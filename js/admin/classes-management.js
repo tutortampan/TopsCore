@@ -750,7 +750,8 @@ export async function loadClassLearningPath(classId) {
     const ClassGrid = new DataGrid({
       container: 'class-datagrid-container',
       data: gridData,
-      pageSize: 50,
+      pageSize: 1000,
+      hideToolbar: true,
       searchKeys: ['title', 'status'],
       initialSortKey: 'order',
       initialSortAsc: true,
@@ -795,58 +796,58 @@ export async function loadClassLearningPath(classId) {
           key: 'order', label: 'CODE', sortable: true,
           render: (val, row) => {
             if (row.shellCode) {
-              return `<div style="font-size:0.7rem; color:var(--clr-primary); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</div>`;
+              return `<div style="font-size:12px; color:var(--clr-primary); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</div>`;
             }
-            return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.order}</div>`;
+            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.order}</div>`;
           }
         },
         { 
           key: 'title', label: 'TITLE', sortable: true,
-          render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:normal; min-width:250px;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
+          render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden; max-width:250px;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
         },
         {
           key: 'level', label: 'LEVEL', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.level)}</div>`
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.level)}</div>`
         },
         {
           key: 'prereq', label: 'PREREQUISITE', sortable: true,
           render: (val, row) => {
-             if(!row.prereq || row.prereq === '-') return `<span style="color:var(--clr-text-3);">—</span>`;
-             return `<div style="font-size:0.75rem; color:var(--clr-text-muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">⚠️ ${escapeHtml(row.prereq)}</div>`;
+             if(!row.prereq || row.prereq === '-') return `<span style="color:var(--clr-text-3); font-size:12px;">—</span>`;
+             return `<div style="font-size:12px; color:var(--clr-text-muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">⚠️ ${escapeHtml(row.prereq)}</div>`;
           }
         },
         {
           key: 'type', label: 'TYPE', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.type)}</div>`
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.type)}</div>`
         },
         {
           key: 'answerType', label: 'ANSWER', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.answerType}</div>`
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.answerType}</div>`
         },
         {
           key: 'access', label: 'ACCESS', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.access)}</div>`
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.access)}</div>`
         },
         {
           key: 'timeLimit', label: 'DUR. (M)', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">⏱ ${row.timeLimit}</div>`
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">⏱ ${row.timeLimit}</div>`
         },
         {
           key: 'minScore', label: 'PASS (%)', sortable: true,
-          render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap; color:var(--clr-danger);">🎯 ${row.minScore}</div>`
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; color:var(--clr-danger);">🎯 ${row.minScore}</div>`
         },
         {
           key: 'qCount', label: 'QS', sortable: true,
           render: (val, row) => {
-            if(row.qIsVault) return `<div style="font-size:0.75rem; color:var(--clr-accent-1); white-space:nowrap;" title="Dynamic Vault Source">⚡ ${row.qCount} (Vault)</div>`;
-            return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.qCount}</div>`;
+            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-accent-1); white-space:nowrap;" title="Dynamic Vault Source">⚡ ${row.qCount} (Vault)</div>`;
+            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.qCount}</div>`;
           }
         },
         {
           key: 'status', label: 'STATUS', sortable: true,
           render: (val, row) => {
-            const st = String(row.status || 'draft').toLowerCase();
-            return `<span class="badge ${statusColors[st] || 'badge-neutral'}" style="text-transform:uppercase; font-size:0.65rem;">${st}</span>`;
+            const st = String(row.status || 'draft').toUpperCase();
+            return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-2); text-transform:uppercase;">${st}</span>`;
           }
         },
         {

@@ -68,7 +68,7 @@
   --eval-incorrect-rgb: 255, 0, 0;
 
   /* Grade Badge Text Contrast Rules */
-  --badge-text-star: #ffffff;
+  --badge-text-star: #0f172a;
   --badge-text-dark: #0f172a;
 
   /* Status colours */
@@ -858,8 +858,10 @@ tbody tr:last-child td {
 
 /* Zero-Overlap & Typography Safeguards */
 .test-rem-sup,
-.asm-rem-sup {
-  font-size: 0.58em !important;
+.asm-rem-sup,
+.table-wrap td sup,
+.datagrid-table td sup {
+  font-size: 1.0em !important;
   vertical-align: super !important;
   font-weight: 900 !important;
   line-height: 0 !important;

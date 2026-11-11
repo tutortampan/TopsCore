@@ -88,7 +88,9 @@ function getBatchPeriodInfo(startDateStr, endDateStr) {
 }
 
 export async function renderCurriculum(area) {
-  area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Curriculum Hub...</p></div>';
+  area.innerHTML = typeof window.getLoadingStateHtml === 'function'
+    ? window.getLoadingStateHtml('Loading Curriculum Hub...')
+    : '<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">Loading Curriculum Hub...</p></div>';
 
   try {
     const [institutions, programs, classes, batches, levels, students] = await Promise.all([

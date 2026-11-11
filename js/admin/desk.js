@@ -52,7 +52,7 @@ export async function renderRecycleBin(container) {
     <!-- Aggregated Table -->
     <div class="antigravity-card p-4">
       <div class="table-wrap" id="recycle-results-wrap">
-        <div class="p-5 text-center text-muted"><div class="spinner"></div> Scanning Recycle Bin...</div>
+        ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning Recycle Bin...')}
       </div>
     </div>
 
@@ -66,7 +66,7 @@ export async function renderRecycleBin(container) {
   const fetchAllDeleted = async () => {
     const wrap = document.getElementById('recycle-results-wrap');
     const chip = document.getElementById('recycle-total-chip');
-    if (wrap) wrap.innerHTML = '<div class="p-5 text-center text-muted"><div class="spinner"></div> Scanning Recycle Bin...</div>';
+    if (wrap) wrap.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning Recycle Bin...');
 
     try {
       const [stds, progs, Tests, quests] = await Promise.all([
@@ -341,7 +341,7 @@ export async function renderAuditLog(area) {
     <!-- Audit Events Grid/Table -->
     <div class="antigravity-card p-4">
       <div class="table-wrap" id="audit-table-wrap">
-        <div class="p-5 text-center text-muted"><div class="spinner"></div> Fetching audit trail...</div>
+        ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching audit trail...')}
       </div>
     </div>
   `;
@@ -351,7 +351,7 @@ export async function renderAuditLog(area) {
   const loadLogs = async () => {
     const wrap = document.getElementById('audit-table-wrap');
     const chip = document.getElementById('audit-count-chip');
-    if (wrap) wrap.innerHTML = '<div class="p-5 text-center text-muted"><div class="spinner"></div> Fetching audit trail...</div>';
+    if (wrap) wrap.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching audit trail...');
 
     try {
       const sb = await getSupabase();
@@ -1044,6 +1044,11 @@ export async function renderSettings(area) {
         <h2 class="section-title text-gradient">Site Settings &amp; API Cost Guard (Pilar D)</h2>
         <p class="section-subtitle">Platform configuration, API key vault, security credentials, and AI token bankruptcy prevention limits</p>
       </div>
+      <div class="d-flex align-center gap-2">
+        <button class="btn btn-primary edit-mode-only" id="btn-save-all-settings" style="font-weight:700; display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 1.25rem; box-shadow: 0 4px 14px rgba(37,99,235,0.35);">
+          💾 Save All Settings
+        </button>
+      </div>
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:1.5rem;align-items:start;">
@@ -1073,7 +1078,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Hard ceiling for voice recordings before auto-stopping STT (Default: 180s).</div>
         </div>
 
-        <button class="btn btn-danger btn-sm w-100" id="btn-save-cost-guard" style="font-weight:700;">
+        <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-save-cost-guard" style="font-weight:700;">
           &#128274; Save Cost Guard Limits
         </button>
       </div>
@@ -1154,7 +1159,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Time allowed before auto-submit on cheating (Default: 10s).</div>
         </div>
 
-        <button class="btn btn-primary btn-sm w-100" id="btn-save-anti-cheat" style="font-weight:700;">
+        <button class="btn btn-primary btn-sm w-100 edit-mode-only" id="btn-save-anti-cheat" style="font-weight:700;">
           🛡️ Save Security Settings
         </button>
       </div>
@@ -1193,7 +1198,7 @@ export async function renderSettings(area) {
           </div>
         </div>
 
-        <button class="btn btn-primary btn-sm w-100" id="btn-save-vault">
+        <button class="btn btn-primary btn-sm w-100 edit-mode-only" id="btn-save-vault">
           Save API Key Vault
         </button>
       </div>
@@ -1217,7 +1222,7 @@ export async function renderSettings(area) {
           <input class="form-control" id="setting-login_background_url" value="${escapeHtml(settings.login_background_url || '')}" placeholder="https://..." />
         </div>
 
-        <button class="btn btn-secondary btn-sm w-100" id="save-settings-btn">
+        <button class="btn btn-secondary btn-sm w-100 edit-mode-only" id="save-settings-btn">
           Save Site Settings
         </button>
       </div>
@@ -1241,7 +1246,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Leave blank to use default 'admin123' master key.</div>
         </div>
 
-        <button class="btn btn-secondary btn-sm w-100" id="btn-save-admin-password">
+        <button class="btn btn-secondary btn-sm w-100 edit-mode-only" id="btn-save-admin-password">
           Update Admin Credentials
         </button>
       </div>
@@ -1252,7 +1257,7 @@ export async function renderSettings(area) {
           <div style="font-size:1.5rem;">🔐</div>
           <div>
             <h3 style="font-size:1.1rem;margin:0;color:var(--clr-text-1);font-weight:700;">Tutor Proctor Credentials</h3>
-            <div class="text-xs text-muted">Buka Tutup Ujian &amp; Cek Nilai Access</div>
+            <div class="text-xs text-muted">Open/Close Exam &amp; Check Score Access</div>
           </div>
         </div>
         <p class="text-xs text-muted mb-3">Tutor accounts are restricted strictly to opening/closing exam sessions and inspecting student score cards.</p>
@@ -1272,7 +1277,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Leave blank to use default 'tutor123' master key.</div>
         </div>
 
-        <button class="btn btn-secondary btn-sm w-100" id="btn-save-tutor-password">
+        <button class="btn btn-secondary btn-sm w-100 edit-mode-only" id="btn-save-tutor-password">
           Update Tutor Credentials
         </button>
       </div>
@@ -1301,7 +1306,7 @@ export async function renderSettings(area) {
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
           Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: #FF0000;">RESET</strong> to confirm.
         </p>
-        <button class="btn btn-danger btn-sm w-100" id="btn-danger-reset-vault" style="font-weight:700; height: 36px;">
+        <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-danger-reset-vault" style="font-weight:700; height: 36px;">
           🗑️ Master Reset Vocabulary Vault
         </button>
       </div>
@@ -1325,10 +1330,10 @@ export async function renderSettings(area) {
     });
   });
 
-  // Save Cost Guard Limits
-  document.getElementById('btn-save-cost-guard')?.addEventListener('click', async () => {
-    const cooldown = document.getElementById('setting-ai_cooldown').value.trim() || '60';
-    const maxAudio = document.getElementById('setting-ai_max_audio').value.trim() || '180';
+  // 1. Save Cost Guard Limits
+  const saveCostGuard = async (silent = false) => {
+    const cooldown = document.getElementById('setting-ai_cooldown')?.value.trim() || '60';
+    const maxAudio = document.getElementById('setting-ai_max_audio')?.value.trim() || '180';
 
     try {
       await Promise.all([
@@ -1345,11 +1350,15 @@ export async function renderSettings(area) {
         maxAudioDuration: parseInt(maxAudio, 10)
       };
 
-      showToast('Cost Guard safety limits saved globally!', 'success');
+      if (!silent) showToast('Cost Guard safety limits saved globally!', 'success');
+      return true;
     } catch (err) {
-      showToast('Failed to save Cost Guard limits: ' + err.message, 'error');
+      if (!silent) showToast('Failed to save Cost Guard limits: ' + err.message, 'error');
+      throw err;
     }
-  });
+  };
+
+  document.getElementById('btn-save-cost-guard')?.addEventListener('click', () => saveCostGuard(false));
 
   // Sound Picker: show/hide custom upload group
   area.querySelectorAll('input[name="anti_cheat_sound_type"]').forEach(radio => {
@@ -1511,11 +1520,11 @@ export async function renderSettings(area) {
     });
   });
 
-  // Save Anti-Cheat Settings
-  document.getElementById('btn-save-anti-cheat')?.addEventListener('click', async () => {
-    const isEnabled = document.getElementById('setting-anti_cheat_enabled').checked;
-    const isSoundEnabled = document.getElementById('setting-anti_cheat_sound').checked;
-    let countdown = document.getElementById('setting-anti_cheat_countdown').value.trim();
+  // 2. Save Anti-Cheat Settings
+  const saveAntiCheat = async (silent = false) => {
+    const isEnabled = document.getElementById('setting-anti_cheat_enabled')?.checked ?? true;
+    const isSoundEnabled = document.getElementById('setting-anti_cheat_sound')?.checked ?? true;
+    let countdown = document.getElementById('setting-anti_cheat_countdown')?.value.trim();
     
     // Ensure boundaries for countdown
     if (!countdown || isNaN(countdown) || parseInt(countdown) < 3) countdown = '3';
@@ -1531,8 +1540,8 @@ export async function renderSettings(area) {
     if (customFileInput && customFileInput.files && customFileInput.files[0]) {
       const file = customFileInput.files[0];
       if (file.size > 2 * 1024 * 1024) {
-        showToast('Custom sound file is too large (max 2 MB).', 'error');
-        return;
+        if (!silent) showToast('Custom sound file is too large (max 2 MB).', 'error');
+        throw new Error('Custom sound file is too large (max 2 MB).');
       }
       customSoundB64 = await new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1553,17 +1562,21 @@ export async function renderSettings(area) {
         upserts.push(sb.from('site_settings').upsert({ key: 'anti_cheat_custom_sound_b64', value: customSoundB64, updated_at: new Date().toISOString() }, { onConflict: 'key' }));
       }
       await Promise.all(upserts);
-      showToast('🛡️ Security Settings saved!', 'success');
+      if (!silent) showToast('🛡️ Security Settings saved!', 'success');
+      return true;
     } catch (err) {
-      showToast('Failed to save security settings: ' + err.message, 'error');
+      if (!silent) showToast('Failed to save security settings: ' + err.message, 'error');
+      throw err;
     }
-  });
+  };
 
-  // Save API Key Vault
-  document.getElementById('btn-save-vault')?.addEventListener('click', async () => {
-    const openaiKey = document.getElementById('vault-openai-key').value.trim();
-    const anthropicKey = document.getElementById('vault-anthropic-key').value.trim();
-    const geminiKey = document.getElementById('vault-gemini-key').value.trim();
+  document.getElementById('btn-save-anti-cheat')?.addEventListener('click', () => saveAntiCheat(false));
+
+  // 3. Save API Key Vault
+  const saveVault = async (silent = false) => {
+    const openaiKey = document.getElementById('vault-openai-key')?.value.trim() || '';
+    const anthropicKey = document.getElementById('vault-anthropic-key')?.value.trim() || '';
+    const geminiKey = document.getElementById('vault-gemini-key')?.value.trim() || '';
 
     try {
       await Promise.all([
@@ -1572,17 +1585,21 @@ export async function renderSettings(area) {
         sb.from('site_settings').upsert({ key: 'gemini_api_key', value: geminiKey, updated_at: new Date().toISOString() }, { onConflict: 'key' })
       ]);
 
-      showToast('API Key Vault updated securely.', 'success');
+      if (!silent) showToast('API Key Vault updated securely.', 'success');
+      return true;
     } catch (err) {
-      showToast('Failed to update API Key Vault: ' + err.message, 'error');
+      if (!silent) showToast('Failed to update API Key Vault: ' + err.message, 'error');
+      throw err;
     }
-  });
+  };
 
-  // Save General Platform Configuration
-  document.getElementById('save-settings-btn')?.addEventListener('click', async () => {
-    const siteName = document.getElementById('setting-site_name').value.trim();
-    const passThreshold = document.getElementById('setting-passing_threshold').value.trim();
-    const bgUrl = document.getElementById('setting-login_background_url').value.trim();
+  document.getElementById('btn-save-vault')?.addEventListener('click', () => saveVault(false));
+
+  // 4. Save General Platform Configuration
+  const saveSiteConfig = async (silent = false) => {
+    const siteName = document.getElementById('setting-site_name')?.value.trim() || 'TOPS CORE';
+    const passThreshold = document.getElementById('setting-passing_threshold')?.value.trim() || '60';
+    const bgUrl = document.getElementById('setting-login_background_url')?.value.trim() || '';
 
     try {
       await Promise.all([
@@ -1590,33 +1607,69 @@ export async function renderSettings(area) {
         sb.from('site_settings').upsert({ key: 'passing_threshold', value: passThreshold, updated_at: new Date().toISOString() }, { onConflict: 'key' }),
         sb.from('site_settings').upsert({ key: 'login_background_url', value: bgUrl, updated_at: new Date().toISOString() }, { onConflict: 'key' })
       ]);
-      showToast('Global site settings saved.', 'success');
+      if (!silent) showToast('Global site settings saved.', 'success');
+      return true;
     } catch (err) {
-      showToast('Failed to save settings: ' + err.message, 'error');
+      if (!silent) showToast('Failed to save settings: ' + err.message, 'error');
+      throw err;
     }
-  });
+  };
 
-  // Update Custom Admin Password
-  document.getElementById('btn-save-admin-password')?.addEventListener('click', () => {
-    const customPass = document.getElementById('setting-custom-password').value.trim();
+  document.getElementById('save-settings-btn')?.addEventListener('click', () => saveSiteConfig(false));
+
+  // 5. Update Custom Admin Password
+  const saveAdminPassword = (silent = false) => {
+    const customPass = document.getElementById('setting-custom-password')?.value.trim() || '';
     if (customPass) {
       localStorage.setItem('topscore_admin_custom_password', customPass);
-      showToast('Custom admin password saved.', 'success');
+      if (!silent) showToast('Custom admin password saved.', 'success');
     } else {
       localStorage.removeItem('topscore_admin_custom_password');
-      showToast('Custom password cleared. Default (admin123) restored.', 'info');
+      if (!silent) showToast('Custom password cleared. Default (admin123) restored.', 'info');
     }
-  });
+    return true;
+  };
 
-  // Update Custom Tutor Password
-  document.getElementById('btn-save-tutor-password')?.addEventListener('click', () => {
-    const customPass = document.getElementById('setting-tutor-password').value.trim();
+  document.getElementById('btn-save-admin-password')?.addEventListener('click', () => saveAdminPassword(false));
+
+  // 6. Update Custom Tutor Password
+  const saveTutorPassword = (silent = false) => {
+    const customPass = document.getElementById('setting-tutor-password')?.value.trim() || '';
     if (customPass) {
       localStorage.setItem('topscore_tutor_custom_password', customPass);
-      showToast('Custom tutor password saved.', 'success');
+      if (!silent) showToast('Custom tutor password saved.', 'success');
     } else {
       localStorage.removeItem('topscore_tutor_custom_password');
-      showToast('Custom tutor password cleared. Default (tutor123) restored.', 'info');
+      if (!silent) showToast('Custom tutor password cleared. Default (tutor123) restored.', 'info');
+    }
+    return true;
+  };
+
+  document.getElementById('btn-save-tutor-password')?.addEventListener('click', () => saveTutorPassword(false));
+
+  // 7. Master Unified Save All Settings
+  document.getElementById('btn-save-all-settings')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '⏳ Saving All...';
+
+    try {
+      await Promise.all([
+        saveCostGuard(true),
+        saveAntiCheat(true),
+        saveVault(true),
+        saveSiteConfig(true)
+      ]);
+      saveAdminPassword(true);
+      saveTutorPassword(true);
+
+      showToast('✓ All settings saved and synced globally!', 'success');
+    } catch (err) {
+      showToast('Error saving settings: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
     }
   });
 

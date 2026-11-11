@@ -405,9 +405,9 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
       return `
       <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
-        <td class="cell-institution" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(56, 189, 248, 0.35); display: inline-block;">${escapeHtml(w.institutions?.code || w.institution_code || w.institutions?.name || 'CEC')}</span></td>
-        <td class="cell-program" style="padding: 6px 8px; font-weight: 600;"><span style="background: rgba(168, 85, 247, 0.15); color: #c084fc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(168, 85, 247, 0.35); display: inline-block;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
-        <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="background: #334155; color: #f8fafc; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(255, 255, 255, 0.15); display: inline-block; white-space: nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(w.target_level) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level, true) : (w.target_level || '1st')))}</span></td>
+        <td class="cell-institution" style="padding: 6px 8px; font-weight: 600;"><span style="color: #38bdf8; font-size: 11px; font-weight: 700;">${escapeHtml(w.institutions?.code || w.institution_code || w.institutions?.name || 'CEC')}</span></td>
+        <td class="cell-program" style="padding: 6px 8px; font-weight: 600;"><span style="color: #c084fc; font-size: 11px; font-weight: 700;">${escapeHtml(w.programs?.name || w.program_name || 'Camp')}</span></td>
+        <td class="cell-level" style="padding: 6px 8px; font-weight: 600;"><span style="color: #f8fafc; font-size: 11px; font-weight: 700; white-space: nowrap; font-variant-numeric: tabular-nums;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(w.target_level) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(w.target_level, true) : (w.target_level || '1st')))}</span></td>
         <td class="cell-code cell-topic-code" style="padding: 6px 12px; font-weight: 500;"><span style="color:#a5b4fc;font-family:monospace;letter-spacing:0.5px;font-size:11px;font-weight:700;">${escapeHtml(w.topic_code || '—')}</span></td>
         <td class="cell-theme" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</td>
         <td class="cell-topic" style="padding: 6px 12px; color: #ffffff; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px;" title="${escapeHtml(w.topic)}">${escapeHtml(w.topic)}</td>
@@ -1747,7 +1747,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
         // Assigned programs badge pills
         const assignedPillsHtml = assignedProgs.length > 0
-          ? assignedProgs.map(p => `<span class="badge-prog-pill" style="display:inline-flex;align-items:center;gap:4px;background:rgba(34,197,94,0.15);color:#4ade80;border:1px solid rgba(34,197,94,0.3);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:4px;">🟢 ${escapeHtml(p.name)}</span>`).join('')
+          ? assignedProgs.map(p => `<span class="badge-prog-pill" style="display:inline-flex;align-items:center;gap:4px;color:#4ade80;font-size:10.5px;font-weight:700;margin-right:6px;">🟢 ${escapeHtml(p.name)}</span>`).join('')
           : `<span style="color:#64748b;font-size:10.5px;font-style:italic;">None Assigned</span>`;
 
         topics.forEach(tp => {
@@ -1766,7 +1766,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 <span>${escapeHtml(tp.name)}</span>
               </td>
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(56, 189, 248, 0.3); font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
+                <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
               </td>
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
                 <span style="color: #cbd5e1; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
@@ -2247,21 +2247,44 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   const pctReady = totalExpectedAll > 0 ? Math.round((totalReadyAll / totalExpectedAll) * 100) : 0;
   const selectedProg = activeProgs.find(p => p.id === selectedProgId);
 
-  // Setup Bottom Infobar for Test Blueprint (Rule 2.23 & 2.24)
+  // Setup Bottom Infobar for Test Blueprint (Rules 2.23, 2.24 & Phase 398)
   if (window.setBottomInfobar) {
     const leftHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">View:</span><span class="chip-val" style="color: #38bdf8;">Test Blueprint</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Program:</span><span class="chip-val" style="color: #f8fafc;">${escapeHtml(selectedProg?.name || 'All')}</span></div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 5px;">
+          <label style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">PROGRAM:</label>
+          <select id="bp-program-select" style="height: 28px; font-size: 11px; width: 140px; background: rgba(30,41,59,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; padding: 0 6px; cursor: pointer; outline: none; font-weight: 600;">
+            ${activeProgs.map(p => `<option value="${p.id}" ${p.id === selectedProgId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display: flex; gap: 2px; align-items: center; background: rgba(15,23,42,0.8); padding: 2px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
+          <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 24px; font-size: 10.5px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
+          ${levels.map(lvl => {
+            const isActive = (String(activeLevel) === String(lvl));
+            const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
+            return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 24px; font-size: 10.5px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'};">${shortLbl}</button>`;
+          }).join('')}
+        </div>
+      </div>
+    `;
+    const centerHtml = `
       <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val" style="color: #22c55e;">${totalTasksReady}/${totalTasksExpected}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val" style="color: #c084fc;">${totalExamsReady}/${totalExamsExpected}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Readiness:</span><span class="chip-val" style="color: ${pctReady === 100 ? '#22c55e' : '#f59e0b'}; font-weight: 800;">${pctReady}%</span></div>
     `;
     const rightHtml = `
-      <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 32px; font-size: 11px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Test System Settings">⚙️ Test Settings</button>
-      <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 12px; padding: 0 14px; height: 32px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 6px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate All Tests</button>
+      <input type="search" id="bp-search-input" placeholder="🔍 Search Topics..." style="width: 140px; height: 28px; font-size: 11px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
+      <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 28px; font-size: 11px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Test System Settings">⚙️ Test Settings</button>
+      <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 5px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate All Tests</button>
     `;
-    window.setBottomInfobar(leftHtml, rightHtml);
+    window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
   }
+
+  // Answer Type State Map
+  window._bpTopicAnswerTypes = window._bpTopicAnswerTypes || {};
+  window._onBpAnswerTypeChange = (topicCode, ans) => {
+    window._bpTopicAnswerTypes[topicCode] = ans;
+  };
 
   // Batch Configuration Grid Table Rows Builder
   const buildBlueprintTableRows = (searchQuery = '') => {
@@ -2301,37 +2324,36 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           const taskScore = tpTask?.minimum_required_score || 60;
           const examDuration = thExam?.working_duration_minutes || 30;
           const examScore = thExam?.minimum_required_score || 60;
+          const ansType = window._bpTopicAnswerTypes[tp.topicCode] || tpTask?.answer_type || (tpTask?.payload && tpTask.payload.answer_type) || 'spoken';
 
           rowsHtml += `
             <tr class="blueprint-table-row" data-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); width: 40px;">
-                <input type="checkbox" class="bp-row-select-cb" data-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" data-topic-name="${escapeHtml(tp.name)}" style="accent-color: #6366f1; width: 14px; height: 14px; cursor: pointer;">
-              </td>
-              <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
                 ${escapeHtml(lvlLabel)}
               </td>
-              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px;">
+              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px; width: 55px;">
                 ${escapeHtml(tp.topicCode || '—')}
               </td>
-              <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
+              <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px; min-width: 130px;">
                 ${escapeHtml(th.name || '—')}
               </td>
-              <td style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px;">
+              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 11.5px; min-width: 150px;">
                 ${escapeHtml(tp.name)}
               </td>
+              
               <!-- Vocab Pool Split (Single Responsibility) -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 11px; border: 1px solid rgba(56, 189, 248, 0.3); font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
+                <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
               </td>
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
                 <span style="color: #cbd5e1; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
               </td>
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
+              <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px;">
                 <span style="color: #a78bfa; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
               
-              <!-- Test Settings Split: Duration -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+              <!-- Generation Blueprint Split: Duration -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
                 <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
                   <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size:11px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
@@ -2339,8 +2361,8 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
                 </span>
               </td>
 
-              <!-- Test Settings Split: Pass Score -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;">
+              <!-- Generation Blueprint Split: Pass Score -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
                 <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: #FFFF00; font-variant-numeric: tabular-nums;">${taskScore}%</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
                   <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size:11px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
@@ -2348,28 +2370,37 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
                 </span>
               </td>
 
-              <!-- Test Settings Split: Delivery Format -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.1); white-space: nowrap;">
-                <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; font-weight: 700; padding: 2px 7px; border-radius: 4px; font-size: 10.5px; border: 1px solid rgba(56, 189, 248, 0.3);">7×7 Spoken</span>
+              <!-- Generation Blueprint Split: Format -->
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
+                <span style="color: #38bdf8; font-weight: 600; font-size: 11px;">7×7</span>
+              </td>
+
+              <!-- Generation Blueprint Split: Answer Type -->
+              <td class="col-bp-sep" style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px;">
+                <span class="badge-answer-type badge-answer-${ansType}">
+                  ${ansType === 'written' ? '✍️ Written' : (ansType === 'hybrid' ? '🔄 Hybrid' : '🗣️ Spoken')}
+                </span>
+                <span class="bp-setting-input edit-mode-only" style="align-items:center;">
+                  <select class="bp-inline-answer-type" data-topic-code="${escapeHtml(tp.topicCode)}" onchange="window._onBpAnswerTypeChange && window._onBpAnswerTypeChange('${escapeHtml(tp.topicCode)}', this.value)" style="height:22px; font-size:10.5px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 2px;">
+                    <option value="spoken" ${ansType === 'spoken' ? 'selected' : ''}>🗣️ Spoken</option>
+                    <option value="written" ${ansType === 'written' ? 'selected' : ''}>✍️ Written</option>
+                    <option value="hybrid" ${ansType === 'hybrid' ? 'selected' : ''}>🔄 Hybrid</option>
+                  </select>
+                </span>
               </td>
 
               <!-- Task Status (Single Responsibility: Status Only) -->
-              <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+              <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap; width: 95px;">
                 ${taskReady 
-                  ? `<span style="background: rgba(34, 197, 94, 0.15); border: 1px solid rgba(34, 197, 94, 0.4); color: #4ade80; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
-                  : `<span style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
+                  ? `<span style="color: #4ade80; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
+                  : `<span style="color: #f87171; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
               </td>
 
               <!-- Exam Status (Single Responsibility: Status Only) -->
-              <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+              <td style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px;">
                 ${examReady 
-                  ? `<span style="background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: #c084fc; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
-                  : `<span style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; padding: 3px 8px; border-radius: 5px; font-weight: 700; font-size: 10.5px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
-              </td>
-
-              <!-- Actions -->
-              <td style="text-align: center; padding: 6px 8px; white-space: nowrap;">
-                ${targetClass ? `<button type="button" class="btn btn-secondary btn-sm btn-goto-class-hub" data-class-id="${targetClass.id}" style="height: 26px; font-size: 10.5px; padding: 0 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px;" title="Open Class Hub">👁️ Class Hub</button>` : '<span style="color:#64748b;font-size:10px;">No Class</span>'}
+                  ? `<span style="color: #c084fc; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>` 
+                  : `<span style="color: #f87171; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
               </td>
             </tr>
           `;
@@ -2380,7 +2411,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     if (renderedCount === 0) {
       rowsHtml = `
         <tr>
-          <td colspan="14" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
+          <td colspan="13" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
             No topics or tests found matching the current criteria.
           </td>
         </tr>
@@ -2393,54 +2424,34 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   const initialRows = buildBlueprintTableRows('');
 
   let html = `
-    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif; gap: 8px;">
-      
-      <!-- Top Control Toolbar (Clean & Minimal: Program Select + Level Tabs + Search Only) -->
-      <div style="flex-shrink: 0; padding: 2px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 6px;">
-            <label style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Program:</label>
-            <select id="bp-program-select" style="height: 30px; font-size: 11.5px; width: 170px; background: rgba(30,41,59,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 6px; padding: 0 8px; cursor: pointer; outline: none; font-weight: 600;">
-              ${activeProgs.map(p => `<option value="${p.id}" ${p.id === selectedProgId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
-            </select>
-          </div>
-
-          <div style="display: flex; gap: 3px; align-items: center; background: rgba(15,23,42,0.7); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
-            <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
-            ${levels.map(lvl => {
-              const isActive = (String(activeLevel) === String(lvl));
-              const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-              return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 5px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'};">${shortLbl}</button>`;
-            }).join('')}
-          </div>
-        </div>
-
-        <div style="display:flex; align-items:center; gap:8px;">
-          <input type="search" id="bp-search-input" placeholder="🔍 Search Topics &amp; Tests..." style="width: 220px; height: 28px; font-size: 11px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
-        </div>
-      </div>
-
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
       <!-- Batch Configuration Grid (ONLY Container With Vertical Scroll) -->
       <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
         <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
+            <tr class="bp-super-header-row">
+              <th colspan="4" class="bp-sh-topic">Curriculum Topic</th>
+              <th colspan="3" class="bp-sh-vocab">Vocabulary Pool</th>
+              <th colspan="4" class="bp-sh-blueprint">Generation Blueprint</th>
+              <th colspan="2" class="bp-sh-status">Readiness Status</th>
+            </tr>
             <tr>
-              <th style="padding: 8px 6px; text-align: center; width: 40px; border-right: 1px solid rgba(255,255,255,0.06);">
-                <input type="checkbox" id="bp-select-all-cb" style="accent-color: #6366f1; width: 14px; height: 14px; cursor: pointer;" title="Select All">
-              </th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">LEVEL</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 130px; border-right: 1px solid rgba(255,255,255,0.1);">Theme Name</th>
-              <th style="padding: 8px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px; border-right: 1px solid rgba(255,255,255,0.08);">Topic Name</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">PHRASES</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #FFFF00; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
-              <th style="padding: 8px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 80px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);">FORMAT</th>
-              <th style="padding: 8px 10px; font-weight: 800; color: #86efac; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Task Status</th>
-              <th style="padding: 8px 10px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Exam Status</th>
-              <th style="padding: 8px 8px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 90px; text-align: center;">ACTIONS</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">LEVEL</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
+              <th style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 130px; border-right: 1px solid rgba(255,255,255,0.08);">Theme Name</th>
+              <th class="col-bp-sep" style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 10px; min-width: 150px;">Topic Name</th>
+              
+              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
+              <th class="col-bp-sep" style="padding: 7px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; width: 55px; text-align: center;">PHRASES</th>
+              
+              <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #FFFF00; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 10px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
+              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: #34d399; text-transform: uppercase; font-size: 10px; width: 95px; text-align: center;">ANSWER TYPE</th>
+              
+              <th style="padding: 7px 10px; font-weight: 800; color: #86efac; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Task Status</th>
+              <th style="padding: 7px 10px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 10px; min-width: 95px; text-align: center;">Exam Status</th>
             </tr>
           </thead>
           <tbody id="bp-matrix-tbody">
@@ -2452,7 +2463,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   `;
   area.innerHTML = html;
 
-  // Program Select Change Handler
+  // Bottom Infobar Program Select Change Handler
   const progSelect = document.getElementById('bp-program-select');
   if (progSelect) {
     progSelect.onchange = (e) => {
@@ -2462,8 +2473,8 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     };
   }
 
-  // Level Tabs Handler
-  area.querySelectorAll('.btn-bp-level-tab').forEach(btn => {
+  // Bottom Infobar Level Tabs Handler
+  document.querySelectorAll('.btn-bp-level-tab').forEach(btn => {
     btn.onclick = (e) => {
       const lvl = e.currentTarget.getAttribute('data-lvl');
       window._bpSelectedLevel = lvl;
@@ -2471,38 +2482,15 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     };
   });
 
-  // Dynamic Search Handler
+  // Bottom Infobar Dynamic Search Handler
   const bpSearch = document.getElementById('bp-search-input');
   if (bpSearch) {
     bpSearch.oninput = (e) => {
       const rows = buildBlueprintTableRows(e.target.value);
       const tbody = document.getElementById('bp-matrix-tbody');
       if (tbody) tbody.innerHTML = rows;
-      bindBpActionHandlers();
     };
   }
-
-  // Select All Checkbox Handler
-  const selectAllCb = document.getElementById('bp-select-all-cb');
-  if (selectAllCb) {
-    selectAllCb.onchange = (e) => {
-      const isChecked = e.target.checked;
-      area.querySelectorAll('.bp-row-select-cb').forEach(cb => cb.checked = isChecked);
-    };
-  }
-
-  // Action Button Binds
-  const bindBpActionHandlers = () => {
-    area.querySelectorAll('.btn-goto-class-hub').forEach(btn => {
-      btn.onclick = (e) => {
-        const classId = e.currentTarget.getAttribute('data-class-id');
-        if (classId) {
-          window.location.hash = `#class-hub?class_id=${classId}`;
-        }
-      };
-    });
-  };
-  bindBpActionHandlers();
 
   // Test Settings Trigger
   const triggerSettings = async () => {
@@ -2534,17 +2522,13 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint', 'error');
     const targetClass = getLevelClass(activeLevel === 'ALL' ? importedLevels[0] : Number(activeLevel));
 
-    // Check if selective checkboxes are checked
-    const selectedCheckboxes = Array.from(area.querySelectorAll('.bp-row-select-cb:checked'));
-    const selectedTopicNames = selectedCheckboxes.map(cb => cb.getAttribute('data-topic-name'));
-
     try {
       const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');
       await openAutoGenerateModal({
         availableLevels: importedLevels,
         preSelectedLevels: activeLevel === 'ALL' ? importedLevels : [Number(activeLevel)],
         explicitClassId: targetClass?.id || null,
-        selectedTopics: selectedTopicNames.length > 0 ? selectedTopicNames : null,
+        topicAnswerTypes: window._bpTopicAnswerTypes || null,
         onComplete: () => {
           if (typeof renderVocabularyVault === 'function') {
             const container = document.getElementById('classes-detail-canvas');

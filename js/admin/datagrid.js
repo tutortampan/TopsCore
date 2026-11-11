@@ -253,7 +253,10 @@ export class DataGrid {
             data-idx="${this.columns.indexOf(col)}"
             draggable="true"${titleAttr}
             style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle}">
-          ${col.label} ${col.sortable ? `<span class="sort-icon">${this.sortKey === col.key ? (this.sortAsc ? '↑' : '↓') : '⇅'}</span>` : ''}
+          <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; width:100%; white-space:nowrap; vertical-align:middle;">
+            <span class="datagrid-header-label" style="display:inline-flex; align-items:center;">${col.label}</span>
+            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size:10px; line-height:1; color:#38bdf8; margin-left:4px;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
+          </div>
         </th>
       `;
     });

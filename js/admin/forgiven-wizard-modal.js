@@ -91,7 +91,7 @@ export async function openForgivenWizard(options = {}) {
             </span>
           </div>
           <p style="margin: 3px 0 0 0; font-size: 0.76rem; color: #94a3b8;">
-            Buka gembok Pekan 3 untuk siswa/batch tertentu tanpa merusak silabus kurikulum.
+            Unlock Week 3 tests for specific students or batches without compromising curriculum integrity.
           </p>
         </div>
         <button type="button" id="btn-close-forgiven-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
@@ -101,11 +101,11 @@ export async function openForgivenWizard(options = {}) {
       <div style="display: flex; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: #0b1120;">
         <div id="step-tab-1" style="flex: 1; padding: 10px 16px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #f59e0b; color: #f59e0b; cursor: pointer;">
           <span style="width: 20px; height: 20px; border-radius: 50%; background: #f59e0b; color: #0f172a; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900;">1</span>
-          PILIH SISWA &amp; BATCH
+          SELECT STUDENTS &amp; BATCH
         </div>
         <div id="step-tab-2" style="flex: 1; padding: 10px 16px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer;">
           <span style="width: 20px; height: 20px; border-radius: 50%; background: #334155; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900;">2</span>
-          KONFIGURASI TASK &amp; EXAM
+          CONFIGURE TASKS &amp; EXAMS
         </div>
       </div>
 
@@ -117,7 +117,7 @@ export async function openForgivenWizard(options = {}) {
             <div style="display: flex; align-items: center; gap: 10px;">
               <label style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Filter Batch:</label>
               <select id="forgiven-batch-select" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 5px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 600;">
-                <option value="ALL">Semua Batch (${students.length} Siswa)</option>
+                <option value="ALL">All Batches (${students.length} Students)</option>
                 ${availableBatches.map(b => `
                   <option value="${b.id}" ${b.id === currentBatchFilter ? 'selected' : ''}>${escapeHtml(b.name)}</option>
                 `).join('')}
@@ -125,18 +125,18 @@ export async function openForgivenWizard(options = {}) {
             </div>
             <div style="display: flex; gap: 8px;">
               <button type="button" id="btn-select-all-students" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 4px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
-                ✓ Pilih Semua
+                ✓ Select All
               </button>
               <button type="button" id="btn-clear-all-students" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
-                Kosongkan
+                Clear
               </button>
             </div>
           </div>
 
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <input type="text" id="student-search-input" placeholder="Cari nama siswa..." style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; width: 100%; max-width: 320px;">
+            <input type="text" id="student-search-input" placeholder="Search student name..." style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; width: 100%; max-width: 320px;">
             <span id="selected-student-count-chip" style="font-size: 0.76rem; font-weight: 700; color: #f59e0b;">
-              ${selectedStudentIds.size} siswa terpilih
+              ${selectedStudentIds.size} students selected
             </span>
           </div>
 
@@ -150,22 +150,22 @@ export async function openForgivenWizard(options = {}) {
         <div id="step-2-container" style="display: none;">
           <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div style="font-size: 0.8rem; color: #f8fafc;">
-              Target: <strong id="summary-student-count" style="color: #f59e0b;">${selectedStudentIds.size} Siswa</strong> terpilih
+              Target: <strong id="summary-student-count" style="color: #f59e0b;">${selectedStudentIds.size} Students</strong> selected
             </div>
             <button type="button" id="btn-quick-pacing-w12" style="background: #d97706; border: none; color: #fff; padding: 5px 12px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-              ⚡ Setel Cepat Pekan 1 &amp; 2 (Forgive A1–B4 &amp; Exam A–B)
+              ⚡ Quick-Set Week 1 &amp; 2 (Forgive A1–B4 &amp; Exam A–B)
             </button>
           </div>
 
           <!-- Metadata Settings -->
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 16px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
             <div>
-              <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Nama Admin / Tutor:</label>
+              <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Admin / Tutor Name:</label>
               <input type="text" id="forgiven-admin-name" value="Mr. Top" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 600;">
             </div>
             <div>
-              <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Alasan / Catatan Audit:</label>
-              <input type="text" id="forgiven-reason" value="Pacing Adjustment Pekan 1-2" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem;">
+              <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Reason / Audit Note:</label>
+              <input type="text" id="forgiven-reason" value="Week 1-2 Pacing Adjustment" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem;">
             </div>
           </div>
 
@@ -182,12 +182,12 @@ export async function openForgivenWizard(options = {}) {
                   <div style="padding: 10px 14px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                       <span style="font-size: 0.82rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.03em;">
-                        PEKAN / TEMA ${tc}: ${escapeHtml(themeTitle)}
+                        WEEK / THEME ${tc}: ${escapeHtml(themeTitle)}
                       </span>
                       <span style="font-size: 0.7rem; color: #94a3b8;">(${grp.tasks.length} Tasks, ${grp.exams.length} Exams)</span>
                     </div>
                     <button type="button" class="btn-toggle-theme-tasks" data-theme="${tc}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
-                      Pilih Semua Task Tema ${tc}
+                      Select All Theme ${tc} Tasks
                     </button>
                   </div>
 
@@ -220,12 +220,12 @@ export async function openForgivenWizard(options = {}) {
                               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
                                 <span style="font-weight: 700; font-size: 0.82rem; color: #f8fafc;">
                                   ${escapeHtml(exam.title || exam.shell_code || 'Exam')}
-                                  <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">(${totalQ} Soal)</span>
+                                  <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">(${totalQ} Questions)</span>
                                 </span>
                                 <div style="display: flex; align-items: center; gap: 14px; font-size: 0.78rem;">
                                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                                     <input type="radio" name="exam_action_${exam.id}" value="none" checked style="accent-color: #94a3b8;">
-                                    <span>Abaikan</span>
+                                    <span>Ignore</span>
                                   </label>
                                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #f59e0b;">
                                     <input type="radio" name="exam_action_${exam.id}" value="forgive" style="accent-color: #f59e0b;">
@@ -233,14 +233,14 @@ export async function openForgivenWizard(options = {}) {
                                   </label>
                                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #38bdf8;">
                                     <input type="radio" name="exam_action_${exam.id}" value="manual" style="accent-color: #38bdf8;">
-                                    <span>Input Nilai Manual</span>
+                                    <span>Manual Score Entry</span>
                                   </label>
                                 </div>
                               </div>
 
                               <!-- Manual Score Inputs (Hidden by default) -->
                               <div class="exam-manual-inputs-row" id="manual-inputs-${exam.id}" style="display: none; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.08); align-items: center; gap: 12px; font-size: 0.78rem;">
-                                <span style="color: #38bdf8; font-weight: 700;">Nilai Ujian Offline:</span>
+                                <span style="color: #38bdf8; font-weight: 700;">Offline Exam Score:</span>
                                 <div style="display: flex; align-items: center; gap: 6px;">
                                   <input type="number" class="manual-pct-input" data-exam-id="${exam.id}" min="0" max="100" placeholder="0-100" style="width: 70px; background: #1e293b; border: 1px solid rgba(56,189,248,0.4); color: #fff; padding: 4px 6px; border-radius: 4px; text-align: center; font-weight: 700;">
                                   <span>%</span>
@@ -268,18 +268,18 @@ export async function openForgivenWizard(options = {}) {
       <div style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
         <div>
           <button type="button" id="btn-forgiven-revoke" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: none;">
-            ↩️ Revoke / Batalkan Forgiven
+            ↩️ Revoke Forgiven Status
           </button>
         </div>
         <div style="display: flex; gap: 10px;">
           <button type="button" id="btn-forgiven-prev" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; padding: 7px 16px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: none;">
-            ← Kembali
+            ← Back
           </button>
           <button type="button" id="btn-forgiven-next" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #0f172a; padding: 7px 18px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer;">
-            Lanjut ke Konfigurasi Tes →
+            Continue to Test Configuration →
           </button>
           <button type="button" id="btn-forgiven-submit" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #0f172a; padding: 7px 20px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: none;">
-            ⚡ Terapkan Sekarang
+            ⚡ Apply Now
           </button>
         </div>
       </div>
@@ -301,7 +301,7 @@ export async function openForgivenWizard(options = {}) {
     });
 
     if (filteredStudents.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 20px; font-size: 0.8rem;">Tidak ada siswa yang sesuai filter.</div>`;
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 20px; font-size: 0.8rem;">No students matching filter.</div>`;
       return;
     }
 
@@ -332,8 +332,8 @@ export async function openForgivenWizard(options = {}) {
   function updateStudentCountChips() {
     const chip = overlay.querySelector('#selected-student-count-chip');
     const summary = overlay.querySelector('#summary-student-count');
-    if (chip) chip.textContent = `${selectedStudentIds.size} siswa terpilih`;
-    if (summary) summary.textContent = `${selectedStudentIds.size} Siswa`;
+    if (chip) chip.textContent = `${selectedStudentIds.size} students selected`;
+    if (summary) summary.textContent = `${selectedStudentIds.size} Students`;
   }
 
   // --- Step Switching ---
@@ -361,7 +361,7 @@ export async function openForgivenWizard(options = {}) {
       btnRevoke.style.display = 'none';
     } else {
       if (selectedStudentIds.size === 0) {
-        showToast('Pilih minimal satu siswa untuk melanjutkan.', 'warning');
+        showToast('Please select at least one student to continue.', 'warning');
         return;
       }
       step1.style.display = 'none';
@@ -503,7 +503,7 @@ export async function openForgivenWizard(options = {}) {
   // --- SUBMIT ACTION ---
   overlay.querySelector('#btn-forgiven-submit')?.addEventListener('click', async () => {
     if (selectedStudentIds.size === 0) {
-      showToast('Pilih minimal satu siswa.', 'warning');
+      showToast('Please select at least one student.', 'warning');
       return;
     }
 
@@ -536,7 +536,7 @@ export async function openForgivenWizard(options = {}) {
     });
 
     if (testActions.length === 0) {
-      showToast('Pilih minimal satu task atau exam untuk diproses.', 'warning');
+      showToast('Please select at least one task or exam to process.', 'warning');
       return;
     }
 
@@ -545,7 +545,7 @@ export async function openForgivenWizard(options = {}) {
 
     const submitBtn = overlay.querySelector('#btn-forgiven-submit');
     submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Memproses...';
+    submitBtn.textContent = '⏳ Processing...';
 
     try {
       const res = await adminApplyForgiven({
@@ -556,21 +556,21 @@ export async function openForgivenWizard(options = {}) {
         reason
       });
 
-      showToast(`Sukses! ${res.affectedCount} kombinasi siswa-tes telah diperbarui.`, 'success');
+      showToast(`Success! ${res.affectedCount} student-test combinations updated.`, 'success');
       overlay.remove();
       if (typeof onComplete === 'function') onComplete();
     } catch (err) {
       console.error('[ForgivenWizard Submit Error]:', err);
-      showToast('Gagal menerapkan Forgiven: ' + err.message, 'error');
+      showToast('Failed to apply score exemption: ' + err.message, 'error');
       submitBtn.disabled = false;
-      submitBtn.textContent = '⚡ Terapkan Sekarang';
+      submitBtn.textContent = '⚡ Apply Now';
     }
   });
 
   // --- REVOKE ACTION ---
   overlay.querySelector('#btn-forgiven-revoke')?.addEventListener('click', async () => {
     if (selectedStudentIds.size === 0) {
-      showToast('Pilih minimal satu siswa untuk revoke.', 'warning');
+      showToast('Please select at least one student to revoke.', 'warning');
       return;
     }
 
@@ -584,17 +584,17 @@ export async function openForgivenWizard(options = {}) {
     });
 
     if (testIds.length === 0) {
-      showToast('Centang task atau pilih exam yang ingin di-revoke status Forgiven-nya.', 'warning');
+      showToast('Check the tasks or select the exams you want to revoke Forgiven status for.', 'warning');
       return;
     }
 
-    if (!confirm(`Batalkan status Forgiven untuk ${selectedStudentIds.size} siswa pada ${testIds.length} tes yang dipilih?`)) {
+    if (!confirm(`Revoke Forgiven status for ${selectedStudentIds.size} student(s) across ${testIds.length} selected test(s)?`)) {
       return;
     }
 
     const revokeBtn = overlay.querySelector('#btn-forgiven-revoke');
     revokeBtn.disabled = true;
-    revokeBtn.textContent = '⏳ Mencabut...';
+    revokeBtn.textContent = '⏳ Revoking...';
 
     try {
       const res = await adminRevokeForgiven({
@@ -603,14 +603,14 @@ export async function openForgivenWizard(options = {}) {
         testIds
       });
 
-      showToast(`Status Forgiven dicabut (${res.deletedCount} dihapus, ${res.resetCount} direset).`, 'info');
+      showToast(`Forgiven status revoked (${res.deletedCount} removed, ${res.resetCount} reset).`, 'info');
       overlay.remove();
       if (typeof onComplete === 'function') onComplete();
     } catch (err) {
       console.error('[ForgivenWizard Revoke Error]:', err);
-      showToast('Gagal mencabut Forgiven: ' + err.message, 'error');
+      showToast('Failed to revoke Forgiven: ' + err.message, 'error');
       revokeBtn.disabled = false;
-      revokeBtn.textContent = '↩️ Revoke / Batalkan Forgiven';
+      revokeBtn.textContent = '↩️ Revoke Forgiven Status';
     }
   });
 

@@ -1444,3 +1444,33 @@ In the Organization screen, topbar tabs displayed generic strings `"Program (1)"
 - Immediate, accurate institution branding in the top navigation.
 - Consistent visual language: active/ongoing states are 100% pure green without magenta/pink bleed.
 - Clean, legible, and uncluttered Grade & Score student roster.
+
+
+---
+
+## DECISION-048 — Agent System Extension, Spatial Invariant Quality Gate, and Pre-Flight Protocol
+
+Date: 2026-11-11
+Status: ACCEPTED
+
+### Context
+To support the user's structured, invariant-driven development workflow, three system extensions were proposed and developed across side sessions (`faadd726-0df1-4cea-8824-2da6729641f4`) and the active roadmap:
+1. `ui-spatial-checker`: Need for programmatic assertions verifying 100vh lock, 10px container gap, 50px lower panel height, tabular numbers, and dynamic nowrap table columns.
+2. `visual-preflight`: Need for an automated quality gate requiring visual before-screenshots and interactive proposed mockups before subagent delegation or code edits.
+3. Context Window Hygiene: Need to prevent token bloat and memory degradation over long development trajectories via systematic compaction (`/compact`) and historical rule archiving.
+
+### Decision
+1. **Pipeline Integration of `ui-spatial-checker`**:
+   - Codified in `.agents/skills/ui-spatial-checker/SKILL.md` with script `scripts/check_spatial_invariants.mjs`.
+   - Embedded directly into the default `npm test` script in `package.json`.
+2. **Automated Subagent Pre-Flight Gate (`scripts/verify_plan_preflight.mjs`)**:
+   - Created standalone script `scripts/verify_plan_preflight.mjs` verifying that any plan involving UI changes contains the authoritative `# Visual Pre-Flight Verification Checklist` and visual deliverables.
+   - Delegation to subagent `DeepCoder` is strictly gated behind this automated verification.
+3. **Rules 23 & 24 Codification**:
+   - Codified in `.antigravityrules` and `AGENTS.md` (Sections 2.36 and 2.37).
+   - Standardized `/compact` command recommendation following milestone completion.
+
+### Consequences
+- Zero manual verification burden: spatial invariants and pre-flight rules are validated deterministically via automated CLI tests.
+- High-fidelity visual communication is enforced before any code changes are made.
+- Long-term sustainability and reasoning sharpness across agent workflows.

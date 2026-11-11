@@ -497,7 +497,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         return;
       }
 
-      // Display warning for Strike 1 to 10 (PERINGATAN MERAH SEMUA)
+      // Display warning for Strike 1 to 10 (ALL RED WARNINGS)
       const isFinalWarning = (cheatStrikes === MAX_STRIKES);
       if (strikeBadge) {
         strikeBadge.textContent = isFinalWarning ? `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES} (FINAL WARNING)` : `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;

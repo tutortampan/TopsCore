@@ -80,7 +80,7 @@ export async function renderTopics(area) {
         </div>
       </div>
 
-      <div class="table-responsive card" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
+      <div class="table-wrap">
         <table class="data-table" id="topics-table">
           <thead>
             <tr>
@@ -188,8 +188,8 @@ function renderTopicRows(topicsList) {
       <td style="text-align:right;">
         <div class="d-flex gap-1 justify-end">
           <button class="btn btn-outline btn-xs btn-nav-questions" data-id="${t.id}" data-name="${escapeHtml(t.name)}" title="View Questions in this Topic">Questions &rarr;</button>
-          <button class="btn btn-ghost btn-sm btn-edit-topic" data-id="${t.id}" title="Edit Topic">&#9999;&#65039;</button>
-          <button class="btn btn-ghost btn-sm text-danger btn-del-topic" data-id="${t.id}" title="Delete Topic">&#128465;&#65039;</button>
+          <button class="btn btn-ghost btn-sm btn-edit-topic edit-mode-only" data-id="${t.id}" title="Edit Topic">&#9999;&#65039;</button>
+          <button class="btn btn-ghost btn-sm text-danger btn-del-topic edit-mode-only" data-id="${t.id}" title="Delete Topic">&#128465;&#65039;</button>
         </div>
       </td>
     </tr>
@@ -1416,18 +1416,19 @@ export async function renderResults(area) {
     new window.DataGrid({
       container: 'results-grid-container',
       data: deduplicated,
-      pageSize: 20,
+      pageSize: 1000,
+      hideToolbar: true,
       searchKeys: ['students.name', 'tests.title', 'tests.shell_code', 'tests.test_type', 'students.programs.name', 'students.programs.institutions.name'],
       columns: [
-        { key: 'students.name', label: 'Student Name', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1);">${formatStudentName(r.students?.name, r.students?.gender) || '&mdash;'}</span>` },
-        { key: 'students.programs.institutions.name', label: 'Program', sortable: true, render: (v, r) => `<span class="text-muted text-sm">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
-        { key: 'students.programs.name', label: 'Class', sortable: true, render: (v, r) => `<span class="text-muted text-sm">${escapeHtml(r.students?.programs?.name || '&mdash;')}</span>` },
-        { key: 'students.batches.name', label: 'Batch', sortable: true, render: (v, r) => `<span class="badge ${r.students?.batches?.name ? 'badge-info' : 'badge-neutral'}" style="font-size:0.75rem;">${escapeHtml(r.students?.batches?.name || 'Unassigned')}</span>` },
+        { key: 'students.name', label: 'Student Name', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1); font-size:12px;">${formatStudentName(r.students?.name, r.students?.gender) || '&mdash;'}</span>` },
+        { key: 'students.programs.institutions.name', label: 'Program', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
+        { key: 'students.programs.name', label: 'Class', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.name || '&mdash;')}</span>` },
+        { key: 'students.batches.name', label: 'Batch', sortable: true, render: (v, r) => `<span class="text-sm fw-600" style="color:var(--clr-text-2); font-size:12px;">${escapeHtml(r.students?.batches?.name || 'Unassigned')}</span>` },
         {
           key: 'tests.title', label: 'Test Title', sortable: true, render: (v, r) => {
             const def = r.tests || {};
-            const codeBadge = def.shell_code ? `<span class="badge" style="font-family:monospace;font-size:0.7rem;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-right:6px;padding:2px 5px;">${escapeHtml(def.shell_code)}</span>` : '';
-            return `<div class="d-flex align-items-center flex-wrap gap-1">${codeBadge}<span class="text-sm fw-600">${def.test_type ? escapeHtml(def.test_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span></div>`;
+            const codeBadge = def.shell_code ? `<span class="badge" style="font-family:monospace;font-size:11px;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-right:6px;padding:2px 5px;">${escapeHtml(def.shell_code)}</span>` : '';
+            return `<div class="d-flex align-items-center flex-wrap gap-1" style="font-size:12px;">${codeBadge}<span class="text-sm fw-600">${def.test_type ? escapeHtml(def.test_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span></div>`;
           }
         },
         {
@@ -1438,13 +1439,12 @@ export async function renderResults(area) {
             const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
             const effectiveGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : (effectivePct >= 90 ? 'A' : (effectivePct >= 80 ? 'B' : (effectivePct >= 60 ? 'C' : (effectivePct >= 30 ? 'D' : 'E')))));
             const indicatorHtml = isRemedial
-              ? '<sup class="test-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;">R</sup>'
-              : (isForgiven ? '<sup class="test-forgiven-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;color:#ef4444;" title="Score Forgiven: ' + escapeHtml(r.forgiven_reason || 'Waiver') + '">F</sup>' : '');
+              ? '<sup class="test-rem-sup" style="font-size:1.0em !important;font-weight:900;margin-left:2px;">R</sup>'
+              : (isForgiven ? '<sup class="test-forgiven-sup" style="font-size:1.0em !important;font-weight:900;margin-left:2px;color:#ef4444;" title="Score Forgiven: ' + escapeHtml(r.forgiven_reason || 'Waiver') + '">F</sup>' : '');
             return `
-              <div class="text-center fw-700" style="display:flex;flex-direction:column;align-items:center;gap:3px;">
+              <div class="text-center fw-700" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
                   <span>${effectivePct.toFixed(1)}%${indicatorHtml}</span>
-                  <span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>
                 </div>
               </div>
             `;

@@ -1515,7 +1515,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (badgeEl) badgeEl.textContent = data.badge || 'TOPIC ASSESSMENT';
         if (titleEl) titleEl.textContent = data.title || 'Topic Assessment';
-        if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Pilih bagian yang ingin Anda kerjakan terlebih dahulu:';
+        if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Choose the module you would like to take first:';
 
         const wordsCard = document.getElementById('component-opt-words');
         const wordsTitle = document.getElementById('component-words-title');
@@ -1895,7 +1895,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     const modalData = encodeURIComponent(JSON.stringify({
                       badge: `THEME ${grp.themeCode} OFFICIAL EXAM`,
                       title: `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`,
-                      subtitle: 'Pilih bagian yang ingin Anda kerjakan terlebih dahulu:',
+                      subtitle: 'Choose the module you would like to take first:',
                       wordsTestId: wordsTest?.id,
                       phrasesTestId: phrasesTest?.id,
                       wordsBest: wBest,
@@ -1904,23 +1904,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     }));
                     actionBtnHtml = `<button type="button" onclick="window.triggerComponentChoiceModal('${modalData}')"
                                       style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
-                                      ${unifiedScore.isAttempted ? 'Kerjakan Exam' : 'Mulai Exam 🚀'}
+                                      ${unifiedScore.isAttempted ? 'Retake Exam' : 'Start Exam 🚀'}
                                     </button>`;
                   } else {
                     actionBtnHtml = `<button onclick="location.href='test.html?test_id=${wordsTest.id}'"
                                       style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
-                                      ${unifiedScore.isAttempted ? 'Kerjakan Exam' : 'Mulai Exam 🚀'}
+                                      ${unifiedScore.isAttempted ? 'Retake Exam' : 'Start Exam 🚀'}
                                     </button>`;
                   }
                 } else {
                   // Task
-                  const drillLabel = topicLevel >= 7 ? 'Drill Lagi 7×7' : (topicLevel > 0 ? 'Lanjut Drill' : 'Mulai Task 🚀');
+                  const drillLabel = topicLevel >= 7 ? '7×7 Mastery Drill' : (topicLevel > 0 ? 'Continue Drill' : 'Start Task 🚀');
 
                   if (hasPhrases) {
                     const modalData = encodeURIComponent(JSON.stringify({
                       badge: `THEME ${grp.themeCode} • TOPIC ${grp.topicCode} DRILL`,
                       title: `Topic ${grp.topicCode}: ${resolvedTopicTitle}`,
-                      subtitle: 'Pilih bagian yang ingin Anda kerjakan terlebih dahulu:',
+                      subtitle: 'Choose the module you would like to take first:',
                       wordsTestId: wordsTest?.id,
                       phrasesTestId: phrasesTest?.id,
                       wordsBest: wBest,

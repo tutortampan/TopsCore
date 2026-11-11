@@ -699,12 +699,12 @@ export const TOPSCORE_COLORS = Object.freeze({
   NEUTRAL_RGB: '148, 163, 184',
 
   // 3. Question Answer Evaluation Status (Result Page)
-  CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Star / A)
+  CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Strictly referencing Grade A, never Star)
   PARTIAL: '#FFFF00', // Half point (0.5 pt)  -> Pure Yellow (Grade C standard)
   INCORRECT: '#FF0000', // Zero point (0.0 pt)  -> Pure Red (Grade E fail tier)
 
   // 4. Grade Badge Text Contrast
-  TEXT_STAR: '#FFFFFF', // White star symbol on ★ badge
+  TEXT_STAR: '#0F172A', // Deep dark slate star symbol on ★ badge (Universal Dark Standard)
   TEXT_DARK: '#0F172A', // Deep dark slate letters for A, B, C, D, E badges
 });
 

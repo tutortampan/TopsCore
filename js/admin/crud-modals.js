@@ -1139,7 +1139,7 @@ function _initDuplicateModals() {
 async function loadDuplicateStudents(scope = 'same_class') {
   const dupStudContent = document.getElementById('dup-students-content');
   if (!dupStudContent) return;
-  dupStudContent.innerHTML = '<div class="empty-state p-6 text-center"><div class="spinner"></div><p>Scanning for duplicate students...</p></div>';
+  dupStudContent.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning for duplicate students...');
   try {
     const duplicateGroups = await detectDuplicateStudents(scope);
     dupStudentGroups = duplicateGroups || [];
@@ -1234,7 +1234,7 @@ async function loadDuplicateQuestions() {
   const dupQTestselect = document.getElementById('dup-q-test-select');
   if (!dupQContent) return;
 
-  dupQContent.innerHTML = '<div class="empty-state p-6 text-center"><div class="spinner"></div><p>Scanning for duplicate questions...</p></div>';
+  dupQContent.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning for duplicate questions...');
   try {
     const testId = dupQTestselect?.value || null;
     const data = await detectDuplicateQuestions(testId);
@@ -1578,7 +1578,7 @@ function _initBulkEditModal() {
   if (saveBtn) {
     saveBtn.addEventListener('click', async () => {
       if (!_bulkEditSelectedIds || _bulkEditSelectedIds.length === 0) {
-        showToast('Tidak ada test yang dipilih.', 'warning');
+        showToast('No tests selected.', 'warning');
         return;
       }
 
@@ -1588,7 +1588,7 @@ function _initBulkEditModal() {
       const chkOrd = document.getElementById('bulk-check-order')?.checked;
 
       if (!chkDur && !chkAns && !chkMin && !chkOrd) {
-        showToast('Pilih setidaknya satu opsi centang (⏱️ Waktu, 🗣️ Cara Jawab, atau 🎯 Batas Kelulusan) yang ingin diubah.', 'warning');
+        showToast('Select at least one checkbox option (⏱️ Duration, 🗣️ Answer Type, or 🎯 Passing Score) to modify.', 'warning');
         return;
       }
 
@@ -1598,17 +1598,17 @@ function _initBulkEditModal() {
       const ordVal = chkOrd ? document.getElementById('bulk-select-order')?.value : null;
 
       const count = _bulkEditSelectedIds.length;
-      if (!confirm(`Yakin ingin menerapkan perubahan massal ke ${count} test terpilih?`)) {
+      if (!confirm(`Are you sure you want to apply bulk changes to ${count} selected tests?`)) {
         return;
       }
 
       saveBtn.disabled = true;
       const origText = saveBtn.innerHTML;
-      saveBtn.innerHTML = `<span>⏳ Menyimpan...</span>`;
+      saveBtn.innerHTML = `<span>⏳ Saving...</span>`;
 
       try {
         const sb = getSupabase();
-        if (!sb) throw new Error('Database client tidak tersedia.');
+        if (!sb) throw new Error('Database client is not available.');
 
         // Build atomic bulk update payload
         const commonUpdate = {
@@ -1672,7 +1672,7 @@ function _initBulkEditModal() {
         clearAdminCache('tests');
         clearApiCache('tests');
 
-        showToast(`Berhasil memperbarui ${count} test secara massal.`, 'success');
+        showToast(`Successfully updated ${count} tests in bulk.`, 'success');
         closeModal();
 
         if (typeof _bulkEditOnComplete === 'function') {
@@ -1680,7 +1680,7 @@ function _initBulkEditModal() {
         }
       } catch (err) {
         console.error('[BulkEdit] Failed:', err);
-        showToast('Gagal menerapkan perubahan: ' + (err.message || 'Unknown error'), 'error');
+        showToast('Failed to apply changes: ' + (err.message || 'Unknown error'), 'error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.innerHTML = origText;
@@ -1694,7 +1694,7 @@ async function openBulkEditTestsModal(selectedIds = [], onComplete = null) {
   _initBulkEditModal();
 
   if (!selectedIds || selectedIds.length === 0) {
-    showToast('Pilih setidaknya satu test untuk di-edit.', 'warning');
+    showToast('Select at least one test to edit.', 'warning');
     return;
   }
 

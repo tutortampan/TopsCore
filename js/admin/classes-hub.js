@@ -2,7 +2,9 @@ import { adminFetchAll, adminUpdate } from '../api.js?v=20261106_v160';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 
 export async function renderClassesHub(area) {
-  area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Classes Hub...</p></div>';
+  area.innerHTML = typeof window.getLoadingStateHtml === 'function'
+    ? window.getLoadingStateHtml('Loading Classes Hub...')
+    : '<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">Loading Classes Hub...</p></div>';
 
   try {
     const [institutions, programs, classes, levels, classLevels, students, batches] = await Promise.all([

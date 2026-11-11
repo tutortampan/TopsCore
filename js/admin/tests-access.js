@@ -4,16 +4,16 @@
  * 
  * Features:
  * 1. Unified Theme Test Cards (Theme A, B, C, D): Words Test & Phrases Test unified into 1 Theme Card.
- * 2. 2 Distinct Session Opening Triggers: "🟢 Buka Sesi Normal" & "🟡 Buka Sesi Remidi".
+ * 2. 2 Distinct Session Opening Triggers: "🟢 Open Normal Session" & "🟡 Open Remedial Session".
  * 3. Smart Eligibility Engine:
- *    - Normal Mode: Prerequisite quizzes tuntas (>= 60%). Siswa yang sudah lulus tetap muncul untuk perbaikan nilai.
- *    - Remedial Mode: Prerequisite quizzes tuntas (>= 60%) & belum lulus (< 60% atau belum pernah ikut). Siswa yang sudah lulus TIDAK masuk remidi.
- * 4. Late Student Addition (+ Susulan):
- *    - HANYA menampilkan siswa eligible yang BELUM terdaftar di dalam sesi ujian.
- *    - Siswa yang sudah terdaftar 100% disembunyikan.
- *    - Otomatis mewarisi mode sesi (Normal / Remedial) tanpa centang manual.
- *    - Sisa waktu mengacu pada sisa waktu berjalan sesi global.
- * 5. 1-Click Dual Activation: Membuka/menutup Words Test dan Phrases Test secara serempak di database.
+ *    - Normal Mode: Prerequisite quizzes completed (>= 60%). Passed students remain visible for score improvement.
+ *    - Remedial Mode: Prerequisite quizzes completed (>= 60%) & not passed (< 60% or not taken). Passed students are excluded from remedial.
+ * 4. Late Student Addition (+ Late Arrival):
+ *    - ONLY displays eligible students who are NOT yet enrolled in the exam session.
+ *    - Enrolled students are 100% hidden.
+ *    - Automatically inherits session mode (Normal / Remedial) without manual toggles.
+ *    - Remaining time tracks running global session duration.
+ * 5. 1-Click Dual Activation: Opens/closes Words Test and Phrases Test synchronously in database.
  */
 
 import {
@@ -389,7 +389,7 @@ export async function renderClassTestSessions(container, context = {}) {
           <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; margin-bottom:8px;">
             <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.78rem; font-weight:700; color:#fbbf24; margin:0;">
               <input type="checkbox" id="late-modal-override-checkbox" style="width:15px; height:15px; cursor:pointer;">
-              <span>🛡️ Tutor Override (Izinkan semua siswa susulan)</span>
+              <span>🛡️ Tutor Override (Allow all late arrival students)</span>
             </label>
           </div>
           <div id="late-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
@@ -432,27 +432,27 @@ export async function renderClassTestSessions(container, context = {}) {
               NORMAL
             </div>
             <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:4px 10px; font-size:0.8rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-              <span>⏳ Sisa:</span>
+              <span>⏳ Remaining:</span>
               <span id="live-modal-remaining" style="color:#ffffff; font-weight:800;">--m</span>
             </div>
 
             <!-- Quick Add/Reduce Time Dropdown (Yellow #ffe600 per Rule 2.10) -->
             <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
-              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:900; background:#ffe600 !important; border:1px solid #d4c000 !important; color:#0f172a !important; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(255,230,0,0.35); cursor:pointer;" title="Atur Sisa Waktu Ujian (Tambah / Kurangi)">
-                <span>⏱️ Edit Waktu Sesi</span>
+              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.8rem; font-weight:900; background:#ffe600 !important; border:1px solid #d4c000 !important; color:#0f172a !important; border-radius:6px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 2px 10px rgba(255,230,0,0.35); cursor:pointer;" title="Adjust Remaining Exam Time (+ / -)">
+                <span>⏱️ Edit Session Time</span>
                 <span style="font-size:0.65rem;">▼</span>
               </button>
               <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; top:calc(100% + 6px); background:#0f172a; border:2px solid #ffe600; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 18px rgba(255,230,0,0.28); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
                 <!-- Yellow Header Banner -->
                 <div style="background:#ffe600; color:#0f172a; font-weight:900; font-size:0.72rem; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
-                  <span>⏱️ ATUR WAKTU SESI</span>
+                  <span>⏱️ ADJUST SESSION TIME</span>
                   <span style="font-size:0.65rem; background:#0f172a; color:#ffe600; padding:1px 5px; border-radius:3px;">LIVE</span>
                 </div>
 
-                <!-- Section 1: Tambah Waktu (+) -->
+                <!-- Section 1: Add Time (+) -->
                 <div>
                   <div style="font-size:0.65rem; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                    <span>🟢</span> TAMBAH WAKTU (+)
+                    <span>🟢</span> ADD TIME (+)
                   </div>
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                     <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
@@ -470,10 +470,10 @@ export async function renderClassTestSessions(container, context = {}) {
                   </div>
                 </div>
 
-                <!-- Section 2: Kurangi Waktu (-) -->
+                <!-- Section 2: Reduce Time (-) -->
                 <div>
                   <div style="font-size:0.65rem; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                    <span>🔴</span> KURANGI WAKTU (-)
+                    <span>🔴</span> REDUCE TIME (-)
                   </div>
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                     <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
@@ -493,7 +493,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
                 <!-- Section 3: Custom Button -->
                 <button type="button" id="btn-add-time-custom" style="width:100%; text-align:center; background:rgba(255,230,0,0.1); border:1px dashed #ffe600; color:#ffe600; padding:6px 8px; border-radius:6px; font-size:0.74rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
-                  <span>⚙️</span> Kustom Menit (+ / -)...
+                  <span>⚙️</span> Custom Minutes (+ / -)...
                 </button>
               </div>
             </div>
@@ -508,23 +508,23 @@ export async function renderClassTestSessions(container, context = {}) {
         <!-- KPI Summary Grid -->
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; padding:14px 24px; background:rgba(0,0,0,0.3); border-bottom:1px solid rgba(255,255,255,0.06);">
           <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">👥 Total Siswa</div>
+            <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">👥 Total Students</div>
             <div id="kpi-live-total" style="font-size:1.4rem; font-weight:800; color:#ffffff; margin-top:2px;">0</div>
           </div>
           <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#60a5fa; text-transform:uppercase;">🟢 Sedang Mengerjakan</div>
+            <div style="font-size:0.7rem; font-weight:700; color:#60a5fa; text-transform:uppercase;">🟢 In Progress</div>
             <div id="kpi-live-in-progress" style="font-size:1.4rem; font-weight:800; color:#38bdf8; margin-top:2px;">0</div>
           </div>
           <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#34d399; text-transform:uppercase;">✅ Sudah Selesai</div>
+            <div style="font-size:0.7rem; font-weight:700; color:#34d399; text-transform:uppercase;">✅ Completed</div>
             <div id="kpi-live-submitted" style="font-size:1.4rem; font-weight:800; color:#00c000ff; margin-top:2px;">0</div>
           </div>
           <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#fbbf24; text-transform:uppercase;">⏳ Belum Mulai</div>
+            <div style="font-size:0.7rem; font-weight:700; color:#fbbf24; text-transform:uppercase;">⏳ Not Started</div>
             <div id="kpi-live-not-started" style="font-size:1.4rem; font-weight:800; color:#fbbf24; margin-top:2px;">0</div>
           </div>
           <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#f87171; text-transform:uppercase;">🚨 Total Alarm</div>
+            <div style="font-size:0.7rem; font-weight:700; color:#f87171; text-transform:uppercase;">🚨 Total Alarms</div>
             <div id="kpi-live-alarms" style="font-size:1.4rem; font-weight:800; color:#FF0000; margin-top:2px;">0</div>
           </div>
         </div>
@@ -532,11 +532,11 @@ export async function renderClassTestSessions(container, context = {}) {
         <!-- Filter & Search Bar -->
         <div style="padding:12px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(15,23,42,0.4); border-bottom:1px solid rgba(255,255,255,0.06);">
           <div style="display:flex; gap:6px; flex-wrap:wrap;" id="live-modal-filter-tabs">
-            <button type="button" class="btn btn-xs btn-primary live-filter-btn active" data-filter="all">Semua (<span id="tab-cnt-all">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="in_progress">🟢 Sedang Mengerjakan (<span id="tab-cnt-in-progress">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="submitted">✅ Selesai (<span id="tab-cnt-submitted">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="not_started">⏳ Belum Mulai (<span id="tab-cnt-not-started">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="alarm">🚨 Ada Alarm (<span id="tab-cnt-alarm">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-primary live-filter-btn active" data-filter="all">All (<span id="tab-cnt-all">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="in_progress">🟢 In Progress (<span id="tab-cnt-in-progress">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="submitted">✅ Submitted (<span id="tab-cnt-submitted">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="not_started">⏳ Not Started (<span id="tab-cnt-not-started">0</span>)</button>
+            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="alarm">🚨 Alarm Triggered (<span id="tab-cnt-alarm">0</span>)</button>
           </div>
 
           <div style="display:flex; align-items:center; gap:10px;">
@@ -544,7 +544,7 @@ export async function renderClassTestSessions(container, context = {}) {
               <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer;">
               <span>⚡ Auto-Refresh (5s)</span>
             </label>
-            <input type="text" id="live-modal-search" placeholder="🔍 Cari siswa..." class="form-control" style="font-size:0.78rem; padding:4px 10px; width:150px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:6px;">
+            <input type="text" id="live-modal-search" placeholder="🔍 Search student..." class="form-control" style="font-size:0.78rem; padding:4px 10px; width:150px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:6px;">
           </div>
         </div>
 
@@ -554,12 +554,12 @@ export async function renderClassTestSessions(container, context = {}) {
             <table class="live-monitor-table">
               <thead>
                 <tr>
-                  <th class="sortable-th" data-sort-key="name">NAMA <span class="sort-icon" id="th-sort-name">⇅</span></th>
-                  <th class="sortable-th" data-sort-key="status">STATUS TEST <span class="sort-icon" id="th-sort-status">⇅</span></th>
-                  <th class="sortable-th" data-sort-key="progress">PROGRESS <span class="sort-icon" id="th-sort-progress">⇅</span></th>
-                  <th class="sortable-th" data-sort-key="score">SCORE (REALTIME) <span class="sort-icon" id="th-sort-score">⇅</span></th>
+                  <th class="sortable-th" data-sort-key="name">NAME <span class="sort-icon" id="th-sort-name"></span></th>
+                  <th class="sortable-th" data-sort-key="status">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
+                  <th class="sortable-th" data-sort-key="progress">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
+                  <th class="sortable-th" data-sort-key="score">SCORE (REALTIME) <span class="sort-icon" id="th-sort-score"></span></th>
                   <th style="text-align: center; width: 85px;">PEEK</th>
-                  <th class="sortable-th" data-sort-key="alarm" style="text-align: center; width: 120px;">ALARM <span class="sort-icon" id="th-sort-alarm">⇅</span></th>
+                  <th class="sortable-th" data-sort-key="alarm" style="text-align: center; width: 120px;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
                   <th style="text-align: right; width: 190px;">ACTION</th>
                 </tr>
               </thead>
@@ -573,9 +573,9 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <!-- Modal Footer -->
         <div style="padding:12px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); font-size:0.78rem; color:#94a3b8;">
-          <span id="live-modal-footer-info">Status ujian diperbarui secara real-time.</span>
+          <span id="live-modal-footer-info">Exam status updated in real-time.</span>
           <div style="display:flex; gap:8px;">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-close-live-modal-footer" style="color:#cbd5e1;">Tutup</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="btn-close-live-modal-footer" style="color:#cbd5e1;">Close</button>
           </div>
         </div>
       </div>
@@ -587,31 +587,31 @@ export async function renderClassTestSessions(container, context = {}) {
         <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
           <span style="font-size:1.6rem;">🚨</span>
           <div>
-            <h4 style="margin:0; font-size:1.15rem; font-weight:800; color:#f87171;">Keluarkan Siswa dari Ujian</h4>
-            <div id="kick-confirm-student-name" style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">Nama Siswa</div>
+            <h4 style="margin:0; font-size:1.15rem; font-weight:800; color:#f87171;">Expel Student from Exam</h4>
+            <div id="kick-confirm-student-name" style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">Student Name</div>
           </div>
         </div>
         <div style="padding:20px; font-size:0.85rem; color:#cbd5e1; display:flex; flex-direction:column; gap:12px;">
-          <div>Pilih tindakan untuk berkas ujian siswa yang sedang berlangsung:</div>
+          <div>Select an action for the student's active exam attempt:</div>
           <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
             <input type="radio" name="kick_action" value="submit" checked style="margin-top:3px; cursor:pointer;">
             <div>
-              <div style="font-weight:700; color:#ffffff;">📥 Kumpulkan & Nilai Jawaban Saat Ini</div>
-              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Ujian siswa dihentikan seketika. Jawaban yang sudah diisi disimpan dan dinilai secara otomatis.</div>
+              <div style="font-weight:700; color:#ffffff;">📥 Submit &amp; Grade Current Answers</div>
+              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Student's exam is stopped immediately. Current answers are saved and graded automatically.</div>
             </div>
           </label>
           <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
             <input type="radio" name="kick_action" value="cancel" style="margin-top:3px; cursor:pointer;">
             <div>
-              <div style="font-weight:700; color:#f87171;">⛔ Batalkan Ujian (Skor 0 / Cancelled)</div>
-              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Ujian siswa dibatalkan dan status berkas menjadi 'cancelled' dengan skor 0.</div>
+              <div style="font-weight:700; color:#f87171;">⛔ Cancel Exam (Score 0 / Cancelled)</div>
+              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Exam is voided and the attempt status is set to 'cancelled' with score 0.</div>
             </div>
           </label>
         </div>
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="color:#94a3b8;">Batal</button>
+          <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="color:#94a3b8;">Cancel</button>
           <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="background:#FF0000; border-color:#cc0000; font-weight:800; padding:8px 18px; display:inline-flex; align-items:center; gap:6px;">
-            <span>🚫</span> Keluarkan Sekarang
+            <span>🚫</span> Expel Now
           </button>
         </div>
       </div>
@@ -625,7 +625,7 @@ export async function renderClassTestSessions(container, context = {}) {
             <span style="font-size:1.5rem;">🚨</span>
             <div>
               <h4 id="alarm-detail-student-name" style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Log Alarm Anti-Cheat</h4>
-              <div id="alarm-detail-meta" style="font-size:0.75rem; color:#fca5a5; margin-top:2px;">Riwayat peringatan integritas ujian</div>
+              <div id="alarm-detail-meta" style="font-size:0.75rem; color:#fca5a5; margin-top:2px;">Exam integrity warning history</div>
             </div>
           </div>
           <button type="button" class="btn btn-ghost btn-icon" id="btn-close-alarm-detail" style="color:#94a3b8; font-size:1.3rem;">✕</button>
@@ -635,9 +635,9 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.3); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
           <button type="button" class="btn btn-sm" id="btn-clear-student-alarms" style="background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-size:0.78rem; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">
-            🔄 Reset / Ampuni Alarm Siswa
+            🔄 Reset / Forgive Student Alarms
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-alarm-detail" style="font-size:0.78rem; padding:6px 14px;">Tutup</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-alarm-detail" style="font-size:0.78rem; padding:6px 14px;">Close</button>
         </div>
       </div>
     </div>
@@ -652,13 +652,13 @@ export async function renderClassTestSessions(container, context = {}) {
               S
             </div>
             <div>
-              <h4 id="inspect-answers-student-name" style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff;">Lembar Jawaban Siswa</h4>
-              <div id="inspect-answers-meta" style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Progres dan status jawaban real-time</div>
+              <h4 id="inspect-answers-student-name" style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff;">Student Live Answer Sheet</h4>
+              <div id="inspect-answers-meta" style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Real-time progress and answer status</div>
             </div>
           </div>
           <div style="display:flex; align-items:center; gap:10px;">
             <div id="inspect-answers-score-badge" style="padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:800; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">
-              Akurasi: --
+              Accuracy: --
             </div>
             <button type="button" class="btn btn-ghost btn-icon" id="btn-close-inspect-answers" style="color:#94a3b8; font-size:1.3rem;">✕</button>
           </div>
@@ -674,7 +674,7 @@ export async function renderClassTestSessions(container, context = {}) {
           <div style="display:flex; gap:8px;" id="inspect-answers-quick-actions">
             <!-- Dynamic student actions: +10m, Resume -->
           </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-inspect-answers" style="font-size:0.8rem; padding:6px 16px;">Tutup</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-inspect-answers" style="font-size:0.8rem; padding:6px 16px;">Close</button>
         </div>
       </div>
     </div>
@@ -704,7 +704,7 @@ function renderThemeCard(theme, context) {
               🟢 LIVE (${remainingMinutes}m left)
             </span>
             <span class="duration-badge" style="font-size:0.72rem; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
-              👥 ${escapeHtml(liveBatchName || '')} (${enrolledCount} Siswa)
+              👥 ${escapeHtml(liveBatchName || '')} (${enrolledCount} Students)
             </span>
           ` : `
             <span class="duration-badge" style="font-size:0.72rem; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 7px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);" title="Official Exam Duration">
@@ -734,7 +734,7 @@ function renderThemeCard(theme, context) {
     row2Content = `
       <div style="height:54px;">
         <button type="button" class="btn btn-wireframe-live-view btn-theme-live-monitor" data-theme="${code}">
-          <span>👁️</span> LIVE VIEW &bull; MONITOR REALTIME (${enrolledCount} SISWA)
+          <span>👁️</span> LIVE VIEW &bull; REALTIME MONITOR (${enrolledCount} STUDENTS)
         </button>
       </div>
     `;
@@ -742,11 +742,11 @@ function renderThemeCard(theme, context) {
     // NORMAL (Green #00a82d) | REMIDI (Yellow #ffe600 with dark slate text #0f172a)
     row2Content = `
       <div class="card-block-row-buttons">
-        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" title="Buka Sesi Normal (Nilai Penuh)">
+        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" title="Open Normal Session (Full Score)">
           <span>🟢</span> NORMAL
         </button>
-        <button type="button" class="btn btn-wireframe-remidi btn-theme-open-session" data-theme="${code}" data-mode="remedial" title="Buka Sesi Remedial (Maksimal 60%)">
-          <span>🟡</span> REMIDI
+        <button type="button" class="btn btn-wireframe-remidi btn-theme-open-session" data-theme="${code}" data-mode="remedial" title="Open Remedial Session (Max 60%)">
+          <span>🟡</span> REMEDIAL
         </button>
       </div>
     `;
@@ -759,26 +759,26 @@ function renderThemeCard(theme, context) {
     row3Content = `
       <div class="card-block-row-buttons" style="position:relative;">
         <!-- 1. +Late Students -->
-        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" title="Tambah Siswa Susulan / Late Arrivals">
+        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" title="Add Late Arrival Students">
           <span>👥</span> +LATE STUDENTS
         </button>
 
         <!-- 2. Edit Time (Yellow #ffe600 with Dropdown Popover) -->
         <div style="position:relative; flex:1; height:100%; display:flex;">
-          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; height:100%; background:#ffe600 !important; color:#0f172a !important; border:1px solid #d4c000 !important; font-weight:900 !important; font-size:0.78rem !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:5px !important; border-radius:8px !important; box-shadow:0 4px 10px rgba(255,230,0,0.3) !important; cursor:pointer;" title="Edit Waktu Ujian (Tambah / Kurangi)">
+          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; height:100%; background:#ffe600 !important; color:#0f172a !important; border:1px solid #d4c000 !important; font-weight:900 !important; font-size:0.78rem !important; display:inline-flex !important; align-items:center !important; justify-content:center !important; gap:5px !important; border-radius:8px !important; box-shadow:0 4px 10px rgba(255,230,0,0.3) !important; cursor:pointer;" title="Edit Exam Time (+ / -)">
             <span>⏱️</span> EDIT TIME
           </button>
           <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid #ffe600; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 18px rgba(255,230,0,0.28); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
             <!-- Yellow Header Banner -->
             <div style="background:#ffe600; color:#0f172a; font-weight:900; font-size:0.72rem; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
-              <span>⏱️ EDIT WAKTU &bull; THEME ${code}</span>
-              <span style="font-size:0.65rem; background:#0f172a; color:#ffe600; padding:1px 5px; border-radius:3px;">SESI</span>
+              <span>⏱️ EDIT TIME &bull; THEME ${code}</span>
+              <span style="font-size:0.65rem; background:#0f172a; color:#ffe600; padding:1px 5px; border-radius:3px;">SESSION</span>
             </div>
 
-            <!-- Section 1: Tambah Waktu (+) -->
+            <!-- Section 1: Add Time (+) -->
             <div>
               <div style="font-size:0.65rem; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                <span>🟢</span> TAMBAH WAKTU (+)
+                <span>🟢</span> ADD TIME (+)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#34d399; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
@@ -796,10 +796,10 @@ function renderThemeCard(theme, context) {
               </div>
             </div>
 
-            <!-- Section 2: Kurangi Waktu (-) -->
+            <!-- Section 2: Reduce Time (-) -->
             <div>
               <div style="font-size:0.65rem; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                <span>🔴</span> KURANGI WAKTU (-)
+                <span>🔴</span> REDUCE TIME (-)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.3); color:#f87171; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
@@ -819,13 +819,13 @@ function renderThemeCard(theme, context) {
 
             <!-- Section 3: Custom Button -->
             <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="width:100%; text-align:center; background:rgba(255,230,0,0.1); border:1px dashed #ffe600; color:#ffe600; padding:6px 8px; border-radius:6px; font-size:0.74rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
-              <span>⚙️</span> Kustom Menit (+ / -)...
+              <span>⚙️</span> Custom Minutes (+ / -)...
             </button>
           </div>
         </div>
 
         <!-- 3. Close Session -->
-        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" title="Tutup Sesi Ujian Aktif">
+        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" title="Close Active Exam Session">
           <span>🔒</span> CLOSE SESSION
         </button>
       </div>
@@ -952,7 +952,7 @@ function bindTestSessionsEvents(container, themesData, context) {
       const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
       if (menu) menu.style.display = 'none';
 
-      const actionText = mins > 0 ? `diperpanjang +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
+      const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
       showLoading();
       try {
         const promises = [];
@@ -960,13 +960,13 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil ${actionText}!`, 'success');
+        showToast(`⏱️ Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
       } catch (err) {
         console.error('Error adjusting session time from card:', err);
-        showToast('Gagal mengubah waktu ujian: ' + err.message, 'error');
+        showToast('Failed to adjust exam timer: ' + err.message, 'error');
       } finally {
         hideLoading();
       }
@@ -986,21 +986,21 @@ function bindTestSessionsEvents(container, themesData, context) {
       if (menu) menu.style.display = 'none';
 
       const input = prompt(
-        `Atur waktu ujian Theme ${theme.code}:\n` +
-        `• Masukkan angka positif untuk menambah (contoh: 15 atau +15)\n` +
-        `• Masukkan angka negatif untuk mengurangi (contoh: -10)\n` +
-        `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+        `Adjust exam time for Theme ${theme.code}:\n` +
+        `• Enter a positive number to extend (e.g. 15 or +15)\n` +
+        `• Enter a negative number to reduce (e.g. -10)\n` +
+        `Allowed range: -180 to +180 minutes (cannot be 0).`,
         '10'
       );
       if (input === null) return;
       const cleanInput = input.trim();
       const mins = parseInt(cleanInput, 10);
       if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
-        showToast('Jumlah menit tidak valid (masukkan angka antara -180 s/d +180 dan tidak boleh 0)', 'warning');
+        showToast('Invalid minutes (enter a number between -180 and +180, non-zero)', 'warning');
         return;
       }
 
-      const actionText = mins > 0 ? `diperpanjang +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
+      const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
       showLoading();
       try {
         const promises = [];
@@ -1008,13 +1008,13 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`⏱️ Waktu ujian Theme ${theme.code} berhasil ${actionText}!`, 'success');
+        showToast(`⏱️ Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
       } catch (err) {
         console.error('Error adjusting session time from card:', err);
-        showToast('Gagal mengubah waktu ujian: ' + err.message, 'error');
+        showToast('Failed to adjust exam timer: ' + err.message, 'error');
       } finally {
         hideLoading();
       }
@@ -1386,7 +1386,7 @@ function openThemeSessionModal(container, theme, mode, context) {
 }
 
 /**
- * Open Modal: Tambah Siswa Susulan ke Sesi Berjalan
+ * Open Modal: Add Late Arrival Students to Running Session
  */
 function openThemeLateModal(container, theme, context) {
   _currentLateModalTheme = theme;
@@ -1707,7 +1707,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       studentsContainer.innerHTML = `
         <div style="padding: 40px; text-align: center; color: #94a3b8;">
           <div class="loading-spinner" style="margin: 0 auto 12px; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-          <div style="font-size: 0.9rem; font-weight: 600;">Mengambil status live siswa, progres jawaban, & alarm...</div>
+          <div style="font-size: 0.9rem; font-weight: 600;">Fetching live student status, answer progression, & alarms...</div>
         </div>
       `;
     }
@@ -1737,20 +1737,20 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         const hasCancelled = [wAtt, pAtt].some(a => a && a.status === 'cancelled');
 
         let status = 'not_started';
-        let statusText = 'Belum Mulai';
+        let statusText = 'Not Started';
         let statusColor = '#fbbf24';
 
         if (inProgressAtt) {
           status = 'in_progress';
-          statusText = 'Sedang Mengerjakan';
+          statusText = 'In Progress';
           statusColor = '#38bdf8';
         } else if (hasSubmitted) {
           status = 'submitted';
-          statusText = 'Sudah Selesai';
+          statusText = 'Submitted';
           statusColor = '#00c000ff';
         } else if (hasCancelled) {
           status = 'cancelled';
-          statusText = 'Dibatalkan / Kicked';
+          statusText = 'Cancelled / Ejected';
           statusColor = '#FF0000';
         }
 
@@ -1798,14 +1798,14 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         const activitySecAgo = lastActivityTime ? Math.max(0, Math.floor((Date.now() - new Date(lastActivityTime).getTime()) / 1000)) : null;
 
         let heartbeat = 'not_started';
-        let heartbeatText = 'Belum Masuk';
+        let heartbeatText = 'Not Joined';
         let heartbeatColor = '#94a3b8';
         let isPulsing = false;
 
         if (status === 'in_progress') {
           if (activitySecAgo !== null && activitySecAgo <= 90) {
             heartbeat = 'active';
-            heartbeatText = 'Aktif Menjawab';
+            heartbeatText = 'Actively Answering';
             heartbeatColor = '#34d399';
             isPulsing = true;
           } else if (activitySecAgo !== null && activitySecAgo <= 300) {
@@ -1814,17 +1814,17 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             heartbeatColor = '#fbbf24';
           } else if (activitySecAgo !== null && activitySecAgo > 300) {
             heartbeat = 'away';
-            heartbeatText = `Tidak Aktif ${Math.floor(activitySecAgo / 60)}m`;
+            heartbeatText = `Inactive ${Math.floor(activitySecAgo / 60)}m`;
             heartbeatColor = '#f87171';
           } else {
             heartbeat = 'starting';
-            heartbeatText = 'Memulai Ujian';
+            heartbeatText = 'Starting Exam';
             heartbeatColor = '#38bdf8';
             isPulsing = true;
           }
         } else if (status === 'submitted') {
           heartbeat = 'completed';
-          heartbeatText = 'Selesai';
+          heartbeatText = 'Finished';
           heartbeatColor = '#00c000ff';
         }
 
@@ -1832,15 +1832,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         let activityFeed = '';
         if (status === 'in_progress') {
           if (answeredCount > 0 && activitySecAgo !== null) {
-            const agoStr = activitySecAgo < 60 ? `${activitySecAgo}s lalu` : `${Math.floor(activitySecAgo / 60)}m lalu`;
-            activityFeed = `Terakhir: Soal #${answeredCount} (${agoStr})`;
+            const agoStr = activitySecAgo < 60 ? `${activitySecAgo}s ago` : `${Math.floor(activitySecAgo / 60)}m ago`;
+            activityFeed = `Last: Question #${answeredCount} (${agoStr})`;
           } else {
-            activityFeed = 'Belum ada soal dijawab';
+            activityFeed = 'No questions answered yet';
           }
         } else if (status === 'submitted') {
-          activityFeed = 'Semua soal tersubmit';
+          activityFeed = 'All questions submitted';
         } else {
-          activityFeed = 'Menunggu siswa membuka ujian';
+          activityFeed = 'Waiting for student to start exam';
         }
 
         // Velocity & ETA
@@ -1857,7 +1857,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         let rawScore = 0;
         let effectiveScore = 0;
         let isEvaluated = false;
-        let scoreLabel = 'Belum Ada Skor';
+        let scoreLabel = 'No Score Yet';
 
         if (status === 'submitted') {
           const validSub = [wAtt, pAtt].filter(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
@@ -1885,14 +1885,14 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         } else if (status === 'in_progress' && targetAtt) {
           if (answeredCount === 0) {
             isEvaluated = false;
-            scoreLabel = 'Memulai Ujian...';
+            scoreLabel = 'Starting Exam...';
           } else {
             isEvaluated = true;
             const correctCount = countCorrectAnswers(targetAnswers);
             const runningAccuracy = Math.round((correctCount / answeredCount) * 100);
             rawScore = runningAccuracy;
             effectiveScore = theme.isRemedial ? Math.min(rawScore, 60) : rawScore;
-            scoreLabel = `Akurasi (${correctCount}/${answeredCount})`;
+            scoreLabel = `Accuracy (${correctCount}/${answeredCount})`;
           }
         }
 
@@ -1939,14 +1939,14 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
       if (footerInfoEl) {
         const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        footerInfoEl.textContent = `Terakhir diperbarui: ${timeStr} WITA • Data real-time sinkron`;
+        footerInfoEl.textContent = `Last updated: ${timeStr} WITA • Real-time synchronized`;
       }
     } catch (err) {
       console.error('Error loading live test session data:', err);
       studentsContainer.innerHTML = `
         <div style="padding: 30px; text-align: center; color: #f87171;">
-          <div>⚠️ Gagal memuat data live monitor: ${escapeHtml(err.message)}</div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-retry-live-load" style="margin-top: 10px;">Coba Lagi</button>
+          <div>⚠️ Failed to load live monitor data: ${escapeHtml(err.message)}</div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-retry-live-load" style="margin-top: 10px;">Retry</button>
         </div>
       `;
       modal.querySelector('#btn-retry-live-load')?.addEventListener('click', () => loadLiveData(false));
@@ -1966,7 +1966,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     modal.querySelector('#kpi-live-in-progress').textContent = String(inProgress);
     modal.querySelector('#kpi-live-submitted').textContent = String(submitted);
     modal.querySelector('#kpi-live-not-started').textContent = String(notStarted);
-    modal.querySelector('#kpi-live-alarms').innerHTML = `${totalAlarms} <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">(${studentsWithAlarms} Siswa)</span>`;
+    modal.querySelector('#kpi-live-alarms').innerHTML = `${totalAlarms} <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">(${studentsWithAlarms} Students)</span>`;
 
     modal.querySelector('#tab-cnt-all').textContent = String(total);
     modal.querySelector('#tab-cnt-in-progress').textContent = String(inProgress);
@@ -2032,7 +2032,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         if (icon) icon.textContent = _liveSortDirection === 'asc' ? '▲' : '▼';
       } else {
         th.classList.remove('active-sort');
-        if (icon) icon.textContent = '⇅';
+        if (icon) icon.textContent = '';
       }
     });
 
@@ -2040,7 +2040,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       tableBody.innerHTML = `
         <tr>
           <td colspan="7" style="padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-            ${q ? `Tidak ada siswa yang cocok dengan "${escapeHtml(q)}".` : 'Tidak ada siswa pada filter ini.'}
+            ${q ? `No students matching "${escapeHtml(q)}".` : 'No students found in this filter.'}
           </td>
         </tr>
       `;
@@ -2058,7 +2058,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
       const isStar = item.isEvaluated && (item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100);
       const gradeText = isStar ? '★' : (item.isEvaluated ? item.grade : '-');
-      const circleText = isStar ? '#ffffff' : (item.isEvaluated ? '#0f172a' : '#64748b');
+      const circleText = isStar ? '#0f172a' : (item.isEvaluated ? '#0f172a' : '#64748b');
       const circleClass = isStar ? 'grade-circle-star' : `grade-circle-${(item.grade || 'e').toLowerCase()}`;
 
       const gradeCircleHtml = item.isEvaluated ? `
@@ -2112,7 +2112,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           <!-- 3. PROGRESS -->
           <td style="min-width: 170px;">
             <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
-              <span style="color:#94a3b8;">Soal:</span>
+              <span style="color:#94a3b8;">Questions:</span>
               <span style="font-weight:800; color:#ffffff;">${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)</span>
             </div>
             <div style="height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
@@ -2141,8 +2141,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
           <!-- 5. PEEK -->
           <td style="text-align:center;">
-            <button type="button" class="btn btn-xs btn-inspect-student-answers" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-weight:700; font-size:0.75rem; padding:5px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;" title="Intip lembar jawaban & riwayat pengerjaan siswa">
-              <span>👁️</span> Intip
+            <button type="button" class="btn btn-xs btn-inspect-student-answers" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-weight:700; font-size:0.75rem; padding:5px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;" title="Inspect student answer sheet & attempt history">
+              <span>👁️</span> Peek
             </button>
           </td>
 
@@ -2150,10 +2150,10 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           <td style="text-align:center;">
             ${item.alarmCount === 0 ? `
               <span style="font-size:0.75rem; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
-                🛡️ 0x Bersih
+                🛡️ 0 Clean
               </span>
             ` : `
-              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size:0.75rem; font-weight:800; color:#FF0000; background:rgba(255,0,0,0.2); border:1px solid #FF0000; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer;" title="Klik untuk lihat rincian ${item.alarmCount}x alarm anti-cheat">
+              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size:0.75rem; font-weight:800; color:#FF0000; background:rgba(255,0,0,0.2); border:1px solid #FF0000; padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer;" title="Click to view details of ${item.alarmCount} anti-cheat alarms">
                 🚨 ${item.alarmCount}x ALARM 🔍
               </span>
             `}
@@ -2163,19 +2163,19 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           <td style="text-align:right;">
             <div style="display:inline-flex; align-items:center; gap:5px; justify-content:flex-end;">
               ${item.targetAtt && item.status === 'in_progress' ? `
-                <button type="button" class="btn btn-xs btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,230,0,0.15); border:1px solid #ffe600; color:#ffe600; font-weight:800; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Atur waktu pengerjaan khusus siswa ini (Tambah / Kurangi)">
-                  <span>⏱️</span> ±Waktu
+                <button type="button" class="btn btn-xs btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,230,0,0.15); border:1px solid #ffe600; color:#ffe600; font-weight:800; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Adjust exam time for this student (+ / -)">
+                  <span>⏱️</span> ±Time
                 </button>
               ` : ''}
 
               ${item.targetAtt && (item.status === 'submitted' || item.status === 'cancelled') ? `
-                <button type="button" class="btn btn-xs btn-student-reopen-attempt" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Buka kembali sesi ujian siswa ini (Resume Attempt)">
+                <button type="button" class="btn btn-xs btn-student-reopen-attempt" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Reopen exam session for this student (Resume Attempt)">
                   <span>🔄</span> Resume
                 </button>
               ` : ''}
 
-              <button type="button" class="btn btn-xs btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,0,0,0.15); border:1px solid rgba(255,0,0,0.35); color:#ff6b6b; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Keluarkan siswa dari sesi ujian">
-                <span>🚫</span> Keluarkan
+              <button type="button" class="btn btn-xs btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,0,0,0.15); border:1px solid rgba(255,0,0,0.35); color:#ff6b6b; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Expel student from exam session">
+                <span>🚫</span> Expel
               </button>
             </div>
           </td>
@@ -2194,7 +2194,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           theme.allowedStudentIds = (theme.allowedStudentIds || []).filter(id => id !== studentId);
           await loadLiveData(false);
           const enrolledLabel = container.querySelector(`.btn-theme-live-monitor[data-theme="${theme.code}"]`);
-          if (enrolledLabel) enrolledLabel.innerHTML = `<span>👁️</span> Monitor Live & Status Ujian (${theme.allowedStudentIds.length})`;
+          if (enrolledLabel) enrolledLabel.innerHTML = `<span>👁️</span> Live Monitor & Exam Status (${theme.allowedStudentIds.length})`;
           if (window.renderClassHub) {
             // Background sync Class Hub if open
           }
@@ -2213,9 +2213,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         if (!inspectModal) return;
 
         inspectModal.querySelector('#inspect-answers-avatar').textContent = (found.student.name || 'S').charAt(0).toUpperCase();
-        inspectModal.querySelector('#inspect-answers-student-name').textContent = found.student.name || 'Siswa';
-        inspectModal.querySelector('#inspect-answers-meta').textContent = `${found.activeModule} • ${found.answeredCount} / ${found.totalQuestions} Soal Terjawab • ${found.heartbeatText}`;
-        inspectModal.querySelector('#inspect-answers-score-badge').textContent = `Akurasi: ${found.isEvaluated ? found.effectiveScore + '%' : '--'}`;
+        inspectModal.querySelector('#inspect-answers-student-name').textContent = found.student.name || 'Student';
+        inspectModal.querySelector('#inspect-answers-meta').textContent = `${found.activeModule} • ${found.answeredCount} / ${found.totalQuestions} Questions Answered • ${found.heartbeatText}`;
+        inspectModal.querySelector('#inspect-answers-score-badge').textContent = `Accuracy: ${found.isEvaluated ? found.effectiveScore + '%' : '--'}`;
 
         const contentBox = inspectModal.querySelector('#inspect-answers-content');
         const answers = found.targetAnswers || [];
@@ -2223,13 +2223,13 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         if (answers.length === 0) {
           contentBox.innerHTML = `
             <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-              Belum ada lembar jawaban yang tersimpan untuk siswa ini.
+              No answer records saved yet for this student.
             </div>
           `;
         } else {
           contentBox.innerHTML = answers.map((ans, idx) => {
             const num = idx + 1;
-            const prompt = ans.question_snapshot || ans.topic_snapshot || `Soal #${num}`;
+            const prompt = ans.question_snapshot || ans.topic_snapshot || `Question #${num}`;
             const studentInput = (ans.student_answer || '').trim();
             const isCorrect = ans.is_correct === true || ans.score >= 1;
             const isPartial = ans.score > 0 && ans.score < 1;
@@ -2237,22 +2237,22 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
             let statusBadge = '';
             if (!isAnswered) {
-              statusBadge = '<span style="color:#94a3b8; font-size:0.75rem; font-weight:700;">⏳ Belum Diisi</span>';
+              statusBadge = '<span style="color:#94a3b8; font-size:0.75rem; font-weight:700;">⏳ Not Answered</span>';
             } else if (isCorrect) {
-              statusBadge = '<span style="color:#34d399; font-size:0.75rem; font-weight:800; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">✅ Benar (1.0 pt)</span>';
+              statusBadge = '<span style="color:#34d399; font-size:0.75rem; font-weight:800; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">✅ Correct (1.0 pt)</span>';
             } else if (isPartial) {
               statusBadge = '<span style="color:#fbbf24; font-size:0.75rem; font-weight:800; background:rgba(245,158,11,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">🟡 Partial (0.5 pt)</span>';
             } else {
-              statusBadge = '<span style="color:#f87171; font-size:0.75rem; font-weight:800; background:rgba(239,68,68,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);">❌ Salah (0 pt)</span>';
+              statusBadge = '<span style="color:#f87171; font-size:0.75rem; font-weight:800; background:rgba(239,68,68,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);">❌ Incorrect (0 pt)</span>';
             }
 
             return `
               <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
                 <div style="flex:1;">
-                  <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">Soal #${num}</div>
+                  <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">Question #${num}</div>
                   <div style="font-size:0.85rem; font-weight:600; color:#ffffff; margin-top:2px;">${escapeHtml(prompt)}</div>
                   <div style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;">
-                    Jawaban Siswa: <strong style="color:${isAnswered ? '#ffffff' : '#64748b'};">${escapeHtml(studentInput || '(Kosong)')}</strong>
+                    Student Answer: <strong style="color:${isAnswered ? '#ffffff' : '#64748b'};">${escapeHtml(studentInput || '(Empty)')}</strong>
                   </div>
                 </div>
                 <div>${statusBadge}</div>
@@ -2268,31 +2268,31 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           const btnAddTime = document.createElement('button');
           btnAddTime.className = 'btn btn-sm';
           btnAddTime.style.cssText = 'background:#ffe600; border:1px solid #d4c000; color:#0f172a; font-weight:900; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer; box-shadow:0 2px 8px rgba(255,230,0,0.3);';
-          btnAddTime.innerHTML = '⏱️ ± Atur Waktu Siswa Ini';
+          btnAddTime.innerHTML = '⏱️ ± Adjust Student Time';
           btnAddTime.onclick = async () => {
             const input = prompt(
-              `Atur waktu pengerjaan khusus untuk ${found.student.name}:\n` +
-              `• Masukkan angka positif untuk menambah (contoh: 10 atau +10)\n` +
-              `• Masukkan angka negatif untuk mengurangi (contoh: -5)\n` +
-              `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+              `Adjust exam time for ${found.student.name}:\n` +
+              `• Enter a positive number to extend (e.g. 10 or +10)\n` +
+              `• Enter a negative number to reduce (e.g. -5)\n` +
+              `Allowed range: -180 to +180 minutes (cannot be 0).`,
               '10'
             );
             if (input === null) return;
             const mins = parseInt(input.trim(), 10);
             if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
-              showToast('Jumlah menit tidak valid (masukkan -180 s/d +180 dan tidak boleh 0)', 'warning');
+              showToast('Invalid minutes (enter a number between -180 and +180, non-zero)', 'warning');
               return;
             }
 
-            const actionText = mins > 0 ? `ditambah +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
+            const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
             showLoading();
             try {
               await extendIndividualAttemptTime(found.targetAtt.id, mins);
-              showToast(`⏱️ Waktu untuk ${found.student.name} berhasil ${actionText}!`, 'success');
+              showToast(`⏱️ Time for ${found.student.name} successfully ${actionText}!`, 'success');
               inspectModal.classList.add('hidden');
               await loadLiveData(true);
             } catch (err) {
-              showToast('Gagal mengubah waktu: ' + err.message, 'error');
+              showToast('Failed to adjust time: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
@@ -2302,19 +2302,18 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           const btnResume = document.createElement('button');
           btnResume.className = 'btn btn-sm';
           btnResume.style.cssText = 'background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#34d399; font-weight:700; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer;';
-          btnResume.innerHTML = '🔄 Buka Kunci / Resume Attempt';
+          btnResume.innerHTML = '🔄 Unlock / Resume Attempt';
           btnResume.onclick = async () => {
-            const confirmed = confirm(`Buka kembali sesi ujian untuk ${found.student.name}?
-Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang +30 menit.`);
+            const confirmed = confirm(`Reopen exam session for ${found.student.name}?\nStatus will be restored to 'in_progress' and remaining time extended by +30 minutes.`);
             if (!confirmed) return;
             showLoading();
             try {
               await reopenStudentAttempt(found.targetAtt.id, 30);
-              showToast(`🔄 Ujian ${found.student.name} berhasil dibuka kembali!`, 'success');
+              showToast(`🔄 Exam for ${found.student.name} reopened successfully!`, 'success');
               inspectModal.classList.add('hidden');
               await loadLiveData(false);
             } catch (err) {
-              showToast('Gagal membuka kembali ujian: ' + err.message, 'error');
+              showToast('Failed to reopen exam: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
@@ -2334,31 +2333,31 @@ Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang
     tableBody.querySelectorAll('.btn-student-add-time').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const attemptId = e.currentTarget.getAttribute('data-attempt-id');
-        const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
+        const studentName = e.currentTarget.getAttribute('data-student-name') || 'Student';
         if (!attemptId) return;
 
         const input = prompt(
-          `Atur sisa waktu pengerjaan untuk ${studentName}:\n` +
-          `• Masukkan angka positif untuk menambah (contoh: 10 atau +10)\n` +
-          `• Masukkan angka negatif untuk mengurangi (contoh: -5)\n` +
-          `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+          `Adjust remaining time for ${studentName}:\n` +
+          `• Enter a positive number to extend (e.g. 10 or +10)\n` +
+          `• Enter a negative number to reduce (e.g. -5)\n` +
+          `Allowed range: -180 to +180 minutes (cannot be 0).`,
           '10'
         );
         if (input === null) return;
         const mins = parseInt(input.trim(), 10);
         if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
-          showToast('Jumlah menit tidak valid (masukkan angka antara -180 s/d +180 dan tidak boleh 0)', 'warning');
+          showToast('Invalid minutes (enter a number between -180 and +180, non-zero)', 'warning');
           return;
         }
 
-        const actionText = mins > 0 ? `ditambah +${mins} menit` : `dikurangi ${Math.abs(mins)} menit`;
+        const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
         showLoading();
         try {
           await extendIndividualAttemptTime(attemptId, mins);
-          showToast(`⏱️ Waktu untuk ${studentName} berhasil ${actionText}!`, 'success');
+          showToast(`⏱️ Time for ${studentName} successfully ${actionText}!`, 'success');
           await loadLiveData(true);
         } catch (err) {
-          showToast('Gagal mengubah waktu siswa: ' + err.message, 'error');
+          showToast('Failed to adjust student time: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -2369,20 +2368,19 @@ Status akan kembali menjadi 'in_progress' dan sisa waktu pengerjaan diperpanjang
     tableBody.querySelectorAll('.btn-student-reopen-attempt').forEach(btn => {
       btn.addEventListener('click', async (e) => {
         const attemptId = e.currentTarget.getAttribute('data-attempt-id');
-        const studentName = e.currentTarget.getAttribute('data-student-name') || 'Siswa';
+        const studentName = e.currentTarget.getAttribute('data-student-name') || 'Student';
         if (!attemptId) return;
 
-        const confirmed = confirm(`Buka kembali sesi ujian untuk ${studentName}?
-Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa dapat melanjutkan.`);
+        const confirmed = confirm(`Reopen exam session for ${studentName}?\nStatus will be restored to 'in_progress' and exam time extended by +30 minutes so the student can resume.`);
         if (!confirmed) return;
 
         showLoading();
         try {
           await reopenStudentAttempt(attemptId, 30);
-          showToast(`🔄 Ujian ${studentName} berhasil dibuka kembali!`, 'success');
+          showToast(`🔄 Exam for ${studentName} reopened successfully!`, 'success');
           await loadLiveData(false);
         } catch (err) {
-          showToast('Gagal membuka kembali ujian: ' + err.message, 'error');
+          showToast('Failed to reopen exam: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -2424,7 +2422,7 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
     refreshBtn.onclick = () => loadLiveData(false);
   }
 
-  // Time Extension Controls (+ Tambah Waktu)
+  // Time Extension Controls (+ Add Time)
   const addTimeBtn = modal.querySelector('#btn-live-modal-add-time');
   const addTimeMenu = modal.querySelector('#live-modal-add-time-menu');
 
@@ -2458,16 +2456,16 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
         addTimeMenu.style.display = 'none';
         addTimeMenu.classList.add('hidden');
         const inputStr = prompt(
-          `Atur waktu sesi ujian live:\n` +
-          `• Masukkan angka positif untuk menambah (contoh: 15 atau +15)\n` +
-          `• Masukkan angka negatif untuk mengurangi (contoh: -10)\n` +
-          `Rentang yang diizinkan: -180 s/d +180 menit (tidak boleh 0).`,
+          `Adjust live exam session time:\n` +
+          `• Enter a positive number to extend (e.g. 15 or +15)\n` +
+          `• Enter a negative number to reduce (e.g. -10)\n` +
+          `Allowed range: -180 to +180 minutes (cannot be 0).`,
           '10'
         );
         if (!inputStr) return;
         const mins = parseInt(inputStr.trim(), 10);
         if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
-          alert('Jumlah menit harus berupa angka antara -180 s/d +180 dan tidak boleh 0.');
+          alert('Minutes must be a number between -180 and +180 and cannot be 0.');
           return;
         }
         await doExtendTime(mins);
@@ -2478,20 +2476,20 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
   async function doExtendTime(mins) {
     const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
     if (!testIds.length) {
-      showToast('Tidak ada tes yang aktif untuk diatur waktunya.', 'error');
+      showToast('No active tests available to adjust time.', 'error');
       return;
     }
 
-    const actionText = mins > 0 ? `+${mins} menit` : `${mins} menit`;
+    const actionText = mins > 0 ? `+${mins} min` : `${mins} min`;
     try {
-      showToast(`Menyesuaikan waktu ujian (${actionText})...`, 'info', 2500);
+      showToast(`Adjusting exam time (${actionText})...`, 'info', 2500);
       const res = await extendTestSessionTime({ testIds, additionalMinutes: mins });
       if (res.success) {
         theme.remainingMinutes = res.remainingMinutes;
         remainingEl.textContent = `${res.remainingMinutes}m`;
         const resultMsg = mins > 0
-          ? `⏱️ Waktu ujian berhasil diperpanjang +${mins} menit! Sisa waktu sekarang: ${res.remainingMinutes}m`
-          : `⏱️ Waktu ujian berhasil dikurangi ${Math.abs(mins)} menit! Sisa waktu sekarang: ${res.remainingMinutes}m`;
+          ? `⏱️ Exam timer successfully extended by +${mins} minutes! Remaining time: ${res.remainingMinutes}m`
+          : `⏱️ Exam timer successfully reduced by ${Math.abs(mins)} minutes! Remaining time: ${res.remainingMinutes}m`;
         showToast(resultMsg, 'success', 5000);
         await loadLiveData(true);
         if (window.renderClassHub) {
@@ -2500,7 +2498,7 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
       }
     } catch (err) {
       console.error('Failed to adjust test time:', err);
-      showToast('Gagal mengubah waktu ujian: ' + err.message, 'error');
+      showToast('Failed to adjust exam timer: ' + err.message, 'error');
     }
   }
 
@@ -2593,7 +2591,7 @@ Status akan kembali 'in_progress' dan waktu ujian ditambah +30 menit agar siswa 
 }
 
 /**
- * Open Modal: Rincian Alarm Anti-Cheat & Opsi Reset / Ampuni Siswa
+ * Open Modal: Anti-Cheat Alarm Details & Student Alarm Reset
  */
 function openStudentAlarmDetailModal(container, student, alarmsList = [], theme, onDone) {
   const alarmModal = container.querySelector('#modal-student-alarm-detail');
@@ -2603,14 +2601,14 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   const metaEl = alarmModal.querySelector('#alarm-detail-meta');
   const listEl = alarmModal.querySelector('#alarm-detail-logs-list');
 
-  if (nameEl) nameEl.textContent = `${student.name || 'Siswa'} (${alarmsList.length}x ALARM)`;
+  if (nameEl) nameEl.textContent = `${student.name || 'Student'} (${alarmsList.length}x ALARMS)`;
   if (metaEl) metaEl.textContent = `Batch ${theme.liveBatchName} • Theme ${theme.code} (${theme.name})`;
 
   if (listEl) {
     if (alarmsList.length === 0) {
       listEl.innerHTML = `
         <div style="text-align:center; color:#34d399; padding:24px 10px; font-weight:700;">
-          🛡️ Tidak ada catatan alarm integritas untuk siswa ini.
+          🛡️ No integrity alarm records for this student.
         </div>
       `;
     } else {
@@ -2644,15 +2642,15 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   if (resetBtn) {
     resetBtn.onclick = async () => {
       const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
-      if (!confirm(`Reset semua alarm anti-cheat untuk ${student.name}? Tindakan ini akan menganggap peringatan sebelumnya sebagai false alarm.`)) return;
+      if (!confirm(`Reset all anti-cheat alarms for ${student.name}? This will treat previous warnings as false alarms.`)) return;
 
       try {
         await resetStudentTestAlarms({ studentId: student.id, testIds });
-        showToast(`✅ Seluruh alarm untuk ${student.name} berhasil di-reset.`, 'success');
+        showToast(`✅ All alarms for ${student.name} successfully reset.`, 'success');
         closeAlarmModal();
         if (onDone) onDone();
       } catch (err) {
-        showToast('Gagal me-reset alarm: ' + err.message, 'error');
+        showToast('Failed to reset alarms: ' + err.message, 'error');
       }
     };
   }
@@ -2661,7 +2659,7 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
 }
 
 /**
- * Open Modal: Konfirmasi Keluarkan Siswa (Kick Student)
+ * Open Modal: Confirm Expel Student from Exam
  */
 function openKickConfirmationModal(container, studentId, studentName, theme, onDone) {
   const kickModal = container.querySelector('#modal-kick-student-confirm');
@@ -2706,14 +2704,14 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
 
       await Promise.all(promises);
 
-      const actionText = chosenAction === 'submit' ? 'Jawaban Dikumpulkan & Dinilai' : 'Ujian Dibatalkan (Skor 0)';
-      showToast(`🚫 ${studentName} berhasil dikeluarkan dari sesi ujian (${actionText}).`, 'success');
+      const actionText = chosenAction === 'submit' ? 'Answers Submitted & Graded' : 'Exam Cancelled (Score 0)';
+      showToast(`🚫 ${studentName} successfully removed from exam session (${actionText}).`, 'success');
       if (typeof onDone === 'function') {
         await onDone();
       }
     } catch (err) {
       console.error('Error kicking student:', err);
-      showToast('Gagal mengeluarkan siswa: ' + err.message, 'error');
+      showToast('Failed to expel student: ' + err.message, 'error');
     } finally {
       hideLoading();
     }
@@ -2845,7 +2843,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     if (mode === 'normal') {
       // Normal Mode:
       // - Prereq must be met.
-      // - If already passed: STILL eligible per user rule ("siapa tahu dia ingin mencoba lagi untuk nilai yang lebih baik").
+      // - If already passed: STILL eligible per user rule ("in case they want to try again for a higher score").
       // - If prereq not met: NOT eligible unless tutor overrides.
       if (!priorThemePassed) {
         isEligible = false;

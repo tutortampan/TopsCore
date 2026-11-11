@@ -161,7 +161,7 @@ export async function openAutoGenerateModal(options = {}) {
           <!-- Section 1: Target Level & Program -->
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
             <div>
-              <label class="form-label" style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px; display:block;">Pilih Level:</label>
+              <label class="form-label" style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px; display:block;">Select Level:</label>
               <div style="display:flex; flex-wrap:wrap; gap:8px; background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
                 ${displayLevels.map(lvl => `
                   <label style="display:inline-flex; align-items:center; gap:4px; font-size:0.78rem; cursor:pointer; color:#e2e8f0;">
@@ -172,11 +172,11 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
 
             <div>
-              <label for="wizard-scope-select" class="form-label" style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px; display:block;">Cakupan Kategori:</label>
+              <label for="wizard-scope-select" class="form-label" style="font-size:0.72rem; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px; display:block;">Category Scope:</label>
               <select id="wizard-scope-select" class="form-control" style="background:#090d16; color:#f8fafc; border:1px solid rgba(255,255,255,0.08); font-size:0.78rem; height:34px;">
-                <option value="all" selected>● Semua (Words &amp; Phrases — 40 Soal)</option>
-                <option value="words">○ Words Saja (20 Soal)</option>
-                <option value="phrases">○ Phrases Saja (20 Soal)</option>
+                <option value="all" selected>● All (Words &amp; Phrases — 40 Questions)</option>
+                <option value="words">○ Words Only (20 Questions)</option>
+                <option value="phrases">○ Phrases Only (20 Questions)</option>
               </select>
             </div>
           </div>
@@ -185,12 +185,12 @@ export async function openAutoGenerateModal(options = {}) {
           <div style="background:#1e293b; border:1px solid rgba(255,255,0,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:0.82rem; font-weight:800; color:#ffff00; display:inline-flex; align-items:center; gap:4px;">
-                ⚡ 1. PENGATURAN TASK (TASKS)
+                ⚡ 1. TASK SETTINGS (TASKS)
               </span>
               <span class="badge" style="background:rgba(255,255,0,0.15); color:#ffff00; font-size:0.68rem; font-weight:700;">Mandiri</span>
             </div>
 
-            <!-- Row 1: Durasi Pengerjaan Terpisah (Words vs Phrases) & Nilai Minimal -->
+            <!-- Row 1: Separate Durations (Words vs Phrases) & Passing Score -->
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
               <div>
                 <label for="wizard-quiz-words-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Words Task (Mnt)</label>
@@ -250,14 +250,14 @@ export async function openAutoGenerateModal(options = {}) {
           <div style="background:#1e293b; border:1px solid rgba(244,114,182,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:0.82rem; font-weight:800; color:#f472b6; display:inline-flex; align-items:center; gap:4px;">
-                📝 2. PENGATURAN EXAM (EXAMS)
+                📝 2. EXAM SETTINGS (EXAMS)
               </span>
               <span class="badge" style="background:rgba(244,114,182,0.15); color:#f472b6; font-size:0.68rem; font-weight:700;">Sesi Ujian</span>
             </div>
 
             <!-- Dynamic Session Duration Callout -->
             <div style="background:rgba(0,0,0,0.3); border-left:3px solid #f472b6; padding:6px 10px; border-radius:4px; font-size:0.72rem; color:#cbd5e1; line-height:1.35;">
-              ⏱️ <strong>Durasi Ujian:</strong> Dikendalikan secara dinamis oleh <strong>Sesi Ujian Tutor</strong>. Tidak ada batasan durasi kaku agar siswa leluasa mengikuti jadwal buka/tutup sesi.
+              ⏱️ <strong>Exam Duration:</strong> Dynamically controlled by <strong>Tutor Exam Sessions</strong>. No rigid duration limits are imposed so students follow the open/close session schedule seamlessly.
             </div>
 
             <div style="display:grid; grid-template-columns:1.2fr 1.2fr 1fr; gap:8px;">
@@ -299,12 +299,12 @@ export async function openAutoGenerateModal(options = {}) {
 
         <!-- Modal Footer: Action Buttons -->
         <div style="padding:0.85rem 1.25rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:#1e293b; gap:8px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-ghost btn-sm" id="wizard-cancel-btn" style="color:#94a3b8; font-size:0.8rem;">Batal</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="wizard-cancel-btn" style="color:#94a3b8; font-size:0.8rem;">Cancel</button>
           
           <div style="display:flex; gap:8px;">
             <!-- Action 1: Update Existing Only -->
             <button type="button" class="btn btn-secondary btn-sm" id="wizard-update-only-btn" style="font-size:0.78rem; font-weight:700; color:#38bdf8; border-color:rgba(56,189,248,0.4);">
-              ⚡ Update Pengaturan Saja
+              ⚡ Update Settings Only
             </button>
 
             <!-- Action 2: Generate & Sync All -->
@@ -381,13 +381,13 @@ export async function openAutoGenerateModal(options = {}) {
     overlay.querySelector('#wizard-update-only-btn').onclick = async () => {
       const cfg = getWizardConfig();
       if (!cfg.targetClassId) {
-        if (window.showToast) window.showToast('ID Kelas tidak ditemukan.', 'error');
+        if (window.showToast) window.showToast('Class ID not found.', 'error');
         return;
       }
 
       const btn = overlay.querySelector('#wizard-update-only-btn');
       btn.disabled = true;
-      btn.innerHTML = '<span>⏳ Memperbarui...</span>';
+      btn.innerHTML = '<span>⏳ Updating...</span>';
 
       try {
         const res = await updateClassTestsConfig({
@@ -404,7 +404,7 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
-        const msg = `Pengaturan berhasil diterapkan: ${res.updatedTasks} Task (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m), ${res.updatedTests} Exam diperbarui!`;
+        const msg = `Settings successfully applied: ${res.updatedTasks} Tasks (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m), ${res.updatedTests} Exams updated!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);
 
@@ -412,9 +412,9 @@ export async function openAutoGenerateModal(options = {}) {
       } catch (err) {
         console.error(err);
         btn.disabled = false;
-        btn.innerHTML = '⚡ Update Pengaturan Saja';
-        if (window.showToast) window.showToast('Gagal memperbarui: ' + err.message, 'error');
-        else alert('Gagal memperbarui: ' + err.message);
+        btn.innerHTML = '⚡ Update Settings Only';
+        if (window.showToast) window.showToast('Failed to update: ' + err.message, 'error');
+        else alert('Failed to update: ' + err.message);
       }
     };
 
@@ -422,17 +422,17 @@ export async function openAutoGenerateModal(options = {}) {
     overlay.querySelector('#wizard-generate-btn').onclick = async () => {
       const cfg = getWizardConfig();
       if (cfg.selectedLevels.length === 0) {
-        if (window.showToast) window.showToast('Pilih setidaknya satu level.', 'error');
-        else alert('Pilih setidaknya satu level.');
+        if (window.showToast) window.showToast('Please select at least one level.', 'error');
+        else alert('Please select at least one level.');
         return;
       }
 
       overlay.innerHTML = `
         <div style="background:#0f172a; padding:2.5rem; border-radius:12px; width:440px; text-align:center; font-family:Inter,sans-serif; color:white; border:1px solid rgba(255,255,255,0.15);">
           <div class="spinner" style="margin:0 auto 1.25rem; width:36px; height:36px; border:3px solid rgba(255,255,255,0.2); border-radius:50%; border-top-color:#38bdf8; animation:spin 1s ease-in-out infinite;"></div>
-          <h3 style="margin:0 0 6px 0; font-size:1.1rem; font-weight:700;">Men-generate Test Kurikulum</h3>
+          <h3 style="margin:0 0 6px 0; font-size:1.1rem; font-weight:700;">Generating Curriculum Tests</h3>
           <p style="color:#94a3b8; font-size:0.8rem; margin:0; line-height:1.4;">
-            Sedang membangun hierarki Task (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exam untuk Level ${cfg.selectedLevels.join(', ')} pada kelas ${escapeHtml(className)}...
+            Building Task hierarchy (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exams for Level ${cfg.selectedLevels.join(', ')} in class ${escapeHtml(className)}...
           </p>
         </div>
       `;
@@ -455,7 +455,7 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
-        const msg = `Auto-Gen Sukses: ${res.tasks ?? res.quizzes ?? 0} Task, ${res.tests ?? res.exams ?? 0} Exam dibuat (${res.updated ?? 0} disinkronkan)!`;
+        const msg = `Auto-Gen Success: ${res.tasks ?? res.quizzes ?? 0} Tasks, ${res.tests ?? res.exams ?? 0} Exams created (${res.updated ?? 0} synchronized)!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);
 
@@ -463,8 +463,8 @@ export async function openAutoGenerateModal(options = {}) {
       } catch (err) {
         overlay.remove();
         console.error(err);
-        if (window.showToast) window.showToast('Auto-Generate Gagal: ' + err.message, 'error');
-        else alert('Auto-Generate Gagal: ' + err.message);
+        if (window.showToast) window.showToast('Auto-Generate Failed: ' + err.message, 'error');
+        else alert('Auto-Generate Failed: ' + err.message);
       }
     };
 

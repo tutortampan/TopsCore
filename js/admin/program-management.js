@@ -403,7 +403,7 @@ export async function renderUnifiedInstitutions(area) {
   `;
   hierarchy.forEach((inst, instIdx) => {
     html += `
-      <div class="card mb-4" style="padding:0; overflow-x: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;">
+      <div class="card mb-4 table-wrap" style="padding:0; overflow: auto; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; max-height: calc(100vh - 180px);">
         <table class="matrix-table" id="matrix-table-${instIdx}">
           <colgroup>
             <col style="width: 18%; min-width: 140px;">

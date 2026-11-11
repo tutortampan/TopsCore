@@ -1667,7 +1667,7 @@
     }
 
 .test-rem-sup {
-  font-size: 0.55em !important;
+  font-size: 1.0em !important;
   vertical-align: super !important;
   font-weight: 900 !important;
   margin-left: 2px !important;

@@ -35,6 +35,30 @@
   --fm-font-display: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   --fm-font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
+  /* ============================================================
+     Tutor's Room Authoritative 8-Tier Typographic Scale (Rule 25 / Rule 2.39)
+     Explicit pixel tokens eliminating fractional rem discrepancies
+     ============================================================ */
+  --tr-font-display: 800 20px/1.2 'Outfit', sans-serif;
+  --tr-font-title: 700 16px/1.25 'Outfit', sans-serif;
+  --tr-font-subtitle: 600 14px/1.3 'Inter', sans-serif;
+  --tr-font-body: 500 13px/1.4 'Inter', sans-serif;
+  --tr-font-table: 500 12px/1.4 'Inter', sans-serif;
+  --tr-font-table-hdr: 700 12px/1.4 'Inter', sans-serif;
+  --tr-font-control: 600 12px/1.3 'Inter', sans-serif;
+  --tr-font-caption: 600 11px/1.3 'Inter', sans-serif;
+  --tr-font-mono: 600 11px/1.4 'JetBrains Mono', monospace;
+
+  /* Raw pixel values for individual property assignment */
+  --tr-size-display: 20px;
+  --tr-size-title: 16px;
+  --tr-size-subtitle: 14px;
+  --tr-size-body: 13px;
+  --tr-size-table: 12px;
+  --tr-size-control: 12px;
+  --tr-size-caption: 11px;
+  --tr-size-mono: 11px;
+
   /* Dimensions */
   --fm-sidebar-w: 200px;
   --fm-topbar-h: 50px;
@@ -50,20 +74,41 @@
 
 html {
   font-size: 80%; /* Scale overall UI down to ~80% */
+  height: 100vh !important;
+  max-height: 100vh !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
 }
 
 body {
   background-color: var(--fm-bg-main) !important;
   color: var(--fm-text-primary);
   font-family: var(--fm-font-sans);
-  overflow-x: hidden;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 #admin-console.admin-layout {
-  display: flex;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  display: flex !important;
+  flex-direction: row !important;
+  flex: 1 1 0 !important;
+  height: calc(100vh - 60px) !important;
+  max-height: calc(100vh - 60px) !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  overflow: hidden !important;
   background: var(--fm-bg-main);
   position: relative;
 }
@@ -74,7 +119,8 @@ body {
 
 .admin-sidebar {
   width: var(--fm-sidebar-w);
-  height: 100vh;
+  height: 100% !important;
+  max-height: 100% !important;
   background: var(--fm-bg-sidebar);
   border-right: 1px solid var(--fm-border-subtle);
   display: flex;
@@ -88,10 +134,12 @@ body {
 
 .sidebar-logo {
   height: var(--fm-topbar-h);
-  padding: 0 1.25rem;
+  padding: 0 0.85rem;
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   border-bottom: 1px solid var(--fm-border-subtle);
   background: var(--fm-bg-topbar);
   flex-shrink: 0;
@@ -107,7 +155,7 @@ body {
 }
 
 .sidebar-logo .logo-sub {
-  font-size: 0.65rem;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -149,7 +197,7 @@ body {
 }
 
 .nav-domain-header {
-  font-size: 0.68rem;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -161,7 +209,7 @@ body {
 }
 
 .nav-domain-header .domain-icon {
-  font-size: 0.85rem;
+  font-size: 11px;
 }
 
 /* Tactical Nav Items */
@@ -172,7 +220,7 @@ body {
   padding: 0.45rem 0.75rem;
   border-radius: var(--fm-radius-sm);
   color: var(--fm-text-secondary);
-  font-size: 0.82rem;
+  font-size: 13px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -235,7 +283,7 @@ body {
   border: 1px solid var(--fm-border-medium);
   color: var(--fm-accent-tactical);
   font-weight: 800;
-  font-size: 0.85rem;
+  font-size: 11px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -249,7 +297,7 @@ body {
 }
 
 .admin-user-chip .user-name {
-  font-size: 0.8rem;
+  font-size: 12px;
   font-weight: 700;
   color: var(--fm-text-primary);
   white-space: nowrap;
@@ -258,7 +306,7 @@ body {
 }
 
 .admin-user-chip .user-role {
-  font-size: 0.68rem;
+  font-size: 11px;
   color: var(--fm-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -269,12 +317,15 @@ body {
    ============================================================ */
 
 .admin-main {
-  flex: 1;
-  min-width: 0;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
   background: var(--fm-bg-main);
 }
 
@@ -344,7 +395,7 @@ body {
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   text-decoration: none;
   color: #94a3b8;
-  font-size: 0.8rem;
+  font-size: 11px;
   font-weight: 600;
   position: relative;
   margin-bottom: -1px;
@@ -392,7 +443,7 @@ body {
 }
 
 .topbar-tab-label {
-  font-size: 0.78rem;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.01em;
   color: inherit;
@@ -404,7 +455,7 @@ body {
 .topbar-tab-val,
 .topbar-tab-badge {
   font-family: var(--fm-font-sans, 'Inter', sans-serif);
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 700;
   color: #cbd5e1;
   background: rgba(255, 255, 255, 0.08);
@@ -466,6 +517,15 @@ body {
   overflow-x: auto;
 }
 
+.bottom-infobar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
 .bottom-infobar-right {
   display: flex;
   align-items: center;
@@ -477,7 +537,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.75rem;
+  font-size: 11px;
   color: #ffffff;
   background: rgba(255, 255, 255, 0.05);
   padding: 4px 10px;
@@ -489,14 +549,14 @@ body {
 .bottom-info-chip .chip-label {
   color: #94a3b8;
   text-transform: uppercase;
-  font-size: 0.65rem;
+  font-size: 11px;
   letter-spacing: 0.04em;
 }
 
 .bottom-info-chip .chip-val {
   color: #ffffff;
   font-weight: 700;
-  font-size: 0.82rem;
+  font-size: 12px;
 }
 
 /* ============================================================
@@ -505,10 +565,10 @@ body {
 
 .admin-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0.75rem 0.75rem 1.5rem 0.75rem;
-  scroll-behavior: smooth;
+  overflow: hidden !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
+  padding: 0.5rem 0.75rem;
 }
 
 .admin-content::-webkit-scrollbar {
@@ -581,7 +641,7 @@ body {
 }
 
 .section-subtitle {
-  font-size: 0.78rem;
+  font-size: 12px;
   color: var(--fm-text-muted);
   margin-top: 2px;
 }
@@ -590,7 +650,7 @@ body {
   background: var(--fm-bg-panel-elevated);
   border: 1px solid var(--fm-border-subtle);
   color: var(--fm-accent-tactical);
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 700;
   padding: 2px 8px;
   border-radius: var(--fm-radius-sm);
@@ -614,7 +674,7 @@ body {
   max-height: calc(100vh - 215px);
   min-height: 200px;
   position: relative;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0 !important;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -641,7 +701,7 @@ body {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 0.82rem;
+  font-size: 12px;
   background: transparent;
 }
 
@@ -661,10 +721,10 @@ body {
 .tac-pacing-table th,
 .modal-box table th,
 .modal-body table th {
-  padding: 8px 12px !important;
-  font-size: 0.70rem !important;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
-  letter-spacing: 0.05em !important;
+  letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
   color: #ffffff !important;
   background: #0f172a !important;
@@ -673,38 +733,52 @@ body {
   border-right: none !important;
   border-top: none !important;
   border-left: none !important;
-  white-space: nowrap;
+  white-space: nowrap !important;
   position: sticky;
   top: 0;
   z-index: 10;
   box-sizing: border-box;
   font-variant-numeric: tabular-nums;
+  height: 24px;
 }
 
-/* Super-headers in DataGrid (e.g. Student Roster with Class Exam columns) */
-.datagrid-thead tr.datagrid-super-header-row th {
+/* Super-headers in DataGrid & Multi-Tier Matrix Tables (e.g. Class Hub, Blueprint) */
+.datagrid-thead tr.datagrid-super-header-row th,
+#class-attendance-grid thead tr:nth-child(1) th,
+#blueprint-matrix-table thead tr.bp-super-header-row th {
   position: sticky !important;
   top: 0 !important;
-  z-index: 15 !important;
+  z-index: 20 !important;
   background: #0f172a !important;
-  height: 26px !important;
-  padding: 4px 8px !important;
+  height: 24px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  padding: 3px 8px !important;
   box-sizing: border-box !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  white-space: nowrap !important;
 }
 
-/* Secondary header row directly beneath super-header (avoids collision/overlap) */
+/* Secondary header row directly beneath super-header (Two-Tier Sticky Locking at top: 24px) */
 .datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th,
-.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th {
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th,
+#class-attendance-grid thead tr:nth-child(2) th,
+#blueprint-matrix-table thead tr:nth-child(2) th {
   position: sticky !important;
-  top: 26px !important;
-  z-index: 14 !important;
+  top: 24px !important;
+  z-index: 19 !important;
   background: #0f172a !important;
+  height: 24px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  padding: 3px 6px !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  white-space: nowrap !important;
 }
 
 /* First sticky column intersection with super-headers */
-.datagrid-thead tr.datagrid-super-header-row th:first-child {
+.datagrid-thead tr.datagrid-super-header-row th:first-child,
+#class-attendance-grid thead tr:nth-child(1) th:first-child {
   position: sticky !important;
   top: 0 !important;
   left: 0 !important;
@@ -713,9 +787,10 @@ body {
 }
 
 .datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:first-child,
-.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:first-child {
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:first-child,
+#class-attendance-grid thead tr:nth-child(2) th:first-child {
   position: sticky !important;
-  top: 26px !important;
+  top: 24px !important;
   left: 0 !important;
   z-index: 24 !important;
   background: #0f172a !important;
@@ -732,8 +807,8 @@ body {
 #vault-topic-table td,
 #access-tests-table td,
 .dossier-table td {
-  padding: 7px 12px !important;
-  font-size: 0.82rem !important;
+  padding: 5px 8px !important;
+  font-size: 12px !important;
   font-weight: 500;
   color: #ffffff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
@@ -742,6 +817,11 @@ body {
   border-left: none !important;
   vertical-align: middle !important;
   box-sizing: border-box;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  font-variant-numeric: tabular-nums !important;
+}
 }
 
 /* Secondary / muted helper text inside cells */
@@ -815,7 +895,7 @@ body {
   gap: 4px;
   padding: 2px 7px;
   border-radius: var(--fm-radius-sm);
-  font-size: 0.7rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
@@ -877,7 +957,7 @@ body {
   width: 22px;
   height: 22px;
   border-radius: var(--fm-radius-sm);
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 800;
   margin-right: 3px;
 }
@@ -930,7 +1010,7 @@ body {
   gap: 0.45rem;
   padding: 0.45rem 0.95rem;
   border-radius: var(--fm-radius-sm);
-  font-size: 0.82rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -942,7 +1022,7 @@ body {
 
 .btn-sm {
   padding: 0.35rem 0.65rem;
-  font-size: 0.78rem;
+  font-size: 12px;
   min-height: 32px;
 }
 
@@ -1053,7 +1133,7 @@ body {
 .pill-filter-btn {
   padding: 4px 12px;
   border-radius: var(--fm-radius-sm);
-  font-size: 0.76rem;
+  font-size: 12px;
   font-weight: 600;
   color: var(--fm-text-secondary);
   background: var(--fm-bg-panel);
@@ -1254,7 +1334,7 @@ body {
     border: none;
     color: var(--fm-text-secondary);
     cursor: pointer;
-    font-size: 0.68rem;
+    font-size: 11px;
     font-weight: 600;
     gap: 2px;
     transition: all 0.15s ease;
@@ -1340,7 +1420,7 @@ body {
 }
 
 #admin-login-screen .auth-brand p {
-  font-size: 0.75rem;
+  font-size: 12px;
   color: var(--fm-text-muted);
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1355,7 +1435,7 @@ body {
 #admin-login-screen .auth-footer-link a {
   color: var(--fm-text-muted);
   text-decoration: none;
-  font-size: 0.78rem;
+  font-size: 12px;
   transition: color 0.15s;
 }
 
@@ -1404,7 +1484,7 @@ body {
 }
 
 .datagrid-count {
-  font-size: 0.76rem;
+  font-size: 11px;
   color: var(--fm-text-muted);
   font-weight: 600;
   text-transform: uppercase;
@@ -1428,7 +1508,7 @@ body {
 }
 
 .sort-icon {
-  font-size: 0.7rem;
+  font-size: 11px;
   margin-left: 4px;
   opacity: 0.7;
 }
@@ -1445,7 +1525,7 @@ body {
   min-width: 28px;
   height: 28px;
   padding: 0 6px;
-  font-size: 0.78rem;
+  font-size: 12px;
 }
 
 /* Universal Card & Surface Overrides for Admin Console */
@@ -1462,11 +1542,56 @@ body {
   border-color: var(--fm-border-medium) !important;
 }
 
-/* Empty States & Spinners */
+/* Empty States & Spinners (Universal Centered Loading - Rule 22 / Rule 2.35) */
 .empty-state {
   padding: 3rem 1.5rem;
   text-align: center;
   color: var(--fm-text-muted);
+  width: 100% !important;
+  height: 100% !important;
+  min-height: calc(100vh - 200px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
+  margin: auto !important;
+}
+
+/* Canonical TopsCore Centered Loading State Component */
+.topscore-loading-center {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: calc(100vh - 200px) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  margin: auto !important;
+  box-sizing: border-box !important;
+  flex: 1 1 0 !important;
+}
+
+.topscore-loading-center .spinner {
+  width: 34px !important;
+  height: 34px !important;
+  border: 3px solid rgba(255, 255, 255, 0.12) !important;
+  border-top-color: #38bdf8 !important;
+  border-radius: 50% !important;
+  animation: spin 0.8s linear infinite !important;
+  margin-bottom: 14px !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25) !important;
+}
+
+.topscore-loading-center p,
+.topscore-loading-center .loading-text {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.03em !important;
+  margin: 0 !important;
 }
 
 .empty-state__icon {
@@ -1484,7 +1609,7 @@ body {
 }
 
 .empty-state p {
-  font-size: 0.82rem;
+  font-size: 13px;
   max-width: 420px;
   margin: 0 auto;
 }
@@ -1630,7 +1755,7 @@ input[type="checkbox"], input[type="radio"] {
 
 /* KPI label inside section kpi-cards */
 .kpi-lbl {
-  font-size: 0.68rem;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1729,7 +1854,7 @@ input[type="checkbox"], input[type="radio"] {
 }
 
 .section-tab-lbl {
-  font-size: 0.68rem;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1807,7 +1932,7 @@ input[type="checkbox"], input[type="radio"] {
 
 .search-bar .search-icon {
   padding: 0 0.6rem 0 0.75rem;
-  font-size: 0.85rem;
+  font-size: 11px;
   color: var(--fm-text-muted);
   flex-shrink: 0;
   pointer-events: none;
@@ -2039,7 +2164,7 @@ textarea.form-control {
   border: 1px solid rgba(56, 189, 248, 0.2);
   border-radius: var(--fm-radius-sm);
   padding: 0.75rem 1rem;
-  font-size: 0.82rem;
+  font-size: 13px;
   color: var(--fm-text-secondary);
   margin-bottom: 1rem;
 }
@@ -2049,7 +2174,7 @@ textarea.form-control {
   border: 1px solid rgba(245, 158, 11, 0.28);
   border-radius: var(--fm-radius-sm);
   padding: 0.75rem 1rem;
-  font-size: 0.82rem;
+  font-size: 13px;
   color: var(--fm-accent-amber);
   margin-bottom: 1rem;
 }
@@ -2059,7 +2184,7 @@ textarea.form-control {
   border: 1px solid rgba(239, 68, 68, 0.28);
   border-radius: var(--fm-radius-sm);
   padding: 0.75rem 1rem;
-  font-size: 0.82rem;
+  font-size: 13px;
   color: var(--fm-accent-crimson);
   margin-bottom: 1rem;
 }
@@ -2117,7 +2242,7 @@ textarea.form-control {
   gap: 5px;
   padding: 2px 8px;
   border-radius: var(--fm-radius-sm);
-  font-size: 0.68rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2138,7 +2263,7 @@ textarea.form-control {
   padding: 2rem 1.5rem;
   text-align: center;
   color: var(--fm-text-muted);
-  font-size: 0.85rem;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.2s ease;
   background: var(--fm-bg-panel);
@@ -2523,22 +2648,26 @@ tr.deleted-row td {
   align-items: center;
 }
 .matrix-table th {
-  position: relative;
-  background: rgba(15, 23, 42, 0.95);
-  color: #ffffff;
-  font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.70rem;
-  letter-spacing: 0.05em;
-  padding: 8px 12px;
-  border-bottom: 2px solid rgba(99, 102, 241, 0.3);
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 10 !important;
+  background: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  font-size: 12px !important;
+  letter-spacing: 0.04em !important;
+  padding: 4px 8px !important;
+  height: 24px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
 }
 .matrix-table th:last-child {
   border-right: none;
 }
 .matrix-table td {
-  padding: 8px 12px;
+  padding: 4px 8px !important;
+  font-size: 12px !important;
   color: #ffffff;
   border-right: 1px solid rgba(255, 255, 255, 0.06);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
@@ -2612,7 +2741,7 @@ tr.deleted-row td {
   color: var(--clr-text-2);
   padding: 0.75rem 1rem;
   border-radius: 8px 0 0 8px;
-  font-size: 0.85rem;
+  font-size: 12px;
   font-weight: 600;
   text-align: right;
   cursor: pointer;
@@ -2651,7 +2780,7 @@ tr.deleted-row td {
   color: var(--clr-text-2);
   padding: 0.6rem 1.25rem;
   border-radius: 8px 8px 0 0;
-  font-size: 0.85rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -2707,7 +2836,7 @@ tr.deleted-row td {
   border: 1px solid transparent;
   background: transparent;
   color: var(--clr-text-2);
-  font-size: 0.85rem;
+  font-size: 12px;
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -2743,7 +2872,7 @@ tr.deleted-row td {
   margin: 0.5rem;
   width: calc(100% - 1rem);
   border: 1px dashed var(--clr-border) !important;
-  font-size: 0.8rem;
+  font-size: 11px;
 }
 
 /* ── RIGHT: Detail Canvas ── */
@@ -2772,7 +2901,7 @@ tr.deleted-row td {
 }
 
 .split-detail-breadcrumb {
-  font-size: 0.78rem;
+  font-size: 12px;
   color: var(--clr-text-3);
   margin-top: 0.2rem;
 }
@@ -2792,7 +2921,7 @@ tr.deleted-row td {
   border: 1px solid var(--clr-border);
   background: transparent;
   color: var(--clr-text-2);
-  font-size: 0.8rem;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
@@ -2824,7 +2953,7 @@ tr.deleted-row td {
 }
 
 .pill-empty {
-  font-size: 0.7rem;
+  font-size: 11px;
   color: var(--clr-text-3);
   margin-left: 2px;
 }
@@ -2874,7 +3003,7 @@ tr.deleted-row td {
 }
 
 .split-stats-title {
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -2887,7 +3016,7 @@ tr.deleted-row td {
   justify-content: space-between;
   align-items: center;
   padding: 0.3rem 0;
-  font-size: 0.85rem;
+  font-size: 11px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
@@ -2907,13 +3036,13 @@ tr.deleted-row td {
 .data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 12px;
 }
 
 .data-table th {
   text-align: left;
   padding: 0.5rem 0.75rem;
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -2942,7 +3071,7 @@ tr.deleted-row td {
   align-items: center;
   padding: 0.2rem 0.6rem;
   border-radius: 20px;
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -2981,7 +3110,7 @@ tr.deleted-row td {
 /* -- C-CLASS Secondary Nav Panel items -- */
 .cnav-item {
   padding: 0.42rem 1rem;
-  font-size: 0.82rem;
+  font-size: 12px;
   color: var(--clr-text-muted);
   cursor: pointer;
   border-radius: 0;
@@ -3151,7 +3280,7 @@ tr.deleted-row td {
 }
 
 .curriculum-tree-group-title {
-  font-size: 0.75rem;
+  font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -3195,7 +3324,7 @@ tr.deleted-row td {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 4px;
@@ -3275,7 +3404,7 @@ tr.deleted-row td {
 .curriculum-sub-tab-item .sub-tab-badge {
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 700;
   background: rgba(255, 255, 255, 0.08);
   color: var(--fm-text-muted);
@@ -3299,7 +3428,7 @@ tr.deleted-row td {
 }
 
 .tree-grid-header-batches {
-  font-size: 0.68rem;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3333,7 +3462,7 @@ tr.deleted-row td {
 }
 
 .tree-grid-header-classes {
-  font-size: 0.68rem;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3411,7 +3540,7 @@ tr.deleted-row td {
 }
 
 .classes-hub-collapse-icon {
-  font-size: 0.72rem;
+  font-size: 11px;
   color: var(--fm-text-muted);
   width: 14px;
   text-align: center;
@@ -3428,7 +3557,7 @@ tr.deleted-row td {
   background: rgba(99, 102, 241, 0.18);
   color: #818cf8;
   font-weight: 800;
-  font-size: 0.76rem;
+  font-size: 11px;
   border: 1.5px solid rgba(99, 102, 241, 0.35);
   flex-shrink: 0;
 }
@@ -3439,9 +3568,8 @@ tr.deleted-row td {
 
 .classes-hub-empty-level {
   padding: 0.75rem 0.85rem;
-  font-size: 0.82rem;
+  font-size: 13px;
   color: var(--fm-text-muted);
-  font-style: italic;
   background: rgba(255,255,255,0.01);
   border-radius: 6px;
 }
@@ -3452,7 +3580,7 @@ tr.deleted-row td {
   grid-template-columns: minmax(160px, 2fr) minmax(130px, 1.4fr) minmax(90px, 0.9fr) minmax(110px, 1fr) minmax(100px, 0.9fr) 150px;
   gap: 0.5rem;
   padding: 0.35rem 0.65rem;
-  font-size: 0.7rem;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -3500,20 +3628,24 @@ tr.deleted-row td {
 }
 
 /* ============================================================
-   ZERO-SCROLL VIEWPORT LOCK (AGENTS.md Rule 2.23)
+   ZERO-SCROLL VIEWPORT LOCK (AGENTS.md Rule 2.23 & Rule 15)
    ============================================================ */
 .admin-main {
-  height: 100vh !important;
-  max-height: 100vh !important;
+  height: 100% !important;
+  max-height: 100% !important;
   overflow: hidden !important;
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
   display: flex !important;
   flex-direction: column !important;
 }
 
 .admin-content {
-  flex: 1 !important;
+  flex: 1 1 0 !important;
   min-height: 0 !important;
   overflow: hidden !important; /* STRICT: No outer scrollbar */
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
   display: flex !important;
   flex-direction: column !important;
   padding: 6px 12px 0 12px !important;
@@ -3525,16 +3657,42 @@ tr.deleted-row td {
 .admin-content:has(#programs-grid-container),
 .admin-content:has(#batches-grid-container),
 .admin-content:has(#class-datagrid-container),
-.admin-content:has(.test-analytics-dashboard) {
-  padding: 4px 10px 0 10px !important;
+.admin-content:has(#class-hub-tab-content),
+.admin-content:has(#class-attendance-container),
+.admin-content:has(#class-tests-grid),
+.admin-content:has(#class-analytics-container),
+.admin-content:has(#class-analytics-datagrid-container),
+.admin-content:has(#class-analytics-grid),
+.admin-content:has(.test-analytics-dashboard),
+.admin-content:has(.test-analytics-view),
+.admin-content:has(.table-wrap) {
+  padding: 10px 10px 0 10px !important;
   overflow: hidden !important;
+  overflow-y: hidden !important;
+  overflow-x: hidden !important;
   display: flex !important;
   flex-direction: column !important;
-  height: auto !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
 }
 
-#vault-tab-content {
-  flex: 1 !important;
+#vault-tab-content,
+#student-grid-container,
+#programs-grid-container,
+#batches-grid-container,
+#class-datagrid-container,
+#class-hub-tab-content,
+#class-hub-tab-content > .card,
+#class-attendance-container,
+#class-attendance-grid,
+#class-tests-grid,
+#class-analytics-container,
+#class-analytics-datagrid-container,
+#class-analytics-grid {
+  flex: 1 1 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
@@ -3545,21 +3703,217 @@ tr.deleted-row td {
   box-sizing: border-box !important;
 }
 
-/* The ONLY vertically scrolling element is the table container */
+/* The ONLY vertically & horizontally scrolling element is the table container */
 .table-wrap {
-  flex: 1 !important;
+  flex: 1 1 0 !important;
   min-height: 0 !important;
   overflow-y: auto !important;
   overflow-x: auto !important;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
+  position: relative !important;
 }
 
-.table-wrap table thead th {
+.table-wrap table thead th,
+.datagrid-table thead th,
+#blueprint-matrix-table thead th {
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
-  background: #1e293b !important;
+  background: #0f172a !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Universal Lower Panel (50px Height) & Table Footer Alignment (Rule 20 / Sec 2.33) */
+.workspace-lower-panel,
+.table-wrap table tfoot,
+.datagrid-table tfoot,
+#blueprint-matrix-table tfoot,
+.attendance-matrix-toolbar.workspace-lower-panel,
+.analytics-toolbar.workspace-lower-panel {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  line-height: 50px;
+  box-sizing: border-box !important;
+  border-top: 1px solid var(--fm-border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  border-bottom: none !important;
+  margin-bottom: 0 !important;
+  background: #0f172a !important;
+}
+
+.workspace-lower-panel {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  padding: 0 14px !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  z-index: 10 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+.workspace-lower-panel * {
+  line-height: normal;
+}
+
+.table-wrap table tfoot,
+.datagrid-table tfoot,
+#blueprint-matrix-table tfoot {
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 10 !important;
+  background: #0f172a !important;
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+
+.table-wrap table tfoot:empty,
+.datagrid-table tfoot:empty,
+#blueprint-matrix-table tfoot:empty {
+  display: none !important;
+}
+
+.table-wrap table tfoot tr,
+.datagrid-table tfoot tr,
+#blueprint-matrix-table tfoot tr,
+.datagrid-tfoot tr.datagrid-summary-row {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+}
+
+.table-wrap table tfoot td,
+.datagrid-table tfoot td,
+#blueprint-matrix-table tfoot td,
+.datagrid-tfoot tr.datagrid-summary-row td {
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  line-height: 1.2 !important;
+}
+
+/* Strict 10px Container Gap across Workspace */
+#admin-content-area {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+}
+
+.workspace-container-gap,
+.test-analytics-view,
+#class-attendance-container,
+#student-grid-container,
+#class-hub-tab-content,
+#programs-grid-container,
+#batches-grid-container,
+#class-datagrid-container,
+#vault-tab-content,
+.student-management-container {
+  gap: 10px !important;
+}
+
+/* Utility Class for Centering */
+.justify-center {
+  justify-content: center !important;
+}
+
+/* Dynamic Column Sizing & Single-Line Text Invariant (Rule 21 / Sec 2.34) */
+.datagrid-table,
+.table-wrap table,
+#class-attendance-grid table,
+#blueprint-matrix-table {
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: auto !important;
+}
+
+.datagrid-table th,
+.datagrid-table td,
+.table-wrap th,
+.table-wrap td,
+#class-attendance-grid th,
+#class-attendance-grid td {
+  white-space: nowrap !important;
+  text-overflow: ellipsis;
+}
+
+.datagrid-toolbar,
+.attendance-matrix-toolbar,
+.class-asm-toolbar,
+.student-roster-toolbar,
+.admin-toolbar {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  min-height: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+/* When Edit Mode is OFF, collapse toolbars that only contain edit-mode-only buttons and no visible text */
+body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content) {
+  display: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 0 !important;
+}
+
+.datagrid-pagination {
+  flex-shrink: 0 !important;
+  margin-top: 6px !important;
+}
+
+/* ============================================================
+   NO-CAPSULE VIEW MODE & EDIT-MODE-ONLY CAPSULES (Rule 18 / Sec 2.31)
+   ============================================================ */
+/* In View Mode (Edit Mode OFF), table data cells must NOT render in capsule/badge mode */
+body:not(.global-edit-mode-on) .datagrid-table td .badge:not(.badge-grade-symbol),
+body:not(.global-edit-mode-on) .table-wrap td .badge:not(.badge-grade-symbol),
+body:not(.global-edit-mode-on) .table-wrap td .pill-box,
+body:not(.global-edit-mode-on) #blueprint-matrix-table td span.bp-capsule-badge {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Tabular Nums for all numeric table data */
+.datagrid-table td,
+.table-wrap td,
+#blueprint-matrix-table td {
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* Subtle Row Hover Highlight for clean visual tracking without capsule clutter */
+.datagrid-table tbody tr:hover td,
+.table-wrap table tbody tr:hover td,
+#blueprint-matrix-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* When Edit Mode is ON, editable interactive inputs receive capsule styling & zero-jitter 24px height */
+body.global-edit-mode-on .datagrid-table td input,
+body.global-edit-mode-on .table-wrap td input,
+body.global-edit-mode-on .table-wrap td select,
+body.global-edit-mode-on .datagrid-table td select,
+body.global-edit-mode-on .data-table td input,
+body.global-edit-mode-on .data-table td select,
+body.global-edit-mode-on .matrix-table td input,
+body.global-edit-mode-on .matrix-table td select,
+body.global-edit-mode-on .admin-standard-table td input,
+body.global-edit-mode-on .admin-standard-table td select,
+body.global-edit-mode-on .bp-setting-input input,
+body.global-edit-mode-on .bp-setting-input select {
+  background: #0f172a !important;
+  border: 1px solid #6366f1 !important;
+  border-radius: 9999px !important;
+  color: #ffffff !important;
+  font-size: 12px !important;
+  padding: 2px 8px !important;
+  height: 24px !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
 }
 
 /* ============================================================
@@ -3713,7 +4067,11 @@ body.global-edit-mode-on .bp-setting-input {
 #student-grid-container .table-wrap,
 #programs-grid-container .table-wrap,
 #batches-grid-container .table-wrap,
-#class-datagrid-container .table-wrap {
+#class-datagrid-container .table-wrap,
+#class-tests-grid .table-wrap,
+#class-analytics-container .table-wrap,
+#class-analytics-datagrid-container .table-wrap,
+.test-analytics-view .table-wrap {
   flex: 1 1 0 !important;
   min-height: 0 !important;
   height: 100% !important;
@@ -3732,8 +4090,67 @@ body.global-edit-mode-on .bp-setting-input {
 #student-grid-container .table-wrap table,
 #programs-grid-container .table-wrap table,
 #batches-grid-container .table-wrap table,
-#class-datagrid-container .table-wrap table {
+#class-datagrid-container .table-wrap table,
+#class-analytics-datagrid-container .table-wrap table {
   width: 100% !important;
+}
+
+/* Test Analytics Table Dynamic Column Sizing (Zero Dead Space - Rule 2.34) */
+#class-analytics-datagrid-container th:nth-child(1),
+#class-analytics-datagrid-container td:nth-child(1) {
+  width: 220px !important;
+  min-width: 180px !important;
+}
+
+#class-analytics-datagrid-container th:nth-child(2),
+#class-analytics-datagrid-container td:nth-child(2) {
+  width: 95px !important;
+  min-width: 85px !important;
+  text-align: center !important;
+}
+
+#class-analytics-datagrid-container th:nth-child(3),
+#class-analytics-datagrid-container td:nth-child(3) {
+  width: 80px !important;
+  min-width: 75px !important;
+  text-align: center !important;
+}
+
+#class-analytics-datagrid-container th:nth-child(4),
+#class-analytics-datagrid-container td:nth-child(4) {
+  width: 80px !important;
+  min-width: 75px !important;
+  text-align: center !important;
+}
+
+#class-analytics-datagrid-container th:nth-child(5),
+#class-analytics-datagrid-container td:nth-child(5) {
+  min-width: 200px !important;
+}
+
+#class-analytics-datagrid-container th:nth-child(6),
+#class-analytics-datagrid-container td:nth-child(6) {
+  width: 180px !important;
+  min-width: 160px !important;
+  text-align: center !important;
+}
+
+#class-analytics-datagrid-container th:nth-child(7),
+#class-analytics-datagrid-container td:nth-child(7) {
+  width: 120px !important;
+  min-width: 110px !important;
+  text-align: center !important;
+}
+
+.analytics-triage-pills .btn-analytics-pill {
+  transition: all 0.15s ease;
+  border-radius: 6px !important;
+  padding: 3px 9px !important;
+}
+
+.analytics-triage-pills .btn-analytics-pill.active {
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4) !important;
+  border-color: #38bdf8 !important;
 }
 
 @supports (scrollbar-width: thin) {
@@ -3797,10 +4214,10 @@ body.global-edit-mode-on .bp-setting-input {
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  --matrix-row-height: 26px;
-  --matrix-font-size: 0.70rem;
-  --matrix-badge-font: 0.58rem;
-  --matrix-cell-padding: 1px 1px;
+  --matrix-row-height: 28px;
+  --matrix-font-size: 12px;
+  --matrix-badge-font: 12px;
+  --matrix-cell-padding: 3px 4px;
 }
 
 #class-attendance-grid .datagrid-toolbar,
@@ -3869,7 +4286,7 @@ body.sidebar-collapsed .admin-main {
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
-  height: 100% !important;
+  height: auto !important;
   border-collapse: separate !important;
   border-spacing: 0 !important;
 }
@@ -3879,8 +4296,8 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid tbody tr {
-  height: var(--matrix-row-height, 26px);
-  max-height: var(--matrix-row-height, 26px);
+  height: var(--matrix-row-height, 28px);
+  max-height: var(--matrix-row-height, 28px);
 }
 
 #class-attendance-grid tbody tr:hover {
@@ -3927,6 +4344,30 @@ body.sidebar-collapsed .admin-main {
   background: #0b1120 !important;
 }
 
+#class-attendance-grid th.super-hdr-identity {
+  position: sticky !important;
+  top: 0 !important;
+  left: 0 !important;
+  z-index: 35 !important;
+  background: #0b1120 !important;
+  color: #94a3b8 !important;
+  font-weight: 700 !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
+  border-top: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+#class-attendance-grid th.super-hdr-overall {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 30 !important;
+  background: #0e172a !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  border-top: 2px solid #38bdf8;
+  border-right: 3px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
+}
+
 #class-attendance-grid th.super-hdr-student {
   position: sticky !important;
   top: 0 !important;
@@ -3934,8 +4375,8 @@ body.sidebar-collapsed .admin-main {
   z-index: 35 !important;
   background: #0b1120 !important;
   color: #ffffff !important;
-  border-right: 3px solid rgba(56, 189, 248, 0.75) !important;
-  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4);
+  border-right: 3px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
 }
 
 #class-attendance-grid th.super-hdr-theme-a {
@@ -4059,11 +4500,7 @@ body.sidebar-collapsed .admin-main {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Sticky Student Info Columns on the Left */
-#class-attendance-grid .col-sticky {
-  position: sticky !important;
-}
-
+/* Student Details Columns on the Left - Proportional Dynamic Column Allocation */
 #class-attendance-grid thead th.col-sticky {
   background: #0b1120 !important;
   position: sticky !important;
@@ -4074,7 +4511,6 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid tbody td.col-sticky {
   background: #0d1527 !important;
-  z-index: 10 !important;
 }
 
 #class-attendance-grid tbody tr:hover td.col-sticky {
@@ -4083,23 +4519,48 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid tfoot td.col-sticky {
   position: sticky !important;
+  bottom: 0 !important;
   background: #0b1120 !important;
   z-index: 25 !important;
 }
 
-/* Individual Sticky Column Left Offsets & Widths (7 Columns: INSTITUTION, PROGRAM, BATCH, STUDENT NAME, PROGRESS, POINTS, GRADE) - Streamlined for 100% Zero-Scroll Viewport Fit */
-#class-attendance-grid .col-sticky-1 { left: 0px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
-#class-attendance-grid .col-sticky-2 { left: 34px !important; width: 44px !important; min-width: 44px !important; max-width: 44px !important; }
-#class-attendance-grid .col-sticky-3 { left: 78px !important; width: 36px !important; min-width: 36px !important; max-width: 36px !important; }
-#class-attendance-grid .col-sticky-4 { left: 114px !important; width: 145px !important; min-width: 145px !important; max-width: 145px !important; }
-#class-attendance-grid .col-sticky-5 { left: 259px !important; width: 36px !important; min-width: 36px !important; max-width: 36px !important; }
-#class-attendance-grid .col-sticky-6 { left: 295px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
-#class-attendance-grid .col-sticky-7 { left: 329px !important; width: 34px !important; min-width: 34px !important; max-width: 34px !important; }
+/* Individual Column Widths (7 Columns: INSTITUTION, PROGRAM, BATCH, STUDENT NAME, PROGRESS, POINTS, GRADE) - Streamlined for 100% Zero-Scroll Viewport Fit */
+#class-attendance-grid .col-sticky-1 { width: 80px !important; min-width: 75px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-2 { width: 85px !important; min-width: 80px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-3 { width: 65px !important; min-width: 60px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-4 { width: 180px !important; min-width: 150px !important; max-width: 220px !important; border-right: 2px solid rgba(255, 255, 255, 0.15) !important; }
+#class-attendance-grid .col-sticky-5 { min-width: 75px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-6 { min-width: 70px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-7 { min-width: 65px !important; text-align: center !important; }
 
-/* Sticky Border & Shadow Separator on Last Sticky Column (PTS) */
+/* Subheader Typography & Alignment Protection */
+#class-attendance-grid thead th:not(.super-hdr) {
+  padding: 3px 4px !important;
+  font-size: 0.68rem !important;
+  white-space: nowrap !important;
+  height: 24px !important;
+}
+
+#class-attendance-grid thead th .datagrid-header-content {
+  gap: 3px !important;
+  white-space: nowrap !important;
+}
+
+/* Border Separator on Last Student Info Column (GRADE) */
 #class-attendance-grid .col-sticky-last {
-  border-right: 3px solid rgba(56, 189, 248, 0.75) !important;
-  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.4) !important;
+  border-right: 3px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Theme Sub-Columns (TASK, PTS, SCR) Proportional Dynamic Widths */
+#class-attendance-grid th.col-theme-task,
+#class-attendance-grid td.col-theme-task,
+#class-attendance-grid th.col-exam-pts,
+#class-attendance-grid td.col-exam-pts,
+#class-attendance-grid th.col-exam-score,
+#class-attendance-grid td.col-exam-score {
+  min-width: 62px !important;
+  text-align: center !important;
 }
 
 /* Test Columns Widths & Layout */
@@ -4179,55 +4640,56 @@ body.sidebar-collapsed .admin-main {
   border-right: none !important;
 }
 
-#class-attendance-grid th.col-test-theme-score,
-#class-attendance-grid td.col-test-theme-score {
-  width: 38px !important;
-  min-width: 38px !important;
-  max-width: 40px !important;
-  border-left: 2px solid rgba(255, 255, 255, 0.25) !important;
-  border-right: 1px dashed rgba(255, 255, 255, 0.10) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
 #class-attendance-grid th.col-test-theme-total,
 #class-attendance-grid td.col-test-theme-total {
-  width: 38px !important;
-  min-width: 38px !important;
-  max-width: 40px !important;
   border-left: none !important;
-  border-right: 3px solid rgba(255, 255, 255, 0.35) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
+  border-right: 1px dashed rgba(255, 255, 255, 0.08) !important;
+  background: rgba(255, 255, 255, 0.02) !important;
 }
 
-/* Theme-Specific Firm Dividing Borders (3px Solid) running all the way down */
-#class-attendance-grid th.col-test-theme-total-a,
-#class-attendance-grid td.col-test-theme-total-a,
-#class-attendance-grid tfoot td.col-test-theme-total-a,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-total-a {
+#class-attendance-grid th.col-test-theme-score,
+#class-attendance-grid td.col-test-theme-score {
+  border-left: none !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Theme-Specific Firm Dividing Borders (3px Solid) running all the way down through thead, tbody rows, and tfoot */
+#class-attendance-grid thead th.col-test-theme-score-a,
+#class-attendance-grid tbody td.col-test-theme-score-a,
+#class-attendance-grid td.col-test-theme-score-a,
+#class-attendance-grid tfoot td.col-test-theme-score-a,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-a,
+#class-attendance-grid tr:hover td.col-test-theme-score-a {
   border-right: 3px solid #38bdf8 !important;
   box-shadow: 2px 0 8px rgba(56, 189, 248, 0.3) !important;
 }
 
-#class-attendance-grid th.col-test-theme-total-b,
-#class-attendance-grid td.col-test-theme-total-b,
-#class-attendance-grid tfoot td.col-test-theme-total-b,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-total-b {
+#class-attendance-grid thead th.col-test-theme-score-b,
+#class-attendance-grid tbody td.col-test-theme-score-b,
+#class-attendance-grid td.col-test-theme-score-b,
+#class-attendance-grid tfoot td.col-test-theme-score-b,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-b,
+#class-attendance-grid tr:hover td.col-test-theme-score-b {
   border-right: 3px solid #c084fc !important;
   box-shadow: 2px 0 8px rgba(192, 132, 252, 0.3) !important;
 }
 
-#class-attendance-grid th.col-test-theme-total-c,
-#class-attendance-grid td.col-test-theme-total-c,
-#class-attendance-grid tfoot td.col-test-theme-total-c,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-total-c {
+#class-attendance-grid thead th.col-test-theme-score-c,
+#class-attendance-grid tbody td.col-test-theme-score-c,
+#class-attendance-grid td.col-test-theme-score-c,
+#class-attendance-grid tfoot td.col-test-theme-score-c,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-c,
+#class-attendance-grid tr:hover td.col-test-theme-score-c {
   border-right: 3px solid #fbbf24 !important;
   box-shadow: 2px 0 8px rgba(251, 191, 36, 0.3) !important;
 }
 
-#class-attendance-grid th.col-test-theme-total-d,
-#class-attendance-grid td.col-test-theme-total-d,
-#class-attendance-grid tfoot td.col-test-theme-total-d,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-total-d {
+#class-attendance-grid thead th.col-test-theme-score-d,
+#class-attendance-grid tbody td.col-test-theme-score-d,
+#class-attendance-grid td.col-test-theme-score-d,
+#class-attendance-grid tfoot td.col-test-theme-score-d,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-d,
+#class-attendance-grid tr:hover td.col-test-theme-score-d {
   border-right: 3px solid #34d399 !important;
   box-shadow: 2px 0 8px rgba(52, 211, 153, 0.3) !important;
 }
@@ -4254,7 +4716,7 @@ body.sidebar-collapsed .admin-main {
   padding: 1px 1px !important;
 }
 
-#class-attendance-grid td.col-exam-score {
+#class-attendance-grid td.col-exam-score:not(.col-test-theme-score) {
   border-left: 1px solid rgba(255, 255, 255, 0.18) !important;
   border-right: none !important;
 }
@@ -4344,11 +4806,11 @@ body.sidebar-collapsed .admin-main {
 }
 
 .test-rem-sup {
-  font-size: 0.60em !important;
+  font-size: 1.0em !important;
   opacity: 0.9 !important;
   color: inherit !important;
   font-weight: 900 !important;
-  margin-left: 0.5px !important;
+  margin-left: 1px !important;
   vertical-align: super !important;
   line-height: 0 !important;
 }
@@ -4523,7 +4985,7 @@ body.sidebar-collapsed .admin-main {
 }
 
 .badge-grade-star-s .star-icon {
-  font-size: 0.72rem;
+  font-size: 11px;
   line-height: 1;
 }
 
@@ -4533,19 +4995,24 @@ body.sidebar-collapsed .admin-main {
   font-weight: 900 !important;
 }
 
-/* Attendance Matrix Toolbar (Theme Filter Pills) */
+/* Attendance Matrix Toolbar (Theme Filter Pills in Lower Panel) */
 .attendance-matrix-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 10px;
-  background: rgba(15, 23, 42, 0.95);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  flex-wrap: wrap;
+  padding: 0 14px;
+  background: #0f172a;
+  border-top: 1px solid var(--fm-border-subtle, rgba(255, 255, 255, 0.08));
+  border-bottom: none !important;
+  flex-wrap: nowrap !important;
   gap: 10px;
-  margin-bottom: 10px;
+  margin-bottom: 0 !important;
   flex-shrink: 0;
-  min-height: 32px;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .attendance-theme-pills {
@@ -4557,7 +5024,7 @@ body.sidebar-collapsed .admin-main {
 .attendance-theme-pill {
   padding: 2px 10px;
   border-radius: 6px;
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 700;
   border: 1px solid rgba(255, 255, 255, 0.14);
   background: rgba(255, 255, 255, 0.04);
@@ -4627,7 +5094,7 @@ tfoot.datagrid-tfoot,
   border-top: 2px solid rgba(56, 189, 248, 0.6) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   padding: 6px 8px !important;
-  font-size: 0.8rem;
+  font-size: 12px;
   line-height: 1.2;
   vertical-align: middle;
   font-variant-numeric: tabular-nums !important;
@@ -4658,7 +5125,7 @@ tfoot.datagrid-tfoot,
 
 .students-filter-bar-slim select.form-input-slim {
   padding: 2px 24px 2px 8px;
-  font-size: 0.78rem;
+  font-size: 12px;
   height: 28px;
   width: auto;
   min-width: 140px;
@@ -4727,7 +5194,7 @@ tfoot.datagrid-tfoot,
 .program-tab-count {
   background: rgba(255, 255, 255, 0.08);
   color: var(--clr-text-2, #94a3b8);
-  font-size: 0.72rem;
+  font-size: 11px;
   font-weight: 700;
   padding: 1px 7px;
   border-radius: 12px;
@@ -4784,7 +5251,7 @@ tfoot.datagrid-tfoot,
   border-bottom: 2px solid transparent;
   color: var(--fm-text-secondary, #94a3b8);
   padding: 10px 16px;
-  font-size: 0.85rem;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
@@ -4817,7 +5284,7 @@ tfoot.datagrid-tfoot,
 }
 
 .profile-kpi-label {
-  font-size: 0.7rem;
+  font-size: 11px;
   color: var(--fm-text-muted, #94a3b8);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -4889,7 +5356,7 @@ tfoot.datagrid-tfoot,
 .dossier-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: 12px;
   margin-top: 10px;
 }
 
@@ -4898,7 +5365,7 @@ tfoot.datagrid-tfoot,
   color: #0f172a;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.70rem;
+  font-size: 12px;
   letter-spacing: 0.05em;
   padding: 8px 12px;
   border-bottom: 2px solid #cbd5e1;
@@ -5186,7 +5653,7 @@ tfoot.datagrid-tfoot,
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.74rem;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.02em;
   padding: 3px 8px;
@@ -5265,7 +5732,7 @@ tfoot.datagrid-tfoot,
 }
 
 .smart-empty-subtext {
-  font-size: 0.78rem;
+  font-size: 11px;
   color: var(--fm-text-muted, #64748b);
   max-width: 360px;
   margin: 0 0 8px 0;
@@ -5274,7 +5741,7 @@ tfoot.datagrid-tfoot,
 
 .smart-empty-btn {
   padding: 4px 12px;
-  font-size: 0.75rem;
+  font-size: 12px;
   font-weight: 600;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);
@@ -5305,7 +5772,7 @@ tfoot.datagrid-tfoot,
 .auth-footer-link {
   text-align: center;
   margin-top: 1rem;
-  font-size: 0.8rem;
+  font-size: 12px;
 }
 
 .admin-user-chip .btn-logout {
@@ -5999,7 +6466,7 @@ tfoot.datagrid-tfoot,
   padding: 1.5px 8px;
   border-radius: 4px;
   font-weight: 800;
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.5px;
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.25);
 }
@@ -6102,7 +6569,7 @@ tfoot.datagrid-tfoot,
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 11px;
   letter-spacing: 0.3px;
   box-shadow: 0 0 6px rgba(34, 197, 94, 0.2);
 }
@@ -6123,7 +6590,7 @@ tfoot.datagrid-tfoot,
   padding: 2.5px 8px;
   border-radius: 4px;
   font-weight: 700;
-  font-size: 10.5px;
+  font-size: 11px;
 }
 .badge-test-missing {
   display: inline-flex;
@@ -6135,7 +6602,7 @@ tfoot.datagrid-tfoot,
   padding: 2.5px 8px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 10.5px;
+  font-size: 11px;
 }
 .bp-hero-command-bar {
   background: rgba(15, 23, 42, 0.85);
@@ -6147,6 +6614,66 @@ tfoot.datagrid-tfoot,
   align-items: center;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+/* Phase 398: Test Blueprint Super-Headers & Answer Type Badges */
+#blueprint-matrix-table thead tr.bp-super-header-row th {
+  background: #111e38 !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  padding: 6px 10px !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.16) !important;
+  text-align: center !important;
+}
+#blueprint-matrix-table thead tr.bp-super-header-row th.bp-sh-topic {
+  color: #38bdf8 !important;
+  border-right: 2px solid rgba(56, 189, 248, 0.35) !important;
+}
+#blueprint-matrix-table thead tr.bp-super-header-row th.bp-sh-vocab {
+  color: #c084fc !important;
+  border-right: 2px solid rgba(192, 132, 252, 0.35) !important;
+}
+#blueprint-matrix-table thead tr.bp-super-header-row th.bp-sh-blueprint {
+  color: #fbbf24 !important;
+  border-right: 2px solid rgba(251, 191, 36, 0.35) !important;
+}
+#blueprint-matrix-table thead tr.bp-super-header-row th.bp-sh-status {
+  color: #34d399 !important;
+}
+
+/* Firm Section Separators on Blueprint Table Columns */
+#blueprint-matrix-table th.col-bp-sep,
+#blueprint-matrix-table td.col-bp-sep {
+  border-right: 2px solid rgba(255, 255, 255, 0.16) !important;
+}
+
+/* Answer Type Badges */
+.badge-answer-type {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2.5px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.badge-answer-spoken {
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+.badge-answer-written {
+  background: rgba(192, 132, 252, 0.14);
+  color: #c084fc;
+  border: 1px solid rgba(192, 132, 252, 0.3);
+}
+.badge-answer-hybrid {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
 
 
@@ -6408,7 +6935,7 @@ tfoot.datagrid-tfoot,
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  font-size: 0.82rem;
+  font-size: 12px;
 }
 
 .live-monitor-table thead {
@@ -6420,7 +6947,7 @@ tfoot.datagrid-tfoot,
 
 .live-monitor-table thead th {
   padding: 11px 14px;
-  font-size: 0.72rem;
+  font-size: 12px;
   font-weight: 800;
   color: #94a3b8;
   text-transform: uppercase;
@@ -6446,7 +6973,7 @@ tfoot.datagrid-tfoot,
 .sort-icon {
   display: inline-block;
   margin-left: 4px;
-  font-size: 0.72rem;
+  font-size: 11px;
   color: #64748b;
 }
 .active-sort .sort-icon {

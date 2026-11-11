@@ -317,15 +317,15 @@ if (!session) {
         if (btnNormal && btnRemidi && btnForgive) {
           btnNormal.onclick = async () => {
             if (isNormal) return;
-            if (!confirm('Kembalikan status ujian ini ke NORMAL (penilaian asli tanpa batasan remedial/dispensasi)?')) return;
+            if (!confirm('Revert this test status to NORMAL (original evaluation without remedial cap or exemption)?')) return;
             try {
               showLoading();
               await labelAttemptNormal(attempt.id);
-              showToast('Status berhasil diubah: NORMAL', 'success');
+              showToast('Status successfully changed: NORMAL', 'success');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
-              showToast('Gagal mengubah status: ' + err.message, 'error');
+              showToast('Failed to change status: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
@@ -333,15 +333,15 @@ if (!session) {
 
           btnRemidi.onclick = async () => {
             if (isRemedial) return;
-            if (!confirm('Terapkan status REMEDIAL pada ujian ini (skor maksimal 60% / Grade C)?')) return;
+            if (!confirm('Apply REMEDIAL status to this test (maximum score capped at 60% / Grade C)?')) return;
             try {
               showLoading();
               await labelAttemptRemedial(attempt.id, true, 60);
-              showToast('Status berhasil diubah: REMEDIAL (Max 60%)', 'warning');
+              showToast('Status successfully changed: REMEDIAL (Max 60%)', 'warning');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
-              showToast('Gagal mengubah status: ' + err.message, 'error');
+              showToast('Failed to change status: ' + err.message, 'error');
             } finally {
               hideLoading();
             }
@@ -349,15 +349,15 @@ if (!session) {
 
           btnForgive.onclick = async () => {
             if (isForgiven) return;
-            if (!confirm('Berikan dispensasi SKOR F (FORGIVE) pada ujian ini agar siswa dapat memenuhi prasyarat materi berikutnya?')) return;
+            if (!confirm('Grant SCORE EXEMPTION (FORGIVE) on this test so the student fulfills prerequisites for the next curriculum module?')) return;
             try {
               showLoading();
-              await labelAttemptForgiven(attempt.id, 'Dispensasi Ujian oleh Tutor');
-              showToast('Status berhasil diubah: FORGIVEN (Skor F)', 'success');
+              await labelAttemptForgiven(attempt.id, 'Test Score Exemption by Tutor');
+              showToast('Status successfully changed: FORGIVEN (Exemption)', 'success');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
-              showToast('Gagal mengubah status: ' + err.message, 'error');
+              showToast('Failed to change status: ' + err.message, 'error');
             } finally {
               hideLoading();
             }

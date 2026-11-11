@@ -113,7 +113,7 @@ export async function renderStudents(area) {
   });
   const duplicateGroups = Array.from(dupMap.values()).filter(g => g.length > 1);
   const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + (g.length - 1), 0);
-  
+
   // 1 Program 1 Table: Dynamic Active Programs (Auto-show when active, auto-hide when inactive)
   const activePrograms = (allPrograms || []).filter(p => p.is_active !== false);
   activePrograms.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -299,7 +299,7 @@ export async function renderStudents(area) {
     const completedTestsCount = Math.max(bestByAsm.size, completedAssignedCount);
     const completionPct = totalAssigned > 0 ? Math.round((completedTestsCount / totalAssigned) * 100) : 0;
     const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
-    
+
     // Authoritative Milestone Progression Engine (Rule 2.7, 2.8 & 2.10)
     // Academic Score, Grade, and Points are evaluated EXCLUSIVELY from Exams
     const studentLevelExams = (allTests || []).filter(a => {
@@ -426,8 +426,8 @@ export async function renderStudents(area) {
       let hasAnyExamAtt = false;
 
       themeCodes.forEach(tc => {
-        const examsInTheme = targetExams.filter(t => 
-          t.payload?.theme_code === tc || 
+        const examsInTheme = targetExams.filter(t =>
+          t.payload?.theme_code === tc ||
           (t.shell_code && (t.shell_code.includes(`-${tc}-`) || t.shell_code.startsWith(`3${tc}-`)))
         );
 
@@ -630,7 +630,7 @@ export async function renderStudents(area) {
   const programStudents = currentProgramId ? gridData.filter(s => s.program_id === currentProgramId) : gridData;
 
   // Scope students strictly by the active batch if selected, or active batches in the program
-  const rosterScopeStudents = window._filterBatchId 
+  const rosterScopeStudents = window._filterBatchId
     ? programStudents.filter(s => s.batch_id === window._filterBatchId)
     : programStudents.filter(s => (s.batches ? s.batches.is_active !== false : true));
 
@@ -747,7 +747,7 @@ export async function renderStudents(area) {
       </div>
     ` : ''}
 
-    <div class="d-flex align-center justify-between mb-3 flex-wrap gap-2">
+    <div class="student-roster-toolbar d-flex align-center justify-between mb-2 flex-wrap gap-2 ${currentBatchStatus === 'alumni' || totalDuplicates > 0 ? 'has-visible-content' : ''}">
       <div class="d-flex align-center gap-2">
         ${currentBatchStatus !== 'alumni' ? `
           <button class="btn btn-success btn-sm fw-700 edit-mode-only" id="btn-promote-all-eligible" style="background:#00c000;border:1px solid #00c000;color:#000;" title="Promote all students who have passed all active level exams with >= 70%">
@@ -762,6 +762,12 @@ export async function renderStudents(area) {
             </select>
           </div>
         `}
+        <button class="btn btn-primary btn-sm fw-700 edit-mode-only" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;" title="Register New Student">
+          ➕ Add Student
+        </button>
+        <button class="btn btn-secondary btn-sm fw-700 edit-mode-only" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;" title="Import Students from Excel / CSV">
+          📥 Import Excel / CSV
+        </button>
       </div>
       <div class="text-xs text-muted">
         ${currentBatchStatus === 'alumni' ? '🎓 Displaying Alumni with Lifetime Universal Access' : ''}
@@ -770,6 +776,23 @@ export async function renderStudents(area) {
 
     <div id="student-grid-container"></div>
   `;
+
+  const addStudentDirectBtn = document.getElementById('btn-add-student-direct');
+  if (addStudentDirectBtn) {
+    addStudentDirectBtn.onclick = () => {
+      if (typeof window.openStudentFullEdit === 'function') {
+        window.openStudentFullEdit({ program_id: currentProgramId, batch_id: currentBatchId }, () => renderStudents(area));
+      }
+    };
+  }
+  const importStudentsDirectBtn = document.getElementById('btn-import-students-direct');
+  if (importStudentsDirectBtn) {
+    importStudentsDirectBtn.onclick = () => {
+      if (typeof window.renderStudentsRegistration === 'function') {
+        window.renderStudentsRegistration(area);
+      }
+    };
+  }
 
   const promoteAllBtn = document.getElementById('btn-promote-all-eligible');
   if (promoteAllBtn) promoteAllBtn.onclick = () => window.promoteAllEligibleStudents();
@@ -785,20 +808,20 @@ export async function renderStudents(area) {
   // Bind Buttons
   const addBtn = document.getElementById('students-add-shortcut');
   if (addBtn) addBtn.onclick = () => window.openStudentFullEdit({ program_id: currentProgramId }, () => window.loadSection('students'));
-  
+
   const mergeBtn = document.getElementById('students-merge-shortcut');
   if (mergeBtn) mergeBtn.onclick = () => { if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal(); };
-  
+
   const mergeBannerBtn = document.getElementById('btn-banner-merge-duplicates');
   if (mergeBannerBtn) mergeBannerBtn.onclick = () => { if (window.openDuplicateStudentsModal) window.openDuplicateStudentsModal(); };
-  
+
   // Global Export Function (callable from dedicated Import Students tab & DataGrid toolbar)
   window.exportStudentsGradebook = () => {
     if (!filteredGridData || !filteredGridData.length) {
       showToast('No students to export.', 'info');
       return;
     }
-    
+
     const headers = [
       'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Age', 'Gender',
       'Exam 1 (Theme A) Pts', 'Exam 2 (Theme B) Pts', 'Exam 3 (Theme C) Pts', 'Exam 4 (Theme D) Pts',
@@ -831,7 +854,7 @@ export async function renderStudents(area) {
         'Status': s.is_active !== false ? 'Active' : 'Inactive'
       };
     });
-    
+
     try {
       const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
       ws['!cols'] = [
@@ -865,14 +888,14 @@ export async function renderStudents(area) {
       const isRem = Boolean(r.is_remedial_unlocked || r.is_remedial);
       const isForgiven = Boolean(r.is_forgiven);
       const scoreClickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();" style="cursor:pointer; text-decoration:underline;" title="View Exam Result Sheet"` : '';
-      
+
       let actionHtml = '<span class="text-muted text-xs">—</span>';
       if (r.is_completed && attId) {
         if (isForgiven) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size:0.65rem; background:rgba(255,0,0,0.15); color:#FF0000; border:1px solid #FF0000; padding:2px 6px;" title="Dispensasi Skor F: ${escapeHtml(r.forgiven_reason || 'Mr. Top Exemption')}">55%ᶠ FORGIVEN</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size:0.75rem;" title="Revoke Skor F waiver">↩️</button>
+              <span class="badge" style="font-size:0.65rem; background:rgba(255,0,0,0.15); color:#FF0000; border:1px solid #FF0000; padding:2px 6px;" title="Score Exemption: ${escapeHtml(r.forgiven_reason || 'Mr. Top Exemption')}">55%ᶠ FORGIVEN</span>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size:0.75rem;" title="Revoke score exemption">↩️</button>
             </div>
           `;
         } else if (isRem) {
@@ -889,8 +912,8 @@ export async function renderStudents(area) {
                 🏷️ Remedial
               </button>
               ${r.isExam ? `
-                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#FF0000; color:#fff; border-radius:4px;" title="Dispensasi Skor F (Admin Mr. Top Prerogative)">
-                  ⚡ Skor F
+                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#FF0000; color:#fff; border-radius:4px;" title="Exempt Score (Admin Override)">
+                  ⚡ Exempt
                 </button>
               ` : ''}
             </div>
@@ -949,8 +972,8 @@ export async function renderStudents(area) {
       <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:14px;width:100%;max-width:820px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 40px rgba(0,0,0,0.6);overflow:hidden;">
         <div style="padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.02);">
           <div class="d-flex align-center gap-3">
-            ${rec.photo_url 
-              ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">` 
+            ${rec.photo_url
+              ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`
               : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`
             }
             <div>
@@ -1005,8 +1028,8 @@ export async function renderStudents(area) {
           <div class="mb-4">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
               <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
-                <span>🎓 Weekly Exams (Ujian Mingguan)</span>
-                <span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;font-size:0.7rem;border:1px solid rgba(244,114,182,0.3);">Penentu Nilai Akademik &amp; Milestone</span>
+                <span>🎓 Weekly Exams</span>
+                <span class="badge" style="background:rgba(244,114,182,0.15);color:#f472b6;font-size:0.7rem;border:1px solid rgba(244,114,182,0.3);">Academic Grading &amp; Milestone Determinant</span>
               </div>
               <span class="text-xs text-muted">${(rec.details || []).filter(r => r.isExam && r.is_completed).length} / ${(rec.details || []).filter(r => r.isExam).length} Completed</span>
             </div>
@@ -1118,7 +1141,7 @@ export async function renderStudents(area) {
             created_at: new Date().toISOString()
           });
 
-          showToast('⚡ Skor F (Forgiven) berhasil diberikan.', 'success');
+          showToast('⚡ Score Exemption (Forgiven) granted.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1128,7 +1151,7 @@ export async function renderStudents(area) {
           }, 300);
         } catch (err) {
           console.error(err);
-          showToast('Gagal memberikan Skor F: ' + err.message, 'error');
+          showToast('Failed to grant Score Exemption: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -1159,7 +1182,7 @@ export async function renderStudents(area) {
             created_at: new Date().toISOString()
           });
 
-          showToast('↩️ Dispensasi Skor F dicabut.', 'success');
+          showToast('↩️ Score exemption revoked.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1169,7 +1192,7 @@ export async function renderStudents(area) {
           }, 300);
         } catch (err) {
           console.error(err);
-          showToast('Gagal mencabut status: ' + err.message, 'error');
+          showToast('Failed to revoke status: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -1269,9 +1292,9 @@ export async function renderStudents(area) {
                 <span class="badge badge-info" style="font-size: 0.7rem;">${escapeHtml(rec.gender || '—')}</span>
               </div>
               <div class="text-xs text-muted" style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span>🏛️ ${escapeHtml(rec.instName)}</span> &bull; 
-                <span>👥 ${escapeHtml(rec.progName)}</span> &bull; 
-                <span>🏷️ Batch ${escapeHtml(rec.batchName)}</span> &bull; 
+                <span>🏛️ ${escapeHtml(rec.instName)}</span> &bull;
+                <span>👥 ${escapeHtml(rec.progName)}</span> &bull;
+                <span>🏷️ Batch ${escapeHtml(rec.batchName)}</span> &bull;
                 <span>⭐ ${escapeHtml(rec.levelName)}</span> &bull;
                 <span>🎂 ${escapeHtml(rec.ageDisplay || '—')}</span>
               </div>
@@ -1339,7 +1362,7 @@ export async function renderStudents(area) {
 
         <!-- Tab Body -->
         <div style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;" id="profile-tab-body">
-          <div class="empty-state" style="padding: 2rem;"><div class="spinner"></div><p style="margin-top:8px;">Loading test history...</p></div>
+          ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Loading test history...')}
         </div>
       </div>
     `;
@@ -1868,8 +1891,8 @@ export async function renderStudents(area) {
 
               <!-- 3:4 Student Photo Box -->
               <div style="width:125px;height:166px;border:2px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 6px rgba(0,0,0,0.05);position:relative;">
-                ${rec.photo_url 
-                  ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">` 
+                ${rec.photo_url
+                  ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">`
                   : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
                 }
                 <div style="position:absolute;bottom:0;inset-inline:0;background:rgba(15,23,42,0.8);color:#fff;font-size:0.6rem;text-align:center;padding:2px 0;font-weight:700;letter-spacing:0.04em;">
@@ -2035,7 +2058,7 @@ export async function renderStudents(area) {
   const classColCountMap = new Map();
   const perClassColDefs = activeClassColumns.flatMap(cls => {
     const classAllTests = (testsByClass.get(cls.id) || []).slice().sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
-    
+
     // Standard multi-theme milestone curriculum (> 6 tests e.g. Camp 2nd / 3rd)
     if (classAllTests.length > 6) {
       classColCountMap.set(cls.id, 4);
@@ -2045,7 +2068,8 @@ export async function renderStudents(area) {
           label: 'Exam 1',
           sortable: true,
           align: 'center',
-          width: '75px',
+          width: '125px',
+          minWidth: '100px',
           _classId: cls.id,
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
@@ -2062,7 +2086,8 @@ export async function renderStudents(area) {
           label: 'Exam 2',
           sortable: true,
           align: 'center',
-          width: '75px',
+          width: '125px',
+          minWidth: '100px',
           _classId: cls.id,
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
@@ -2079,7 +2104,8 @@ export async function renderStudents(area) {
           label: 'Exam 3',
           sortable: true,
           align: 'center',
-          width: '75px',
+          width: '125px',
+          minWidth: '100px',
           _classId: cls.id,
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
@@ -2096,7 +2122,8 @@ export async function renderStudents(area) {
           label: 'Exam 4',
           sortable: true,
           align: 'center',
-          width: '75px',
+          width: '125px',
+          minWidth: '100px',
           _classId: cls.id,
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
@@ -2139,7 +2166,8 @@ export async function renderStudents(area) {
           label: shortLabel,
           sortable: true,
           align: 'center',
-          width: '85px',
+          width: '120px',
+          minWidth: '100px',
           _classId: cls.id,
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
@@ -2182,6 +2210,7 @@ export async function renderStudents(area) {
     data: filteredGridData,
     pageSize: 50,
     hideToolbar: true,
+    tableLayout: 'auto',
     searchKeys: ['levelName', 'displayName', 'name', 'pinDisplay'],
     initialSortKey: 'displayName',
     initialSortAsc: true,
@@ -2286,13 +2315,13 @@ export async function renderStudents(area) {
           const color = classExamColors[col.key] || 'var(--clr-text-1)';
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color} !important;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.85;font-weight:normal;color:${color} !important;">pts</span>` : '—'}</td>`;
         } else if (col.label === 'Actions') {
-          cells += `<td style="background:#0f172a;text-align:right;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${batchPtsColor} !important;font-size:0.8rem;padding-right:1rem;">Avg: ${avgPtsStr}</td>`;
+          cells += `<td style="background:#0f172a;border-top:2px solid var(--grade-star, #00c000ff);"></td>`;
         } else {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;">—</td>`;
         }
       });
 
-      return `<tr class="datagrid-summary-row" style="background:#0f172a;font-weight:700;">${cells}</tr>`;
+      return `<tr class="datagrid-summary-row" style="background:#0f172a;font-weight:700;height:50px;min-height:50px;max-height:50px;">${cells}</tr>`;
     },
     sortComparator: (sortKey, direction, a, b) => {
       // Active students ALWAYS on top, inactive at bottom
@@ -2374,7 +2403,7 @@ export async function renderStudents(area) {
         <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:12px;padding:2rem;width:100%;max-width:500px;">
           <h3 style="margin:0 0 0.5rem;font-size:1.1rem;">Bulk Edit ${selectedIds.length} Student(s)</h3>
           <p style="color:var(--clr-text-3);font-size:0.85rem;margin:0 0 1.5rem;">Leave fields blank to keep their current values.</p>
-          
+
           <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem;">
             <div>
               <label class="form-label" style="display:block;margin-bottom:0.25rem;">Institution</label>
@@ -2416,7 +2445,7 @@ export async function renderStudents(area) {
             <button id="bulk-deactivate" class="btn btn-secondary" style="flex:1;">&#128683; Deactivate</button>
             <button id="bulk-delete" class="btn btn-danger" style="flex:1;">&#128465; Delete</button>
           </div>
-          
+
           <button id="bulk-cancel" class="btn btn-ghost" style="width:100%;color:var(--clr-text-3);">Cancel</button>
         </div>
       `;
@@ -2459,7 +2488,7 @@ export async function renderStudents(area) {
              return;
           }
         }
-        
+
         clearAdminCache('students');
         close();
         showToast(`Updated ${selectedIds.length} students.`, 'success');
@@ -2525,26 +2554,28 @@ export async function renderStudents(area) {
         label: 'Level',
         sortable: true,
         align: 'center',
-        width: '80px',
+        width: '75px',
         render: (row) => {
           if (row.isAlumni || row.studentLevelNum === 0 || (row.levelName && row.levelName.toLowerCase() === 'alumni')) {
-            return `<span class="badge" style="background:rgba(168,85,247,0.18);color:#c084fc;border:1px solid #c084fc;font-weight:700;font-size:0.75rem;white-space:nowrap;">🎓 Alumni</span>`;
+            return `<span style="color:#c084fc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;">🎓 Alumni</span>`;
           }
           const shortLvl = typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—');
-          return `<span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size:0.75rem;white-space:nowrap;">${escapeHtml(shortLvl)}</span>`;
+          return `<span style="color:#f8fafc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(shortLvl)}</span>`;
         }
       },
-      // 5. Name
+      // 5. Name (Dynamic Column Sizing: Absorbs available horizontal space, zero dead void)
       {
         key: 'sortName',
         label: 'Name',
         sortable: true,
-        width: '180px',
+        width: '280px',
+        minWidth: '240px',
+        maxWidth: '340px',
         render: (row) => {
           const isAlumni = Boolean(row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni');
           const avatarUri = row.photo_url || generateAvatarDataUri(row.displayName || row.name, row.gender);
           return `
-            <div class="d-flex align-center gap-3">
+            <div class="d-flex align-center gap-3" style="min-width:200px; white-space:nowrap;">
               <div style="position:relative;display:inline-block;">
                 <img src="${avatarUri}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">
                 ${isAlumni ? `<span style="position:absolute;bottom:-4px;right:-4px;font-size:0.85rem;" title="Alumni Graduate">🎓</span>` : ''}
@@ -2566,7 +2597,7 @@ export async function renderStudents(area) {
         label: 'Age',
         sortable: true,
         align: 'center',
-        width: '75px',
+        width: '80px',
         render: (row) => {
           if (!row.birth_date) {
             return `<span title="Date of Birth not set — edit this student to add it" style="display:inline-flex;align-items:center;gap:3px;cursor:help;">
@@ -2583,7 +2614,7 @@ export async function renderStudents(area) {
         label: 'Gender',
         sortable: true,
         align: 'center',
-        width: '55px',
+        width: '65px',
         render: (row) => {
           const g = (row.gender || '').trim().toLowerCase();
           if (g === 'male' || g === 'm') {
@@ -2628,7 +2659,7 @@ export async function renderStudents(area) {
         label: 'Actions',
         className: 'actions-col',
         align: 'right',
-        width: '240px',
+        width: '90px',
         render: (row) => {
           const div = document.createElement('div');
           div.className = 'student-actions-cell actions-col';
@@ -2688,7 +2719,7 @@ export async function renderStudents(area) {
               window.showStudentProgressDetails(row.id);
             }
           };
-          
+
           // 4. Profile Button
           const profileBtn = document.createElement('button');
           profileBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
@@ -2716,7 +2747,7 @@ export async function renderStudents(area) {
               window._editRecord('students', row.id);
             }
           };
-          
+
           // 6. Delete Button
           const delBtn = document.createElement('button');
           delBtn.className = 'btn btn-danger btn-icon btn-sm student-action-btn edit-mode-only';
@@ -2726,7 +2757,7 @@ export async function renderStudents(area) {
              e.stopPropagation();
              if (window._deleteRecord) window._deleteRecord('students', row.id, row.displayName);
           };
-          
+
           div.appendChild(lifeBtn);
           div.appendChild(transferBtn);
           div.appendChild(detailsBtn);
@@ -2750,7 +2781,7 @@ window.promoteStudentNextLevel = async function(row) {
   if (!row) return;
   const studentId = row.id;
   const currentLevelNum = parseInt(row.studentLevelNum != null ? row.studentLevelNum : 1, 10);
-  
+
   if (row.isAlumni || currentLevelNum === 0 || row.levelName === 'Alumni') {
     showToast(`${row.displayName} is already an Alumni graduate.`, 'info');
     return;
@@ -3262,7 +3293,7 @@ export async function openStudentFullEdit(student, onSaved) {
           <label class="form-label">Full Name *</label>
           <input class="form-control" id="bfe-name" value="${escHtml(initialName)}" placeholder="e.g. Johnathan Doe">
         </div>
-        
+
         <div class="form-group">
           <label class="form-label">Honorific &amp; Gender</label>
           <select class="form-control" id="bfe-gender">
@@ -3347,7 +3378,7 @@ export async function openStudentFullEdit(student, onSaved) {
     document.getElementById(id)?.addEventListener('input', updateDraft);
     document.getElementById(id)?.addEventListener('change', updateDraft);
   });
-  
+
   // Avatar Upload Listener (3:4 Center-Crop Engine)
   const avatarFileInput = document.getElementById('bfe-avatar-file');
   avatarFileInput?.addEventListener('change', async (e) => {
@@ -3419,7 +3450,7 @@ export async function openStudentFullEdit(student, onSaved) {
     try {
       const sb = await getSupabase();
       let finalStudentId = student?.id;
-      
+
       if (finalStudentId) {
         await adminUpdate('students', finalStudentId, payload);
         showToast('Student updated successfully.', 'success');
@@ -3458,7 +3489,7 @@ export async function openStudentFullEdit(student, onSaved) {
         }
       }
 
-      
+
 
       window.isProfileDirty = false;
       localStorage.removeItem(draftKey);

@@ -50,7 +50,7 @@ export async function openTestSystemSettingsModal(options = {}) {
             </span>
           </div>
           <p style="margin: 3px 0 0 0; font-size: 0.76rem; color: #94a3b8;">
-            Atur target repetisi task, nilai minimum kelulusan task &amp; exam untuk kurikulum ${escapeHtml(className)}.
+            Configure task repetition targets and minimum passing scores for ${escapeHtml(className)} curriculum.
           </p>
         </div>
         <button type="button" id="btn-close-settings-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
@@ -63,19 +63,19 @@ export async function openTestSystemSettingsModal(options = {}) {
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label style="font-size: 0.78rem; font-weight: 800; color: #eab308; text-transform: uppercase; letter-spacing: 0.03em;">
-              📌 Target Repetisi Task (Kelulusan x Kali)
+              📌 Task Repetition Target (Passing Count)
             </label>
-            <span style="font-size: 0.72rem; color: #94a3b8;">Default: 7 kali</span>
+            <span style="font-size: 0.72rem; color: #94a3b8;">Default: 7 times</span>
           </div>
           <p style="margin: 0 0 10px 0; font-size: 0.75rem; color: #94a3b8;">
-            Berapa kali siswa harus mencapai nilai kelulusan pada tiap task sebelum ujian tema (Exam) terbuka.
+            How many times a student must achieve the passing score on each task before the weekly theme Exam unlocks.
           </p>
           <div style="display: flex; align-items: center; gap: 12px;">
             <input type="number" id="setting-task-repetitions" min="7" max="10" value="${Math.max(7, cur.taskRepetitions || 7)}" style="
               width: 80px; padding: 6px 10px; font-size: 0.95rem; font-weight: 800; text-align: center;
               background: #1e293b; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff;
             ">
-            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">Kali Lulus Repetisi per Task (Min. 7x Rule 2.21)</span>
+            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">Passing repetitions per Task (Min. 7x Rule 2.21)</span>
           </div>
         </div>
 
@@ -83,12 +83,12 @@ export async function openTestSystemSettingsModal(options = {}) {
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label style="font-size: 0.78rem; font-weight: 800; color: #eab308; text-transform: uppercase; letter-spacing: 0.03em;">
-              🎯 Nilai Minimum Kelulusan Task (%)
+              🎯 Minimum Task Passing Score (%)
             </label>
             <span style="font-size: 0.72rem; color: #94a3b8;">Default: 70%</span>
           </div>
           <p style="margin: 0 0 10px 0; font-size: 0.75rem; color: #94a3b8;">
-            Nilai persentase minimum agar satu kali percobaan task dihitung sebagai kelulusan repetisi (misal: 70%, atau turunkan ke 50%).
+            Minimum score percentage for a task attempt to count as a passing repetition (e.g. 70%, or adjust to 50%).
           </p>
           <div style="display: flex; align-items: center; gap: 8px;">
             <input type="number" id="setting-task-min-score" min="1" max="100" value="${cur.taskMinScore || 70}" style="
@@ -103,12 +103,12 @@ export async function openTestSystemSettingsModal(options = {}) {
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
             <label style="font-size: 0.78rem; font-weight: 800; color: #f472b6; text-transform: uppercase; letter-spacing: 0.03em;">
-              📝 Nilai Minimum Kelulusan Exam (%)
+              📝 Minimum Exam Passing Score (%)
             </label>
             <span style="font-size: 0.72rem; color: #94a3b8;">Default: 60%</span>
           </div>
           <p style="margin: 0 0 10px 0; font-size: 0.75rem; color: #94a3b8;">
-            Nilai persentase kelulusan minimum untuk ujian milestone mingguan (Exam) agar dapat lanjut ke tema pekan berikutnya.
+            Minimum passing percentage for the weekly milestone Exam to advance to next week's theme.
           </p>
           <div style="display: flex; align-items: center; gap: 8px;">
             <input type="number" id="setting-exam-min-score" min="1" max="100" value="${cur.examMinScore || 60}" style="
@@ -122,23 +122,23 @@ export async function openTestSystemSettingsModal(options = {}) {
         <!-- Scope & Batch Sync -->
         <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 14px 16px;">
           <div style="font-size: 0.78rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px;">
-            🌐 Cakupan Penerapan Pengaturan
+            🌐 Settings Application Scope
           </div>
           <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
               <input type="radio" name="setting_scope" value="class" checked style="accent-color: #38bdf8;">
-              <span>Terapkan khusus untuk kelas ini: <strong>${escapeHtml(className)}</strong></span>
+              <span>Apply specifically to this class: <strong>${escapeHtml(className)}</strong></span>
             </label>
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
               <input type="radio" name="setting_scope" value="global" style="accent-color: #38bdf8;">
-              <span>Terapkan sebagai <strong>Default Global Sistem</strong> untuk seluruh kelas</span>
+              <span>Apply as <strong>Global System Default</strong> across all classes</span>
             </label>
           </div>
 
           <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
             <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.8rem; cursor: pointer; color: #f8fafc;">
               <input type="checkbox" id="setting-apply-to-existing" checked style="margin-top: 3px; accent-color: #38bdf8;">
-              <span><strong>Terapkan sekarang ke seluruh tes yang ada:</strong> Update otomatis kolom nilai minimum kelulusan pada semua Task dan Exam di kelas ini.</span>
+              <span><strong>Apply now to all existing tests:</strong> Automatically update the minimum passing score on all Tasks and Exams in this class.</span>
             </label>
           </div>
         </div>
@@ -150,12 +150,12 @@ export async function openTestSystemSettingsModal(options = {}) {
         <button type="button" id="btn-cancel-settings" style="
           background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8;
           padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-        ">Batal</button>
+        ">Cancel</button>
         <button type="button" id="btn-save-settings" style="
           background: #0ea5e9; border: none; color: #fff;
           padding: 7px 18px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer;
           display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
-        ">💾 Simpan Pengaturan</button>
+        ">💾 Save Settings</button>
       </div>
     </div>
   `;
@@ -180,7 +180,7 @@ export async function openTestSystemSettingsModal(options = {}) {
 
     const saveBtn = overlay.querySelector('#btn-save-settings');
     saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Menyimpan...';
+    saveBtn.textContent = '⏳ Saving...';
 
     try {
       const res = await saveClassTestSettings(classId, {
@@ -190,14 +190,14 @@ export async function openTestSystemSettingsModal(options = {}) {
         isGlobal
       }, applyToExisting);
 
-      showToast(`Pengaturan berhasil disimpan! Target repetisi: ${taskRepetitions}x, Task: ${taskMinScore}%, Exam: ${examMinScore}%`, 'success');
+      showToast(`Settings saved successfully! Repetition target: ${taskRepetitions}x, Task: ${taskMinScore}%, Exam: ${examMinScore}%`, 'success');
       overlay.remove();
       if (typeof onComplete === 'function') onComplete(res);
     } catch (err) {
       console.error('[openTestSystemSettingsModal] Save error:', err);
-      showToast('Gagal menyimpan pengaturan: ' + err.message, 'error');
+      showToast('Failed to save settings: ' + err.message, 'error');
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Simpan Pengaturan';
+      saveBtn.textContent = '💾 Save Settings';
     }
   });
 }

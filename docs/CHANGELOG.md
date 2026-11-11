@@ -1,3 +1,440 @@
+## [2026-11-11 06:52] — Phase 402: Tutor's Room Table Engineering, Centered Loading & Typography Harmonization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 402  
+**Status:** PASS  
+
+### Why
+- Fully execute user command `/learn`: establish the unified plan, `tasks.md`, and table engineering audit as the permanent reference standard for Tutor's Room.
+- Eliminate loading state inconsistency: side-drifting in Test Analytics and top-offsetting in route transitions (`loadSection`).
+- Harmonize Tutor's Room typography across `admin.html` and `css/admin.css`: resolve `html { font-size: 80%; }` (1rem = 12.8px) scaling conflicts, enforce **Zero Sub-11px Rule**, and de-escalate font weight inflation.
+
+### Changed
+1. **Authoritative Governance & Rule Codification**:
+   - Updated `AGENTS.md`: Section 2.35 (Centered Loading States), Section 2.38 (Universal Table Standardization Protocol & Construction Blueprint), Section 2.39 (Tutor's Room 8-Tier Typographic Scale & Zero Sub-11px Invariant).
+   - Updated `.agents/rules/ui-invariants.md`: Sections 7, 8, and 9.
+   - Updated `.antigravityrules`: Domain 3 Rules 15, 21, 22, and 25.
+2. **CSS 8-Tier Typographic Tokens & Sub-11px Eradication (`css/admin.css`)**:
+   - Declared `--tr-font-*` tokens in `:root` (Display: 20px Outfit, Title: 16px Outfit, Subtitle: 14px Inter, Body: 13px Inter, Table: 12px Inter, Control: 12px Inter, Caption: 11px Inter, Mono: 11px Mono).
+   - Upgraded all 75 sub-11px font declarations to minimum 11px/12px/13px, reducing sub-11px declarations to **0**.
+   - Purged unneeded `font-style: italic` on `.classes-hub-empty-level`.
+3. **Universal Centered Loading State Architecture**:
+   - Defined `.topscore-loading-center` with full viewport flex centering (`min-height: calc(100vh - 200px)`), tactical cyan glowing spinner, and 13px Inter text.
+   - Upgraded `.empty-state` to flex-center vertically and horizontally.
+   - Enforced `width: 100% !important; height: 100% !important; flex: 1 1 0 !important;` on tab/workspace containers to eliminate horizontal drifting.
+4. **JavaScript Centered Loading Helper & Module Adoption**:
+   - Created and exported `getLoadingStateHtml(message)` in `js/admin/app.js` and mounted to `window.getLoadingStateHtml`.
+   - Harmonized loading states across `js/admin/app.js` (`loadSection`, `renderClassList`, `renderTestHub`), `class-analytics.js`, `classes-hub.js`, `curriculum-management.js`, `desk.js`, `crud-modals.js`, and `student-management.js`.
+5. **Testing & Verification**:
+   - Created `scripts/test_unified_tutor_room_typography_and_loading.mjs` verifying all 8 pillars.
+   - Expanded `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`.
+   - Bumped cache busters: `admin.html` (v182) and `sw.js` (v107).
+   - All 19 test suites in `package.json` pass 100% cleanly.
+
+## [2026-11-11 06:10] — Phase 401: Full-Scale System Table Audit, Standardization & Harmonization Protocol
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 401  
+**Status:** PASS  
+
+### Why
+- Execute full-scale system table audit and harmonization per user directives across all tables in the application:
+  1. **Standardized Spatial Margins**: `10px` top, `10px` sides, `0px` bottom (flush docking to the 60px locked bottom banner `#bottom-ad-banner`).
+  2. **Uniform Font Size**: Standardized uniform `12px !important;` font size across all headers (`th`), super-headers, data cells (`td`), and inputs.
+  3. **Superscript Tag Standard**: Standardized remedial tags (`<sup>R</sup>`) and waiver tags (`<sup>F</sup>`) to `font-size: 1.0em !important; font-weight: 900 !important; vertical-align: super !important; line-height: 0 !important;`.
+  4. **Two-Tier Sticky Header Locking**: Super-headers locked at `top: 0 !important; z-index: 20 !important; height: 24px !important;`, sub-headers locked at `top: 24px !important; z-index: 19 !important; height: 24px !important;`.
+  5. **Small Table Anti-Ballooning & Zero Scrollbar**: In `fitMatrixToScreen()`, bounded row heights between `24px` and `32px`. Eliminated unnecessary vertical scrollbars when rosters are small (< 15 rows).
+  6. **Sort Icon Modernization**: Purged ambiguous idle `⇅` sort icon; sort arrow `▲` (asc) or `▼` (desc) appears ONLY when a column is actively clicked/sorted.
+  7. **Live Monitor Table Harmonization & Pure Direct English**: Purged all Indonesian UI text and fixed Star badge text to dark slate `#0F172A` (Rule 2.10).
+  8. **Master Edit Mode Table Input Safeguards**: Interactive table inputs receive capsule styling (`border-radius: 9999px !important; height: 24px !important; font-size: 12px !important;`) when Edit Mode is ON.
+
+### Changed
+1. **Global CSS Standardization (`css/admin.css`, `css/style.css`, `css/result.css`)**:
+   - Set `.table-wrap th`, `.data-table th`, `.datagrid-table th...` to `font-size: 12px !important; height: 24px !important; padding: 4px 8px !important;`.
+   - Set `.table-wrap td`, `.data-table td`, `.datagrid-table td...` to `font-size: 12px !important; white-space: nowrap !important; text-overflow: ellipsis !important;`.
+   - Standardized `.test-rem-sup`, `.asm-rem-sup`, and table `sup` to `font-size: 1.0em !important; font-weight: 900 !important;`.
+   - Locked `.table-wrap` to `margin-bottom: 0 !important;` and `.admin-content:has(.table-wrap)` to `padding: 10px 10px 0 10px !important;`.
+   - Enforced capsule styling and 24px height on table inputs during Master Edit Mode ON.
+2. **Class Hub Matrix Sizing & Scroll Elimination (`js/admin/app.js`, `css/admin.css`)**:
+   - Bounded row height in `fitMatrixToScreen()` between 24px and 32px.
+   - Dynamically set `overflow-y: hidden` when total table height fits within available viewport.
+   - Set `#class-attendance-grid table.datagrid-table` to `height: auto !important;`.
+3. **Core DataGrid & Sort Icon Modernization (`js/admin/datagrid.js`, `js/admin/tests-access.js`)**:
+   - Modernized sort icon renderer in `datagrid.js`: Purged idle `⇅`; active columns render `▲` or `▼`.
+   - Modernized sort icon in `tests-access.js`: Removed idle `⇅` from template and active switcher.
+4. **Live Monitor Table Harmonization (`js/admin/tests-access.js`)**:
+   - Purged Indonesian text in KPI chips, peek buttons, alarms, and answer modals.
+   - Set Star circular badge text color to dark slate `#0F172A`.
+5. **Classes Management, Class Results & Topics (`js/admin/classes-management.js`, `js/admin/class.js`, `js/admin/program-management.js`)**:
+   - In `classes-management.js`: Added `hideToolbar: true`, `pageSize: 1000`, single-line nowrap Title, flat text Status.
+   - In `class.js`: Added `hideToolbar: true`, `pageSize: 1000`, flat text Batch, removed merged `Highest` capsule in Score, wrapped `#topics-table` in `.table-wrap`, and added `edit-mode-only` to topic buttons.
+   - In `program-management.js`: Wrapped `.matrix-table` in `.table-wrap` and declared sticky `thead th`.
+6. **Governance & Testing**:
+   - Added Rule 2.38 in `AGENTS.md` and `.agents/rules/ui-invariants.md`.
+   - Created `scripts/test_universal_table_standardization.mjs` verifying all 8 pillars.
+   - Updated `package.json` to include `test:universal-table` in `npm test`.
+   - Bumped cache busters: `admin.html` (v181), `sw.js` (v106).
+
+## [2026-11-11 04:20] — Phase 398: Test Blueprint Controls Relocation, Table Pruning, Answer Type & Theme Boundary Lines
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 398  
+**Status:** PASS  
+
+### Why
+- Execute user interface refactoring per user directives across Vocabulary Vault Test Blueprint and Class Attendance Theme Matrix:
+  1. **Relocate Top Controls to Lower Panel**: Bilah filter atas (`Program`, `Level Tabs`, `Search`) memakan ruang vertikal di bawah sub-tab; dipindahkan ke dalam unified 50px bottom panel bersama kesimpulan metadata dan tombol aksi.
+  2. **Prune Redundant Columns**: Kolom checkbox dan kolom tombol `ACTIONS` (`👁️ Class Hub`) bersifat repetitif di setiap baris; dihapus bersih.
+  3. **Add Dedicated `ANSWER TYPE` Column**: Kolom `FORMAT` hanya berisi `7×7 Spoken`; dipisah agar memiliki kolom `ANSWER TYPE` tersendiri (`🗣️ Spoken`, `✍️ Written`, `🔄 Hybrid`) sebagai blueprint generasi tes kurikulum.
+  4. **Normalize Theme Boundary Lines**: Menghilangkan warna biru muda pada pemisah `STUDENT DETAILS` (`col-sticky-last` / kolom Grade) dan membersihkan legacy 3px border pada kolom PTS agar garis batas tema murni dan presisi hanya berada di kolom `SCR`.
+
+### Changed
+1. **Vocabulary Vault Test Blueprint (`js/admin/vocab-vault.js`)**:
+   - Removed top toolbar HTML (`#bp-program-select`, `.btn-bp-level-tab`, `#bp-search-input`).
+   - Integrated 3-zone layout into `window.setBottomInfobar`: Left (Program select & Level pill buttons), Center (Metadata chips: Tasks, Exams, Readiness %), Right (Search input, Test Settings, and Auto-Generate All Tests).
+   - Removed checkbox and Actions columns from `<thead>` and `<tbody>`.
+   - Added `ANSWER TYPE` column next to `FORMAT`, rendering badges with inline select support during Master Edit Mode.
+   - Introduced 4-pillar super-headers (`CURRICULUM TOPIC`, `VOCABULARY POOL`, `GENERATION BLUEPRINT`, `READINESS STATUS`) with `.col-bp-sep` dividing lines.
+2. **Unified Lower Panel Support (`js/admin/app.js` & `css/admin.css`)**:
+   - Expanded `setBottomInfobar` to accept `centerHtml` parameter.
+   - Added `.bottom-infobar-center` flexbox styling in `css/admin.css`.
+3. **Theme Boundary Lines Calibration (`css/admin.css`)**:
+   - Changed `super-hdr-student` and `.col-sticky-last` border from `#38bdf8` to neutral `rgba(255, 255, 255, 0.25)`.
+   - Cleaned legacy 3px border from `.col-test-theme-total` (PTS), replacing with `1px dashed rgba(255, 255, 255, 0.08)`.
+   - Enforced 3px solid theme colored boundary borders (`#38bdf8`, `#c084fc`, `#fbbf24`, `#34d399`) strictly on `.col-test-theme-score-*` (SCR).
+4. **Cache Busting**:
+   - Updated `admin.html` cache buster to `v=20261111_v178`.
+   - Updated `sw.js` cache name to `topscore-cache-option-a-v103`.
+
+### Verification
+- `node scripts/test_blueprint_refactor_and_theme_dividers.mjs`: All 12 assertions PASS (100%).
+- `node scripts/test_theme_divider_and_task_edit.mjs`: 11/11 PASS.
+- `node scripts/test_dynamic_columns_and_10px_gap.mjs`: 25/25 PASS.
+- `node scripts/test_subheader_and_footer_relocation.mjs`: 11/11 PASS.
+- `npm test`: 15 test suites passed, 100% clean.
+
+---
+
+## [2026-11-11 03:50] — Phase 397: Theme Divider Realignment, Footer Flush Baseline Docking & Task Progress Live Editing
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 397  
+**Status:** PASS  
+
+### Why
+- Address specific visual alignment and feature requests from user:
+  1. **Theme Divider Line Placement**: Vertical boundary lines between themes (`3px solid`) were placed on `.col-test-theme-total-*` (the PTS column), cutting through the middle of the theme instead of cleanly demarcating each theme after the SCR column.
+  2. **Footer Baseline Alignment (Gambar 2 vs Gambar 3)**: A 10px discrepancy existed between the table footer (`★ CLASS AVERAGE`) and `.sidebar-footer` (`Tutor's Room ADMIN`) due to an artificial `- 10` subtraction in `fitMatrixToScreen`.
+  3. **Task Progress Live Editing in Master Edit Mode**: When Master Edit Mode is active, all table cells including `TASK` (`21/21`) should be manually editable and automatically synchronized across the entire system. Completing tasks in edit mode unlocks exam gating in real time.
+
+### Changed
+1. **Theme Boundary Line CSS (`css/admin.css`)**:
+   - Realigned `border-right: 3px solid #...` from `.col-test-theme-total-*` (PTS) to `.col-test-theme-score-*` (SCR) across themes A, B, C, and D (`#38bdf8`, `#c084fc`, `#fbbf24`, `#34d399`).
+2. **Footer Baseline Calculation (`js/admin/app.js` & `css/admin.css`)**:
+   - Removed `- 10` deduction in `fitMatrixToScreen`, allowing `#class-attendance-grid` to dock flush at the 60px bottom banner floor, leveling `tfoot` with `.sidebar-footer` at 50px height.
+   - Enforced `padding-bottom: 0 !important; margin-bottom: 0 !important;` on attendance grid containers.
+3. **Task Progress Live Editing & Synchronization (`js/admin/app.js`)**:
+   - Rendered interactive capsule input `<input type="number" min="0" max="${maxT}" class="input-matrix-task-progress ...">` when `isGlobalEdit` is true.
+   - Implemented `window.onMatrixTaskChange` and `window.saveRowManualTaskInput`, delegating to `adminApplyForgiven` with `action: 'forgive'` (if earned >= maxTasks) or `action: 'manual'`, syncing updates across the entire platform.
+   - Dynamic real-time unlocking of exam gating (🛑 Stop ➔ 🔒 Lock or score) upon task completion.
+4. **Cache Busting**:
+   - Updated `admin.html` cache buster to `v=20261111_v177`.
+   - Updated `sw.js` cache name to `topscore-cache-option-a-v102`.
+
+### Verification
+- `node scripts/test_theme_divider_and_task_edit.mjs`: All 11 assertions PASS (100%).
+- `node --check js/admin/app.js` & `node --check js/admin/student-management.js`: Syntax Valid (0 errors).
+- `node scripts/test_dynamic_columns_and_10px_gap.mjs`: 25/25 PASS.
+- `node scripts/test_subheader_and_footer_relocation.mjs`: 11/11 PASS.
+- `node scripts/test_unified_theme_matrix_and_3state_gating.mjs`: 16/16 PASS.
+- `npm test`: 15 test suites passed, 100% clean.
+
+---
+
+## [2026-11-11 03:20] — Phase 396: Dynamic Column Sizing, Zero Dead Space & Universal 10px Spatial Normalization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 396  
+**Status:** PASS  
+
+### Why
+- Fix severe visual and spatial distortions identified in user screenshots (Gambar 1 & Gambar 2):
+  1. **Gambar 1 (`#class-attendance-grid`)**: Header text was heavily truncated (`INSTIT`, `PROGRA`, `RATCH`) due to hardcoded micro-widths (`34px`, `44px`, `36px`), and hardcoded sticky left offsets (`left: 259px`, `295px`, `329px`) caused `PROGRESS`, `POINTS`, and `GRADE` to tear away from their columns, creating an 800px black hole void in the center of the screen.
+  2. **Gambar 2 (`studentGrid` / Batch Student Roster)**: Column `Name` lacked width bounds under default fixed table layout and absorbed ~1200px of extra width, creating a 1000px empty chasm in the middle of the table while exam columns were squished at the far right.
+  3. **Universal 10px Spatial Gap**: Normalize gap across all workspace containers, cards, and data grids to strictly `10px !important;`.
+  4. **/learn Codification**: Ratify rules in `.agents/rules/ui-invariants.md`, `AGENTS.md`, and `.antigravityrules`.
+
+### Changed
+1. **Attendance Grid CSS & Render (`css/admin.css`, `js/admin/app.js`)**:
+   - Removed rigid `left: 0px` to `329px` offsets and `position: sticky` on body cells; kept vertical sticky on `thead th` (top: 19px) and `tfoot td` (bottom: 0).
+   - Allocated proportional base widths: `INSTITUTION` (80px), `PROGRAM` (85px), `BATCH` (65px), `STUDENT NAME` (min 200px), `PROGRESS` (80px), `POINTS` (75px), `GRADE` (65px), Theme sub-columns (`TASK`, `PTS`, `SCR`: min 60px/65px).
+   - Removed cell-level clipping `max-width:44px;` and `max-width:140px;`.
+2. **Batch Student Roster Balanced Proportions (`js/admin/student-management.js`)**:
+   - Set `tableLayout: 'auto'` on `studentGrid`.
+   - Balanced columns: `Level` (75px), `Name` (`width: 280px, minWidth: 240px, maxWidth: 340px`), `Age` (80px), `Gender` (65px), `Exam 1–4` (`width: 125px, minWidth: 100px` each), `Actions` (90px).
+3. **Universal 10px Container Gap Enforcement (`css/admin.css`)**:
+   - Standardized `#admin-content-area`, `.workspace-container-gap`, `#class-attendance-container`, `#student-grid-container`, `#class-hub-tab-content`, `#programs-grid-container`, `#batches-grid-container`, `#class-datagrid-container`, `#vault-tab-content`, and `.student-management-container` to `gap: 10px !important;`.
+4. **Master Governance Codification**:
+   - `.agents/rules/ui-invariants.md`: Codified Universal 10px Container Gap in Section 3 and Zero Dead Space & Proportional Width Distribution in Section 5.
+   - `AGENTS.md`: Synchronized Sub-sections 2.33 & 2.34.
+   - `.antigravityrules`: Synchronized Domain 3 Rules 20 & 21.
+
+### Verification
+- `node scripts/test_dynamic_columns_and_10px_gap.mjs`: All 25 assertions PASS (100%).
+- `node --check js/admin/app.js` & `node --check js/admin/student-management.js`: Syntax Valid (0 errors).
+- `node scripts/test_subheader_and_footer_relocation.mjs`: 11/11 PASS.
+- `node scripts/test_unified_theme_matrix_and_3state_gating.mjs`: 16/16 PASS.
+- `node scripts/test_viewport_lock_and_table_normalization.mjs`: 100% PASS.
+- `node scripts/verify_green_star_grading.mjs`: 100% PASS.
+- `node scripts/test_vocab_vault_and_edit_mode.mjs`: 100% PASS.
+
+---
+
+## [2026-11-11 01:50] — Phase 395: Agent System Extension & Invariant Workflow Optimization (ui-spatial-checker Pipeline Integration, Pre-Flight Gating Validator, Rules 23/24 Codification, and DECISION-048)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 395  
+**Status:** PASS  
+
+### Why
+- Formalize and operationalize the system extensions derived from the user's invariant-driven working style:
+  1. **Elevate `ui-spatial-checker` to Core Test Pipeline**: Expanded `check_spatial_invariants.mjs` with deep regex validations (Universal Lower Panel 50px height, 10px container gap, dynamic nowrap table cells, centered loading spinner) and integrated it into the default `npm test` script in `package.json`.
+  2. **Automated Subagent Pre-Flight Gate (`scripts/verify_plan_preflight.mjs`)**: Created a standalone gate script enforcing that any plan involving UI changes must declare the `# Visual Pre-Flight Verification Checklist` with visual deliverables (mockups/screenshots) before subagent delegation (`DeepCoder`) or production edits are permitted.
+  3. **Master Governance Codification**: Updated Rule 23 (Subagent Gating) and added Rule 24 (Context Window Hygiene & `/compact` Routine) in `.antigravityrules`, ratified Sections 2.36 and 2.37 in `AGENTS.md`, and recorded `DECISION-048` in `docs/DECISIONS.md`.
+
+### Changed
+1. **Pipeline Integration (`package.json`)**:
+   - Integrated `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs` directly into the default `"test"` script.
+2. **Spatial Invariant Suite (`.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`)**:
+   - Added regex assertions for `.workspace-lower-panel` 50px height, 10px container gap, `white-space: nowrap !important;`, tabular numbers, and centered loading spinners.
+3. **Pre-Flight Gating Script (`scripts/verify_plan_preflight.mjs`)**:
+   - Created standalone script that validates plan markdown files against the Visual Pre-Flight Verification Checklist and rejects non-compliant plans with exit code 1.
+4. **Governance Codification (`.antigravityrules`, `AGENTS.md`, `docs/DECISIONS.md`)**:
+   - Updated Rule 23 (Subagent Gating) and Rule 24 (Context Window Hygiene) in `.antigravityrules`.
+   - Ratified Sections 2.36 and 2.37 in `AGENTS.md`.
+   - Recorded `DECISION-048` in `docs/DECISIONS.md`.
+
+### Verification
+- `npm run check:spatial`: All spatial invariants passed 100%.
+- `node scripts/verify_plan_preflight.mjs`: Both positive and negative gate tests passed.
+- `npm test`: Full 15-suite test pipeline passed 100%.
+
+---
+
+## [2026-11-11 01:15] — Phase 394: Universal Lower Panel Architecture (50px Height), Dynamic Column Sizing, Single-Line Text Invariant, Centered Loading, and Footer Metric Elimination
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 394  
+**Status:** PASS  
+
+### Why
+- Implement the spatial and architectural overhaul requested by the user across Tutor's Room (`admin.html`):
+  1. **Universal Lower Panel (50px Height)**: Standardize the lower panel directly above the 60px bottom ad banner with an exact height of **50px**, perfectly aligned with the 50px height and horizontal top line of `.sidebar-footer` (`[A] Tutor's Room ADMIN [🚪]`). Relocate page summary info, table footers (`tfoot`), theme selection pills (`attendance-theme-pills`), triage filter pills (Class Analytics), auto-generate wizard buttons, and edit actions into this Lower Panel.
+  2. **Strict 10px Container Gap**: Enforce an exact 10px spacing between all containers (top panel, table headers, table body, lower panel, and cards).
+  3. **Dynamic Column Sizing & Single-Line Invariant**: Allow table columns across all tables in Tutor's Room to dynamically adjust their width to fit content, eliminating dead black voids. Enforce `white-space: nowrap !important;` so table text never wraps onto multiple lines.
+  4. **Elimination of Useless Metric in Footer**: In the student table summary row (`datagrid-summary-row`), removed `Avg: ... pts` from the Actions column.
+  5. **Centered Loading Indicator & English Language Standard**: Centered loading spinner horizontally and vertically (`display: flex; align-items: center; justify-content: center;`), and standardized all diagnostic strings to direct professional English (`Loading class vocabulary item error analytics...`, `Safe`, `Timeout / Blank`, `STT / Audio Homophone`, `Spelling Typo`, `Word Form / Root Error`, `Distractor Trap / Concept Error`).
+
+### Changed
+1. **Master Governance Codification (`.antigravityrules`, `AGENTS.md`)**:
+   - Codified Rule 20 / Section 2.33: Universal Lower Panel Architecture & 10px Container Gap.
+   - Codified Rule 21 / Section 2.34: Dynamic Column Sizing, Single-Line Text & Zero Dead Space Invariant.
+   - Codified Rule 22 / Section 2.35: Centered Loading States & English Messaging Invariant.
+   - Codified Rule 23 / Section 2.36: Mandatory Visual Pre-Flight Checklist in Planning Mode (`/plan`).
+1b. **Workspace Agent Skills Architecture (`.agents/skills/`)**:
+   - Created `ui-spatial-checker` skill with automated scanner script `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs` (`npm run check:spatial`) auditing 100vh lock, 10px gap, 50px lower panel height, nowrap text, and English loading states.
+   - Created `visual-preflight` skill with SOP and interactive checklist template `.agents/skills/visual-preflight/examples/checklist_template.md` enforcing before/after UI verification in planning mode.
+2. **Universal Lower Panel & Dynamic Column Styles (`css/admin.css`)**:
+   - Defined `.workspace-lower-panel` with strict 50px height (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; line-height: 50px; border-top: 1px solid var(--fm-border-subtle); background: #0f172a;`).
+   - Enforced 50px height on table footers (`tfoot`) and summary rows (`.datagrid-summary-row`).
+   - Applied strict 10px gap on `#admin-content-area`, `.test-analytics-view`, `#class-attendance-container`, and `#student-grid-container`.
+   - Added `.justify-center { justify-content: center !important; }` utility class.
+   - Enforced `white-space: nowrap !important;` and dynamic width (`width: 100% !important; table-layout: auto !important;`) across all tables.
+3. **Student Roster Management Datagrid Cleanup (`js/admin/student-management.js`)**:
+   - Removed `Avg: ... pts` metric from the Actions cell in the summary row.
+   - Replaced rigid 180px width on `sortName` with dynamic space absorption (`min-width: 180px`), eliminating the empty black void on wide screens.
+   - Set 50px height lock on `.datagrid-summary-row`.
+   - Standardized all score exemption (Skor F) prompts, loading messages, and toast alerts to pure Direct English.
+4. **Class Analytics Overhaul & Relocation (`js/admin/class-analytics.js`)**:
+   - Centered loading spinner horizontally and vertically with English string `Loading class vocabulary item error analytics...`.
+   - Standardized all 6 diagnostic labels and modal strings to direct professional English (`Safe`, `Timeout / Blank`, `STT / Audio Homophone`, `Spelling Typo`, `Word Form / Root Error`, `Distractor Trap / Concept Error`).
+   - Relocated urgency triage pills (`🌐 All`, `🔴 Critical >50%`, `🟡 Needs Attention`, `🟢 Safe`) and error stats into `.workspace-lower-panel` docked at the bottom.
+5. **Class Hub Attendance Matrix Lower Panel & Sizing (`js/admin/app.js`)**:
+   - Relocated `.attendance-matrix-toolbar.workspace-lower-panel` to dock beneath `#class-attendance-grid` at the bottom of the workspace.
+   - Preserved Theme filter pills and curriculum edit-mode action buttons inside the Lower Panel.
+   - Standardized manual exam grade loading messages to English.
+5b. **Comprehensive Direct English UI Sweep Across All Admin Modals & Controls**:
+   - **`admin.html`**: Fully translated the Bulk Edit Tests modal (duration presets, answer types, passing score, question order, buttons) to 100% Direct English.
+   - **`js/admin/tests-access.js`**: Translated live session monitor statuses (`Not Started`, `In Progress`, `Submitted`, `Cancelled / Ejected`), heartbeats (`Actively Answering`, `Not Joined`), telemetry messages, toast notifications, exam timer prompt dialogs, anti-cheat alarm reset dialogs, and expelled student confirmation modals to Direct English.
+   - **`js/admin/crud-modals.js`**: Standardized bulk test update validation messages, confirmations, and saving spinners to Direct English.
+   - **`js/admin/auto-gen-modal.js`**: Standardized level selection labels, task/exam duration descriptions, generation overlays, and error toasts to Direct English.
+   - **`js/admin/forgiven-wizard-modal.js`**: Standardized multi-step pacing wizard (step headers, student checklist, quick-pacing buttons, metadata inputs, and confirmation alerts) to Direct English.
+   - Bumped cache busters across `admin.html` to `v=20261111_v175` and `sw.js` to `v100`.
+   - Standardized Test Analytics tab pill badge to Direct English (`val: 'Insights'`).
+   - Standardized all action button error toasts and inline passing score edit toasts to Direct English.
+   - Fixed `fitMatrixToScreen` dynamic sizing to accurately deduct the 50px lower panel height and 10px container gap, and updated footer height reference to 50px.
+6. **Automated Verification Suite (`scripts/test_lower_panel_and_dynamic_columns.mjs`, `package.json`)**:
+   - Created test suite verifying Lower Panel 50px height, 10px container gap, single-line text, footer cleanup, centered loading, English diagnostics, attendance panel relocation, and CSS containment rules.
+   - Integrated into `package.json` `"test"` pipeline.
+
+### Verification
+- `npm.cmd run test:syntax`: 44/44 JS files passed `node --check`.
+- `node scripts/test_lower_panel_and_dynamic_columns.mjs`: All 4 test sections passed 100%.
+- `npm.cmd run test:grading`: 33/33 checks passed 100%.
+- `npm.cmd run test:rbac`: All RBAC checks passed 100%.
+- `npm.cmd test`: All 14 platform regression suites passed 100%.
+
+---
+
+## [2026-11-11 00:30] — Phase 393: Strict 100vh Viewport Lock, Zero Outer Scroll, Universal Sticky Header/Footer, Non-Capsule Data Display, and Pure Direct English UI Standard
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 393  
+**Status:** PASS  
+
+### Why
+- The user diagnosed persistent layout anomalies in `admin.html`:
+  1. **Persistent 60px Outer Scrollbar**: Browser window had a persistent vertical scrollbar on the right edge due to `#admin-console` (`100vh`) + fixed footer `#bottom-ad-banner` (`60px`) equaling `100vh + 60px`.
+  2. **Giant Black Void & Crushed Student Table**: In `#students` (`Camp 134` and `Evnikom EV-07`), the student table was squished into the bottom 50% because `#admin-content-area > div` applied `flex: 1 1 0`, inflating the empty student action toolbar.
+  3. **Universal Sticky Header & Footer**: All tables must have sticky `thead th` (top: 0, z-index 10) and sticky `tfoot` (bottom: 0, z-index 10). Empty `tfoot` must collapse (`display: none !important;`).
+  4. **Prohibition of Capsule Mode in View Mode**: Values, counts, numbers, and badges in table cells must NOT render in capsule/pill box mode when Edit Mode is OFF. All numbers must render as clean, flat text with `tabular-nums`. Capsules are strictly reserved for interactive editable inputs when Edit Mode is ON (`body.global-edit-mode-on`).
+  5. **Pure Direct English UI Standard**: All tabs, toolbar buttons, column headers, modals, toasts, and controls must strictly use English across all pages (sole exception: Indonesian meaning/translation text in Vocabulary Vault).
+  6. **Single-Responsibility Columns**: Every column across all tables must contain only one metric/information.
+  7. **Middle-Panel Tab Hygiene**: Configure `.vscode/settings.json` editor limit (`max: 3`) so middle tabs close automatically when done.
+
+### Changed
+1. **Root Viewport Lock & 60px Banner Deduction (`css/admin.css`)**:
+   - Locked `html` and `body` to `height: 100vh !important; max-height: 100vh !important; width: 100vw !important; max-width: 100vw !important; overflow: hidden !important; overflow-x: hidden !important; overflow-y: hidden !important;`.
+   - Set `#admin-console.admin-layout` to `height: calc(100vh - 60px) !important; max-height: calc(100vh - 60px) !important; width: 100vw !important; overflow: hidden !important;`.
+   - Constrained `.admin-sidebar` and `.admin-main` to `height: 100% !important; max-height: 100% !important; overflow: hidden !important;`.
+   - Deducted generic `flex: 1` from `#admin-content-area > div` and explicitly targeted only table container elements (`#student-grid-container`, `#class-attendance-grid`, `#class-tests-grid`, `#class-analytics-grid`, `#vault-tab-content`, etc.).
+2. **Universal Sticky Header & Footer (`css/admin.css`)**:
+   - Enforced sticky `thead th` (`top: 0; z-index: 10; background: #0f172a;`) and sticky `tfoot` (`bottom: 0; z-index: 10; background: #0f172a;`) across `.table-wrap table`, `.datagrid-table`, and `#blueprint-matrix-table`.
+   - Automatically collapsed empty footers (`tfoot:empty { display: none !important; }`).
+3. **Non-Capsule View Mode & Tabular Numbers (`css/admin.css`, `js/admin/vocab-vault.js`, `js/admin/student-management.js`)**:
+   - Stripped capsule backgrounds, borders, and shadows from table cells in View Mode (`body:not(.global-edit-mode-on)`).
+   - Applied `font-variant-numeric: tabular-nums !important;` for clean number alignment.
+   - Removed hardcoded inline pill backgrounds/borders from `tp.totalCount`, `7×7 Spoken`, `✓ Ready`, and `▲ Missing` in `vocab-vault.js`.
+   - Normalized student table Level column to flat text with tabular numbers.
+   - Enforced capsule pill styling exclusively on editable inputs when Edit Mode is ON (`body.global-edit-mode-on`).
+4. **Student Toolbar Normalization & Void Elimination (`js/admin/student-management.js`, `css/admin.css`)**:
+   - Tagged action toolbar with `.student-roster-toolbar`.
+   - Configured toolbar to collapse (`display: none !important; margin: 0 !important;`) when Edit Mode is OFF and batch is not alumni, allowing `#student-grid-container` to sit flush beneath the top panel with zero void.
+5. **Pure Direct English UI Standard across All Admin Modules**:
+   - Standardized button labels and tooltips in `js/admin/app.js` (`🗺️ Open Test Blueprint ↗`, `Open Forgiven & Manual Exam Override Wizard`, `Open Default Test System & Blueprint Settings`, `Remedial`).
+   - Standardized `js/admin/desk.js` (`Open/Close Exam & Check Score Access`).
+   - Standardized `js/admin/student-management.js` (`Register New Student`, `Import Students from Excel / CSV`, `Score Exemption`, `Exempt Score (Admin Override)`).
+   - Standardized `js/admin/auto-gen-modal.js`, `js/admin/forgiven-wizard-modal.js`, `js/admin/test-system-settings-modal.js`, and `js/admin/tests-access.js`.
+6. **Editor Tab Hygiene (`.vscode/settings.json`)**:
+   - Added `"workbench.editor.limit.enabled": true`, `"workbench.editor.limit.max": 3`, `"workbench.editor.limit.perEditorGroup": true`.
+7. **Automated Verification Suite (`scripts/test_viewport_lock_and_table_normalization.mjs`, `package.json`)**:
+   - Created comprehensive headless test script verifying viewport containment, sticky headers/footers, non-capsule data cells, student toolbar collapse, English UI standard, and VSCode settings.
+   - Registered into `package.json` `"test"` pipeline.
+
+### Verification
+- `npm.cmd run test:syntax`: 44/44 JS files passed `node --check`.
+- `npm.cmd run test:viewport-lock`: All 7 verification categories passed 100%.
+- `npm.cmd run test:grading`: 33/33 grading and token checks passed 100%.
+- `npm.cmd test`: All 13 platform regression test suites passed 100%.
+
+---
+
+## [2026-11-10 23:40] — Phase 392: True Test Analytics Engine, Viewport Lock with Pinned Table Header/Footer, Action Buttons Relocation to Grade Sheet, and Navigation Header/Footer Relocation
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 392  
+**Status:** PASS  
+
+### Why
+- The user clarified critical requirements and architectural refinements:
+  1. **True Test Analytics Engine**: The 3rd tab was previously just the class tests list renamed. The user required a dedicated, form-fitting analytics engine that tracks which vocabulary questions students frequently answer incorrectly, error rates, mistake triage, and underlying cognitive/technical error diagnosis (*"daftar soal vocab yang sering salah dijawab oleh siswa dan kenapa sering salah"*).
+  2. **Zero Outer Scrollbar & Viewport Lock**: Eliminate the outer workspace vertical scrollbar entirely so the screen remains pinned to `100vh`. Scrolling is strictly allowed only inside table bodies (`.table-wrap` / `tbody`).
+  3. **Pinned Table Header & Footer**: Sticky table headers (`thead th` top: 0) and sticky footers (`tfoot` bottom: 0) remain visible within `.table-wrap` when footer data exists (e.g. `★ BATCH AVG`). Empty footers are hidden cleanly (`tfoot:empty`).
+  4. **Navigation Layout Relocation**:
+     - Move the Edit Mode toggle (`#global-edit-mode-toggle`) into the top-left corner of the sidebar header (`.sidebar-logo`), adjacent to `TOPS CORE`.
+     - Move the door logout button 🚪 (`#admin-logout-btn`) to the bottom-left sidebar footer alongside the user avatar `[A]` and a two-line text label (top: "Tutor's Room", bottom: dynamic "admin" or "tutor").
+  5. **Curriculum Action Buttons Placement**: Relocate the 4 curriculum action buttons (`[ 🛡️ Forgiven & Override ]`, `[ ⚙️ Test System Settings ]`, `[ 🗺️ Buka Test Blueprint ↗ ]`, `[ ⚡ Generator & Settings Wizard ]`) from Class Tests into the toolbar of the `Students Grade and Score` tab, protected by `edit-mode-only`.
+
+### Changed
+1. **True Test Analytics Engine (`js/admin/class-analytics.js`, `js/admin/app.js`)**:
+   - Built item-level error aggregation across `attempt_answers` calculating total attempts, incorrect answers, and error percentage.
+   - Built `diagnoseErrorReason()` diagnosing why students missed the question: Damerau-Levenshtein distance ($\le 2$ typo), word form root checking, STT homophones, MCQ distractor traps, and blank/timeout errors.
+   - Added triage filter pills: `[ 🌐 Semua ]`, `[ 🔴 Kritis >50% ]`, `[ 🟡 Butuh Perhatian 25-50% ]`, `[ 🟢 Aman <25% ]`.
+   - Built student mistake breakdown modal (`openVocabErrorDetailModal`) showing student names, timestamps, and exact incorrect submissions.
+   - Added pinned summary `tfoot` at table bottom displaying analyzed vocabulary count and class-wide average error rate.
+   - Structured Class Hub into 4 clear tabs: `1. Students Grade and Score`, `2. Test Sessions`, `3. Class Tests`, `4. Test Analytics`.
+2. **Navigation Header & Footer Relocation (`admin.html`, `css/admin.css`, `js/admin/app.js`)**:
+   - Moved `#global-edit-mode-toggle` into `.sidebar-logo` in the top-left corner.
+   - Reconfigured `.sidebar-footer` to house avatar `[A]`, "Tutor's Room", `#sidebar-user-role-label` ("admin"/"tutor"), and door logout `🚪` (`#admin-logout-btn`).
+   - Cleaned up duplicate topbar toggle and centered topbar breadcrumbs.
+3. **Curriculum Action Buttons Relocation (`js/admin/app.js`)**:
+   - Moved cluster of 4 action buttons into `#class-attendance-container .attendance-matrix-toolbar`.
+   - Protected with `.edit-mode-only` per Rule 2.24 so they only render when Edit Mode = ON.
+4. **100vh Viewport Lock & Pinned Headers/Footers (`css/admin.css`)**:
+   - Enforced `height: 100vh !important; overflow: hidden !important; overflow-y: hidden !important;` on `.admin-content` and `#admin-content-area`.
+   - Set `.table-wrap` to `flex: 1 1 0 !important; min-height: 0 !important; overflow-y: auto !important; position: relative !important;`.
+   - Enforced `position: sticky !important; top: 0 !important; z-index: 10 !important;` on table `thead th`.
+   - Enforced `position: sticky !important; bottom: 0 !important; z-index: 10 !important;` on table `tfoot`, with `tfoot:empty { display: none !important; }`.
+5. **Automated Verification Suite (`scripts/test_streamline_and_analytics_overhaul.mjs`, `package.json`)**:
+   - Created headless test verifying DOM positions, CSS rules, action buttons, 4-tab structure, and analytics module exports.
+   - Registered into `package.json` `"test"` pipeline.
+
+### Verification
+- `npm.cmd run test:syntax`: 44/44 JS files passed `node --check`.
+- `npm.cmd run test:rbac`: 8/8 RBAC tests passed 100%.
+- `npm.cmd run test:grading`: 33/33 grading and token checks passed 100%.
+- `npm.cmd test`: All 12 platform regression test suites passed 100%.
+- All changes remain uncommitted in the working tree for user review per Rule 0.1.1.
+
+---
+
+## [2026-11-10 23:05] — Phase 391: System Streamlining & Feature Consolidation, Universal Dark Badge Standard, and Upfront Task List Execution
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 391  
+**Status:** PASS  
+
+### Why
+- The user requested a comprehensive audit and streamlining of all duplicate buttons and fragmented features across TopsCore LMS:
+  *"saya ingin melihat ulang semua tombol atau fitur2 yang ada di dalam sistem, sepertinya banyak tombol yang memiliki lokasi ganda dan itu membuat semua terlalu ramai... saya ingin kita buat rencana streamline sistem dan buat lebih compact dan lebih efisien"*
+- User also established four non-negotiable architectural standards:
+  1. **Typo Correction Standard**: Always display typo corrections at the very start of every response under `### 🎯 Perbaikan Perintah (Typo Fixed)`.
+  2. **Upfront Task List & Center Screen Pinning**: When a plan proceeds, `tasks.md` must be created immediately upfront as Step Zero, opened, and pinned to the center editor screen before any code is modified.
+  3. **Universal Dark Grade Badge Contrast**: Inside all circular badges (`.grade-circle`), all grade codes and symbols (`★`, `A`, `B`, `C`, `D`, `E`) must strictly render in deep dark slate (`#0F172A`), no longer white.
+  4. **Test Analytics Consolidation**: Test Analytics moved from standalone sidebar item into the 3rd tab of `Class Hub` (`Class Hub -> 📊 Test Analytics`).
+
+### Changed
+1. **Governance & Core Rules (`.antigravityrules`, `AGENTS.md`)**:
+   - Enforced Rules 11, 12, 13, 14 in `.antigravityrules` and Sections 2.10, 2.27, 2.28, 2.29 in `AGENTS.md`.
+   - Updated `TOPSCORE_COLORS.TEXT_STAR` to `#0F172A` in `js/grading.js` and `--badge-text-star: #0f172a;` in `css/style.css`.
+   - Updated grading verification suite `scripts/verify_green_star_grading.mjs`.
+2. **Phase 1: Test Analytics Consolidation into Class Hub (`admin.html`, `js/admin/app.js`)**:
+   - Removed standalone `<div class="admin-nav-item" data-sub="tests">` from Domain C sidebar in `admin.html`.
+   - Integrated `{ id: 'tests', icon: '📊', label: 'Test Analytics' }` as the 3rd tab inside `Class Hub`.
+   - Rerouted `#tests` and `#class-hub?tab=tests` / `tab=analytics` seamlessly into Class Hub.
+3. **Phase 2: Domain B Consolidation (Students & Registration Merger) (`admin.html`, `js/admin/app.js`, `js/admin/student-management.js`)**:
+   - Removed standalone `Students Registration` item from Domain B sidebar in `admin.html`.
+   - Rerouted `#student-registration`, `#students-registration`, and `#import-students` directly to `#students`.
+   - Added direct `[ ➕ Add Student ]` and `[ 📥 Import Excel / CSV ]` buttons to the student table toolbar, protected by `edit-mode-only`.
+4. **Phase 3: Legacy Question Bank & Duplicate Route Cleanup (`js/admin/app.js`)**:
+   - Redirected legacy routes `#questions`, `#import-questions`, `#export-questions` to `#vocab_vault`.
+   - Redirected legacy routes `#audit`, `#health`, `#recycle` to `#settings?tab=...`.
+5. **Phase 4: Duplicates & Diagnostics Integration (`admin.html`, `js/admin/desk.js`)**:
+   - Cleaned up orphan modals `#duplicate-students-modal` and `#duplicate-questions-modal` from `admin.html`.
+   - Centralized duplicate scans and database repairs strictly within the **Data Health** tab in `desk.js`.
+6. **Phase 5: Unified Sticky Save Bar in Settings (`js/admin/desk.js`)**:
+   - Consolidated 6 individual save buttons (`btn-save-cost-guard`, `btn-save-anti-cheat`, `btn-save-vault`, `save-settings-btn`, `btn-save-admin-password`, `btn-save-tutor-password`) into a single master action button: `[ 💾 Save All Settings ]` (`#btn-save-all-settings`) in the settings header.
+   - Preserved card-level buttons with `edit-mode-only` protection while centralizing all saves into a parallel `Promise.all` transaction with loading feedback.
+
+### Verification
+- `npm.cmd run test:syntax`: 43/43 JS files passed `node --check`.
+- `npm.cmd run test:rbac`: 8/8 RBAC tests passed 100%.
+- `npm.cmd run test:grading`: 33/33 grading and token checks passed 100%.
+- `npm.cmd test`: All 11 platform regression test suites passed 100%.
+- Git working tree verified clean of unexpected modifications; all changes uncommitted for user review.
+
+---
+
 ## [2026-11-10 17:35] — Phase 390: Dual-Direction (+ / -) Exam Session Time Adjustment & Yellow Panel Standardization
 
 **Agent/Session:** Antigravity  

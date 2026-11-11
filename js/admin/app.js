@@ -8,6 +8,22 @@ if (typeof window !== 'undefined') {
 }
 
 // =========================================================
+// UNIVERSAL CENTERED LOADING STATE HELPER (Rule 22 / Rule 2.35)
+// =========================================================
+export function getLoadingStateHtml(message = 'Loading...') {
+  const safeMsg = escapeHtml(message || 'Loading...');
+  return `
+    <div class="topscore-loading-center">
+      <div class="spinner"></div>
+      <p class="loading-text">${safeMsg}</p>
+    </div>
+  `;
+}
+if (typeof window !== 'undefined') {
+  window.getLoadingStateHtml = getLoadingStateHtml;
+}
+
+// =========================================================
 // EXCEL-STYLE TABLE COLUMN RESIZER
 // =========================================================
 export function makeTableResizable(table, storageKey) {
@@ -356,10 +372,10 @@ export function setTopbarTabs(tabs = [], activeId = null, onSelect = null) {
 }
 window.setTopbarTabs = setTopbarTabs;
 
-export function setBottomInfobar(leftHtml = '', rightHtml = '') {
+export function setBottomInfobar(leftHtml = '', rightHtml = '', centerHtml = '') {
   const bar = document.getElementById('admin-bottom-infobar');
   if (!bar) return;
-  if (!leftHtml && !rightHtml) {
+  if (!leftHtml && !rightHtml && !centerHtml) {
     bar.classList.add('hidden');
     bar.innerHTML = '';
     return;
@@ -367,6 +383,7 @@ export function setBottomInfobar(leftHtml = '', rightHtml = '') {
   bar.classList.remove('hidden');
   bar.innerHTML = `
     <div class="bottom-infobar-left" id="bottom-infobar-left">${leftHtml || ''}</div>
+    ${centerHtml ? `<div class="bottom-infobar-center" id="bottom-infobar-center">${centerHtml}</div>` : ''}
     <div class="bottom-infobar-right" id="bottom-infobar-right">${rightHtml || ''}</div>
   `;
 }
@@ -389,6 +406,7 @@ import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v160';
 import { renderTests } from './tests-management.js?v=20261106_v160';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261110_v174';
+import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261110_v175';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261109_v173';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261106_v160';
@@ -580,8 +598,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         try { localStorage.setItem('topscore_admin_settings_tab', tab); } catch(_) {}
       } else if (targetSec === 'class-hub') {
         let tab = (rawSec === 'test-access') ? 'test-sessions'
+          : (rawSec === 'tests' || rawSec === 'test-hub') ? 'tests'
+          : (rawSec === 'analytics' || subTab === 'analytics') ? 'analytics'
           : (subTab || localStorage.getItem('topscore_admin_class_hub_tab') || 'attendance');
-        if (isTutorRole() && tab === 'tests') {
+        if (isTutorRole() && (tab === 'tests' || tab === 'analytics')) {
           tab = 'test-sessions';
         }
         window._classHubActiveTab = tab;
@@ -747,15 +767,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
       const nameEl = document.querySelector('.admin-user-chip .user-name');
       const roleEl = document.querySelector('.admin-user-chip .user-role');
       const session = getAdminSession();
-      if (isTutor) {
-        if (avatarEl) avatarEl.textContent = 'T';
-        if (nameEl) nameEl.textContent = session?.username ? (session.username.charAt(0).toUpperCase() + session.username.slice(1)) : 'Tutor';
-        if (roleEl) roleEl.textContent = 'Exam Proctor';
-      } else {
-        if (avatarEl) avatarEl.textContent = 'A';
-        if (nameEl) nameEl.textContent = 'Administrator';
-        if (roleEl) roleEl.textContent = 'Super Admin';
-      }
+      if (avatarEl) avatarEl.textContent = isTutor ? 'T' : 'A';
+      if (nameEl) nameEl.textContent = "Tutor's Room";
+      if (roleEl) roleEl.textContent = isTutor ? 'tutor' : 'admin';
 
       if (!isTutor) {
         updateAdminKpiBanner();
@@ -1172,7 +1186,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         const cached = classId ? window._classHubCache[classId] : null;
         const isFresh = cached && (Date.now() - cached.timestamp < 45000);
         if (!isFresh && (!area.querySelector('#class-attendance-grid') || area.dataset.currentClassId !== classId)) {
-          area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading Class Hub for ${escapeHtml(className)}...</p></div>`;
+          area.innerHTML = getLoadingStateHtml(`Loading Class Hub for ${className}...`);
         }
         area.dataset.currentClassId = classId || '';
 
@@ -1809,14 +1823,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         const testTests = classTests.filter(a => a.test_type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || (a.test_subtype && a.test_subtype.includes('EXAM')) || (a.test_subtype && a.test_subtype.includes('TEST')) || /\b(EXAM|TEST)\b/i.test(a.title || ''));
 
         let classHubTabs = [
-          { id: 'attendance', icon: '📊', val: activeBatchStudents.length, label: 'Students Grade and Score' },
-          { id: 'test-sessions', icon: '🔐', val: 4, label: 'Test Sessions' },
-          { id: 'tests', icon: '📝', val: classTests.length, label: 'Class Tests' }
+          { id: 'attendance', icon: '👥', val: activeBatchStudents.length, label: 'Students Grade and Score' },
+          { id: 'test-sessions', icon: '⏱️', val: 4, label: 'Test Sessions' },
+          { id: 'tests', icon: '📝', val: classTests.length, label: 'Class Tests' },
+          { id: 'analytics', icon: '📊', val: 'Insights', label: 'Test Analytics' }
         ];
 
         if (isTutorRole()) {
           classHubTabs = classHubTabs.filter(t => t.id === 'test-sessions' || t.id === 'attendance');
-          if (window._classHubActiveTab === 'tests') {
+          if (window._classHubActiveTab === 'tests' || window._classHubActiveTab === 'analytics') {
             window._classHubActiveTab = 'test-sessions';
           }
         }
@@ -1826,65 +1841,40 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         }
 
         let html = `
-          <div>
-            <div id="class-hub-tab-content">
+          <div style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden;">
+            <div id="class-hub-tab-content" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden;">
               ${window._classHubActiveTab === 'test-sessions' ? `
-                <div id="class-test-sessions-container"></div>
+                <div id="class-test-sessions-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
+              ` : (window._classHubActiveTab === 'analytics' ? `
+                <div id="class-analytics-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
               ` : (window._classHubActiveTab === 'tests' ? `
-                <div class="card" style="padding: 0.85rem 1rem; background: var(--clr-surface); margin: 0;">
-                  <!-- Sleek Tactical Toolbar for Class Tests -->
-                  <div class="class-asm-toolbar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 8px;">
-                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: var(--clr-text-1);">📝 Class Tests</h3>
-                      <div class="asm-meta-chips" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <span class="badge" style="background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.12); color: var(--grade-c, #ffff00); font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.3);">⚡ ${taskTests.length} Tasks</span>
-                        <span class="badge" style="background: rgba(244, 114, 182, 0.12); color: #f472b6; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(244, 114, 182, 0.3);">📝 ${testTests.length} Exams</span>
-                        <span class="badge" style="background: rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.12); color: ${TOPSCORE_COLORS.STAR}; font-size: 0.72rem; font-weight: 700; border: 1px solid rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.3);" title="Repetisi: ${targetReps}x lulus (Min. ${taskMinScore}%), Exam: ${examMinScore}%">🎯 Min. ${taskMinScore}% (Task) / ${examMinScore}% (Exam)</span>
-                      </div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                      <button type="button" class="btn btn-warning btn-sm" id="btn-open-forgiven-wizard" style="font-size: 0.75rem; font-weight: 700; background: #d97706; border-color: #d97706; color: #fff;" title="Buka Wizard Forgiven &amp; Exam Manual Override">
+                <div style="padding: 0; background: var(--clr-surface); margin: 0; display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
+                  <div id="class-tests-grid" style="flex:1 1 0; min-height:0; overflow:hidden; display:flex; flex-direction:column;"></div>
+                </div>
+              ` : `
+                <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden; gap:10px;">
+                  <div id="class-attendance-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
+
+                  <!-- Universal Lower Action Bar (Collapses completely when Edit Mode is OFF) -->
+                  <div class="attendance-matrix-toolbar workspace-lower-panel edit-mode-only" style="display:none; justify-content:flex-start; align-items:center; flex-shrink:0;">
+                    <!-- 4 Action Buttons placed directly in Lower Panel (edit-mode-only) -->
+                    <div class="attendance-actions-cluster edit-mode-only" style="display:inline-flex; align-items:center; gap:6px;">
+                      <button type="button" class="btn btn-warning btn-sm" id="btn-open-forgiven-wizard" style="font-size: 0.72rem; font-weight: 700; background: #d97706; border-color: #d97706; color: #fff; padding: 3px 8px;" title="Open Forgiven &amp; Manual Exam Override Wizard">
                         🛡️ Forgiven &amp; Override
                       </button>
-                      <button type="button" class="btn btn-info btn-sm" id="btn-open-blueprint-settings" style="font-size: 0.75rem; font-weight: 700; background: #0ea5e9; border-color: #0ea5e9; color: #fff;" title="Buka Pengaturan Default Test System &amp; Blueprint">
+                      <button type="button" class="btn btn-info btn-sm" id="btn-open-blueprint-settings" style="font-size: 0.72rem; font-weight: 700; background: #0ea5e9; border-color: #0ea5e9; color: #fff; padding: 3px 8px;" title="Open Default Test System &amp; Blueprint Settings">
                         ⚙️ Test System Settings
                       </button>
-                      <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size: 0.75rem; font-weight: 600;" title="Buka Roadmap Kurikulum Lengkap di Test Blueprint">
-                        🗺️ Buka Test Blueprint ↗
+                      <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size: 0.72rem; font-weight: 600; padding: 3px 8px;" title="Open Complete Curriculum Roadmap in Test Blueprint">
+                        🗺️ Open Test Blueprint ↗
                       </button>
-                      <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="font-size: 0.75rem; font-weight: 700; background: #4f46e5; border-color: #4f46e5;" title="Buka Wizard Generator &amp; Pengaturan Kurikulum">
+                      <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="font-size: 0.72rem; font-weight: 700; background: #4f46e5; border-color: #4f46e5; padding: 3px 8px;" title="Open Generator &amp; Curriculum Settings Wizard">
                         ⚡ Generator &amp; Settings Wizard
                       </button>
                     </div>
                   </div>
-                  <div id="class-tests-grid"></div>
                 </div>
-              ` : `
-                <div id="class-attendance-container">
-                  <div class="attendance-matrix-toolbar" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:10px;">
-                    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                      <div class="attendance-theme-pills" id="attendance-theme-pills-container">
-                        <span style="font-size:0.7rem; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-right:2px;">THEME VIEW:</span>
-                        <button type="button" class="attendance-theme-pill ${(!window._classAttendanceThemeFilter || window._classAttendanceThemeFilter === 'ALL') ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('ALL')" data-theme="ALL" title="View all weekly exams across all themes">🌐 ALL (EXAMS ONLY)</button>
-                        <button type="button" class="attendance-theme-pill theme-a ${window._classAttendanceThemeFilter === 'A' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('A')" data-theme="A">🟦 THEME A (8)</button>
-                        <button type="button" class="attendance-theme-pill theme-b ${window._classAttendanceThemeFilter === 'B' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('B')" data-theme="B">🟪 THEME B (10)</button>
-                        <button type="button" class="attendance-theme-pill theme-c ${window._classAttendanceThemeFilter === 'C' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('C')" data-theme="C">🟧 THEME C (12)</button>
-                        <button type="button" class="attendance-theme-pill theme-d ${window._classAttendanceThemeFilter === 'D' ? 'active' : ''}" onclick="window._setAttendanceThemeFilter('D')" data-theme="D">🟩 THEME D (10)</button>
-                      </div>
-                    </div>
-
-                    <div style="display:flex; align-items:center; gap:10px; font-size:0.68rem; color:#94a3b8;">
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800;">WRD</span> Word</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#00FFFF; font-weight:800;">PHR</span> Phrase</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">PTS</span> Points</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#e2e8f0; font-weight:800;">SCORE</span> %</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span style="color:#FFFF00; font-weight:800; font-size:0.75rem;">ᴿ</span> Remedi</span>
-                      <span style="display:inline-flex; align-items:center; gap:3px;"><span class="grade-circle grade-circle-star" style="width:16px !important; height:16px !important; min-width:16px !important; min-height:16px !important; font-size:0.6rem !important;">★</span> ★ (100%)</span>
-                    </div>
-                  </div>
-                  <div id="class-attendance-grid"></div>
-                </div>
-              `)}
+              `))}
             </div>
           </div>
         `;
@@ -1908,11 +1898,25 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               levelMap
             });
           }
+        } else if (window._classHubActiveTab === 'analytics') {
+          const analyticsContainer = document.getElementById('class-analytics-container');
+          if (analyticsContainer) {
+            await renderClassVocabularyAnalytics(analyticsContainer, {
+              classId,
+              className,
+              currentClass,
+              classTests,
+              allStudents,
+              allBatches,
+              batchMap
+            });
+          }
         } else if (window._classHubActiveTab === 'tests') {
           const classAsmGrid = new window.DataGrid({
             container: document.getElementById('class-tests-grid'),
             data: testsGridData,
             pageSize: 50,
+            hideToolbar: true,
             searchKeys: ['title', 'shellCode', 'status', 'TestCategory'],
             bulkActions: true,
             customBulkActions: [
@@ -2016,7 +2020,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                              data-original-val="${currentMin}"
                              value="${currentMin}"
                              min="1" max="100"
-                             title="Ketik angka persentase kelulusan manual (Enter / Blur untuk simpan)"
+                             title="Type manual passing percentage (Enter / Blur to save)"
                              style="width:46px; height:22px; padding:0 2px; font-size:0.75rem; font-weight:700; text-align:center; background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#f8fafc;" />
                       <span style="font-size:0.68rem; color:#94a3b8; font-weight:700;">%</span>
                     </div>
@@ -2089,7 +2093,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               });
             } catch (err) {
               console.error(err);
-              showToast('Gagal membuka settings: ' + err.message, 'error');
+              showToast('Failed to open settings: ' + err.message, 'error');
             }
           });
 
@@ -2103,7 +2107,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               const origVal = parseFloat(input.dataset.originalVal) || 60;
               const rawVal = parseFloat(input.value);
               if (isNaN(rawVal) || rawVal < 1 || rawVal > 100) {
-                showToast('Persentase kelulusan harus antara 1% - 100%', 'error');
+                showToast('Passing score percentage must be between 1% and 100%', 'error');
                 input.value = origVal;
                 return;
               }
@@ -2113,10 +2117,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 input.disabled = true;
                 await updateTestPassingScore(testId, newVal);
                 input.dataset.originalVal = newVal;
-                showToast(`Nilai kelulusan berhasil diubah menjadi ${newVal}%`, 'success');
+                showToast(`Passing score successfully updated to ${newVal}%`, 'success');
               } catch (err) {
                 console.error(err);
-                showToast('Gagal update nilai kelulusan: ' + err.message, 'error');
+                showToast('Failed to update passing score: ' + err.message, 'error');
                 input.value = origVal;
               } finally {
                 input.disabled = false;
@@ -2130,41 +2134,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               }
             });
           }
-
-          // Open Forgiven & Exam Manual Override Wizard
-          document.getElementById('btn-open-forgiven-wizard')?.addEventListener('click', async () => {
-            try {
-              const { openForgivenWizard } = await import('./forgiven-wizard-modal.js?v=20261106_v140');
-              await openForgivenWizard({
-                classId: classId || cid,
-                classTests,
-                batches: allBatches,
-                students: studentsGridData,
-                onComplete: () => {
-                  window.renderClassHub(document.getElementById('admin-content-area'));
-                }
-              });
-            } catch (err) {
-              console.error(err);
-              showToast('Gagal membuka wizard: ' + err.message, 'error');
-            }
-          });
-
-          // Open Test Generator & Settings Wizard
-          document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
-            try {
-              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');
-              await openAutoGenerateModal({
-                explicitClassId: classId,
-                onComplete: () => {
-                  window.renderClassHub(document.getElementById('admin-content-area'));
-                }
-              });
-            } catch (err) {
-              console.error(err);
-              showToast('Gagal membuka wizard: ' + err.message, 'error');
-            }
-          });
         } else {
           let attendanceGridInstance = null;
           const rosterBatchFilter = window._classRosterBatchFilter || 'active';
@@ -2286,6 +2255,89 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             }
           };
 
+          window.onMatrixTaskChange = (studentId, themeCode, maxTasks, valStr) => {
+            if (!window._manualInputState.drafts[studentId]) {
+              window._manualInputState.drafts[studentId] = {};
+            }
+            const taskKey = `task_${themeCode}`;
+            if (!valStr || valStr.trim() === '') {
+              window._manualInputState.drafts[studentId][taskKey] = { earned: null, maxTasks, isDirty: true };
+              return;
+            }
+            const valNum = parseInt(valStr, 10);
+            const clampedEarned = Math.max(0, Math.min(maxTasks, isNaN(valNum) ? 0 : valNum));
+            window._manualInputState.drafts[studentId][taskKey] = {
+              earned: clampedEarned,
+              maxTasks,
+              isDirty: true
+            };
+          };
+
+          window.saveRowManualTaskInput = async (studentId, themeCode, maxTasks) => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify student tasks.', 'warning');
+              return;
+            }
+            const taskKey = `task_${themeCode}`;
+            const studentDraft = window._manualInputState.drafts[studentId] || {};
+            let draft = studentDraft[taskKey];
+
+            if (!draft) {
+              const inputEl = document.querySelector(`.input-matrix-task-progress-${studentId}-${themeCode.toLowerCase()}`);
+              if (inputEl && inputEl.value !== '') {
+                window.onMatrixTaskChange(studentId, themeCode, maxTasks, inputEl.value);
+                draft = window._manualInputState.drafts[studentId]?.[taskKey];
+              }
+            }
+
+            if (draft && draft.isDirty && draft.earned != null) {
+              const earnedVal = Number(draft.earned);
+              const taskAsms = window._themeTaskAsmsMap?.[themeCode] || [];
+              if (taskAsms.length > 0) {
+                if (typeof showLoading === 'function') showLoading(`Saving Theme ${themeCode} task progress (${earnedVal}/${maxTasks})...`);
+                try {
+                  const testActions = taskAsms.map(t => {
+                    const isComplete = earnedVal >= maxTasks;
+                    const pct = isComplete ? 100 : Math.round((earnedVal / maxTasks) * 100);
+                    const maxQ = getAsmExpectedMax(t) || 40;
+                    const score = isComplete ? maxQ : Math.round(maxQ * (pct / 100) * 10) / 10;
+                    return {
+                      testId: t.id,
+                      action: isComplete ? 'forgive' : 'manual',
+                      percentage: pct,
+                      score
+                    };
+                  });
+
+                  await adminApplyForgiven({
+                    classId: window._selectedClassId || classId || cid,
+                    studentIds: [studentId],
+                    testActions,
+                    forgivenBy: 'Mr. Top',
+                    reason: `Manual Task Progress Input: ${earnedVal}/${maxTasks}`
+                  });
+
+                  if (typeof showToast === 'function') showToast(`✓ Theme ${themeCode} task progress (${earnedVal}/${maxTasks}) saved successfully!`, 'success');
+                } catch (err) {
+                  console.error('Save manual task progress error:', err);
+                  if (typeof showToast === 'function') showToast('Failed to save task progress: ' + (err.message || err), 'error');
+                  if (typeof hideLoading === 'function') hideLoading();
+                  return;
+                } finally {
+                  if (typeof hideLoading === 'function') hideLoading();
+                }
+              }
+              draft.isDirty = false;
+            }
+
+            window._manualInputState.activeStudentIds.delete(studentId);
+            delete window._manualInputState.drafts[studentId]?.[taskKey];
+
+            if (window.renderClassHub) {
+              await window.renderClassHub(document.getElementById('admin-content-area'));
+            }
+          };
+
           window.saveRowManualInput = async (studentId, testId, totalQ) => {
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
@@ -2307,7 +2359,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             }
 
             if (dirtyTestIds.length > 0) {
-              if (typeof showLoading === 'function') showLoading('Menyimpan nilai exam manual...');
+              if (typeof showLoading === 'function') showLoading('Saving manual exam score...');
               try {
                 const testActions = dirtyTestIds.map(tId => {
                   const d = studentDraft[tId];
@@ -2329,10 +2381,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   reason: 'Manual Grade Input'
                 });
 
-                if (typeof showToast === 'function') showToast('✓ Nilai exam manual berhasil disimpan!', 'success');
+                if (typeof showToast === 'function') showToast('✓ Manual exam score saved successfully!', 'success');
               } catch (err) {
                 console.error('Save manual grade error:', err);
-                if (typeof showToast === 'function') showToast('Gagal menyimpan nilai manual: ' + (err.message || err), 'error');
+                if (typeof showToast === 'function') showToast('Failed to save manual score: ' + (err.message || err), 'error');
                 if (typeof hideLoading === 'function') hideLoading();
                 return;
               } finally {
@@ -2394,20 +2446,43 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
               allActiveIds.forEach(sId => {
                 const studentDraft = window._manualInputState.drafts[sId] || {};
-                const dirtyTestIds = Object.keys(studentDraft).filter(tId => studentDraft[tId]?.isDirty);
-                if (dirtyTestIds.length > 0) {
-                  const testActions = dirtyTestIds.map(tId => {
-                    const d = studentDraft[tId];
+                const dirtyKeys = Object.keys(studentDraft).filter(k => studentDraft[k]?.isDirty);
+                const testActions = [];
+
+                dirtyKeys.forEach(k => {
+                  if (k.startsWith('task_')) {
+                    const tc = k.replace('task_', '');
+                    const d = studentDraft[k];
+                    const taskAsms = window._themeTaskAsmsMap?.[tc] || [];
+                    const earnedVal = Number(d?.earned || 0);
+                    const maxTasks = Number(d?.maxTasks || 21);
+                    const isComplete = earnedVal >= maxTasks;
+                    const pct = isComplete ? 100 : Math.round((earnedVal / maxTasks) * 100);
+                    taskAsms.forEach(t => {
+                      const maxQ = getAsmExpectedMax(t) || 40;
+                      const score = isComplete ? maxQ : Math.round(maxQ * (pct / 100) * 10) / 10;
+                      testActions.push({
+                        testId: t.id,
+                        action: isComplete ? 'forgive' : 'manual',
+                        percentage: pct,
+                        score
+                      });
+                    });
+                  } else {
+                    const d = studentDraft[k];
                     const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
                     const pts = d?.pts != null ? Number(d.pts) : Math.round((d?.totalQ || 120) * (pct / 100) * 10) / 10;
-                    return { testId: tId, action: 'manual', percentage: pct, score: pts };
-                  });
+                    testActions.push({ testId: k, action: 'manual', percentage: pct, score: pts });
+                  }
+                });
+
+                if (testActions.length > 0) {
                   updatesByStudent.push({ studentId: sId, testActions });
                 }
               });
 
               if (updatesByStudent.length > 0) {
-                if (typeof showLoading === 'function') showLoading(`Menyimpan nilai manual ${updatesByStudent.length} siswa...`);
+                if (typeof showLoading === 'function') showLoading(`Saving manual scores for ${updatesByStudent.length} students...`);
                 try {
                   for (const item of updatesByStudent) {
                     await adminApplyForgiven({
@@ -2418,10 +2493,10 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       reason: 'Manual Grade Batch Input'
                     });
                   }
-                  if (typeof showToast === 'function') showToast(`✓ Nilai manual ${updatesByStudent.length} siswa berhasil disimpan!`, 'success');
+                  if (typeof showToast === 'function') showToast(`✓ Manual scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
                 } catch (err) {
                   console.error('Batch save error:', err);
-                  if (typeof showToast === 'function') showToast('Gagal menyimpan nilai manual: ' + (err.message || err), 'error');
+                  if (typeof showToast === 'function') showToast('Failed to save manual score: ' + (err.message || err), 'error');
                 } finally {
                   if (typeof hideLoading === 'function') hideLoading();
                 }
@@ -2439,7 +2514,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               if (typeof renderAttendanceGridMatrix === 'function') {
                 renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
               }
-              if (typeof showToast === 'function') showToast('Manual input mode AKTIF untuk semua siswa.', 'info');
+              if (typeof showToast === 'function') showToast('Manual input mode ACTIVE for all students.', 'info');
             }
           };
 
@@ -2456,19 +2531,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
             const isTestAsm = isWeeklyExam;
 
-            // Filter tests if a specific theme is selected:
-            // When ALL: only show Checkpoint Tests across all themes! (8 tests = 16 columns)
-            // When specific theme (A, B, C, D): show all tasks and tests for that theme!
-            const activeTests = selectedTheme === 'ALL'
-              ? classTests.filter(isTestAsm)
-              : classTests.filter(asm => {
-                  const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
-                  return (rawTheme || 'A').toUpperCase() === selectedTheme;
-                });
-
-            // Group activeTests by theme and compute dynamic columns
+            // Group all class tests by theme (Tasks & Exams)
             const themeGroups = {};
-            activeTests.forEach(asm => {
+            classTests.forEach(asm => {
               const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
               const tc = (rawTheme || 'A').toUpperCase();
               if (!themeGroups[tc]) themeGroups[tc] = [];
@@ -2477,13 +2542,53 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
             const sortedActiveThemes = Object.keys(themeGroups).sort();
 
-            // Pre-calculate exam points and theme combined score for each student in studentsGridData
+            // Pre-calculate accumulated task progress and exam points/score for each student in studentsGridData
             sortedActiveThemes.forEach(tc => {
-              const asmsInTheme = themeGroups[tc];
+              const asmsInTheme = themeGroups[tc] || [];
+              const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
               const examAsmsInTheme = asmsInTheme.filter(isWeeklyExam);
               const targetAsms = examAsmsInTheme.length > 0 ? examAsmsInTheme : asmsInTheme;
 
+              // Determine number of topics in theme
+              const hasPhrasesInTheme = taskAsmsInTheme.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+              let topicCodes = [];
+              if (hasPhrasesInTheme) {
+                topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || '1')))).sort();
+              } else {
+                topicCodes = taskAsmsInTheme.map((a, idx) => String(a.payload?.topic_code || (idx + 1)));
+              }
+              const numTopics = topicCodes.length;
+              const maxThemeTasks = numTopics * targetReps;
+
               studentsGridData.forEach(row => {
+                // 1. Task Progress Calculation
+                let earnedTasks = 0;
+                if (hasPhrasesInTheme) {
+                  topicCodes.forEach(topCode => {
+                    const wTask = taskAsmsInTheme.find(a => String(a.payload?.topic_code || '1') === topCode && !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+                    const pTask = taskAsmsInTheme.find(a => String(a.payload?.topic_code || '1') === topCode && (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+                    const wPass = wTask ? (row.asmPassCounts?.[wTask.id] || 0) : 0;
+                    const pPass = pTask ? (row.asmPassCounts?.[pTask.id] || 0) : 0;
+                    const topicLevel = typeof computeTopicPassLevel === 'function'
+                      ? computeTopicPassLevel(wPass, pPass, true, targetReps)
+                      : Math.min(wPass, pPass);
+                    earnedTasks += Math.min(topicLevel, targetReps);
+                  });
+                } else {
+                  taskAsmsInTheme.forEach(asm => {
+                    const passCount = row.asmPassCounts?.[asm.id] || 0;
+                    earnedTasks += Math.min(passCount, targetReps);
+                  });
+                }
+
+                const isTaskCompleted = maxThemeTasks > 0 ? (earnedTasks >= maxThemeTasks) : true;
+                row[`theme_${tc}_task`] = earnedTasks;
+                row[`theme_${tc}_task_progress`] = earnedTasks;
+                row[`theme_${tc}_task_max`] = maxThemeTasks;
+                row[`theme_${tc}_task_completed`] = isTaskCompleted;
+                row[`theme_${tc}_task_str`] = maxThemeTasks > 0 ? `${earnedTasks}/${maxThemeTasks}` : '—';
+
+                // 2. Exam Points & Score Calculation
                 let themeEarned = 0;
                 let hasAtt = false;
                 let studentThemeMaxQ = 0;
@@ -2509,33 +2614,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 row[`theme_${tc}_total_pts`] = hasAtt ? cleanThemeEarned : -1;
                 row[`theme_${tc}_score`] = hasAtt ? themePct : -1;
                 row[`theme_${tc}_max_q`] = studentThemeMaxQ;
+                row[`theme_${tc}_has_exam_att`] = hasAtt;
               });
             });
 
-            // Calibrate contextual progressPct and tooltip per view mode:
-            // In 'ALL' (EXAMS ONLY) view: progress strictly represents Milestone Exam Progression (N / totalClassExams)
-            // In Theme views (A, B, C, D): progress represents Theme Completion (N / asmsInTheme.length)
+            // Calibrate master milestone progression progressPct and tooltip
             studentsGridData.forEach(row => {
-              if (selectedTheme === 'ALL') {
-                const totalExams = allClassExams.length || 8;
-                row.progressPct = totalExams > 0 ? Math.round(((row.completedExamCount || 0) / totalExams) * 100) : 0;
-                row.progressStr = `${row.progressPct}%`;
-                row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
-              } else {
-                const asmsInTheme = themeGroups[selectedTheme] || [];
-                const completedInTheme = asmsInTheme.filter(asm => {
-                  const att = row.asmScores?.[asm.id];
-                  return att && ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(att.status || '').toLowerCase());
-                }).length;
-                row.progressPct = asmsInTheme.length > 0 ? Math.round((completedInTheme / asmsInTheme.length) * 100) : 0;
-                row.progressStr = `${row.progressPct}%`;
-                row.progressTooltip = `${completedInTheme}/${asmsInTheme.length} Theme ${selectedTheme} Activities Done (${row.progressPct}%)`;
-              }
+              const totalExams = allClassExams.length || 8;
+              row.progressPct = totalExams > 0 ? Math.round(((row.completedExamCount || 0) / totalExams) * 100) : 0;
+              row.progressStr = `${row.progressPct}%`;
+              row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
             });
 
-            // Dynamic super-headers (7 columns: INST, PROGRAM, BATCH, STUDENT NAME, PROG, GRD, PTS)
+            // Dynamic super-headers: Semantic split into STUDENT IDENTITY (4 cols) and OVERALL PERFORMANCE (3 cols)
             const dynamicSuperHeaders = [
-              { label: 'STUDENT DETAILS', colSpan: 7, className: 'super-hdr super-hdr-student' }
+              { label: 'STUDENT IDENTITY', colSpan: 4, className: 'super-hdr super-hdr-identity' },
+              { label: 'OVERALL PERFORMANCE', colSpan: 3, className: 'super-hdr super-hdr-overall' }
             ];
 
             const themeColorClasses = {
@@ -2545,613 +2639,242 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               'D': 'super-hdr super-hdr-theme super-hdr-theme-d'
             };
 
-            const hasPhrasesComponents = classTests.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
-
-            if (selectedTheme === 'ALL') {
-              sortedActiveThemes.forEach(tc => {
-                const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
-                dynamicSuperHeaders.push({
-                  label: `THEME ${tc}${tName}`,
-                  colSpan: 2,
-                  className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
-                });
+            sortedActiveThemes.forEach(tc => {
+              const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
+              dynamicSuperHeaders.push({
+                label: `THEME ${tc}${tName}`,
+                colSpan: 3,
+                className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
               });
-              if (!isTutorRole()) {
-                dynamicSuperHeaders.push({
-                  label: 'MANUAL INPUT',
-                  colSpan: 1,
-                  className: 'super-hdr super-hdr-action super-hdr-manual-input'
-                });
-              }
-            } else {
-              const asmsInTheme = themeGroups[selectedTheme] || [];
-              const examAsms = asmsInTheme.filter(isWeeklyExam);
-              const hasExam = examAsms.length > 0;
-              const tName = themeNames[selectedTheme] ? ` (${themeNames[selectedTheme]})` : '';
+            });
 
-              if (hasPhrasesComponents) {
-                const topicCodes = Array.from(new Set(asmsInTheme.filter(a => !isWeeklyExam(a)).map(a => String(a.payload?.topic_code || '1')))).sort();
-                if (topicCodes.length > 0) {
-                  dynamicSuperHeaders.push({
-                    label: `THEME ${selectedTheme}${tName}`,
-                    colSpan: topicCodes.length,
-                    className: themeColorClasses[selectedTheme] || `super-hdr super-hdr-theme super-hdr-theme-${selectedTheme.toLowerCase()}`
-                  });
-                }
-              } else {
-                const topicTasks = asmsInTheme.filter(a => !isWeeklyExam(a));
-                if (topicTasks.length > 0) {
-                  dynamicSuperHeaders.push({
-                    label: `THEME ${selectedTheme}${tName}`,
-                    colSpan: topicTasks.length,
-                    className: themeColorClasses[selectedTheme] || `super-hdr super-hdr-theme super-hdr-theme-${selectedTheme.toLowerCase()}`
-                  });
-                }
-              }
-
-              if (hasExam) {
-                dynamicSuperHeaders.push({
-                  label: 'EXAM',
-                  colSpan: 2,
-                  className: 'super-hdr super-hdr-exam'
-                });
-              }
-              if (!isTutorRole()) {
-                dynamicSuperHeaders.push({
-                  label: 'MANUAL INPUT',
-                  colSpan: 1,
-                  className: 'super-hdr super-hdr-action super-hdr-manual-input'
-                });
-              }
-            }
-
-            // Build dynamic test and exam columns
+            // Build dynamic test and exam columns across all active themes (TASK, PTS, SCR)
             const dynamicAsmCols = [];
+            window._themeTaskAsmsMap = window._themeTaskAsmsMap || {};
 
-            if (selectedTheme === 'ALL') {
-              // ALL VIEW: Clean 2 columns per Theme (SCORE | POINTS), zero task clutter
-              sortedActiveThemes.forEach(tc => {
-                // 1. Theme Exam SCORE Column
-                dynamicAsmCols.push({
-                  key: `theme_${tc}_score`,
-                  className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
-                  width: '42px',
-                  headerTitle: `Theme ${tc} Exam Score %`,
-                  title: `Theme ${tc} Exam Score %`,
-                  label: `
-                    <div class="asm-hdr-cell">
-                      <span class="test-subtag test-subtag-test-score" style="font-size:0.58rem; font-weight:700;">SCORE</span>
-                    </div>
-                  `,
-                  sortable: true,
-                  align: 'center',
-                  render: (val, row) => {
-                    const scoreVal = row[`theme_${tc}_score`];
-                    const asmsInTheme = themeGroups[tc] || [];
-                    const examAsm = asmsInTheme.find(isWeeklyExam);
-                    const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
-
-                    if (window.isStudentManualInputActive?.(row.id) && examAsm) {
-                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
-                      const displayScore = currentDraft?.score != null ? currentDraft.score : (scoreVal != null && scoreVal >= 0 ? scoreVal : '');
-                      return `
-                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
-                          <input type="number" min="0" max="100" class="input-matrix-exam-score input-matrix-exam-score-${row.id}-${examAsm.id}"
-                                 data-student-id="${row.id}"
-                                 data-test-id="${examAsm.id}"
-                                 data-total-q="${totalQ}"
-                                 value="${displayScore}"
-                                 placeholder="%"
-                                 oninput="window.onMatrixExamScoreChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
-                                 onkeydown="if(event.key==='Enter'){window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ});}"
-                                 onclick="event.stopPropagation();"
-                                 style="width:38px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
-                        </div>
-                      `;
-                    }
-
-                    if (scoreVal === undefined || scoreVal === null || scoreVal < 0) {
-                      return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                    }
-                    const color = typeof getGradeColorByScore === 'function'
-                      ? getGradeColorByScore(scoreVal)
-                      : '#94a3b8';
-                    const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
-                    const isForgiven = Boolean(examAtt?.is_forgiven);
-                    const isManual = Boolean(examAtt?.is_manual_override || (examAtt?.forgiven_reason && examAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
-                    const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
-                    let supBadge = '';
-                    if (isForgiven) supBadge = '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>';
-                    else if (isManual) supBadge = '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>';
-                    else if (isRem) supBadge = '<sup class="asm-rem-sup">R</sup>';
-                    const cellColor = (isForgiven && scoreVal === 0) ? '#f59e0b' : color;
-                    return `
-                      <span class="asm-score asm-score-test test-score-theme-pct"
-                            style="color:${cellColor}; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                            title="Theme ${tc} Exam Score: ${scoreVal}%">
-                        ${scoreVal}%${supBadge}
-                      </span>
-                    `;
-                  }
-                });
-
-                // 2. Theme Exam POINTS Column
-                dynamicAsmCols.push({
-                  key: `theme_${tc}_total_pts`,
-                  className: `col-asm col-exam col-exam-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
-                  width: '42px',
-                  headerTitle: `Theme ${tc} Exam Points`,
-                  title: `Theme ${tc} Exam Points`,
-                  label: `
-                    <div class="asm-hdr-cell">
-                      <span class="test-subtag test-subtag-test-pts" style="font-size:0.58rem; font-weight:700;">POINTS</span>
-                    </div>
-                  `,
-                  sortable: true,
-                  align: 'center',
-                  render: (val, row) => {
-                    const ptsVal = row[`theme_${tc}_total_pts`];
-                    const asmsInTheme = themeGroups[tc] || [];
-                    const examAsm = asmsInTheme.find(isWeeklyExam);
-                    const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
-
-                    if (window.isStudentManualInputActive?.(row.id) && examAsm) {
-                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
-                      const cleanTotal = ptsVal != null && ptsVal >= 0 ? Math.round(ptsVal * 2) / 2 : '';
-                      const displayPts = currentDraft?.pts != null ? currentDraft.pts : cleanTotal;
-                      return `
-                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
-                          <input type="number" min="0" max="${totalQ}" step="any" class="input-matrix-exam-pts input-matrix-exam-pts-${row.id}-${examAsm.id}"
-                                 data-student-id="${row.id}"
-                                 data-test-id="${examAsm.id}"
-                                 data-total-q="${totalQ}"
-                                 value="${displayPts}"
-                                 placeholder="pts"
-                                 oninput="window.onMatrixExamPtsChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
-                                 onkeydown="if(event.key==='Enter'){window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ});}"
-                                 onclick="event.stopPropagation();"
-                                 style="width:40px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
-                        </div>
-                      `;
-                    }
-
-                    if (ptsVal === undefined || ptsVal === null || ptsVal < 0) {
-                      return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="Unattempted">&middot;</span>';
-                    }
-                    const cleanTotal = Math.round(ptsVal * 2) / 2;
-                    const displayVal = (cleanTotal % 1 !== 0) ? cleanTotal.toFixed(1) : cleanTotal.toString();
-                    const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0
-                      ? row[`theme_${tc}_score`]
-                      : 0;
-                    const color = typeof getGradeColorByScore === 'function'
-                      ? getGradeColorByScore(themePct)
-                      : (themePct >= 60 ? '#FFFF00' : '#FF0000');
-                    return `
-                      <span class="asm-score asm-score-test test-score-theme-total"
-                            style="color:${color} !important; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                            title="Theme ${tc} Total Points: ${displayVal}">
-                        ${displayVal}
-                      </span>
-                    `;
-                  }
-                });
-              });
-
-            } else {
-              // THEME VIEW: Super Headers: [THEME NAME] (spanning Topics) | EXAM (SCORE | POINTS) | ACTION (BUTTON)
-              const asmsInTheme = themeGroups[selectedTheme] || [];
+            sortedActiveThemes.forEach(tc => {
+              const asmsInTheme = themeGroups[tc] || [];
+              const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
+              window._themeTaskAsmsMap[tc] = taskAsmsInTheme;
               const examAsms = asmsInTheme.filter(isWeeklyExam);
-              const hasExam = examAsms.length > 0;
+              const examAsm = examAsms[0];
+              const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
 
-              if (hasPhrasesComponents) {
-                // Multi-component (3rd Vocabulary)
-                const topicCodes = Array.from(new Set(asmsInTheme.filter(a => !isWeeklyExam(a)).map(a => String(a.payload?.topic_code || '1')))).sort();
-
-                // A. Formative Topic Columns (Strictly Repetition Progress Badge)
-                topicCodes.forEach(topCode => {
-                  const topNum = topCode.replace(/^[A-Za-z]/, '');
-                  const wTask = asmsInTheme.find(a => !isWeeklyExam(a) && String(a.payload?.topic_code || '1') === topCode && !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
-                  const pTask = asmsInTheme.find(a => !isWeeklyExam(a) && String(a.payload?.topic_code || '1') === topCode && (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
-                  const taskName = `Theme ${selectedTheme} • Topic ${topNum} Task (${targetReps}× Passes Required)`;
-
-                  dynamicAsmCols.push({
-                    key: `unified_${selectedTheme}_${topCode}_task`,
-                    className: 'col-asm col-task col-unified-task',
-                    width: '38px',
-                    headerTitle: taskName,
-                    title: taskName,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-subtag test-subtag-task" style="font-size:0.50rem; font-weight:700; opacity:0.85;">TOPIC</span>
-                        <span class="test-num test-num-task" style="font-weight:700; font-size:0.68rem;">${topNum}</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const wAtt = wTask ? row.asmScores?.[wTask.id] : null;
-                      const pAtt = pTask ? row.asmScores?.[pTask.id] : null;
-                      const wPass = wTask ? (row.asmPassCounts?.[wTask.id] || 0) : 0;
-                      const pPass = pTask ? (row.asmPassCounts?.[pTask.id] || 0) : 0;
-                      const topicLevel = typeof computeTopicPassLevel === 'function' ? computeTopicPassLevel(wPass, pPass, true, targetReps) : Math.min(wPass, pPass);
-
-                      const isForgiven = Boolean(wAtt?.is_forgiven || pAtt?.is_forgiven);
-                      const supBadge = isForgiven ? '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>' : '';
-                      const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                      const repColor = topicLevel >= targetReps ? '#00c000' : (topicLevel > 0 ? '#38bdf8' : '#64748b');
-
-                      return `
-                        <div class="asm-cell-task-wrap"
-                             style="display:flex; align-items:center; justify-content:center; ${cursorStyle}"
-                             ${clickAttr}
-                             title="Theme ${selectedTheme} Topic ${topNum} Task&#10;Repetition Passes: ${topicLevel}/${targetReps}&#10;Words: ${wPass}/${targetReps}&#10;Phrases: ${pPass}/${targetReps}${isForgiven ? '&#10;Status: Forgiven' : ''}&#10;Click to view result">
-                          <span class="asm-rep-badge ${topicLevel >= targetReps ? 'rep-complete' : ''}"
-                                style="font-size:var(--matrix-font-size, 0.75rem); font-weight:800; color:${repColor}; font-variant-numeric:tabular-nums;">
-                            ${topicLevel}/${targetReps}${supBadge}
-                          </span>
-                        </div>
-                      `;
-                    }
-                  });
-                });
-
-                // B. Unified Exam Columns
-                if (hasExam) {
-                  const wExam = asmsInTheme.find(a => isWeeklyExam(a) && !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
-                  const pExam = asmsInTheme.find(a => isWeeklyExam(a) && (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
-                  const examName = `Theme ${selectedTheme} Exam Package (150 PTS: 120 Words + 30 Phrases)`;
-
-                  // 1. Exam SCORE
-                  dynamicAsmCols.push({
-                    key: `unified_${selectedTheme}_exam_scr`,
-                    className: 'col-asm col-exam col-exam-score',
-                    width: '38px',
-                    headerTitle: `${examName} (Score %)`,
-                    title: `${examName} (Score %)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-subtag test-subtag-test-score" style="font-size:0.58rem; font-weight:700;">SCORE</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const wAtt = wExam ? row.asmScores?.[wExam.id] : null;
-                      const pAtt = pExam ? row.asmScores?.[pExam.id] : null;
-                      const hasAny = wAtt || pAtt;
-                      if (!hasAny) {
-                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:400;" title="Unattempted">&middot;</span>';
-                      }
-                      const isAnyProgress = (wAtt?.status === 'in_progress') || (pAtt?.status === 'in_progress');
-                      if (isAnyProgress) {
-                        return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
-                      }
-                      const unified = computeUnifiedScore({
-                        wordsBest: wAtt,
-                        phrasesBest: pAtt,
-                        wordsMax: 120,
-                        phrasesMax: 30,
-                        hasPhrases: true
-                      });
-                      const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-                      const isForgiven = Boolean(wAtt?.is_forgiven || pAtt?.is_forgiven);
-                      const isManual = Boolean(wAtt?.is_manual_override || pAtt?.is_manual_override || (wAtt?.forgiven_reason && wAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
-                      let supBadge = '';
-                      if (isForgiven) supBadge = '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>';
-                      else if (isManual) supBadge = '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>';
-                      else if (unified.isRemedial) supBadge = '<sup class="asm-rem-sup">R</sup>';
-                      const cellColor = (isForgiven && Number(unified.percentage || 0) === 0) ? '#f59e0b' : unified.gradeColor;
-
-                      return `
-                        <span class="asm-score asm-score-test"
-                              style="color:${cellColor}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                              ${clickAttr}
-                              title="${selectedTheme} Unified Exam&#10;Score: ${unified.percentage}% (Grade ${unified.grade})&#10;Words Exam: ${unified.wordsPoints}/120 (${unified.wordsPct ?? 0}%)&#10;Phrases Exam: ${unified.phrasesPoints}/30 (${unified.phrasesPct ?? 0}%)&#10;Total: ${unified.totalPoints}/150 pts&#10;Click to view result">
-                          ${unified.percentage}%${supBadge}
-                        </span>
-                      `;
-                    }
-                  });
-
-                  // 2. Exam POINTS
-                  dynamicAsmCols.push({
-                    key: `unified_${selectedTheme}_exam_pts`,
-                    className: 'col-asm col-exam col-exam-pts',
-                    width: '38px',
-                    headerTitle: `${examName} (Points)`,
-                    title: `${examName} (Points)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-subtag test-subtag-test-pts" style="font-size:0.58rem; font-weight:700;">POINTS</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const wAtt = wExam ? row.asmScores?.[wExam.id] : null;
-                      const pAtt = pExam ? row.asmScores?.[pExam.id] : null;
-                      const hasAny = wAtt || pAtt;
-                      if (!hasAny) {
-                        return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:400;" title="Unattempted">&middot;</span>';
-                      }
-                      const isAnyProgress = (wAtt?.status === 'in_progress') || (pAtt?.status === 'in_progress');
-                      if (isAnyProgress) {
-                        return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
-                      }
-                      const unified = computeUnifiedScore({
-                        wordsBest: wAtt,
-                        phrasesBest: pAtt,
-                        wordsMax: 120,
-                        phrasesMax: 30,
-                        hasPhrases: true
-                      });
-                      const attId = wAtt?.id || pAtt?.id || wAtt?.attempt_id || pAtt?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                      return `
-                        <span class="asm-score asm-score-test"
-                              style="color:${unified.gradeColor} !important; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                              ${clickAttr}
-                              title="${selectedTheme} Unified Exam Points: ${unified.totalPoints}/150 pts (${unified.percentage}%)">
-                          ${unified.totalPoints}
-                        </span>
-                      `;
-                    }
-                  });
-                }
-
-              } else {
-                // Single-component (Words-only, e.g. 2nd Vocabulary)
-                const topicTasks = asmsInTheme.filter(a => !isWeeklyExam(a));
-
-                // A. Formative Topic Columns (Strictly Repetition Progress Badge)
-                topicTasks.forEach(asm => {
-                  const code = asm.payload?.shell_code || asm.shell_code || asm.title || '';
-                  const topCode = asm.payload?.topic_code || code.replace(/^[0-9]+[A-Za-z]/, '').replace(/[^0-9].*$/, '') || (classTests.indexOf(asm) + 1);
-                  const topNum = String(topCode);
-
-                  dynamicAsmCols.push({
-                    key: `test_${asm.id}`,
-                    className: 'col-asm col-task',
-                    width: '38px',
-                    headerTitle: `Topic ${topNum}: ${asm.title} (${targetReps}× Passes Required)`,
-                    title: `Topic ${topNum}: ${asm.title} (${targetReps}× Passes Required)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-subtag test-subtag-task" style="font-size:0.50rem; font-weight:700; opacity:0.85;">TOPIC</span>
-                        <span class="test-num test-num-task" style="font-weight:700; font-size:0.68rem;">${topNum}</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const att = row.asmScores?.[asm.id];
-                      const passCount = row.asmPassCounts?.[asm.id] || 0;
-                      const isForgiven = Boolean(att?.is_forgiven);
-                      const supBadge = isForgiven ? '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>' : '';
-                      const attId = att?.id || att?.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                      const repColor = passCount >= targetReps ? '#00c000' : (passCount > 0 ? '#38bdf8' : '#64748b');
-
-                      return `
-                        <div class="asm-cell-task-wrap"
-                             style="display:flex; align-items:center; justify-content:center; ${cursorStyle}"
-                             ${clickAttr}
-                             title="Topic ${topNum}: ${escapeHtml(asm.title)}&#10;Repetition Passes: ${passCount}/${targetReps} (Min. ${taskMinScore}%)${isForgiven ? '&#10;Status: Forgiven' : ''}&#10;Click to view result">
-                          <span class="asm-rep-badge ${passCount >= targetReps ? 'rep-complete' : ''}"
-                                style="font-size:var(--matrix-font-size, 0.75rem); font-weight:800; color:${repColor}; font-variant-numeric:tabular-nums;">
-                            ${passCount}/${targetReps}${supBadge}
-                          </span>
-                        </div>
-                      `;
-                    }
-                  });
-                });
-
-                // B. Single-component Exam Columns
-                if (hasExam) {
-                  const mainExam = examAsms[0];
-                  const examTitle = mainExam.title || 'Exam';
-
-                  // 1. Exam SCORE
-                  dynamicAsmCols.push({
-                    key: `test_${mainExam.id}_pct`,
-                    className: 'col-asm col-exam col-exam-score',
-                    width: '38px',
-                    headerTitle: `${examTitle} (Score %)`,
-                    title: `${examTitle} (Score %)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-subtag test-subtag-test-score" style="font-size:0.58rem; font-weight:700;">SCORE</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const att = row.asmScores?.[mainExam.id];
-                      const maxQ = getAsmExpectedMax(mainExam);
-                      const totalQ = Math.max(maxQ, Number(att?.total_questions || 0)) || maxQ;
-
-                      if (window.isStudentManualInputActive?.(row.id)) {
-                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[mainExam.id];
-                        const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                        const rawPct = totalQ > 0 ? (rawEarned / totalQ) * 100 : 0;
-                        const roundPct = Math.round(rawPct);
-                        const displayScore = currentDraft?.score != null ? currentDraft.score : (roundPct > 0 ? roundPct : '');
-                        return `
-                          <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
-                            <input type="number" min="0" max="100" class="input-matrix-exam-score input-matrix-exam-score-${row.id}-${mainExam.id}"
-                                   data-student-id="${row.id}"
-                                   data-test-id="${mainExam.id}"
-                                   data-total-q="${totalQ}"
-                                   value="${displayScore}"
-                                   placeholder="%"
-                                   oninput="window.onMatrixExamScoreChange('${row.id}', '${mainExam.id}', ${totalQ}, this.value)"
-                                   onkeydown="if(event.key==='Enter'){window.saveRowManualInput('${row.id}', '${mainExam.id}', ${totalQ});}"
-                                   onclick="event.stopPropagation();"
-                                   style="width:38px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
-                          </div>
-                        `;
-                      }
-
-                      if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:400;" title="Unattempted">&middot;</span>';
-                      const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:400;" title="Unattempted">&middot;</span>';
-
-                      const rawEarned = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const rawPct = totalQ > 0 ? (rawEarned / totalQ) * 100 : 0;
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                      const roundPct = Math.round(effPct);
-
-                      const isForgiven = Boolean(att.is_forgiven);
-                      const isManual = Boolean(att.is_manual_override || (att.forgiven_reason && att.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
-                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(roundPct) : (roundPct >= 60 ? '#FFFF00' : '#FF0000');
-                      const cellColor = (isForgiven && roundPct === 0) ? '#f59e0b' : color;
-
-                      let supBadge = '';
-                      if (isForgiven) supBadge = '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>';
-                      else if (isManual) supBadge = '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>';
-                      else if (isRem) supBadge = '<sup class="asm-rem-sup">R</sup>';
-
-                      const attId = att.id || att.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                      return `
-                        <span class="asm-score asm-score-test"
-                              style="color:${cellColor}; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                              ${clickAttr}
-                              title="${escapeHtml(examTitle)}&#10;Score: ${roundPct}%&#10;Click to open result">
-                          ${roundPct}%${supBadge}
-                        </span>
-                      `;
-                    }
-                  });
-
-                  // 2. Exam POINTS
-                  dynamicAsmCols.push({
-                    key: `test_${mainExam.id}_pts`,
-                    className: 'col-asm col-exam col-exam-pts',
-                    width: '38px',
-                    headerTitle: `${examTitle} (Points)`,
-                    title: `${examTitle} (Points)`,
-                    label: `
-                      <div class="asm-hdr-cell">
-                        <span class="test-subtag test-subtag-test-pts" style="font-size:0.58rem; font-weight:700;">POINTS</span>
-                      </div>
-                    `,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const att = row.asmScores?.[mainExam.id];
-                      const maxQ = getAsmExpectedMax(mainExam);
-                      const totalQ = Math.max(maxQ, Number(att?.total_questions || 0)) || maxQ;
-
-                      if (window.isStudentManualInputActive?.(row.id)) {
-                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[mainExam.id];
-                        const rawEarned = att?.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                        const isRem = Boolean(att?.is_remedial_unlocked || att?.is_remedial);
-                        const effEarned = isRem ? Math.min(rawEarned, totalQ * 0.6) : rawEarned;
-                        const cleanSc = Math.round(effEarned * 10) / 10;
-                        const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                        const displayPts = currentDraft?.pts != null ? currentDraft.pts : (cleanSc > 0 ? displayVal : '');
-                        return `
-                          <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
-                            <input type="number" min="0" max="${totalQ}" step="any" class="input-matrix-exam-pts input-matrix-exam-pts-${row.id}-${mainExam.id}"
-                                   data-student-id="${row.id}"
-                                   data-test-id="${mainExam.id}"
-                                   data-total-q="${totalQ}"
-                                   value="${displayPts}"
-                                   placeholder="pts"
-                                   oninput="window.onMatrixExamPtsChange('${row.id}', '${mainExam.id}', ${totalQ}, this.value)"
-                                   onkeydown="if(event.key==='Enter'){window.saveRowManualInput('${row.id}', '${mainExam.id}', ${totalQ});}"
-                                   onclick="event.stopPropagation();"
-                                   style="width:40px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
-                          </div>
-                        `;
-                      }
-
-                      if (!att) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:400;" title="Unattempted">&middot;</span>';
-                      const st = String(att.status || '').toLowerCase();
-                      if (st === 'in_progress') return `<span style="color:${TOPSCORE_COLORS.C}; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.85);" title="In Progress">⏳</span>`;
-                      if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:400;" title="Unattempted">&middot;</span>';
-
-                      const rawEarned = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-                      const effEarned = isRem ? Math.min(rawEarned, totalQ * 0.6) : rawEarned;
-                      const cleanSc = Math.round(effEarned * 10) / 10;
-                      const displayVal = (cleanSc % 1 !== 0) ? cleanSc.toFixed(1) : cleanSc.toString();
-                      const rawPct = totalQ > 0 ? (rawEarned / totalQ) * 100 : 0;
-                      const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(effPct) : (effPct >= 60 ? '#FFFF00' : '#FF0000');
-
-                      const attId = att.id || att.attempt_id;
-                      const clickAttr = attId ? `onclick="window.open('result.html?attempt_id=${encodeURIComponent(attId)}&admin=1', '_blank'); event.stopPropagation();"` : '';
-                      const cursorStyle = attId ? 'cursor:pointer;' : 'cursor:default;';
-
-                      return `
-                        <span class="asm-score asm-score-test"
-                              style="color:${color} !important; ${cursorStyle} font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
-                              ${clickAttr}
-                              title="${escapeHtml(examTitle)}&#10;Points: ${displayVal}/${totalQ} pts">
-                          ${displayVal}
-                        </span>
-                      `;
-                    }
-                  });
-                }
-              }
-            }
-
-            // C. Manual Input Action Column (Present in Both Theme View and All View)
-            const hasAnyActiveStudent = window._manualInputState?.activeStudentIds?.size > 0;
-            const currentThemeExam = (selectedTheme !== 'ALL' && themeGroups[selectedTheme])
-              ? themeGroups[selectedTheme].find(isWeeklyExam)
-              : null;
-            const currentExamId = currentThemeExam ? currentThemeExam.id : null;
-            const currentExamTotalQ = currentThemeExam ? (Number(currentThemeExam.total_questions || getAsmExpectedMax(currentThemeExam)) || 120) : 120;
-
-            if (!isTutorRole()) {
+              // 1. Theme Formative TASK Progress Column (x/Total)
               dynamicAsmCols.push({
-                key: 'manual_input_action',
-                className: 'col-asm col-action col-manual-input edit-mode-only',
-                width: '58px',
-                headerTitle: 'Manual Input (Klik untuk Aktif/Tutup Semua Siswa)',
-                title: 'Manual Input',
-                label: `
-                  <div class="asm-hdr-cell edit-mode-only" style="cursor:pointer;" onclick="window.toggleAllManualInputMode()" title="Klik untuk Toggle Aktif/Tutup Manual Input Semua Siswa">
-                    <span class="test-subtag" style="font-size:0.56rem; font-weight:800; color:${hasAnyActiveStudent ? '#22c55e' : '#38bdf8'}; background:${hasAnyActiveStudent ? 'rgba(34,197,94,0.18)' : 'rgba(56,189,248,0.12)'}; padding:1px 5px; border-radius:6px; border:1px solid ${hasAnyActiveStudent ? '#22c55e' : 'rgba(56,189,248,0.3)'};">
-                      ${hasAnyActiveStudent ? '🟢 ON' : '⚪ OFF'}
-                    </span>
-                  </div>
-                `,
-                sortable: false,
+                key: `theme_${tc}_task`,
+                className: `col-asm col-task col-theme-task col-theme-task-${tc.toLowerCase()}`,
+                width: '65px',
+                minWidth: '60px',
+                headerTitle: `Theme ${tc} Task Progress (Tasks Completed / Max Required)`,
+                title: `Theme ${tc} Task Progress`,
+                label: '<span class="test-subtag test-subtag-task" style="font-size:0.70rem; font-weight:800; color:#38bdf8; letter-spacing:0.02em;">TASK</span>',
+                sortable: true,
                 align: 'center',
                 render: (val, row) => {
-                  const isActive = window.isStudentManualInputActive?.(row.id);
+                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const earned = row[`theme_${tc}_task_progress`] || 0;
+                  const maxT = row[`theme_${tc}_task_max`] || 0;
+                  const isComplete = Boolean(row[`theme_${tc}_task_completed`]);
+                  if (maxT === 0) {
+                    return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="No tasks required">&middot;</span>';
+                  }
+
+                  // Master Edit Mode ON: render inline interactive capsule input
+                  if (isGlobalEdit) {
+                    const taskDraft = window._manualInputState?.drafts?.[row.id]?.[`task_${tc}`];
+                    const displayEarned = taskDraft?.earned != null ? taskDraft.earned : earned;
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; gap:2px;">
+                        <input type="number" min="0" max="${maxT}" step="1"
+                               class="input-matrix-task-progress input-matrix-task-progress-${row.id}-${tc.toLowerCase()}"
+                               data-student-id="${row.id}"
+                               data-theme-code="${tc}"
+                               data-max-tasks="${maxT}"
+                               value="${displayEarned}"
+                               placeholder="0"
+                               oninput="window.onMatrixTaskChange('${row.id}', '${tc}', ${maxT}, this.value)"
+                               onblur="window.saveRowManualTaskInput('${row.id}', '${tc}', ${maxT})"
+                               onkeydown="if(event.key==='Enter'){this.blur();}"
+                               onclick="event.stopPropagation();"
+                               style="width:28px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
+                        <span style="font-size:0.68rem; color:#94a3b8; font-weight:600; font-variant-numeric:tabular-nums;">/${maxT}</span>
+                      </div>
+                    `;
+                  }
+
+                  const color = isComplete ? '#00c000' : (earned > 0 ? '#38bdf8' : '#64748b');
                   return `
-                    <button type="button" class="btn btn-xs btn-manual-input-toggle edit-mode-only ${isActive ? 'active' : ''}"
-                            onclick="window.toggleRowManualInput('${row.id}', ${currentExamId ? `'${currentExamId}', ${currentExamTotalQ}` : 'null, null'}); event.stopPropagation();"
-                            title="${isActive ? 'Klik untuk Simpan Nilai & Tutup Manual Input' : 'Klik untuk Input/Edit Nilai Manual'}"
-                            style="${isActive
-                              ? 'background:#22c55e; color:#0f172a; border:1px solid #16a34a; font-weight:800; font-size:0.62rem; padding:2px 6px; border-radius:8px; cursor:pointer; line-height:1.2; box-shadow:0 0 6px rgba(34,197,94,0.5);'
-                              : 'background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-weight:700; font-size:0.62rem; padding:2px 6px; border-radius:8px; cursor:pointer; line-height:1.2;'}">
-                      ${isActive ? '💾 SAVE' : '✏️ EDIT'}
-                    </button>
+                    <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Tasks Progress: ${earned}/${maxT}${isComplete ? ' (Completed)' : ' (Incomplete)'}">
+                      <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:800; color:${color}; font-variant-numeric:tabular-nums;">
+                        ${earned}/${maxT}
+                      </span>
+                    </div>
                   `;
                 }
               });
-            }
+
+              // 2. Theme Exam POINTS Column
+              dynamicAsmCols.push({
+                key: `theme_${tc}_total_pts`,
+                className: `col-asm col-exam col-exam-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                width: '65px',
+                minWidth: '60px',
+                headerTitle: `Theme ${tc} Exam Points`,
+                title: `Theme ${tc} Exam Points`,
+                label: '<span class="test-subtag test-subtag-test-pts" style="font-size:0.70rem; font-weight:800; color:#38bdf8; letter-spacing:0.02em;">PTS</span>',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => {
+                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const ptsVal = row[`theme_${tc}_total_pts`];
+                  const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                  const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
+                  const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
+                  const maxTasks = row[`theme_${tc}_task_max`] || 0;
+
+                  // Master Edit Mode ON: render inline capsule input
+                  if (isGlobalEdit && examAsm) {
+                    const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
+                    const cleanTotal = ptsVal != null && ptsVal >= 0 ? Math.round(ptsVal * 2) / 2 : '';
+                    const displayPts = currentDraft?.pts != null ? currentDraft.pts : cleanTotal;
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
+                        <input type="number" min="0" max="${totalQ}" step="any" class="input-matrix-exam-pts input-matrix-exam-pts-${row.id}-${examAsm.id}"
+                               data-student-id="${row.id}"
+                               data-test-id="${examAsm.id}"
+                               data-total-q="${totalQ}"
+                               value="${displayPts}"
+                               placeholder="pts"
+                               oninput="window.onMatrixExamPtsChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
+                               onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
+                               onkeydown="if(event.key==='Enter'){this.blur();}"
+                               onclick="event.stopPropagation();"
+                               style="width:40px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
+                      </div>
+                    `;
+                  }
+
+                  // 3-State Gated Display:
+                  // State 1: Incomplete tasks -> Red Stop Icon 🛑
+                  if (!isTaskCompleted) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
+                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
+                      </div>
+                    `;
+                  }
+
+                  // State 2: Tasks completed, exam not taken -> Yellow Lock Icon 🔒
+                  if (!hasExamAttempt || ptsVal === undefined || ptsVal === null || ptsVal < 0) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
+                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
+                      </div>
+                    `;
+                  }
+
+                  // State 3: Tasks completed & Exam taken -> Render Points with grade color
+                  const cleanTotal = Math.round(ptsVal * 2) / 2;
+                  const displayVal = (cleanTotal % 1 !== 0) ? cleanTotal.toFixed(1) : cleanTotal.toString();
+                  const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0
+                    ? row[`theme_${tc}_score`]
+                    : 0;
+                  const color = typeof getGradeColorByScore === 'function'
+                    ? getGradeColorByScore(themePct)
+                    : (themePct >= 60 ? '#FFFF00' : '#FF0000');
+                  return `
+                    <span class="asm-score asm-score-test test-score-theme-total"
+                          style="color:${color} !important; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                          title="Theme ${tc} Total Exam Points: ${displayVal}">
+                      ${displayVal}
+                    </span>
+                  `;
+                }
+              });
+
+              // 3. Theme Exam SCORE Column
+              dynamicAsmCols.push({
+                key: `theme_${tc}_score`,
+                className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
+                width: '65px',
+                minWidth: '60px',
+                headerTitle: `Theme ${tc} Exam Score %`,
+                title: `Theme ${tc} Exam Score %`,
+                label: '<span class="test-subtag test-subtag-test-score" style="font-size:0.70rem; font-weight:800; color:#38bdf8; letter-spacing:0.02em;">SCR</span>',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => {
+                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const scoreVal = row[`theme_${tc}_score`];
+                  const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                  const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
+                  const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
+                  const maxTasks = row[`theme_${tc}_task_max`] || 0;
+
+                  // Master Edit Mode ON: render inline capsule input
+                  if (isGlobalEdit && examAsm) {
+                    const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
+                    const displayScore = currentDraft?.score != null ? currentDraft.score : (scoreVal != null && scoreVal >= 0 ? scoreVal : '');
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
+                        <input type="number" min="0" max="100" class="input-matrix-exam-score input-matrix-exam-score-${row.id}-${examAsm.id}"
+                               data-student-id="${row.id}"
+                               data-test-id="${examAsm.id}"
+                               data-total-q="${totalQ}"
+                               value="${displayScore}"
+                               placeholder="%"
+                               oninput="window.onMatrixExamScoreChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
+                               onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
+                               onkeydown="if(event.key==='Enter'){this.blur();}"
+                               onclick="event.stopPropagation();"
+                               style="width:38px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
+                      </div>
+                    `;
+                  }
+
+                  // 3-State Gated Display:
+                  // State 1: Incomplete tasks -> Red Stop Icon 🛑
+                  if (!isTaskCompleted) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
+                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
+                      </div>
+                    `;
+                  }
+
+                  // State 2: Tasks completed, exam not taken -> Yellow Lock Icon 🔒
+                  if (!hasExamAttempt || scoreVal === undefined || scoreVal === null || scoreVal < 0) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
+                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
+                      </div>
+                    `;
+                  }
+
+                  // State 3: Tasks completed & Exam taken -> Render Score % with grade color
+                  const color = typeof getGradeColorByScore === 'function'
+                    ? getGradeColorByScore(scoreVal)
+                    : '#94a3b8';
+                  const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
+                  const isForgiven = Boolean(examAtt?.is_forgiven);
+                  const isManual = Boolean(examAtt?.is_manual_override || (examAtt?.forgiven_reason && examAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
+                  const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
+                  let supBadge = '';
+                  if (isForgiven) supBadge = '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>';
+                  else if (isManual) supBadge = '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>';
+                  else if (isRem) supBadge = '<sup class="asm-rem-sup">R</sup>';
+                  const cellColor = (isForgiven && scoreVal === 0) ? '#f59e0b' : color;
+                  return `
+                    <span class="asm-score asm-score-test test-score-theme-pct"
+                          style="color:${cellColor}; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                          title="Theme ${tc} Exam Score: ${scoreVal}%">
+                      ${scoreVal}%${supBadge}
+                    </span>
+                  `;
+                }
+              });
+            });
 
             // Clean destruction of previous instance if any
             const gridContainer = document.getElementById('class-attendance-grid');
@@ -3164,7 +2887,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               data: initialRosterData,
               pageSize: 50,
               stickyActionCol: false,
-              tableLayout: 'fixed',
+              tableLayout: 'auto',
               hideToolbar: true,
               rowClassName: (row) => row.hasRemedial ? 'row-remedial' : '',
               searchKeys: [],
@@ -3262,7 +2985,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       cellsHtml += `
                         <td class="col-sticky col-sticky-7 col-sticky-last text-center">
                           ${isAvgGradeS
-                            ? '<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #00c000); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(0,192,0,0.4)); line-height:1;" title="Average Grade ★ (100%)">★</span>'
+                            ? '<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #ff2d87); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Average Grade ★ (100%)">★</span>'
                             : `<span class="grid-grade-val" style="color:${avgGradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
                         </td>
                       `;
@@ -3321,6 +3044,29 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                           </td>
                         `;
                       }
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_task')) {
+                    const tc = col.key.replace('theme_', '').replace('_task', '');
+                    let sumTasks = 0;
+                    let sumMax = 0;
+                    filteredData.forEach(s => {
+                      sumTasks += (s[`theme_${tc}_task_progress`] || 0);
+                      sumMax += (s[`theme_${tc}_task_max`] || 0);
+                    });
+                    if (sumMax > 0) {
+                      const avgTaskPct = Math.round((sumTasks / sumMax) * 100);
+                      const avgTaskCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgTaskPct) : '#FFFF00';
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgTaskCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Tasks Progress: ${avgTaskPct}% (${sumTasks}/${sumMax})">${avgTaskPct}%</span>
+                        </td>
+                      `;
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
@@ -3499,7 +3245,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'col-sticky col-sticky-1',
                   sortable: true,
                   align: 'center',
-                  width: '34px',
+                  width: '80px',
+                  minWidth: '75px',
                   render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:600; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); padding:1px 4px; border-radius:3px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
                 },
                 {
@@ -3508,8 +3255,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'col-sticky col-sticky-2',
                   sortable: true,
                   align: 'center',
-                  width: '44px',
-                  render: (val, row) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:44px; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); font-weight:500; color:var(--clr-text-2);" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
+                  width: '85px',
+                  minWidth: '80px',
+                  render: (val, row) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); font-weight:500; color:var(--clr-text-2);" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
                 },
                 {
                   key: 'batch',
@@ -3517,7 +3265,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'col-sticky col-sticky-3',
                   sortable: true,
                   align: 'center',
-                  width: '36px',
+                  width: '65px',
+                  minWidth: '60px',
                   render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:600; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); padding:1px 4px; border-radius:10px;" title="Batch ${escapeHtml(row.batch)}">${escapeHtml(row.batch)}</span>`
                 },
                 {
@@ -3525,14 +3274,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   label: 'STUDENT NAME',
                   className: 'col-sticky col-sticky-4',
                   sortable: true,
-                  width: '145px',
+                  width: '180px',
+                  minWidth: '150px',
                   render: (val, row) => {
                     const origName = row.displayName || row.name || '';
                     const matrixName = (typeof formatMatrixStudentName === 'function')
                       ? formatMatrixStudentName(origName, 19)
                       : origName;
                     return `
-                      <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:140px; display:flex; align-items:center; gap:2px;" title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
+                      <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; display:flex; align-items:center; gap:2px;" title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
                         <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                           ${escapeHtml(matrixName)}
                         </span>
@@ -3546,7 +3296,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'col-sticky col-sticky-5',
                   sortable: true,
                   align: 'center',
-                  width: '36px',
+                  width: '80px',
+                  minWidth: '70px',
                   render: (val, row) => {
                     const progVal = Number(row.progressPct ?? 0);
                     const progColor = ((row.completedExamCount > 0 || row.completedCount > 0) && typeof getGradeColorByScore === 'function')
@@ -3564,7 +3315,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'col-sticky col-sticky-6',
                   sortable: true,
                   align: 'center',
-                  width: '34px',
+                  width: '75px',
+                  minWidth: '65px',
                   render: (val, row) => {
                     const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
                     if (!isExamTaken && (!val || val === 0)) {
@@ -3587,14 +3339,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   className: 'col-sticky col-sticky-7 col-sticky-last',
                   sortable: true,
                   align: 'center',
-                  width: '34px',
+                  width: '65px',
+                  minWidth: '60px',
                   render: (val, row) => {
                     if (!row.grade || row.grade === '—' || row.grade === '-') {
                       return '<span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem);" title="No exams completed">&mdash;</span>';
                     }
                     const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
-                      return `<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #00c000); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(0,192,0,0.4)); line-height:1;" title="Exam Grade ★ (100% Excellent)">★</span>`;
+                      return `<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #ff2d87); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Exam Grade ★ (100% Excellent)">★</span>`;
                     }
                     const cleanGrade = String(row.grade || '').trim().toUpperCase();
                     const gradeColor = (typeof getGradeColorByScore === 'function')
@@ -3621,34 +3374,38 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             if (!grid) return;
             const rect = grid.getBoundingClientRect();
             const banner = document.getElementById('bottom-ad-banner');
-            const bannerHeight = banner ? banner.offsetHeight : 38;
-            // 20px extra breathing room so the summary row and horizontal scrollbar are NEVER cut off
-            const availHeight = Math.max(260, window.innerHeight - rect.top - bannerHeight - 20);
+            const bannerHeight = banner ? banner.offsetHeight : 60;
+            const lowerPanel = document.querySelector('.attendance-matrix-toolbar.workspace-lower-panel');
+            const isEditOn = document.body.classList.contains('global-edit-mode-on');
+            const lowerPanelHeight = (isEditOn && lowerPanel && lowerPanel.offsetHeight > 0) ? (lowerPanel.offsetHeight + 10) : 0;
+            // When Edit Mode is OFF, table footer sits flush as the sole 50px lower panel perfectly aligned with .sidebar-footer
+            const availHeight = Math.max(260, window.innerHeight - rect.top - bannerHeight - lowerPanelHeight);
             grid.style.height = `${availHeight}px`;
 
             const rows = grid.querySelectorAll('tbody tr');
             const count = rows.length || 25;
-            const headerHeight = 44; // super-header (~20px) + column header (~22px)
-            const footerHeight = 26; // summary row (~26px)
+            const headerHeight = 48; // super-header (~24px) + column header (~24px)
+            const footerHeight = 50; // summary row strictly 50px height
             const scrollbarHeight = 14;
-            const rowHeight = Math.max(22, (availHeight - headerHeight - footerHeight - scrollbarHeight) / count);
+            const minRowHeight = 24;
+            const maxRowHeight = 32;
+            const calculatedHeight = (availHeight - headerHeight - footerHeight - scrollbarHeight) / count;
+            const rowHeight = Math.min(maxRowHeight, Math.max(minRowHeight, calculatedHeight));
 
             grid.style.setProperty('--matrix-row-height', `${rowHeight.toFixed(2)}px`);
 
-            // Optimal font size and cell padding for clean, readable horizontal scroll mode
-            const fontSize = Math.min(11.0, Math.max(8.5, rowHeight * 0.38));
-            const badgeFont = Math.min(9.5, Math.max(7.5, rowHeight * 0.32));
-            const padY = Math.max(1, Math.min(4, Math.floor((rowHeight - 16) / 4)));
-
-            grid.style.setProperty('--matrix-font-size', `${fontSize.toFixed(1)}px`);
-            grid.style.setProperty('--matrix-badge-font', `${badgeFont.toFixed(1)}px`);
-            grid.style.setProperty('--matrix-cell-padding', `${padY}px 4px`);
+            // Standard uniform 12px font size and clean cell padding
+            grid.style.setProperty('--matrix-font-size', '12px');
+            grid.style.setProperty('--matrix-badge-font', '12px');
+            grid.style.setProperty('--matrix-cell-padding', '3px 4px');
 
             // Clean standard scrollable layout (no forced zoom shrinking)
             const wrap = grid.querySelector('.table-wrap');
             const tbl = wrap?.querySelector('table.datagrid-table');
             if (wrap && tbl) {
               wrap.style.overflowX = 'auto';
+              const totalTableHeight = headerHeight + (count * rowHeight) + footerHeight;
+              wrap.style.overflowY = totalTableHeight <= (availHeight - 5) ? 'hidden' : 'auto';
               tbl.style.zoom = '1';
 
               // Attach mouse wheel horizontal scroll
@@ -3667,6 +3424,17 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
           window._setAttendanceThemeFilter = (targetTheme) => {
             renderAttendanceGridMatrix(targetTheme);
           };
+
+          window.renderAttendanceGridMatrix = renderAttendanceGridMatrix;
+
+          if (!window._attendanceGridEditModeBound) {
+            window._attendanceGridEditModeBound = true;
+            window.addEventListener('admin-edit-mode-changed', () => {
+              if (document.getElementById('class-attendance-grid') && typeof window.renderAttendanceGridMatrix === 'function') {
+                window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+              }
+            });
+          }
 
           renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
 
@@ -3692,6 +3460,60 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
 
         }
+
+        // Centralized binding for Class Action Buttons (Forgiven, Settings, Blueprint, Generator)
+        document.getElementById('btn-open-forgiven-wizard')?.addEventListener('click', async () => {
+          try {
+            const { openForgivenWizard } = await import('./forgiven-wizard-modal.js?v=20261106_v140');
+            await openForgivenWizard({
+              classId: classId || cid,
+              classTests,
+              batches: allBatches,
+              students: studentsGridData,
+              onComplete: () => {
+                window.renderClassHub(document.getElementById('admin-content-area'));
+              }
+            });
+          } catch (err) {
+            console.error(err);
+            showToast('Failed to open wizard: ' + err.message, 'error');
+          }
+        });
+
+        document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
+          try {
+            const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261106_v140');
+            openTestSystemSettingsModal({
+              classId: classId || cid,
+              onSaved: () => {
+                window.renderClassHub(document.getElementById('admin-content-area'));
+              }
+            });
+          } catch (err) {
+            console.error(err);
+            showToast('Failed to open blueprint settings: ' + err.message, 'error');
+          }
+        });
+
+        document.getElementById('btn-open-blueprint-from-class')?.addEventListener('click', () => {
+          window.location.hash = '#vocab_vault?tab=blueprint';
+        });
+
+        document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
+          try {
+            const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');
+            await openAutoGenerateModal({
+              explicitClassId: classId,
+              onComplete: () => {
+                window.renderClassHub(document.getElementById('admin-content-area'));
+              }
+            });
+          } catch (err) {
+            console.error(err);
+            showToast('Failed to open wizard: ' + err.message, 'error');
+          }
+        });
+
         window._classHubCache[classId] = { timestamp: Date.now() };
 
       } catch (e) {
@@ -3982,7 +3804,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
       // Reset bottom infobar by default on section change
       if (window.setBottomInfobar) window.setBottomInfobar(null, null);
       const area = document.getElementById('admin-content-area');
-      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading...</p></div>';
+      area.innerHTML = getLoadingStateHtml('Loading...');
 
 
       const addRecBtn = document.getElementById('add-record-btn');
@@ -4015,13 +3837,25 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             await _renderStudentsModule(area);
             break;
 
-          case 'questions':           await renderCentralQuestionBank(area); break;
+          case 'questions':
+          case 'import-questions':
+          case 'export-questions':    return loadSection('vocab_vault');
 
           case 'results':             await renderResults(area); break;
           case 'progress-view':       return loadSection('students');
-          case 'audit':               await renderAuditLog(area); break;
-          case 'health':              await renderDataHealth(area); break;
-          case 'recycle':             await renderRecycleBin(area); break;
+          case 'audit':
+            window._activeSettingTab = 'audit';
+            try { localStorage.setItem('topscore_admin_settings_tab', 'audit'); } catch (_) {}
+            return loadSection('settings');
+          case 'health':
+          case 'recalibrator':
+            window._activeSettingTab = 'health';
+            try { localStorage.setItem('topscore_admin_settings_tab', 'health'); } catch (_) {}
+            return loadSection('settings');
+          case 'recycle':
+            window._activeSettingTab = 'recycle';
+            try { localStorage.setItem('topscore_admin_settings_tab', 'recycle'); } catch (_) {}
+            return loadSection('settings');
           case 'settings':
             const settingTabs = [
               { id: 'site',    icon: '⚙️',  title: 'Site Settings',  label: 'Cost Guard & Engine' },
@@ -4057,16 +3891,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             break;
           case 'student-registration':
           case 'students-registration':
-          case 'import-students':     await renderStudentsRegistration(area); break;
-          case 'import-questions':    await renderCentralQuestionImport(area); break;
-          case 'export-questions':    renderExportQuestions(area); break;
-          case 'recalibrator':
-            window._activeSettingTab = 'health';
-            try { localStorage.setItem('topscore_admin_settings_tab', 'health'); } catch (_) {}
-            return loadSection('settings');
+          case 'import-students':     return loadSection('students');
           case 'test-hub':
           case 'import_ai_tests':
-          case 'tests':               await renderTests(area); break;
+          case 'tests':
+            window._classHubActiveTab = 'tests';
+            try { localStorage.setItem('topscore_admin_class_hub_tab', 'tests'); } catch (_) {}
+            await renderClassHub(area);
+            break;
           case 'class-hub':           await renderClassHub(area); break;
           case 'test-access':
             window._classHubActiveTab = 'test-sessions';
@@ -4176,7 +4008,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
     // ── CLASS LIST ── simple alphabetical list of all classes in main content area
     async function renderClassList(area) {
-      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading classes...</p></div>';
+      area.innerHTML = getLoadingStateHtml('Loading classes...');
       try {
         const [rawClasses, programs] = await Promise.all([
           adminFetchAll('classes', 'id, name, is_active, program_id, class_levels(levels(name))'),
@@ -4261,7 +4093,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
     // ── TEST HUB ──
     async function renderTestHub(area) {
-      area.innerHTML = '<div class="empty-state"><div class="spinner"></div><p>Loading Test Hub...</p></div>';
+      area.innerHTML = getLoadingStateHtml('Loading Test Hub...');
       try {
         const [allTests, classes, results] = await Promise.all([
           adminFetchAll('tests', 'id, title, test_type, status, class_id, level_id, levels(name)'),
@@ -4364,7 +4196,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
         return;
       }
 
-      area.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Loading ${escapeHtml(className)}...</p></div>`;
+      area.innerHTML = getLoadingStateHtml(`Loading ${className}...`);
 
       try {
         const [classRows, programs, students, batches, institutions, allLevels] = await Promise.all([

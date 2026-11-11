@@ -145,6 +145,9 @@
   "window.menuBarVisibility": "compact",
   "workbench.startupEditor": "none",
   "workbench.editor.closeOnFileDelete": true,
+  "workbench.editor.limit.enabled": true,
+  "workbench.editor.limit.max": 3,
+  "workbench.editor.limit.perEditorGroup": true,
   "explorer.confirmDelete": false,
   "explorer.confirmDragAndDrop": false,
 

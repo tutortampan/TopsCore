@@ -12,8 +12,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261109_v172" />
-  <link rel="stylesheet" href="css/admin.css?v=20261110_v174" />
+  <link rel="stylesheet" href="css/style.css?v=20261111_v175" />
+  <link rel="stylesheet" href="css/admin.css?v=20261111_v182" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
@@ -80,7 +80,11 @@
     <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
       <div class="sidebar-logo">
         <div class="logo-text">TOPS CORE</div>
-        <div class="logo-sub">TUTOR'S ROOM</div>
+        <button type="button" id="global-edit-mode-toggle" class="btn btn-sm btn-edit-mode-global mode-off" aria-label="Toggle Global Edit Mode" title="Toggle Global Edit Mode">
+          <span class="edit-mode-dot"></span>
+          <span class="edit-mode-icon">🔒</span>
+          <span class="edit-mode-label">EDIT: OFF</span>
+        </button>
       </div>
 
       <!-- ABCD Architecture Primary Sidebar (ADMIN, BOARD, CLASS, DESK) -->
@@ -97,16 +101,12 @@
         <div class="nav-domain-group" data-domain="board">
           <div class="nav-domain-header"><span class="domain-icon">&#128208;</span>B &mdash; Board</div>
           <div id="sidebar-programs-list"></div>
-          <div class="admin-nav-item" data-sub="student-registration"><span class="nav-icon">&#128203;</span>Students Registration</div>
         </div>
 
         <!-- DOMAIN C: Class (Curriculum & AI Test Engine) -->
         <div class="nav-domain-group" data-domain="class">
           <div class="nav-domain-header"><span class="domain-icon">&#9889;</span>C &mdash; Class</div>
           <div id="sidebar-classes-list"></div>
-
-          <div class="admin-nav-item" data-sub="tests" data-view="tests"><span class="nav-icon">&#128202;</span>Test
-            Analytics</div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault
           </div>
         </div>
@@ -123,13 +123,13 @@
 
       <div class="sidebar-footer">
         <div class="admin-user-chip">
-          <div class="user-avatar">A</div>
+          <div class="user-avatar" id="sidebar-user-avatar">A</div>
           <div class="user-info">
-            <div class="user-name">Administrator</div>
-            <div class="user-role">Super Admin</div>
+            <div class="user-name">Tutor's Room</div>
+            <div class="user-role" id="sidebar-user-role-label">admin</div>
           </div>
           <button class="btn btn-ghost btn-icon btn-sm btn-logout" id="admin-logout-btn"
-            title="Logout">&#128682;</button>
+            title="Logout" aria-label="Logout">🚪</button>
         </div>
       </div>
     </aside>
@@ -143,13 +143,7 @@
         <div class="topbar-tabs-container" id="topbar-tabs-container">
           <!-- Elevated sleek summary KPI tabs render dynamically here -->
         </div>
-        <div class="admin-topbar-actions" id="admin-topbar-actions">
-          <button type="button" id="global-edit-mode-toggle" class="btn btn-sm btn-edit-mode-global mode-off" aria-label="Toggle Global Edit Mode" title="Toggle Global Edit Mode (ON / OFF)">
-            <span class="edit-mode-dot"></span>
-            <span class="edit-mode-icon">🔒</span>
-            <span class="edit-mode-label">EDIT: OFF</span>
-          </button>
-        </div>
+        <div class="admin-topbar-actions" id="admin-topbar-actions"></div>
       </header>
 
       <main class="admin-content" id="admin-content-area">
@@ -300,8 +294,7 @@
       <div class="modal-header modal-header-bordered">
         <div>
           <h3 id="bulk-edit-tests-title" class="modal-title-lg">⚡ Bulk Edit Tests</h3>
-          <p class="text-xs text-muted modal-subtitle" id="bulk-edit-tests-subtitle">Ubah pengaturan waktu, cara jawab,
-            dan skor kelulusan untuk beberapa test sekaligus.</p>
+          <p class="text-xs text-muted modal-subtitle" id="bulk-edit-tests-subtitle">Modify duration, answer type, and passing score across multiple tests simultaneously.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-bulk-edit-tests-modal" aria-label="Close">✕</button>
       </div>
@@ -310,7 +303,7 @@
         <!-- Target Selection Preview Box -->
         <div class="bulk-edit-target-box">
           <div class="bulk-edit-target-header">
-            <span class="bulk-edit-target-label">Target Terpilih:</span>
+            <span class="bulk-edit-target-label">Selected Targets:</span>
             <span class="badge badge-info bulk-edit-target-badge" id="bulk-edit-target-count">0 Selected</span>
           </div>
           <div id="bulk-edit-target-preview" class="bulk-edit-target-chips">
@@ -324,28 +317,23 @@
           <div class="bulk-edit-field-card">
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-duration" class="bulk-edit-checkbox"
-                title="Aktifkan perubahan durasi waktu" />
+                title="Enable duration adjustment" />
               <label for="bulk-check-duration" class="bulk-edit-field-label">
-                ⏱️ Ubah Waktu Pengerjaan (Menit)
+                ⏱️ Change Test Duration (Minutes)
               </label>
             </div>
             <div id="bulk-wrap-duration" class="bulk-edit-field-wrap">
               <div class="bulk-edit-input-group">
                 <input type="number" id="bulk-input-duration" min="1" max="360" value="5" placeholder="5"
-                  title="Waktu Pengerjaan dalam menit" class="form-control bulk-edit-input-num" />
-                <label for="bulk-input-duration" class="text-sm text-muted">Menit per sesi pengerjaan</label>
+                  title="Test duration in minutes" class="form-control bulk-edit-input-num" />
+                <label for="bulk-input-duration" class="text-sm text-muted">Minutes per attempt session</label>
               </div>
               <div class="bulk-edit-preset-row">
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">⚡ 5 Menit
-                  (Quiz)</button>
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-15">15
-                  Menit</button>
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-30">30
-                  Menit</button>
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-60">60
-                  Menit</button>
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">🏆 120
-                  Menit (Exam)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">⚡ 5 Minutes (Quiz)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-15">15 Minutes</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-30">30 Minutes</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-60">60 Minutes</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">🏆 120 Minutes (Exam)</button>
               </div>
             </div>
           </div>
@@ -354,21 +342,19 @@
           <div class="bulk-edit-field-card">
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-answertype" class="bulk-edit-checkbox"
-                title="Aktifkan perubahan cara jawab" />
+                title="Enable answer type change" />
               <label for="bulk-check-answertype" class="bulk-edit-field-label">
-                🗣️ Ubah Tipe Cara Menjawab (Answer Type)
+                🗣️ Change Answer Type
               </label>
             </div>
             <div id="bulk-wrap-answertype" class="bulk-edit-field-wrap">
-              <select id="bulk-select-answertype" class="form-control bulk-edit-select" title="Pilih tipe cara menjawab"
-                aria-label="Tipe Cara Menjawab">
-                <option value="spoken">🗣️ Spoken (Speech to Text / Lisan)</option>
-                <option value="written">✍️ Written (Mengetik Tulisan Langsung)</option>
-                <option value="selection">🔘 Selection (Pilihan Ganda / Dropdown)</option>
-                <option value="mixed">🔀 Mixed (Campuran)</option>
+              <select id="bulk-select-answertype" class="form-control bulk-edit-select" title="Select answer type" aria-label="Answer Type">
+                <option value="spoken">🗣️ Spoken (Speech to Text / Voice)</option>
+                <option value="written">✍️ Written (Direct Typed Text)</option>
+                <option value="selection">🔘 Selection (Multiple Choice / Dropdown)</option>
+                <option value="mixed">🔀 Mixed</option>
               </select>
-              <p class="text-xs text-muted bulk-edit-help-text">Otomatis menyinkronkan seluruh item soal di test_items
-                yang bersangkutan.</p>
+              <p class="text-xs text-muted bulk-edit-help-text">Automatically synchronizes all question items in test_items.</p>
             </div>
           </div>
 
@@ -376,20 +362,19 @@
           <div class="bulk-edit-field-card">
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-minscore" class="bulk-edit-checkbox"
-                title="Aktifkan perubahan batas kelulusan" />
+                title="Enable passing score change" />
               <label for="bulk-check-minscore" class="bulk-edit-field-label">
-                🎯 Ubah Batas Skor Kelulusan (Passing Score %)
+                🎯 Change Passing Score (%)
               </label>
             </div>
             <div id="bulk-wrap-minscore" class="bulk-edit-field-wrap">
               <div class="bulk-edit-input-group">
                 <input type="number" id="bulk-input-minscore" min="1" max="100" value="60" placeholder="60"
-                  title="Batas Minimal Skor (%)" class="form-control bulk-edit-input-num" />
-                <label for="bulk-input-minscore" class="text-sm text-muted">% nilai minimal untuk lulus modul</label>
+                  title="Minimum Passing Score (%)" class="form-control bulk-edit-input-num" />
+                <label for="bulk-input-minscore" class="text-sm text-muted">% minimum score required to pass module</label>
               </div>
               <div class="bulk-edit-preset-row">
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-60">60% (Grade
-                  C Standar)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-60">60% (Grade C Standard)</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn"
                   id="btn-preset-min-70">70%</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-80">80% (Grade
@@ -402,16 +387,15 @@
           <div class="bulk-edit-field-card">
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-order" class="bulk-edit-checkbox"
-                title="Aktifkan perubahan urutan soal" />
+                title="Enable question order change" />
               <label for="bulk-check-order" class="bulk-edit-field-label">
-                🔀 Ubah Urutan Soal (Question Order)
+                🔀 Change Question Order
               </label>
             </div>
             <div id="bulk-wrap-order" class="bulk-edit-field-wrap">
-              <select id="bulk-select-order" class="form-control bulk-edit-select" title="Pilih urutan soal"
-                aria-label="Urutan Soal">
-                <option value="random">🔀 Random (Soal Diacak)</option>
-                <option value="sequential">➡️ Sequential (Soal Berurutan)</option>
+              <select id="bulk-select-order" class="form-control bulk-edit-select" title="Select question order" aria-label="Question Order">
+                <option value="random">🔀 Random (Shuffled Questions)</option>
+                <option value="sequential">➡️ Sequential (Ordered Questions)</option>
               </select>
             </div>
           </div>
@@ -420,9 +404,9 @@
       </div>
 
       <div class="modal-footer modal-footer-bordered bulk-edit-footer">
-        <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Batal</button>
+        <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Cancel</button>
         <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
-          <span>💾 Terapkan Perubahan</span> (<span id="bulk-save-count">0</span> Test)
+          <span>💾 Apply Changes</span> (<span id="bulk-save-count">0</span> Tests)
         </button>
       </div>
     </div>
@@ -557,8 +541,8 @@
     </div>
   </div>
 
-<script type="module" src="./js/admin/admin-init.js?v=20261109_v173"></script>
-  <script type="module" src="js/admin/app.js?v=20261110_v174"></script>
+<script type="module" src="./js/admin/admin-init.js?v=20261111_v175"></script>
+  <script type="module" src="js/admin/app.js?v=20261111_v182"></script>
 
 
 
