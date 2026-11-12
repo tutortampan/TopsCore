@@ -66,14 +66,13 @@ assert.ok(
 );
 console.log('  ✔ Tabular numbers for clean numeric typography verified');
 
-// Table view margins (10px 10px 0 10px)
+// Table view margins & 10px Container Gap (Phase 419 Universal 5-Panel Architecture)
 assert.ok(
   adminCss.includes('.admin-content:has(.table-wrap)') &&
-  adminCss.includes('padding: 10px 10px 0 10px !important;') &&
-  adminCss.includes('margin-bottom: 0 !important;'),
-  '[Pillar 1] Table view margins must enforce 10px top/sides, 0px bottom flush docked'
+  adminCss.includes('padding: 10px 10px 10px 10px !important;'),
+  '[Pillar 1 / Phase 419] Table view margins must enforce 10px on all 4 sides (10px gap to Lower Panel)'
 );
-console.log('  ✔ Table view margins (10px top/sides, 0px bottom flush docked) verified');
+console.log('  ✔ Table view margins (10px padding & active gap to Lower Panel) verified');
 
 // Table uniform 12px font size
 assert.ok(

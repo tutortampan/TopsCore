@@ -486,51 +486,70 @@ body {
 
 /* ============================================================
    BOTTOM INFO BAR (50px Height Docked Directly Above Banner)
+   Universal 5-Panel Architecture: Authoritative Lower Panel
    ============================================================ */
 
 .admin-bottom-infobar {
-  height: 50px;
-  max-height: 50px;
-  padding: 0 16px;
-  box-sizing: border-box;
-  background: rgba(15, 23, 42, 0.95);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-shrink: 0;
-  z-index: 35;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  padding: 0 16px !important;
+  box-sizing: border-box !important;
+  background: #0f172a !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  flex-shrink: 0 !important;
+  z-index: 35 !important;
+  width: 100% !important;
+  position: relative !important;
 }
 
+/* Lower Panel is ALWAYS visible on 100% of admin pages (Universal Invariant) */
 .admin-bottom-infobar.hidden {
-  display: none !important;
+  display: flex !important;
 }
 
 .bottom-infobar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  overflow-x: auto;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  overflow-x: auto !important;
+  flex-wrap: nowrap !important;
 }
 
 .bottom-infobar-center {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  flex: 1 !important;
+  min-width: 0 !important;
 }
 
 .bottom-infobar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-shrink: 0 !important;
+  flex-wrap: nowrap !important;
+  overflow-x: auto !important;
+}
+
+.bottom-infobar-right .btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 4px 10px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  line-height: normal !important;
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  box-shadow: none !important;
 }
 
 .bottom-info-chip {
@@ -3648,7 +3667,7 @@ tr.deleted-row td {
   overflow-y: hidden !important;
   display: flex !important;
   flex-direction: column !important;
-  padding: 6px 12px 0 12px !important;
+  padding: 10px 10px 10px 10px !important;
   box-sizing: border-box !important;
 }
 
@@ -3666,7 +3685,7 @@ tr.deleted-row td {
 .admin-content:has(.test-analytics-dashboard),
 .admin-content:has(.test-analytics-view),
 .admin-content:has(.table-wrap) {
-  padding: 10px 10px 0 10px !important;
+  padding: 10px 10px 10px 10px !important;
   overflow: hidden !important;
   overflow-y: hidden !important;
   overflow-x: hidden !important;
@@ -4339,10 +4358,12 @@ body.global-edit-mode-on .vault-edit-input:focus {
    ZERO-SCROLL DYNAMIC RESPONSIVE CLASS ATTENDANCE MATRIX
    ============================================================ */
 .admin-content:has(#class-attendance-grid) {
-  padding: 2px 6px 0 6px !important;
+  padding: 10px 10px 10px 10px !important;
   overflow: hidden !important;
-  height: calc(100vh - 56px - 38px) !important;
-  box-sizing: border-box;
+  height: 100% !important;
+  max-height: 100% !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
 }
 
 #class-attendance-container {
@@ -4696,14 +4717,16 @@ body.sidebar-collapsed .admin-main {
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Theme Sub-Columns (TASK, PTS, SCR) Proportional Dynamic Widths */
+/* Theme Sub-Columns (Progress, Score, Points, Grade) Proportional Dynamic Widths */
 #class-attendance-grid th.col-theme-task,
 #class-attendance-grid td.col-theme-task,
+#class-attendance-grid th.col-exam-score,
+#class-attendance-grid td.col-exam-score,
 #class-attendance-grid th.col-exam-pts,
 #class-attendance-grid td.col-exam-pts,
-#class-attendance-grid th.col-exam-score,
-#class-attendance-grid td.col-exam-score {
-  min-width: 62px !important;
+#class-attendance-grid th.col-exam-grade,
+#class-attendance-grid td.col-exam-grade {
+  min-width: 55px !important;
   text-align: center !important;
 }
 
@@ -4784,6 +4807,10 @@ body.sidebar-collapsed .admin-main {
   border-right: none !important;
 }
 
+#class-attendance-grid th.col-theme-task,
+#class-attendance-grid td.col-theme-task,
+#class-attendance-grid th.col-test-theme-score,
+#class-attendance-grid td.col-test-theme-score,
 #class-attendance-grid th.col-test-theme-total,
 #class-attendance-grid td.col-test-theme-total {
   border-left: none !important;
@@ -4791,49 +4818,49 @@ body.sidebar-collapsed .admin-main {
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
-#class-attendance-grid th.col-test-theme-score,
-#class-attendance-grid td.col-test-theme-score {
+#class-attendance-grid th.col-test-theme-grade,
+#class-attendance-grid td.col-test-theme-grade {
   border-left: none !important;
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
 /* Theme-Specific Firm Dividing Borders (3px Solid) running all the way down through thead, tbody rows, and tfoot */
-#class-attendance-grid thead th.col-test-theme-score-a,
-#class-attendance-grid tbody td.col-test-theme-score-a,
-#class-attendance-grid td.col-test-theme-score-a,
-#class-attendance-grid tfoot td.col-test-theme-score-a,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-a,
-#class-attendance-grid tr:hover td.col-test-theme-score-a {
+#class-attendance-grid thead th.col-test-theme-grade-a,
+#class-attendance-grid tbody td.col-test-theme-grade-a,
+#class-attendance-grid td.col-test-theme-grade-a,
+#class-attendance-grid tfoot td.col-test-theme-grade-a,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-grade-a,
+#class-attendance-grid tr:hover td.col-test-theme-grade-a {
   border-right: 3px solid #38bdf8 !important;
   /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
-#class-attendance-grid thead th.col-test-theme-score-b,
-#class-attendance-grid tbody td.col-test-theme-score-b,
-#class-attendance-grid td.col-test-theme-score-b,
-#class-attendance-grid tfoot td.col-test-theme-score-b,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-b,
-#class-attendance-grid tr:hover td.col-test-theme-score-b {
+#class-attendance-grid thead th.col-test-theme-grade-b,
+#class-attendance-grid tbody td.col-test-theme-grade-b,
+#class-attendance-grid td.col-test-theme-grade-b,
+#class-attendance-grid tfoot td.col-test-theme-grade-b,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-grade-b,
+#class-attendance-grid tr:hover td.col-test-theme-grade-b {
   border-right: 3px solid #c084fc !important;
   /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
-#class-attendance-grid thead th.col-test-theme-score-c,
-#class-attendance-grid tbody td.col-test-theme-score-c,
-#class-attendance-grid td.col-test-theme-score-c,
-#class-attendance-grid tfoot td.col-test-theme-score-c,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-c,
-#class-attendance-grid tr:hover td.col-test-theme-score-c {
+#class-attendance-grid thead th.col-test-theme-grade-c,
+#class-attendance-grid tbody td.col-test-theme-grade-c,
+#class-attendance-grid td.col-test-theme-grade-c,
+#class-attendance-grid tfoot td.col-test-theme-grade-c,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-grade-c,
+#class-attendance-grid tr:hover td.col-test-theme-grade-c {
   border-right: 3px solid #fbbf24 !important;
   /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
-#class-attendance-grid thead th.col-test-theme-score-d,
-#class-attendance-grid tbody td.col-test-theme-score-d,
-#class-attendance-grid td.col-test-theme-score-d,
-#class-attendance-grid tfoot td.col-test-theme-score-d,
-#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-d,
-#class-attendance-grid tr:hover td.col-test-theme-score-d {
+#class-attendance-grid thead th.col-test-theme-grade-d,
+#class-attendance-grid tbody td.col-test-theme-grade-d,
+#class-attendance-grid td.col-test-theme-grade-d,
+#class-attendance-grid tfoot td.col-test-theme-grade-d,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-grade-d,
+#class-attendance-grid tr:hover td.col-test-theme-grade-d {
   border-right: 3px solid #34d399 !important;
   /* Rule 14: Zero neon glow — box-shadow removed */
 }
@@ -4927,6 +4954,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid .test-subtag-phr { color: #ffffff !important; }
 #class-attendance-grid .test-subtag-test-pts { color: #ffffff !important; }
 #class-attendance-grid .test-subtag-test-score { color: #ffffff !important; }
+#class-attendance-grid .test-subtag-test-grade { color: #ffffff !important; }
 
 /* Remedial Row & Value Styling (No special color; color follows score, small R tag inherits color) */
 #class-attendance-grid tbody tr.row-remedial {
@@ -5157,6 +5185,9 @@ body.sidebar-collapsed .admin-main {
   max-height: 50px !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
+  width: calc(100% + 20px) !important;
+  margin-left: -10px !important;
+  margin-right: -10px !important;
 }
 
 .attendance-theme-pills {

@@ -790,9 +790,9 @@ export async function loadClassLearningPath(classId) {
           key: 'order', label: 'CODE', sortable: true,
           render: (val, row) => {
             if (row.shellCode) {
-              return `<div style="font-size:12px; color:var(--clr-primary); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</div>`;
+              return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
             }
-            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.order}</div>`;
+            return `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-weight:500; white-space:nowrap;">${row.order}</span>`;
           }
         },
         { 

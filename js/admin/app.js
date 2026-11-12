@@ -375,16 +375,15 @@ window.setTopbarTabs = setTopbarTabs;
 export function setBottomInfobar(leftHtml = '', rightHtml = '', centerHtml = '') {
   const bar = document.getElementById('admin-bottom-infobar');
   if (!bar) return;
-  if (!leftHtml && !rightHtml && !centerHtml) {
-    bar.classList.add('hidden');
-    bar.innerHTML = '';
-    return;
-  }
   bar.classList.remove('hidden');
+  const defaultLeft = `<span style="font-size:12px; color:#94a3b8; font-weight:500;">TopsCore ABCD System</span>`;
+  const defaultRight = `<span style="font-size:11px; color:#64748b; font-weight:600;">Status: Operational</span>`;
+  const finalLeft = (leftHtml !== null && leftHtml !== undefined && leftHtml !== '') ? leftHtml : (!rightHtml && !centerHtml ? defaultLeft : '');
+  const finalRight = (rightHtml !== null && rightHtml !== undefined && rightHtml !== '') ? rightHtml : (!leftHtml && !centerHtml ? defaultRight : '');
   bar.innerHTML = `
-    <div class="bottom-infobar-left" id="bottom-infobar-left">${leftHtml || ''}</div>
+    <div class="bottom-infobar-left" id="bottom-infobar-left">${finalLeft}</div>
     ${centerHtml ? `<div class="bottom-infobar-center" id="bottom-infobar-center">${centerHtml}</div>` : ''}
-    <div class="bottom-infobar-right" id="bottom-infobar-right">${rightHtml || ''}</div>
+    <div class="bottom-infobar-right" id="bottom-infobar-right">${finalRight}</div>
   `;
 }
 window.setBottomInfobar = setBottomInfobar;
@@ -1848,37 +1847,83 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               ` : (window._classHubActiveTab === 'analytics' ? `
                 <div id="class-analytics-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
               ` : (window._classHubActiveTab === 'tests' ? `
-                <div style="padding: 0; background: var(--clr-surface); margin: 0; display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
-                  <div id="class-tests-grid" style="flex:1 1 0; min-height:0; overflow:hidden; display:flex; flex-direction:column;"></div>
+                <div id="class-tests-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
+                  <div id="class-tests-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
                 </div>
               ` : `
-                <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden; gap:10px;">
+                <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
                   <div id="class-attendance-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
-
-                  <!-- Universal Lower Action Bar (Collapses completely when Edit Mode is OFF) -->
-                  <div class="attendance-matrix-toolbar workspace-lower-panel edit-mode-only" style="display:none; justify-content:flex-start; align-items:center; flex-shrink:0;">
-                    <!-- 4 Action Buttons placed directly in Lower Panel (edit-mode-only) -->
-                    <div class="attendance-actions-cluster edit-mode-only" style="display:inline-flex; align-items:center; gap:6px;">
-                      <button type="button" class="btn btn-warning btn-sm" id="btn-open-forgiven-wizard" style="font-size: 0.72rem; font-weight: 700; background: #d97706; border-color: #d97706; color: #fff; padding: 3px 8px;" title="Open Forgiven &amp; Manual Exam Override Wizard">
-                        🛡️ Forgiven &amp; Override
-                      </button>
-                      <button type="button" class="btn btn-info btn-sm" id="btn-open-blueprint-settings" style="font-size: 0.72rem; font-weight: 700; background: #0ea5e9; border-color: #0ea5e9; color: #fff; padding: 3px 8px;" title="Open Default Test System &amp; Blueprint Settings">
-                        ⚙️ Test System Settings
-                      </button>
-                      <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size: 0.72rem; font-weight: 600; padding: 3px 8px;" title="Open Complete Curriculum Roadmap in Test Blueprint">
-                        🗺️ Open Test Blueprint ↗
-                      </button>
-                      <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="font-size: 0.72rem; font-weight: 700; background: #4f46e5; border-color: #4f46e5; padding: 3px 8px;" title="Open Generator &amp; Curriculum Settings Wizard">
-                        ⚡ Generator &amp; Settings Wizard
-                      </button>
-                    </div>
-                  </div>
                 </div>
               `))}
             </div>
           </div>
         `;
         area.innerHTML = html;
+
+        // Authoritative Lower Panel Sync for Class Hub (Phase 419 Universal 5-Panel Architecture)
+        const syncClassHubLowerPanel = (activeTab) => {
+          if (activeTab === 'attendance') {
+            const leftHtml = `
+              <div class="attendance-summary-cluster" style="display:inline-flex; align-items:center; gap:12px; font-size:12px; color:#94a3b8; font-weight:600;">
+                <span id="class-roster-count-badge">${activeBatchStudents.length} Enrolled</span>
+              </div>
+            `;
+            const rightHtml = `
+              <div class="attendance-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
+                <button type="button" class="btn btn-warning btn-sm" id="btn-open-forgiven-wizard" style="font-size:12px; font-weight:700; background:#d97706; border-color:#d97706; color:#fff; padding:4px 10px; cursor:pointer;" title="Open Forgiven &amp; Manual Exam Override Wizard">
+                  🛡️ Forgiven &amp; Override
+                </button>
+              </div>
+            `;
+            setBottomInfobar(leftHtml, rightHtml);
+          } else if (activeTab === 'tests') {
+            const leftHtml = `
+              <div class="class-tests-summary-cluster" style="display:inline-flex; align-items:center; gap:12px; font-size:12px; color:#94a3b8; font-weight:600;">
+                <span>Total Tests: <strong style="color:#f8fafc;">${classTests.length}</strong></span>
+              </div>
+            `;
+            const rightHtml = `
+              <div class="class-tests-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-settings" style="font-size:11.5px; font-weight:700; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; cursor:pointer;" title="Open Default Test System &amp; Blueprint Settings">
+                  ⚙️ Test System Settings
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size:11.5px; font-weight:600; background:#334155; border:1px solid rgba(255,255,255,0.15); color:#f8fafc; padding:4px 10px; cursor:pointer;" title="Open Complete Curriculum Roadmap in Test Blueprint">
+                  🗺️ Open Test Blueprint ↗
+                </button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="font-size:11.5px; font-weight:700; background:#4f46e5; border-color:#4f46e5; color:#fff; padding:4px 10px; cursor:pointer;" title="Open Generator &amp; Curriculum Settings Wizard">
+                  ⚡ Generator &amp; Settings Wizard
+                </button>
+              </div>
+            `;
+            setBottomInfobar(leftHtml, rightHtml);
+          } else if (activeTab === 'test-sessions') {
+            const leftHtml = `
+              <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
+                <span>Class Test Sessions &amp; Live Monitoring</span>
+              </div>
+            `;
+            const rightHtml = `
+              <div style="display:inline-flex; align-items:center; gap:8px;">
+                <span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size:11px; font-weight:700;">● SESSIONS ACTIVE</span>
+              </div>
+            `;
+            setBottomInfobar(leftHtml, rightHtml);
+          } else if (activeTab === 'analytics') {
+            const leftHtml = `
+              <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
+                <span>Class Vocabulary &amp; Error Analytics</span>
+              </div>
+            `;
+            const rightHtml = `
+              <div style="display:inline-flex; align-items:center; gap:8px;">
+                <span class="badge" style="background:rgba(0,192,0,0.15); color:#00c000; border:1px solid rgba(0,192,0,0.3); font-size:11px; font-weight:700;">● ANALYTICS ACTIVE</span>
+              </div>
+            `;
+            setBottomInfobar(leftHtml, rightHtml);
+          }
+        };
+
+        syncClassHubLowerPanel(window._classHubActiveTab);
 
         // Render content depending on tab
         if (window._classHubActiveTab === 'test-sessions') {
@@ -1945,11 +1990,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 label: 'TITLE',
                 sortable: true,
                 render: (val, row) => {
+                  const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
+                  if (isEditMode) {
+                    return `
+                      <input type="text"
+                             class="input-test-title edit-mode-flat-input"
+                             data-test-id="${row.id}"
+                             data-original-val="${escapeHtml(row.title)}"
+                             value="${escapeHtml(row.title)}"
+                             title="Click to rename test (Enter / Blur to save)"
+                             style="width:100%; min-width:240px; height:24px; padding:0 4px; font-size:12px; font-weight:600; background:transparent !important; border:none !important; border-radius:0 !important; color:var(--clr-text-1); outline:none;" />
+                    `;
+                  }
                   let displayTitle = escapeHtml(row.title);
                   displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--grade-c, #ffff00);">$1</span>');
                   displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
                   displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: #f472b6;">$1</span>');
-                  return `<div class="fw-700" style="color:var(--clr-text-1); font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:280px; max-width:600px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
+                  return `<div class="fw-500" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:260px; max-width:600px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
                 }
               },
               {
@@ -1958,9 +2015,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 sortable: true,
                 render: (val, row) => {
                   if (row.shellCode) {
-                    return `<div style="font-size:0.7rem; color:var(--clr-primary); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</div>`;
+                    return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
                   }
-                  return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">ORD: ${row.order || '-'}</div>`;
+                  return `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-weight:500; white-space:nowrap;">${row.order || '—'}</span>`;
                 }
               },
               {
@@ -1969,8 +2026,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 sortable: true,
                 render: (val, row) => {
                   const prereqDisplay = row.prereq || '';
-                  if (!prereqDisplay) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-                  return `<div style="font-size:0.7rem; color:var(--clr-warning); font-family:monospace; font-weight:bold; white-space:nowrap; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); display:inline-block; max-width:180px; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(prereqDisplay)}">⚠️ ${escapeHtml(prereqDisplay)}</div>`;
+                  if (!prereqDisplay) return '<span class="text-muted" style="font-size:12px; font-weight:500;">—</span>';
+                  return `<span style="font-size:12px; color:var(--clr-warning, #f59e0b); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(prereqDisplay)}">⚠️ ${escapeHtml(prereqDisplay)}</span>`;
                 }
               },
               {
@@ -1979,28 +2036,28 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 sortable: true,
                 render: (val, row) => {
                   let typeStr = escapeHtml(row.TestCategory || 'Task');
-                  typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: var(--grade-c, #ffff00); font-weight: 800;">$1</span>');
-                  typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #f472b6; font-weight: 800;">$1</span>');
-                  return `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${typeStr}</div>`;
+                  typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: var(--grade-c, #ffff00); font-weight: 700;">$1</span>');
+                  typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #f472b6; font-weight: 700;">$1</span>');
+                  return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${typeStr}</div>`;
                 }
               },
               {
                 key: 'answerType',
                 label: 'ANSWER',
                 sortable: true,
-                render: (val, row) => `<div class="fw-600 text-info" style="font-size:0.75rem; white-space:nowrap;">${escapeHtml(row.answerType || 'Multiple Choice')}</div>`
+                render: (val, row) => `<div class="fw-500 text-info" style="font-size:12px; white-space:nowrap;">${escapeHtml(row.answerType || 'Multiple Choice')}</div>`
               },
               {
                 key: 'questionOrder',
                 label: 'ACCESS',
                 sortable: true,
-                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">${row.questionOrder === 'Random' ? '&#128256; Rand' : '&rarr; Seq'}</div>`
+                render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${row.questionOrder === 'Random' ? '🔀 Rand' : '→ Seq'}</div>`
               },
               {
                 key: 'timeLimit',
                 label: 'DUR. (M)',
                 sortable: true,
-                render: (val, row) => `<div style="font-size:0.75rem; color:var(--clr-text-2); white-space:nowrap;">&#9201;&#65039; ${row.timeLimit || 60}</div>`
+                render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">⏱️ ${row.timeLimit || 60}</div>`
               },
               {
                 key: 'minScore',
@@ -2010,19 +2067,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   const testId = row.id;
                   const currentMin = row.minScore || 60;
                   const isExamTest = isWeeklyExam(row._raw);
+                  const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
+                  if (!isEditMode) {
+                    return `<div style="display:inline-flex; align-items:center; justify-content:center; gap:3px; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; color:${isExamTest ? '#f472b6' : '#eab308'};"><span style="font-size:11px;">🎯</span><span>${currentMin}%</span></div>`;
+                  }
                   return `
-                    <div class="pass-pct-cell-wrap" style="display:flex; align-items:center; justify-content:center; gap:2px;">
-                      <span style="font-size:0.68rem; color:${isExamTest ? '#f472b6' : '#eab308'}; font-weight:800;" title="${isExamTest ? 'Exam Passing Threshold' : 'Task Passing Threshold'}">🎯</span>
+                    <div class="pass-pct-cell-wrap" style="display:inline-flex; align-items:center; justify-content:center; gap:2px;">
+                      <span style="font-size:11px; color:${isExamTest ? '#f472b6' : '#eab308'}; font-weight:700;">🎯</span>
                       <input type="number"
-                             class="input-test-pass-score"
+                             class="input-test-pass-score edit-mode-flat-input"
                              data-test-id="${testId}"
                              data-shell-code="${escapeHtml(row.shellCode || row.title)}"
                              data-original-val="${currentMin}"
                              value="${currentMin}"
                              min="1" max="100"
                              title="Type manual passing percentage (Enter / Blur to save)"
-                             style="width:46px; height:22px; padding:0 2px; font-size:0.75rem; font-weight:700; text-align:center; background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#f8fafc;" />
-                      <span style="font-size:11px; color:#94a3b8; font-weight:700;">%</span>
+                             style="width:42px; height:24px; padding:0; font-size:12px; font-weight:600; text-align:center; background:transparent !important; border:none !important; border-radius:0 !important; color:#f8fafc; outline:none;" />
+                      <span style="font-size:11px; color:#94a3b8; font-weight:600;">%</span>
                     </div>
                   `;
                 }
@@ -2033,8 +2094,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 sortable: true,
                 render: (val, row) => {
                   const count = row.qCount || 0;
-                  if (row.qIsVault) return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;" title="Live count projected from Vocabulary Vault">&#9889; ${count} (Vault)</span>`;
-                  return `<span class="fw-700 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:0.8rem;">${count}</span>`;
+                  if (row.qIsVault) return `<span class="fw-500 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:12px;" title="Live count projected from Vocabulary Vault">⚡ ${count} (Vault)</span>`;
+                  return `<span class="fw-500 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:12px;">${count}</span>`;
                 }
               },
               {
@@ -2043,36 +2104,40 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 sortable: true,
                 render: (val, row) => {
                   const st = row.status || 'draft';
-                  return `<span class="badge ${statusColors[String(st).toLowerCase()] || 'badge-neutral'} fw-700" style="font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase;">${escapeHtml(st)}</span>`;
-                }
-              },
-              {
-                key: 'actions',
-                label: '',
-                sortable: false,
-                render: (val, row) => {
-                  const id = row.id || '';
-                  const st = String(row.status || 'draft').toLowerCase();
-                  const isPub = st === 'published';
-                  const pubBtnCls = isPub ? 'btn-danger' : 'btn-success';
-                  const pubIcon = isPub ? '&#128065;&#65039;' : '&#128065;';
-                  const safeTitle = (row.title || '').replace(/['"\\]/g, ' ');
+                  const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
+                  const isPub = String(st).toLowerCase() === 'published';
+                  if (!isEditMode) {
+                    return `<span style="font-size:12px; font-weight:600; text-transform:uppercase; color:${isPub ? 'var(--grade-a, #00c000)' : '#94a3b8'};">${escapeHtml(st)}</span>`;
+                  }
+                  const stLower = String(st).toLowerCase();
                   return `
-                    <div class="d-flex gap-1 justify-end align-center">
-                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${id}'; window.loadSection('results');">&#128202;</button>
-                      <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="Recalibrate" onclick="window._filterRecalibrateTest='${id}'; window.loadSection('health');">&#9878;&#65039;</button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._duplicateTest('${id}')" title="Duplicate">&#128196;</button>
-                      <button class="btn ${pubBtnCls}" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._publishTest('${id}', '${st}')">
-                        ${pubIcon}
-                      </button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openCrudModal('tests', window._classHubRecords['${id}'])">&#9999;&#65039;</button>
-                      <button class="btn btn-secondary" style="padding: 2px 6px; font-size: 0.75rem; background-color: var(--clr-accent-1); color: white;" onclick="window._deleteRecord('tests', '${id}', '${safeTitle}')">&#128465;&#65039;</button>
-                    </div>
+                    <select class="input-test-status-select edit-mode-flat-select"
+                            data-test-id="${row.id}"
+                            data-test-title="${escapeHtml(row.title)}"
+                            data-original-status="${stLower}"
+                            title="Change status or delete test"
+                            style="background:transparent !important; border:none !important; border-radius:0 !important; color:${stLower === 'published' ? 'var(--grade-a, #00c000)' : '#94a3b8'}; font-size:12px !important; font-weight:700; cursor:pointer; text-transform:uppercase; padding:2px 4px; outline:none;">
+                      <option value="published" ${stLower === 'published' ? 'selected' : ''} style="background:#0f172a; color:var(--grade-a, #00c000);">PUBLISHED</option>
+                      <option value="draft" ${stLower === 'draft' ? 'selected' : ''} style="background:#0f172a; color:#94a3b8;">DRAFT</option>
+                      <option value="delete" style="background:#0f172a; color:#ef4444; font-weight:bold;">🗑️ DELETE</option>
+                    </select>
                   `;
                 }
               }
             ]
           });
+
+          window._classAsmGridInstance = classAsmGrid;
+
+          // Wire Edit Mode change listener to update Class Tests DataGrid
+          if (!window._classTestsEditModeBound) {
+            window._classTestsEditModeBound = true;
+            window.addEventListener('admin-edit-mode-changed', () => {
+              if (document.getElementById('class-tests-grid') && window._classAsmGridInstance) {
+                window._classAsmGridInstance.render();
+              }
+            });
+          }
 
           // Open Test Blueprint in Vocabulary Vault
           document.getElementById('btn-open-blueprint-from-class')?.addEventListener('click', () => {
@@ -2097,40 +2162,143 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             }
           });
 
-          // Inline Test Passing Score edit listener on #class-tests-grid
+          // Open Generator & Curriculum Settings Wizard
+          document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
+            try {
+              const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');
+              await openAutoGenerateModal({
+                explicitClassId: classId,
+                onComplete: () => {
+                  window.renderClassHub(document.getElementById('admin-content-area'));
+                }
+              });
+            } catch (err) {
+              console.error(err);
+              showToast('Failed to open wizard: ' + err.message, 'error');
+            }
+          });
+
+          // Inline Test Passing Score, Status Dropdown, and Rename listener on #class-tests-grid
           const classTestsGridEl = document.getElementById('class-tests-grid');
           if (classTestsGridEl) {
             classTestsGridEl.addEventListener('change', async (e) => {
-              const input = e.target.closest('.input-test-pass-score');
-              if (!input) return;
-              const testId = input.dataset.testId;
-              const origVal = parseFloat(input.dataset.originalVal) || 60;
-              const rawVal = parseFloat(input.value);
-              if (isNaN(rawVal) || rawVal < 1 || rawVal > 100) {
-                showToast('Passing score percentage must be between 1% and 100%', 'error');
-                input.value = origVal;
+              // 1. Pass score change
+              const passInput = e.target.closest('.input-test-pass-score');
+              if (passInput) {
+                const testId = passInput.dataset.testId;
+                const origVal = parseFloat(passInput.dataset.originalVal) || 60;
+                const rawVal = parseFloat(passInput.value);
+                if (isNaN(rawVal) || rawVal < 1 || rawVal > 100) {
+                  showToast('Passing score percentage must be between 1% and 100%', 'error');
+                  passInput.value = origVal;
+                  return;
+                }
+                const newVal = Math.round(rawVal);
+                passInput.value = newVal;
+                try {
+                  passInput.disabled = true;
+                  await updateTestPassingScore(testId, newVal);
+                  passInput.dataset.originalVal = newVal;
+                  showToast(`Passing score successfully updated to ${newVal}%`, 'success');
+                } catch (err) {
+                  console.error(err);
+                  showToast('Failed to update passing score: ' + err.message, 'error');
+                  passInput.value = origVal;
+                } finally {
+                  passInput.disabled = false;
+                }
                 return;
               }
-              const newVal = Math.round(rawVal);
-              input.value = newVal;
-              try {
-                input.disabled = true;
-                await updateTestPassingScore(testId, newVal);
-                input.dataset.originalVal = newVal;
-                showToast(`Passing score successfully updated to ${newVal}%`, 'success');
-              } catch (err) {
-                console.error(err);
-                showToast('Failed to update passing score: ' + err.message, 'error');
-                input.value = origVal;
-              } finally {
-                input.disabled = false;
+
+              // 2. Status select change (published / draft / delete)
+              const statusSelect = e.target.closest('.input-test-status-select');
+              if (statusSelect) {
+                const testId = statusSelect.dataset.testId;
+                const testTitle = statusSelect.dataset.testTitle || 'Test';
+                const origStatus = statusSelect.dataset.originalStatus || 'draft';
+                const newVal = statusSelect.value;
+
+                if (newVal === 'delete') {
+                  const confirmDelete = window.confirm(`Are you sure you want to delete test "${testTitle}"?\nThis action will soft-delete the test.`);
+                  if (confirmDelete) {
+                    try {
+                      statusSelect.disabled = true;
+                      await window._deleteRecord('tests', testId, testTitle);
+                      window.renderClassHub(document.getElementById('admin-content-area'));
+                    } catch (err) {
+                      console.error(err);
+                      showToast('Failed to delete test: ' + err.message, 'error');
+                      statusSelect.value = origStatus;
+                      statusSelect.disabled = false;
+                    }
+                  } else {
+                    statusSelect.value = origStatus;
+                    statusSelect.style.color = origStatus === 'published' ? 'var(--grade-a, #00c000)' : '#94a3b8';
+                  }
+                  return;
+                }
+
+                if (newVal === 'published' || newVal === 'draft') {
+                  try {
+                    statusSelect.disabled = true;
+                    await adminUpdate('tests', testId, { status: newVal.toUpperCase() });
+                    statusSelect.dataset.originalStatus = newVal;
+                    statusSelect.style.color = newVal === 'published' ? 'var(--grade-a, #00c000)' : '#94a3b8';
+                    const targetRow = testsGridData.find(t => t.id === testId);
+                    if (targetRow) targetRow.status = newVal;
+                    if (window._classHubRecords && window._classHubRecords[testId]) {
+                      window._classHubRecords[testId].status = newVal.toUpperCase();
+                    }
+                    showToast(`Test status updated to ${newVal.toUpperCase()}`, 'success');
+                  } catch (err) {
+                    console.error(err);
+                    showToast('Failed to update test status: ' + err.message, 'error');
+                    statusSelect.value = origStatus;
+                  } finally {
+                    statusSelect.disabled = false;
+                  }
+                }
+                return;
+              }
+
+              // 3. Title rename change
+              const titleInput = e.target.closest('.input-test-title');
+              if (titleInput) {
+                const testId = titleInput.dataset.testId;
+                const origTitle = titleInput.dataset.originalVal || '';
+                const newTitle = titleInput.value.trim();
+                if (!newTitle) {
+                  titleInput.value = origTitle;
+                  return;
+                }
+                if (newTitle === origTitle) return;
+                try {
+                  titleInput.disabled = true;
+                  await adminUpdate('tests', testId, { title: newTitle });
+                  titleInput.dataset.originalVal = newTitle;
+                  const targetRow = testsGridData.find(t => t.id === testId);
+                  if (targetRow) targetRow.title = newTitle;
+                  if (window._classHubRecords && window._classHubRecords[testId]) {
+                    window._classHubRecords[testId].title = newTitle;
+                  }
+                  showToast(`Test renamed to "${newTitle}"`, 'success');
+                } catch (err) {
+                  console.error(err);
+                  showToast('Failed to rename test: ' + err.message, 'error');
+                  titleInput.value = origTitle;
+                } finally {
+                  titleInput.disabled = false;
+                }
+                return;
               }
             });
 
             classTestsGridEl.addEventListener('keydown', (e) => {
-              const input = e.target.closest('.input-test-pass-score');
-              if (input && e.key === 'Enter') {
-                input.blur();
+              if (e.key === 'Enter') {
+                const passInput = e.target.closest('.input-test-pass-score');
+                if (passInput) passInput.blur();
+                const titleInput = e.target.closest('.input-test-title');
+                if (titleInput) titleInput.blur();
               }
             });
           }
@@ -2613,6 +2781,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 const themePct = (hasAtt && studentThemeMaxQ > 0) ? Math.round((cleanThemeEarned / studentThemeMaxQ) * 100) : -1;
                 row[`theme_${tc}_total_pts`] = hasAtt ? cleanThemeEarned : -1;
                 row[`theme_${tc}_score`] = hasAtt ? themePct : -1;
+                row[`theme_${tc}_grade`] = hasAtt ? themePct : -1;
                 row[`theme_${tc}_max_q`] = studentThemeMaxQ;
                 row[`theme_${tc}_has_exam_att`] = hasAtt;
               });
@@ -2643,12 +2812,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
               dynamicSuperHeaders.push({
                 label: `THEME ${tc}${tName}`,
-                colSpan: 3,
+                colSpan: 4,
                 className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
               });
             });
 
-            // Build dynamic test and exam columns across all active themes (TASK, PTS, SCR)
+            // Build dynamic test and exam columns across all active themes (Progress | Score | Points | Grade)
             const dynamicAsmCols = [];
             window._themeTaskAsmsMap = window._themeTaskAsmsMap || {};
 
@@ -2660,15 +2829,15 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               const examAsm = examAsms[0];
               const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
 
-              // 1. Theme Formative TASK Progress Column (x/Total)
+              // 1. Theme Formative PROGRESS Column (Tasks Completed / Max Required)
               dynamicAsmCols.push({
                 key: `theme_${tc}_task`,
                 className: `col-asm col-task col-theme-task col-theme-task-${tc.toLowerCase()}`,
                 width: '65px',
-                minWidth: '60px',
-                headerTitle: `Theme ${tc} Task Progress (Tasks Completed / Max Required)`,
-                title: `Theme ${tc} Task Progress`,
-                label: '<span class="test-subtag test-subtag-task" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">TASK</span>',
+                minWidth: '55px',
+                headerTitle: `Theme ${tc} Progress (Tasks Completed / Max Required)`,
+                title: `Theme ${tc} Progress`,
+                label: '<span class="test-subtag test-subtag-task" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">PROGRESS</span>',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
@@ -2714,15 +2883,97 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 }
               });
 
-              // 2. Theme Exam POINTS Column
+              // 2. Theme Exam SCORE Column
+              dynamicAsmCols.push({
+                key: `theme_${tc}_score`,
+                className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
+                width: '65px',
+                minWidth: '55px',
+                headerTitle: `Theme ${tc} Exam Score %`,
+                title: `Theme ${tc} Exam Score %`,
+                label: '<span class="test-subtag test-subtag-test-score" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">SCORE</span>',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => {
+                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const scoreVal = row[`theme_${tc}_score`];
+                  const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                  const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
+                  const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
+                  const maxTasks = row[`theme_${tc}_task_max`] || 0;
+
+                  // Master Edit Mode ON: render inline capsule input
+                  if (isGlobalEdit && examAsm) {
+                    const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
+                    const displayScore = currentDraft?.score != null ? currentDraft.score : (scoreVal != null && scoreVal >= 0 ? scoreVal : '');
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
+                        <input type="number" min="0" max="100" class="input-matrix-exam-score input-matrix-exam-score-${row.id}-${examAsm.id}"
+                               data-student-id="${row.id}"
+                               data-test-id="${examAsm.id}"
+                               data-total-q="${totalQ}"
+                               value="${displayScore}"
+                               placeholder="%"
+                               oninput="window.onMatrixExamScoreChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
+                               onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
+                               onkeydown="if(event.key==='Enter'){this.blur();}"
+                               onclick="event.stopPropagation();"
+                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                      </div>
+                    `;
+                  }
+
+                  // 3-State Gated Display:
+                  // State 1: Incomplete tasks -> Red Stop Icon 🛑
+                  if (!isTaskCompleted) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
+                        <span style="font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
+                      </div>
+                    `;
+                  }
+
+                  // State 2: Tasks completed, exam not taken -> Yellow Lock Icon 🔒
+                  if (!hasExamAttempt || scoreVal === undefined || scoreVal === null || scoreVal < 0) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
+                        <span style="font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
+                      </div>
+                    `;
+                  }
+
+                  // State 3: Tasks completed & Exam taken -> Render Score % with grade color
+                  const color = typeof getGradeColorByScore === 'function'
+                    ? getGradeColorByScore(scoreVal)
+                    : '#94a3b8';
+                  const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
+                  const isForgiven = Boolean(examAtt?.is_forgiven);
+                  const isManual = Boolean(examAtt?.is_manual_override || (examAtt?.forgiven_reason && examAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
+                  const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
+                  let supBadge = '';
+                  if (isForgiven) supBadge = '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>';
+                  else if (isManual) supBadge = '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>';
+                  else if (isRem) supBadge = '<sup class="asm-rem-sup">R</sup>';
+                  const cellColor = (isForgiven && scoreVal === 0) ? '#f59e0b' : color;
+                  return `
+                    <span class="asm-score asm-score-test test-score-theme-pct"
+                          style="color:${cellColor}; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
+                          title="Theme ${tc} Exam Score: ${scoreVal}%">
+                      ${scoreVal}%${supBadge}
+                    </span>
+                  `;
+                }
+              });
+
+              // 3. Theme Exam POINTS Column
               dynamicAsmCols.push({
                 key: `theme_${tc}_total_pts`,
                 className: `col-asm col-exam col-exam-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
                 width: '65px',
-                minWidth: '60px',
+                minWidth: '55px',
                 headerTitle: `Theme ${tc} Exam Points`,
                 title: `Theme ${tc} Exam Points`,
-                label: '<span class="test-subtag test-subtag-test-pts" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">PTS</span>',
+                label: '<span class="test-subtag test-subtag-test-pts" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">POINTS</span>',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
@@ -2793,47 +3044,24 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 }
               });
 
-              // 3. Theme Exam SCORE Column
+              // 4. Theme Exam GRADE Column
               dynamicAsmCols.push({
-                key: `theme_${tc}_score`,
-                className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
-                width: '65px',
-                minWidth: '60px',
-                headerTitle: `Theme ${tc} Exam Score %`,
-                title: `Theme ${tc} Exam Score %`,
-                label: '<span class="test-subtag test-subtag-test-score" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">SCR</span>',
+                key: `theme_${tc}_grade`,
+                className: `col-asm col-exam col-exam-grade col-test-theme-grade col-test-theme-grade-${tc.toLowerCase()}`,
+                width: '55px',
+                minWidth: '50px',
+                headerTitle: `Theme ${tc} Exam Grade`,
+                title: `Theme ${tc} Exam Grade`,
+                label: '<span class="test-subtag test-subtag-test-grade" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">GRADE</span>',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
-                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
                   const scoreVal = row[`theme_${tc}_score`];
                   const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
                   const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
                   const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
                   const maxTasks = row[`theme_${tc}_task_max`] || 0;
 
-                  // Master Edit Mode ON: render inline capsule input
-                  if (isGlobalEdit && examAsm) {
-                    const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
-                    const displayScore = currentDraft?.score != null ? currentDraft.score : (scoreVal != null && scoreVal >= 0 ? scoreVal : '');
-                    return `
-                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
-                        <input type="number" min="0" max="100" class="input-matrix-exam-score input-matrix-exam-score-${row.id}-${examAsm.id}"
-                               data-student-id="${row.id}"
-                               data-test-id="${examAsm.id}"
-                               data-total-q="${totalQ}"
-                               value="${displayScore}"
-                               placeholder="%"
-                               oninput="window.onMatrixExamScoreChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
-                               onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
-                               onkeydown="if(event.key==='Enter'){this.blur();}"
-                               onclick="event.stopPropagation();"
-                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
-                      </div>
-                    `;
-                  }
-
-                  // 3-State Gated Display:
                   // State 1: Incomplete tasks -> Red Stop Icon 🛑
                   if (!isTaskCompleted) {
                     return `
@@ -2852,25 +3080,23 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                     `;
                   }
 
-                  // State 3: Tasks completed & Exam taken -> Render Score % with grade color
-                  const color = typeof getGradeColorByScore === 'function'
-                    ? getGradeColorByScore(scoreVal)
-                    : '#94a3b8';
-                  const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
-                  const isForgiven = Boolean(examAtt?.is_forgiven);
-                  const isManual = Boolean(examAtt?.is_manual_override || (examAtt?.forgiven_reason && examAtt.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
-                  const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
-                  let supBadge = '';
-                  if (isForgiven) supBadge = '<sup class="asm-forgiven-sup" title="Forgiven">ᶠ</sup>';
-                  else if (isManual) supBadge = '<sup class="asm-manual-sup" title="Manual Score">ᴹ</sup>';
-                  else if (isRem) supBadge = '<sup class="asm-rem-sup">R</sup>';
-                  const cellColor = (isForgiven && scoreVal === 0) ? '#f59e0b' : color;
+                  // State 3: Tasks completed & Exam taken -> Render Grade Symbol (★, A, B, C, D, E)
+                  const themeGrade = typeof calculateGrade === 'function' ? calculateGrade(scoreVal) : (typeof getGrade === 'function' ? getGrade(scoreVal) : '—');
+                  const isGradeS = themeGrade === '★' || themeGrade === 'S';
+                  const cleanGrade = String(themeGrade || '').trim().toUpperCase();
+                  const gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(scoreVal) : '#94a3b8';
+
+                  if (isGradeS) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;">
+                        <span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #ff2d87); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Theme ${tc} Grade ★ (100% Excellent)">★</span>
+                      </div>
+                    `;
+                  }
                   return `
-                    <span class="asm-score asm-score-test test-score-theme-pct"
-                          style="color:${cellColor}; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
-                          title="Theme ${tc} Exam Score: ${scoreVal}%">
-                      ${scoreVal}%${supBadge}
-                    </span>
+                    <div style="display:flex; align-items:center; justify-content:center;">
+                      <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Theme ${tc} Grade ${cleanGrade}">${cleanGrade}</span>
+                    </div>
                   `;
                 }
               });
@@ -3117,6 +3343,37 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
                           <span style="color:${avgThemeColor}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts (${avgThemePct}%)">${avgThemePts}</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_grade')) {
+                    const tc = col.key.replace('theme_', '').replace('_grade', '');
+                    let count = 0;
+                    let totalScoreSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[`theme_${tc}_score`];
+                      if (val !== undefined && val !== null && val >= 0) {
+                        count++;
+                        totalScoreSum += Number(val);
+                      }
+                    });
+                    if (count > 0) {
+                      const avgThemeScore = Math.round(totalScoreSum / count);
+                      const avgThemeGrade = typeof calculateGrade === 'function' ? calculateGrade(avgThemeScore) : (typeof getGrade === 'function' ? getGrade(avgThemeScore) : '—');
+                      const isAvgThemeGradeS = avgThemeGrade === '★' || avgThemeGrade === 'S';
+                      const cleanAvgThemeGrade = String(avgThemeGrade || '').trim().toUpperCase();
+                      const avgThemeGradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemeScore) : '#94a3b8';
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          ${isAvgThemeGradeS
+                            ? `<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #ff2d87); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; line-height:1;" title="Class Avg Theme ${tc} Grade ★">★</span>`
+                            : `<span class="grid-grade-val" style="color:${avgThemeGradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Class Avg Theme ${tc} Grade ${cleanAvgThemeGrade}">${cleanAvgThemeGrade}</span>`}
                         </td>
                       `;
                     } else {
@@ -3837,6 +4094,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               // Elevate settings navigation to topbar
               if (window.setTopbarTabs) {
                 window.setTopbarTabs(settingTabs, activeSettingTab, 'window._switchSettingTab');
+              }
+              if (window.setBottomInfobar) {
+                window.setBottomInfobar(
+                  `<div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;"><span>⚙️ TopsCore System Settings &amp; Security Protocols</span></div>`,
+                  `<div style="display:inline-flex; align-items:center; gap:8px;"><span style="font-size:11px; color:#64748b; font-weight:600;">Build 2026.11 • Operational</span></div>`
+                );
               }
               area.innerHTML = `<div id="unified-settings-content" style="padding-top: 0.75rem;"></div>`;
               const sArea = area.querySelector('#unified-settings-content');

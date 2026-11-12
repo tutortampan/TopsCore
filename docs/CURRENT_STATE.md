@@ -1,8 +1,135 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-12 15:35 UTC+8
-Current Phase: Phase 416: Purge Batch Column Capsule Badge & Enforce Universal Zero-Capsule Invariant in Edit Mode [COMPLETE]
+Last Updated: 2026-11-12 20:25 UTC+8
+Current Phase: Phase 421: 4-Column Theme Matrix Standard (Progress | Score | Points | Grade) [COMPLETE]
 Status: COMPLETE
+
+## Completed Work (Phase 421):
+1. **4-Column Theme Matrix Standard (`js/admin/app.js`)**:
+   - Expanded dynamic theme super-headers (`THEME A`, `THEME B`, `THEME C`, `THEME D`) from `colSpan: 3` to `colSpan: 4`.
+   - Reorganized theme sub-columns into the exact user-mandated sequence:
+     1. **Progress** (`theme_${tc}_task`): Task completion readout (`${earned}/${maxT}` in View Mode; interactive capsule input in Edit Mode).
+     2. **Score** (`theme_${tc}_score`): Exam percentage score (`${scoreVal}%` with optional `ᶠ`, `ᴹ`, `ᴿ` superscripts in View Mode; interactive input in Edit Mode).
+     3. **Points** (`theme_${tc}_total_pts`): Exam points earned (`${displayVal}` in View Mode; interactive input in Edit Mode).
+     4. **Grade** (`theme_${tc}_grade`): Authoritative grade letter/star badge (`★`, `A`, `B`, `C`, `D`, `E`) computed dynamically from theme exam score via `calculateGrade(scoreVal)`.
+2. **Grade Column 3-State Gated Display (`js/admin/app.js`)**:
+   - Synchronized Grade column with exam gating:
+     - Incomplete tasks: renders Red Stop Icon `🛑`.
+     - Tasks completed, exam unattempted: renders Yellow Lock Icon `🔒`.
+     - Exam attempted: renders official Grade badge with standard styling (`grid-grade-val`, `grid-grade-star`).
+3. **Class Average Theme Grade in Summary Row (`js/admin/app.js`)**:
+   - Extended `summaryRow` to compute the class average grade for each theme based on `avgThemeScore`, rendering cleanly in the bottom summary row.
+4. **Theme Boundary Dividing Borders & Subheaders (`css/admin.css`)**:
+   - Anchored the firm 3px solid theme dividing borders (`border-right: 3px solid ...`) to `col-test-theme-grade-*`, which forms the new right boundary of each theme.
+   - Enforced subtle 1px dashed separators (`border-right: 1px dashed rgba(255, 255, 255, 0.08)`) between internal theme columns (Progress, Score, Points).
+   - Added `.test-subtag-test-grade` rule to maintain pure white typography on sub-headers.
+5. **Automated Verification**:
+   - `scripts/verify_theme_4_columns.mjs`: 100% PASS on colSpan 4, exact sequence, grade rendering, and CSS dividers.
+   - `scripts/test_class_hub_super_headers_and_continuous_dividers.mjs`: 12/12 PASS (100%).
+   - `scripts/test_theme_divider_and_task_edit.mjs`: 11/11 PASS (100%).
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+   - `scripts/verify_universal_5_panels.mjs`: 100% PASS.
+   - `scripts/verify_class_tests_no_capsule.mjs`: 100% PASS.
+   - `scripts/verify_blueprint_program_scoping.mjs`: 100% PASS.
+   - `npm run test:syntax`: 44/44 JS files passed.
+
+---
+
+## Completed Work (Phase 420):
+1. **Program-Scoped Curriculum in Test Blueprint (`js/admin/vocab-vault.js`)**:
+   - Replaced unconstrained iteration over all global vocabulary themes with strict program-level scoping in `_renderThemeBlueprintTab`.
+   - Fetched fresh `theme_program_assignments` on every blueprint render and mapped active assignments (`assignSet`) by `${theme_code}_${target_level}_${program_id}`.
+   - Implemented authoritative `isThemeAssignedToProgram(lvl, thCode, targetClassId)`:
+     1. Verified explicit multi-tenant assignment in `theme_program_assignments`.
+     2. Checked if tests matching `${lvl}${thCode}` already exist in the program's target class.
+     3. Fallback: verified words in `vocabulary_vault` directly tagged with `program_id`.
+     4. Foreign/unassigned themes return `false` and are completely excluded from both KPI calculations and table rows.
+2. **Elimination of Phantom `▲ Missing` Rows**:
+   - Previously, selecting `Evnikom` (which only teaches Level 1 Theme G) iterated over Camp's Level 2 themes (Public Speaking, Podcast, Shopping, Cooking) and Level 3 themes, displaying 31 rows of `▲ Missing` with an incorrect 7% readiness metric.
+   - Now, `Evnikom` correctly displays ONLY its assigned curriculum (Level 1 Theme G: Time Name and Family Member), rendering 2 rows with `✓ Ready`, 0 `▲ Missing` rows, and **100% Readiness (2/2 Tasks, 1/1 Exams)**.
+   - For `Camp`, correctly scopes to its 31 assigned tasks and 8 exams across Level 2 and Level 3, with **100% Readiness (31/31 Tasks, 8/8 Exams)** and zero foreign Level 1 topics.
+3. **Empty State & Dynamic Metrics Alignment**:
+   - When a program has no themes assigned yet (e.g. `Sheraton`), displays an informative empty state guidance row linking to `Theme Manager` rather than broken or unassigned rows.
+   - `triggerAutoGenerate` wizard scoped to only propose levels that actually have themes assigned to the active program.
+4. **Automated Verification**:
+   - `scripts/verify_blueprint_program_scoping.mjs`: Validated Evnikom (2 rows, 100% readiness), Camp (31 rows, 100% readiness), and Sheraton (0 rows, empty state) against live Supabase data.
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS on spatial invariants.
+   - `scripts/verify_universal_5_panels.mjs`: 100% PASS on 5-panel architecture.
+   - `scripts/test_vocab_vault_and_edit_mode.mjs`: 100% PASS on single-responsibility columns.
+   - `npm run test:syntax`: All 44 JavaScript files passed syntax verification.
+
+---
+
+## Completed Work (Phase 419):
+1. **Universal 5-Panel Architecture Codification (`css/admin.css` & `js/admin/app.js`)**:
+   - Codified the definitive 5-panel layout framework across Tutor's Room (`admin.html`):
+     - **Top Corner Panel** (`.sidebar-logo`): 50px fixed height, containing TOPS CORE brand and Master Edit Mode toggle.
+     - **Low Corner Panel** (`.sidebar-footer`): 50px fixed height, containing Tutor's Room avatar, user name, role, and logout button `🚪`.
+     - **Top Panel** (`#admin-topbar`): 50px fixed height, containing elevated section navigation tabs and actions.
+     - **Main Panel** (`.admin-content` / `#admin-content-area`): `flex: 1 1 0` workspace containing active tables or cards, strictly bounded by a 10px container gap on all 4 sides (`padding: 10px 10px 10px 10px !important`).
+     - **Lower Panel / Sub Panel** (`#admin-bottom-infobar`): 50px fixed height, docked completely flush with the sidebar (**0px gap to side panel**), positioned 10px below the Main Panel, and **permanently visible across 100% of admin screens**.
+2. **0px Gap Between Side Panel & Lower Panel (`css/admin.css`)**:
+   - Replaced fragmented inner lower panels with the root `#admin-bottom-infobar`, which sits side-by-side with `.sidebar-footer` with **0px gap**, sharing an identical `#0f172a` background and a continuous `1px solid rgba(255, 255, 255, 0.08)` hairline border.
+3. **Active 10px Container Gap Between Table and Lower Panel (`css/admin.css`)**:
+   - Enforced `padding: 10px 10px 10px 10px !important` across all `.admin-content` wrappers (including `#vault-tab-content`, `#class-attendance-container`, `#class-tests-grid`, etc.).
+   - Activated the strict 10px container gap above the Lower Panel, completely preventing table scrollbars from touching or colliding with the bottom panel.
+4. **Permanent Visibility of `[🛡️ Forgiven & Override]` in View Mode and Edit Mode (`js/admin/app.js`)**:
+   - Removed `.edit-mode-only` from `btn-open-forgiven-wizard`. The waiver and forgiveness review wizard button remains permanently accessible in both View Mode and Edit Mode.
+5. **Standardized Button Placement (Actions on RIGHT, Metrics on LEFT)**:
+   - Standardized the Lower Panel layout:
+     - **LEFT**: Informational readouts, student/test counters (`17 Enrolled`, `Total Tests: 19`), and quick filters.
+     - **RIGHT**: Action triggers, wizards, and launcher buttons (`[🛡️ Forgiven & Override]`, `[⚙️ Test System Settings]`, `[🗺️ Open Test Blueprint ↗]`, `[⚡ Generator & Settings Wizard]`).
+   - Enforced anti-ballooning rules: `flex-wrap: nowrap !important; overflow-x: auto;` with compact 32px button heights.
+6. **Universal Lower Panel Integration on Modules & Settings (`js/admin/modules.js` & `js/admin/app.js`)**:
+   - Modules (Core Blocks) now features an active Lower Panel displaying `🧩 8 Core AI Evaluation Engines (Stateless & Low-Egress)` on the left and `● ALL ENGINES ACTIVE` on the right.
+   - Settings displays active system engine status and operational build version.
+   - `setBottomInfobar` updated so calling it with empty arguments displays default operational status and NEVER adds `.hidden`.
+7. **Automated Verification**:
+   - `scripts/verify_universal_5_panels.mjs`: 100% PASS across all 5-panel layout, 0px sidebar docking, 10px container gap, and permanent visibility assertions.
+   - `scripts/verify_class_tests_no_capsule.mjs`: 10/10 assertions passed (100% Quality Gate Success).
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS on spatial invariants.
+   - `scripts/verify_plan_preflight.mjs`: 100% PASS.
+
+---
+
+## Completed Work (Phase 418):
+1. **Purged Action Buttons Column & Clustered Buttons (`js/admin/app.js`)**:
+   - Completely deleted `{ key: 'actions', ... }` column from `classAsmGrid`.
+   - Purged all 6 clustered buttons (`Results`, `Recalibrate`, `Duplicate`, `Publish Eye`, `Edit Pencil`, `Delete Trash Can`) to free up horizontal space and enforce the pristine zero-actions table invariant.
+2. **Eradicated Capsule Elements in Class Tests (`js/admin/app.js` & `js/admin/classes-management.js`)**:
+   - `CODE`: Purged background, border, border-radius, and padding; rendered as clean flat text (`#38bdf8`, monospace, 12px, font-weight 500).
+   - `PREREQUISITE`: Purged capsule box; rendered as clean flat text (`⚠️ <prereq>` in `#f59e0b` or `—` in `#94a3b8`, 12px, font-weight 500).
+   - `PASS (%)`: Renders flat text in View Mode (`🎯 <minScore>%`, 12px, tabular-nums). The input box is exclusively rendered when Edit Mode is ON as a borderless transparent cell.
+   - `STATUS`: Renders flat text in View Mode (`PUBLISHED` in emerald `#00c000`, `DRAFT` in `#94a3b8`) with zero `.badge` pill borders.
+   - Cleaned up legacy `CODE` capsule styling in `js/admin/classes-management.js` (line 793).
+3. **Direct In-Place Title Renaming & Status Dropdown in Edit Mode (`js/admin/app.js`)**:
+   - In `TITLE` column: When Master Edit Mode is ON, renders `<input type="text" class="input-test-title edit-mode-flat-input" ...>` with auto-save to Supabase on blur or `Enter`.
+   - In `STATUS` column: When Master Edit Mode is ON, renders an Excel-like flat `<select>` with options `PUBLISHED`, `DRAFT`, and `🗑️ DELETE`. Selecting `delete` prompts an explicit confirmation before soft-deleting the test.
+   - Wired `admin-edit-mode-changed` event listener to automatically re-render `classAsmGrid` (`window._classAsmGridInstance?.render()`) on toggle.
+4. **Universal 50px Lower Panel Architecture (`js/admin/app.js`)**:
+   - Added persistent 50px lower panel (`.workspace-lower-panel`) to `#class-tests-container`.
+   - Removed `edit-mode-only` and `style="display:none;"` from the outer panel wrappers in both `tests` and `attendance` tabs so the 50px lower panel remains **ALWAYS VISIBLE** (even when empty or in View Mode), strictly aligned with `.sidebar-footer` and maintaining the 10px container gap.
+   - Relocated `[⚙️ Test System Settings]`, `[🗺️ Open Test Blueprint ↗]`, and `[⚡ Generator & Settings Wizard]` into the Class Tests lower panel with direct click listeners.
+   - Attendance lower panel retains `[🛡️ Forgiven & Override]` alongside student enrollment metrics.
+5. **Automated Verification**:
+   - `scripts/verify_class_tests_no_capsule.mjs`: 10/10 assertions passed (100% Quality Gate Success).
+   - `scripts/verify_all_project_imports.mjs`: 41/41 JS modules verified with 100% valid imports and exports.
+   - `scripts/verify_system_health.mjs`: System Health Audit 100% healthy (0 errors across 12 tables).
+
+---
+
+## Completed Work (Phase 417):
+1. **Purged Accidental User Home `.git` Repository (`C:\Users\ASUS\.git`)**:
+   - Identified that opening files or task logs in `C:\Users\ASUS\.gemini\...` triggered Git detection in the Windows user root directory (`C:\Users\ASUS`).
+   - Confirmed `C:\Users\ASUS\.git` was an accidental `git init` with 0 commits, no remotes, and master branch tracking all user files (AppData, Downloads, Documents, etc.), reaching the editor's 10,000+ file ceiling ("10k changes").
+   - Safely purged `C:\Users\ASUS\.git` using `Remove-Item -LiteralPath "C:\Users\ASUS\.git" -Recurse -Force`.
+   - Verified `Test-Path "C:\Users\ASUS\.git"` returns `False`.
+2. **Verified Project & User Directory Health**:
+   - TopsCore LMS repository (`d:\Tutor Tampan\TopsCore`) verified 100% clean and untouched (`On branch main, working tree clean`).
+   - User home directory (`C:\Users\ASUS`) verified 100% intact with zero impact on personal files.
+   - Editor Source Control badge permanently relieved of 10k phantom untracked changes.
+
+---
 
 ## Completed Work (Phase 416):
 1. **Purged Batch Capsule in Class Hub Attendance Matrix (`js/admin/app.js`)**:

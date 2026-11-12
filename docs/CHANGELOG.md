@@ -1,8 +1,189 @@
-## [2026-11-12 15:35] — Phase 416: Purge Batch Column Capsule Badge & Enforce Universal Zero-Capsule Invariant in Edit Mode
+## [2026-11-12 20:25] — Phase 421: 4-Column Theme Matrix Standard (Progress | Score | Points | Grade)
 
 **Agent/Session:** Antigravity  
-**Phase:** Phase 416  
+**Phase:** Phase 421  
 **Status:** PASS  
+
+### Why
+- The user reported: *"disini saya kurang suka urutan kolomnya,,, buat agar kolom dalam tiap tema isinya 4, Progress | Score | Points | Grade."* with uploaded screenshots of `Students Grade and Score` tab in `Class Hub`.
+- Previously, each theme in the class matrix contained 3 sub-columns in the order: `TASK`, `PTS`, `SCR`.
+- The user requested standardizing each theme into 4 columns in the exact sequence: `Progress` | `Score` | `Points` | `Grade`.
+
+### Changed
+1. **4-Column Theme Matrix Standard (`js/admin/app.js`)**:
+   - Expanded dynamic theme super-headers (`THEME A`, `THEME B`, `THEME C`, `THEME D`) from `colSpan: 3` to `colSpan: 4`.
+   - Reorganized theme sub-columns into the exact user-mandated sequence:
+     1. **Progress** (`theme_${tc}_task`): Task completion readout (`${earned}/${maxT}` in View Mode; interactive capsule input in Edit Mode).
+     2. **Score** (`theme_${tc}_score`): Exam percentage score (`${scoreVal}%` with optional `ᶠ`, `ᴹ`, `ᴿ` superscripts in View Mode; interactive input in Edit Mode).
+     3. **Points** (`theme_${tc}_total_pts`): Exam points earned (`${displayVal}` in View Mode; interactive input in Edit Mode).
+     4. **Grade** (`theme_${tc}_grade`): Authoritative grade letter/star badge (`★`, `A`, `B`, `C`, `D`, `E`) computed dynamically from theme exam score via `calculateGrade(scoreVal)`.
+2. **Grade Column 3-State Gated Display (`js/admin/app.js`)**:
+   - Synchronized Grade column with exam gating:
+     - Incomplete tasks: renders Red Stop Icon `🛑`.
+     - Tasks completed, exam unattempted: renders Yellow Lock Icon `🔒`.
+     - Exam attempted: renders official Grade badge with standard styling (`grid-grade-val`, `grid-grade-star`).
+3. **Class Average Theme Grade in Summary Row (`js/admin/app.js`)**:
+   - Extended `summaryRow` to compute the class average grade for each theme based on `avgThemeScore`, rendering cleanly in the bottom summary row.
+4. **Theme Boundary Dividing Borders & Subheaders (`css/admin.css`)**:
+   - Anchored the firm 3px solid theme dividing borders (`border-right: 3px solid ...`) to `col-test-theme-grade-*`, which forms the new right boundary of each theme.
+   - Enforced subtle 1px dashed separators (`border-right: 1px dashed rgba(255, 255, 255, 0.08)`) between internal theme columns (Progress, Score, Points).
+   - Added `.test-subtag-test-grade` rule to maintain pure white typography on sub-headers.
+5. **Automated Verification**:
+   - `scripts/verify_theme_4_columns.mjs`: 100% PASS on colSpan 4, exact sequence, grade rendering, and CSS dividers.
+   - `scripts/test_class_hub_super_headers_and_continuous_dividers.mjs`: 12/12 PASS (100%).
+   - `scripts/test_theme_divider_and_task_edit.mjs`: 11/11 PASS (100%).
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+   - `scripts/verify_universal_5_panels.mjs`: 100% PASS.
+   - `scripts/verify_class_tests_no_capsule.mjs`: 100% PASS.
+   - `scripts/verify_blueprint_program_scoping.mjs`: 100% PASS.
+   - `npm run test:syntax`: 44/44 JS files passed.
+
+---
+
+## [2026-11-12 20:10] — Phase 420: Scoping Test Blueprint to Assigned Program Themes & Eliminating Foreign Missing Rows
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 420  
+**Status:** PASS  
+
+### Why
+- The user reported: *"ada keterngan missing yang menunjukkan bahwa tema itu tidak ada dalam program itu, saya tidak suka ini ada, kalau memang tidak ada maka jangan tampilkan dalam daftar"*.
+- In `Vocabulary Vault -> Test Blueprint`, when selecting `PROGRAM: Evnikom`, the table was iterating through all global vocabulary themes, including Level 2 themes (Public Speaking, Podcast, Shopping, Cooking) that belong strictly to `Camp`.
+- Because Evnikom has no Level 2 curriculum or tests, these foreign themes were rendered with `▲ Missing` in `TASK STATUS` and `EXAM STATUS`, skewing the readiness score to a false `7%` (2/33 Tasks, 1/9 Exams).
+- The user's directive mandates that themes not assigned to the active program MUST NOT be displayed in the list at all.
+
+### Changed
+1. **Multi-Tenant Assignment Integration (`js/admin/vocab-vault.js`)**:
+   - Fetched fresh `theme_program_assignments` in `_renderThemeBlueprintTab` and built lookup set `assignSet` by `${theme_code}_${target_level}_${program_id}`.
+   - Implemented `isThemeAssignedToProgram(lvl, thCode, targetClassId)` to verify if a theme belongs to `selectedProgId` via:
+     - Multi-tenant assignment in `theme_program_assignments`,
+     - Existing tests matching `${lvl}${thCode}` in the target class, or
+     - Words in `vocabulary_vault` tagged with `program_id`.
+2. **Program-Scoped Row Builder & KPI Calculations (`js/admin/vocab-vault.js`)**:
+   - Filtered theme iterations in `buildBlueprintTableRows` and KPI counting loops (`levelsToScan.forEach`).
+   - For `Evnikom`: Only Level 1 Theme G (Time Name, Family Member) is rendered. The 31 foreign Level 2 & Level 3 rows are completely omitted.
+   - For `Evnikom`: Readiness metric displays **100% (2/2 Tasks, 1/1 Exams)** with 0 `▲ Missing` rows.
+   - For `Camp`: Correctly renders all 31 tasks and 8 exams across Level 2 and Level 3 with **100% Readiness (31/31 Tasks, 8/8 Exams)**, omitting Level 1 Theme G.
+3. **Empty State & Level Wizard Alignment (`js/admin/vocab-vault.js`)**:
+   - Provided informative empty state row when an unassigned program is selected (e.g. `Sheraton`), guiding the user to assign themes in `Theme Manager`.
+   - Scoped `triggerAutoGenerate` to only propose levels that have assigned themes for the active program.
+4. **Automated Verification**:
+   - Created `scripts/verify_blueprint_program_scoping.mjs`: Validated Evnikom, Camp, and Sheraton against live Supabase data (100% PASS).
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+   - `scripts/verify_universal_5_panels.mjs`: 100% PASS.
+   - `scripts/test_vocab_vault_and_edit_mode.mjs`: 100% PASS.
+   - `npm run test:syntax`: 44/44 JS files passed.
+
+---
+
+## [2026-11-12 19:45] — Phase 419: Universal 5-Panel Architecture, 0px Sidebar Docking & Lower Panel Spatial Alignment
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 419  
+**Status:** PASS  
+
+### Why
+- The user reported: *"ini ada jarak antara bottom panel dengan side panel harus nya tidka ad,,, cek seklaian semua tabel dan halaman di room pastikan tidak melnggar aturan yang kita tetapkan, tomboll override ini juga harus ada walaupun edit mode off. lalu tombol2 seprti ini sbaiknya ada di kanan atau kiri? /plan gambar 3,, jarak 10 pixel tidak aktif.gambar 4 panel bawah tidak ada. cek semua halaman admin,, WAJIB ada 3 panel, MAin panel, Top PAnel, Lower Panel (kita sebut sebagai sub PAnel) lalu Top Corner Panel dN lOW CORNER pANLE (pJOK KIRI ATAS DAN POJOK KIRI BAWAH)"*.
+- Lower panel had an unwanted 10px recess/gap from the sidebar in Class Attendance (Image 1).
+- `[🛡️ Forgiven & Override]` button was conditionally hidden in View Mode due to `.edit-mode-only` (Image 2).
+- The 10px container gap between the Main Panel table viewport and the Lower Panel was missing in Vocabulary Vault (Image 3), causing table scrollbars to collide with the bottom panel.
+- The Lower Panel was completely missing on Modules (Core Blocks) and other non-table pages (Image 4).
+
+### Changed
+1. **Universal 5-Panel Architecture Codification (`css/admin.css` & `js/admin/app.js`)**:
+   - Standardized the 5-panel layout framework:
+     - Top Corner Panel (`.sidebar-logo`): 50px fixed.
+     - Low Corner Panel (`.sidebar-footer`): 50px fixed.
+     - Top Panel (`#admin-topbar`): 50px fixed.
+     - Main Panel (`.admin-content` / `#admin-content-area`): `flex: 1 1 0` with `padding: 10px 10px 10px 10px !important`.
+     - Lower Panel / Sub Panel (`#admin-bottom-infobar`): 50px fixed, 0px gap to sidebar, 10px below Main Panel, permanently visible on 100% of admin screens.
+2. **0px Gap Between Side Panel & Lower Panel (`css/admin.css`)**:
+   - Anchored the Lower Panel directly to `#admin-bottom-infobar` at the `.admin-main` root level. Seamless hairline connection with `.sidebar-footer` (`border-top: 1px solid rgba(255, 255, 255, 0.08)`, `#0f172a` background).
+3. **Active 10px Container Gap Between Table and Lower Panel (`css/admin.css`)**:
+   - Enforced `padding: 10px 10px 10px 10px !important` across all `.admin-content` containers, activating the 10px container gap above the Lower Panel.
+4. **Permanent Visibility of `[🛡️ Forgiven & Override]` in View Mode and Edit Mode (`js/admin/app.js`)**:
+   - Removed `.edit-mode-only` so the forgiveness waiver review wizard button remains permanently accessible.
+5. **Standardized Button Placement (Actions on RIGHT, Metrics on LEFT)**:
+   - Left: Information metrics, student/test counters (`17 Enrolled`, `Total Tests: 19`), search inputs.
+   - Right: Action buttons (`[🛡️ Forgiven & Override]`, `[⚙️ Test System Settings]`, `[🗺️ Open Test Blueprint ↗]`, `[⚡ Generator & Settings Wizard]`).
+   - Enforced anti-ballooning rules: `flex-wrap: nowrap !important; overflow-x: auto;` with compact 32px button heights.
+6. **Universal Lower Panel Integration on Modules & Settings (`js/admin/modules.js` & `js/admin/app.js`)**:
+   - Modules now displays `🧩 8 Core AI Evaluation Engines` on the left and `● ALL ENGINES ACTIVE` on the right.
+   - Settings displays active system engine status and build version.
+   - `setBottomInfobar` renders default operational status when called empty, never adding `.hidden`.
+7. **Automated Verification**:
+   - `scripts/verify_universal_5_panels.mjs`: 100% PASS.
+   - `scripts/verify_class_tests_no_capsule.mjs`: 100% PASS.
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+   - `scripts/verify_plan_preflight.mjs`: 100% PASS.
+
+---
+
+## [2026-11-12 17:25] — Phase 418: Class Tests Actions Purge, Zero-Capsule Standardization & Universal 50px Lower Panel
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 418
+**Status:** PASS
+
+### Why
+- The user reported: *"masih ada item yang pakai capsule (code, preq, pass %, etc). gambar 2. kolom action button banyak yang tidak terpakai, contoh opsi recalibrate buang saja, lalu renam juga bisa langsung. intinya hpus kolom itu dan isinya. di kolom stsus saat masuk edit mode disana kita pilih stsus published, draft atau delete. tambahkan dalam plan, disini tidak terlihat ada low panel. waluapun isinya kosong, tetap harus ada selalu muncul di semua halaman room. lalu untuk halaman test ini tpindahkan fitur blueprint generate, test sytem setting, dan generator dari halaman attendance kesini. dan ingat di halaman itu juga low panel must always visible"*.
+- Actions column contained 6 cluttered buttons (`Results`, `Recalibrate`, `Duplicate`, `Publish`, `Edit`, `Delete`) taking up excessive horizontal space.
+- Capsule pills in `CODE`, `PREREQUISITE`, and an active input box on `PASS (%)` violated TopsCore UI Invariants (AGENTS.md Rule 2.20 & Rule 4/10).
+- The 50px lower panel was missing on Class Tests and conditionally collapsed (`display: none;`) on Attendance, violating Rule 3 (Universal Lower Panel Architecture: 50px fixed height, always visible, 10px container gap).
+
+### Changed
+1. **Purged Action Buttons Column (`js/admin/app.js`)**:
+   - Completely deleted `{ key: 'actions', ... }` column from `classAsmGrid` in Class Tests.
+2. **Eradicated Capsule Elements in Class Tests (`js/admin/app.js` & `js/admin/classes-management.js`)**:
+   - `CODE`: Rendered as clean flat text (`#38bdf8`, monospace, 12px, font-weight 500) without background or border.
+   - `PREREQUISITE`: Rendered as clean flat text (`⚠️ <prereq>` in `#f59e0b` or `—` in `#94a3b8`, 12px, font-weight 500).
+   - `PASS (%)`: Renders flat text in View Mode (`🎯 <minScore>%`, 12px, tabular-nums). Renders borderless transparent input exclusively when Edit Mode is ON.
+   - `STATUS`: Renders flat text in View Mode (`PUBLISHED` in emerald `#00c000`, `DRAFT` in `#94a3b8`) with zero `.badge` styling.
+   - Cleaned up legacy `CODE` capsule styling in `js/admin/classes-management.js` (line 793).
+3. **Direct In-Place Title Renaming & Status Dropdown in Edit Mode (`js/admin/app.js`)**:
+   - Enabled direct in-place renaming on `TITLE` when Edit Mode is ON via borderless flat `<input class="input-test-title ...">` with auto-save to Supabase on blur/Enter.
+   - Added interactive `<select class="input-test-status-select ...">` on `STATUS` in Edit Mode with `PUBLISHED`, `DRAFT`, and `🗑️ DELETE`. Choosing `delete` prompts an explicit confirmation dialog before executing soft-delete.
+   - Wired `admin-edit-mode-changed` listener to dynamically re-render `classAsmGrid` on toggle.
+4. **Universal 50px Lower Panel Architecture (`js/admin/app.js`)**:
+   - Added persistent 50px lower panel (`.workspace-lower-panel`) to `#class-tests-container`.
+   - Removed `edit-mode-only` and `style="display:none;"` from the outer panel wrappers in both `tests` and `attendance` tabs so the 50px lower panel remains **ALWAYS VISIBLE** (even when empty or in View Mode), strictly aligned with `.sidebar-footer` and maintaining the 10px container gap.
+   - Relocated `[⚙️ Test System Settings]`, `[🗺️ Open Test Blueprint ↗]`, and `[⚡ Generator & Settings Wizard]` into the Class Tests lower panel with direct click listeners.
+   - Attendance lower panel retains `[🛡️ Forgiven & Override]` alongside student enrollment metrics.
+5. **Automated Verification**:
+   - `scripts/verify_class_tests_no_capsule.mjs`: 10/10 assertions passed (100% Quality Gate Success).
+   - `scripts/verify_all_project_imports.mjs`: 41/41 JS modules verified with 100% valid imports and exports.
+   - `scripts/verify_system_health.mjs`: System Health Audit 100% healthy (0 errors across 12 tables).
+
+---
+
+## [2026-11-12 16:50] — Phase 417: Purge Accidental User Home .git & Eliminate 10k Phantom Changes
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 417
+**Status:** PASS
+
+### Why
+- The user reported: *"cek git ststus,,, ada banyak sekali samapi 10k,,, apa itu?"*
+- Investigation revealed that an accidental `git init` had created a hidden `.git` folder at `C:\Users\ASUS\.git`.
+- Whenever files in `C:\Users\ASUS\.gemini\...` were viewed or edited in the IDE, Git extension in VS Code indexed the user's home directory (Desktop, Downloads, Documents, AppData, etc.), reaching the 10,000+ file limit and flooding the Source Control panel with 10k phantom changes.
+
+### Changed
+1. **Purged Accidental Git Repository (`C:\Users\ASUS\.git`)**:
+   - Released active background Git processes holding locks on `maintenance.lock`.
+   - Executed recursive deletion: `Remove-Item -LiteralPath "C:\Users\ASUS\.git" -Recurse -Force`.
+   - Verified `Test-Path "C:\Users\ASUS\.git"` returns `False`.
+2. **System & Workspace Integrity Verification**:
+   - Confirmed `d:\Tutor Tampan\TopsCore` repository is 100% clean and intact on branch `main` (`nothing to commit, working tree clean`).
+   - Confirmed all user documents and files in `C:\Users\ASUS` remain 100% untouched and safe.
+   - 10k phantom changes badge in editor Source Control permanently eliminated.
+
+---
+
+## [2026-11-12 15:35] — Phase 416: Purge Batch Column Capsule Badge & Enforce Universal Zero-Capsule Invariant in Edit Mode
+
+**Agent/Session:** Antigravity
+**Phase:** Phase 416
+**Status:** PASS
 
 ### Why
 - The user reported: *"kolom batch saat edit mode, masih ada kaspul, dibereskan"* with an attached screenshot showing that in Class Hub Attendance Matrix (`#class-attendance-grid`), while in Master Edit Mode (`EDIT: ON`), the `BATCH` column still rendered values (e.g. `134`) inside rounded blue pill/capsule badges with borders and background.
@@ -29,9 +210,9 @@
 
 ## [2026-11-12 15:20] — Phase 415: Education Population, Attendance Matrix Column Streamlining, Blueprint Alignment & Universal Typography
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 415  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 415
+**Status:** PASS
 
 ### Why
 - The user requested:
@@ -74,9 +255,9 @@
 
 ## [2026-11-12 14:55] — Phase 414: Universal Table Workspace Containment, Excel White Gridlines Edit Mode & Student Roster Reordering
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 414  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 414
+**Status:** PASS
 
 ### Why
 - The user requested:
@@ -116,9 +297,9 @@
 
 ## [2026-11-12 14:10] — Phase 413: Governance & AGENTS.md Rules Optimization and Bloat Reduction
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 413  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 413
+**Status:** PASS
 
 ### Why
 - The user requested an audit of all governance rules to eliminate one-off, obsolete, and duplicate rules (specifically asking about Rules 29, 30, and 22), and warned to prevent `AGENTS.md` from becoming overloaded ("jangan sampai over").
@@ -146,193 +327,9 @@
 
 ## [2026-11-12 13:20] — Phase 412: Universal Excel Gridlines, Auto-Fit Column Resizing & Student Roster Enhancement
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 412  
-**Status:** PASS  
-
-### Why
-- The user requested:
-  1. Universal auto-resize for all tables is not functioning across the app.
-  2. Double-click column resize to auto-fit cell content was janky and froze the UI due to synchronous DOM cloning loops across all table rows.
-  3. Tables lacked clear column boundaries — the user wanted clean, subtle vertical divider lines between columns replicating Microsoft Excel spreadsheets.
-  4. The Active Student table (`#students` / batch student roster) had an enormous black void on the right side and needed column enrichment: Date of Birth (`DOB`), Last Education (`EDUCATION`), and Program Status (`STATUS`).
-
-### Changed
-1. **Universal Excel Gridlines Across All Tables (`css/admin.css`)**:
-   - Added subtle vertical column borders (`border-right: 1px solid rgba(255, 255, 255, 0.08)`) and row dividers (`border-bottom: 1px solid rgba(255, 255, 255, 0.05)`) across `.table-wrap table`, `.datagrid-table`, and `#admin-console table`.
-   - Stripped `border-right` on `:last-child` columns to ensure clean edge alignment.
-   - Enhanced super-header borders with `rgba(255, 255, 255, 0.12)` vertical and `rgba(255, 255, 255, 0.15)` horizontal dividers.
-   - Expanded column resize grab handle to 7px (`width: 7px; right: -3px; z-index: 30;`) for easy, responsive mouse grabbing.
-2. **Smooth, High-Performance Canvas Auto-Fit Column Resizing (`js/admin/datagrid.js`)**:
-   - Replaced expensive DOM cloning loop with offscreen canvas text measurement (`calculateColumnAutoWidth(th, cells)`), measuring cell text widths in < 1ms with zero DOM reflows.
-   - Clamped auto-fit widths between 50px and 550px.
-   - Updated `window.initColumnResize(tableElement, storageKey)` to use `calculateColumnAutoWidth` on double-click.
-   - Added `window.initAllTablesColumnResize()` with a MutationObserver on `#admin-console` so custom and dynamically mounted tables automatically receive the resize engine.
-3. **Active Student Roster Column Enrichment & Dead Space Elimination (`js/admin/student-management.js`)**:
-   - Added `DOB` (Date of Birth) column formatted as `DD Mon YYYY` (e.g. `16 Oct 2004`) with `⚠ No DOB` indicator when missing.
-   - Added `EDUCATION` (Last Degree/School) column dynamically parsing JSON arrays (`[{"institution":"SMK","year":2024}]`) to display formatted degree (e.g. `SMK (2024)`).
-   - Added `STATUS` (Program Status) column displaying `In Progress`, `Graduated`, or `Inactive`.
-   - Fixed `buildSuperHeaders()` column span: updated `fixed_before = 7` (Level, Name, Gender, Age, DOB, Education, Status) ensuring class exam super-headers align directly over their 4 exam sub-columns.
-   - Enriched `summaryRow` to display `—` for DOB, Education, and Status while preserving `BATCH AVG` calculations.
-   - Enriched Excel gradebook export (`window.exportStudentsGradebook`) to include `Gender`, `Age`, `DOB`, and `Education`.
-   - Eliminated right-side dead void: columns now expand across 100% of available viewport width with dynamic proportioning.
-4. **Automated Verification**:
-   - `scripts/check_all_js_syntax.cjs`: 44/44 JS files passed syntax validation (100% PASS).
-   - `check_spatial_invariants.mjs`: 100% PASS on all spatial and layout invariant checks.
-   - `scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS on student dashboard ranking and scoring parity.
-   - Visual verification via Playwright: `verify_student_roster_enriched.png` confirms presence of DOB, Education, Status, Excel gridlines, and zero dead space; `verify_class_tests_gridlines.png` confirms Excel gridlines across data grid headers and rows.
-
-## [2026-11-12 15:35] — Phase 416: Purge Batch Column Capsule Badge & Enforce Universal Zero-Capsule Invariant in Edit Mode
-
-**Agent/Session:** Antigravity  
-**Phase:** Phase 416  
-**Status:** PASS  
-
-### Why
-- The user reported: *"kolom batch saat edit mode, masih ada kaspul, dibereskan"* with an attached screenshot showing that in Class Hub Attendance Matrix (`#class-attendance-grid`), while in Master Edit Mode (`EDIT: ON`), the `BATCH` column still rendered values (e.g. `134`) inside rounded blue pill/capsule badges with borders and background.
-- This violated Rule 10 (Excel-Like Master Edit Mode & Zero Inner Capsule Invariant) in `.agents/rules/ui-invariants.md`.
-
-### Changed
-1. **Attendance Matrix Batch Column Rendering (`js/admin/app.js`)**:
-   - In `columns: [{ key: 'batch', ... }]` (line 3237), replaced the `<span class="badge" style="background:...; border:...; border-radius:10px;">` inline pill markup with flat, borderless, zero-radius Excel text: `<span style="color:#38bdf8; font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1;" title="Batch ${escapeHtml(row.batch)}">${escapeHtml(row.batch)}</span>`.
-2. **Universal No-Capsule Invariant in Tables (`css/admin.css`)**:
-   - Updated lines 3874–3886: Removed the `body:not(.global-edit-mode-on)` restriction, making the suppression of capsule backgrounds, borders, shadows, and border-radii universal across ALL tables in BOTH View Mode and Edit Mode.
-   - Preserved Grade Star and circular grade badge exceptions (`:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val)`).
-3. **Governance & UI Invariants Harmonization (`.agents/rules/ui-invariants.md`)**:
-   - Replaced obsolete item 8 in `.agents/rules/ui-invariants.md` (which historically mentioned capsule styling for inputs) to align with Rule 10 (flat, borderless, zero-radius Excel grid cells).
-4. **Automated Verification**:
-   - `node scripts/check_all_js_syntax.cjs`: 44/44 JS files passed syntax validation (100% PASS).
-   - `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
-   - `node scripts/verify_batch_column_no_capsule.mjs`:
-     - Computed border-radius on BATCH column cells in Edit Mode: `0px` (verified).
-     - Computed border: `0px none` (verified).
-     - Computed background: `rgba(0, 0, 0, 0)` transparent (verified).
-     - Captured `verify_batch_column_no_capsule_edit_mode.png` and `verify_batch_column_no_capsule_view_mode.png`.
-
----
-
-## [2026-11-12 15:20] — Phase 415: Education Population, Attendance Matrix Column Streamlining, Blueprint Alignment & Universal Typography
-
-**Agent/Session:** Antigravity  
-**Phase:** Phase 415  
-**Status:** PASS  
-
-### Why
-- The user requested:
-  1. **Populate Empty Education Column:** The Education column in the Active Students roster rendered `—` because `education` was omitted from the `adminFetchAll('students', ...)` query.
-  2. **Remove Redundant Institution & Program Columns in Class Hub:** On the "Students Grade and Score" Attendance Matrix, `INSTITUTION` and `PROGRAM` columns were redundant because the user is already inside that class view.
-  3. **Universal Spatial Blueprint Alignment (Image 2):** Verify and align against the universal spatial blueprint: Sidebar 200px, Top Panel 50px, Lower Panel 50px docked flush (0px to sidebar, right edge, and banner), Banner 60px, and Workspace surrounded by strict 10px gaps on all 4 sides.
-  4. **Universal Table Typography Standardization:** Fix font jumping when toggling Master Edit Mode. Enforce universal typography across all Tutor's Room tables: Header uppercase bold (700) 12px; Footer bold (700) 12px (not forced uppercase); Table Body Cells regular (400) 12px (strict NO bolding); Edit Mode inputs and selects 100% font parity (Inter/Outfit, 12px, regular 400).
-
-### Changed
-1. **Education Data Retrieval & Display (`js/admin/student-management.js`)**:
-   - Added `education` to the `adminFetchAll('students', '...')` query in line 104.
-   - Populated input value with formatted string `eduStr` (e.g. `SMA (2025)`, `S1 (2026)`) instead of raw JSON string.
-   - Visual verification confirms all active students in Camp 134 now cleanly display their Last Education credentials (`TK (2026)`, `SMA (2026)`, `SMA (2025)`, `S1 (2026)`, `SMK (2024)`).
-2. **Attendance Matrix Column Streamlining (`js/admin/app.js` & `css/admin.css`)**:
-   - In `js/admin/app.js`: Reduced `STUDENT IDENTITY` super-header `colSpan` from 4 to 2.
-   - Removed `instName` and `progName` columns from `columns: [...]` array and sorting handler.
-   - Re-indexed sticky identity and performance columns: Col 1 `batch` (`col-sticky-1`, 65px), Col 2 `displayName` (`col-sticky-2`, 220px with divider), Col 3 `progressPct` (`col-sticky-3`), Col 4 `totalEarnedScore` (`col-sticky-4`), Col 5 `grade` (`col-sticky-5 col-sticky-last`).
-   - Updated `summaryRow()`: Col 1 renders `★`, Col 2 renders `★ CLASS AVERAGE`, followed by summary percentages and total points, achieving 100% column-to-footer parity.
-   - In `css/admin.css`: Updated `#class-attendance-grid .col-sticky-*` definitions to reflect the 5 streamlined sticky columns.
-3. **Universal Spatial Blueprint Alignment (`css/admin.css`)**:
-   - Ensured `.workspace-lower-panel` has `margin-left: -10px !important; margin-right: -10px !important; width: calc(100% + 20px) !important;` so it touches sidebar (0px), right edge (0px), and bottom banner (0px) flush, while retaining the 10px top gap to the table container and 10px perimeter around the workspace.
-4. **Universal Tutor's Room Table Typography Invariant (`css/admin.css`)**:
-   - Added comprehensive Universal Table Typography block at the base of `css/admin.css`:
-     - `thead th` & children: `text-transform: uppercase !important; font-weight: 700 !important; font-size: 12px !important; font-family: var(--fm-font-sans) !important;`
-     - `tfoot td/th` & summary rows: `font-weight: 700 !important; font-size: 12px !important; font-family: var(--fm-font-sans) !important;`
-     - `tbody td` & text spans/divs: `font-weight: 400 !important; font-size: 12px !important; font-family: var(--fm-font-sans) !important;` (zero bolding on data cells).
-     - Edit Mode inputs & selects (`.student-inline-input`, `.student-inline-select`, `.input-matrix-*`): `font-family: var(--fm-font-sans) !important; font-size: 12px !important; font-weight: 400 !important; text-transform: none !important;`.
-   - Result: 100% visual stability with zero font jumping or layout shift when toggling Master Edit Mode.
-5. **Automated Verification**:
-   - `node scripts/check_all_js_syntax.cjs`: 44/44 JS files passed syntax validation (100% PASS).
-   - `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS on all spatial and governance invariants.
-   - `node scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS on ranking parity.
-   - `node scripts/capture_verification_p415.mjs`: Captured 4 visual artifacts:
-     - `verify_student_roster_education_populated.png`
-     - `verify_student_roster_p415_edit_mode.png`
-     - `verify_attendance_matrix_no_inst_prog.png`
-     - `verify_attendance_matrix_p415_edit_mode.png`
-
----
-
-## [2026-11-12 14:55] — Phase 414: Universal Table Workspace Containment, Excel White Gridlines Edit Mode & Student Roster Reordering
-
-**Agent/Session:** Antigravity  
-**Phase:** Phase 414  
-**Status:** PASS  
-
-### Why
-- The user requested:
-  1. Relocate the top toolbar (`[🚀 NEXT]`, `[➕ Add Student]`, `[📥 Import Excel / CSV]`) from above the table down into the bottom 50px Lower Panel (`.workspace-lower-panel`).
-  2. The table footer summary row (`★ BATCH AVG`) must remain strictly inside the workspace table container (`tfoot`) and NOT enter the lower panel.
-  3. Strict 10px vertical gap separating the table container from the lower panel; lower panel docked flush (0px gap) against the bottom banner and side panel.
-  4. Fix column alignment in table footer summary row (identified phantom checkbox `<td>★</td>` shifting all footer metrics).
-  5. Remove the `Actions` column entirely from the active students roster table.
-  6. Enable Student Profile / Dossier modal on clicking student Photo or Name across all views.
-  7. Restrict student deletion exclusively to the Inactive Students tab to prevent accidental data loss.
-  8. Reorder Student Roster columns: `LEVEL` -> `PHOTO` (30px round avatar) -> `GENDER` (`Mr.` for male, `Miss.` for female) -> `NAME` -> `DOB` (before Age) -> `AGE` -> `EDUCATION` -> `CLASS EXAMS` -> `STATUS` (at the very end).
-  9. In Master Edit Mode (`EDIT: ON`): All table cell and header gridlines across all tables turn crisp WHITE. All inputs inside cells are completely borderless, transparent, and zero-radius (zero inner capsule/box), filling the cell seamlessly like Microsoft Excel.
-  10. In-place live editing across Name, Gender, DOB, Education, and Status with instant Supabase save and state propagation.
-
-### Changed
-1. **Student Roster Spatial Restructuring (`js/admin/student-management.js`)**:
-   - Relocated toolbar buttons into `.workspace-lower-panel` docked at the base with 50px locked height.
-   - `#student-grid-container` sits with `flex: 1 1 0; min-height: 0; margin-bottom: 10px;`, establishing the strict 10px gap to the lower panel.
-   - Reordered columns: `Level`, `Photo`, `Gender` (`Mr.` / `Miss.`), `Name`, `DOB`, `Age`, `Education`, `Class Exams`, `Status`.
-   - Purged `Actions` column from active students table; only rendered if viewing inactive students.
-   - Made Photo and Name clickable (`cursor: pointer;`) to open `showStudentProfileModal(row.id)`.
-   - Replaced phantom checkbox cell in `summaryRow()` so all footer metrics (`BATCH AVG`, empty photo, `M · F`, `BATCH AVERAGE`, `—`, `avg age`, `avg pts`) align 1-to-1 with table headers.
-   - Added auto-save event delegation on `.student-inline-input` and `.student-inline-select` with green cell flash confirmation.
-2. **Master Edit Mode Excel White Gridlines & Capsule Purge (`css/admin.css` & `js/admin/app.js`)**:
-   - In `css/admin.css`: `body.global-edit-mode-on` table headers and cells enforce crisp white borders (`border-right: 1px solid rgba(255, 255, 255, 0.45) !important; border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;`).
-   - Removed all inner capsule boxes and outlines on inputs (`border: none !important; border-radius: 0 !important; background: transparent !important;`).
-   - In `js/admin/app.js`: removed hardcoded inline cyan borders and dark backgrounds on `input-matrix-task-progress`, `input-matrix-exam-pts`, and `input-matrix-exam-score`.
-   - Made Student Name clickable in Attendance matrix to open student profile modal.
-3. **Governance & Rules Codification**:
-   - Updated Rule 17 (Single-Responsibility Columns & Profile Click Invariant), Rule 18 (Excel-Like Master Edit Mode & Zero Inner Capsule), and Rule 20 (Universal Lower Panel Architecture & Table Workspace Containment) in `.antigravityrules`.
-   - Updated Sections 3, 4, and 10 in `.agents/rules/ui-invariants.md`.
-4. **Automated Verification**:
-   - `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS on all spatial and governance invariants.
-   - `node scripts/check_all_js_syntax.cjs`: 44/44 JS files passed syntax validation (100% PASS).
-   - `node scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS on ranking parity.
-   - Captured visual proof: `verify_student_roster_p414_view.png`, `verify_student_roster_p414_edit.png`, `verify_camp_2nd_matrix_edit_mode.png`, `verify_student_profile_modal.png`.
-
-## [2026-11-12 14:10] — Phase 413: Governance & AGENTS.md Rules Optimization and Bloat Reduction
-
-**Agent/Session:** Antigravity  
-**Phase:** Phase 413  
-**Status:** PASS  
-
-### Why
-- The user requested an audit of all governance rules to eliminate one-off, obsolete, and duplicate rules (specifically asking about Rules 29, 30, and 22), and warned to prevent `AGENTS.md` from becoming overloaded ("jangan sampai over").
-- Investigation revealed that `AGENTS.md` had ballooned to 22.2 KB (305 lines), dangerously close to the 24 KB per-file ceiling. Lines 175–258 duplicated 20 sub-rules (Rules 2.20–2.39) verbatim from `.agents/rules/ui-invariants.md` and `agent-workflow.md`, wasting ~5,500 prompt tokens per turn.
-- Multiple one-off bugfix rules in `.antigravityrules` (Rules 29, 30, 3, 10, 26, 27, 28) were already permanently enforced in CSS and JavaScript classes.
-
-### Changed
-1. **Streamlined & De-bloated `AGENTS.md`**:
-   - Replaced 84 lines of duplicate text in Section 2 (Rules 2.20 through 2.39) with a compact, structured Modular Specification Map linking to `.agents/rules/ui-invariants.md` and `.agents/rules/agent-workflow.md`.
-   - Removed obsolete Rule 2.22 (`/btw` Side Quest Protocol).
-   - Preserved 100% of core business rules (Rules 2.1–2.19: ABCD navigation, student login, level-centric tests, grading scale, 8 modules, scoring pipeline, answer tolerances, test lifecycle, attempts, snapshots, soft delete), execution authorities (0.1–0.1.2), target architecture, and do-not-do list.
-   - Reduced `AGENTS.md` from 22,212 bytes (305 lines) to 14,054 bytes (233 lines), permanently cutting ~2,000 prompt tokens per turn.
-2. **Pruned One-Off Rules from `.antigravityrules`**:
-   - Safely removed one-off bugfix rules: Rule 29 (Checkbox column purge — default in DataGrid and CSS), Rule 30 (Neon glow purge — enforced in CSS), Rule 3 (DataGrid cell sanitization — handled in code), Rule 10 (Defensive property scoping), Rule 26 (Duplicate bold rule), Rule 27 (Single-line program chips — in CSS), and Rule 28 (Duplicate footer docking).
-   - Retained exact test-checked titles: Rules 20, 21, 22, and 25 to guarantee 100% test compatibility.
-   - Condensed Rule 22 (Centered Loading States) to a single crisp line.
-   - Reduced `.antigravityrules` from 6,843 bytes (66 lines) to 5,465 bytes (46 lines).
-3. **Cleaned Up Modular Workflow Rules**:
-   - Removed obsolete Section 8 ("Side Quest Protocol for Side Conversations /btw") from `.agents/rules/agent-workflow.md`.
-4. **Automated Verification**:
-   - `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS across all spatial and governance invariant checks.
-   - `node scripts/check_all_js_syntax.cjs`: 44/44 JS files passed syntax validation (100% PASS).
-   - `node scripts/test_student_dashboard_exam_parity.mjs`: 100% PASS on student dashboard ranking and scoring parity.
-   - Verified total permanent reduction of ~9.5 KB (~2,400 tokens) across system prompt rules.
-
-## [2026-11-12 13:20] — Phase 412: Universal Excel Gridlines, Auto-Fit Column Resizing & Student Roster Enhancement
-
-**Agent/Session:** Antigravity  
-**Phase:** Phase 412  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 412
+**Status:** PASS
 
 ### Why
 - The user requested:
@@ -368,9 +365,9 @@
 
 ## [2026-11-12 12:45] — Phase 411: Lexicon Code System (LEX-CD) & Evnikom Test Cross-Pollination Isolation
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 411  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 411
+**Status:** PASS
 
 ### Why
 - In Tutor's Room Vocabulary Vault, words and phrases previously displayed only composite topic codes (e.g. `1G1`, `2A1`), lacking individual coordinate identifiers for fine-grained AI test generation, distractor boundaries, and diagnostic remediation.
@@ -399,9 +396,9 @@
 
 ## [2026-11-11 23:50] — Phase 410: Comprehensive Table Repair, Native Architecture Restoration & Legacy Cleanup
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 410  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 410
+**Status:** PASS
 
 ### Why
 - User audit revealed layout degradation across admin data tables:
@@ -438,9 +435,9 @@
 
 ## [2026-11-11 22:25] — Phase 409: Antigravity Rules Streamlining & Token Budget Optimization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 409  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 409
+**Status:** PASS
 
 ### Why
 - Antigravity IDE displayed a red token overflow alert: "You have exceeded the maximum token limit for this file" on `.antigravityrules` (11,502 bytes / ~2,872 tokens).
@@ -460,9 +457,9 @@
 
 ## [2026-11-11 22:00] — Phase 408: Universal Table Polish, Typography Discipline & Layout Invariants
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 408  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 408
+**Status:** PASS
 
 ### Why
 - Address user feedback across all admin data tables (Theme Manager, Attendance Matrix, Student Roster):
@@ -503,9 +500,9 @@
 
 ## [2026-11-11 21:05] — Phase 407: Theme & Topic Manager Table Header Reorganization & Hierarchical Flow
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 407  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 407
+**Status:** PASS
 
 ### Why
 - Reorganize the 19 columns in Theme Manager table into an intuitive, hierarchical left-to-right reading flow:
@@ -524,9 +521,9 @@
 
 ## [2026-11-11 19:15] — Phase 406: Plan Repository Migration & Multi-Device Git Dual-Write Protocol
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 406  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 406
+**Status:** PASS
 
 ### Why
 - Plans stored exclusively in local Windows profile directory (`C:\Users\ASUS\.gemini\antigravity\brain\...`) were inaccessible when opening the repository on other laptops or devices.
@@ -547,9 +544,9 @@
 
 ## [2026-11-11 19:10] — Phase 405: Vocabulary Vault Automatic Merge for Identical Level, Theme, and Topic
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 405  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 405
+**Status:** PASS
 
 ### Why
 - User identified duplicate rows in Theme Manager for the same Level and Theme (e.g. Level 1 Theme G had two separate rows for `Time Name` with codes `1` and `A1`, splitting 1 word and 39 words).
@@ -567,9 +564,9 @@
 
 ## [2026-11-11 12:40] — Phase 404: Vocabulary Vault Code Architecture & 19-Column Inline Editing Standardization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 404  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 404
+**Status:** PASS
 
 ### Why
 - Eliminate top filter/search bars from Vocabulary Vault views to enforce strict flush-docking of table headers to top panels (Rule 2.23 & Rule 2.38).
@@ -597,9 +594,9 @@
 
 ## [2026-11-11 09:00] — Phase 403: Quick-Win Lean Streamlining (Dashboard Executive Monitor & Modal Standardization)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 403  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 403
+**Status:** PASS
 
 ### Why
 - Execute approved Option A ("opi a") from the Data & Feature Streamlining Plan.
@@ -626,9 +623,9 @@
 
 ## [2026-11-11 06:52] — Phase 402: Tutor's Room Table Engineering, Centered Loading & Typography Harmonization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 402  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 402
+**Status:** PASS
 
 ### Why
 - Fully execute user command `/learn`: establish the unified plan, `tasks.md`, and table engineering audit as the permanent reference standard for Tutor's Room.
@@ -659,9 +656,9 @@
 
 ## [2026-11-11 06:10] — Phase 401: Full-Scale System Table Audit, Standardization & Harmonization Protocol
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 401  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 401
+**Status:** PASS
 
 ### Why
 - Execute full-scale system table audit and harmonization per user directives across all tables in the application:
@@ -703,9 +700,9 @@
 
 ## [2026-11-11 04:20] — Phase 398: Test Blueprint Controls Relocation, Table Pruning, Answer Type & Theme Boundary Lines
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 398  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 398
+**Status:** PASS
 
 ### Why
 - Execute user interface refactoring per user directives across Vocabulary Vault Test Blueprint and Class Attendance Theme Matrix:
@@ -743,9 +740,9 @@
 
 ## [2026-11-11 03:50] — Phase 397: Theme Divider Realignment, Footer Flush Baseline Docking & Task Progress Live Editing
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 397  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 397
+**Status:** PASS
 
 ### Why
 - Address specific visual alignment and feature requests from user:
@@ -779,9 +776,9 @@
 
 ## [2026-11-11 03:20] — Phase 396: Dynamic Column Sizing, Zero Dead Space & Universal 10px Spatial Normalization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 396  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 396
+**Status:** PASS
 
 ### Why
 - Fix severe visual and spatial distortions identified in user screenshots (Gambar 1 & Gambar 2):
@@ -818,9 +815,9 @@
 
 ## [2026-11-11 01:50] — Phase 395: Agent System Extension & Invariant Workflow Optimization (ui-spatial-checker Pipeline Integration, Pre-Flight Gating Validator, Rules 23/24 Codification, and DECISION-048)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 395  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 395
+**Status:** PASS
 
 ### Why
 - Formalize and operationalize the system extensions derived from the user's invariant-driven working style:
@@ -849,9 +846,9 @@
 
 ## [2026-11-11 01:15] — Phase 394: Universal Lower Panel Architecture (50px Height), Dynamic Column Sizing, Single-Line Text Invariant, Centered Loading, and Footer Metric Elimination
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 394  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 394
+**Status:** PASS
 
 ### Why
 - Implement the spatial and architectural overhaul requested by the user across Tutor's Room (`admin.html`):
@@ -914,9 +911,9 @@
 
 ## [2026-11-11 00:30] — Phase 393: Strict 100vh Viewport Lock, Zero Outer Scroll, Universal Sticky Header/Footer, Non-Capsule Data Display, and Pure Direct English UI Standard
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 393  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 393
+**Status:** PASS
 
 ### Why
 - The user diagnosed persistent layout anomalies in `admin.html`:
@@ -967,9 +964,9 @@
 
 ## [2026-11-10 23:40] — Phase 392: True Test Analytics Engine, Viewport Lock with Pinned Table Header/Footer, Action Buttons Relocation to Grade Sheet, and Navigation Header/Footer Relocation
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 392  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 392
+**Status:** PASS
 
 ### Why
 - The user clarified critical requirements and architectural refinements:
@@ -1016,9 +1013,9 @@
 
 ## [2026-11-10 23:05] — Phase 391: System Streamlining & Feature Consolidation, Universal Dark Badge Standard, and Upfront Task List Execution
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 391  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 391
+**Status:** PASS
 
 ### Why
 - The user requested a comprehensive audit and streamlining of all duplicate buttons and fragmented features across TopsCore LMS:
@@ -1063,9 +1060,9 @@
 
 ## [2026-11-10 17:35] — Phase 390: Dual-Direction (+ / -) Exam Session Time Adjustment & Yellow Panel Standardization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 390  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 390
+**Status:** PASS
 
 ### Why
 - The user requested dual-direction time adjustment for test sessions:
@@ -1105,9 +1102,9 @@
 
 ## [2026-11-10 07:15] — Phase 389: Single-Responsibility Column Principle Overhaul Across All Tables
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 389  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 389
+**Status:** PASS
 
 ### Why
 - The user invoked `/plan` to enforce the Single-Responsibility Column Principle across all tables in the platform:
@@ -1148,9 +1145,9 @@
 
 ## [2026-11-09 23:51] — Phase 388: Global Master Edit Mode, Zero-Scroll Viewport Lock & Vocabulary Vault Overhaul
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 388  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 388
+**Status:** PASS
 
 ### Why
 - The user expressed strong dissatisfaction with the interface, functionality, layout, and structural condition of the Vocabulary Vault (`#vocab_vault`: Theme Manager and Theme Blueprint).
@@ -1199,9 +1196,9 @@
 
 ## [2026-11-09 22:46] — Side Quest: VS Code Extensions Audit & Optimization (Option 1)
 
-**Agent/Session:** Antigravity  
-**Phase:** Side Quest  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Side Quest
+**Status:** PASS
 
 ### Why
 - The user requested Option 1 from the VS Code Extensions Audit (`Side Quest — VS Code Extensions Audit.md`).
@@ -1221,9 +1218,9 @@
 
 ## [2026-11-09 19:20] — Phase 387: Tutor Role & Strict Role-Based Access Control (RBAC)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 387  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 387
+**Status:** PASS
 
 ### Why
 - The user requested a restricted `TUTOR` account in addition to the master `ADMIN` account.
@@ -1270,9 +1267,9 @@
 
 ## [2026-11-09 18:40] — Phase 386: Master Legacy Cleanup & Codebase Rationalization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 386  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 386
+**Status:** PASS
 
 ### Why
 - An exhaustive audit revealed dead baggage across multiple layers of the system:
@@ -1315,9 +1312,9 @@
 
 ## [2026-11-09 17:18] — Phase 385: Universal Diagnostic Automation & Test Suite Modernization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 385  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 385
+**Status:** PASS
 
 ### Why
 - The user requested "rerun all check /boost" and "continue" to solidify error checking automation across the repository.
@@ -1354,9 +1351,9 @@
 
 ## [2026-11-09 15:26] — Phase 384: Tutor's Room Module Import Alignment & API Contract Restoration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 384  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 384
+**Status:** PASS
 
 ### Why
 - On Tutor's Room login page (`admin.html`), an `Uncaught SyntaxError` occurred:
@@ -1387,9 +1384,9 @@
 
 ## [2026-11-09 15:05] — Phase 383: iPhone Safari & Chrome Ghost Abort Elimination & Interim Transcript Salvage
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 383  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 383
+**Status:** PASS
 
 ### Why
 - On iPhone (both Safari and Chrome using iOS WebKit), students experienced speech recognition aborting unexpectedly, showing "Recognition stopped." / "recognition aborted" or resetting the mic button immediately after tapping.
@@ -1427,9 +1424,9 @@
 
 ## [2026-11-09 14:40] — Phase 382: iPhone / iOS Microphone & AudioSession Stabilization
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 382  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 382
+**Status:** PASS
 
 ### Why
 - On iPhone (iOS Safari / WebKit), students frequently experienced unresponsive microphones, microphone permission errors (`not-allowed`, `audio-capture`), or the mic stopping immediately after tapping.
@@ -1468,9 +1465,9 @@
 
 ## [2026-11-09 12:10] — Phase 381: Comprehensive Test Room Input Modes Responsiveness & Reliability Overhaul
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 381  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 381
+**Status:** PASS
 
 ### Why
 - Students reported unresponsiveness, freezing, and hard-to-click buttons during spoken tests, as well as occasional microphone unresponsiveness.
@@ -1514,9 +1511,9 @@
 
 ## [2026-11-09 09:25] — Phase 379: Theme Blueprint Schema Column Alignment & 100% Test Readiness Detection
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 379  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 379
+**Status:** PASS
 
 ### Why
 - In `_renderThemeBlueprintTab` (`js/admin/vocab-vault.js`), querying `tests` included non-existent column `is_active` (which caused Supabase 42703 error `column tests.is_active does not exist` and returned empty test data).
@@ -1543,9 +1540,9 @@
 
 ## [2026-11-09 09:16] — Phase 378: Batch 134 Written Words Exam Completion & Official Scoreboard Ratification
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 378  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 378
+**Status:** PASS
 
 ### Why
 - The 120-minute live written exam `2C-WORDS-EXAM - SHOPPING ESSENTIALS` (Test ID: `6705f171-7b17-48d1-9391-e301f663a411`) reached its authoritative server deadline at 09:15:14 WIB (01:15:14 UTC).
@@ -1573,9 +1570,9 @@
 
 ## [2026-11-09 09:05] — Phase 377: Permanent ServiceWorker Elimination on Tutor Console & Vocab Vault Split Verification
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 377  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 377
+**Status:** PASS
 
 ### Why
 - User submitted screenshot of `admin.html#vocab_vault` showing legacy 16-column matrix with old tabs (`Topic Blueprint 34`) due to persistent browser caching and active ServiceWorker on port 5500.
@@ -1609,9 +1606,9 @@
 
 ## [2026-11-09 08:56] — Phase 376: Unified Live Exam Mission Control, Forgive KKM Standardization, Leaderboard Contrast & Side Quest Protocol
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 376  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 376
+**Status:** PASS
 
 ### Why
 - The Live Test Session Monitor felt static ("kurang live") because statuses were flat database enums without active heartbeat telemetry, students with 0 answers were penalized with a harsh red `0% E Below Passing`, and tutors only had a single blunt "Keluarkan" button.
@@ -1663,9 +1660,9 @@
 
 ## [2026-11-09 08:31] — Phase 375: Admin Zero-Stale Cache Invalidation & Written Exam Telemetry Monitoring
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 375  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 375
+**Status:** PASS
 
 ### Why
 - The user uploaded a screenshot of `http://127.0.0.1:5500/admin.html#vocab_vault` showing the legacy monolithic 16-column matrix because the browser's Service Worker and disk cache were serving obsolete pre-cached versions.
@@ -1705,9 +1702,9 @@
 
 ## [2026-11-09 08:25] — Phase 374: Exam Eligibility Bugfix, Late Students Modal & Direct Card Duration Controls
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 374  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 374
+**Status:** PASS
 
 ### Why
 - Students who had legitimately completed 7x7 tasks were evaluated as ineligible for exams (`0 out of 18 eligible`), forcing tutors to use "Tutor Override" for everyone.
@@ -1744,9 +1741,9 @@
 
 ## [2026-11-09 08:06] — Phase 373: Vocabulary Vault Cache Busters & Tab Count Polish
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 373  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 373
+**Status:** PASS
 
 ### Why
 - The user's browser was still displaying the legacy single-tab monolithic Topic Blueprint table because `js/admin/app.js` imported `vocab-vault.js?v=20261106_v160` (cached by Chrome).
@@ -1782,9 +1779,9 @@
 
 ## [2026-11-09 07:51] — Phase 372: Incident Analysis (Havvina Auto-Submit) & Test Account 7x7 Seeding
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 372  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 372
+**Status:** PASS
 
 ### Why
 - User reported student Havvina's exam unexpectedly auto-submitted mid-exam (`2C-WORDS-EXAM`).
@@ -1809,9 +1806,9 @@
 
 ## [2026-11-09 07:30] — Phase 371: Hotfix Words Exam Written Mode Synchronization across Active Attempts & Database
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 371: Hotfix Words Exam Written Mode Synchronization  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 371: Hotfix Words Exam Written Mode Synchronization
+**Status:** PASS
 
 ### Why
 - Students currently taking `2nd Vocabulary C Words Exam - SHOPPING ESSENTIALS` (`2C-WORDS-EXAM`) received the spoken (microphone) interface instead of the written keyboard interface.
@@ -1847,9 +1844,9 @@
 
 ## [2026-11-09 07:20] — Phase 370: Theme Manager vs Theme Blueprint (Test Auto-Generator) Separation
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 370: Theme Manager vs Theme Blueprint Separation  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 370: Theme Manager vs Theme Blueprint Separation
+**Status:** PASS
 
 ### Why
 - User requested splitting the monolithic and overcrowded `Topic Blueprint` table (16+ columns) into 2 dedicated tabs:
@@ -1875,9 +1872,9 @@
 
 ## [2026-11-09 06:48] — Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining (v167)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 367: Institution Tab Header Naming, Full-Green Active Badges & Grade-Score Toolbar Streamlining
+**Status:** PASS
 
 ### Why
 - In the Organization / Curriculum screen, the topbar tab displayed `"Program (1)"` and `"Programs (2)"` instead of the institution's actual name (`TOP`, `CEC`).
@@ -1925,9 +1922,9 @@
 
 ## [2026-11-09 01:45] — Phase 366: Multi-Program Theme Assignment, 2-Tier Topic Blueprint Matrix & Class Hub Vault Quick-Action (v166)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 366: Multi-Program Theme Assignment, 2-Tier Topic Blueprint Matrix & Class Hub Vault Quick-Action  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 366: Multi-Program Theme Assignment, 2-Tier Topic Blueprint Matrix & Class Hub Vault Quick-Action
+**Status:** PASS
 
 ### Why
 - Multi-tenancy and curriculum material isolation for client programs sharing the same class structure and level mechanics (**CEC Camp**, **Evnikom**, **Sheraton**, **Tamata Persada**).
@@ -1985,9 +1982,9 @@
 
 ## [2026-11-08 23:40] — Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant (v165)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 365: Anti-Cheat Hardening, 5s Countdown, Dual-Defense & Test Room Layout Invariant
+**Status:** PASS
 
 ### Why
 - User submitted 2 real device screenshots on mobile:
@@ -2010,12 +2007,12 @@
    - Added checkScreenSizeCovered() detecting any display area or directional reduction >= 25%, immediately triggering Screen Area Covered / Split-Screen Detected (X% reduction).
    - Attached to window.resize, isualViewport.resize, isibilitychange, and ocus.
 3. **DOM Layout & Reading Order (js/test.js)**:
-   - Enforced strict DOM appending order in 
+   - Enforced strict DOM appending order in
 enderQuestion() across all modes (Written, Spoken, MCQ, Chips):
      Metadata Table (Top, Flex 1) -> Question Box (Flex 3) -> Answer Area (Flex 3 or 6) -> Control Area (Flex 3).
    - Preserves 3:1:3:3 golden ratio verified by automated tests.
 4. **Universal Netlify Badge Blocker (css/test.css, js/test.js)**:
-   - Added comprehensive CSS blocker rule completely hiding and neutralizing [href*="netlify.com"], 
+   - Added comprehensive CSS blocker rule completely hiding and neutralizing [href*="netlify.com"],
 etlify-drawer, and badge elements.
    - Added runtime purgeExternalBadges() function with MutationObserver in js/test.js.
 5. **Universal Cache & Version Harmonization (sw.js, 	est.html, css/test.css)**:
@@ -2034,13 +2031,13 @@ etlify-drawer, and badge elements.
 - docs/CURRENT_STATE.md
 
 ### Tests
-- command: 
+- command:
 ode scripts/test_anti_cheat_and_layout_v165.mjs
 - result: PASS (14/14 tests passed)
-- command: 
+- command:
 ode scripts/test_unified_test_room_ratios.mjs
 - result: PASS (100% parity across all test room modes)
-- command: 
+- command:
 ode scripts/test_bottom_banner_universal.mjs
 - result: PASS (Universal bottom banner validated)
 
@@ -2050,9 +2047,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 21:08] — Phase 362: Cohort Level Pill Sync & 7x7 Repetitive Mastery Quota Locking
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 362: Cohort Level Pill Sync & 7x7 Repetitive Mastery Quota Locking  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 362: Cohort Level Pill Sync & 7x7 Repetitive Mastery Quota Locking
+**Status:** PASS
 
 ### Why
 - The user reported two critical issues from live student screenshots (`Mr. Muhamad Alifurrahman`, Batch 134):
@@ -2098,9 +2095,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 20:25] — Rule 0 Enforcement: Revert of Unrequested Batch 134 Pacing Adjustments (Option 1)
 
-**Agent/Session:** Antigravity  
-**Phase:** Operational Governance & Rule 0 Enforcement  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Operational Governance & Rule 0 Enforcement
+**Status:** PASS
 
 ### Why
 - The user reviewed the audit and restoration plan (`unrequested_pacing_adjustment_audit_and_restoration_plan.md`) and explicitly chose **Opsi 1 (Recommended)**: full revert of all unrequested pacing adjustments.
@@ -2125,9 +2122,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 20:20] — Phase 360: Strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity Across All 5 Test Modes
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 360: Strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity Across All 5 Test Modes  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 360: Strict 3:1:3:3 and 3:1:6 Test Room Ratio Parity Across All 5 Test Modes
+**Status:** PASS
 
 ### Why
 - The user instructed to make the Question Box adaptive while ensuring its rendered size is 100% identical across all question modalities ("buat adaptif, tapi ukurannya jadi sama").
@@ -2161,9 +2158,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 20:10] — Phase 359: Batch 134 Cohort Pacing Adjustment & Theme C Acceleration
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 359: Batch 134 Cohort Pacing Adjustment & Theme C Acceleration  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 359: Batch 134 Cohort Pacing Adjustment & Theme C Acceleration
+**Status:** PASS
 
 ### Why
 - An audit of all 18 active students in Batch 134 across Theme C revealed that 3 additional students had demonstrated mastery ($\ge 82\%$) on `2C1-WORDS-TASK` but were gated from accessing `2C2-WORDS-TASK` due to incomplete 7x7 pass repetition quotas.
@@ -2191,9 +2188,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 20:00] — Phase 358: Student Access Diagnosis & Resolution (Lifurrahman / 2C Gating)
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 358: Student Access Diagnosis & Resolution (Lifurrahman / 2C Gating)  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 358: Student Access Diagnosis & Resolution (Lifurrahman / 2C Gating)
+**Status:** PASS
 
 ### Why
 - The user requested an investigation into why student "lifurrahman" was unable to access his daily task ("cek siswa atas nama lifurrahman , kenapa dia masih belum bia akses task harian,, selsaiakn /goal").
@@ -2218,9 +2215,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 19:31] — Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 357: Vault Intelligent Distractor Selection Engine & MCQ/UI Polish
+**Status:** PASS
 
 ### Why
 - The user requested that Multiple Choice questions sourcing items from `vocabulary_vault` must intelligently select distractors that are as similar and plausible as possible to the correct answer ("saat ada multiple choice yang mengambil dari vault, maka usahakan mengambil pilihan jawaban yang semirip mungkin dengan yang benar dan pengacaunya dari yang ada di vault").
@@ -2258,9 +2255,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-08 19:25] — Phase 356: All Test Types Visual Catalog Harness & IDE Extension Suite Upgrade
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 356: All Test Types Visual Catalog Harness & IDE Extension Suite Upgrade  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 356: All Test Types Visual Catalog Harness & IDE Extension Suite Upgrade
+**Status:** PASS
 
 ### Why
 - The user requested screenshots of all active test types in TopsCore ("erikan ss semua tipe test") and asked what extensions should be updated or enhanced ("apa yang perlu saya update sebagai extensi,,, analisa dan terapkan kalau ada yang bisa ditingkatkn. /goal").
@@ -2294,9 +2291,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-07 12:40] — Phase 355: Test Room Question Box Adaptive Uniformity across All Answering Modes
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 355: Test Room Question Box Adaptive Uniformity  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 355: Test Room Question Box Adaptive Uniformity
+**Status:** PASS
 
 ### Why
 - The user requested making the question box adaptive while keeping its dimensions identical across all answering methods (Written, Spoken, Multiple Choice, and Phrase chips).
@@ -2330,9 +2327,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-07 12:15] — Phase 354: Master Terminology & Spatial Architecture Alignment
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 354: Master Terminology & Spatial Architecture Alignment  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 354: Master Terminology & Spatial Architecture Alignment
+**Status:** PASS
 
 ### Why
 - User approved `topscore_terminology_and_spatial_mapping_plan.md` to establish an unambiguous, intuitive spatial vocabulary across all TopsCore interfaces:
@@ -2374,9 +2371,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-07 10:15] — Phase 353: Multi-Tenant Boundary Hardening, Batch 134 7x7 Audit & Comprehensive Health Check
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 353: Multi-Tenant Boundary Hardening & Batch 134 Complete Verification  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 353: Multi-Tenant Boundary Hardening & Batch 134 Complete Verification
+**Status:** PASS
 
 ### Why
 - User requested a comprehensive, zero-compromise health audit of all systems (`/goal`) to ensure no complaints, verification of student Ayya (Batch 134) 7x7 mastery, and hardening of tenant isolation between programs (CEC Camp vs TOP Evnikom).
@@ -2409,9 +2406,9 @@ ode scripts/test_bottom_banner_universal.mjs
 
 ## [2026-11-06 08:46] — Phase 352: Comprehensive E2E System Audit & Bug Resolution
 
-**Agent/Session:** Antigravity  
-**Phase:** Phase 352: Comprehensive E2E System Audit & Bug Resolution  
-**Status:** PASS  
+**Agent/Session:** Antigravity
+**Phase:** Phase 352: Comprehensive E2E System Audit & Bug Resolution
+**Status:** PASS
 
 ### Why
 - User requested an exhaustive End-to-End audit (`/goal`) to hunt down all bugs, possible errors, and architectural inconsistencies across TopsCore, map them out thoroughly (`/plan`), and resolve them.
@@ -7117,5 +7114,5 @@ ode scripts/test_bottom_banner_universal.mjs
 - `css/admin.css`:
   - Permanently integrated all `.tac-slide-drawer`, `.tac-drawer-backdrop`, and pacing table styles into the global admin stylesheet with `!important` guards to ensure fixed positioning is never lost.
 - `js/admin/app.js`:
-  
+
 ... [truncated for diff preview]

@@ -26,33 +26,33 @@ function assert(condition, testName) {
   }
 }
 
-// 1. Theme Dividing Lines Realignment in admin.css
+// 1. Theme Dividing Lines Realignment in admin.css (Anchored to Grade column - Phase 421)
 assert(
-  adminCss.includes('th.col-test-theme-score-a,') &&
-  adminCss.includes('td.col-test-theme-score-a,') &&
+  adminCss.includes('th.col-test-theme-grade-a,') &&
+  adminCss.includes('td.col-test-theme-grade-a,') &&
   adminCss.includes('border-right: 3px solid #38bdf8 !important;'),
-  'admin.css: Theme A 3px divider line is placed on SCR column (col-test-theme-score-a)'
+  'admin.css: Theme A 3px divider line is placed on GRADE column (col-test-theme-grade-a)'
 );
 
 assert(
-  adminCss.includes('th.col-test-theme-score-b,') &&
-  adminCss.includes('td.col-test-theme-score-b,') &&
+  adminCss.includes('th.col-test-theme-grade-b,') &&
+  adminCss.includes('td.col-test-theme-grade-b,') &&
   adminCss.includes('border-right: 3px solid #c084fc !important;'),
-  'admin.css: Theme B 3px divider line is placed on SCR column (col-test-theme-score-b)'
+  'admin.css: Theme B 3px divider line is placed on GRADE column (col-test-theme-grade-b)'
 );
 
 assert(
-  adminCss.includes('th.col-test-theme-score-c,') &&
-  adminCss.includes('td.col-test-theme-score-c,') &&
+  adminCss.includes('th.col-test-theme-grade-c,') &&
+  adminCss.includes('td.col-test-theme-grade-c,') &&
   adminCss.includes('border-right: 3px solid #fbbf24 !important;'),
-  'admin.css: Theme C 3px divider line is placed on SCR column (col-test-theme-score-c)'
+  'admin.css: Theme C 3px divider line is placed on GRADE column (col-test-theme-grade-c)'
 );
 
 assert(
-  adminCss.includes('th.col-test-theme-score-d,') &&
-  adminCss.includes('td.col-test-theme-score-d,') &&
+  adminCss.includes('th.col-test-theme-grade-d,') &&
+  adminCss.includes('td.col-test-theme-grade-d,') &&
   adminCss.includes('border-right: 3px solid #34d399 !important;'),
-  'admin.css: Theme D 3px divider line is placed on SCR column (col-test-theme-score-d)'
+  'admin.css: Theme D 3px divider line is placed on GRADE column (col-test-theme-grade-d)'
 );
 
 assert(

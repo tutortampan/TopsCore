@@ -2368,14 +2368,17 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
 async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   showLoading();
   const sb = await getSupabase();
-  const [{ data: testsData }, { data: classesData }] = await Promise.all([
+  const [{ data: testsData }, { data: classesData }, freshAssignments] = await Promise.all([
     sb.from('tests').select('id, class_id, title, shell_code, test_type, payload, working_duration_minutes, minimum_required_score, status, display_order').is('deleted_at', null),
-    (meta.classes && meta.classes.length > 0) ? Promise.resolve({ data: meta.classes }) : sb.from('classes').select('id, name, program_id, level_id, institution_id, is_active').is('deleted_at', null)
+    (meta.classes && meta.classes.length > 0) ? Promise.resolve({ data: meta.classes }) : sb.from('classes').select('id, name, program_id, level_id, institution_id, is_active').is('deleted_at', null),
+    fetchThemeProgramAssignments().catch(() => meta?.themeAssignments || window._vaultMeta?.themeAssignments || [])
   ]);
   hideLoading();
 
   const tests = testsData || [];
   const classes = classesData || meta.classes || [];
+  const assignments = freshAssignments || meta.themeAssignments || window._vaultMeta?.themeAssignments || [];
+  if (window._vaultMeta) window._vaultMeta.themeAssignments = assignments;
 
   // Group words by Level -> Theme Code -> Topic
   const levelsSet = new Set([1, 2, 3]);
@@ -2470,6 +2473,41 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     ) || classes.find(c => c.program_id === selectedProgId && c.name && c.name.toLowerCase().includes('vocab')) || null;
   };
 
+  // Multi-Tenant Assignment Lookup Set
+  const assignSet = new Set(
+    assignments
+      .filter(a => a.is_active !== false)
+      .map(a => `${String(a.theme_code).trim().toUpperCase()}_${parseInt(a.target_level, 10)}_${a.program_id}`)
+  );
+
+  // Helper: Verify if theme belongs to the selected program (Rule: omit foreign unassigned themes)
+  const isThemeAssignedToProgram = (lvl, thCode, targetClassId) => {
+    if (!selectedProgId) return true;
+
+    // 1. Explicit multi-tenant assignment in theme_program_assignments
+    if (assignSet.has(`${thCode}_${lvl}_${selectedProgId}`)) return true;
+
+    // 2. Program class already has an existing exam or task for this theme
+    if (targetClassId) {
+      const classTests = tests.filter(t => t.class_id === targetClassId);
+      const hasTest = classTests.some(t => {
+        const code = String(t.shell_code || '').toUpperCase();
+        return code.startsWith(`${lvl}${thCode}`);
+      });
+      if (hasTest) return true;
+    }
+
+    // 3. Fallback: words in vault directly tagged with this program_id
+    const hasProgWords = (words || []).some(w =>
+      w.program_id === selectedProgId &&
+      parseInt(w.target_level, 10) === lvl &&
+      String(w.theme_code || '').trim().toUpperCase() === thCode
+    );
+    if (hasProgWords) return true;
+
+    return false;
+  };
+
   // Helper: Find Task for topic
   const findTaskForTopic = (lvl, thCode, tpCode, tpName, classId) => {
     if (!classId) return null;
@@ -2502,6 +2540,9 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     if (!thMap) return;
 
     thMap.forEach(th => {
+      // Exclude themes that do not belong to the active program
+      if (!isThemeAssignedToProgram(lvl, th.code, targetClass?.id)) return;
+
       totalExamsExpected++;
       const thExam = findExamForTheme(lvl, th.code, th.name, targetClass?.id);
       if (thExam) totalExamsReady++;
@@ -2516,7 +2557,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
   const totalExpectedAll = totalTasksExpected + totalExamsExpected;
   const totalReadyAll = totalTasksReady + totalExamsReady;
-  const pctReady = totalExpectedAll > 0 ? Math.round((totalReadyAll / totalExpectedAll) * 100) : 0;
+  const pctReady = totalExpectedAll > 0 ? Math.round((totalReadyAll / totalExpectedAll) * 100) : 100;
   const selectedProg = activeProgs.find(p => p.id === selectedProgId);
 
   // Setup Bottom Infobar for Test Blueprint (Rules 2.23, 2.24 & Phase 398)
@@ -2574,6 +2615,9 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
       themeList.forEach(th => {
         const thCode = String(th.code || '').trim().toUpperCase();
+        // Exclude themes that do not belong to the active program
+        if (!isThemeAssignedToProgram(lvl, thCode, targetClass?.id)) return;
+
         const thExam = findExamForTheme(lvl, thCode, th.name, targetClass?.id);
 
         const topics = Array.from(th.topicsMap.values())
@@ -2685,10 +2729,17 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     });
 
     if (renderedCount === 0) {
+      const progName = selectedProg?.name || 'this program';
+      const lvlText = activeLevel === 'ALL' ? '' : ` for Level ${typeof toShortLevel === 'function' ? toShortLevel(activeLevel) : activeLevel}`;
       rowsHtml = `
         <tr>
-          <td colspan="13" style="text-align: center; padding: 24px; color: #64748b; font-size: 12px;">
-            No topics or tests found matching the current criteria.
+          <td colspan="13" style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 13px;">
+            <div style="font-size: 24px; margin-bottom: 6px;">🗺️</div>
+            <div style="font-weight: 700; color: #f1f5f9; font-size: 13.5px;">No Curriculum Themes Found</div>
+            <div style="font-size: 12px; margin-top: 4px; color: #64748b;">
+              No themes are currently assigned to <strong style="color: #38bdf8;">${escapeHtml(progName)}</strong>${escapeHtml(lvlText)}.
+              Assign themes in the <a href="#vocab_vault?tab=theme_manager" style="color: #818cf8; text-decoration: underline; font-weight: 600;">Theme Manager</a>.
+            </div>
           </td>
         </tr>
       `;
@@ -2794,8 +2845,13 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
   // Auto-Generate Trigger (1+3 Hybrid Confirmation Modal Wizard)
   const triggerAutoGenerate = async () => {
-    const importedLevels = levels.filter(lvl => (levelGroups.get(lvl)?.size || 0) > 0);
-    if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint', 'error');
+    const importedLevels = levels.filter(lvl => {
+      const thMap = levelGroups.get(lvl);
+      if (!thMap) return false;
+      const targetClass = getLevelClass(lvl);
+      return Array.from(thMap.values()).some(th => isThemeAssignedToProgram(lvl, th.code, targetClass?.id));
+    });
+    if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint for this program', 'error');
     const targetClass = getLevelClass(activeLevel === 'ALL' ? importedLevels[0] : Number(activeLevel));
 
     try {

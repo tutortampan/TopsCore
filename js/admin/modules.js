@@ -20,9 +20,24 @@ export async function renderModules(area) {
     { id: 'm8', name: 'Vocabulary Mastery', type: 'Written/Oral', desc: 'Rigorous testing of target lexicon including spelling, meaning, and usage.', status: 'Active', icon: '🧠', directive: 'Direct English Only.\\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' }
   ].sort((a, b) => a.name.localeCompare(b.name));
 
+  // Authoritative Lower Panel Sync for Modules (Phase 419 Universal 5-Panel Architecture)
+  if (window.setBottomInfobar) {
+    const leftHtml = `
+      <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
+        <span>🧩 8 Core AI Evaluation Engines (Stateless &amp; Low-Egress)</span>
+      </div>
+    `;
+    const rightHtml = `
+      <div style="display:inline-flex; align-items:center; gap:8px;">
+        <span class="badge" style="background:rgba(0,192,0,0.15); color:var(--grade-a, #00c000); border:1px solid rgba(0,192,0,0.3); font-size:11px; font-weight:700; padding:4px 8px; border-radius:4px;">● ALL ENGINES ACTIVE</span>
+      </div>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+  }
+
   area.innerHTML = `
-    <div style="display: flex; flex-direction: column; height: calc(100vh - 100px); padding: 24px; box-sizing: border-box; overflow-y: auto;">
-      <div style="margin-bottom: 24px; display: flex; justify-content: space-between; align-items: flex-end;">
+    <div style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; padding: 10px 14px; box-sizing: border-box; overflow-y: auto;">
+      <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
           <h2 style="font-size: 24px; font-weight: 700; color: #f8fafc; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px;">
             <span>📦</span> Modules (Core Blocks)

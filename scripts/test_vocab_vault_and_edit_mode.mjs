@@ -3,14 +3,14 @@ import assert from 'assert';
 
 console.log('=== [TEST] Starting Global Edit Mode, Single-Responsibility Columns & Vocab Vault Verification ===\n');
 
-// 1. Verify AGENTS.md Invariants
-console.log('[Test 1] Verifying AGENTS.md rules 2.23 and 2.24...');
-const agentsMd = fs.readFileSync('AGENTS.md', 'utf8');
-assert(agentsMd.includes('## 2.23 Zero Outer Page Scroll & Table-Only Viewport Lock (/learn)'), 'AGENTS.md must contain Rule 2.23');
-assert(agentsMd.includes('## 2.24 Global Master Edit Mode Across All Admin Pages (/learn)'), 'AGENTS.md must contain Rule 2.24');
-assert(agentsMd.includes('Table-Only Vertical Scroll'), 'Rule 2.23 must mandate Table-Only vertical scroll');
-assert(agentsMd.includes('Absolute Hiding when OFF'), 'Rule 2.24 must mandate Absolute Hiding when OFF');
-console.log('  ✓ AGENTS.md Section 2.23 and 2.24 verified.');
+// 1. Verify AGENTS.md / ui-invariants.md Invariants
+console.log('[Test 1] Verifying rules 2.23 and 2.24 in ui-invariants.md / AGENTS.md...');
+const invariantsMd = fs.existsSync('.agents/rules/ui-invariants.md') ? fs.readFileSync('.agents/rules/ui-invariants.md', 'utf8') : fs.readFileSync('AGENTS.md', 'utf8');
+assert(invariantsMd.includes('## 2.23 Zero Outer Page Scroll & Table-Only Viewport Lock (/learn)') || invariantsMd.includes('Zero Outer Page Scroll & Table-Only Viewport Lock'), 'ui-invariants.md must contain Rule 2.23');
+assert(invariantsMd.includes('## 2.24 Global Master Edit Mode Across All Admin Pages (/learn)') || invariantsMd.includes('Global Master Edit Mode Across All Admin Pages'), 'ui-invariants.md must contain Rule 2.24');
+assert(invariantsMd.includes('Table-Only Vertical Scroll'), 'Rule 2.23 must mandate Table-Only vertical scroll');
+assert(invariantsMd.includes('Absolute Hiding when OFF'), 'Rule 2.24 must mandate Absolute Hiding when OFF');
+console.log('  ✓ UI Invariants Section 2.23 and 2.24 verified.');
 
 // 2. Verify admin.html Structure
 console.log('[Test 2] Verifying admin.html Global Edit Mode Toggle...');
