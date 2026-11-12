@@ -1,0 +1,1571 @@
+{
+  "headers": [
+    {
+      "file": "css/style.css",
+      "selector": "thead th,\n.table-wrap th,\n.table-responsive th",
+      "props": {
+        "padding": "var(--space-3) var(--space-4)",
+        "font-size": "0.78rem",
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/style.css",
+      "selector": ".table-compact thead th",
+      "props": {
+        "padding": "4px 5px !important",
+        "font-size": "0.65rem !important"
+      }
+    },
+    {
+      "file": "css/style.css",
+      "selector": ".card-header h3,\n.card-title,\n.primary-kpi",
+      "props": {
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-nav",
+      "props": {
+        "padding": "0.75rem 0.5rem",
+        "gap": "0.85rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".nav-domain-group",
+      "props": {
+        "gap": "2px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".nav-domain-header",
+      "props": {
+        "font-size": "11px",
+        "font-weight": "800",
+        "padding": "0.35rem 0.65rem",
+        "gap": "0.4rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".nav-domain-header .domain-icon",
+      "props": {
+        "font-size": "11px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-nav-item",
+      "props": {
+        "gap": "0.6rem",
+        "padding": "0.45rem 0.75rem",
+        "font-size": "13px",
+        "font-weight": "500"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-nav-item .nav-icon",
+      "props": {
+        "font-size": "0.95rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-nav-item.active",
+      "props": {
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-topbar",
+      "props": {
+        "gap": "10px",
+        "height": "50px",
+        "max-height": "50px",
+        "padding": "0 16px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tabs-container",
+      "props": {
+        "gap": "4px",
+        "height": "100%"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tab-card,\n.topbar-tab-folder",
+      "props": {
+        "height": "38px",
+        "gap": "8px",
+        "padding": "0 16px",
+        "font-size": "11px",
+        "font-weight": "600"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tab-left",
+      "props": {
+        "gap": "6px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tab-icon",
+      "props": {
+        "font-size": "0.95rem",
+        "line-height": "1"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tab-label",
+      "props": {
+        "font-size": "12px",
+        "font-weight": "600"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tab-val,\n.topbar-tab-badge",
+      "props": {
+        "font-family": "var(--fm-font-sans, 'Inter', sans-serif)",
+        "font-size": "11px",
+        "font-weight": "700",
+        "padding": "1px 6px",
+        "line-height": "1.2"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-default-title",
+      "props": {
+        "gap": "8px",
+        "font-size": "0.95rem",
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".section-header",
+      "props": {
+        "gap": "0.75rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-thead tr.datagrid-super-header-row th,\n#class-attendance-grid thead tr:nth-child(1) th,\n#blueprint-matrix-table thead tr.bp-super-header-row th",
+      "props": {
+        "height": "24px !important",
+        "font-size": "12px !important",
+        "font-weight": "800 !important",
+        "padding": "3px 8px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th,\n.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th,\n#class-attendance-grid thead tr:nth-child(2) th,\n#blueprint-matrix-table thead tr:nth-child(2) th",
+      "props": {
+        "height": "24px !important",
+        "font-size": "12px !important",
+        "font-weight": "700 !important",
+        "padding": "3px 6px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-topbar",
+      "props": {
+        "height": "auto",
+        "min-height": "56px",
+        "padding": "8px 12px",
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topbar-tab-card",
+      "props": {
+        "height": "38px",
+        "padding": "0 10px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-drawer-header",
+      "props": {
+        "padding": "1.25rem 1.5rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-drawer-header h3",
+      "props": {
+        "margin": "0",
+        "font-size": "1.25rem",
+        "font-weight": "800"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".split-detail-header",
+      "props": {
+        "padding": "0 0 1rem 0"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".cnav-item",
+      "props": {
+        "padding": "0.42rem 1rem",
+        "font-size": "12px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".cnav-item.active",
+      "props": {
+        "font-weight": "600"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".card-header h3,\n.card-title,\n.section-title,\n.stat-card-val,\n.kpi-value,\n#admin-kpi-banner div[id^=\"kpi-\"],\n.curriculum-inst-avatar,\n.profile-kpi-val",
+      "props": {
+        "font-weight": "700 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".section-subtitle,\n.text-muted,\n.helper-text,\n.table-subtext,\n.datagrid-count,\n.class-roster-sub,\n.header-sub",
+      "props": {
+        "font-weight": "400"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".curriculum-tree-header",
+      "props": {
+        "padding": "0.85rem 1.15rem",
+        "gap": "0.75rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".tree-grid-header-batches,\n.tree-grid-row-batches",
+      "props": {
+        "gap": "10px",
+        "padding": "0.55rem 0.85rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".tree-grid-header-batches",
+      "props": {
+        "font-size": "12px",
+        "font-weight": "800",
+        "padding": "0.45rem 0.85rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".tree-grid-header-classes,\n.tree-grid-row-classes",
+      "props": {
+        "gap": "10px",
+        "padding": "0.55rem 0.85rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".tree-grid-header-classes",
+      "props": {
+        "font-size": "12px",
+        "font-weight": "800",
+        "padding": "0.45rem 0.85rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".classes-hub-level-header",
+      "props": {
+        "gap": "0.75rem",
+        "padding": "0.65rem 0.9rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".classes-hub-grid-header",
+      "props": {
+        "gap": "0.5rem",
+        "padding": "0.35rem 0.65rem",
+        "font-size": "12px",
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-topbar-actions",
+      "props": {
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#theme-manager-flat-table thead tr:first-child th",
+      "props": {
+        "height": "24px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#theme-manager-flat-table thead tr:nth-child(2) th",
+      "props": {
+        "height": "28px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th",
+      "props": {
+        "padding": "2px 1px !important",
+        "font-size": "11px",
+        "font-weight": "500",
+        "line-height": "1.1",
+        "height": "20px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#class-attendance-grid thead th:not(.super-hdr)",
+      "props": {
+        "padding": "3px 4px !important",
+        "font-size": "11px !important",
+        "height": "24px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#class-attendance-grid thead th .datagrid-header-content",
+      "props": {
+        "gap": "3px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".program-nav-tabs",
+      "props": {
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".program-nav-tab-btn",
+      "props": {
+        "padding": "8px 18px",
+        "font-size": "0.88rem",
+        "font-weight": "600",
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".program-nav-tab-btn.active",
+      "props": {
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bulk-edit-field-header",
+      "props": {
+        "gap": "0.6rem !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".prereq-override-header",
+      "props": {
+        "padding": "14px 18px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#blueprint-matrix-table thead th",
+      "props": {
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#blueprint-matrix-table thead tr.bp-super-header-row th",
+      "props": {
+        "font-size": "10px !important",
+        "font-weight": "800 !important",
+        "padding": "6px 10px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".live-monitor-table thead th",
+      "props": {
+        "padding": "11px 14px",
+        "font-size": "12px",
+        "font-weight": "800"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#class-attendance-grid thead th,\n#student-roster-grid thead th,\n.vocab-vault-table thead th,\n.datagrid-table thead th,\n.admin-standard-table thead th",
+      "props": {
+        "font-weight": "700 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#admin-console table thead th,\n.datagrid-table thead th,\n.table-wrap table thead th,\n#class-attendance-grid thead th,\n#blueprint-matrix-table thead th",
+      "props": {
+        "font-weight": "700 !important",
+        "font-size": "12px !important",
+        "font-family": "var(--fm-font-sans) !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#admin-console table thead th *,\n.datagrid-table thead th *,\n.table-wrap table thead th *,\n#class-attendance-grid thead th *",
+      "props": {
+        "font-weight": "700 !important",
+        "font-size": "12px !important",
+        "font-family": "var(--fm-font-sans) !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".dashboard-header",
+      "props": {
+        "padding": "clamp(1rem, 3vw, 1.5rem) clamp(1.25rem, 4vw, 2rem) clamp(0.75rem, 2vw, 1rem)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".dashboard-header-brand",
+      "props": {
+        "font-family": "var(--font-display)",
+        "font-size": "1rem",
+        "font-weight": "800"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".header-avatar",
+      "props": {
+        "height": "36px",
+        "font-size": "1.1rem"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".header-action-btn",
+      "props": {
+        "height": "36px",
+        "padding": "0"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".test-topbar",
+      "props": {
+        "padding": "0 var(--space-4)",
+        "height": "48px",
+        "gap": "var(--space-3)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".question-header-row",
+      "props": {
+        "gap": "var(--space-2)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-drawer",
+      "props": {
+        "max-height": "80vh"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-drawer-header",
+      "props": {
+        "padding": "var(--space-3) var(--space-4)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-drawer-header h3",
+      "props": {
+        "font-size": "1rem",
+        "margin": "0"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-drawer-content",
+      "props": {
+        "padding": "var(--space-4)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-grid",
+      "props": {
+        "gap": "6px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-btn",
+      "props": {
+        "font-size": "0.8rem",
+        "font-weight": "600"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-legend",
+      "props": {
+        "padding": "var(--space-3) var(--space-4)",
+        "gap": "var(--space-4)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-legend-item",
+      "props": {
+        "gap": "6px",
+        "font-size": "0.7rem"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-legend-dot",
+      "props": {
+        "height": "8px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".bottom-nav-bar",
+      "props": {
+        "height": "auto",
+        "min-height": "54px",
+        "padding": "10px var(--space-4) env(safe-area-inset-bottom)"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".bottom-nav-status",
+      "props": {
+        "font-size": "0.85rem",
+        "font-weight": "700"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".q-nav-drawer",
+      "props": {
+        "max-height": "100%"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".answer-item-header",
+      "props": {
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".dashboard-header-brand",
+      "props": {
+        "font-size": "1rem"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".header-action-btn",
+      "props": {
+        "height": "32px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".header-avatar",
+      "props": {
+        "height": "32px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "#header-mic-btn",
+      "props": {
+        "padding": "4px 6px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".profile-header-left",
+      "props": {
+        "gap": "10px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".profile-tab-nav",
+      "props": {
+        "padding": "3px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".profile-pin-header",
+      "props": {
+        "gap": "6px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".Test-card-header",
+      "props": {
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .dashboard-header",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "padding": "0 14px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .dashboard-header-brand",
+      "props": {
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "0.95rem !important",
+        "font-weight": "800 !important",
+        "margin": "0 !important",
+        "line-height": "1.15 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .dock-tab-header,\nbody.dashboard-page .standings-card-header",
+      "props": {
+        "height": "38px !important",
+        "min-height": "38px !important",
+        "max-height": "38px !important",
+        "padding": "0 !important",
+        "gap": "0 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .standings-table-header",
+      "props": {
+        "padding": "4px 12px !important",
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "0.68rem !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".header-avatar",
+      "props": {
+        "height": "28px",
+        "font-weight": "bold"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".header-avatar img,\n#header-avatar-img",
+      "props": {
+        "height": "100%"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .header-door-btn",
+      "props": {
+        "height": "38px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .dashboard-header-brand",
+      "props": {
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "0.95rem !important",
+        "font-weight": "800 !important",
+        "padding": "0 10px !important",
+        "margin": "0 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .standings-table-header",
+      "props": {
+        "gap": "6px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .completed-table-header",
+      "props": {
+        "padding": "4px 12px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .dashboard-header",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "padding": "0 14px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .dashboard-header-brand",
+      "props": {
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(0.95rem, 3.8vw, 1.15rem) !important",
+        "font-weight": "800 !important",
+        "margin": "0 !important",
+        "padding": "0 4px !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .standings-table-header,\nbody.dashboard-page .completed-table-header",
+      "props": {
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page .standings-table-header span,\nbody.dashboard-page .completed-table-header span,\nbody.dashboard-page .standings-table-header .th-col,\nbody.dashboard-page .completed-table-header .th-col",
+      "props": {
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".speech-nav-row",
+      "props": {
+        "gap": "0.5rem"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".test-top-header,\nheader.test-top-header,\nbody.test-page .test-top-header",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "margin": "6px auto 10px auto !important",
+        "padding": "4px 12px !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".test-page .bottom-nav-bar",
+      "props": {
+        "margin": "0 auto",
+        "padding": "0",
+        "height": "40px !important",
+        "min-height": "40px !important",
+        "max-height": "40px !important",
+        "gap": "10px"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".btn-nav-prev,\n.btn-nav-next",
+      "props": {
+        "height": "40px !important",
+        "min-height": "40px !important",
+        "max-height": "40px !important",
+        "padding": "0 14px",
+        "font-weight": "700",
+        "font-size": "13px"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".test-page .q-nav-grid",
+      "props": {
+        "gap": "6px"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".result-page .dashboard-header",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "padding": "0 14px !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".result-page .result-header-left",
+      "props": {
+        "height": "36px"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".result-page .result-header-right",
+      "props": {
+        "height": "36px"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".result-page .dashboard-header-brand",
+      "props": {
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "0.95rem !important",
+        "font-weight": "800 !important",
+        "margin": "0 auto !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".answer-item-header .fw-700.text-sm",
+      "props": {
+        "font-size": "0.88rem !important",
+        "line-height": "1.4"
+      }
+    },
+    {
+      "file": "css/auth.css",
+      "selector": ".cascade-header",
+      "props": {
+        "gap": "0.85rem",
+        "padding": "0.8rem 1.1rem"
+      }
+    },
+    {
+      "file": "css/auth.css",
+      "selector": ".cascade-header",
+      "props": {
+        "padding": "0.55rem 0.85rem"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-topbar",
+      "props": {
+        "height": "50px",
+        "padding": "0 16px"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-topbar-left",
+      "props": {
+        "gap": "12px"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-topbar-center",
+      "props": {
+        "gap": "16px"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-topbar-right",
+      "props": {
+        "gap": "12px"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-card-header",
+      "props": {
+        "padding": "12px 16px"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-speaker-header",
+      "props": {
+        "gap": "8px"
+      }
+    }
+  ],
+  "subheaders": [
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-toolbar",
+      "props": {
+        "gap": "0.85rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".section-tab-bar",
+      "props": {
+        "padding": "0.75rem 0",
+        "margin": "-0.75rem 0 0.75rem 0",
+        "gap": "0.75rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".section-sticky-header,\n.admin-content > div:not(:has(.section-tab-bar)) > .section-header:first-child",
+      "props": {
+        "padding": "0.75rem 0",
+        "margin": "-0.75rem 0 0.75rem 0"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".split-stats-card,\n.split-toolbar-card",
+      "props": {
+        "padding": "1rem 1.15rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".hub-toolbar",
+      "props": {
+        "gap": "0.75rem",
+        "padding": "0.6rem 0.9rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".hub-toolbar-search",
+      "props": {
+        "gap": "0.5rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".workspace-lower-panel,\n.table-wrap table tfoot,\n.datagrid-table tfoot,\n#blueprint-matrix-table tfoot,\n.attendance-matrix-toolbar.workspace-lower-panel,\n.analytics-toolbar.workspace-lower-panel",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "line-height": "50px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-toolbar,\n.attendance-matrix-toolbar,\n.class-asm-toolbar,\n.student-roster-toolbar,\n.admin-toolbar",
+      "props": {
+        "height": "auto !important",
+        "min-height": "0 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content)",
+      "props": {
+        "margin": "0 !important",
+        "padding": "0 !important",
+        "height": "0 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#class-attendance-grid .datagrid-toolbar,\n#class-attendance-container .datagrid-toolbar,\n#class-attendance-grid .datagrid-search,\n#class-attendance-grid .datagrid-search-wrap,\n#class-attendance-grid .datagrid-columns-dropdown,\n#class-attendance-grid .datagrid-pagination,\n#student-grid-container .datagrid-toolbar,\n#student-grid-container .datagrid-pagination",
+      "props": {
+        "margin": "0 !important",
+        "padding": "0 !important",
+        "height": "0 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".attendance-matrix-toolbar",
+      "props": {
+        "padding": "0 14px",
+        "gap": "10px",
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".dossier-modal-toolbar",
+      "props": {
+        "padding": "12px 20px",
+        "gap": "10px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".table-toolbar-unified",
+      "props": {
+        "gap": "8px",
+        "height": "38px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".toolbar-input-38,\n.table-toolbar-unified input[type=\"text\"],\n.table-toolbar-unified input[type=\"search\"],\n.table-toolbar-unified select",
+      "props": {
+        "height": "38px !important",
+        "min-height": "38px !important",
+        "max-height": "38px !important",
+        "padding": "0 12px !important",
+        "font-size": "0.80rem !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".toolbar-btn-38,\n.table-toolbar-unified .btn",
+      "props": {
+        "height": "38px !important",
+        "min-height": "38px !important",
+        "max-height": "38px !important",
+        "padding": "0 14px !important",
+        "font-size": "0.80rem !important",
+        "font-weight": "600 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".btn-override-prereq-matrix,\n.btn-prereq-override-toolbar",
+      "props": {
+        "font-weight": "700 !important",
+        "font-size": "0.72rem !important",
+        "height": "24px !important",
+        "line-height": "1 !important",
+        "gap": "5px !important",
+        "padding": "2px 10px !important"
+      }
+    }
+  ],
+  "footers": [
+    {
+      "file": "css/style.css",
+      "selector": ".flashcard-footer-controls",
+      "props": {
+        "padding": "0.85rem 1.25rem"
+      }
+    },
+    {
+      "file": "css/style.css",
+      "selector": ".topscore-locked-banner,\n#bottom-ad-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/style.css",
+      "selector": ".topscore-locked-banner .banner-brand,\n#bottom-ad-banner .banner-brand",
+      "props": {
+        "font-size": "clamp(1.05rem, 3vw, 1.25rem) !important",
+        "font-weight": "900 !important"
+      }
+    },
+    {
+      "file": "css/style.css",
+      "selector": ".topscore-locked-banner .banner-author,\n#bottom-ad-banner .banner-author",
+      "props": {
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".sidebar-footer",
+      "props": {
+        "height": "50px",
+        "max-height": "50px",
+        "padding": "0 1rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".admin-bottom-infobar",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "padding": "0 16px !important",
+        "gap": "10px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-infobar-left",
+      "props": {
+        "gap": "10px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-infobar-center",
+      "props": {
+        "gap": "8px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-infobar-right",
+      "props": {
+        "gap": "8px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-infobar-right .btn,\n.bottom-infobar-right button",
+      "props": {
+        "height": "32px !important",
+        "min-height": "32px !important",
+        "max-height": "32px !important",
+        "padding": "4px 10px !important",
+        "font-size": "11.5px !important",
+        "font-weight": "700 !important",
+        "line-height": "normal !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-info-chip",
+      "props": {
+        "gap": "6px",
+        "font-size": "11px",
+        "padding": "4px 10px",
+        "font-weight": "600"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-info-chip .chip-label",
+      "props": {
+        "font-size": "11px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".bottom-info-chip .chip-val",
+      "props": {
+        "font-weight": "700",
+        "font-size": "12px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".mobile-bottom-tabs",
+      "props": {
+        "height": "var(--fm-bottom-tab-h)",
+        "padding": "0 4px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#admin-login-screen .auth-footer-link a",
+      "props": {
+        "font-size": "12px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-drawer-footer",
+      "props": {
+        "padding": "1.25rem 1.5rem",
+        "gap": "1rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".workspace-lower-panel",
+      "props": {
+        "padding": "0 14px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".workspace-lower-panel *",
+      "props": {
+        "line-height": "normal"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".table-wrap table tfoot tr,\n.datagrid-table tfoot tr,\n#blueprint-matrix-table tfoot tr,\n.datagrid-tfoot tr.datagrid-summary-row",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".table-wrap table tfoot td,\n.datagrid-table tfoot td,\n#blueprint-matrix-table tfoot td,\n.datagrid-tfoot tr.datagrid-summary-row td",
+      "props": {
+        "height": "50px !important",
+        "min-height": "50px !important",
+        "max-height": "50px !important",
+        "line-height": "1.2 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#class-attendance-grid tbody td,\n#class-attendance-grid tfoot td,\n#class-attendance-grid tr.datagrid-summary-row td",
+      "props": {
+        "font-size": "var(--matrix-font-size, 0.75rem)"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".datagrid-tfoot tr.datagrid-summary-row td",
+      "props": {
+        "padding": "6px 8px !important",
+        "font-size": "12px",
+        "line-height": "1.2"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".auth-footer-link",
+      "props": {
+        "font-size": "12px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".prereq-override-footer",
+      "props": {
+        "padding": "12px 18px",
+        "gap": "10px"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".tac-drawer-footer",
+      "props": {
+        "padding": "12px 20px !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topscore-locked-banner,\n#bottom-ad-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topscore-locked-banner .banner-brand,\n#bottom-ad-banner .banner-brand",
+      "props": {
+        "font-size": "clamp(1.05rem, 3vw, 1.25rem) !important",
+        "font-weight": "900 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".topscore-locked-banner .banner-author,\n#bottom-ad-banner .banner-author",
+      "props": {
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": "#admin-console table tfoot td,\n#admin-console table tfoot th,\n.datagrid-table tfoot td,\n.table-wrap table tfoot td,\n#class-attendance-grid tfoot td,\n.datagrid-summary-row td",
+      "props": {
+        "font-weight": "700 !important",
+        "font-size": "12px !important",
+        "font-family": "var(--fm-font-sans) !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".auth-footer-link",
+      "props": {
+        "font-size": "0.8rem"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".Test-card-footer",
+      "props": {
+        "font-size": "0.75rem"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page #bottom-stat-avg-score",
+      "props": {
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(1.9rem, 5.2vw, 2.25rem) !important",
+        "font-weight": "900 !important",
+        "line-height": "1 !important",
+        "margin": "0 !important",
+        "padding": "0 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".topscore-locked-banner,\n#bottom-ad-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".topscore-locked-banner .banner-brand,\n#bottom-ad-banner .banner-brand",
+      "props": {
+        "font-size": "clamp(1.05rem, 3vw, 1.25rem) !important",
+        "font-weight": "900 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".topscore-locked-banner .banner-author,\n#bottom-ad-banner .banner-author",
+      "props": {
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page #welcome-banner-section,\nbody.dashboard-page .welcome-banner,\nbody.dashboard-page #dashboard-grade-legend,\nbody.dashboard-page .dashboard-grade-legend,\nbody.dashboard-page #up-next-section,\nbody.dashboard-page .dashboard-next-test-deck,\nbody.dashboard-page #bottom-dock-section,\nbody.dashboard-page .dashboard-standings-card",
+      "props": {
+        "margin": "0 !important"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": "body.dashboard-page #bottom-ad-banner,\nbody.dashboard-page .topscore-locked-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "margin": "0 !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": "body.test-page .topscore-locked-banner,\n    body.test-page #bottom-ad-banner",
+      "props": {
+        "margin": "0 !important",
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "padding": "0 0 0 clamp(16px, 4vw, 24px) !important",
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".test-fixed-bottom,\nbody.test-page #fixed-bottom-area",
+      "props": {
+        "gap": "10px !important",
+        "margin": "0 auto calc(60px + 10px + env(safe-area-inset-bottom, 0px)) auto !important",
+        "padding": "4px 0 0 0 !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".test-bottom-container",
+      "props": {
+        "padding": "0",
+        "margin": "0 auto !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".matrix-footer",
+      "props": {
+        "gap": "8px"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".topscore-locked-banner,\n#bottom-ad-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".topscore-locked-banner .banner-brand,\n#bottom-ad-banner .banner-brand",
+      "props": {
+        "font-size": "clamp(1.05rem, 3vw, 1.25rem) !important",
+        "font-weight": "900 !important"
+      }
+    },
+    {
+      "file": "css/test.css",
+      "selector": ".topscore-locked-banner .banner-author,\n#bottom-ad-banner .banner-author",
+      "props": {
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".flashcard-footer-controls",
+      "props": {
+        "padding": "0.85rem 1.25rem"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": "body.result-page .topscore-locked-banner,\nbody.result-page #bottom-ad-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".topscore-locked-banner,\n#bottom-ad-banner",
+      "props": {
+        "height": "60px !important",
+        "min-height": "60px !important",
+        "max-height": "60px !important",
+        "font-family": "'Outfit', sans-serif !important",
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".topscore-locked-banner .banner-brand,\n#bottom-ad-banner .banner-brand",
+      "props": {
+        "font-size": "clamp(1.05rem, 3vw, 1.25rem) !important",
+        "font-weight": "900 !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".topscore-locked-banner .banner-author,\n#bottom-ad-banner .banner-author",
+      "props": {
+        "font-size": "clamp(1rem, 2.8vw, 1.15rem) !important",
+        "font-weight": "800 !important"
+      }
+    },
+    {
+      "file": "css/conversation.css",
+      "selector": ".conv-bottom-panel",
+      "props": {
+        "height": "50px",
+        "padding": "0 16px"
+      }
+    }
+  ],
+  "tables": [],
+  "modals": [
+    {
+      "file": "css/style.css",
+      "selector": ".modal-header h3",
+      "props": {
+        "font-size": "1.25rem"
+      }
+    },
+    {
+      "file": "css/style.css",
+      "selector": ".flashcard-modal-header",
+      "props": {
+        "padding": "1rem 1.25rem"
+      }
+    },
+    {
+      "file": "css/admin.css",
+      "selector": ".modal-header h3",
+      "props": {
+        "font-family": "var(--fm-font-display)",
+        "font-size": "1.1rem",
+        "font-weight": "800",
+        "margin": "0"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".profile-modal-header",
+      "props": {
+        "padding": "14px 16px 12px"
+      }
+    },
+    {
+      "file": "css/dashboard.css",
+      "selector": ".profile-modal-header h3",
+      "props": {
+        "font-family": "var(--font-display, 'Outfit', sans-serif)",
+        "font-size": "0.95rem",
+        "font-weight": "700",
+        "margin": "0",
+        "gap": "6px"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".answers-modal-header",
+      "props": {
+        "padding": "0.9rem 1.25rem !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".answers-modal-footer",
+      "props": {
+        "padding": "0.75rem 1.25rem !important"
+      }
+    },
+    {
+      "file": "css/result.css",
+      "selector": ".flashcard-modal-header",
+      "props": {
+        "padding": "1rem 1.25rem"
+      }
+    }
+  ]
+}

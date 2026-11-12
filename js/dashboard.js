@@ -243,29 +243,26 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         };
 
         // Hard Gate: No skip allowed. Gender/Honorific is mandatory.
-        optMale.onclick = () => {
-          selectedGender = 'male';
-          optMale.style.borderColor = 'var(--clr-primary)';
-          optMale.style.background = 'rgba(99, 102, 241, 0.15)';
-          optMale.style.boxShadow = '0 0 0 2px var(--clr-primary)';
-          optFemale.style.borderColor = 'var(--clr-border)';
-          optFemale.style.background = 'rgba(255, 255, 255, 0.03)';
-          optFemale.style.boxShadow = 'none';
+        const selectGender = (gender) => {
+          selectedGender = gender;
+          // Clear both cards first
+          [optMale, optFemale].forEach(card => {
+            card.classList.remove('selected');
+            card.setAttribute('aria-pressed', 'false');
+            card.style.borderColor = '';
+            card.style.background = '';
+            card.style.boxShadow = '';
+          });
+          // Activate selected card via CSS class (no hardcoded hex)
+          const activeCard = gender === 'male' ? optMale : optFemale;
+          activeCard.classList.add('selected');
+          activeCard.setAttribute('aria-pressed', 'true');
           confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Confirm as Male (Mr.) ✓';
+          confirmBtn.innerHTML = `SAVE &amp; CONTINUE &rarr;`;
         };
 
-        optFemale.onclick = () => {
-          selectedGender = 'female';
-          optFemale.style.borderColor = 'var(--clr-accent-1)';
-          optFemale.style.background = 'rgba(236, 72, 153, 0.15)';
-          optFemale.style.boxShadow = '0 0 0 2px var(--clr-accent-1)';
-          optMale.style.borderColor = 'var(--clr-border)';
-          optMale.style.background = 'rgba(255, 255, 255, 0.03)';
-          optMale.style.boxShadow = 'none';
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Confirm as Female (Miss) ✓';
-        };
+        optMale.onclick = () => selectGender('male');
+        optFemale.onclick = () => selectGender('female');
 
         confirmBtn.onclick = async () => {
           if (!selectedGender) return;
@@ -1123,7 +1120,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isTest = isExam(nextTest);
 
       // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play), 4D (White Forward Arrow)
-      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="#ffff00" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="#ffff00" stroke="#cccc00" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="var(--grade-c, #ffff00)" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="var(--grade-c, #ffff00)" stroke="#cccc00" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
       const ICON_2B_RED_RETAKE  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
       const ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
@@ -1526,11 +1523,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (data.wordsTestId) {
           wordsCard.style.display = 'block';
           if (wordsTitle) wordsTitle.textContent = data.isExam ? 'Words Exam' : 'Words Task';
-          if (wordsBadge) wordsBadge.textContent = data.isExam ? '120 Soal (Written Mode)' : '40 Soal (Speaking)';
+          if (wordsBadge) {
+            if (data.isExam) {
+              wordsBadge.textContent = data.isRetake || !data.isLiveSession
+                ? '🎙️ Spoken Mode @ 15s'
+                : '120 Questions (Written Mode)';
+            } else {
+              wordsBadge.textContent = '40 Questions (Speaking)';
+            }
+          }
           if (wordsStatus) {
             wordsStatus.textContent = data.isExam
-              ? (data.wordsBest ? `Score: ${Number(data.wordsBest.percentage || 0).toFixed(0)}%` : 'Belum Dikerjakan')
-              : `Progres: ${data.wordsPasses || 0}/7 Passes`;
+              ? (data.wordsBest ? `Score: ${Number(data.wordsBest.percentage || 0).toFixed(0)}%` : 'Not Attempted')
+              : `Progress: ${data.wordsPasses || 0}/7 Passes`;
           }
           if (wordsBestEl) {
             wordsBestEl.textContent = data.wordsBest
@@ -1554,11 +1559,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (data.phrasesTestId) {
           phrasesCard.style.display = 'block';
           if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'Phrases Exam' : 'Phrases Task';
-          if (phrasesBadge) phrasesBadge.textContent = data.isExam ? '30 Soal (Selection Mode)' : '10 Soal (Speaking)';
+          if (phrasesBadge) {
+            if (data.isExam) {
+              phrasesBadge.textContent = data.isRetake || !data.isLiveSession
+                ? '🎙️ Spoken Mode @ 20s'
+                : '30 Questions (Selection Mode)';
+            } else {
+              phrasesBadge.textContent = '10 Questions (Speaking)';
+            }
+          }
           if (phrasesStatus) {
             phrasesStatus.textContent = data.isExam
-              ? (data.phrasesBest ? `Score: ${Number(data.phrasesBest.percentage || 0).toFixed(0)}%` : 'Belum Dikerjakan')
-              : `Progres: ${data.phrasesPasses || 0}/7 Passes`;
+              ? (data.phrasesBest ? `Score: ${Number(data.phrasesBest.percentage || 0).toFixed(0)}%` : 'Not Attempted')
+              : `Progress: ${data.phrasesPasses || 0}/7 Passes`;
           }
           if (phrasesBestEl) {
             phrasesBestEl.textContent = data.phrasesBest
@@ -1891,25 +1904,57 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     statusBadgeHtml = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
                   }
 
-                  if (hasPhrases) {
+                  const isEligibleForSelfPaced = Boolean(
+                    (wBest && (Number(wBest.effective_score ?? wBest.percentage ?? 0) >= 60 || wBest.is_forgiven)) ||
+                    (pBest && (Number(pBest.effective_score ?? pBest.percentage ?? 0) >= 60 || pBest.is_forgiven)) ||
+                    unifiedScore.percentage >= 60
+                  );
+
+                  const isLiveSessActive = liveSess?.status === 'UNLOCKED' &&
+                    (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
+                    (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id || session?.id));
+
+                  const isExamLocked = !isLiveSessActive && !isEligibleForSelfPaced;
+
+                  if (isExamLocked) {
+                    actionBtnHtml = `<div style="text-align:right;"><span style="font-size:0.75rem;color:#94a3b8;font-weight:700;padding:5px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);">🔒 Session Locked</span></div>`;
+                  } else if (hasPhrases) {
                     const modalData = encodeURIComponent(JSON.stringify({
-                      badge: `THEME ${grp.themeCode} OFFICIAL EXAM`,
+                      badge: `THEME ${grp.themeCode} ${isEligibleForSelfPaced && !isLiveSessActive ? 'SELF-PACED EXAM DRILL' : 'OFFICIAL EXAM'}`,
                       title: `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`,
                       subtitle: 'Choose the module you would like to take first:',
                       wordsTestId: wordsTest?.id,
                       phrasesTestId: phrasesTest?.id,
                       wordsBest: wBest,
                       phrasesBest: pBest,
-                      isExam: true
+                      isExam: true,
+                      isRetake: isEligibleForSelfPaced,
+                      isLiveSession: isLiveSessActive
                     }));
+                    const btnLabel = (unifiedScore.percentage === 100)
+                      ? '🎯 Retake Drill'
+                      : (wBest?.is_forgiven || pBest?.is_forgiven)
+                        ? '⚡ Retake Exam'
+                        : (unifiedScore.isAttempted ? '🔁 Retake Exam' : 'Start Exam 🚀');
+                    const btnColor = (unifiedScore.percentage === 100 || !unifiedScore.isAttempted)
+                      ? 'linear-gradient(135deg, var(--grade-a, #00c000) 0%, #009900 100%)'
+                      : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
                     actionBtnHtml = `<button type="button" onclick="window.triggerComponentChoiceModal('${modalData}')"
-                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
-                                      ${unifiedScore.isAttempted ? 'Retake Exam' : 'Start Exam 🚀'}
+                                      style="background:${btnColor};color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);">
+                                      ${btnLabel}
                                     </button>`;
                   } else {
+                    const btnLabel = (unifiedScore.percentage === 100)
+                      ? '🎯 Retake Drill'
+                      : (wBest?.is_forgiven)
+                        ? '⚡ Retake Exam'
+                        : (unifiedScore.isAttempted ? '🔁 Retake Exam' : 'Start Exam 🚀');
+                    const btnColor = (unifiedScore.percentage === 100 || !unifiedScore.isAttempted)
+                      ? 'linear-gradient(135deg, var(--grade-a, #00c000) 0%, #009900 100%)'
+                      : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
                     actionBtnHtml = `<button onclick="location.href='test.html?test_id=${wordsTest.id}'"
-                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
-                                      ${unifiedScore.isAttempted ? 'Retake Exam' : 'Start Exam 🚀'}
+                                      style="background:${btnColor};color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);">
+                                      ${btnLabel}
                                     </button>`;
                   }
                 } else {
@@ -2457,10 +2502,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
 
+          const isEligibleForSelfPacedExam = Boolean(passed || bestAtt?.is_forgiven);
+
           if (isAsmTest) {
-            // For formal Tests: Retake allowed if session is unlocked by Tutor (or Normal session for score improvement)
-            if (passed) {
-              retakesAllowed = isSessionUnlocked && !session?.is_remedial;
+            // For formal Tests: Students who passed (>=60%) or are forgiven can retake 24/7 independently!
+            if (isEligibleForSelfPacedExam) {
+              retakesAllowed = true;
             } else {
               retakesAllowed = retakesAllowed && isSessionUnlocked;
             }
@@ -2470,10 +2517,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             ? `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);color:${TOPSCORE_COLORS.STAR};border:1px solid rgba(${TOPSCORE_COLORS.STAR_RGB},0.3);">✓ Passed</span>`
             : `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">Needs Improvement</span>`;
 
-          const canRetake = retakesAllowed && (!isAsmTest || !passed);
+          const canRetake = isAsmTest ? (isEligibleForSelfPacedExam || (retakesAllowed && !passed)) : retakesAllowed;
 
           if (canRetake) {
-            actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">Retake</button></div>`;
+            const retakeBtnLabel = (bestAttPct === 100)
+              ? '🎯 Retake Drill'
+              : (bestAtt?.is_forgiven)
+                ? '⚡ Retake Exam'
+                : '🔁 Retake';
+            actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;background:#0284c7;border-color:#0284c7;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
           } else if (isAsmTest && !passed && !isSessionUnlocked) {
             actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:0.7rem;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);">🔒 Locked</span></div>`;
           } else {
@@ -2656,7 +2708,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       if (hasExam) {
         const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : (GRADE_PALETTE['★'] || {
-          color: TOPSCORE_COLORS.STAR, dark: '#006400', light: '#86efac', rgb: TOPSCORE_COLORS.STAR_RGB, glow: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`
+          color: TOPSCORE_COLORS.STAR, dark: '#be185d', light: '#f472b6', rgb: TOPSCORE_COLORS.STAR_RGB, glow: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`
         });
         targetColor = theme.color;
         rgbColor = theme.rgb || TOPSCORE_COLORS.STAR_RGB;
@@ -2675,15 +2727,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           gradeBadgeValue.textContent = '—';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
-            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(134, 239, 172, 0.65)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.55)); display:inline-block; vertical-align:middle;">
               <defs>
-                <linearGradient id="starGreenDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#86efac" />
-                  <stop offset="50%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                  <stop offset="100%" stop-color="#006400" />
+                <linearGradient id="starDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
+                  <stop offset="100%" stop-color="#be185d" />
                 </linearGradient>
               </defs>
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenDashGrad)" />
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starDashGrad)" />
             </svg>
           `;
         } else {
@@ -2785,7 +2836,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const avatarBox = document.getElementById('banner-avatar-container');
       if (avatarBox) {
         if (isGradeS) {
-          avatarBox.style.background = `linear-gradient(135deg, #86efac 0%, ${TOPSCORE_COLORS.STAR} 45%, #006400 100%)`;
+          avatarBox.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
           avatarBox.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
           avatarBox.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
           avatarBox.classList.add('grade-star');
@@ -3747,7 +3798,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const closeProfile = () => {
         if (window.isProfileDirty) {
-          if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
+          window.showConfirmDialog({
+            icon: '⚠️',
+            title: 'UNSAVED CHANGES',
+            message: 'You have unsaved profile changes. Are you sure you want to discard them and close?',
+            confirmText: 'Discard & Close',
+            cancelText: 'Keep Editing',
+            type: 'warning',
+            onConfirm: () => {
+              window.isProfileDirty = false;
+              if (changePinForm) changePinForm.reset();
+              modal.classList.add('hidden');
+              if (window.location.hash.startsWith('#profile') || window.location.hash === '#history') {
+                try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
+              }
+            }
+          });
+          return;
         }
         window.isProfileDirty = false;
         if(changePinForm) changePinForm.reset();
@@ -3811,12 +3878,73 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       document.getElementById('level-up-overlay').classList.remove('active');
     });
 
+    // ── Universal Custom Confirmation Modal (Phase 3) ──
+    window.showConfirmDialog = function({
+      icon = '🚪',
+      title = 'LOG OUT SESSION',
+      message = 'Are you sure you want to sign out?',
+      confirmText = 'Log Out',
+      cancelText = 'Cancel',
+      type = 'danger',
+      onConfirm = null
+    } = {}) {
+      const modal = document.getElementById('custom-confirm-modal');
+      if (!modal) {
+        if (confirm(message)) onConfirm?.();
+        return;
+      }
+      const box = modal.querySelector('.custom-confirm-box');
+      const iconEl = document.getElementById('custom-confirm-icon');
+      const titleEl = document.getElementById('custom-confirm-title');
+      const msgEl = document.getElementById('custom-confirm-msg');
+      const cancelBtn = document.getElementById('custom-confirm-btn-cancel');
+      const actionBtn = document.getElementById('custom-confirm-btn-action');
+
+      if (iconEl) iconEl.textContent = icon;
+      if (titleEl) titleEl.textContent = title;
+      if (msgEl) msgEl.textContent = message;
+      if (cancelBtn) cancelBtn.textContent = cancelText;
+      if (actionBtn) actionBtn.textContent = confirmText;
+
+      box?.classList.toggle('danger', type === 'danger');
+
+      modal.classList.remove('hidden');
+
+      const cleanup = () => {
+        modal.classList.add('hidden');
+        cancelBtn?.removeEventListener('click', onCancel);
+        actionBtn?.removeEventListener('click', onAction);
+        modal.removeEventListener('click', onBackdrop);
+      };
+
+      const onCancel = () => cleanup();
+      const onAction = () => {
+        cleanup();
+        onConfirm?.();
+      };
+      const onBackdrop = (e) => {
+        if (e.target === modal) cleanup();
+      };
+
+      cancelBtn?.addEventListener('click', onCancel, { once: true });
+      actionBtn?.addEventListener('click', onAction, { once: true });
+      modal.addEventListener('click', onBackdrop, { once: true });
+    };
+
     // Logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {
-      if (confirm('Are you sure you want to log out?')) {
-        clearStudentSession();
-        window.location.href = '/index.html';
-      }
+      window.showConfirmDialog({
+        icon: '🚪',
+        title: 'LOG OUT SESSION',
+        message: 'Are you sure you want to sign out of your learning session?',
+        confirmText: 'Log Out',
+        cancelText: 'Stay Here',
+        type: 'danger',
+        onConfirm: () => {
+          clearStudentSession();
+          window.location.href = '/index.html';
+        }
+      });
     });
 
     function restoreDashboardHashRoute() {

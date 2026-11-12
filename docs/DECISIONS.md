@@ -1474,3 +1474,79 @@ To support the user's structured, invariant-driven development workflow, three s
 - Zero manual verification burden: spatial invariants and pre-flight rules are validated deterministically via automated CLI tests.
 - High-fidelity visual communication is enforced before any code changes are made.
 - Long-term sustainability and reasoning sharpness across agent workflows.
+
+
+---
+
+## DECISION-049 — Vocabulary Vault Relocation to Domain D, Alphabetical Main Panel Sorting, Program Quick Filters & Lexicon Architecture
+
+Date: 2026-11-13
+Status: ACCEPTED
+
+### Context
+In the ABCD System hierarchy, Domain C (`C — CLASS`) was historically cluttered by having `Vocabulary Vault` pinned alongside active operational class instances (`Camp 2nd Vocabulary`, `Evnikom 1st Vocabulary`). Because `Vocabulary Vault` is a centralized multi-tenant master data item bank (containing 1,330 words, 160 phrases, 9 themes, 33 topics, and blueprints) rather than an enrolled class session, its presence in Domain C created cognitive friction between teaching classes and authoring master data. Furthermore, users required alphabetical ordering across Domain D menu items and main panel table contents, program-specific quick filtering in the lower panel, and fine-grained deterministic lexicon coordinates (`LEX-CD`).
+
+### Decision
+1. **Domain D Relocation & Alphabetical Order**:
+   - Relocated `Vocabulary Vault` (`vocab_vault`) from Domain C to Domain D (`D — SYSTEM & DATA`) in `admin.html`.
+   - Ordered Domain D sub-navigation alphabetically: `Modules (Core Blocks)` (M) ➔ `System Settings` (S) ➔ `Vocabulary Vault` (V).
+   - Re-mapped `sectionDomainMap.vocab_vault = 'DATA'` in `js/admin/app.js`.
+2. **Main Panel Alphabetical Sorting Engine**:
+   - In `js/admin/vocab-vault.js`, modernized `_renderThemeManagerTab` and `_renderThemeBlueprintTab` to sort themes alphabetically A–Z by name within each level, and topics alphabetically A–Z by name within each theme.
+   - In `_renderVaultGrid`, default sorted all vocabulary words and phrases alphabetically A–Z by English text.
+3. **Program Quick Filters in Lower Panel**:
+   - In `syncThemeManagerBottomBar`, added program quick filter pills (`[PROG: ALL]`, `[CMP]`, `[EVN]`, `[SHR]`) alongside level pills, allowing instant tenant isolation without page reload.
+   - Added `vault-program-filter` to Vocabulary Words and Phrases bottom action bars.
+4. **Lexicon Code System (`LEX-CD`) Integration**:
+   - Pre-indexed all words and phrases deterministically by sorting stably before assigning incremental counters (`101-W01`..`101-W40`, `2A1-P01`..`2A1-P10`).
+   - Displayed `LEX-CD` coordinate badges in tables to prevent cross-pollination and support automated distractor generation.
+
+
+---
+
+## DECISION-050 — Vocabulary Vault Column Consolidation and Truncation Eradication
+
+Date: 2026-11-13
+Status: ACCEPTED
+
+### Context
+User identified redundant identity columns (`INST`, `PROG`, `LVL`, `CODE`) in the Words & Phrases grid (Gambar 1), text truncation across English idioms and Indonesian translations (Gambar 2 & 3), and artificial text clipping in Theme Manager topic names (Gambar 4). Investigation identified that 5 redundant metadata columns consumed 343px of horizontal space, while Theme Manager had an artificial inline `max-width: 130px` cap on `TOPIC NAME` and 40px widths on 8 two-digit breakdown columns.
+
+### Decision
+1. **Words & Phrases Grid Column Simplification**:
+   - Eliminated redundant `INST`, `PROG`, `LVL`, and `CODE` columns from `vault-table`.
+   - Grid now begins directly with `LEX-CD`, establishing a clean 6-column architecture:
+     `LEX-CD` (85px) | `THEME` (150px) | `TOPIC` (180px) | `TYPE` (80px) | `INDONESIAN` (30%) | `ENGLISH` (35%).
+   - Net gain of 263px horizontal width transferred directly to `ENGLISH` (`min-width: 360px`) and `INDONESIAN` (`min-width: 280px`).
+2. **Theme Manager Truncation Eradication**:
+   - Eradicated hardcoded `max-width: 130px` on `TOPIC NAME` (now `min-width: 240px; width: auto;`) and `max-width: 120px` on `THEME` (now `min-width: 140px;`).
+   - Slimmed down 8 count breakdown columns from 40px to 30px, freeing up 80px horizontal space for long topic titles.
+
+
+---
+
+## DECISION-051 — Vocabulary Vault Pure Blue Spectrum Palette, Interactive Header Sorting & `<colgroup>` Geometry
+
+Date: 2026-11-13  
+Status: ACCEPTED
+
+### Context
+Users reported that sorting by `LEX-CD` was inoperative in the Vocabulary Vault grids, that Proverb items showed jarring alarm red (`#FF0000`) violating the Color SSOT rule, that Test Blueprint topic names suffered severe clipping under `table-layout: fixed`, and that zero-count cells in Theme Manager created visual noise.
+
+### Decision
+1. **Interactive Column Sorting & Coordinate Attachment**:
+   - Attached `lex_code` directly as a first-class property (`w.lex_code = lexCode`).
+   - Wired interactive click handlers on `<th>` elements toggling between ascending and descending sort, dynamically rendering `▲` / `▼` sort direction indicators.
+   - Enhanced `#vault-search` filter predicate to support searching by `LEX-CD` coordinate strings (e.g. `3D1`).
+2. **Pure Blue Spectrum Palette for Word Types**:
+   - Enforced all word types strictly within blue spectrum hues to preserve high-contrast professional calm and prevent grade-confusion with Grade E red:
+     - Noun & Idiom: Sky Blue (`#60a5fa`)
+     - Verb & Proverb: Indigo Blue (`#818cf8`) — replacing `#FF0000`
+     - Adjective & Expression: Tactical Cyan (`#38bdf8`)
+     - Adverb & Phrase: Powder Blue (`#93c5fd`)
+     - Vocab: Periwinkle Blue (`#a5b4fc`)
+   - Replaced rogue purple Exam Status (`#c084fc`) with Pure Green (`#4ade80`).
+   - Implemented Zero-Dimming (`#334155`) for empty breakdown counts in Theme Manager.
+3. **`<colgroup>` Geometry Overhaul for Truncation Eradication**:
+   - Injected `<colgroup>` elements directly before `<thead>` in `#blueprint-matrix-table` (`Topic Name: min-width: 240px; width: auto;`) and `#theme-manager-flat-table` (`TOPIC NAME: min-width: 260px; width: auto;`).
+   - Overrode super-header `colspan` distribution under `table-layout: fixed`, expanding Test Blueprint Topic Name to 290.98px and Theme Manager to 377.89px with zero truncated cells.

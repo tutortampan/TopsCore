@@ -254,20 +254,20 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
               <button type="button" class="btn btn-sm btn-analytics-pill active" data-filter="all" style="font-size:0.75rem; font-weight:700;">
                 🌐 All (${totalVocabCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size:0.75rem; font-weight:700; background:rgba(255,0,0,0.15); color:#ff0000; border:1px solid rgba(255,0,0,0.35);">
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size:0.75rem; font-weight:700; background:rgba(var(--grade-e-rgb, 255,0,0),0.15); color:var(--grade-e, #ff0000); border:1px solid rgba(var(--grade-e-rgb, 255,0,0),0.35);">
                 🔴 Critical &gt;50% (${criticalCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size:0.75rem; font-weight:700; background:rgba(255,255,0,0.15); color:#ffff00; border:1px solid rgba(255,255,0,0.35);">
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size:0.75rem; font-weight:700; background:rgba(var(--grade-c-rgb, 255,255,0),0.15); color:var(--grade-c, #ffff00); border:1px solid rgba(var(--grade-c-rgb, 255,255,0),0.35);">
                 🟡 Needs Attention (${warningCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size:0.75rem; font-weight:700; background:rgba(0,192,0,0.15); color:#00c000; border:1px solid rgba(0,192,0,0.35);">
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size:0.75rem; font-weight:700; background:rgba(var(--grade-a-rgb, 0,192,0),0.15); color:var(--grade-a, #00c000); border:1px solid rgba(var(--grade-a-rgb, 0,192,0),0.35);">
                 🟢 Safe (${safeCount})
               </button>
             </div>
           </div>
 
           <div style="display:flex; align-items:center; gap:12px; font-size:0.74rem; color:var(--clr-text-muted);">
-            <span>Class Error Average: <strong style="color:${avgErrorPct >= 50 ? '#ff0000' : (avgErrorPct >= 25 ? '#ffff00' : '#00c000')}; font-size:0.85rem;">${avgErrorPct}%</strong></span>
+            <span>Class Error Average: <strong style="color:${avgErrorPct >= 50 ? 'var(--grade-e, #ff0000)' : (avgErrorPct >= 25 ? 'var(--grade-c, #ffff00)' : 'var(--grade-a, #00c000)')}; font-size:0.85rem;">${avgErrorPct}%</strong></span>
             <span>Total Evaluations: <strong style="color:var(--clr-text-1);">${totalAttemptsAll} attempts</strong></span>
           </div>
         </div>
@@ -296,7 +296,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         align: 'center',
         width: '95px',
         render: (row) => {
-          const color = row.errorRate >= 50 ? '#FF0000' : (row.errorRate >= 25 ? '#FF8C00' : '#00c000ff');
+          const color = row.errorRate >= 50 ? 'var(--grade-e, #FF0000)' : (row.errorRate >= 25 ? 'var(--grade-d, #FF8C00)' : 'var(--grade-a, #00c000ff)');
           return `
             <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
               <span style="font-weight:900; font-size:0.95rem; color:${color}; font-variant-numeric:tabular-nums;">${row.errorRate}%</span>

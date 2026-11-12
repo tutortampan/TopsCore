@@ -5,7 +5,7 @@ const _measureCtx = _measureCanvas ? _measureCanvas.getContext('2d') : null;
  * High-performance offscreen canvas text measurement to determine best-fit column width.
  * Replaces expensive DOM cloning to guarantee smooth, sub-millisecond double-click auto-resizing.
  */
-export function calculateColumnAutoWidth(th, cells = []) {
+export function calculateColumnAutoWidth(th, cells = [], footerCells = []) {
   if (!_measureCtx || !th) return Math.max(60, th?.scrollWidth || 100);
   const thStyle = window.getComputedStyle(th);
   _measureCtx.font = `${thStyle.fontWeight || '700'} ${thStyle.fontSize || '12px'} ${thStyle.fontFamily || 'Inter, sans-serif'}`;
@@ -14,11 +14,30 @@ export function calculateColumnAutoWidth(th, cells = []) {
   for (let i = 0; i < sampleLimit; i++) {
     const cell = cells[i];
     if (!cell || cell.classList.contains('table-spacer-cell') || cell.style.display === 'none') continue;
+    let text = '';
+    const cellView = cell.querySelector('.student-cell-view');
     const input = cell.querySelector('input, select');
-    const text = input ? (input.value || input.placeholder || '') : cell.textContent.trim().replace(/\s+/g, ' ');
+    if (cellView && typeof window !== 'undefined' && window.getComputedStyle(cellView).display !== 'none') {
+      text = cellView.textContent.trim().replace(/\s+/g, ' ');
+    } else if (input) {
+      text = input.value || input.placeholder || '';
+    } else {
+      text = cell.textContent.trim().replace(/\s+/g, ' ');
+    }
     if (!text) continue;
     const cellStyle = window.getComputedStyle(cell);
     _measureCtx.font = `${cellStyle.fontWeight || '500'} ${cellStyle.fontSize || '12px'} ${cellStyle.fontFamily || 'Inter, sans-serif'}`;
+    const cellW = _measureCtx.measureText(text).width + 26;
+    if (cellW > maxWidth) maxWidth = cellW;
+  }
+  // Also measure footer summary cells to prevent under-sizing
+  for (let i = 0; i < footerCells.length; i++) {
+    const cell = footerCells[i];
+    if (!cell || cell.style.display === 'none') continue;
+    const text = cell.textContent.trim().replace(/\s+/g, ' ');
+    if (!text) continue;
+    const cellStyle = window.getComputedStyle(cell);
+    _measureCtx.font = `${cellStyle.fontWeight || '700'} ${cellStyle.fontSize || '12px'} ${cellStyle.fontFamily || 'Inter, sans-serif'}`;
     const cellW = _measureCtx.measureText(text).width + 26;
     if (cellW > maxWidth) maxWidth = cellW;
   }
@@ -26,8 +45,10 @@ export function calculateColumnAutoWidth(th, cells = []) {
 }
 
 export class DataGrid {
-  constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null, hideToolbar = false }) {
+  constructor({ container, tableId = null, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null, hideToolbar = false, autoFitOnMount = false }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
+    this.tableId = tableId || arguments[0]?.tableId || null;
+    this.autoFitOnMount = Boolean(autoFitOnMount || arguments[0]?.autoFitOnMount);
     this.rowClassName = rowClassName;
     if (!this.container) {
       console.warn('[DataGrid] Container element not found or not in DOM:', container);
@@ -89,8 +110,8 @@ export class DataGrid {
         </div>
       </div>
       `}
-      <div class="table-wrap" style="${this.tableLayout === 'fixed' ? 'overflow-x:hidden;' : 'overflow-x:auto;'}">
-        <table class="datagrid-table" style="width:100%; position:relative; ${this.tableLayout ? `table-layout:${this.tableLayout};` : ''}">
+      <div class="table-wrap" style="overflow-x:hidden;">
+        <table class="datagrid-table" id="${this.tableId || ''}" style="width:100%; position:relative; ${this.tableLayout ? `table-layout:${this.tableLayout};` : ''}">
           <colgroup class="datagrid-colgroup"></colgroup>
           <thead class="datagrid-thead">
           </thead>
@@ -203,7 +224,7 @@ export class DataGrid {
 
     this.renderHeaders();
     this.render();
-    this.initColumnResize();
+    this.initColumnResize(this.tableId);
   }
 
   renderHeaders() {
@@ -271,7 +292,7 @@ export class DataGrid {
       const topOffset = hasSuperHdr ? 'top:26px;' : 'top:0;';
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
       const stickyStyle = isStickyRight ? `position:sticky; ${topOffset} right:0; z-index:15; background:var(--fm-bg-panel,#0f172a);` : '';
-      const widthStyle = col.width ? `width:${col.width}; max-width:${col.width};` : '';
+      const widthStyle = col.width ? `width:${col.width};` : '';
       const customClass = col.className ? ` ${col.className}` : '';
       const rawTitle = col.headerTitle || col.title;
       const titleAttr = rawTitle ? ` title="${String(rawTitle).replace(/"/g, '&quot;')}"` : '';
@@ -361,6 +382,43 @@ export class DataGrid {
   }
 
   /**
+   * Automatically calculates and applies content-proportional widths across all visible columns.
+   */
+  autoFitColumns(persist = false) {
+    const tableEl = this.container?.querySelector('.datagrid-table');
+    const colgroup = this.container?.querySelector('.datagrid-colgroup');
+    if (!tableEl || !colgroup) return;
+
+    const cols = colgroup.querySelectorAll('col');
+    const ths = Array.from(this.thead?.querySelectorAll('tr:not(.datagrid-super-header-row) th') || []);
+    if (!ths.length) return;
+
+    const colOffset = this.bulkActions ? 1 : 0;
+    const currentWidths = {};
+
+    ths.forEach((th, thIdx) => {
+      const colIdx = thIdx + colOffset;
+      const colEl = cols[colIdx];
+      if (!colEl) return;
+
+      const cells = Array.from(tableEl.querySelectorAll('tbody tr')).map(r => r.cells[colIdx]).filter(Boolean);
+      const footerCells = Array.from(tableEl.querySelectorAll('tfoot tr, .datagrid-summary-row')).map(r => r.cells[colIdx]).filter(Boolean);
+      const autoWidth = calculateColumnAutoWidth(th, cells, footerCells);
+      colEl.style.width = autoWidth + 'px';
+      th.style.width = autoWidth + 'px';
+      currentWidths[colIdx] = autoWidth;
+    });
+
+    if (persist) {
+      const effectiveTableId = this.tableId || this.container?.id || 'datagrid';
+      const storageKey = `topscore_col_widths_${effectiveTableId}`;
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(currentWidths));
+      } catch (err) {}
+    }
+  }
+
+  /**
    * Rule 15: Dynamic Column Resizing with Persistent Width Memory (Excel-Like)
    * Attaches drag-resize handles to each th, auto-size on double-click,
    * and persists widths to localStorage keyed by tableId.
@@ -371,7 +429,8 @@ export class DataGrid {
     if (!tableEl || !colgroup) return;
 
     // Determine storage key
-    const storageKey = `topscore_col_widths_${tableId || this.container?.id || 'datagrid'}`;
+    const effectiveTableId = tableId || this.tableId || this.container?.id || 'datagrid';
+    const storageKey = `topscore_col_widths_${effectiveTableId}`;
 
     // Load saved widths from localStorage
     let savedWidths = {};
@@ -379,18 +438,29 @@ export class DataGrid {
       savedWidths = JSON.parse(localStorage.getItem(storageKey) || '{}');
     } catch (e) { savedWidths = {}; }
 
-    // Apply saved widths to colgroup <col> elements
+    // Apply saved widths to colgroup <col> elements and matching <th>
     const cols = colgroup.querySelectorAll('col');
-    cols.forEach((col, i) => {
-      if (savedWidths[i] != null) {
-        col.style.width = savedWidths[i] + 'px';
-      }
-    });
+    const ths = Array.from(this.thead?.querySelectorAll('tr:not(.datagrid-super-header-row) th') || []);
+    if (!ths.length) return;
+
+    const colOffset = this.bulkActions ? 1 : 0;
+    const hasCustomSavedWidths = Object.keys(savedWidths).length > 0;
+
+    if (hasCustomSavedWidths) {
+      cols.forEach((col, i) => {
+        if (savedWidths[i] != null) {
+          col.style.width = savedWidths[i] + 'px';
+          const thIdx = i - colOffset;
+          if (thIdx >= 0 && ths[thIdx]) {
+            ths[thIdx].style.width = savedWidths[i] + 'px';
+          }
+        }
+      });
+    } else if (this.autoFitOnMount) {
+      this.autoFitColumns(false);
+    }
 
     // Attach resize handles to each header th
-    const ths = this.thead?.querySelectorAll('th');
-    if (!ths || !ths.length) return;
-
     ths.forEach((th, thIdx) => {
       // Skip super-headers (they span multiple columns)
       if (th.closest('.datagrid-super-header-row')) return;
@@ -413,7 +483,6 @@ export class DataGrid {
       let colEl = null;
 
       // Find the matching <col> (accounting for bulkActions col offset)
-      const colOffset = this.bulkActions ? 1 : 0;
       const colIdx = thIdx + colOffset;
 
       // mousedown — start drag
@@ -430,6 +499,7 @@ export class DataGrid {
           const delta = me.clientX - startX;
           const newWidth = Math.max(40, Math.min(600, startWidth + delta));
           if (colEl) colEl.style.width = newWidth + 'px';
+          th.style.width = newWidth + 'px';
         };
 
         const onMouseUp = (me) => {
@@ -456,8 +526,9 @@ export class DataGrid {
         colEl = cols[colIdx];
         if (!colEl) return;
 
-        const cells = Array.from(tableEl.querySelectorAll('tbody tr')).map(r => r.cells[thIdx]).filter(Boolean);
-        const autoWidth = calculateColumnAutoWidth(th, cells);
+        const cells = Array.from(tableEl.querySelectorAll('tbody tr')).map(r => r.cells[colIdx]).filter(Boolean);
+        const footerCells = Array.from(tableEl.querySelectorAll('tfoot tr, .datagrid-summary-row')).map(r => r.cells[colIdx]).filter(Boolean);
+        const autoWidth = calculateColumnAutoWidth(th, cells, footerCells);
         colEl.style.width = autoWidth + 'px';
         th.style.width = autoWidth + 'px';
 
@@ -477,7 +548,11 @@ export class DataGrid {
       superRow.addEventListener('dblclick', () => {
         try { localStorage.removeItem(storageKey); } catch (err) {}
         cols.forEach(col => col.style.width = '');
-        tableEl.style.tableLayout = '';
+        ths.forEach(th => th.style.width = '');
+        tableEl.style.tableLayout = 'fixed';
+        if (this.autoFitOnMount) {
+          this.autoFitColumns(false);
+        }
       });
     }
   }
@@ -634,7 +709,6 @@ export class DataGrid {
         if (col.className) td.className += ' ' + col.className;
         if (col.width) {
           td.style.width = col.width;
-          td.style.maxWidth = col.width;
         }
         
         const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
@@ -809,7 +883,8 @@ window.initColumnResize = function(tableElement, storageKey) {
     handle.addEventListener('dblclick', (e) => {
       e.preventDefault(); e.stopPropagation();
       const cells = Array.from(tableElement.querySelectorAll('tbody tr')).map(r => r.cells[idx]).filter(Boolean);
-      const autoW = calculateColumnAutoWidth(th, cells);
+      const footerCells = Array.from(tableElement.querySelectorAll('tfoot tr, .datagrid-summary-row')).map(r => r.cells[idx]).filter(Boolean);
+      const autoW = calculateColumnAutoWidth(th, cells, footerCells);
       th.style.width = autoW + 'px';
       const curWidths = {};
       ths.forEach((t, i) => { const w = parseInt(t.style.width); if (w) curWidths[i] = w; });

@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261107_v161" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261107_v161" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261113_v176" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
 
 
@@ -54,7 +54,11 @@
       </button>
     </div>
     <div class="dashboard-header-brand" id="dashboard-header-class-name">SELECT CLASS</div>
-    <div class="dashboard-header-right dashboard-header-actions">
+    <div class="dashboard-header-right dashboard-header-actions" style="display:flex;align-items:center;gap:8px;">
+      <button class="header-action-btn" id="btn-open-conversation" title="1-Hour Peer Conversation Room" aria-label="Peer Conversation Room" onclick="window.location.href='conversation.html'" style="display:flex;align-items:center;gap:4px;height:32px;padding:0 10px;font-size:11px;font-weight:700;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);border-radius:6px;color:#818cf8;cursor:pointer;">
+        <span>🎙️</span>
+        <span>Oral Room</span>
+      </button>
       <button class="header-action-btn header-logout-btn" id="logout-btn" title="Logout" aria-label="Logout">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -268,6 +272,21 @@
       </div>
     </div>
 
+    <!-- Reusable Custom Confirmation Modal (Phase 3: Zero Native confirm()) -->
+    <div class="modal-backdrop hidden" id="custom-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="custom-confirm-title">
+      <div class="modal-box custom-confirm-box">
+        <div class="custom-confirm-icon-wrap" id="custom-confirm-icon-wrap">
+          <span id="custom-confirm-icon">🚪</span>
+        </div>
+        <h3 id="custom-confirm-title" class="custom-confirm-title">LOG OUT SESSION</h3>
+        <p id="custom-confirm-msg" class="custom-confirm-desc">Are you sure you want to sign out of your learning session?</p>
+        <div class="custom-confirm-actions">
+          <button type="button" class="btn custom-confirm-btn-cancel" id="custom-confirm-btn-cancel">Cancel</button>
+          <button type="button" class="btn custom-confirm-btn-action" id="custom-confirm-btn-action">Log Out</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Component Selector Modal (Phase 298: Choose Words or Phrases) -->
     <div class="modal-backdrop hidden" id="component-selector-modal" role="dialog" aria-modal="true" aria-labelledby="component-modal-title">
       <div class="modal-box component-selector-modal-box" style="max-width: 480px; padding: 1.5rem; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);">
@@ -285,7 +304,7 @@
           <div id="component-opt-words" role="button" tabindex="0" class="component-choice-card" style="padding: 1rem; border-radius: 12px; background: rgba(56, 189, 248, 0.08); border: 1.5px solid rgba(56, 189, 248, 0.3); cursor: pointer; transition: all 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-size: 0.95rem; font-weight: 800; color: #38bdf8; display: flex; align-items: center; gap: 6px;">
-                <span>ðŸ“</span> <span id="component-words-title">Words Component</span>
+                <span>📊</span> <span id="component-words-title">Words Component</span>
               </span>
               <span id="component-words-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.2); color: #38bdf8;">40 Soal</span>
             </div>
@@ -299,7 +318,7 @@
           <div id="component-opt-phrases" role="button" tabindex="0" class="component-choice-card" style="padding: 1rem; border-radius: 12px; background: rgba(168, 85, 247, 0.08); border: 1.5px solid rgba(168, 85, 247, 0.3); cursor: pointer; transition: all 0.2s ease;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <span style="font-size: 0.95rem; font-weight: 800; color: #c084fc; display: flex; align-items: center; gap: 6px;">
-                <span>ðŸ’¬</span> <span id="component-phrases-title">Phrases Component</span>
+                <span>💬</span> <span id="component-phrases-title">Phrases Component</span>
               </span>
               <span id="component-phrases-badge" style="font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(168, 85, 247, 0.2); color: #c084fc;">10 Soal</span>
             </div>
@@ -469,30 +488,32 @@
     <div class="modal-backdrop hidden" id="gender-setup-modal" role="dialog" aria-modal="true" aria-labelledby="gender-setup-title">
       <div class="modal-box gender-setup-box">
         <div class="p-6">
-          <div class="setup-modal-icon">ðŸŒŸ</div>
-          <h2 id="gender-setup-title" class="setup-modal-title">Personalize Your Account</h2>
+          <div class="setup-modal-icon">🌟</div>
+          <h2 id="gender-setup-title" class="setup-modal-title">CHOOSE YOUR AVATAR</h2>
           <p class="text-sm text-muted mb-6">
-            Welcome to TOPS CORE! Please select your gender to personalize your title (<strong>Mr.</strong> / <strong>Miss</strong>):
+            Select your profile avatar to personalize your title and learning dashboard.
           </p>
 
-          <!-- Gender Choice Cards -->
+          <!-- Gender Choice Cards — 2-column side-by-side grid -->
           <div class="d-flex gap-4 justify-center mb-6 gender-cards-row">
-            <div class="gender-card p-5" id="opt-gender-male">
-              <div class="gender-card-icon">👨</div>
+            <div class="gender-card p-5" id="opt-gender-male" role="button" tabindex="0" aria-pressed="false">
+              <div class="gender-card-checkmark">✓</div>
+              <div class="gender-card-icon">👦</div>
               <div class="fw-800 text-lg gender-card-label">Male</div>
               <div class="badge badge-primary mt-2">Title: Mr.</div>
             </div>
-            <div class="gender-card p-5" id="opt-gender-female">
-              <div class="gender-card-icon">👩</div>
+            <div class="gender-card p-5" id="opt-gender-female" role="button" tabindex="0" aria-pressed="false">
+              <div class="gender-card-checkmark">✓</div>
+              <div class="gender-card-icon">👧</div>
               <div class="fw-800 text-lg gender-card-label">Female</div>
               <div class="badge badge-accent mt-2">Title: Miss</div>
             </div>
           </div>
 
-          <p class="text-xs text-muted mb-6">ℹ️   You can change this anytime later from your Profile settings.</p>
+          <p class="text-xs text-muted mb-6">ℹ️ You can change this anytime later from your Profile settings.</p>
 
           <button class="btn btn-primary btn-block setup-btn-confirm" id="btn-confirm-gender" disabled>
-            Confirm &amp; Continue &rarr;
+            SAVE &amp; CONTINUE &rarr;
           </button>
         </div>
       </div>
@@ -625,7 +646,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/dashboard.js?v=20261108_v162"></script>
+  <script type="module" src="./js/dashboard.js?v=20261113_v176"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {

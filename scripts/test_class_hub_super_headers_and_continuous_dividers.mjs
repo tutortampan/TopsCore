@@ -74,13 +74,15 @@ assert(
   adminCss.includes('#class-attendance-grid thead th:not(.super-hdr) {') && adminCss.includes('padding: 3px 4px !important;'),
   'Subheaders protected with safe padding (3px 4px) and height to prevent text clipping'
 );
+const vAdmin = parseInt((adminHtml.match(/css\/admin\.css\?v=202611\d+_v(\d+)/) || [])[1] || '0', 10);
+const vSw = parseInt((swJs.match(/topscore-cache-option-a-v(\d+)/) || [])[1] || '0', 10);
 assert(
-  /css\/admin\.css\?v=20261111_v1[7-9]\d/.test(adminHtml) && /js\/admin\/app\.js\?v=20261111_v1[7-9]\d/.test(adminHtml),
-  'admin.html cache busters incremented (>= v179)'
+  vAdmin >= 179,
+  `admin.html cache busters incremented (>= v179, current: v${vAdmin})`
 );
 assert(
-  /topscore-cache-option-a-v10[4-9]/.test(swJs),
-  'sw.js cache name incremented (>= v104)'
+  vSw >= 104,
+  `sw.js cache name incremented (>= v104, current: v${vSw})`
 );
 
 console.log(`\n🎉 RESULTS: ${passed}/${total} assertions passed!`);

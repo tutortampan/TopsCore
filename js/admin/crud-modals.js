@@ -1180,7 +1180,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
       (group.candidates || []).forEach((student, sIdx) => {
         const isPrimary = student.id === group.recommendedPrimaryId || sIdx === 0;
         html += `
-              <tr style="${isPrimary ? 'background:rgba(var(--grade-star-rgb, 0, 192, 0), 0.12);' : ''} border-bottom:1px solid rgba(255,255,255,0.05);">
+              <tr style="${isPrimary ? 'background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.12);' : ''} border-bottom:1px solid rgba(255,255,255,0.05);">
                 <td style="padding:8px 4px; font-family:monospace; font-size:0.8rem;">${student.id.substring(0,8)}...</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.programName || student.programs?.name || '—')}</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.batchName || student.batches?.name || 'Unassigned')}</td>
@@ -1295,7 +1295,7 @@ async function loadDuplicateQuestions() {
         `;
         group.candidates.forEach((q, qIdx) => {
           html += `
-                <tr style="${qIdx === 0 ? 'background:rgba(var(--grade-star-rgb, 0, 192, 0), 0.1);' : 'background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.05);'} border-bottom:1px solid rgba(255,255,255,0.05);">
+                <tr style="${qIdx === 0 ? 'background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.1);' : 'background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.05);'} border-bottom:1px solid rgba(255,255,255,0.05);">
                   <td style="padding:6px 4px; font-family:monospace;">${q.id.substring(0,8)}...</td>
                   <td style="padding:6px 4px; font-weight:700;">#${q.question_order}</td>
                   <td style="padding:6px 4px;">${escapeHtml(q.answer_type)}</td>

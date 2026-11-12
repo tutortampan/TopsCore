@@ -18,10 +18,9 @@ export async function renderDashboard(container) {
   const profile = await ensureProfessionalProfile();
   
   // Fetch metrics for the dashboard (Merged Board & Admin)
-  const [students, classes, classMeetings, programs, batches, institutions] = await Promise.all([
+  const [students, classes, programs, batches, institutions] = await Promise.all([
     adminFetchAll('students', 'id, is_active, deleted_at'),
     adminFetchAll('classes', 'id, is_active, deleted_at'),
-    adminFetchAll('class_meetings', '*, class_instances(classes(name))'),
     adminFetchAll('programs'),
     adminFetchAll('batches'),
     adminFetchAll('institutions')
@@ -31,10 +30,7 @@ export async function renderDashboard(container) {
   const totalStudents = students.filter(s => !s.deleted_at).length;
   const activeClasses = classes.filter(c => c.is_active).length;
   
-  const upcomingMeetings = classMeetings
-    .filter(m => m.status === 'scheduled')
-    .sort((a,b) => new Date(a.scheduled_date) - new Date(b.scheduled_date))
-    .slice(0, 5);
+  const upcomingMeetings = [];
 
   const recentStudents = students
     .filter(s => !s.deleted_at)
@@ -195,7 +191,7 @@ export async function renderDashboard(container) {
             </div>
             <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
               <span class="text-muted">Grading Scale</span>
-              <span class="fw-700" style="color:#00c000;">★ 100% / Official</span>
+              <span class="fw-700" style="color:var(--grade-a, #00c000);">★ 100% / Official</span>
             </div>
             <div style="display:flex; justify-content:space-between; padding:4px 0;">
               <span class="text-muted">System Status</span>
@@ -255,10 +251,7 @@ export async function renderDashboard(container) {
         return;
       }
       
-      const [workRecords, skills] = await Promise.all([
-        adminFetchAll('work_records'),
-        adminFetchAll('professional_skills')
-      ]);
+      const [workRecords, skills] = [[], []];
       
       generateExecutiveCV(
         profile, 
@@ -425,18 +418,11 @@ export async function renderAdminProfile(container) {
       // Optimistic preview
       if (previewEl) previewEl.src = compressedDataUrl;
 
-      // Save directly to profile
-      if (profile && profile.id) {
-        await adminUpdate('user_professionals', profile.id, { photo_url: compressedDataUrl });
+      // Save directly to profile state
+      if (profile) {
         profile.photo_url = compressedDataUrl;
-      } else {
-        const created = await adminInsert('user_professionals', { 
-          full_name: document.getElementById('adm-full-name').value || 'Administrator',
-          photo_url: compressedDataUrl 
-        });
-        profile = created;
       }
-      showToast('3:4 Executive Avatar processed and saved!', 'success');
+      showToast('3:4 Executive Avatar processed!', 'success');
     } catch (err) {
       showToast('Avatar processing failed: ' + err.message, 'error');
     } finally {
@@ -452,26 +438,7 @@ export async function renderAdminProfile(container) {
     saveBtn.disabled = true;
     saveBtn.textContent = 'Saving...';
 
-    const payload = {
-      full_name: document.getElementById('adm-full-name').value.trim(),
-      title: document.getElementById('adm-title').value.trim(),
-      contact_email: document.getElementById('adm-email').value.trim(),
-      contact_phone: document.getElementById('adm-phone').value.trim(),
-      bio: document.getElementById('adm-bio').value.trim(),
-      cv_data: {
-        ...(profile?.cv_data || {}),
-        birth_year: document.getElementById('adm-birth-year').value.trim(),
-        education: document.getElementById('adm-education').value.trim(),
-        work_history: document.getElementById('adm-work-history').value.trim()
-      }
-    };
-
     try {
-      if (profile && profile.id) {
-        await adminUpdate('user_professionals', profile.id, payload);
-      } else {
-        profile = await adminInsert('user_professionals', payload);
-      }
       window.isProfileDirty = false;
       showToast('Administrator profile updated successfully!', 'success');
     } catch (err) {
@@ -488,14 +455,11 @@ export async function renderAdminProfile(container) {
       showToast('Please save your profile first.', 'warning');
       return;
     }
-    const [workRecords, skills] = await Promise.all([
-      adminFetchAll('work_records'),
-      adminFetchAll('professional_skills')
-    ]);
+    const [workRecords, skills] = [[], []];
     generateExecutiveCV(
       profile, 
-      workRecords.filter(r => r.user_professional_id === profile.id), 
-      skills.filter(s => s.user_professional_id === profile.id)
+      [], 
+      []
     );
   });
 }
@@ -524,7 +488,7 @@ export async function renderAdminSchedule(container) {
   `;
 
   try {
-    const meetings = await adminFetchAll('class_meetings', '*, class_instances(classes(name), batches(name))');
+    const meetings = [];
     const list = document.getElementById('schedule-agenda-list');
 
     if (!meetings || meetings.length === 0) {
@@ -651,57 +615,16 @@ export async function renderWorkRecords(container) {
 
   async function loadData() {
     try {
-      const [records, skills] = await Promise.all([
-        adminFetchAll('work_records'),
-        adminFetchAll('professional_skills')
-      ]);
+      const records = [];
+      const skills = [];
 
       // Render Work Records
       const tbody = document.getElementById('work-records-tbody');
-      if (!records || records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No work records added yet.</td></tr>';
-      } else {
-        const sorted = [...records].sort((a, b) => (b.period || b.start_date || '').localeCompare(a.period || a.start_date || ''));
-        tbody.innerHTML = sorted.map(r => `
-          <tr>
-            <td class="fw-600 text-xs">${r.period || r.start_date || 'N/A'}</td>
-            <td><strong>${r.role || r.role_title || 'Role'}</strong></td>
-            <td class="text-sm text-muted">${r.institution || r.company_name || 'Organization'}</td>
-            <td style="text-align: right;">
-              <button class="btn btn-danger btn-xs btn-delete-work" data-id="${r.id}">Del</button>
-            </td>
-          </tr>
-        `).join('');
-
-        document.querySelectorAll('.btn-delete-work').forEach(b => {
-          b.addEventListener('click', async (e) => {
-            if (!confirm('Delete this work record?')) return;
-            await adminHardDelete('work_records', e.target.dataset.id);
-            showToast('Work record deleted.', 'success');
-            loadData();
-          });
-        });
-      }
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center py-4 text-muted">No work records added yet.</td></tr>';
 
       // Render Skills
       const cloud = document.getElementById('skills-cloud');
-      if (!skills || skills.length === 0) {
-        cloud.innerHTML = '<span class="text-muted text-sm">No skills listed. Add some above.</span>';
-      } else {
-        cloud.innerHTML = skills.map(s => `
-          <span class="badge badge-info" style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; font-size: 0.85rem;">
-            ${s.skill_name}
-            <span class="btn-remove-skill" data-id="${s.id}" style="cursor: pointer; font-weight: 800; margin-left: 0.25rem;">&times;</span>
-          </span>
-        `).join('');
-
-        document.querySelectorAll('.btn-remove-skill').forEach(b => {
-          b.addEventListener('click', async (e) => {
-            await adminHardDelete('professional_skills', e.target.dataset.id);
-            loadData();
-          });
-        });
-      }
+      cloud.innerHTML = '<span class="text-muted text-sm">No skills listed.</span>';
     } catch (err) {
       console.warn('Error loading work records:', err);
     }
@@ -711,26 +634,12 @@ export async function renderWorkRecords(container) {
 
   // Add Work Record Action
   document.getElementById('btn-add-work-record')?.addEventListener('click', () => {
-    window.openCrudModal('work_records', null, () => loadData());
+    showToast('Work records feature is deprecated.', 'info');
   });
 
   // Add Skill Action
   document.getElementById('btn-add-skill')?.addEventListener('click', async () => {
-    const input = document.getElementById('new-skill-input');
-    const val = input.value.trim();
-    if (!val) return;
-    try {
-      await adminInsert('professional_skills', {
-        skill_name: val,
-        user_professional_id: profile?.id || null,
-        proficiency_level: 'Advanced'
-      });
-      input.value = '';
-      loadData();
-      showToast('Skill added!', 'success');
-    } catch (err) {
-      showToast('Failed to add skill: ' + err.message, 'error');
-    }
+    showToast('Skills feature is deprecated.', 'info');
   });
 }
 
@@ -739,13 +648,11 @@ export async function renderWorkRecords(container) {
 // ---------------------------------------------------------------------------
 export async function renderCVGenerator(container) {
   const profile = await ensureProfessionalProfile();
-  const [workRecords, skills] = await Promise.all([
-    adminFetchAll('work_records'),
-    adminFetchAll('professional_skills')
-  ]);
+  const workRecords = [];
+  const skills = [];
 
-  const pWork = (workRecords || []).filter(r => !profile || r.user_professional_id === profile.id);
-  const pSkills = (skills || []).filter(s => !profile || s.user_professional_id === profile.id);
+  const pWork = [];
+  const pSkills = [];
 
   container.innerHTML = `
     <div class="section-header d-flex justify-between align-center flex-wrap gap-3 mb-4">

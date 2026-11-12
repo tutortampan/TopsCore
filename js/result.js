@@ -87,15 +87,16 @@ if (!session) {
       canvas.height = window.innerHeight;
 
       // Color palette per grade (Matte Modern)
-      const starGreen = TOPSCORE_COLORS.STAR || '#00c000ff';
+      const starColor = TOPSCORE_COLORS.STAR || '#ff2d87';
+      const aColor = TOPSCORE_COLORS.A || '#00c000ff';
       const bColor = TOPSCORE_COLORS.B || '#95ff00ff';
       const cColor = TOPSCORE_COLORS.C || '#FFFF00';
       const dColor = TOPSCORE_COLORS.D || '#FF8C00';
       const eColor = TOPSCORE_COLORS.E || '#FF0000';
       const palettes = {
-        '★': [starGreen, '#86efac', TOPSCORE_COLORS.STAR, '#4ade80'],
-        S: [starGreen, '#86efac', TOPSCORE_COLORS.STAR, '#4ade80'],
-        A: [starGreen, '#86efac', TOPSCORE_COLORS.STAR, '#4ade80'],
+        '★': [starColor, '#f472b6', '#be185d', '#fda4af'],
+        S: [starColor, '#f472b6', '#be185d', '#fda4af'],
+        A: [aColor, '#86efac', '#4ade80', '#22c55e'],
         B: [bColor, '#d9f99d', TOPSCORE_COLORS.B, '#bef264'],
         C: [cColor, '#ffff99', TOPSCORE_COLORS.C, '#fef08a'],
         D: [dColor, '#fed7aa', TOPSCORE_COLORS.D, '#fdba74'],
@@ -213,7 +214,7 @@ if (!session) {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      const colors = [TOPSCORE_COLORS.C, TOPSCORE_COLORS.D, TOPSCORE_COLORS.B, '#38bdf8', '#ec4899', TOPSCORE_COLORS.STAR, '#ffffff'];
+      const colors = [TOPSCORE_COLORS.C, TOPSCORE_COLORS.D, TOPSCORE_COLORS.B, '#38bdf8', '#c084fc', TOPSCORE_COLORS.STAR, '#ffffff'];
       const particles = [];
       const count = 75;
       for (let i = 0; i < count; i++) {
@@ -978,15 +979,14 @@ if (!session) {
         }
 
         let displayGradeHtml = isGradeSOr100 ? `
-            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 28px rgba(134, 239, 172, 0.65)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 28px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.65)); display:inline-block; vertical-align:middle;">
               <defs>
-                <linearGradient id="starGreenHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#86efac" />
-                  <stop offset="50%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                  <stop offset="100%" stop-color="#006400" />
+                <linearGradient id="starHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
+                  <stop offset="100%" stop-color="#be185d" />
                 </linearGradient>
               </defs>
-              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenHeroGrad)" />
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starHeroGrad)" />
             </svg>
           ` : `${grade}`;
 
@@ -1034,8 +1034,8 @@ if (!session) {
         if (avatarContainer) {
           avatarContainer.style.setProperty('--tier-color', gradeColor);
           if (isGradeSOr100) {
-            avatarContainer.style.background = `linear-gradient(135deg, #86efac 0%, ${TOPSCORE_COLORS.STAR} 45%, #006400 100%)`;
-            avatarContainer.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(134, 239, 172, 0.45)`;
+            avatarContainer.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
+            avatarContainer.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
             avatarContainer.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
           } else {
             avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
@@ -1052,12 +1052,12 @@ if (!session) {
               <span style="display:inline-flex; align-items:center;">
                 <svg class="star-accent-vector" width="34" height="34" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <defs>
-                    <linearGradient id="starGreenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#86efac" />
-                      <stop offset="100%" stop-color="${TOPSCORE_COLORS.STAR}" />
+                    <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
+                      <stop offset="100%" stop-color="#be185d" />
                     </linearGradient>
                   </defs>
-                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGreenGrad)" />
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGrad)" />
                 </svg>
               </span>
             `;
@@ -1897,7 +1897,7 @@ if (!session) {
 
             const isPhrase = phraseItems.includes(a);
             const partTag = hasSections
-              ? `<span style="font-size:0.68rem; font-weight:700; color:${isPhrase ? '#ec4899' : '#38bdf8'}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; margin-right:6px;">${isPhrase ? 'Part 2: Phrase' : 'Part 1: Word'}</span>`
+              ? `<span style="font-size:0.68rem; font-weight:700; color:${isPhrase ? '#c084fc' : '#38bdf8'}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; margin-right:6px;">${isPhrase ? 'Part 2: Phrase' : 'Part 1: Word'}</span>`
               : '';
 
             let headerHtml = '';

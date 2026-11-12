@@ -4455,6 +4455,51 @@ export const toOrdinal = (n) => {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
 
+/**
+ * Authoritative mathematical duration calibration standard (SSOT):
+ * Working Duration (Minutes) = Math.ceil((questionCount * secondsPerQuestion) / 60)
+ *
+ * Rates:
+ * - spoken (words): 15 seconds
+ * - spoken (phrases): 20 seconds
+ * - selection (pilgan): 20 seconds
+ * - written: 30 seconds
+ * - mixed: 25 seconds
+ *
+ * @param {number} questionCount - Number of questions
+ * @param {string} answerType - 'spoken', 'written', 'selection', 'mixed', etc.
+ * @param {string} category - 'words' or 'phrases'
+ * @param {number|null} customPace - Optional custom seconds per item override
+ * @param {number} minMinutes - Minimum allowed minutes (default 5)
+ * @returns {number} Duration in minutes
+ */
+export function calculateAutoDurationMinutes(questionCount, answerType = 'spoken', category = 'words', customPace = null, minMinutes = 5) {
+  const count = Number(questionCount) || 0;
+  if (count <= 0) return Math.max(minMinutes, 5);
+
+  const isPhrase = String(category).toLowerCase() === 'phrases' || String(answerType).toLowerCase().includes('phrase');
+  let rate = 20;
+
+  if (customPace && Number(customPace) > 0) {
+    rate = Number(customPace);
+  } else {
+    const ans = String(answerType || '').toLowerCase().trim();
+    if (ans === 'spoken') {
+      rate = isPhrase ? 20 : 15;
+    } else if (ans === 'written') {
+      rate = 30;
+    } else if (ans === 'selection' || ans === 'multiple_choice' || ans === 'dropdown') {
+      rate = 20;
+    } else if (ans === 'mixed') {
+      rate = 25;
+    } else {
+      rate = isPhrase ? 20 : 15;
+    }
+  }
+
+  return Math.max(minMinutes, Math.ceil((count * rate) / 60));
+}
+
 export async function upsertDynamicTestShell(config) {
   const sb = await getSupabase();
   const {
@@ -4472,9 +4517,6 @@ export async function upsertDynamicTestShell(config) {
 
   const isTest = tier === 'TEST' || tier === 'EXAM';
   const isPhrase = category === 'phrases' || modulePrefix === 'PHRASE';
-  const effectiveDurationMinutes = durationMinutes !== null && durationMinutes !== undefined
-    ? Number(durationMinutes)
-    : (isTest ? 120 : 5);
 
   // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-EXAM, 3A-PHRASES-EXAM
   const cleanTopCode = topicCode ? String(topicCode).replace(/^[A-Za-z]/, '') : '1';
@@ -4496,7 +4538,7 @@ export async function upsertDynamicTestShell(config) {
   // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
   const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'written') : 'spoken';
 
-  // Expected question counts
+  // Expected question counts (Cumulative per theme for exams)
   let expectedQuestions = 40;
   if (!isTest) {
     expectedQuestions = isPhrase ? 10 : 40;
@@ -4504,8 +4546,8 @@ export async function upsertDynamicTestShell(config) {
     const th = (themeCode || '').toUpperCase();
     if (th === 'A') expectedQuestions = isPhrase ? 30 : 120;
     else if (th === 'B') expectedQuestions = isPhrase ? 70 : 280;
-    else if (th === 'C') expectedQuestions = isPhrase ? 120 : 480;
-    else if (th === 'D') expectedQuestions = isPhrase ? 160 : 640;
+    else if (th === 'C') expectedQuestions = isPhrase ? 110 : 440;
+    else if (th === 'D') expectedQuestions = isPhrase ? 150 : 600;
     else expectedQuestions = isPhrase ? 30 : 120;
   }
 
@@ -4594,6 +4636,9 @@ export async function upsertDynamicTestShell(config) {
 
   // Prioritize explicitly passed answerType; Words Exam is strictly written (Rule 2.13)
   const effectiveAnswerType = answerType || ((isTest && !isPhrase) ? 'written' : (existing && existing.answer_type)) || defaultAnswerType;
+  const effectiveDurationMinutes = (durationMinutes !== null && durationMinutes !== undefined && Number(durationMinutes) > 0)
+    ? Number(durationMinutes)
+    : calculateAutoDurationMinutes(expectedQuestions, effectiveAnswerType, isPhrase ? 'phrases' : 'words');
   const effectiveMinScore = config.minimumRequiredScore !== undefined
     ? Number(config.minimumRequiredScore)
     : 70;
@@ -4714,29 +4759,53 @@ export async function updateClassTestsConfig(params = {}) {
       updateData.minimum_required_score = Number(testPassingScore);
       const testAns = isPhrase ? (phrasesTestAnswerType || 'selection') : (wordsTestAnswerType || 'spoken');
       updateData.answer_type = testAns;
+
+      // Extract theme code to calculate expected question count
+      const thMatch = (row.shell_code && row.shell_code.match(/([A-H])(?:-|$)/i)) || (row.title && row.title.match(/Vocabulary\s+([A-H])/i));
+      const th = (row.payload?.theme_code || (thMatch ? thMatch[1] : 'A')).toUpperCase();
+      let qCount = 120;
+      if (th === 'A') qCount = isPhrase ? 30 : 120;
+      else if (th === 'B') qCount = isPhrase ? 70 : 280;
+      else if (th === 'C') qCount = isPhrase ? 110 : 440;
+      else if (th === 'D') qCount = isPhrase ? 150 : 600;
+      else qCount = isPhrase ? 30 : 120;
+
+      const customPace = isPhrase ? params.phrasesExamPaceSeconds : params.wordsExamPaceSeconds;
+      const customDur = isPhrase ? params.phrasesExamDurationMinutes : params.wordsExamDurationMinutes;
+      const examDur = (customDur && Number(customDur) > 0)
+        ? Number(customDur)
+        : calculateAutoDurationMinutes(qCount, testAns, isPhrase ? 'phrases' : 'words', customPace);
+
+      updateData.working_duration_minutes = Number(examDur);
       if (row.payload && typeof row.payload === 'object') {
         updateData.payload = {
           ...row.payload,
           minimum_required_score: Number(testPassingScore),
-          answer_type: testAns
+          answer_type: testAns,
+          working_duration_minutes: Number(examDur),
+          duration_minutes: Number(examDur)
         };
       }
       updatedTests++;
     } else {
-      const dur = isPhrase
-        ? Number(phrasesTaskDurationMinutes || 10)
-        : Number(wordsTaskDurationMinutes || taskDurationMinutes || 15);
-      updateData.working_duration_minutes = dur;
-      updateData.minimum_required_score = Number(taskPassingScore);
       const taskAns = isPhrase
         ? (phrasesTaskAnswerType || taskAnswerType || 'spoken')
         : (wordsTaskAnswerType || taskAnswerType || 'spoken');
+      const qCount = isPhrase ? 10 : 40;
+      const customPace = isPhrase ? params.phrasesTaskPaceSeconds : params.wordsTaskPaceSeconds;
+      const customDur = isPhrase ? phrasesTaskDurationMinutes : (wordsTaskDurationMinutes || taskDurationMinutes);
+      const dur = (customDur && Number(customDur) > 0 && !customPace)
+        ? Number(customDur)
+        : calculateAutoDurationMinutes(qCount, taskAns, isPhrase ? 'phrases' : 'words', customPace);
+
+      updateData.working_duration_minutes = Number(dur);
+      updateData.minimum_required_score = Number(taskPassingScore);
       updateData.answer_type = taskAns;
       if (row.payload && typeof row.payload === 'object') {
         updateData.payload = {
           ...row.payload,
-          working_duration_minutes: dur,
-          duration_minutes: dur,
+          working_duration_minutes: Number(dur),
+          duration_minutes: Number(dur),
           minimum_required_score: Number(taskPassingScore),
           answer_type: taskAns
         };
@@ -4863,12 +4932,16 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     let displayOrder = 1;
     let lastTaskId = null;
 
-    const taskDur = config.taskDurationMinutes !== undefined ? Number(config.taskDurationMinutes) : 15;
-    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined ? Number(config.wordsTaskDurationMinutes) : (taskDur || 15);
-    const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined ? Number(config.phrasesTaskDurationMinutes) : 10;
+    const taskDur = config.taskDurationMinutes !== undefined && config.taskDurationMinutes !== null ? Number(config.taskDurationMinutes) : null;
     const taskAns = config.taskAnswerType || 'spoken';
     const wordsTaskAns = config.wordsTaskAnswerType || taskAns || 'spoken';
     const phrasesTaskAns = config.phrasesTaskAnswerType || taskAns || 'spoken';
+    const wordsTaskDur = config.wordsTaskDurationMinutes !== undefined && config.wordsTaskDurationMinutes !== null
+      ? Number(config.wordsTaskDurationMinutes)
+      : (taskDur || calculateAutoDurationMinutes(40, wordsTaskAns, 'words', config.wordsTaskPaceSeconds));
+    const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined && config.phrasesTaskDurationMinutes !== null
+      ? Number(config.phrasesTaskDurationMinutes)
+      : (taskDur || calculateAutoDurationMinutes(10, phrasesTaskAns, 'phrases', config.phrasesTaskPaceSeconds, 5));
     const taskPass = config.taskPassingScore !== undefined ? Number(config.taskPassingScore) : 60;
     const wordsTestAns = config.wordsTestAnswerType || 'spoken';
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
@@ -4950,7 +5023,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           modulePrefix: 'VOCAB', category: 'words',
           moduleId: vocabModuleId,
           answerType: wordsTestAns,
-          durationMinutes: 120,
+          durationMinutes: config.wordsExamDurationMinutes || null,
           minimumRequiredScore: testPass,
           prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++
@@ -4970,7 +5043,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           modulePrefix: 'PHRASE', category: 'phrases',
           moduleId: phraseModuleId,
           answerType: phrasesTestAns,
-          durationMinutes: 120,
+          durationMinutes: config.phrasesExamDurationMinutes || null,
           minimumRequiredScore: testPass,
           prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++

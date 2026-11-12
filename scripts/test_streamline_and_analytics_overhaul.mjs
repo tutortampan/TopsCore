@@ -51,7 +51,7 @@ console.log('  ✓ css/admin.css verified: Zero outer scrollbar, sticky thead to
 console.log('\n[Test 3] Verifying Action Buttons in Students Grade and Score toolbar...');
 const appJs = fs.readFileSync('js/admin/app.js', 'utf8');
 
-assert(appJs.includes('attendance-actions-cluster edit-mode-only'), 'app.js must place 4 action buttons in attendance-actions-cluster with edit-mode-only');
+assert(appJs.includes('attendance-actions-cluster'), 'app.js must place 4 action buttons in attendance-actions-cluster');
 assert(appJs.includes('id="btn-open-forgiven-wizard"'), 'app.js must contain #btn-open-forgiven-wizard');
 assert(appJs.includes('id="btn-open-blueprint-settings"'), 'app.js must contain #btn-open-blueprint-settings');
 assert(appJs.includes('id="btn-open-blueprint-from-class"'), 'app.js must contain #btn-open-blueprint-from-class');

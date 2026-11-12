@@ -36,6 +36,7 @@ import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeC
 import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261106_v160';
 import { openStudentProfile } from './student-management.js?v=20261106_v160';
 import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261106_v160';
+import { DataGrid } from './datagrid.js?v=20261106_v160';
 
 // escapeHtml / escHtml imported canonically
 
@@ -449,48 +450,115 @@ export async function renderCentralQuestionBank(area) {
       ` : ''}
 
       <!-- Filter Controls -->
-      <div class="card p-3 mb-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
-        <div class="d-flex gap-3 flex-wrap align-center">
-          <div style="flex:1;min-width:200px;">
-            <input type="text" class="form-control" id="q-search-input" placeholder="&#128269; Search question or answer..." />
-          </div>
-          <div style="min-width:160px;">
-            <select class="form-control" id="q-topic-filter">
-              <option value="">All Topics (${topics.length})</option>
-              ${topics.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
-            </select>
-          </div>
-          <div style="min-width:150px;">
-            <select class="form-control" id="q-wordtype-filter">
-              <option value="">All Word Types</option>
-              ${wordTypes.map(wt => `<option value="${wt.name}">${escapeHtml(wt.name)}</option>`).join('')}
-            </select>
-          </div>
-          <span class="text-muted" style="font-size:0.85rem;margin-left:auto;">
-            Questions: <strong id="q-count-badge">${questions.length}</strong>
-          </span>
+      <div class="antigravity-card p-3 mb-4 d-flex gap-3 align-center flex-wrap" style="border:1px solid var(--clr-border);">
+        <div style="flex:1;min-width:200px;">
+          <input type="text" class="form-control" id="q-search-input" placeholder="&#128269; Search question or answer..." style="padding:6px 10px;font-size:0.85rem;" />
+        </div>
+        <div style="min-width:160px;">
+          <select class="form-control" id="q-topic-filter" style="padding:6px 10px;font-size:0.85rem;">
+            <option value="">All Topics (${topics.length})</option>
+            ${topics.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="min-width:150px;">
+          <select class="form-control" id="q-wordtype-filter" style="padding:6px 10px;font-size:0.85rem;">
+            <option value="">All Word Types</option>
+            ${wordTypes.map(wt => `<option value="${wt.name}">${escapeHtml(wt.name)}</option>`).join('')}
+          </select>
         </div>
       </div>
 
       <!-- Question List Table -->
-      <div class="table-responsive card" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
-        <table class="data-table">
-          <thead>
-            <tr>
-              <th style="width:160px;">Topic</th>
-              <th style="width:110px;">Word Type</th>
-              <th>Question Text</th>
-              <th>Accepted Answers</th>
-              <th style="width:80px;">Status</th>
-              <th style="text-align:right;width:100px;">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="q-tbody">
-            ${renderQuestionRows(questions)}
-          </tbody>
-        </table>
+      <div class="antigravity-card p-4">
+        <div class="table-wrap" id="q-table-wrap">
+          ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching questions...')}
+        </div>
       </div>
     `;
+
+    let questionGrid = null;
+
+    const questionColumns = [
+      {
+        key: 'topic',
+        label: 'TOPIC',
+        sortable: true,
+        width: '140px',
+        render: (val, row) => `<span class="badge badge-info" style="font-size:11px; font-weight:600; white-space:nowrap;">${escapeHtml(row.topics?.name || 'General')}</span>`
+      },
+      {
+        key: 'question_type',
+        label: 'WORD TYPE',
+        sortable: true,
+        width: '110px',
+        render: (val) => val ? `<span class="badge badge-secondary" style="font-size:11px; white-space:nowrap;">${escapeHtml(val)}</span>` : `<span style="color:var(--clr-text-3); font-size:12px;">—</span>`
+      },
+      {
+        // Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY)
+        key: 'question_text',
+        label: 'QUESTION TEXT',
+        sortable: true,
+        minWidth: '240px',
+        render: (val) => `<div style="color:var(--clr-text-1); font-size:12px; font-weight:500; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;" title="${escapeHtml(val || '')}">${escapeHtml(val || '')}</div>`
+      },
+      {
+        key: 'accepted_answers',
+        label: 'ACCEPTED ANSWERS',
+        sortable: false,
+        width: '220px',
+        render: (val) => {
+          const answers = Array.isArray(val) ? val : [];
+          if (!answers.length) return `<span style="color:var(--clr-text-3); font-size:12px;">—</span>`;
+          return `<div class="d-flex gap-1 flex-wrap align-center" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${answers.map(a => `<span class="badge badge-success" style="font-size:11px; font-weight:600;">${escapeHtml(a)}</span>`).join(' ')}</div>`;
+        }
+      },
+      {
+        key: 'status',
+        label: 'STATUS',
+        sortable: true,
+        width: '80px',
+        render: (val) => `<span class="badge ${val === 'active' ? 'badge-success' : 'badge-secondary'}" style="font-size:11px; font-weight:700; text-transform:uppercase;">${escapeHtml(val || 'active')}</span>`
+      },
+      {
+        key: 'actions',
+        label: '',
+        sortable: false,
+        width: '90px',
+        render: (val, row) => `
+          <div class="d-flex gap-1 justify-end align-center">
+            <button class="btn btn-ghost btn-sm btn-edit-q edit-mode-only" data-id="${row.id}" title="Edit Question" style="padding:2px 6px; font-size:0.75rem;">✏️</button>
+            <button class="btn btn-ghost btn-sm text-danger btn-del-q edit-mode-only" data-id="${row.id}" title="Delete Question" style="padding:2px 6px; font-size:0.75rem;">🗑️</button>
+          </div>
+        `
+      }
+    ];
+
+    const wrap = document.getElementById('q-table-wrap');
+    if (wrap) {
+      wrap.innerHTML = '';
+      questionGrid = new DataGrid({
+        container: wrap,
+        tableId: 'question-bank-grid',
+        autoFitOnMount: false,
+        data: questions,
+        columns: questionColumns,
+        pageSize: 1000,
+        hideToolbar: true,
+        initialSortKey: 'question_text',
+        initialSortAsc: true,
+        bulkActions: false,
+        sortComparator: (sortKey, direction, a, b) => {
+          if (sortKey === 'topic') {
+            const tA = (a.topics?.name || 'General').toLowerCase();
+            const tB = (b.topics?.name || 'General').toLowerCase();
+            if (tA < tB) return direction === 'asc' ? -1 : 1;
+            if (tA > tB) return direction === 'asc' ? 1 : -1;
+            return 0;
+          }
+        },
+        emptyStateHtml: `<div class="p-5 text-center text-muted">No questions found matching criteria. Click "+ Add New Question" to create one.</div>`
+      });
+    }
 
     // Filter Logic
     const searchInput = document.getElementById('q-search-input');
@@ -498,9 +566,10 @@ export async function renderCentralQuestionBank(area) {
     const wtFilter = document.getElementById('q-wordtype-filter');
 
     const applyFilters = () => {
-      const s = searchInput.value.toLowerCase().trim();
-      const tid = topicFilter.value;
-      const wt = wtFilter.value;
+      if (!questionGrid) return;
+      const s = searchInput ? searchInput.value.toLowerCase().trim() : '';
+      const tid = topicFilter ? topicFilter.value : '';
+      const wt = wtFilter ? wtFilter.value : '';
 
       const filtered = questions.filter(q => {
         if (tid && q.topic_id !== tid) return false;
@@ -508,21 +577,24 @@ export async function renderCentralQuestionBank(area) {
         if (s) {
           const qMatch = (q.question_text || '').toLowerCase().includes(s);
           const aMatch = Array.isArray(q.accepted_answers) && q.accepted_answers.some((a) => String(a).toLowerCase().includes(s));
-          if (!qMatch && !aMatch) return false;
+          const tMatch = (q.topics?.name || '').toLowerCase().includes(s);
+          if (!qMatch && !aMatch && !tMatch) return false;
         }
         return true;
       });
 
-      document.getElementById('q-tbody').innerHTML = renderQuestionRows(filtered);
-      document.getElementById('q-count-badge').textContent = filtered.length;
+      questionGrid.filteredData = filtered;
+      questionGrid.sortData();
+      questionGrid.currentPage = 1;
+      questionGrid.render();
     };
 
-    searchInput.oninput = applyFilters;
-    topicFilter.onchange = applyFilters;
-    wtFilter.onchange = applyFilters;
+    if (searchInput) searchInput.oninput = applyFilters;
+    if (topicFilter) topicFilter.onchange = applyFilters;
+    if (wtFilter) wtFilter.onchange = applyFilters;
 
     if (window._filterTopicId) {
-      topicFilter.value = window._filterTopicId;
+      if (topicFilter) topicFilter.value = window._filterTopicId;
       applyFilters();
       document.getElementById('clear-topic-filter-btn')?.addEventListener('click', () => {
         window._filterTopicId = null;
@@ -538,8 +610,8 @@ export async function renderCentralQuestionBank(area) {
       });
     };
 
-    // Actions Delegation
-    document.getElementById('q-tbody')?.addEventListener('click', async (e) => {
+    // Actions Delegation on wrap
+    wrap?.addEventListener('click', async (e) => {
       const editBtn = e.target.closest('.btn-edit-q');
       const delBtn = e.target.closest('.btn-del-q');
 
@@ -915,7 +987,7 @@ export async function renderCentralQuestionImport(area) {
           <div class="text-xs text-muted">Exact Matches (Preserved)</div>
         </div>
         <div class="card p-3" style="flex:1;min-width:130px;background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);text-align:center;">
-          <div style="font-size:1.4rem;font-weight:800;color:#FFFF00;">${summary.answerChanges}</div>
+          <div style="font-size:1.4rem;font-weight:800;color:var(--grade-c, #FFFF00);">${summary.answerChanges}</div>
           <div class="text-xs text-muted">Answer Updates</div>
         </div>
         <div class="card p-3" style="flex:1;min-width:130px;background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);text-align:center;">
@@ -923,7 +995,7 @@ export async function renderCentralQuestionImport(area) {
           <div class="text-xs text-muted">Possible Duplicates</div>
         </div>
         <div class="card p-3" style="flex:1;min-width:130px;background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);text-align:center;">
-          <div style="font-size:1.4rem;font-weight:800;color:${summary.invalidWordTypes > 0 ? '#FF0000' : 'var(--clr-text-muted)'};">${summary.invalidWordTypes}</div>
+          <div style="font-size:1.4rem;font-weight:800;color:${summary.invalidWordTypes > 0 ? 'var(--grade-e, #FF0000)' : 'var(--clr-text-muted)'};">${summary.invalidWordTypes}</div>
           <div class="text-xs text-muted">Word Type Suggestions</div>
         </div>
       `;
@@ -1074,7 +1146,7 @@ Existing historical attempt records will NOT be modified.`;
         const activeUiTopicId = document.getElementById('q-topic-filter')?.value || window._filterTopicId;
         const baseOrder = Math.floor(Math.random() * 999999);
         const isValidUUID = (id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
-        
+
         let safeClassId = window.currentClassId || targetClassId || null;
         if (safeClassId && !isValidUUID(safeClassId)) safeClassId = null;
 
@@ -1088,8 +1160,8 @@ Existing historical attempt records will NOT be modified.`;
           // row.topicName is pre-resolved by processCentralBankQuestionImport (handles VOCAB_MASTERY's Class column too)
           const rawTopic = row.topicName || row.Topic || row.TOPIC || row.topic || row['Topic Name'] || row.topicName || '';
           const normalizedExcelTopic = rawTopic.trim().toLowerCase();
-          let finalTopicId = null; 
-          
+          let finalTopicId = null;
+
           if (normalizedExcelTopic !== '') {
               if (topicDictionary[normalizedExcelTopic]) {
                   finalTopicId = topicDictionary[normalizedExcelTopic];
@@ -1098,13 +1170,13 @@ Existing historical attempt records will NOT be modified.`;
                   try {
                       const { data: newTopic, error: createErr } = await sb
                           .from('topics')
-                          .insert([{ 
+                          .insert([{
                               name: rawTopic.trim(),
                               class_id: safeClassId
                           }])
                           .select('id')
                           .single();
-          
+
                       if (newTopic) {
                           finalTopicId = newTopic.id;
                           topicDictionary[normalizedExcelTopic] = newTopic.id; // Cache it so we don't duplicate
@@ -1137,7 +1209,7 @@ Existing historical attempt records will NOT be modified.`;
                   finalAnswerArray = rawAnswer;
               }
           }
-          
+
           const safeAnswer = finalAnswerArray.length > 0 ? JSON.stringify(finalAnswerArray) : '[]';
 
           if (row.duplicateStatus === 'EXACT_DUPLICATE' && row.actionChoice === 'USE_EXISTING') {
@@ -1150,7 +1222,7 @@ Existing historical attempt records will NOT be modified.`;
                     topic_id: finalTopicId,
                     correct_answer: safeAnswer
                 };
-                
+
                 const { error: updErr } = await sb.from('questions')
                   .update(updatePayload)
                   .eq('id', row.duplicateOfId);
@@ -1176,9 +1248,9 @@ Existing historical attempt records will NOT be modified.`;
                 const insertPayload = {
                     question_order: baseOrder + idx,
                     question_text: finalQuestionText,
-                    question_type: finalWordType, 
+                    question_type: finalWordType,
                     answer_type: row.answer_type || 'written', // Keep constraint fallback
-                    accepted_answers: finalAnswerArray, 
+                    accepted_answers: finalAnswerArray,
                     correct_answer: safeAnswer,
                     topic_id: finalTopicId,
                     class_id: safeClassId,

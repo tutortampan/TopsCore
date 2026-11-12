@@ -376,59 +376,56 @@ Deno.serve(async (req) => {
     if (existing) {
       const deadline = new Date(existing.expires_at || existing.expected_end_at);
       if (now > deadline) {
+        // Auto-clean expired attempt without throwing 410 error; proceed to provision fresh attempt
         await supabase.from("attempts")
           .update({ status: "expired", submitted_at: now.toISOString() })
           .eq("id", existing.id);
+      } else {
+        // Fetch saved answers for this attempt and resume cleanly
+        const { data: rawAnswers } = await supabase
+          .from("attempt_answers")
+          .select("id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score")
+          .eq("attempt_id", existing.id)
+          .order("created_at");
 
-        return new Response(JSON.stringify({ error: "Previous attempt has expired." }), {
-          status: 410, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        const sanitizedResumedAnswers = (rawAnswers || []).map((a: any) => {
+          const snap = typeof a.question_snapshot === "string"
+            ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+            : (a.question_snapshot ? { ...a.question_snapshot } : {});
+          delete snap.correct_answer;
+          delete snap.accepted_answers;
+          delete snap.accepted_answers_snapshot;
+          delete snap.correct_answer_snapshot;
+          return {
+            id: a.id,
+            question_id: a.question_id,
+            question_snapshot: snap,
+            topic_snapshot: a.topic_snapshot,
+            question_type_snapshot: a.question_type_snapshot,
+            student_answer: a.student_answer,
+            score: a.score
+          };
+        });
+
+        return new Response(JSON.stringify({
+          attempt: existing,
+          answers: sanitizedResumedAnswers,
+          resumed: true,
+          test: {
+            id: test.id,
+            title: test.title,
+            test_type: test.test_type,
+            test_subtype: test.test_subtype,
+            shell_code: test.shell_code || test.payload?.shell_code,
+            answer_type: test.answer_type || test.payload?.answer_type,
+            payload: test.payload,
+            working_duration_minutes: test.working_duration_minutes,
+            question_order: test.question_order || test.payload?.question_order || 'random'
+          }
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         });
       }
-
-      // Fetch saved answers for this attempt
-      const { data: rawAnswers } = await supabase
-        .from("attempt_answers")
-        .select("id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score")
-        .eq("attempt_id", existing.id)
-        .order("created_at");
-
-      const sanitizedResumedAnswers = (rawAnswers || []).map((a: any) => {
-        const snap = typeof a.question_snapshot === "string"
-          ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
-          : (a.question_snapshot ? { ...a.question_snapshot } : {});
-        delete snap.correct_answer;
-        delete snap.accepted_answers;
-        delete snap.accepted_answers_snapshot;
-        delete snap.correct_answer_snapshot;
-        return {
-          id: a.id,
-          question_id: a.question_id,
-          question_snapshot: snap,
-          topic_snapshot: a.topic_snapshot,
-          question_type_snapshot: a.question_type_snapshot,
-          student_answer: a.student_answer,
-          score: a.score
-        };
-      });
-
-      return new Response(JSON.stringify({
-        attempt: existing,
-        answers: sanitizedResumedAnswers,
-        resumed: true,
-        test: {
-          id: test.id,
-          title: test.title,
-          test_type: test.test_type,
-          test_subtype: test.test_subtype,
-          shell_code: test.shell_code || test.payload?.shell_code,
-          answer_type: test.answer_type || test.payload?.answer_type,
-          payload: test.payload,
-          working_duration_minutes: test.working_duration_minutes,
-          question_order: test.question_order || test.payload?.question_order || 'random'
-        }
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      });
     }
 
     // 7. Check Attempt Limits
@@ -442,16 +439,22 @@ Deno.serve(async (req) => {
 
     const attemptCount = pastAttemptsData?.length || 0;
 
-    // Exam retake cap: max 2 retakes = max 3 attempts total (unless authorized for remedial by tutor)
+    // Self-paced retake eligibility: student has previously passed (>= 60%) OR was forgiven by tutor (is_forgiven: true)
+    const isEligibleForSelfPaced = (pastAttemptsData || []).some((a: any) => {
+      const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
+      return pct >= 60 || Boolean(a.is_forgiven);
+    });
+
+    // Exam retake cap: max 2 retakes = max 3 attempts total (unless authorized for remedial by tutor OR eligible for 24/7 self-paced retake)
     const isRemedialSession = test.payload?.test_session?.is_remedial === true ||
                               (Array.isArray(test.payload?.test_session?.remedial_student_ids) && test.payload.test_session.remedial_student_ids.includes(student_id));
-    if (test.test_type === 'exam' && attemptCount >= 3 && !isRemedialSession) {
+    if (test.test_type === 'exam' && attemptCount >= 3 && !isRemedialSession && !isEligibleForSelfPaced) {
       return new Response(JSON.stringify({ error: "Maximum retake limit reached (2 retakes allowed)." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
-    if (test.max_attempts && attemptCount >= test.max_attempts && !isRemedialSession) {
+    if (test.max_attempts && attemptCount >= test.max_attempts && !isRemedialSession && !isEligibleForSelfPaced) {
       return new Response(JSON.stringify({ error: "Maximum attempts reached for this test." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -499,12 +502,13 @@ Deno.serve(async (req) => {
           const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(student_id));
 
           if (!isSessionUnlocked) {
-            return new Response(JSON.stringify({ error: "This test session has not been opened by the Tutor yet." }), {
-              status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
-            });
-          }
-
-          if (!isWhitelisted) {
+            // Bypass session lock if student has already passed or is forgiven (24/7 self-paced retake)
+            if (!isEligibleForSelfPaced) {
+              return new Response(JSON.stringify({ error: "This test session has not been opened by the Tutor yet." }), {
+                status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+              });
+            }
+          } else if (!isWhitelisted && !isEligibleForSelfPaced) {
             return new Response(JSON.stringify({ error: "You are not on the attendance whitelist for today's test session." }), {
               status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
             });
@@ -512,7 +516,7 @@ Deno.serve(async (req) => {
         }
 
         // 2. Strict Prerequisite Tasks check: Must pass ALL theme tasks 7 times >= 70% (7×7 Mastery)
-        // Exempt authorized remedial attempts
+        // Exempt authorized remedial attempts and students eligible for self-paced retakes
         const isStudentRemedialAuthorized = isRemedialSession ||
           (Array.isArray(liveSession?.remedial_student_ids) && liveSession.remedial_student_ids.includes(student_id));
         const themeCode = test.payload?.theme_code;
@@ -522,7 +526,7 @@ Deno.serve(async (req) => {
         const topicCode = test.payload?.topic_code;
         const topicNum = parseInt(String(topicCode || '').replace(/^[A-Za-z]+/, ''), 10);
 
-        if (isExamTest && themeCode && !isStudentRemedialAuthorized) {
+        if (isExamTest && themeCode && !isStudentRemedialAuthorized && !isEligibleForSelfPaced) {
           const { data: siblingTasks } = await supabase
             .from('tests')
             .select('id, payload, test_type, category, shell_code')
@@ -780,14 +784,24 @@ Deno.serve(async (req) => {
         vaultWords = vaultWords.slice(0, Number(maxTargetQuestions));
       }
 
+      const liveSession = test.payload?.test_session;
+      const isLiveSessionActive = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > now);
+      const isSelfPacedRetake = !isLiveSessionActive && isEligibleForSelfPaced && test.test_type === 'exam';
+
       let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
-      if (test.answer_type === 'written' || (test.shell_code && test.shell_code.endsWith('-WORDS-EXAM')) || (test.title && test.title.toUpperCase().includes('WORDS EXAM'))) {
-        dynamicAnswerType = 'written';
-      }
-      if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
-         if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
-         else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'spoken';
-         else if (test.test_subtype === 'PHRASE_TEST') dynamicAnswerType = 'selection';
+
+      if (isSelfPacedRetake) {
+        // Outside active tutor sessions, self-paced retakes strictly enforce 100% SPOKEN modality (SSOT Standard)
+        dynamicAnswerType = 'spoken';
+      } else {
+        if (test.answer_type === 'written' || (test.shell_code && test.shell_code.endsWith('-WORDS-EXAM')) || (test.title && test.title.toUpperCase().includes('WORDS EXAM'))) {
+          dynamicAnswerType = 'written';
+        }
+        if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
+           if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
+           else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'spoken';
+           else if (test.test_subtype === 'PHRASE_TEST') dynamicAnswerType = 'selection';
+        }
       }
 
       if (vaultWords && vaultWords.length > 0) {
@@ -853,18 +867,28 @@ Deno.serve(async (req) => {
     }
 
     // 9. Create New Attempt
-    let durationMinutes = test.working_duration_minutes || 60;
-    let expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+    const isPhrase = test.test_subtype?.includes('PHRASE') || (test.shell_code && test.shell_code.includes('PHRASE')) || test.category === 'phrases' || test.payload?.category === 'phrases';
 
-    if (test.test_type === 'quiz') {
-      durationMinutes = test.working_duration_minutes || 5;
-      expiresAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+    let durationMinutes = test.working_duration_minutes || 60;
+    if (isSelfPacedRetake) {
+      // 24/7 Self-Paced Retake: auto-calibrate duration (15s Words, 20s Phrases)
+      const pace = isPhrase ? 20 : 15;
+      durationMinutes = Math.max(5, Math.ceil((snapQuestions.length * pace) / 60));
+    } else if (test.test_type === 'quiz') {
+      const pace = isPhrase ? 20 : 15;
+      durationMinutes = test.working_duration_minutes || Math.max(5, Math.ceil((snapQuestions.length * pace) / 60));
     } else if (test.test_type === 'exam') {
       if (effectiveEnd) {
-        expiresAt = new Date(effectiveEnd);
+        const diffMs = new Date(effectiveEnd).getTime() - now.getTime();
+        durationMinutes = Math.max(5, Math.ceil(diffMs / (60 * 1000)));
+      } else {
+        const pace = dynamicAnswerType === 'written' ? 30 : (dynamicAnswerType === 'selection' ? 20 : (isPhrase ? 20 : 15));
+        durationMinutes = test.working_duration_minutes || Math.max(5, Math.ceil((snapQuestions.length * pace) / 60));
       }
-      durationMinutes = test.working_duration_minutes || 120;
     }
+    const expiresAt = (test.test_type === 'exam' && effectiveEnd && !isSelfPacedRetake)
+      ? new Date(effectiveEnd)
+      : new Date(now.getTime() + durationMinutes * 60 * 1000);
 
     const attemptPayload: any = {
       student_id,
@@ -952,7 +976,7 @@ Deno.serve(async (req) => {
         test_type: test.test_type,
         test_subtype: test.test_subtype,
         shell_code: test.shell_code || test.payload?.shell_code,
-        answer_type: test.answer_type || test.payload?.answer_type,
+        answer_type: dynamicAnswerType || test.answer_type || test.payload?.answer_type,
         payload: test.payload,
         working_duration_minutes: durationMinutes,
         question_order: test.question_order || test.payload?.question_order || 'random'

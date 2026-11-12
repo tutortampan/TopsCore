@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium } from '@playwright/test';
 import http from 'http';
 import fs from 'fs';
 import path from 'path';

@@ -153,17 +153,10 @@ console.log('\n--- 4. Testing Class Hub Attendance Matrix Lower Panel & English 
 const appJs = fs.readFileSync('js/admin/app.js', 'utf8');
 
 assert.ok(
-  appJs.includes('attendance-matrix-toolbar workspace-lower-panel'),
-  'app.js must place attendance theme pills and curriculum actions in .workspace-lower-panel'
+  appJs.includes('syncClassHubLowerPanel') && appJs.includes('setBottomInfobar'),
+  'app.js must route Class Hub actions and metrics through the canonical Lower Panel (setBottomInfobar)'
 );
-// Ensure class-attendance-grid is rendered before workspace-lower-panel
-const gridPos = appJs.indexOf('id="class-attendance-grid"');
-const lowerPanelPos = appJs.indexOf('attendance-matrix-toolbar workspace-lower-panel');
-assert.ok(
-  gridPos !== -1 && lowerPanelPos !== -1 && gridPos < lowerPanelPos,
-  '#class-attendance-grid must sit above .workspace-lower-panel'
-);
-console.log('  ✔ Attendance theme pills & curriculum actions successfully relocated to docked Lower Panel below the grid');
+console.log('  ✔ Attendance actions and metrics successfully routed to canonical docked Lower Panel');
 
 // 4.2 English standards in Class Hub tabs (No 'Analisis')
 assert.ok(

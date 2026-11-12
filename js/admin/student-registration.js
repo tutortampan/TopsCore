@@ -735,7 +735,7 @@ async function renderIndividualRegView(container) {
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem 1.25rem;">
         <!-- Full Name -->
         <div class="form-group" style="grid-column: 1 / -1;">
-          <label class="form-label" style="font-size: 0.78rem;">Full Name <span style="color: #FF0000;">*</span></label>
+          <label class="form-label" style="font-size: 0.78rem;">Full Name <span style="color: var(--grade-e, #FF0000);">*</span></label>
           <input type="text" class="form-control" id="indiv-name" placeholder="e.g. Johnathan Doe" autocomplete="off" />
         </div>
 
@@ -744,7 +744,7 @@ async function renderIndividualRegView(container) {
           <label class="form-label" style="font-size: 0.78rem;">Honorific &amp; Gender</label>
           <select class="form-control" id="indiv-gender">
             <option value="">— Unassigned —</option>
-            <option value="male">Mr. (Male)</option>
+            <option value="male">Mister (Male)</option>
             <option value="female">Miss (Female)</option>
           </select>
         </div>
@@ -757,7 +757,7 @@ async function renderIndividualRegView(container) {
 
         <!-- Institution -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Institution <span style="color: #FF0000;">*</span></label>
+          <label class="form-label" style="font-size: 0.78rem;">Institution <span style="color: var(--grade-e, #FF0000);">*</span></label>
           <select class="form-control" id="indiv-inst">
             <option value="">— Select Institution —</option>
             ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
@@ -766,7 +766,7 @@ async function renderIndividualRegView(container) {
 
         <!-- Program -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Program <span style="color: #FF0000;">*</span></label>
+          <label class="form-label" style="font-size: 0.78rem;">Program <span style="color: var(--grade-e, #FF0000);">*</span></label>
           <select class="form-control" id="indiv-prog">
             <option value="">— Select Program —</option>
             ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">[${escapeHtml(p.name)}]</option>`).join('')}
@@ -776,7 +776,7 @@ async function renderIndividualRegView(container) {
         <!-- Batch -->
         <div class="form-group">
           <div class="d-flex align-center justify-between mb-1">
-            <label class="form-label" style="font-size: 0.78rem; margin: 0;">Batch <span style="color: #FF0000;">*</span></label>
+            <label class="form-label" style="font-size: 0.78rem; margin: 0;">Batch <span style="color: var(--grade-e, #FF0000);">*</span></label>
             <button type="button" class="btn btn-ghost btn-xs text-primary" id="btn-quick-new-batch" style="padding: 0; font-size: 0.72rem;">+ New Batch</button>
           </div>
           <select class="form-control" id="indiv-batch" disabled>
@@ -786,7 +786,7 @@ async function renderIndividualRegView(container) {
 
         <!-- PIN -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Personal PIN <span style="color: #FF0000;">*</span></label>
+          <label class="form-label" style="font-size: 0.78rem;">Personal PIN <span style="color: var(--grade-e, #FF0000);">*</span></label>
           <input type="text" class="form-control" id="indiv-pin" value="1234" autocomplete="new-password" />
           <span class="text-muted text-xs mt-1" style="display:block;">Default preset is 1234 (hashed on save).</span>
         </div>
@@ -1109,4 +1109,8 @@ async function renderIndividualRegView(container) {
   document.getElementById('btn-refresh-recent')?.addEventListener('click', () => {
     renderIndividualRegView(container);
   });
+}
+
+if (typeof window !== 'undefined') {
+  window.renderStudentsRegistration = renderStudentsRegistration;
 }

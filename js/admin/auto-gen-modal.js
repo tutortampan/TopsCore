@@ -4,6 +4,7 @@ export async function openAutoGenerateModal(options = {}) {
     fetchPrograms, 
     autoGenerateTestsHierarchy, 
     updateClassTestsConfig,
+    calculateAutoDurationMinutes,
     adminFetchAll, 
     toShortLevel,
     escapeHtml, 
@@ -182,34 +183,46 @@ export async function openAutoGenerateModal(options = {}) {
           </div>
 
           <!-- Section 2: Task Configuration -->
-          <div style="background:#1e293b; border:1px solid rgba(255,255,0,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+          <div style="background:#1e293b; border:1px solid rgba(var(--grade-c-rgb, 255,255,0),0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:0.82rem; font-weight:800; color:#ffff00; display:inline-flex; align-items:center; gap:4px;">
+              <span style="font-size:0.82rem; font-weight:800; color:var(--grade-c, #ffff00); display:inline-flex; align-items:center; gap:4px;">
                 ⚡ 1. TASK SETTINGS (TASKS)
               </span>
-              <span class="badge" style="background:rgba(255,255,0,0.15); color:#ffff00; font-size:0.68rem; font-weight:700;">Mandiri</span>
+              <span class="badge" style="background:rgba(var(--grade-c-rgb, 255,255,0),0.15); color:var(--grade-c, #ffff00); font-size:0.68rem; font-weight:700;">Mandiri</span>
             </div>
 
             <!-- Row 1: Separate Durations (Words vs Phrases) & Passing Score -->
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
               <div>
-                <label for="wizard-quiz-words-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Words Task (Mnt)</label>
-                <input type="number" id="wizard-quiz-words-dur" min="1" max="180" value="${escapeHtml(String(prefillWordsTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Words Task (40 Soal, default 15 menit)" />
-                <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-words-dur" data-val="20" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">20m</button>
+                <label for="wizard-quiz-words-pace" class="form-label" style="font-size:0.7rem; color:var(--grade-c, #ffff00); font-weight:700; margin-bottom:2px; display:block;">
+                  ⏱️ Words Task (<span id="words-task-calc-dur">10m</span>)
+                </label>
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <input type="number" id="wizard-quiz-words-pace" min="5" max="60" value="15" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px; width:70px;" title="Detik per kata (default 15s)" />
+                  <span style="font-size:0.75rem; color:#94a3b8;">detik/soal</span>
                 </div>
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-quiz-words-pace" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10s</button>
+                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-quiz-words-pace" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15s</button>
+                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-quiz-words-pace" data-val="20" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">20s</button>
+                </div>
+                <input type="hidden" id="wizard-quiz-words-dur" value="${escapeHtml(String(prefillWordsTaskDur || 10))}" />
               </div>
 
               <div>
-                <label for="wizard-quiz-phrases-dur" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">⏱️ Phrases Task (Mnt)</label>
-                <input type="number" id="wizard-quiz-phrases-dur" min="1" max="180" value="${escapeHtml(String(prefillPhrasesTaskDur))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px;" title="Waktu pengerjaan Phrases Task (10 Soal, default 10 menit)" />
-                <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="5" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">5m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="10" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10m</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-quiz-phrases-dur" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15m</button>
+                <label for="wizard-quiz-phrases-pace" class="form-label" style="font-size:0.7rem; color:var(--grade-c, #ffff00); font-weight:700; margin-bottom:2px; display:block;">
+                  ⏱️ Phrases Task (<span id="phrases-task-calc-dur">5m</span>)
+                </label>
+                <div style="display:flex; align-items:center; gap:4px;">
+                  <input type="number" id="wizard-quiz-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.82rem; height:32px; width:70px;" title="Detik per frase (default 20s)" />
+                  <span style="font-size:0.75rem; color:#94a3b8;">detik/soal</span>
                 </div>
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-quiz-phrases-pace" data-val="15" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15s</button>
+                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-quiz-phrases-pace" data-val="20" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">20s</button>
+                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-quiz-phrases-pace" data-val="30" style="font-size:0.65rem; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">30s</button>
+                </div>
+                <input type="hidden" id="wizard-quiz-phrases-dur" value="${escapeHtml(String(prefillPhrasesTaskDur || 5))}" />
               </div>
 
               <div>
@@ -223,62 +236,70 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
 
             <!-- Row 2: Cara Jawab Terpisah (Words Task vs Phrases Task) -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(255,255,0,0.2);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(var(--grade-c-rgb, 255,255,0),0.2);">
               <div>
-                <label for="wizard-quiz-ans-words" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">🗣️ Words Task</label>
+                <label for="wizard-quiz-ans-words" class="form-label" style="font-size:0.7rem; color:var(--grade-c, #ffff00); font-weight:700; margin-bottom:2px; display:block;">🗣️ Words Task</label>
                 <select id="wizard-quiz-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
-                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / AI)</option>
-                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
-                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
-                  <option value="mixed" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran)</option>
+                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 15s)</option>
+                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>
+                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>
+                  <option value="mixed" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>
                 </select>
               </div>
 
               <div>
-                <label for="wizard-quiz-ans-phrases" class="form-label" style="font-size:0.7rem; color:#ffff00; font-weight:700; margin-bottom:2px; display:block;">🗣️ Phrases Task</label>
+                <label for="wizard-quiz-ans-phrases" class="form-label" style="font-size:0.7rem; color:var(--grade-c, #ffff00); font-weight:700; margin-bottom:2px; display:block;">🗣️ Phrases Task</label>
                 <select id="wizard-quiz-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
-                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / AI)</option>
-                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
-                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
-                  <option value="mixed" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran)</option>
+                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 20s)</option>
+                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>
+                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>
+                  <option value="mixed" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>
                 </select>
               </div>
             </div>
           </div>
 
-          <!-- Section 3: Exam Configuration (No Rigid Duration - Session Governed) -->
-          <div style="background:#1e293b; border:1px solid rgba(244,114,182,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
+          <!-- Section 3: Exam Configuration (Auto-Calibrated Duration & Session Governed) -->
+          <div style="background:#1e293b; border:1px solid rgba(251,191,36,0.25); border-radius:8px; padding:10px 12px; display:flex; flex-direction:column; gap:8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-              <span style="font-size:0.82rem; font-weight:800; color:#f472b6; display:inline-flex; align-items:center; gap:4px;">
+              <span style="font-size:0.82rem; font-weight:800; color:#fbbf24; display:inline-flex; align-items:center; gap:4px;">
                 📝 2. EXAM SETTINGS (EXAMS)
               </span>
-              <span class="badge" style="background:rgba(244,114,182,0.15); color:#f472b6; font-size:0.68rem; font-weight:700;">Sesi Ujian</span>
+              <span class="badge" style="background:rgba(251,191,36,0.15); color:#fbbf24; font-size:0.68rem; font-weight:700;">Exam Sessions</span>
             </div>
 
             <!-- Dynamic Session Duration Callout -->
-            <div style="background:rgba(0,0,0,0.3); border-left:3px solid #f472b6; padding:6px 10px; border-radius:4px; font-size:0.72rem; color:#cbd5e1; line-height:1.35;">
-              ⏱️ <strong>Exam Duration:</strong> Dynamically controlled by <strong>Tutor Exam Sessions</strong>. No rigid duration limits are imposed so students follow the open/close session schedule seamlessly.
+            <div style="background:rgba(0,0,0,0.3); border-left:3px solid #fbbf24; padding:6px 10px; border-radius:4px; font-size:0.72rem; color:#cbd5e1; line-height:1.35;">
+              ⏱️ <strong>Durasi Exam:</strong> Dihitung otomatis per detik/soal sesuai tema kumulatif (Words: 15s/item, Phrases: 20s/item). Sesi live tutor juga dapat menetapkan alokasi waktu sendiri saat membuka ujian.
             </div>
 
             <div style="display:grid; grid-template-columns:1.2fr 1.2fr 1fr; gap:8px;">
               <div>
                 <label for="wizard-test-ans-words" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">🗣️ Words Exam</label>
                 <select id="wizard-test-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
-                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan)</option>
-                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
-                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
-                  <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran)</option>
+                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 15s)</option>
+                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>
+                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>
+                  <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>
                 </select>
+                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
+                  <input type="number" id="wizard-exam-words-pace" min="5" max="60" value="15" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.75rem; height:26px; width:55px;" title="Detik per kata untuk exam" />
+                  <span style="font-size:0.68rem; color:#94a3b8;">detik/soal</span>
+                </div>
               </div>
 
               <div>
                 <label for="wizard-test-ans-phrases" class="form-label" style="font-size:0.7rem; color:#94a3b8; margin-bottom:2px; display:block;">🔘 Phrases Exam</label>
                 <select id="wizard-test-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:0.78rem; height:32px;">
-                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan)</option>
-                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik)</option>
-                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan)</option>
-                  <option value="mixed" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran)</option>
+                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>
+                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>
+                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 20s)</option>
+                  <option value="mixed" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>
                 </select>
+                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
+                  <input type="number" id="wizard-exam-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:0.75rem; height:26px; width:55px;" title="Detik per frase untuk exam" />
+                  <span style="font-size:0.68rem; color:#94a3b8;">detik/soal</span>
+                </div>
               </div>
 
               <div>
@@ -325,9 +346,81 @@ export async function openAutoGenerateModal(options = {}) {
         const targetId = btn.dataset.target;
         const targetVal = btn.dataset.val;
         const input = overlay.querySelector('#' + targetId);
-        if (input) input.value = targetVal;
+        if (input) {
+          input.value = targetVal;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
       });
     });
+
+    overlay.querySelectorAll('.pace-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetId = btn.dataset.target;
+        const targetVal = btn.dataset.val;
+        const input = overlay.querySelector('#' + targetId);
+        if (input) {
+          input.value = targetVal;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      });
+    });
+
+    // Real-time Duration Auto-Calibration
+    const recalculateDurations = () => {
+      const wordsAns = overlay.querySelector('#wizard-quiz-ans-words')?.value || 'spoken';
+      const phrasesAns = overlay.querySelector('#wizard-quiz-ans-phrases')?.value || 'spoken';
+      const wordsPace = parseInt(overlay.querySelector('#wizard-quiz-words-pace')?.value, 10) || 15;
+      const phrasesPace = parseInt(overlay.querySelector('#wizard-quiz-phrases-pace')?.value, 10) || 20;
+
+      const wordsDur = calculateAutoDurationMinutes(40, wordsAns, 'words', wordsPace);
+      const phrasesDur = calculateAutoDurationMinutes(10, phrasesAns, 'phrases', phrasesPace, 5);
+
+      const wordsDurBadge = overlay.querySelector('#words-task-calc-dur');
+      if (wordsDurBadge) wordsDurBadge.textContent = wordsDur + 'm';
+      const wordsDurInput = overlay.querySelector('#wizard-quiz-words-dur');
+      if (wordsDurInput) wordsDurInput.value = wordsDur;
+
+      const phrasesDurBadge = overlay.querySelector('#phrases-task-calc-dur');
+      if (phrasesDurBadge) phrasesDurBadge.textContent = phrasesDur + 'm';
+      const phrasesDurInput = overlay.querySelector('#wizard-quiz-phrases-dur');
+      if (phrasesDurInput) phrasesDurInput.value = phrasesDur;
+    };
+
+    // Live Event Listeners for real-time recalculation
+    ['wizard-quiz-words-pace', 'wizard-quiz-phrases-pace'].forEach(id => {
+      const el = overlay.querySelector('#' + id);
+      if (el) {
+        el.addEventListener('input', recalculateDurations);
+        el.addEventListener('change', recalculateDurations);
+      }
+    });
+
+    overlay.querySelector('#wizard-quiz-ans-words')?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      const paceInput = overlay.querySelector('#wizard-quiz-words-pace');
+      if (paceInput) {
+        if (val === 'spoken') paceInput.value = 15;
+        else if (val === 'written') paceInput.value = 30;
+        else if (val === 'selection') paceInput.value = 20;
+        else if (val === 'mixed') paceInput.value = 25;
+      }
+      recalculateDurations();
+    });
+
+    overlay.querySelector('#wizard-quiz-ans-phrases')?.addEventListener('change', (e) => {
+      const val = e.target.value;
+      const paceInput = overlay.querySelector('#wizard-quiz-phrases-pace');
+      if (paceInput) {
+        if (val === 'spoken') paceInput.value = 20;
+        else if (val === 'written') paceInput.value = 30;
+        else if (val === 'selection') paceInput.value = 20;
+        else if (val === 'mixed') paceInput.value = 25;
+      }
+      recalculateDurations();
+    });
+
+    // Run initial calibration
+    recalculateDurations();
 
     const closeOverlay = () => overlay.remove();
     overlay.querySelector('#wizard-close-btn').onclick = closeOverlay;
@@ -345,11 +438,17 @@ export async function openAutoGenerateModal(options = {}) {
       const wordsAnsEl = overlay.querySelector('#wizard-quiz-ans-words') || overlay.querySelector('#wizard-task-ans-words');
       const phrasesAnsEl = overlay.querySelector('#wizard-quiz-ans-phrases') || overlay.querySelector('#wizard-task-ans-phrases');
 
-      const wordsQuizDuration = parseInt(wordsDurEl?.value, 10) || parseInt(durEl?.value, 10) || 15;
-      const phrasesQuizDuration = parseInt(phrasesDurEl?.value, 10) || 10;
-      const quizDuration = wordsQuizDuration;
+      const wordsPace = parseInt(overlay.querySelector('#wizard-quiz-words-pace')?.value, 10) || 15;
+      const phrasesPace = parseInt(overlay.querySelector('#wizard-quiz-phrases-pace')?.value, 10) || 20;
+      const wordsExamPace = parseInt(overlay.querySelector('#wizard-exam-words-pace')?.value, 10) || 15;
+      const phrasesExamPace = parseInt(overlay.querySelector('#wizard-exam-phrases-pace')?.value, 10) || 20;
+
       const wordsQuizAnswer = wordsAnsEl ? wordsAnsEl.value : 'spoken';
       const phrasesQuizAnswer = phrasesAnsEl ? phrasesAnsEl.value : 'spoken';
+
+      const wordsQuizDuration = parseInt(wordsDurEl?.value, 10) || calculateAutoDurationMinutes(40, wordsQuizAnswer, 'words', wordsPace);
+      const phrasesQuizDuration = parseInt(phrasesDurEl?.value, 10) || calculateAutoDurationMinutes(10, phrasesQuizAnswer, 'phrases', phrasesPace, 5);
+      const quizDuration = wordsQuizDuration;
       const quizPassing = parseInt(minEl?.value, 10) || 60;
       const wordsTestAnswer = overlay.querySelector('#wizard-test-ans-words').value;
       const phrasesTestAnswer = overlay.querySelector('#wizard-test-ans-phrases').value;
@@ -364,6 +463,10 @@ export async function openAutoGenerateModal(options = {}) {
         taskDuration: quizDuration,
         wordsTaskDuration: wordsQuizDuration,
         phrasesTaskDuration: phrasesQuizDuration,
+        wordsTaskPaceSeconds: wordsPace,
+        phrasesTaskPaceSeconds: phrasesPace,
+        wordsExamPaceSeconds: wordsExamPace,
+        phrasesExamPaceSeconds: phrasesExamPace,
         wordsQuizAnswer,
         wordsTaskAnswer: wordsQuizAnswer,
         phrasesQuizAnswer,
@@ -395,6 +498,10 @@ export async function openAutoGenerateModal(options = {}) {
           taskDurationMinutes: cfg.taskDuration,
           wordsTaskDurationMinutes: cfg.wordsTaskDuration,
           phrasesTaskDurationMinutes: cfg.phrasesTaskDuration,
+          wordsTaskPaceSeconds: cfg.wordsTaskPaceSeconds,
+          phrasesTaskPaceSeconds: cfg.phrasesTaskPaceSeconds,
+          wordsExamPaceSeconds: cfg.wordsExamPaceSeconds,
+          phrasesExamPaceSeconds: cfg.phrasesExamPaceSeconds,
           wordsTaskAnswerType: cfg.wordsTaskAnswer,
           phrasesTaskAnswerType: cfg.phrasesTaskAnswer,
           taskPassingScore: cfg.taskPassing,
@@ -446,6 +553,10 @@ export async function openAutoGenerateModal(options = {}) {
           taskDurationMinutes: cfg.taskDuration,
           wordsTaskDurationMinutes: cfg.wordsTaskDuration,
           phrasesTaskDurationMinutes: cfg.phrasesTaskDuration,
+          wordsTaskPaceSeconds: cfg.wordsTaskPaceSeconds,
+          phrasesTaskPaceSeconds: cfg.phrasesTaskPaceSeconds,
+          wordsExamPaceSeconds: cfg.wordsExamPaceSeconds,
+          phrasesExamPaceSeconds: cfg.phrasesExamPaceSeconds,
           wordsTaskAnswerType: cfg.wordsTaskAnswer,
           phrasesTaskAnswerType: cfg.phrasesTaskAnswer,
           taskPassingScore: cfg.taskPassing,

@@ -21,6 +21,7 @@ import {
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261106_v160';
+import { DataGrid } from './datagrid.js?v=20261106_v160';
 
 // escapeHtml / escHtml imported canonically
 
@@ -222,18 +223,18 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:2rem;line-height:1;">&#9888;&#65039;</div>
           <div>
-            <h3 style="margin:0;font-size:1.25rem;color:#FF0000;font-weight:700;">Permanent Purge Warning</h3>
+            <h3 style="margin:0;font-size:1.25rem;color:var(--grade-e, #FF0000);font-weight:700;">Permanent Purge Warning</h3>
             <div class="text-xs text-muted">Irreversible Database Action</div>
           </div>
         </div>
 
         <p style="font-size:0.875rem;line-height:1.5;color:#cbd5e1;margin-bottom:1rem;">
-          You are about to permanently purge <strong style="color:#f8fafc;">${escapeHtml(name)}</strong> (<code style="color:#FF0000;">${table}</code>).
+          You are about to permanently purge <strong style="color:#f8fafc;">${escapeHtml(name)}</strong> (<code style="color:var(--grade-e, #FF0000);">${table}</code>).
           This action will permanently delete this row and cannot be undone.
         </p>
 
         <div style="margin-bottom:1rem;">
-          <label style="font-size:0.75rem;font-weight:700;color:#FF0000;text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">
+          <label style="font-size:0.75rem;font-weight:700;color:var(--grade-e, #FF0000);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">
             Type "CONFIRM" to unlock permanent purge:
           </label>
           <input type="text" class="purge-confirm-input" id="purge-confirm-text" placeholder="CONFIRM" autocomplete="off" />
@@ -347,33 +348,77 @@ export async function renderAuditLog(area) {
   `;
 
   let allLogs = [];
+  let auditGrid = null;
 
-  const loadLogs = async () => {
-    const wrap = document.getElementById('audit-table-wrap');
-    const chip = document.getElementById('audit-count-chip');
-    if (wrap) wrap.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching audit trail...');
-
-    try {
-      const sb = await getSupabase();
-      const { data, error } = await sb
-        .from('audit_logs')
-        .select('id, created_at, actor_role, actor_user_id, action, entity_type, entity_id, old_value, new_value')
-        .order('created_at', { ascending: false })
-        .limit(150);
-
-      if (error) throw error;
-      allLogs = data || [];
-      if (chip) chip.textContent = `${allLogs.length} Events`;
-      renderTable();
-    } catch (err) {
-      if (wrap) wrap.innerHTML = `<div class="p-4 text-center text-danger">Failed to load audit logs: ${escapeHtml(err.message)}</div>`;
+  const auditColumns = [
+    {
+      key: 'created_at',
+      label: 'TIMESTAMP',
+      sortable: true,
+      width: '170px',
+      render: (val) => `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); white-space:nowrap;">${val ? new Date(val).toLocaleString() : '—'}</span>`
+    },
+    {
+      key: 'actor_role',
+      label: 'ACTOR',
+      sortable: true,
+      width: '130px',
+      render: (val, row) => `
+        <span class="badge badge-info" style="font-size:11px; font-weight:600;">${escapeHtml(val || 'ADMIN')}</span>
+        ${row.actor_user_id ? `<div style="font-size:11px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); margin-top:2px;" title="${escapeHtml(row.actor_user_id)}">${escapeHtml(String(row.actor_user_id).substring(0, 8))}…</div>` : ''}
+      `
+    },
+    {
+      key: 'action',
+      label: 'ACTION',
+      sortable: true,
+      width: '180px',
+      render: (val) => {
+        const act = String(val || '').toLowerCase();
+        const isSecurity = act.includes('cheat') || act.includes('security') || act.includes('purge');
+        const isSuccess = act.includes('create') || act.includes('restore') || act.includes('insert');
+        const isInfo = act.includes('login') || act.includes('auth');
+        const badgeClass = isSecurity ? 'badge-danger' : (isSuccess ? 'badge-success' : (isInfo ? 'badge-info' : 'badge-neutral'));
+        return `<span class="badge ${badgeClass}" style="font-size:11px; font-weight:700; white-space:nowrap;">${escapeHtml(val || '—')}</span>`;
+      }
+    },
+    {
+      key: 'entity_type',
+      label: 'ENTITY',
+      sortable: true,
+      width: '120px',
+      render: (val, row) => {
+        if (!val) return `<span style="color:var(--clr-text-3, #94a3b8); font-size:12px;">—</span>`;
+        return `<div style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-weight:500; white-space:nowrap;">${escapeHtml(val)}${row.entity_id ? ` <span style="font-family:var(--font-mono, monospace); font-size:11px; color:var(--clr-text-3, #94a3b8);" title="${escapeHtml(row.entity_id)}">(${escapeHtml(String(row.entity_id).substring(0, 8))}…)</span>` : ''}</div>`;
+      }
+    },
+    {
+      // Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY)
+      key: 'new_value',
+      label: 'TARGET CONTEXT / DETAILS',
+      sortable: false,
+      minWidth: '260px',
+      render: (val, row) => {
+        let detailsText = '';
+        if (row.new_value) {
+          try {
+            const nv = typeof row.new_value === 'string' ? JSON.parse(row.new_value) : row.new_value;
+            detailsText = Object.entries(nv).map(([k, v]) => `<span style="color:var(--clr-text-3, #94a3b8);">${escapeHtml(k)}:</span> <strong style="font-weight:500; color:var(--clr-text-1, #f8fafc);">${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : String(v))}</strong>`).join(' <span style="color:rgba(255,255,255,0.2);">|</span> ');
+          } catch {
+            detailsText = escapeHtml(String(row.new_value));
+          }
+        } else if (row.entity_type) {
+          detailsText = `<span style="color:var(--clr-text-3, #94a3b8);">Entity:</span> <strong style="font-weight:500; color:var(--clr-text-1, #f8fafc);">${escapeHtml(row.entity_type)}</strong> (ID: <code style="font-size:11px; color:var(--clr-primary, #38bdf8);">${escapeHtml(row.entity_id || '—')}</code>)`;
+        } else {
+          detailsText = `<span style="color:var(--clr-text-3, #94a3b8);">—</span>`;
+        }
+        return `<div style="font-size:12px; line-height:1.4; white-space:nowrap; text-overflow:ellipsis; overflow:hidden;" title="${escapeHtml(detailsText.replace(/<[^>]+>/g, ''))}">${detailsText}</div>`;
+      }
     }
-  };
+  ];
 
-  const renderTable = () => {
-    const wrap = document.getElementById('audit-table-wrap');
-    if (!wrap) return;
-
+  const applyFilters = () => {
+    if (!auditGrid) return;
     const cat = document.getElementById('audit-filter-action')?.value || '';
     const q = (document.getElementById('audit-search-input')?.value || '').toLowerCase().trim();
 
@@ -394,67 +439,64 @@ export async function renderAuditLog(area) {
       return true;
     });
 
-    if (!filtered.length) {
-      wrap.innerHTML = `<div class="p-5 text-center text-muted">No audit events match the selected criteria.</div>`;
-      return;
-    }
-
-    let html = `
-      <table class="table w-100">
-        <thead>
-          <tr>
-            <th style="width:170px;">Timestamp</th>
-            <th style="width:140px;">Actor</th>
-            <th style="width:180px;">Action</th>
-            <th>Target Context / Details</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
-
-    filtered.forEach(item => {
-      const isSecurity = item.action.toLowerCase().includes('cheat') || item.action.toLowerCase().includes('security') || item.action.toLowerCase().includes('purge');
-      const actionBadge = isSecurity ? 'badge-danger' :
-                          item.action.toLowerCase().includes('create') || item.action.toLowerCase().includes('restore') ? 'badge-success' :
-                          item.action.toLowerCase().includes('login') ? 'badge-info' : 'badge-neutral';
-
-      let detailsText = '';
-      if (item.new_value) {
-        try {
-          const nv = typeof item.new_value === 'string' ? JSON.parse(item.new_value) : item.new_value;
-          detailsText = Object.entries(nv).map(([k, v]) => `<span class="text-muted">${escapeHtml(k)}:</span> <strong>${escapeHtml(typeof v === 'object' ? JSON.stringify(v) : v)}</strong>`).join(' | ');
-        } catch {
-          detailsText = escapeHtml(String(item.new_value));
-        }
-      } else if (item.entity_type) {
-        detailsText = `<span class="text-muted">Entity:</span> <strong>${escapeHtml(item.entity_type)}</strong> (ID: <code style="font-size:0.75rem;">${escapeHtml(item.entity_id || '&mdash;')}</code>)`;
-      } else {
-        detailsText = '&mdash;';
-      }
-
-      html += `
-        <tr>
-          <td class="text-xs text-muted">${new Date(item.created_at).toLocaleString()}</td>
-          <td>
-            <span class="badge badge-info" style="font-size:0.7rem;">${escapeHtml(item.actor_role || 'ADMIN')}</span>
-            ${item.actor_user_id ? `<div class="text-xs text-muted" style="font-family:monospace;margin-top:2px;">${escapeHtml(item.actor_user_id.substring(0,8))}…</div>` : ''}
-          </td>
-          <td><span class="badge ${actionBadge}" style="font-size:0.75rem;font-weight:700;">${escapeHtml(item.action)}</span></td>
-          <td class="text-xs" style="line-height:1.4;">${detailsText}</td>
-        </tr>
-      `;
-    });
-
-    html += `</tbody></table>`;
-    wrap.innerHTML = html;
+    auditGrid.filteredData = filtered;
+    auditGrid.sortData();
+    auditGrid.currentPage = 1;
+    auditGrid.render();
+    const chip = document.getElementById('audit-count-chip');
+    if (chip) chip.textContent = `${filtered.length} Events`;
   };
 
-  document.getElementById('audit-filter-action')?.addEventListener('change', renderTable);
-  document.getElementById('audit-search-input')?.addEventListener('input', renderTable);
+  const loadLogs = async () => {
+    const wrap = document.getElementById('audit-table-wrap');
+    const chip = document.getElementById('audit-count-chip');
+    if (wrap && !auditGrid) {
+      wrap.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching audit trail...');
+    }
+
+    try {
+      const sb = await getSupabase();
+      const { data, error } = await sb
+        .from('audit_logs')
+        .select('id, created_at, actor_role, actor_user_id, action, entity_type, entity_id, old_value, new_value')
+        .order('created_at', { ascending: false })
+        .limit(150);
+
+      if (error) throw error;
+      allLogs = data || [];
+      if (chip) chip.textContent = `${allLogs.length} Events`;
+
+      // Instantiate DataGrid inside audit-table-wrap
+      if (wrap) {
+        wrap.innerHTML = '';
+        auditGrid = new DataGrid({
+          container: wrap,
+          tableId: 'audit-logs-grid',
+          autoFitOnMount: false,
+          data: allLogs,
+          columns: auditColumns,
+          pageSize: 1000,
+          hideToolbar: true,
+          initialSortKey: 'created_at',
+          initialSortAsc: false,
+          bulkActions: false,
+          emptyStateHtml: `<div class="p-5 text-center text-muted">No audit events match the selected criteria.</div>`
+        });
+        applyFilters();
+      }
+    } catch (err) {
+      if (wrap) wrap.innerHTML = `<div class="p-4 text-center text-danger">Failed to load audit logs: ${escapeHtml(err.message)}</div>`;
+    }
+  };
+
+  document.getElementById('audit-filter-action')?.addEventListener('change', applyFilters);
+  document.getElementById('audit-search-input')?.addEventListener('input', applyFilters);
   document.getElementById('audit-reset-btn')?.addEventListener('click', () => {
-    document.getElementById('audit-filter-action').value = '';
-    document.getElementById('audit-search-input').value = '';
-    renderTable();
+    const filterEl = document.getElementById('audit-filter-action');
+    const searchEl = document.getElementById('audit-search-input');
+    if (filterEl) filterEl.value = '';
+    if (searchEl) searchEl.value = '';
+    applyFilters();
   });
   document.getElementById('audit-refresh-btn')?.addEventListener('click', loadLogs);
 
@@ -564,7 +606,7 @@ export async function renderDataHealth(container) {
             Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
-        <button class="btn btn-success" id="btn-health-scan-orphans" style="width:100%;font-weight:700;background:linear-gradient(135deg, #86efac, var(--grade-star, #00c000ff));color:#0F172A;">
+        <button class="btn btn-primary" id="btn-health-scan-orphans" style="width:100%;font-weight:700;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.25);">
           &#128269; Scan Integrity
         </button>
       </div>
@@ -595,7 +637,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-2 align-end" style="padding-top: 18px;">
           <button class="btn btn-primary" id="btn-preview-recal" disabled style="height: 38px;">🔍 Preview Recalibration</button>
-          <button class="btn btn-success" id="btn-apply-recal" disabled style="height: 38px; background: linear-gradient(135deg, #86efac, var(--grade-star, #00c000ff)); color: #0F172A; font-weight: 700;">⚡ Apply Recalibration</button>
+          <button class="btn btn-primary" id="btn-apply-recal" disabled style="height: 38px; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">⚡ Apply Recalibration</button>
         </div>
       </div>
 
@@ -614,9 +656,9 @@ export async function renderDataHealth(container) {
             <div class="text-xs text-muted mb-1">Affected Attempts</div>
             <div class="fw-700" style="font-size: 1.4rem; color: var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
           </div>
-          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-star, #00c000ff);">
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-a, #00c000ff);">
             <div class="text-xs text-muted mb-1">Status: FAIL &rarr; PASS</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: var(--grade-star, #00c000ff);" id="recal-metric-fail-pass">0</div>
+            <div class="fw-700" style="font-size: 1.4rem; color: var(--grade-a, #00c000ff);" id="recal-metric-fail-pass">0</div>
           </div>
           <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-e, #FF0000);">
             <div class="text-xs text-muted mb-1">Status: PASS &rarr; FAIL</div>
@@ -678,7 +720,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-3 justify-between">
           <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
-          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: linear-gradient(135deg, #86efac, var(--grade-star, #00c000ff)); color: #0F172A; font-weight: 700; border:none;">✅ Yes, Apply Changes</button>
+          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">✅ Yes, Apply Changes</button>
         </div>
       </div>
     </div>
@@ -804,7 +846,7 @@ export async function renderDataHealth(container) {
 
       const resultsHTML = `
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
-          <div class="antigravity-card p-4 text-center" style="border:1px solid ${totalIssues === 0 ? 'rgba(var(--grade-star-rgb, 0, 192, 0), 0.3)' : 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.3)'};">
+          <div class="antigravity-card p-4 text-center" style="border:1px solid ${totalIssues === 0 ? 'rgba(var(--grade-a-rgb, 0, 192, 0), 0.3)' : 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.3)'};">
             <div style="font-size:2.5rem;margin-bottom:0.25rem;">${totalIssues === 0 ? '&#9989;' : '&#9888;&#65039;'}</div>
             <h3 style="font-weight:700;margin:0 0 4px 0;color:${totalIssues === 0 ? 'var(--clr-success, #00c000ff)' : 'var(--clr-warning, #FFFF00)'};">
               ${totalIssues === 0 ? 'All Relational Constraints Healthy' : `${totalIssues} Integrity Issue(s) Detected`}
@@ -1058,7 +1100,7 @@ export async function renderSettings(area) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:1.5rem;">&#128737;&#65039;</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:#FF0000;font-weight:700;">The Cost Guard Engine</h3>
+            <h3 style="font-size:1.1rem;margin:0;color:var(--grade-e, #FF0000);font-weight:700;">The Cost Guard Engine</h3>
             <div class="text-xs text-muted">Global AI Token Bankruptcy Defense</div>
           </div>
         </div>
@@ -1088,7 +1130,7 @@ export async function renderSettings(area) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:1.5rem;">🛡️</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:#FFFF00;font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
+            <h3 style="font-size:1.1rem;margin:0;color:var(--grade-c, #FFFF00);font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
             <div class="text-xs text-muted">Controls for exam-taking integrity</div>
           </div>
         </div>
@@ -1137,7 +1179,7 @@ export async function renderSettings(area) {
               { id: 'custom',       emoji: '📁', label: 'Custom Upload' },
             ].map(s => `
               <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);transition:background 0.15s;" class="sound-opt-label">
-                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:#FFFF00;" />
+                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:var(--grade-c, #FFFF00);" />
                 <span style="font-size:0.95rem;">${s.emoji}</span>
                 <span class="text-xs fw-600">${s.label}</span>
                 <button type="button" class="btn-preview-sound" data-sound="${s.id}" title="Preview" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:0.8rem;opacity:0.7;padding:0 2px;" tabindex="-1">▶</button>
@@ -1299,12 +1341,12 @@ export async function renderSettings(area) {
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
           <div style="font-size:1.5rem;">⚠️</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:#FF0000;font-weight:700;">Danger Zone: Vocabulary Vault Reset</h3>
+            <h3 style="font-size:1.1rem;margin:0;color:var(--grade-e, #FF0000);font-weight:700;">Danger Zone: Vocabulary Vault Reset</h3>
             <div class="text-xs text-muted">Master Reset for Vocabulary Vault Items</div>
           </div>
         </div>
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
-          Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: #FF0000;">RESET</strong> to confirm.
+          Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: var(--grade-e, #FF0000);">RESET</strong> to confirm.
         </p>
         <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-danger-reset-vault" style="font-weight:700; height: 36px;">
           🗑️ Master Reset Vocabulary Vault

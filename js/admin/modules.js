@@ -53,7 +53,7 @@ export async function renderModules(area) {
                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
               <div style="font-size: 32px; line-height: 1;">${mod.icon}</div>
-              <span style="background: rgba(var(--grade-star-rgb), 0.1); color: var(--clr-success); border: 1px solid rgba(var(--grade-star-rgb), 0.2); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span style="background: rgba(var(--grade-a-rgb), 0.12); color: var(--clr-success); border: 1px solid rgba(var(--grade-a-rgb), 0.35); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
                 ${mod.status}
               </span>
             </div>

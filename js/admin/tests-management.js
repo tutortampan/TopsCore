@@ -1236,7 +1236,7 @@ export async function renderTests(area) {
       .tac-badge { font-size: 0.6rem; font-weight: 800; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; }
       .badge-blue-soft { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
       .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
-      .badge-success-soft { background: rgba(var(--grade-star-rgb, 0, 192, 0), 0.15); color: #86efac; border: 1px solid rgba(var(--grade-star-rgb, 0, 192, 0), 0.3); }
+      .badge-success-soft { background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.15); color: #86efac; border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.3); }
       .badge-warning-soft { background: rgba(var(--grade-d-rgb, 255, 140, 0), 0.2); color: #fed7aa; border: 1px solid rgba(var(--grade-d-rgb, 255, 140, 0), 0.3); }
       .badge-danger-soft { background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.2); color: #ff9999; border: 1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.3); }
     </style>
@@ -2389,7 +2389,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             <tbody>
               ${(st.hardestQs20 || []).map((q, idx) => `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? '#FF0000' : '#FFFF00'}; text-align:center;">#${idx + 1}</td>
+                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? 'var(--grade-e, #FF0000)' : 'var(--grade-c, #FFFF00)'}; text-align:center;">#${idx + 1}</td>
                   <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">"${esc(q.text)}"</td>
                   <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:0.65rem;">${esc(q.wordType)}</span></td>
                   <td style="padding:8px 10px;"><span class="tac-badge ${q.failRate >= 60 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% (${q.fail}/${q.total})</span></td>
@@ -2422,9 +2422,9 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             <div class="text-2xl fw-800 text-warning">${st.panicRatio}%</div>
             <div class="text-xs text-muted">${st.panicCount} auto-submissions on deadline expiry</div>
           </div>
-          <div class="card p-2 flex-1" style="background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.3); border-radius:8px;">
-            <div class="text-xs fw-700 uppercase" style="color:#fb7185;">WITA Peak Hour</div>
-            <div class="text-2xl fw-800" style="color:#fb7185;">${String(peakHour).padStart(2, '0')}:00 WITA</div>
+          <div class="card p-2 flex-1" style="background:rgba(255,140,0,0.1); border:1px solid rgba(255,140,0,0.3); border-radius:8px;">
+            <div class="text-xs fw-700 uppercase" style="color:#ff8c00;">WITA Peak Hour</div>
+            <div class="text-2xl fw-800" style="color:#ff8c00;">${String(peakHour).padStart(2, '0')}:00 WITA</div>
             <div class="text-xs text-muted">${maxHour} submissions at peak time</div>
           </div>
         </div>
@@ -2436,7 +2436,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
               <strong style="color:#f8fafc; font-size:0.85rem;">📊 24-Hour Exam Traffic Heatmap (UTC+8 / WITA)</strong>
               <div class="text-xs text-muted">Hourly distribution of 991 attempts. Peak testing load occurs between 19:00 - 22:00 WITA.</div>
             </div>
-            <span class="tac-badge badge-rose-soft">&#128293; Peak Traffic: 20:00 WITA</span>
+            <span class="tac-badge badge-warning-soft">&#128293; Peak Traffic: 20:00 WITA</span>
           </div>
 
           <!-- Vertical CSS Histogram -->
@@ -2444,10 +2444,10 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             ${st.witaHourly.map((cnt, h) => {
               const hPct = Math.round((cnt / maxHour) * 100);
               const isPeak = (h >= 19 && h <= 22) || h === 7;
-              const barColor = isPeak ? 'linear-gradient(180deg, #f43f5e 0%, #be123c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
+              const barColor = isPeak ? 'linear-gradient(180deg, #ff8c00 0%, #c2410c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
               return `
                 <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="${h}:00 WITA &mdash; ${cnt} attempts">
-                  <div style="font-size:0.55rem; color:${isPeak ? '#fb7185' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
+                  <div style="font-size:0.55rem; color:${isPeak ? '#ff8c00' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
                   <div style="width:100%; height:${Math.max(hPct, 3)}%; background:${barColor}; border-radius:2px 2px 0 0; transition:height 0.3s ease;"></div>
                 </div>
               `;
@@ -2564,7 +2564,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
     const p = st.posStats || {};
     const categories = [
       { name: 'Noun', icon: '📦', tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },
-      { name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: TOPSCORE_COLORS.C || '#FFFF00' },
+      { name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: TOPSCORE_COLORS.C || 'var(--grade-c, #FFFF00)' },
       { name: 'Adjective', icon: '🎨', tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },
       { name: 'Phrase / Idiom', icon: '💬', tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: '#34d399' },
     ];
@@ -2752,7 +2752,7 @@ window._openTestCardDrawer = function(testId) {
   const getGradeBadge = (pct) => {
     if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
     const sym = typeof calculateGrade === 'function' ? calculateGrade(pct) : (pct >= 60 ? 'C' : 'E');
-    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#FF0000';
+    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (TOPSCORE_COLORS?.E || 'var(--grade-e, #FF0000)');
     return '<span style="color:' + color + '; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ' + color + '40;">' + pct + '% [' + sym + ']</span>';
   };
 

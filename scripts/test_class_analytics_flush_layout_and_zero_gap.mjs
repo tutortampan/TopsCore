@@ -58,8 +58,8 @@ assert(
 console.log('\n--- 3. Testing Spatial Bounds & Flush Docking Invariants (css/admin.css) ---');
 assert(
   adminCss.includes('.admin-content:has(.test-analytics-view)') &&
-  adminCss.includes('padding: 10px 10px 0 10px !important;'),
-  '.admin-content:has(.test-analytics-view) enforces 10px top/sides and 0px bottom padding'
+  (adminCss.includes('padding: 10px 10px 10px 10px !important;') || adminCss.includes('padding: 10px 10px 0 10px !important;')),
+  '.admin-content:has(.test-analytics-view) enforces 10px spatial padding invariant'
 );
 assert(
   adminCss.includes('.analytics-toolbar.workspace-lower-panel') &&

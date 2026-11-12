@@ -41,5 +41,11 @@
 13. MANDATORY PROMPT & TYPO CORRECTION: Inspect user prompt for typos and display `### 🎯 Perbaikan Perintah (Typo Fixed)` before execution.
 14. PLAN NAMING STANDARD & REPOSITORY DUAL-WRITE PROTOCOL (/learn): Save in `docs/plans/YYYYMMDD - <Plan Name>.md` and mirror in active brain artifact directory.
 19. AUTOMATIC MIDDLE-PANEL TAB HYGIENE & POST-PROCESS FILE CLOSURE (/learn): Only `tasks.md` is pinned. Maximum 3 open editor tabs.
-23. MANDATORY VISUAL PRE-FLIGHT CHECKLIST & SUBAGENT GATING (/learn): All UI plans must embed screenshot (Before) and mockup (After). Gated until checklist verified.
-24. CONTEXT WINDOW HYGIENE & POST-MILESTONE COMPACTION (/learn): Recommend `/compact` after completing multi-phase milestones.
+23. MANDATORY BEFORE & AFTER VISUAL SPECIFICATION PROTOCOL (/learn): Any task involving UI layout, Font (size, weight, style), Color (hex, tokens), or Tables MUST present an explicit 4-column Before & After Comparative Matrix (exact current state vs proposed target state, with mockups/code) in the plan artifact before any code is modified.
+24. AUTOMATIC COMPACTION ADVISORY TRIGGER & ANTI-YAPPING DISCIPLINE (/learn): AI cannot invoke slash commands autonomously. The agent MUST conclude its response with a prominent /compact all call-to-action banner immediately upon milestone completion or when conversation depth reaches >= 20 turns. Responses accompanying artifacts are strictly capped at 15-20 lines (zero repetitive yapping).
+26. UNIVERSAL SINGLE-SOURCE COLOR PROPAGATION ("RUBAH SATU MAKA RUBAH SEMUA") (/learn):
+    - All Red elements follow Grade E (`--grade-e` / `var(--grade-e)` / `TOPSCORE_COLORS.E` / `.text-fail`).
+    - All Yellow elements follow Grade C (`--grade-c` / `var(--grade-c)` / `TOPSCORE_COLORS.C` / `.text-warning`).
+    - All Green elements follow Grade A (`--grade-a` / `var(--grade-a)` / `TOPSCORE_COLORS.A` / `.text-success`).
+    - Star Pink (`#ff2d87`) remains 100% exclusive to Star 100%. System chrome uses neutral workstation tokens.
+    - Zero raw hardcoded hex literals in CSS or JS. Any change to a central token in :root must instantaneously propagate across the entire application in a single step.

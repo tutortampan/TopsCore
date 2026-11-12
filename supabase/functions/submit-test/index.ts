@@ -523,9 +523,12 @@ Deno.serve(async (req) => {
 
     const grade = calculateGrade(effectiveScore);
 
-    // 6. Update Attempt Record
+    // 6. Update Attempt Record with 60s network transmission grace period
     const now = new Date();
-    const finalStatus = payload.is_auto_submit ? "auto_submitted" : "submitted";
+    const deadline = attempt.expires_at ? new Date(attempt.expires_at) : null;
+    const GRACE_PERIOD_MS = 60 * 1000; // 60-second network latency buffer
+    const isPastDeadline = deadline && (now.getTime() > (deadline.getTime() + GRACE_PERIOD_MS));
+    const finalStatus = (payload.is_auto_submit || isPastDeadline) ? "auto_submitted" : "submitted";
 
     const { data: updatedAttempt, error: updErr } = await supabase
       .from("attempts")

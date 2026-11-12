@@ -102,7 +102,7 @@ export async function openTestSystemSettingsModal(options = {}) {
         <!-- Exam Passing Score Block -->
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.78rem; font-weight: 800; color: #f472b6; text-transform: uppercase; letter-spacing: 0.03em;">
+            <label style="font-size: 0.78rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.03em;">
               📝 Minimum Exam Passing Score (%)
             </label>
             <span style="font-size: 0.72rem; color: #94a3b8;">Default: 60%</span>

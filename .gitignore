@@ -21,6 +21,7 @@ audit_screenshots/
 temp_test/
 test-results/
 playwright-report/
+tests/artifacts/
 deploy_new_supabase.sql
 /*.png
 scripts/*.png

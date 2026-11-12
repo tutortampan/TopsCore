@@ -59,24 +59,26 @@
   --grade-e: #ff0000;
   --grade-e-rgb: 255, 0, 0;
 
-  /* Question Answer Evaluations (Result Page & Answer Logs) */
-  --eval-correct: #00c000ff;
-  --eval-correct-rgb: 0, 192, 0;
-  --eval-partial: #ffff00;
-  --eval-partial-rgb: 255, 255, 0;
-  --eval-incorrect: #ff0000;
-  --eval-incorrect-rgb: 255, 0, 0;
+  /* Question Answer Evaluations (Result Page & Answer Logs) - SSOT Bindings */
+  --eval-correct: var(--grade-a);
+  --eval-correct-rgb: var(--grade-a-rgb);
+  --eval-partial: var(--grade-c);
+  --eval-partial-rgb: var(--grade-c-rgb);
+  --eval-incorrect: var(--grade-e);
+  --eval-incorrect-rgb: var(--grade-e-rgb);
 
   /* Grade Badge Text Contrast Rules */
   --badge-text-star: #0f172a;
   --badge-text-dark: #0f172a;
 
-  /* Status colours */
-  --clr-success: #00c000ff;
-  --clr-success-rgb: 0, 192, 0;
-  --clr-success-glow: rgba(0, 192, 0, 0.4);
-  --clr-warning: #ff8c00;
-  --clr-danger: #ff0000;
+  /* Status colours - Single-Source Universal Propagation (Green -> A, Yellow -> C, Red -> E) */
+  --clr-success: var(--grade-a);
+  --clr-success-rgb: var(--grade-a-rgb);
+  --clr-success-glow: rgba(var(--grade-a-rgb), 0.4);
+  --clr-warning: var(--grade-c);
+  --clr-warning-rgb: var(--grade-c-rgb);
+  --clr-danger: var(--grade-e);
+  --clr-danger-rgb: var(--grade-e-rgb);
   --clr-info: #06b6d4;
 
   /* Text */
@@ -129,6 +131,19 @@
   --z-modal: 1000;
   --z-toast: 2000;
 }
+
+/* ============================================================
+   UNIVERSAL SSOT COLOR UTILITY CLASSES (Rule 26: Rubah Satu Maka Rubah Semua)
+   ============================================================ */
+.text-fail, .color-fail { color: var(--grade-e) !important; }
+.text-warning, .color-enough, .color-warning { color: var(--grade-c) !important; }
+.text-success, .color-good, .color-success { color: var(--grade-a) !important; }
+.border-fail { border-color: var(--grade-e) !important; }
+.border-warning { border-color: var(--grade-c) !important; }
+.border-success { border-color: var(--grade-a) !important; }
+.bg-fail { background-color: var(--grade-e) !important; }
+.bg-warning { background-color: var(--grade-c) !important; }
+.bg-success { background-color: var(--grade-a) !important; }
 
 /* ============================================================
    RESET & BASE
@@ -745,7 +760,7 @@ textarea.form-control {
    ============================================================ */
 .table-wrap,
 .table-responsive {
-  overflow-x: auto;
+  overflow-x: hidden !important;
   overflow-y: auto;
   border-radius: var(--radius-lg);
   border: 1px solid var(--clr-border);
@@ -763,8 +778,15 @@ textarea.form-control {
 
 .table-wrap::-webkit-scrollbar,
 .table-responsive::-webkit-scrollbar {
-  height: 6px;
+  height: 0px !important;
   width: 6px;
+}
+
+.table-wrap::-webkit-scrollbar:horizontal,
+.table-responsive::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0px !important;
+  width: 0px !important;
 }
 
 .table-wrap::-webkit-scrollbar-track,
@@ -832,12 +854,13 @@ tbody tr:hover {
   width: 100% !important;
   min-width: 0 !important;
   table-layout: fixed !important;
-  font-size: 0.72rem !important;
+  font-size: 12px !important;
 }
 
 .table-compact thead th {
-  padding: 4px 5px !important;
-  font-size: 0.65rem !important;
+  padding: 4px 6px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   letter-spacing: 0 !important;
   white-space: nowrap !important;
   text-overflow: ellipsis !important;
@@ -845,8 +868,8 @@ tbody tr:hover {
 }
 
 .table-compact tbody td {
-  padding: 4px 5px !important;
-  font-size: 0.7rem !important;
+  padding: 4px 6px !important;
+  font-size: 12px !important;
   line-height: 1.2 !important;
   word-break: break-word !important;
   overflow-wrap: break-word !important;
@@ -1077,7 +1100,7 @@ tbody tr:last-child td {
 .grade-circle.grade-circle-star,
 .grade-circle.grade-circle-★,
 .grade-circle.grade-circle-s {
-  background: linear-gradient(135deg, #f472b6 0%, var(--grade-star) 100%) !important;
+  background: var(--grade-star) !important;
   color: var(--badge-text-star) !important;
   font-size: 0.72rem !important;
   font-weight: 900 !important;

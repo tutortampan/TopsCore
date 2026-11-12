@@ -638,44 +638,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       switchTab('tab-publish');
     };
 
-    // (Removed Step 3 tab logic)
-
-    document.getElementById('btn-assign-prev').onclick = () => switchTab('tab-topics');
-    document.getElementById('btn-assign-next').onclick = () => {
-      const typeVal = builderDiv.querySelector('input[name="wiz-type"]:checked').value;
-      const title = document.getElementById('wiz-title').value;
-      const duration = document.getElementById('wiz-duration').value;
-      const order = document.getElementById('wiz-order').value;
-      const strategy = 'NONE';
-
-      document.getElementById('rev-title').textContent = title;
-      document.getElementById('rev-type').textContent = typeVal;
-      document.getElementById('rev-class').textContent = subSel.options[subSel.selectedIndex]?.text || '';
-      document.getElementById('rev-duration').textContent = `${duration} minutes`;
-      document.getElementById('rev-order').textContent = order;
-
-      if (strategy === 'BATCH') {
-        const bName = batchSel.options[batchSel.selectedIndex]?.text || 'Batch';
-        document.getElementById('rev-assignment').textContent = `Batch: ${bName}`;
-      } else if (strategy === 'STUDENT') {
-        const sName = studentSel.options[studentSel.selectedIndex]?.text || 'Student';
-        document.getElementById('rev-assignment').textContent = `Student: ${sName}`;
-      } else {
-        document.getElementById('rev-assignment').textContent = 'Open / Assign Later';
-      }
-
-      const topicNames = allTopics.filter(t => selectedTopicIds.has(t.id)).map(t => t.name).join(', ');
-      document.getElementById('rev-topics').textContent = topicNames || 'Selected Topics';
-
-      const qTotal = (typeVal === 'Test')
-        ? document.getElementById('wiz-Test-q-count').textContent
-        : document.getElementById('wiz-eval-q-count').textContent;
-      document.getElementById('rev-questions').textContent = qTotal;
-
-      switchTab('tab-publish');
-    };
-
-    // Step 4 Nav
+    // Step 4 Nav (Review & Publish)
     document.getElementById('btn-publish-prev').onclick = () => switchTab('tab-topics');
 
     // Save as Draft

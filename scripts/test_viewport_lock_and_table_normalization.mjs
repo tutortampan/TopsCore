@@ -90,18 +90,18 @@ assert.ok(
 console.log('  ✔ Empty table footers (tfoot:empty) automatically collapse');
 
 // =========================================================================
-// 3. No-Capsule View Mode & Edit-Mode-Only Input Capsules
+// 3. No-Capsule View Mode & Transparent Excel-Like Edit Mode Cells
 // =========================================================================
-console.log('\n--- 3. Testing No-Capsule View Mode & Edit-Mode Capsules ---');
+console.log('\n--- 3. Testing No-Capsule View Mode & Transparent Edit Mode Cells ---');
 
 assert.ok(
-  adminCss.includes('body:not(.global-edit-mode-on) .datagrid-table td .badge:not(.badge-grade-symbol)') &&
-  adminCss.includes('body:not(.global-edit-mode-on) .table-wrap td .badge:not(.badge-grade-symbol)') &&
+  adminCss.includes('.datagrid-table td .badge:not(.badge-grade-symbol)') &&
+  adminCss.includes('.table-wrap td .badge:not(.badge-grade-symbol)') &&
   adminCss.includes('background: transparent !important;') &&
   adminCss.includes('border: none !important;'),
-  'In View Mode (Edit Mode OFF), table data cells must not render in capsule/badge mode'
+  'Table data cells must not render in capsule/badge mode'
 );
-console.log('  ✔ View Mode CSS strips badge backgrounds, borders, and shadows from data cells');
+console.log('  ✔ CSS strips badge backgrounds, borders, and shadows from data cells');
 
 assert.ok(
   adminCss.includes('font-variant-numeric: tabular-nums !important;'),
@@ -112,10 +112,10 @@ console.log('  ✔ Tabular numbers enforced across table cells');
 assert.ok(
   adminCss.includes('body.global-edit-mode-on .datagrid-table td input') &&
   adminCss.includes('body.global-edit-mode-on .bp-setting-input input') &&
-  adminCss.includes('border-radius: 12px !important;'),
-  'When Edit Mode is ON, editable interactive inputs receive capsule pill styling'
+  adminCss.includes('background: transparent !important;'),
+  'When Edit Mode is ON, editable interactive inputs receive transparent Excel cell styling'
 );
-console.log('  ✔ Edit-Mode-Only inputs receive rounded capsule pill styling');
+console.log('  ✔ Edit-Mode-Only inputs receive transparent borderless Excel cell styling');
 
 // =========================================================================
 // 4. Student Roster Toolbar & Void Elimination (student-management.js)
@@ -124,17 +124,11 @@ console.log('\n--- 4. Testing Student Roster Toolbar & Table Layout ---');
 const studentMgmtJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'student-management.js'), 'utf-8');
 
 assert.ok(
-  studentMgmtJs.includes('class="student-roster-toolbar d-flex align-center justify-between mb-2 flex-wrap gap-2'),
-  'Student roster toolbar must be tagged with .student-roster-toolbar'
+  studentMgmtJs.includes('syncStudentRosterBottomInfobar') &&
+  studentMgmtJs.includes('window.setBottomInfobar'),
+  'Student roster actions must be docked in the canonical bottom infobar'
 );
-console.log('  ✔ Action toolbar tagged with .student-roster-toolbar');
-
-assert.ok(
-  adminCss.includes('body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content)') &&
-  adminCss.includes('display: none !important;'),
-  'Empty student toolbar must completely collapse when Edit Mode is OFF'
-);
-console.log('  ✔ Empty student toolbar collapses to display: none when Edit Mode is OFF');
+console.log('  ✔ Student roster actions docked in canonical bottom infobar');
 
 assert.ok(
   !studentMgmtJs.includes('title="Daftarkan Siswa Baru"') &&

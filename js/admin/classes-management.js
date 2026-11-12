@@ -743,6 +743,8 @@ export async function loadClassLearningPath(classId) {
 
     const ClassGrid = new DataGrid({
       container: 'class-datagrid-container',
+      tableId: 'class-learning-path-grid',
+      autoFitOnMount: false,
       data: gridData,
       pageSize: 1000,
       hideToolbar: true,
@@ -787,7 +789,7 @@ export async function loadClassLearningPath(classId) {
       },
       columns: [
         {
-          key: 'order', label: 'CODE', sortable: true,
+          key: 'order', label: 'CODE', sortable: true, width: '80px',
           render: (val, row) => {
             if (row.shellCode) {
               return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
@@ -796,56 +798,57 @@ export async function loadClassLearningPath(classId) {
           }
         },
         { 
-          key: 'title', label: 'TITLE', sortable: true,
-          render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden; max-width:250px;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
+          // Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY)
+          key: 'title', label: 'TITLE', sortable: true, minWidth: '220px',
+          render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
         },
         {
-          key: 'level', label: 'LEVEL', sortable: true,
+          key: 'level', label: 'LEVEL', sortable: true, width: '70px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.level)}</div>`
         },
         {
-          key: 'prereq', label: 'PREREQUISITE', sortable: true,
+          key: 'prereq', label: 'PREREQUISITE', sortable: true, width: '130px',
           render: (val, row) => {
              if(!row.prereq || row.prereq === '-') return `<span style="color:var(--clr-text-3); font-size:12px;">—</span>`;
-             return `<div style="font-size:12px; color:var(--clr-text-muted); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">⚠️ ${escapeHtml(row.prereq)}</div>`;
+             return `<div style="font-size:12px; color:var(--clr-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">⚠️ ${escapeHtml(row.prereq)}</div>`;
           }
         },
         {
-          key: 'type', label: 'TYPE', sortable: true,
+          key: 'type', label: 'TYPE', sortable: true, width: '110px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.type)}</div>`
         },
         {
-          key: 'answerType', label: 'ANSWER', sortable: true,
+          key: 'answerType', label: 'ANSWER', sortable: true, width: '90px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.answerType}</div>`
         },
         {
-          key: 'access', label: 'ACCESS', sortable: true,
+          key: 'access', label: 'ACCESS', sortable: true, width: '80px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.access)}</div>`
         },
         {
-          key: 'timeLimit', label: 'DUR. (M)', sortable: true,
+          key: 'timeLimit', label: 'DUR. (M)', sortable: true, width: '75px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">⏱ ${row.timeLimit}</div>`
         },
         {
-          key: 'minScore', label: 'PASS (%)', sortable: true,
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; color:var(--clr-danger);">🎯 ${row.minScore}</div>`
+          key: 'minScore', label: 'PASS (%)', sortable: true, width: '75px',
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">🎯 ${row.minScore}</div>`
         },
         {
-          key: 'qCount', label: 'QS', sortable: true,
+          key: 'qCount', label: 'QS', sortable: true, width: '65px',
           render: (val, row) => {
-            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-accent-1); white-space:nowrap;" title="Dynamic Vault Source">⚡ ${row.qCount} (Vault)</div>`;
+            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-accent-1); white-space:nowrap;" title="Dynamic Vault Source">⚡ ${row.qCount}</div>`;
             return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.qCount}</div>`;
           }
         },
         {
-          key: 'status', label: 'STATUS', sortable: true,
+          key: 'status', label: 'STATUS', sortable: true, width: '90px',
           render: (val, row) => {
             const st = String(row.status || 'draft').toUpperCase();
             return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-2); text-transform:uppercase;">${st}</span>`;
           }
         },
         {
-          key: 'actions', label: '', sortable: false,
+          key: 'actions', label: '', sortable: false, width: '120px',
           render: (val, row) => `
             <div class="d-flex gap-1 justify-end align-center">
               <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${row.id}'; window.loadSection('results');">&#128202;</button>
@@ -918,3 +921,7 @@ window._toggleClassTestPublish = async (testId, currentStatus) => {
     }
   } catch(e) { window.showToast(e.message, 'error'); }
 };
+
+if (typeof window !== 'undefined') {
+  window.loadClassLearningPath = loadClassLearningPath;
+}

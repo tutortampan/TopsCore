@@ -1,3 +1,872 @@
+## [2026-11-13 07:48] — Phase 445: Live Test Sessions 3-Part Overhaul (Matrix, 2-Column Wizard, Cards)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 445  
+**Status:** PASS (23/23 PASS on `scripts/verify_3part_overhaul.cjs`, zero regressions on all master suites)
+
+### Why
+- Overhaul Live Test Sessions UI based on user design requirements:
+  1. Simplify Readiness Matrix to show all themes simultaneously without theme-filtering dropdown, using standard status colors.
+  2. Redesign Open Session Wizard into a roomy 2-column layout (Left: Target Batch, Answering Mode pills, Duration Allocation; Right: Enrolled Students with functional Select All/None bypass).
+  3. Polish Theme Cards with uniform >=11px typography, CSS color variables, and clean layout.
+
+### Changed
+1. **`js/admin/tests-access.js` (Readiness Matrix)**:
+   - Replaced single-theme table with unified multi-theme table showing columns for all active themes simultaneously.
+   - Enforced user-specified status color palette: Passed = Pure Green (`--grade-a`), Ready = Pure Yellow (`--grade-c`), Incomplete = Pure Red (`--grade-e`).
+   - Removed obsolete `#matrix-theme-filter` dropdown and its event listeners.
+2. **`js/admin/tests-access.js` (Open Session Wizard Modal)**:
+   - Expanded modal width to 820px with 2-column layout.
+   - Left Column: Target Batch selector, Answering Mode selectors (Words: Typing / MC / Voice; Phrases: Chips / Typing / Voice), and auto-calculated duration (`questions * 1.5` min).
+   - Right Column: Enrolled Students with search, alphabetical sorting, and fixed Select All/None logic for Tutor Override.
+   - Standardized all text to minimum 11px (eradicated `0.75rem` / small text).
+3. **`js/admin/tests-access.js` & `js/admin/app.js` (Typography & Cache)**:
+   - Elevated theme card metadata and readiness badges to >= 11px.
+   - Wired CSS variables for all badge colors.
+   - Bumped cache busters to `tests-access.js?v=20261113_v441` in `js/admin/app.js`.
+4. **Automated Verification**:
+   - Authored `scripts/verify_3part_overhaul.cjs` verifying 23 layout and behavioral invariants: 100% PASS.
+
+---
+
+## [2026-11-13 07:44] — Phase 444: Vocabulary Vault Sorting, Blueprint Truncation & Pure Blue Spectrum Overhaul
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 444  
+**Status:** PASS (100% PASS on `scripts/verify_vault_sorting_and_all_truncation.mjs`)
+
+### Why
+- Enable interactive column sorting in Vocabulary Vault with LEX-CD coordinates sorting and searchability.
+- Eradicate severe text truncation on Test Blueprint (`Topic Name` clipped under `table-layout: fixed`) and Theme Manager.
+- Enforce the Pure Blue Spectrum for all word types, completely eliminating alarm red `#FF0000` from Proverbs.
+- Standardize Blueprint Exam Status to Pure Green (`#4ade80`), eradicating rogue purple badges.
+
+### Changed
+1. **`js/admin/vocab-vault.js` Interactive Sorting & Coordinate Attachment**:
+   - Attached `w.lex_code = lexCode` as a first-class property for direct alphanumeric sorting and query filtering.
+   - Built sortable `<thead>` headers with click listeners and `▲`/`▼` indicators across `LEX-CD`, `THEME`, `TOPIC`, `TYPE`, `INDONESIAN`, `ENGLISH`.
+   - Enhanced `#vault-search` filter predicate to support instant LEX-CD coordinate lookups.
+2. **Pure Blue Spectrum Palette & Visual Hierarchy**:
+   - Mapped all word types strictly within blue hues: Noun/Idiom (`#60a5fa`), Verb/Proverb (`#818cf8`), Adjective/Expression (`#38bdf8`), Adverb/Phrase (`#93c5fd`), Vocab (`#a5b4fc`).
+   - Standardized Exam Status to `#4ade80` (Pure Green) and elevated row text contrast (`ENGLISH` bold white, `INDONESIAN` soft slate).
+   - Applied Zero-Dimming (`#334155`) for empty breakdown counts in Theme Manager.
+3. **Colgroup Geometry & Truncation Eradication**:
+   - Injected explicit `<colgroup>` to `#blueprint-matrix-table` expanding `Topic Name` to 290.98px with 0 truncation.
+   - Injected explicit `<colgroup>` to `#theme-manager-flat-table` expanding `TOPIC NAME` to 377.89px with 0 clipping.
+   - Injected `<colgroup>` to `#vault-table` for balanced column allocation.
+4. **Automated Verification**:
+   - Authored and verified `scripts/verify_vault_sorting_and_all_truncation.mjs` with Playwright screenshot artifacts.
+
+---
+
+## [2026-11-13 07:40] — Phase 443: Central Question Bank DataGrid Migration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 443  
+**Status:** PASS (18/18 checks passed on `scripts/verify_question_bank_datagrid.mjs`, `npm.cmd test` 100% PASS across 22 test suites)
+
+### Why
+- Advance the Master Table Architecture Standardization & DataGrid Migration roadmap by transitioning the Central Question Bank in `js/admin/class.js` from an ad-hoc HTML table to the unified `DataGrid` engine.
+- Deliver persistent column widths via `localStorage`, click-to-sort headers with custom topic sorter, and responsive Flex Primary space distribution.
+
+### Changed
+1. **`js/admin/class.js` DataGrid Integration**:
+   - Refactored `renderCentralQuestionBank()` to instantiate `DataGrid` (`tableId: 'question-bank-grid'`) with `autoFitOnMount: false`.
+   - Calibrated 5 fixed columns (`TOPIC` 140px, `WORD TYPE` 110px, `ACCEPTED ANSWERS` 220px, `STATUS` 80px, `ACTIONS` 90px).
+   - Applied Flex Primary Column pattern (§TABLE-FLEX-PRIMARY) to `question_text` (`minWidth: '240px'`, no fixed width).
+2. **Filtering, Search & Sort Harmonization**:
+   - Integrated live query search across question text, accepted answers array, and topic names.
+   - Built custom `sortComparator` for alphabetical sorting on nested topic objects.
+   - Preserved Master Edit Mode discipline (`.edit-mode-only` on mutation action buttons).
+3. **Governance & Test Invariants**:
+   - Registered Central Question Bank under §TABLE-FLEX-PRIMARY in `.agents/rules/ui-invariants.md`.
+   - Authored automated verification suite `scripts/verify_question_bank_datagrid.mjs` (18 assertions).
+   - Added to `package.json` test script.
+
+---
+
+## [2026-11-13 03:15] — Phase 442: Activity & Audit Log DataGrid Migration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 442  
+**Status:** PASS (16/16 checks passed on `scripts/verify_audit_log_datagrid.mjs`, `npm.cmd test` 100% PASS across 21 test suites)
+
+### Why
+- Continue the Master Table Architecture Standardization & DataGrid Migration roadmap by migrating the Activity & Audit Log from an ad-hoc HTML table to the unified `DataGrid` engine.
+- Provide persistent column resizing, click-to-sort headers, default reverse-chronological ordering, and viewport-responsive Flex Primary Column spacing.
+
+### Changed
+1. **`js/admin/desk.js` DataGrid Integration**:
+   - Replaced string concatenation table in `renderAuditLog()` with `new DataGrid`.
+   - Explicitly configured `tableId: 'audit-logs-grid'` with `autoFitOnMount: false` and `pageSize: 1000`.
+   - Calibrated 4 fixed columns (`created_at` 170px, `actor_role` 130px, `action` 180px, `entity_type` 120px) and designated `new_value` / DETAILS as the Flex Primary column (`minWidth: '260px'`, no fixed width).
+2. **Filtering & Search Harmonization**:
+   - Preserved category filtering (`AUTH`, `CRUD`, `CONFIG`, `SECURITY`) and realtime query search by wiring them cleanly to `auditGrid.filteredData`, `auditGrid.sortData()`, and `auditGrid.render()`.
+3. **Governance & Test Invariants**:
+   - Registered Audit Log in `.agents/rules/ui-invariants.md` §TABLE-FLEX-PRIMARY.
+   - Added automated verification suite `scripts/verify_audit_log_datagrid.mjs` (16 assertions).
+   - Added to `package.json` test script.
+
+---
+
+## [2026-11-13 03:09] — Phase 443: Admin Workspace Header, Sub-Header, and Footer Spatial & Typography Standardization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 443  
+**Status:** PASS (100% PASS on `scripts/test_admin_headers_footers_standardization.mjs` and full `npm.cmd test` suite)
+
+### Why
+- Standardize all headers, sub-headers, and footers across the desktop admin workstation (`admin.html`).
+- Eliminate visual ballooning on table summary rows (`tfoot`), lock admin topbar strictly to 50px across all viewports (purging media query overrides), enforce universal 50px modal headers and footers, and eradicate all legacy sub-11px font sizes (`0.65rem`, `10px`).
+
+### Changed
+1. **Table Summary Row (`tfoot`) Separation & 32px Standardization (`css/admin.css`)**:
+   - Separated `.workspace-lower-panel` (kept at `50px !important`) from table `tfoot` elements.
+   - Enforced `height: 32px !important; min-height: 32px !important; max-height: 32px !important; line-height: 32px !important;` on `.table-wrap table tfoot`, `.datagrid-table tfoot`, `#blueprint-matrix-table tfoot`, and summary cells.
+2. **Admin Topbar Strict 50px Lock Across All Breakpoints (`css/admin.css`)**:
+   - Purged rogue `@media (max-width: 900px)` override (`height: auto; min-height: 56px;`).
+   - Locked `.admin-topbar` strictly to `50px !important` on both desktop and responsive viewports.
+3. **Admin Modal Header & Footer 50px Standardization (`css/admin.css`)**:
+   - Enforced strict `50px` height lock on `.modal-header`, `.modal-header-bordered`, and `.modal-header-add-class`.
+   - Enforced strict `50px` height lock on `.modal-footer` and `.modal-footer-bordered` with 32px buttons.
+4. **Purged Sub-11px Font in Admin Tables (`css/style.css`, `css/admin.css`)**:
+   - Replaced legacy `0.65rem` in `.table-compact thead th` with `12px Inter 700`.
+   - Replaced `10px` in `#blueprint-matrix-table thead tr.bp-super-header-row th` with `12px Inter 800`.
+   - Replaced `20px` height and `11px` font in `#class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th` with standard `24px` height and `12px Inter 700`.
+5. **Verification**:
+   - Created `scripts/test_admin_headers_footers_standardization.mjs` (5 pillars verified).
+   - Integrated into `package.json` under `"test:admin-spatial"` and `"test"`. All 21 test suites passed 100%.
+
+---
+
+## [2026-11-13 03:08] — Phase 442: Repository Hygiene, Test Artifacts Exclusion & Full Script Consolidation
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 442  
+**Status:** PASS (100% PASS on `npm.cmd run verify:all` across 21 test suites, 48 JS syntax checks, UI spatial checker)
+
+### Why
+- The user authorized Step 1 of the repository streamlining audit: eliminating loose screenshot test artifacts from the root, excluding test artifacts in `.gitignore`, and consolidating one-off legacy scripts to clean the workspace.
+
+### Changed
+1. **Loose Test Dumps Deleted**:
+   - Safely deleted `test_theme_manager_live.png` and `test_vocab_live.png` from the root repository.
+2. **Git Artifact Hygiene (`.gitignore`)**:
+   - Added `tests/artifacts/` to `.gitignore`, preventing Playwright screenshot dumps from polluting `git status`.
+3. **Comprehensive Script Archival (`scripts/archive/`)**:
+   - Relocated 139 legacy one-off scripts (visual captures, comparison board generators, ad-hoc JSONs, old patches, and historical test scripts) to `scripts/archive/`.
+   - Preserved exactly 38 active and protected scripts in `scripts/`: 35 declared in `package.json`, `verify_roster_flex_layout.mjs`, and 2 P2P conversation test scripts.
+4. **Tooling & SSOT Test Synchronization**:
+   - Registered `"test:roster:flex": "node scripts/verify_roster_flex_layout.mjs"` in `package.json`.
+   - Generalized Section check in `scripts/test_universal_color_token_ssot.mjs` to dynamically match `Universal Single-Source Color Governance & One-Touch Propagation Invariant`.
+5. **Verification**:
+   - Full `npm.cmd run verify:all` passed with 100% PASS across 21 test suites, 48 JS syntax checks, and UI spatial checker.
+
+---
+
+## [2026-11-13 03:07] — Phase 441: Flex Primary Column Governance & Class Tests Grid Calibration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 441  
+**Status:** PASS (15/15 rules verified via `scripts/verify_phase441_static.cjs`, `npm.cmd test` 100% PASS)
+
+### Why
+- Establish unified table architecture standard to eliminate viewport-dependent horizontal scrolling, ensure consistency across all DataGrid instances, and provide a roadmap for full table migration across TopsCore LMS.
+
+### Changed
+1. **Universal Flex Primary Governance (`.agents/rules/ui-invariants.md`)**:
+   - Codified §TABLE-FLEX-PRIMARY: Rules for converting ad-hoc HTML tables into standard DataGrid with flex-responsive primary content columns.
+2. **`classes-management.js` DataGrid Calibration**:
+   - Explicitly configured `tableId: 'class-learning-path-grid'` and `autoFitOnMount: false` for stable layout persistence.
+   - Calibrated 11 columns with fixed pixel widths to guarantee column stability, while applying Flex Primary pattern to the `TITLE` column (min-width 220px, no max-width) to absorb viewport space gracefully.
+
+---
+
+## [2026-11-13 02:10] — Phase 440: SSOT Color Governance & Sleek Modern Card Action Buttons
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 440  
+**Status:** PASS (100% PASS on `scripts/verify_ssot_colors_wireframe_buttons.mjs`, all 17 checks passed)
+
+### Why
+- The user requested strict adherence to Rule 2.10 (SSOT Color Governance) across green, yellow, and red action buttons, and commanded the eradication of tacky neon arcade aesthetics in favor of a sleek, compact, and modern professional workstation design.
+
+### Changed
+1. **CSS Syntax Repair (`css/admin.css`)**:
+   - Removed stray unmatched closing brace `}` at line 849 and duplicate dangling block at line 7149, restoring 100% brace balance (depth: 0).
+2. **SSOT Color Governance Alignment (Rule 2.10)**:
+   - **Semua Merah Ikut Grade E**: Converted `.btn-wireframe-close` and `.box-wireframe-locked` from Tailwind `#ef4444` to `var(--grade-e, #ff0000)` and `rgba(var(--grade-e-rgb, 255, 0, 0), ...)`.
+   - **Semua Kuning Ikut Grade C**: Converted `.card-add-time-menu` and popovers from `#ffe600` to `var(--grade-c, #ffff00)` and `rgba(var(--grade-c-rgb, 255, 255, 0), ...)`.
+   - **Semua Hijau Ikut Grade A**: Converted time adjustment options (+5m..+30m) from Tailwind `#10b981` / `#34d399` to `rgba(var(--grade-a-rgb, 0, 192, 0), ...)`.
+3. **Sleek Modern Card Redesign**:
+   - Replaced chunky 1.5px borders and loud neon glowing drop-shadows with refined 1px hairline borders (`rgba(..., 0.5)` resting, solid on hover) and clean matte depth.
+   - Refactored `.btn-wireframe-live-view` from loud royal blue box to an elevated tactile dark slate gradient (`#1e293b` to `#0f172a`) with subtle tactical sky-blue accent.
+   - Enforced `width: 100% !important;` on `.btn-wireframe-edit-time` to eliminate popover wrapper width collapse.
+4. **Asset Cache Invalidation**:
+   - Updated `admin.html`: `css/admin.css?v=20261113_v434`.
+   - Updated `js/admin/app.js`: `./tests-access.js?v=20261113_v434`.
+
+### Result
+- 100% compliant with Rule 2.10 SSOT Color Governance (Green = Grade A, Yellow = Grade C, Red = Grade E).
+- Eliminated tacky neon fatigue in favor of a compact, sleek, and modern tactical workstation interface.
+
+## [2026-11-13 02:08] — Phase 439: System Streamlining, Script Archival & Ghost Query Elimination
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 439  
+**Status:** PASS (100% PASS on `npm.cmd run verify:all` across all 20 test suites, 48 JS syntax checks, UI spatial checker)
+
+### Why
+- The user requested a system-wide audit and streamlining to eliminate unused database calls, obsolete debug scripts, and redundant proposals without risking regressions.
+
+### Changed
+1. **Ghost Query Elimination (`js/admin/app.js`)**:
+   - Removed dead network query `adminFetchAll('test_results', 'final_score').catch(() => [])` in `renderTestHub()`. The `test_results` table was safely dropped in migration `20261109020000_master_legacy_cleanup.sql`.
+   - Replaced dead calculation with clean fallback `let passRate = "—";` and removed obsolete loop filtering.
+2. **Repository & Plan Pruning (`docs/plans/`)**:
+   - Safely purged 7 obsolete duplicate `(rev 2)` plan markdown files from earlier sessions that have since been superseded.
+3. **Debug Script Archival (`scripts/archive/`)**:
+   - Created `scripts/archive/` and relocated 34 temporary, one-off inspection and debug scripts (`analyze_2px.mjs`, `debug_*`, `inspect_*`, `find_*`, etc.) to keep the active `scripts/` directory clean and dedicated solely to active tooling and automated tests.
+4. **Preserved Boundaries**:
+   - P2P Conversation system files left completely intact per explicit user decision ("biarkan dulu").
+   - Standing rules 0.1.1 (no commit/push until user command) and 0.1.2 (no powershell file manipulation) strictly honored.
+
+### Result
+- Zero ghost database queries; cleaner network profile on Admin Test Hub.
+- 100% test integrity maintained across all 20 test suites, 48 JS files, and spatial checker.
+
+---
+
+## [2026-11-13 01:54] — Phase 438: Student Roster Flex Primary Layout & Initial Load Column Proportion
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 438  
+**Status:** PASS (13/13 Playwright checks; 100% PASS on `npm.cmd test` across all 20 test suites, 48 JS syntax checks, UI spatial checker)
+
+### Why
+- User observed that the Student Roster table had disproportionate columns on first entry (names truncated `Abdul Ba...`, footer truncated `★ BATC...`), but only fixed itself after clicking a column header. And every time the user navigated away and returned, the problem recurred from scratch.
+
+### Root Cause
+- `autoFitOnMount: true` on `new DataGrid(...)` triggered `autoFitColumns(false)` on every mount.
+- Canvas 2D measurement excluded footer summary cells (`★ BATCH AVERAGE (16 Students)` = 215px), causing the Name column to be mis-measured at ~180px.
+- When any column header was clicked, `renderHeaders()` regenerated `<col>` from original definitions (320px), instantly "fixing" the display — but this was never persisted (`persist: false`), so the next mount repeated the cycle.
+
+### Changed
+1. **`js/admin/student-management.js`**:
+   - Set `autoFitOnMount: false` permanently.
+   - Removed `width: '320px'` from `sortName` (Name) column, keeping only `minWidth: '220px'` — making Name the **Flex Primary Column** that absorbs all remaining container width via native `table-layout: fixed` behavior.
+   - Recalibrated all 11 fixed columns: `level: 46px`, `photo: 42px`, `gender: 68px`, `dob: 96px`, `age: 66px`, `education: 94px`, `exam1–4: 74px each`, `status: 84px`. Total: 792px fixed; Name gets ~350px on 1366px screen.
+   - Recalibrated dynamic exam column widths (all 4 exam cols from 85px → 74px per class).
+2. **`js/admin/datagrid.js`**:
+   - Updated `calculateColumnAutoWidth(th, cells, footerCells)` to accept and measure footer summary row cells, preventing future under-sizing.
+   - Updated `autoFitColumns()` to gather `tfoot tr` and `.datagrid-summary-row` cells and pass them as third argument.
+   - Updated double-click handler in `DataGrid.initColumnResize` and `window.initColumnResize` to pass footer cells.
+   - `<table class="datagrid-table">` now renders with `id="${this.tableId || ''}"` for consistent `localStorage` key alignment.
+3. **`scripts/verify_roster_flex_layout.mjs`** (new):
+   - 3-scenario Playwright suite: (1) initial load, (2) after sort click, (3) navigate away → back.
+   - Validates zero truncation on all 16 body rows, zero footer truncation, zero horizontal scroll in every scenario.
+
+### Result
+- Name column: **350px** on 1366px viewport (zero truncation, zero dead space).
+- Table width: **1142px** vs container **1144px** — zero horizontal scrollbar.
+- Navigation consistency: columns remain stable across unlimited menu switches without any interaction required.
+
+---
+
+
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 437  
+**Status:** PASS (All 6 pillars verified via `scripts/test_universal_color_token_ssot.mjs`; 100% PASS on `npm.cmd run verify:all` across all 20 test suites)  
+
+### Why
+- The user mandated an authoritative, single-source-of-truth color architecture across TopsCore LMS where **"rubah satu, maka rubah semua"** (change once, propagate everywhere) is fully realized:
+  1. **Semua Merah Ikut Warna E (`--grade-e` / `#ff0000`)**: Semua elemen bernuansa merah (gagal ujian, delete/purge, bahaya, alert, required asterisk `*`, indikator salah) merujuk pada token Grade E.
+  2. **Semua Kuning Ikut Warna C (`--grade-c` / `#ffff00`)**: Semua elemen bernuansa kuning (nilai cukup, peringatan, draft, latency warning, popover penyesuaian waktu) merujuk pada token Grade C.
+  3. **Semua Hijau Ikut Warna A (`--grade-a` / `#00c000ff`)**: Semua elemen bernuansa hijau (nilai sangat baik, sukses, lulus, online telemetry, published status, tombol konfirmasi aman) merujuk pada token Grade A.
+  4. **Eksklusivitas Star Pink (`#ff2d87` / `--grade-star`)**: Tetap 100% mutlak eksklusif untuk nilai bintang (100% Excellent).
+  5. **Warna Sistem Non-Semantik**: Chrome antarmuka tetap menggunakan token sistem yang tenang dan profesional (Dark Navy, Slate, Tactical Blue `#38bdf8`, Indigo `#6366f1`).
+  6. **Purge Hardcoded Hex**: Mengganti 146 titik hardcoded hex di JavaScript dan ~35 di CSS menjadi referensi variabel CSS terpusat.
+  7. **Pembaruan Aturan Tata Kelola**: Meratifikasi aturan ini ke dalam `AGENTS.md`, `.agents/rules/ui-invariants.md`, dan `.antigravityrules` dengan menetapkan percakapan ini sebagai aturan utama.
+
+### Changed
+1. **`AGENTS.md`**:
+   - Updated Rule 2.10 with *SSOT & One-Touch Global Propagation Protocol ("Rubah Satu Maka Rubah Semua")*: All Red -> Grade E, All Yellow -> Grade C, All Green -> Grade A.
+2. **`.agents/rules/ui-invariants.md`**:
+   - Added Section 15: *Universal Single-Source Color Governance & One-Touch Propagation Invariant*.
+3. **`.antigravityrules`**:
+   - Added Rule 26: *UNIVERSAL SINGLE-SOURCE COLOR PROPAGATION ("RUBAH SATU MAKA RUBAH SEMUA")*.
+4. **`css/style.css`**:
+   - Bounded `--clr-success`, `--clr-warning`, `--clr-danger`, `--eval-correct`, `--eval-partial`, `--eval-incorrect` in `:root` directly to `--grade-a`, `--grade-c`, `--grade-e`.
+   - Added universal utility classes: `.text-fail`, `.text-warning`, `.text-success`, `.border-fail`, `.border-warning`, `.border-success`, `.bg-fail`, `.bg-warning`, `.bg-success`.
+5. **`css/admin.css`**:
+   - Bound `--fm-accent-pitch`, `--fm-accent-amber`, `--fm-accent-crimson` in `:root` to `var(--grade-a)`, `var(--grade-c)`, `var(--grade-e)`.
+   - Tokenized all outline action buttons (`.btn-wireframe-normal`, `.btn-wireframe-late`, `.btn-wireframe-remidi`, `.btn-wireframe-edit-time`).
+6. **JavaScript Modules (`js/admin/*.js`, `js/dashboard.js`, `js/test.js`)**:
+   - Tokenized all raw hardcoded hex literals across `app.js`, `desk.js`, `tests-access.js`, `student-management.js`, `student-registration.js`, `class-analytics.js`, `auto-gen-modal.js`, `tests-management.js`, `admin-deck.js`, `class.js`, `vocab-vault.js`, `dashboard.js`, and `test.js`.
+7. **Automated Verification**:
+   - Created `scripts/test_universal_color_token_ssot.mjs` verifying all 6 pillars of SSOT color governance.
+   - Added `"test:color-ssot"` to `package.json` and integrated into `"test"` and `"verify:all"`.
+   - Verified 100% PASS across all 20 test suites and 48 JS syntax checks.
+
+## [2026-11-13 01:20] — Phase 436: Anti-Cheat Mobile Warning Redesign (Ultra Clean Equal-Spacing Card - Option B)
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 436  
+**Status:** PASS (All automated verification checks in `scripts/verify_anticheat_modal_live.mjs` passed 100%)  
+
+### Why
+- The user requested redesigning the anti-cheat warning overlay on the student test screen (`test.html`) to focus on the mobile smartphone (HP portrait) perspective:
+  1. Language: English only, eliminating long cluttered paragraphs.
+  2. Atmosphere: Fullscreen glowing red alert background with audio siren warning preserved.
+  3. Format: Contained inside a centered dark slate card (`.cheat-box`) as in the original layout.
+  4. Content: Top strike text `{ STRIKE 1 / 10 }`, large countdown number (10s) without the siren icon, and a large thumb-friendly return button.
+  5. Layout: Equal spacing (`gap: 32px`) identically separating all three internal elements, with subtext under the button removed.
+  6. Color Compliance: 100% adherence to project Rule 2.10 ("Semua Merah Ikut Grade E" — `var(--grade-e)` / `var(--grade-e-rgb)`).
+  7. Proportion: Option B (Bigger & More Authoritative) selected to avoid the card feeling sunken on mobile screens.
+
+### Changed
+1. **`test.html`**:
+   - Refactored `#cheat-overlay` DOM into a 3-tier card structure:
+     - Element 1: `{ STRIKE 1 / 10 }` pill (`#cheat-strikes-badge`).
+     - Element 2: Countdown group (Ring `#cheat-timer-count` + `Seconds to Auto-Submit`).
+     - Element 3: Large button `#dismiss-cheat-btn` (`RETURN TO TEST`).
+   - Removed deprecated siren icon and tap hint subtext.
+   - Bumped cache query strings to `v=20261113_v174`.
+2. **`css/test.css`**:
+   - Implemented Option B styling:
+     - `#cheat-overlay`: `radial-gradient` emergency red alert background using `rgba(var(--grade-e-rgb), 0.92)`.
+     - `.cheat-box`: `max-width: 365px`, `background: #0f172a`, `border-radius: 28px`, `padding: 36px 24px`, equal spacing `gap: 32px`.
+     - `.cheat-strikes-badge`: `border: 2px solid var(--grade-e)`, `color: var(--grade-e)`, `font-size: 1.35rem`, bold 900.
+     - `.cheat-countdown-circle`: `120px` diameter with ring `5px solid var(--grade-e)`, font `3.85rem` bold 900 white text.
+     - `.cheat-dismiss-btn`: `height: 62px`, `border: 2.5px solid #ffffff`, font `1.25rem` bold 900, tactile active feedback.
+3. **`css/dashboard.css`**:
+   - Purged obsolete `#cheat-overlay` and `.cheat-box` definitions that previously caused jarring strobe flashing.
+4. **`js/test.js`**:
+   - Updated `triggerCheatAlert()` to format strike badge text as `{ STRIKE ${cheatStrikes} / ${MAX_STRIKES} }` (or `{ FINAL WARNING: 10 / 10 }`).
+   - Ensured police siren audio (`startPoliceSiren()`) sounds during alert.
+   - Fixed countdown duration to 10s.
+   - Configured `#dismiss-cheat-btn` to stop siren and resume fullscreen instantly.
+5. **`sw.js`**:
+   - Bumped cache version to `topscore-cache-option-a-v109` and asset version hashes to `v=20261113_v174`.
+6. **`scripts/verify_anticheat_modal_live.mjs`**:
+   - Automated Playwright verification asserting equal spacing (`gap1 === gap2 === 32px`), Grade E computed colors (`rgb(255, 0, 0)`), button dismissal, and zero horizontal/vertical overflow on 390×844 and 360×640 mobile viewports.
+
+## [2026-11-13 01:15] — Phase 435: Vocabulary Vault Column Consolidation and Truncation Eradication
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 435  
+**Status:** PASS (All automated verification checks in `scripts/verify_no_vault_truncation.mjs` passed 100%)  
+
+### Why
+- User identified horizontal table crowding and text truncation across Vocabulary Vault screens:
+  1. Redundant columns (`INST`, `PROG`, `LVL`, `CODE`) duplicating coordinates already captured in `LEX-CD` (`3D1-W01`).
+  2. Multi-word phrases and idioms truncated (`...`) in `vault-table` because the 8 metadata columns squeezed `ENGLISH` into a narrow ~200px slot.
+  3. Artificial ceiling (`max-width: 130px`) on `TOPIC NAME` in Theme Manager causing long topic names like *"Review, Evaluation & Final Rehearsal"* to truncate.
+
+### Changed
+1. **`js/admin/vocab-vault.js`**:
+   - Consolidated `vault-table` headers and body rows to start directly with `LEX-CD`, eradicating redundant `INST`, `PROG`, `LVL`, and `CODE` columns (saving 263px horizontal width).
+   - Reallocated 263px saved width to `ENGLISH` (`min-width: 360px; width: 35%`) and `INDONESIAN` (`min-width: 280px; width: 30%`).
+   - Adjusted empty state `colspan` to 7.
+   - Removed hardcoded `max-width: 130px;` on `TOPIC NAME` in Theme Manager (now `min-width: 240px; width: auto;`) and `max-width: 120px;` on `THEME` (now `min-width: 140px;`).
+   - Slimmed down the 8 breakdown count columns from 40px to 30px each (saving 80px horizontal space).
+2. **`scripts/verify_no_vault_truncation.mjs`**:
+   - Automated Playwright verification asserting clean 6-column header layout starting with `LEX-CD`, zero text truncation (`scrollWidth <= clientWidth`) on phrases, and complete topic name rendering without ellipses.
+
+## [2026-11-13 01:05] — Phase 434: Canonical System Palette Architecture & Star Exclusivity
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 434  
+**Status:** PASS (All automated verification checks in `scripts/verify_canonical_palette_and_star_exclusivity.mjs` and `npm test` passed 100%)  
+
+### Why
+- The user directed that the platform must use its authoritative, canonical grading palette directly across system alerts, states, and telemetry rather than inventing arbitrary intermediary or off-brand shades.
+- Non-negotiable requirements:
+  1. Star (★ 100%) is strictly exclusive to Electric Pink (`#ff2d87`); all legacy mint/green gradient stops (`#86efac`, `#006400`) corrupting Star avatars were completely purged.
+  2. Student Gate step badges, borders, and cards are aligned to Tactical System Blue (`#38bdf8`) on dark navy canvas (`#0a0a1a`).
+  3. Student Roster promotion action button `[🚀 NEXT]` is styled with Tactical Sky Blue (`#0284c7`, border `#38bdf8`, crisp white text `#ffffff`).
+  4. Section 3.6 (Quick Add Time `#ffe600` & Vocab Vault `#FFFF00`) is preserved as-is per direct user instruction.
+  5. System alerts and states map to platform canonical colors: Merah Fail (`#ff0000`), Kuning Enough (`#ffff00`), Green Very Good (`#00c000ff`), and Orange Less (`#ff8c00`).
+
+### Changed
+1. **`js/dashboard.js`, `js/result.js`, `js/grading.js`**:
+   - Replaced legacy green gradient stops (`#86efac`, `#006400`) with pure Electric Pink gradient (`linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`) across Star avatar containers and pure star vector badges.
+   - Cleaned `STAR_THEME` fallback in `js/grading.js` to ensure dark `#be185d`, light `#f472b6`, and glow `rgba(255, 45, 135, 0.5)`.
+2. **`css/admin.css`, `css/dashboard.css`, `css/result.css`**:
+   - Enforced pure Electric Pink (`linear-gradient(135deg, var(--grade-star) 0%, #be185d 100%)`) across `.avatar-container`, `.form-pill.grade-star`, and `.grade-circle-star`.
+   - Purged rogue Star Pink backgrounds from next test / next assessment start buttons, standardizing them to Tactical Sky Blue (`linear-gradient(135deg, #0284c7 0%, #2563eb 100%)`, border `#38bdf8`).
+3. **`css/auth.css`**:
+   - Aligned `.cascade-section.selected .cascade-step-num`, `.opt-card:hover`, `.opt-card.active`, `.pin-digit:focus`, and `.cascade-selection-label` to Tactical System Blue (`#38bdf8`).
+4. **`js/admin/student-management.js`**:
+   - Standardized `#btn-promote-all-eligible` to Tactical Sky Blue (`background:#0284c7; border:1px solid #38bdf8; color:#ffffff;`).
+   - Cleaned roster summary row footer top border from rogue Star Pink to sleek neutral `#334155`.
+   - Replaced Star Pink in "No Remediation Required" and "Configured PIN" with Green Very Good (`TOPSCORE_COLORS.A`).
+5. **`js/admin/app.js`, `js/admin/desk.js`, `js/admin/crud-modals.js`, `js/admin/modules.js`**:
+   - Purged rogue Star Pink references from admin control buttons (`#cpanel-auto-gen-phrases` -> Brand Indigo `#6366f1`).
+   - Cleaned duplicate resolver candidate rows to reference `--grade-a-rgb` (`#00c000ff`).
+   - Standardized desk scan and recalibration action buttons to Tactical Sky Blue (`#0284c7`).
+6. **`scripts/verify_canonical_palette_and_star_exclusivity.mjs`**:
+   - Authored automated verification suite verifying AST syntax, zero green-star blend, student gate styling, promotion button, summary row footer, and Section 3.6 preservation.
+
+## [2026-11-13 00:52] — Phase 432: Class Hub Live Test Sessions Dynamic Curriculum, Batch Readiness Radar & Table Harmonization
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 432  
+**Status:** PASS (All automated verification checks in `scripts/verify_test_sessions_overhaul.mjs` passed 100%)  
+
+### Why
+- The user approved the implementation plan [`docs/plans/20261113 - Class Hub Test Sessions Dynamic Curriculum and Batch Readiness Plan.md`](file:///d:/Drives/Tutor%20Tampan/TopsCore/docs/plans/20261113%20-%20Class%20Hub%20Test%20Sessions%20Dynamic%20Curriculum%20and%20Batch%20Readiness%20Plan.md) to modernize the Live Test Sessions Controller under Class Hub.
+- Enhancements eliminate hardcoded theme artifacts, enforce Universal Dark Badge Text (`#0F172A`) per Rule 2.10, harmonize table cells with single-line `white-space: nowrap !important;`, and upgrade standby wireframe styling to subtle cyan accent.
+
+### Changed
+1. **`js/admin/tests-access.js`**:
+   - Upgraded topic extraction to query `directTopicName` from `topics.name`, `payload.topic_name`, exam titles, and task definitions.
+   - Replaced hardcoded `Batch SH-26` in Live Monitor Modal placeholder with clean real-time status.
+   - Dynamic module description in live monitor modal header: cleanly displays `Words & Phrases Modules`, `Words Module`, `Phrases Module`, or `Tasks Module` based on actual class contents.
+   - Enforced Universal Dark Badge Text (`#0F172A`) across all grade badges in Batch Student Readiness Matrix table (Rule 2.10).
+   - Enforced 12px table typography and `white-space: nowrap !important;` on all table headers and data cells (Rule 2.20).
+2. **`css/admin.css`**:
+   - Refined `.box-wireframe-standby` with subtle translucent slate background (`rgba(15, 23, 42, 0.8)`), cyan border accent (`rgba(56, 189, 248, 0.25)`), and clean `#e2e8f0` text.
+   - Preserved solid red `#e60000` exclusively for active session close actions.
+3. **`scripts/verify_test_sessions_overhaul.mjs`**:
+   - Automated regression test suite validating dynamic curriculum extraction, Universal Dark Badge Text, table nowrap, and spatial invariants.
+4. **Automated Verification**:
+   - `node scripts/verify_test_sessions_overhaul.mjs`: 100% PASS.
+   - `node scripts/check_all_js_syntax.cjs`: 100% PASS (48 files).
+   - `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+
+## [2026-11-13 01:00] — Phase 430: Peer-to-Peer 1-Hour Conversation Module with AI Evaluation
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 430  
+**Status:** PASS (All 47 automated verification checks in `scripts/verify_p2p_conversation_module.mjs` passed 100%)  
+
+### Why
+- Authentic conversational fluency requires sustained dialogue, turn-taking, active listening, and structured debate under an interactive pacing HUD.
+- The approved plan [`docs/plans/20261112 - Peer-to-Peer 1-Hour Conversation Module with AI Evaluation.md`](file:///docs/plans/20261112%20-%20Peer-to-Peer%201-Hour%20Conversation%20Module%20with%20AI%20Evaluation.md) specified a peer-to-peer 60-minute discussion module with $0 media server egress and multi-dimensional 5-Pillar AI evaluation.
+
+### Changed
+1. **`conversation.html` & `css/conversation.css`**:
+   - Single-screen 100vh lock (`overflow: hidden`), strict 10px container gap, 50px lower control panel height, and 50px top navigation bar.
+   - Built 4-stage indicator HUD, 60-minute synchronized countdown timer, dual VU meters, real-time speaking share balance gauge, discussion scenario guidelines, dynamic vocabulary chips, and live synchronized dialogue feed.
+2. **`js/webrtc-call.js`**:
+   - Direct WebRTC `RTCPeerConnection` with Opus audio and STUN negotiation.
+   - Connected Web Audio API `AudioContext` and `AnalyserNode` monitoring real-time sound levels for local and remote speakers with active speaking time accumulation.
+3. **`js/conversation-pacing.js`**:
+   - 4-Stage discussion pacing engine: Stage 1 Warm-up (10m), Stage 2 Deep Dive & Debate (25m), Stage 3 Consensus (15m), Stage 4 Debrief (10m).
+   - Continuous speech recognition buffer, target vocabulary detection, turn-taking visual cues, and speaking share calculations.
+   - Serialized low-egress transcript JSON (0.70 KB, well under 50 KB ceiling per Rule 2.12).
+4. **`js/conversation-eval.js` & `supabase/functions/evaluate-conversation/`**:
+   - Implemented 5-Pillar evaluation rubric: 1. Fluency & Cadence (20%), 2. Vocabulary Mastery (25%), 3. Grammatical Accuracy (20%), 4. Topic Relevance (20%), 5. Turn-Taking Balance (15%).
+   - Authoritative grading scale mapping per Rule 2.10 (★ Electric Pink `#ff2d87`, A Pure Green `#00c000`, B `#95ff00`, C `#ffff00`, D `#ff8c00`, E `#ff0000`).
+   - Relational persistence into Supabase `attempts` and `attempt_answers`.
+5. **`js/test.js` & `dashboard.html`**:
+   - Added automatic redirection in `test.js` to `conversation.html` for conversational module tests.
+   - Added direct "🎙️ Oral Room" quick-action launcher in student dashboard header.
+6. **`supabase/migrations/20261113000000_conversation_sessions.sql`**:
+   - Authored PostgreSQL schema and RLS policies for conversation sessions and room codes.
+7. **`scripts/verify_p2p_conversation_module.mjs`**:
+   - Authored comprehensive verification suite passing 47/47 checks across unit tests, spatial invariants, low-egress payload, and Playwright headless Chrome UI flows.
+
+## [2026-11-13 00:45] — Phase 433 Hotfix: Class Hub Test Sessions Eligibility Runtime Error Resolution
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 433 Hotfix  
+**Status:** PASS (Node.js syntax check & `scripts/verify_runtime_eligibility_fix.mjs` passed 100%)  
+
+### Why
+- When opening `#class-hub?tab=test-sessions`, admin console displayed a runtime crash `Failed to load class data: evaluateStudentEligibility is not defined` with `ReferenceError: evaluateStudentEligibility is not defined at tests-access.js:231:23`.
+- Root cause: Lines 231 & 234 called singular `evaluateStudentEligibility(...)` with positional arguments, whereas the authoritative module engine is named `evaluateStudentsEligibility({ ... })` (plural `s`) taking an options object.
+
+### Changed
+1. **`js/admin/tests-access.js`**:
+   - Fixed lines 231 & 243 in `renderClassTestSessions` to call `evaluateStudentsEligibility({ students: activeBatchStudents, theme: themeObj, themeTasks: tasks, wordsTest, phrasesTest, classTests, allAttempts, mode: 'normal' | 'remedial' })`.
+   - Added fail-safe backward-compatibility wrapper `evaluateStudentEligibility(themeOrObj, students, allAttempts, mode, classTests)` before `evaluateStudentsEligibility` declaration to safely intercept any singular/positional invocations.
+2. **`scripts/verify_runtime_eligibility_fix.mjs`**:
+   - Added dedicated verification test validating AST code alignment, object-based evaluation calculation, remedial mode filtering, and positional wrapper compatibility.
+
+## [2026-11-13 00:30] — Phase 433: Class Hub Live Test Sessions Modernization, Program-Level Batch Isolation & Student Readiness Matrix
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 433  
+**Status:** PASS (All 6 automated verification suites in `scripts/verify_test_sessions_redesign.mjs` passed 100%)  
+
+### Why
+- The user requested improvements to the Class Hub Live Test Sessions Controller (`#class-hub` sub-tab `Test Sessions`):
+  1. Converted heavy solid buttons (red, yellow, green) into sleek outline/border-only styling (`border: 1.5px solid ...`).
+  2. Eliminated the 3 bulky top KPI boxes (`TOTAL EXAMS: 4 Themes`, etc.) that consumed ~130px of vertical space, relocating curriculum summary, active batch pulse, and live session status to the unified 50px Lower Sub-Panel (`window.setBottomInfobar`).
+  3. Fixed batch dropdown leakage where batches from other programs (Camp, Sheraton) appeared when viewing Evnikom classes.
+  4. Redesigned theme cards to be compact, modern glassmorphic units featuring dynamic real curriculum titles (e.g. `PUBLIC SPEAKING`, `PODCAST`, etc.) instead of hardcoded strings from other classes, with honest module chips (only Words Exam when Phrases does not exist).
+  5. Populated the 60% empty bottom workspace with the interactive **Batch Student Readiness & Exam Eligibility Matrix Table**.
+
+### Changed
+1. **`js/admin/tests-access.js`**:
+   - Implemented strict program-level batch isolation via `b.program_id === classProgramId`.
+   - Replaced static `THEME_DEFINITIONS` with dynamic theme discovery from `classTests` and real topic name extraction from test titles.
+   - Built real-time Batch Readiness Radar evaluating active batch student quiz completion and rendering counts on `🟢 NORMAL (X)` and `🟡 REMEDI (Y)` buttons.
+   - Streamlined top bar into a single-line toolbar and connected the 50px Lower Sub-Panel via `window.setBottomInfobar(leftHtml, rightHtml, centerHtml)`.
+   - Implemented `renderBatchReadinessMatrix()` and `bindMatrixEvents()` displaying student names, quiz scores with official grade colors, and exam eligibility badges.
+2. **`css/admin.css`**:
+   - Modernized `.btn-wireframe-normal` to sleek outline green (`border: 1.5px solid #00c000; background: rgba(0,192,0,0.08); color: #86efac;`).
+   - Modernized `.btn-wireframe-remidi` to sleek outline yellow (`border: 1.5px solid #ffff00; background: rgba(255,255,0,0.08); color: #fef08a;`) with `.btn-dimmed` when count is 0.
+   - Replaced 54px solid red locked box with discreet `.box-wireframe-standby` (`background: rgba(15,23,42,0.65); border: 1px solid rgba(255,255,255,0.12); color: #94a3b8;`).
+   - Converted `.btn-wireframe-close` and `.btn-wireframe-late` to modern outline styling.
+   - Compacted `.theme-test-card-frame` to ~175px glassmorphic card.
+3. **`scripts/verify_test_sessions_redesign.mjs`**:
+   - Added automated verification script testing all 6 architectural criteria.
+
+## [2026-11-13 00:16] — Phase 431: Test Builder Wizard Orphan Binding Purge & Complete Room Button Sanity
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 431  
+**Status:** PASS (All deep button audits and syntax checks passed 100%)  
+
+### Why
+- The user requested an exhaustive follow-up audit ("ada lagi? coba cek") of all buttons across the room system.
+- An AST-level scanner scanning 534 dynamic buttons and 53 querySelector bindings across all 25 admin modules and student room views identified a latent crash in `js/admin/test-builder.js`:
+  - When the manual assignment step (Step 3) was deprecated in accordance with Rule 2.5 (level auto-assignment), leftover event listener code for `#btn-assign-prev` and `#btn-assign-next` was not removed.
+  - When `renderTestBuilder()` was initialized, `document.getElementById('btn-assign-prev').onclick = ...` threw an unhandled `TypeError: Cannot set properties of null (setting 'onclick')`.
+  - This fatal error halted wizard initialization, preventing the `#btn-publish-prev`, `#btn-save-draft` ("Save as Draft"), and `#btn-publish-test` ("Publish & Freeze Snapshot") buttons from being attached.
+
+### Changed
+1. **`js/admin/test-builder.js`**:
+   - Removed orphan Step 3 event handlers for `#btn-assign-prev` and `#btn-assign-next`.
+   - Restored unhindered execution and event binding for Step 4 navigation (`#btn-publish-prev`), "Save as Draft" (`#btn-save-draft`), and "Publish & Freeze Snapshot" (`#btn-publish-test`).
+2. **`scripts/deep_button_audit.cjs`**:
+   - Built authoritative automated script scanning all 25 modules in `js/admin/`, `dashboard.html`, `test.html`, and `result.html` for unhandled bindings, missing IDs, or dead event listeners.
+3. **Automated Verification**:
+   - `node scripts/deep_button_audit.cjs`: 100% PASS (0 dangerous bindings).
+   - `node scripts/check_all_js_syntax.cjs`: 100% PASS (44 files).
+   - `node scripts/verify_admin_buttons.mjs`: 100% PASS.
+
+## [2026-11-13 00:15] — Phase 430: Student Roster Default Proportional Column Sizing & Auto-Fit Engine
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 430  
+**Status:** PASS (20/20 auto-fit tests PASS, 14/14 zero-horizontal-scroll tests PASS, 11/11 roster polish tests PASS)  
+
+### Why
+- The user reported that entering the Student Roster (`#students`) resulted in disproportionate column widths where student names were clipped (`Abdul Ba...`, `Muhammad Afy...`), compact columns (`Level`, `Photo`, `Gender`) had excessive dead space, and the footer summary label was truncated to `★ BATC...`.
+- Only after manually triggering auto-resize did the layout balance nicely; however, upon re-entry, the layout reverted to the compressed state.
+
+### Changed
+1. **Chromium Super-Header Equal-Split Eradication (`js/admin/student-management.js`)**:
+   - Replaced monolithic `colSpan: 7` in `buildSuperHeaders()` with 7 individual `colSpan: 1` blank `<th>` cells, preventing Chromium's `table-layout: fixed` algorithm from forcing equal sub-column distribution across the span.
+   - Sized Name column as the primary flexible column (`width: '320px'`, `minWidth: '240px'`), with compact widths for `levelName` (`50px`), `photo_url` (`48px`), `gender` (`65px`), and `ageDisplay` (`60px`).
+2. **Footer Summary Row Label Optimization (`js/admin/student-management.js`)**:
+   - Changed Level summary cell label from `"BATCH AVG"` to `"AVG"` (`letter-spacing: 0.05em`) to eliminate `"BATCH ..."` truncation in the 50px column, while the adjacent Name column displays `★ BATCH AVERAGE (${filteredData.length} Students)`.
+   - Supplied explicit `tableId: 'student_roster_grid'` and `autoFitOnMount: true` to `DataGrid`.
+3. **DataGrid Auto-Fit Engine & Uncapped Cell Expansion (`js/admin/datagrid.js`)**:
+   - Removed restrictive `max-width` styles from header `<th>` (`renderHeaders()`) and body `<td>` (`render()`).
+   - Implemented `autoFitColumns(persist = false)` method using offscreen `<canvas>` context to measure visible cell text (including `.student-cell-view` labels) and configure content-aware column widths on mount.
+   - Added `autoFitOnMount` option in `DataGrid` constructor, ensuring optimal column proportions on initial mount without requiring user double-click interaction.
+   - Enhanced `initColumnResize(tableId)` to synchronize loaded `localStorage` widths to both `<col>` elements in `<colgroup>` and `<th>` elements in `<thead>`.
+   - Updated double-click super-header reset to reset `<col>` and `<th>` and re-run auto-fit.
+4. **Cache-Busting Version Synchronization (`v=20261112_v425`)**:
+   - Bumped query strings across `admin.html`, `js/admin/app.js`, and `js/admin/student-management.js`.
+5. **Subpixel Ceiling Rounding Eradication (`css/admin.css`)**:
+   - Fixed 2px integer rounding accumulation across 12 table columns with separate borders (`sumThOffset = 1146px` vs `clientWidth = 1144px`) by calibrating table width to `width: calc(100% - 2px) !important; max-width: 100% !important;`.
+   - Verified programmatic elimination of horizontal scrolling: `scrollWidth: 1144 === clientWidth: 1144`, `diff: 0`, and `canScrollRight: false`.
+6. **Automated Verification**:
+   - Created `scripts/verify_student_roster_auto_fit.mjs` (20/20 checks PASS).
+   - Ran `scripts/verify_system_wide_no_hscroll.mjs` (14/14 checks PASS).
+   - Ran `scripts/verify_student_roster_polish.mjs` (11/11 checks PASS).
+
+## [2026-11-13 00:05] — Phase 429: Comprehensive 9-Point Live UI Flow Verification & Validation Suite
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 429  
+**Status:** PASS (31/31 checks passed, 100% automated coverage)  
+
+### Why
+- Following the completion of Phase 424 (Independent Retake, Self-Paced Exam Mode & Duration Calibration), user requested a comprehensive, zero-manual-burden review and automated visual testing suite covering all live UI flows and critical operational classroom edge cases.
+
+### Changed
+1. **Automated E2E Playwright Suite (`scripts/test_live_ui_flows_e2e.mjs`)**:
+   - Structured into 4 comprehensive testing modules covering 9 distinct real-world classroom scenarios:
+     - **Scenario 1**: Admin Blueprint Wizard live recalculation on pace inputs (`15s` words, `20s` phrases), preset clicks (`10s`, `15s`, `20s`, `30s`), and modality switching.
+     - **Scenario 2**: Supabase database persistence round-trip verifying `working_duration_minutes` is stored as an integer for all active tests.
+     - **Scenario 3**: Admin Class Tests data grid dynamic rendering of all 40 duration cells (`⏱️ 10`, `⏱️ 5`, etc.) with Excel vertical gridlines, 100vh lock, and zero horizontal scroll.
+     - **Scenario 4**: Student Dashboard retake gating verifying passed ($\ge 60\%$) and forgiven students unlock retakes outside live sessions while failed attempts remain locked.
+     - **Scenario 5**: Component Choice Modal verifying dynamic oral badges (`🎙️ Spoken Mode @ 15s` / `🎙️ Spoken Mode @ 20s`) and pure direct English copy.
+     - **Scenario 6**: Dual-modality session enforcement ensuring active tutor sessions preserve tutor modalities while independent retakes enforce 100% oral retrieval.
+     - **Scenario 7**: Stale attempt auto-recovery ensuring expired attempts auto-archive with zero HTTP 410 errors and fresh 30m countdown attempts are returned.
+     - **Scenario 8**: Score degradation shield ensuring lower retake scores (e.g. 45% D) never overwrite higher historical records (e.g. 85% B) on report cards or dashboards.
+     - **Scenario 9**: Mobile spatial invariants ensuring iPhone 14 viewport (390×844) renders with 0 horizontal scroll, touch targets $\ge 44\text{px}$, and no vertical modal clipping.
+     - **Scenario 10**: Test room 1.5s speech buffer flush in `handleTimeUp()` before triggering auto-submit.
+2. **Student Dashboard Language Standardization (`js/dashboard.js`)**:
+   - Replaced legacy Indonesian modal strings with 100% direct English: `'120 Questions (Written Mode)'`, `'40 Questions (Speaking)'`, `'30 Questions (Selection Mode)'`, `'10 Questions (Speaking)'`, `'Not Attempted'`, and `'Progress: '`.
+3. **High-Resolution Visual Screenshot Artifacts (`tests/artifacts/ui_flows/`)**:
+   - Generated 6 high-resolution PNG captures covering all critical UI states, mirrored into the brain artifact directory for visual embedding.
+4. **Automated Verification**:
+   - `node scripts/test_live_ui_flows_e2e.mjs`: 31/31 checks PASS (100%).
+   - `node scripts/check_all_js_syntax.cjs`: 44/44 files PASS.
+   - `node scripts/verify_all_project_imports.mjs`: 41/41 modules PASS.
+   - `node scripts/verify_star_pink_exclusivity.mjs`: 100% PASS.
+
+## [2026-11-12 23:56] — Phase 428: AGENTS.md Streamlining & Unified Modular Specification Map
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 428  
+**Status:** PASS (All automated verification checks passed)  
+
+### Why
+- The user asked to review and streamline `AGENTS.md`.
+- Analysis identified duplicate mapping tables between Section 2.20 and Section 4, as well as redundant declarations of out-of-scope backend architectures in both the header blockquote and Section 3.
+
+### Changed
+1. **`AGENTS.md`**:
+   - Consolidated the two separate mapping tables into a single *Unified Modular Specification Map* in Section 4.
+   - Retained all critical test invariants (`display: table`, `Authoritative 8-tier typographic scale`, `Centered loading states via canonical`, `dual-write`).
+   - Removed redundant prohibition of Django/Docker/Redis/Celery from the header blockquote.
+2. **Automated Verification**:
+   - Executed `npm run verify:all`: 100% PASS across all 19 test suites and 44 JS syntax validations.
+
+## [2026-11-12 23:55] — Phase 427: Fix Student Roster Buttons, Lower Panel Overflow & Tutor's Room Action Guard
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 427  
+**Status:** PASS (All automated verification checks passed)  
+
+### Why
+- The user reported that clicking the action buttons in the Student Roster lower panel (`🚀 NEXT (Promote All Eligible)`, `➕ Add Student`, and `📥 Import Excel / CSV`) did not work, and requested a root cause fix and system-wide button audit.
+- Root cause diagnosis revealed:
+  1. `➕ Add Student`: An uncaught `ReferenceError: currentBatchId is not defined` in `js/admin/student-management.js` halted execution when the button was clicked.
+  2. `📥 Import Excel / CSV`: `window.renderStudentsRegistration` was not globally exposed, and the `app.js` section router redirected `import-students` back to `students`.
+  3. `🚀 NEXT`: Appeared active green even when 0 students were eligible for level promotion (under live database rules, students have passed only 1–5 of 8 required exams), with no count and only a transient toast on click.
+  4. Lower panel styling displayed a vertical scrollbar artifact on Windows browsers due to unconstrained button box heights.
+- An exhaustive audit of 548 buttons across Tutor's Room and Student Rooms identified 2 additional latent unexposed functions (`formatTestDisplayName`, `loadClassLearningPath`), which were resolved preemptively.
+
+### Changed
+1. **`js/admin/student-management.js`**:
+   - Replaced undeclared `currentBatchId` with declared `activeBatchId` (`window._filterBatchId || null`) in `addStudentBtn.onclick`.
+   - Removed `requestAnimationFrame` deferral; event listeners are now attached synchronously immediately after `setBottomInfobar`.
+   - Upgraded `🚀 NEXT` button into a dynamic counter button: `🚀 NEXT (${eligibleCount} Eligible)` (Grade A Pure Green `#00c000` when $\ge 1$, subtle slate `#1e293b` when 0).
+   - Created `showPromotionRequirementsModal(students)` to display passing criteria ($\ge 70\%$ on all active level exams) and student exam progress when clicked with 0 eligible.
+   - Routed `📥 Import Excel / CSV` to `window.loadSection('student-registration')` with fallback.
+2. **`js/admin/student-registration.js`, `js/admin/app.js`, `js/admin/classes-management.js`**:
+   - Exposed `window.renderStudentsRegistration = renderStudentsRegistration;` and `window.openStudentFullEdit = openStudentFullEdit;`.
+   - Updated `app.js` router to execute `renderStudentsRegistration(area)` on `case 'student-registration': case 'students-registration': case 'import-students':`.
+   - Exposed `window.formatTestDisplayName = formatTestDisplayName;` in `app.js` and `window.loadClassLearningPath = loadClassLearningPath;` in `classes-management.js`.
+3. **`css/admin.css`**:
+   - Added `overflow-y: hidden !important;` to `.bottom-infobar-left`, `.bottom-infobar-center`, and `.bottom-infobar-right`.
+   - Enforced `height: 32px !important;` and `box-sizing: border-box !important;` on `.bottom-infobar-right button` to eliminate vertical scrollbars.
+4. **`scripts/verify_admin_buttons.mjs`**:
+   - Created automated audit suite scanning 25 admin modules and 464 buttons.
+5. **Automated Verification**:
+   - `node scripts/verify_admin_buttons.mjs`: 100% PASS (0 flaws).
+   - `node scripts/check_all_js_syntax.cjs`: 100% PASS (44 files).
+   - `node .agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+
+## [2026-11-12 23:46] — Phase 426: Governance Ratification — Compaction Advisory, Before & After Visual Standards, Anti-Yapping & Rule Streamlining
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 426  
+**Status:** PASS (All automated verification checks passed)  
+
+### Why
+- The user requested adding governance rules to automatically trigger `/compact all` instructions when conversations become long, and requiring strict "Before & After" planning for all UI, Font, Color, and Table modifications.
+- The user also approved adopting Anti-Yapping chat limits (15–20 lines max when artifacts exist), a single-command pre-commit sanity check (`npm run verify:all`), and streamlining redundant rules across `.agents/rules/ui-invariants.md`.
+
+### Changed
+1. **`.agents/rules/agent-workflow.md`**:
+   - Added Section 4: Mandatory "Before & After" Visual Planning Protocol using the standard 4-column comparative table (`Komponen / Properti`, `🔴 BEFORE`, `🟢 AFTER`, `Dasar Aturan / Alasan`).
+   - Added Section 7: Mandatory Context Window Hygiene & Automatic Compaction Advisory Trigger (`/compact all`).
+   - Added Section 8: Anti-Yapping Discipline & Chat-Artifact Separation (capping chat response at 15–20 lines when artifacts exist).
+2. **`.antigravityrules`**:
+   - Updated Rule 23: Codified mandatory 4-column Before & After Visual Specification Protocol.
+   - Updated Rule 24: Codified Automatic Compaction Advisory Trigger & Anti-Yapping Discipline.
+3. **`.agents/rules/ui-invariants.md`**:
+   - Consolidated Master Edit Mode rules (Sections 2 & 10) into a single cohesive Section 2.
+   - Merged Footer Docking and Anti-Ballooning (Section 12) directly into Section 8 Pillar 5.
+   - Renumbered remaining sections sequentially.
+4. **`package.json`**:
+   - Added `"verify:all": "npm test && node scripts/check_all_js_syntax.cjs && node scripts/check_versions.mjs"`.
+5. **`AGENTS.md`**:
+   - Updated Table 2.20 to map the new Before & After protocol, compaction trigger, and anti-yapping discipline.
+6. **Automated Verification**:
+   - Executed `npm run verify:all`: 100% PASS across all 19 test suites, 44 JS syntax validations, and cache buster checks.
+
+## [2026-11-12 23:45] — Phase 425: Submit Modal Button Behavior Refactor and 3-Tier System Accent Redesign
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 425  
+**Status:** PASS (All automated verification checks passed)  
+
+### Why
+- Students reported that clicking "GIVE UP!" did not submit/surrender and instead returned them to the test screen, while clicking "BACK TO THE TEST" caused disorientation.
+- Investigation revealed that `#cancel-submit-btn` was erroneously invoking `jumpToNextUnanswered()`, which abruptly changed the student's active question. Furthermore, the solid glaring yellow/red/green slabs caused visual fatigue and clashed with TopsCore's dark theme.
+- The user requested merging the Warning panel and 0/40 counter into a single unified card, and converting solid button colors into subtle glowing system accents.
+
+### Changed
+1. **`js/test.js`**:
+   - Refactored `#cancel-submit-btn` event listener to strictly hide `#submit-modal` without calling `jumpToNextUnanswered()`, maintaining the exact question position.
+   - Enforced `preventDefault()` and `stopPropagation()` across all modal actions.
+   - Guarded `#danger-submit-btn` with robust surrender submission (`doSubmit(false)`) and clean error/loading state handling.
+2. **`test.html`**:
+   - Consolidated the separate warning card and 0/40 counter card into a unified center tier (`.card-unified-warning-counter`).
+   - Implemented inner deep-well counter strip (`.hazard-inner-counter-strip`) with bold `0 / 40` typography and mini-progress bar.
+   - Streamlined into a 3-tier hierarchy: Tier 1 (Give Up), Tier 2 (Unified Warning & Counter), Tier 3 (Back to the Test).
+   - Bumped version queries to `v=20261112_v173`.
+3. **`css/test.css`**:
+   - Replaced solid glaring `#DC2626`, `#EAB308`, and `#00C853` blocks with TopsCore dark slate surfaces (`#141A28`, `#0D1424`, `#090E1A`).
+   - Converted red (`#FF0000`), yellow (`#FFCC00`), and green (`#00C000ff`) into refined glowing borders, icon drop-shadows, and text highlights.
+4. **`sw.js`**:
+   - Bumped cache key to `topscore-cache-option-a-v108` with updated asset version queries.
+
+### Verification
+- `scripts/verify_submit_modal_behavior.mjs` — All static DOM, event listener, and computed style checks PASS (100%).
+- `scripts/capture_live_modal.mjs` — Captured verified live rendering screenshot (`submit_modal_live_verified.png`).
+- `scripts/verify_plan_preflight.mjs` — Visual pre-flight invariant check PASS (100%).
+
+---
+
+## [2026-11-12 23:30] — Phase 424: Independent Retake and Self-Paced Exam Mode with Real-Time Duration Calibration
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 424  
+**Status:** PASS (7/7 automated checks)  
+
+### Why
+- In TopsCore LMS, all exams were previously gated strictly by scheduled class test sessions (`test_session`). If a tutor had not opened an active live session, students were locked out regardless of whether they had already achieved a passing grade ($\ge 60\%$).
+- Furthermore, in the Admin Class Tests table and Test Generator, durations (`working_duration_minutes`) were configured statically rather than calibrated from question volume and per-item response rates.
+- The user requested 24/7 unlimited independent retakes for passed/forgiven students in 100% Spoken mode (15s per word, 20s per phrase), real-time duration auto-calibration in the admin table and test generator, elimination of HTTP 410 errors on expired attempts, and highest-score resolution.
+
+### Changed
+1. **`js/api.js`**:
+   - Implemented and exported canonical `calculateAutoDurationMinutes(questionCount, answerType, category, customPace, minMinutes = 5)`.
+   - Updated `autoGenerateTestsHierarchy` and `upsertDynamicTestShell` to calculate `effectiveDurationMinutes` dynamically using SSOT formulas.
+2. **`js/admin/app.js`**:
+   - In `_renderClassTestsTable`, dynamically computes `timeLimit` via `calculateAutoDurationMinutes(effectiveQCount, rawAns, category)`.
+   - `DUR. (M)` column dynamically displays live calculated minutes (40 QS = 10m, 120 QS = 30m, 280 QS = 70m, 440 QS = 110m, 600 QS = 150m, 10 QS Phrases = 5m, 30 QS Phrases = 10m).
+3. **`js/admin/auto-gen-modal.js`**:
+   - Added seconds-per-item pace inputs and preset quick-buttons for Words (default 15s) and Phrases (default 20s).
+   - Real-time live duration recalculation badges and listeners on answer type selectors.
+4. **`supabase/functions/start-test/index.ts`**:
+   - Seamless auto-clean for expired attempts (eliminates HTTP 410; cleanly provisions fresh attempt).
+   - Evaluates `isEligibleForSelfPaced` ($\ge 60\%$ or `is_forgiven: true`).
+   - Bypasses 3-attempt limit and session lock gate for eligible self-paced retakes.
+   - Outside active sessions, strictly enforces 100% Spoken modality (15s Words, 20s Phrases); inside active sessions, preserves tutor's configured modality.
+5. **`supabase/functions/submit-test/index.ts`**:
+   - Added 60s network transmission grace period past deadline before auto-submitting.
+   - Authoritative highest-score resolution ensures lower retake scores do not degrade historical best.
+6. **`js/dashboard.js` & `js/test.js`**:
+   - Student dashboard gating updated to unlock retake buttons (`[ 🔁 Retake Exam ]` / `[ ⚡ Retake Exam ]` / `[ 🎯 Retake Drill ]`) for eligible students outside sessions.
+   - `ComponentChoiceModal` dynamically displays `🎙️ Spoken Mode @ 15s` for Words and `🎙️ Spoken Mode @ 20s` for Phrases in self-paced retakes.
+   - `handleTimeUp()` in `js/test.js` implements a 1.5s speech buffer flush before triggering auto-submit.
+
+### Verification
+- `scripts/verify_self_paced_exam_and_duration_calibration.mjs` — 7/7 PASS (100%)
+- `scripts/verify_all_project_imports.mjs` — All 41 modules PASS (100%)
+- `scripts/verify_star_pink_exclusivity.mjs` — Star pink exclusivity PASS (100%)
+
+---
+
+## [2026-11-12 23:45] — Phase 423.1: System-Wide Zero Horizontal Scrollbar Enactment
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 423.1  
+**Status:** PASS (31/31 automated checks combined)  
+
+### Why
+- The user reported that a cyan-to-indigo horizontal scrollbar track was still appearing beneath the BATCH AVG row in the Student Roster table, noting that per TopsCore UI invariants, **ALL tables across the entire application must have ZERO horizontal scrolling** with vertical scrolling permitted exclusively inside `.table-wrap`.
+- An in-depth audit of CSS rules revealed that despite column width optimizations:
+  1. `css/admin.css` lines 3730, 4251, and 7282 contained rogue `overflow-x: auto !important;` rules on `.table-wrap` and `#student-grid-container .table-wrap`.
+  2. `css/admin.css` line 3856 forced `table-layout: auto !important;` across `.datagrid-table` and `.table-wrap table`, which overrode JavaScript `table-layout: fixed` and allowed cell content to expand table width past 100%.
+  3. `css/admin.css` line 4336 and `css/style.css` line 766 set `height: 6px` on `::-webkit-scrollbar` with a cyan-to-indigo gradient thumb, rendering the horizontal scrollbar.
+  4. `css/style.css` line 748 had `overflow-x: auto;`.
+
+### Changed
+1. **`css/admin.css`**:
+   - Replaced all occurrences of `overflow-x: auto !important;` on `.table-wrap` with `overflow-x: hidden !important;`.
+   - Replaced `table-layout: auto !important;` with `table-layout: fixed !important;` on `.datagrid-table`, `.table-wrap table`, `#class-attendance-grid table`, and `#blueprint-matrix-table`.
+   - Added `.table-wrap::-webkit-scrollbar:horizontal { display: none !important; height: 0px !important; }` to eliminate horizontal scrollbar rendering.
+2. **`css/style.css`**:
+   - Enforced `overflow-x: hidden !important;` on `.table-wrap, .table-responsive`.
+   - Set `height: 0px !important;` and hidden horizontal scrollbars.
+3. **`js/admin/student-management.js`**:
+   - Optimized Level column width to `50px` (minWidth: `45px`) for proportional table balance.
+4. **Cache Busting**:
+   - Bumped query string versions to `v=20261112_v424` across `admin.html`, `js/admin/app.js`, and `js/admin/student-management.js`.
+
+### Verification
+- `scripts/verify_system_wide_no_hscroll.mjs` — 14/14 PASS
+- `scripts/verify_student_roster_polish.mjs` — 17/17 PASS
+
+---
+
+## [2026-11-12 23:00] — Phase 423: Student Roster Polish — Scrollbar, Status Dropdown, Gender Labels & Duplicate Sub-Panel
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 423  
+**Status:** PASS (17/17 automated checks)  
+
+### Why
+- User reported 4 UI/UX issues in the Student Roster (`#students`):
+  1. Horizontal scrollbar visible beneath BATCH AVG row.
+  2. Status dropdown popup shows invisible/blank text in Edit Mode.
+  3. Gender column shows `Mr.` / `Miss.` with trailing dots — should be `Mister` / `Miss`.
+  4. Two stacked bottom bars: a rogue `.student-roster-lower-panel` inside `#admin-content-area` stacked above the canonical `#admin-bottom-infobar` (which showed "TopsCore ABCD System" fallback text).
+  5. Action buttons (🚀 NEXT, ➕ Add Student, 📥 Import Excel / CSV) only visible in Edit Mode (had `edit-mode-only` class).
+
+### Changed
+1. **`js/admin/student-management.js`** — Rogue bottom panel deleted; `syncStudentRosterBottomInfobar()` added using `window.setBottomInfobar()`; gender titleText → Mister/Miss; inline select options updated; full edit modal updated; exam col widths 125px→85px; discrete test cols 120px→95px; DOB 100px→95px; Education 120px→110px; Status 95px→90px.
+2. **`css/admin.css`** — `color-scheme: dark` + dark `option` background CSS appended for `.student-inline-select`.
+3. **`js/admin/student-registration.js`** — Gender option `Mr. (Male)` → `Mister (Male)`.
+4. **`js/utils/avatar-engine.js`** — `stripHonorific` regex extended with `mister\.?` prefix.
+
+### Verification
+- `scripts/verify_student_roster_polish.mjs` — 17/17 PASS
+
+---
+
+## [2026-11-12 22:45] — Phase 422: Enforce Star Pink Exclusivity & Purge Rogue Non-Star Pink Leaks
+
+
+**Agent/Session:** Antigravity  
+**Phase:** Phase 422  
+**Status:** PASS  
+
+### Why
+- The user requested: *"disini saya melihat ada warna pink, dan ada juga di beberapa tempat, darimana ini? seingat saya PINK hanya khusus untuk skor 100 atau excellent,,, coba periksa asalnya, ada juga saya liat icon mic saat test berwarna pink... tlusuri /plan"* with uploaded screenshots of active capsule glow (Image 1) and Student Gate login step cards (Image 2).
+- Per AGENTS.md Rule 2.10 and `.antigravityrules` Rule 11, Electric Pink (`#ff2d87`, `--grade-star`) is non-negotiably exclusive to Grade ★ (100% score / Excellent). It must NEVER be inherited, copied, or shared by buttons, inputs, borders, tabs, tags, mic icons, steps, or non-100% elements.
+- An extensive codebase audit revealed rogue pink leaks in Student Gate login steps (`css/auth.css`), green pulse animation shadows (`css/admin.css`), test-taking options and inputs (`css/test.css`), mic recording state (`js/test.js`), and hardcoded string replacements (`js/admin/app.js`).
+
+### Changed
+1. **Student Gate Login Steps (`css/auth.css`)**:
+   - Replaced `var(--grade-star)` and green in `.cascade-step-num.done` and `.cascade-section.selected .cascade-inner` with authoritative **Tactical System Blue (`#38bdf8`)** (`rgba(56, 189, 248, 0.15)` bg, `rgba(56, 189, 248, 0.4)` border).
+   - Replaced `.opt-card-check` with `#38bdf8`, maintaining perfect harmony with the system's core dark navy, blue, slate, and white base palette without conflating system authentication with academic grading.
+2. **Admin Pulse Animation & Glows (`css/admin.css`)**:
+   - Fixed `@keyframes pulseGreen` to pulse with `rgba(0, 192, 0, 0.7)` instead of Star Pink.
+   - Fixed `.status-dot.dot-active` box-shadow to pure green `rgba(0, 192, 0, 0.6)`.
+   - Replaced `#f472b6` in `#class-attendance-grid th.super-hdr-exam` with tactical amber `#fbbf24`.
+   - Replaced `#f472b6` in `.badge-test-chip` and `#blueprint-matrix-table td.cell-theme-code` with tactical cyan `#38bdf8`.
+   - Fixed `.text-gold-champion` to amber `#fbbf24`.
+3. **Test Engine Selected Options & Recording State (`css/test.css` & `js/test.js`)**:
+   - Replaced `var(--grade-star)` in `.mc-option.selected` with cyan `#06b6d4`.
+   - Replaced `var(--grade-star)` in `.frosted-input:focus` with cyan `rgba(56, 189, 248, 0.8)`.
+   - Replaced `var(--grade-star)` in `.test-page .test-progress-fill` with `linear-gradient(90deg, #06b6d4, #00c000ff)`.
+   - Replaced `var(--grade-star)` in `.test-pacing-badge.pace-comfortable` with `#00c000ff`.
+   - Hardened `.speech-mic-btn-lg.listening` and `@keyframes micPulse` in `css/test.css` and `js/test.js` to high-contrast Pure Red `#ef4444` / `#ff0000` (`var(--grade-e)`) with crisp crimson border, eliminating any low-alpha magenta/pink illusion.
+4. **Admin JavaScript Replacements (`js/admin/`)**:
+   - Removed hardcoded `#f472b6` string replacements on "Test" and "Exam" in `js/admin/app.js:2007-2076`, realigning to `#38bdf8`.
+   - Updated female title color in `js/admin/student-management.js:2653` to soft lavender `#c084fc`.
+   - Updated Academic Test badge in `js/admin/student-management.js:1067` to `#38bdf8`.
+   - Replaced `#f472b6` in `js/admin/auto-gen-modal.js` and `js/admin/test-system-settings-modal.js` with `#fbbf24`.
+   - Replaced `#f472b6` / `#ec4899` in `js/admin/vocab-vault.js` with `#38bdf8`.
+5. **Dashboard Question Navigator & Avatars (`css/dashboard.css` & `js/utils/avatar-engine.js`)**:
+   - Replaced `#f43f5e` in `.q-nav-btn:not(.answered)` with soft slate `rgba(255, 255, 255, 0.04)` / `#94a3b8`.
+   - Fixed banner avatar box border and camera badge fallback from `#ec4899` to brand tactical indigo `#6366f1`.
+   - Replaced `#ec4899` in female avatar gradient with violet `#a855f7` / `#7e22ce`.
+6. **Automated Verification**:
+   - `scripts/verify_star_pink_exclusivity.mjs`: 100% PASS (Zero rogue pinks found).
+   - `scripts/check_all_js_syntax.cjs`: 44/44 PASS (100%).
+   - `.agents/skills/ui-spatial-checker/scripts/check_spatial_invariants.mjs`: 100% PASS.
+   - `scripts/verify_star_pink_playwright.mjs`: 100% PASS (Visual artifacts generated: `verify_student_gate_no_pink.png`, `verify_admin_classes_no_pink.png`).
+
+---
+
 ## [2026-11-12 20:25] — Phase 421: 4-Column Theme Matrix Standard (Progress | Score | Points | Grade)
 
 **Agent/Session:** Antigravity  

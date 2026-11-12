@@ -26,9 +26,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261108_v165" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261108_v165" />
-  <link rel="stylesheet" href="css/test.css?v=20261108_v165" />
+  <link rel="stylesheet" href="css/style.css?v=20261113_v174" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261113_v174" />
+  <link rel="stylesheet" href="css/test.css?v=20261113_v175" />
 </head>
 <body class="test-page notranslate" translate="no">
 
@@ -127,10 +127,20 @@
   </footer>
 
   <!-- Centered Modal Question Matrix -->
-  <div id="matrix-popup" class="matrix-popup">
+  <div id="matrix-popup" class="matrix-popup" role="dialog" aria-modal="true" aria-labelledby="matrix-title-text">
     <div class="matrix-header">
-      <span class="matrix-title">Question Matrix</span>
-      <button id="close-matrix-btn" class="matrix-close-btn" onclick="window.toggleMatrixPopup(false)">✕</button>
+      <div class="matrix-title-group">
+        <span id="matrix-title-text" class="matrix-title">QUESTION MATRIX</span>
+        <span id="matrix-progress-pill" class="matrix-progress-pill">0 / 0</span>
+      </div>
+      <button id="close-matrix-btn" class="matrix-close-btn" onclick="window.toggleMatrixPopup(false)" aria-label="Close matrix">✕</button>
+    </div>
+
+    <!-- Inline Status Legend -->
+    <div class="matrix-legend-bar">
+      <div class="matrix-legend-item"><span class="matrix-dot matrix-dot-blue"></span> Current</div>
+      <div class="matrix-legend-item"><span class="matrix-dot matrix-dot-green"></span> Answered (<span id="matrix-legend-answered">0</span>)</div>
+      <div class="matrix-legend-item"><span class="matrix-dot matrix-dot-slate"></span> Blank (<span id="matrix-legend-blank">0</span>)</div>
     </div>
     
     <!-- GRID CONTAINER -->
@@ -139,13 +149,15 @@
         <!-- Filled dynamically -->
       </div>
     </div>
+
+    <div class="matrix-tip-box">
+      💡 Tap any question tile to navigate, or jump directly to next pending item.
+    </div>
     
     <div class="matrix-footer">
-      <button class="btn btn-secondary w-100 btn-sm matrix-jump-btn" id="btn-sidebar-jump-unanswered" onclick="window.toggleMatrixPopup(false)">
-        🔍 Jump to Next Unanswered
-      </button>
-      <button class="btn btn-success w-100 matrix-submit-btn" id="global-submit-btn">
-        Submit TEST 📋
+      <button class="btn matrix-jump-btn" id="btn-sidebar-jump-unanswered" onclick="window.toggleMatrixPopup(false)">
+        <span>JUMP TO NEXT UNANSWERED</span>
+        <span>→</span>
       </button>
     </div>
   </div>
@@ -194,59 +206,71 @@
     </div>
   </div>
 
-  <!-- Fullscreen Pause Modal deprecated in Phase 365: Consolidated into unified #cheat-overlay -->
-  <!-- Anti-Cheat Flashing Overlay -->
-  <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-title">
-    <div class="cheat-box">
-      <h2 id="cheat-title" class="cheat-title">🚨 CHEATING ATTEMPT DETECTED! 🚨</h2>
-      <div id="cheat-strikes-badge" class="cheat-strikes-badge">🚨 STRIKE 1 OF 10</div>
-      <p id="cheat-reason" class="cheat-reason">🚨 You were detected trying to leave the TEST page or using navigation buttons!</p>
-      <div class="cheat-countdown-circle">
-        <span id="cheat-timer-count" class="cheat-timer-count">10</span>
+  <!-- Anti-Cheat Overlay — Option B: Ultra Clean Equal-Spacing Card (Phase 426) -->
+  <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-strikes-badge">
+    <div class="cheat-box" id="cheat-box-card">
+      <!-- ELEMENT 1: TOP STRIKE PILL -->
+      <div id="cheat-strikes-badge" class="cheat-strikes-badge">{ STRIKE 1 / 10 }</div>
+
+      <!-- ELEMENT 2: CENTER COUNTDOWN NUMBER -->
+      <div class="cheat-countdown-group">
+        <div class="cheat-countdown-circle">
+          <span id="cheat-timer-count" class="cheat-timer-count">10</span>
+        </div>
+        <div class="cheat-countdown-label">Seconds to Auto-Submit</div>
       </div>
-      <div class="cheat-countdown-label">Seconds to Auto-Submit</div>
+
+      <!-- ELEMENT 3: BOTTOM RETURN BUTTON (MAX THUMB COMFORT, NO TAP HINT) -->
       <button type="button" class="btn btn-primary cheat-dismiss-btn" id="dismiss-cheat-btn">
-        &#x26F6; Resume Fullscreen &amp; Return to TEST
+        <span>&#x26F6;</span>
+        <span>RETURN TO TEST</span>
       </button>
+
+      <!-- Hidden accessible announcement elements for screen readers / legacy hooks -->
+      <div id="cheat-title" class="sr-only" aria-hidden="true" style="display:none;">Security Violation Detected</div>
+      <div id="cheat-reason" class="sr-only" aria-hidden="true" style="display:none;"></div>
     </div>
   </div>
 
-  <!-- Submit confirm modal — Hazard Yellow/Orange Theme -->
+  <!-- Submit confirm modal — TopsCore Dark Theme & System Color Accents -->
   <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
     <div class="modal-box modal-box-hazard" id="submit-modal-box">
-      
-      <!-- Top-Right Close Button (X) -->
-      <button type="button" class="hazard-close-btn" id="close-submit-modal-btn" aria-label="Close modal">✕</button>
 
-      <!-- INCOMPLETE STATE: 4-TIER BLOCKS AS DESIGNED -->
+      <!-- INCOMPLETE STATE: 3-TIER UNIFIED LAYOUT -->
       <div id="hazard-incomplete-wrap" class="hazard-layout-wrap">
-        <!-- BLOCK 1: GIVE UP! ACTION BUTTON (RED) -->
+        <!-- TIER 1: GIVE UP! ACTION BUTTON (RED ACCENT) -->
         <button type="button" class="hazard-btn hazard-btn-giveup" id="danger-submit-btn">
-          GIVE UP!
+          <span class="hazard-btn-icon">🏳️</span>
+          <span>GIVE UP!</span>
         </button>
 
-        <!-- BLOCK 2: WARNING ICON (YELLOW CARD WITH NEON TRIANGLE) -->
-        <div class="hazard-block hazard-block-warning" id="hazard-warning-block">
-          <svg class="hazard-neon-warning-icon" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M50 12 L88 78 H12 Z" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" class="triangle-neon-stroke" />
-            <line x1="50" y1="36" x2="50" y2="54" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round" class="triangle-neon-stroke" />
-            <circle cx="50" cy="68" r="4.5" fill="#FFFFFF" class="triangle-neon-dot" />
-          </svg>
+        <!-- TIER 2: UNIFIED WARNING & 0/40 COUNTER CARD (YELLOW/AMBER ACCENT) -->
+        <div class="hazard-block card-unified-warning-counter" id="hazard-warning-block">
+          <div class="hazard-warning-icon-wrap">
+            <svg class="hazard-neon-warning-icon" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M50 12 L88 78 H12 Z" stroke="#FFCC00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" class="triangle-neon-stroke" />
+              <line x1="50" y1="36" x2="50" y2="54" stroke="#FFCC00" stroke-width="7" stroke-linecap="round" class="triangle-neon-stroke" />
+              <circle cx="50" cy="68" r="4.5" fill="#FFCC00" class="triangle-neon-dot" />
+            </svg>
+          </div>
+
+          <div class="hazard-warning-title" id="submit-modal-title">WARNING: INCOMPLETE TEST!</div>
+
+          <!-- Merged Counter Strip Inside Warning Card -->
+          <div class="hazard-inner-counter-strip" id="hazard-counter-block">
+            <div class="hazard-counter-label">Questions Answered</div>
+            <div class="hazard-counter-value-white">
+              <span id="answered-count">0</span><span class="hazard-counter-slash">/</span><span id="total-count">40</span>
+            </div>
+            <div class="hazard-mini-progress-track">
+              <div class="hazard-mini-progress-fill" id="hazard-mini-progress-bar" style="width: 0%;"></div>
+            </div>
+          </div>
         </div>
 
-        <!-- BLOCK 3: 0/40 COUNTER (DARK CARD) -->
-        <div class="hazard-block hazard-block-counter-dark" id="hazard-counter-block">
-          <div class="hazard-counter-value-white">
-            <span id="answered-count">0</span>/<span id="total-count">40</span>
-          </div>
-          <div class="hazard-mini-progress-track">
-            <div class="hazard-mini-progress-fill" id="hazard-mini-progress-bar" style="width: 0%;"></div>
-          </div>
-        </div>
-
-        <!-- BLOCK 4: BACK TO THE TEST ACTION BUTTON (GREEN) -->
+        <!-- TIER 3: BACK TO THE TEST ACTION BUTTON (GREEN ACCENT) -->
         <button type="button" class="hazard-btn hazard-btn-back-neon" id="cancel-submit-btn">
-          BACK TO THE TEST
+          <span>BACK TO THE TEST</span>
         </button>
       </div>
 
@@ -270,10 +294,10 @@
     </div>
   </div>
 
-  <script type="module" src="./js/test.js?v=20261109_v171"></script>
+  <script type="module" src="./js/test.js?v=20261113_v175"></script>
   <script>
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20261109_v171')
+      navigator.serviceWorker.register('sw.js?v=20261113_v175')
         .then(registration => registration.update())
         .catch(err => console.warn('SW registration failed:', err));
     }

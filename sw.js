@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v107';
+const CACHE_NAME = 'topscore-cache-option-a-v110';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,17 +6,17 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
-  './css/style.css?v=20261109_v172',
-  './css/dashboard.css?v=20261108_v165',
+  './css/style.css?v=20261113_v174',
+  './css/dashboard.css?v=20261113_v176',
   './css/auth.css?v=20261028',
-  './css/test.css?v=20261108_v165',
+  './css/test.css?v=20261113_v175',
   './css/result.css?v=20261108_v162',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
   './js/api.js?v=20261108_v162',
   './js/auth.js?v=20261108_v162',
-  './js/dashboard.js?v=20261108_v162',
-  './js/test.js?v=20261108_v165',
+  './js/dashboard.js?v=20261113_v176',
+  './js/test.js?v=20261113_v175',
   './js/result.js?v=20261108_v162',
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261028',

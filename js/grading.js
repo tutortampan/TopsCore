@@ -896,10 +896,10 @@ export function getGradeTheme(grade, isRemedial = false) {
   const theme = GRADE_PALETTE[effectiveKey] || {
     symbol: isStar ? '★' : g || '—',
     color: isStar ? TOPSCORE_COLORS.STAR : '#94a3b8',
-    dark: isStar ? '#006400' : '#64748b',
-    light: isStar ? '#86efac' : '#cbd5e1',
+    dark: isStar ? '#be185d' : '#64748b',
+    light: isStar ? '#f472b6' : '#cbd5e1',
     rgb: isStar ? TOPSCORE_COLORS.STAR_RGB : '148, 163, 184',
-    glow: isStar ? 'rgba(0, 192, 0, 0.5)' : 'rgba(148, 163, 184, 0.25)',
+    glow: isStar ? 'rgba(255, 45, 135, 0.5)' : 'rgba(148, 163, 184, 0.25)',
     textColor: isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK,
     name: isStar ? 'Excellent (100%)' : 'Standard',
     sparkle: isStar,

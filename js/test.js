@@ -474,15 +474,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       // Check if 10 warnings limit is exceeded (auto-submit on violation after 10 warnings)
       if (cheatStrikes > MAX_STRIKES) {
         if (strikeBadge) {
-          strikeBadge.textContent = `🚨 LIMIT EXCEEDED (${MAX_STRIKES}/${MAX_STRIKES})`;
-          strikeBadge.style.background = 'var(--grade-e, #FF0000)';
-          strikeBadge.style.color = '#ffffff';
-          strikeBadge.style.boxShadow = '0 0 20px rgba(var(--grade-e-rgb, 255, 0, 0), 0.95)';
-          strikeBadge.style.border = '2px solid #ffffff';
+          strikeBadge.textContent = `{ LIMIT EXCEEDED (${MAX_STRIKES}/${MAX_STRIKES}) }`;
         }
         if (reasonEl) {
-          reasonEl.style.color = '#ffffff';
-          reasonEl.textContent = `🚨 TEST TERMINATED: Maximum warning limit (${MAX_STRIKES} warnings) exceeded!`;
+          reasonEl.textContent = `TEST TERMINATED: Maximum warning limit (${MAX_STRIKES} warnings) exceeded!`;
         }
         if (countEl) countEl.textContent = '0';
         if (dismissBtn) dismissBtn.style.display = 'none';
@@ -497,42 +492,31 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         return;
       }
 
-      // Display warning for Strike 1 to 10 (ALL RED WARNINGS)
+      // Display warning for Strike 1 to 10 (Option B: Ultra Clean Equal-Spacing Card - Phase 426)
       const isFinalWarning = (cheatStrikes === MAX_STRIKES);
       if (strikeBadge) {
-        strikeBadge.textContent = isFinalWarning ? `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES} (FINAL WARNING)` : `🚨 STRIKE ${cheatStrikes} OF ${MAX_STRIKES}`;
-        strikeBadge.style.background = 'var(--grade-e, #FF0000)'; // Merah canonical untuk strike 1-10!
-        strikeBadge.style.color = '#ffffff';
-        strikeBadge.style.boxShadow = '0 0 20px rgba(var(--grade-e-rgb, 255, 0, 0), 0.95)';
-        strikeBadge.style.border = '2px solid #ffffff';
+        strikeBadge.textContent = isFinalWarning ? `{ FINAL WARNING (${cheatStrikes}/${MAX_STRIKES}) }` : `{ STRIKE ${cheatStrikes} / ${MAX_STRIKES} }`;
       }
 
       if (reasonEl) {
-        reasonEl.style.color = '#ffffff';
         reasonEl.textContent = isFinalWarning
-          ? `🚨 FINAL WARNING: ${reason}! You have reached the maximum limit of ${MAX_STRIKES} warnings. Any further navigation or countdown reaching 0 will terminate your exam!`
-          : `🚨 WARNING (STRIKE ${cheatStrikes} OF ${MAX_STRIKES}): ${reason}! (Reaching 0 or exceeding ${MAX_STRIKES} warnings will auto-submit your test)`;
+          ? `FINAL WARNING: ${reason}! You have reached the maximum limit of ${MAX_STRIKES} warnings.`
+          : `WARNING: ${reason}!`;
       }
 
       if (dismissBtn) {
-        dismissBtn.style.display = 'inline-block';
-        dismissBtn.style.background = 'var(--grade-e, #FF0000)';
-        dismissBtn.style.color = '#ffffff';
-        dismissBtn.style.border = '2px solid #ffffff';
-        dismissBtn.style.boxShadow = '0 0 25px rgba(var(--grade-e-rgb, 255, 0, 0), 0.85)';
-        dismissBtn.textContent = isFinalWarning ? '⛶ Resume Fullscreen (Final Warning)' : '⛶ Resume Fullscreen & Return to TEST';
+        dismissBtn.style.display = 'flex';
+        dismissBtn.innerHTML = isFinalWarning 
+          ? '<span>&#x26F6;</span><span>RETURN TO TEST (FINAL)</span>'
+          : '<span>&#x26F6;</span><span>RETURN TO TEST</span>';
       }
 
       if (overlay) overlay.style.display = 'flex';
 
-      // Smart Proctor Tone: Play calm chime on early warnings, reserving loud siren for severe violations
-      if (cheatStrikes <= 3) {
-        startCalmTone();
-      } else {
-        startPoliceSiren();
-      }
+      // Always play warning sound on security alert
+      startPoliceSiren();
 
-      const durationSeconds = 5; // User requirement: exact 5s countdown
+      const durationSeconds = 10; // Phase 426: Authoritative 10s auto-submit countdown
       cheatDeadline = Date.now() + (durationSeconds * 1000);
       if (countEl) countEl.textContent = durationSeconds;
 
@@ -588,7 +572,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const overlay = document.getElementById('cheat-overlay');
       if (overlay) overlay.style.display = 'none';
       const dismissBtn = document.getElementById('dismiss-cheat-btn');
-      if (dismissBtn) dismissBtn.style.display = 'inline-block';
+      if (dismissBtn) dismissBtn.style.display = 'flex';
       if (window.activeKeyboardInput) {
         try { window.activeKeyboardInput.focus(); } catch (_) {}
       }
@@ -1086,6 +1070,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         allAnswerRows = result.answers || [];
         window.attemptData = attemptData;
         window.allAnswerRows = allAnswerRows;
+
+        // Module Redirect: If this is a Peer-to-Peer 1-Hour Conversation test, redirect to conversation room
+        if (testData?.module_type === 'CONVERSATIONAL' || testData?.test_type === 'conversation' || testData?.payload?.is_conversation) {
+          window.location.replace(`conversation.html?test_id=${encodeURIComponent(testId)}&attempt_id=${encodeURIComponent(attemptData?.id || '')}`);
+          return;
+        }
 
         // Status check: do not start if test has been soft-deleted or unpublished/drafted
         const asmStatus = String(testData?.status || 'PUBLISHED').toUpperCase();
@@ -1645,16 +1635,15 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     function handleTimeUp(isSection) {
        saveCurrentAnswer();
-       // Speech Grace Buffer (+3s): Allow in-flight speech recognition to finalize transcribing
-       if (window._isSpeechRecognitionEngaged) {
-          showToast('⏱️ Finalizing your speech recording...', 'info', 3000);
-          setTimeout(() => {
-             saveCurrentAnswer();
-             proceedTimeUp(isSection);
-          }, 3000);
-          return;
+       // Speech Grace Buffer (+1.5s): Stop active speech session and allow in-flight transcription to flush cleanly
+       if (window.currentActiveSpeechSession) {
+          try { window.currentActiveSpeechSession.stop(); } catch(_) {}
        }
-       proceedTimeUp(isSection);
+       showToast('⏱️ Finalizing your speech recording...', 'info', 1500);
+       setTimeout(() => {
+          saveCurrentAnswer();
+          proceedTimeUp(isSection);
+       }, 1500);
     }
 
     // —— Build Nav Grid (Display All Questions & Group by Section) ——
@@ -1663,23 +1652,18 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (!grid) return;
       grid.innerHTML = '';
 
-      const matrixTitle = document.getElementById('matrix-popup-title') || document.querySelector('#matrix-popup span');
-      if (matrixTitle) {
-        matrixTitle.textContent = `Question Matrix (${allAnswerRows.length} Questions)`;
+      const matrixPill = document.getElementById('matrix-progress-pill');
+      if (matrixPill) {
+        matrixPill.textContent = `0 / ${allAnswerRows.length}`;
       }
 
       const isMultiSection = testsections && testsections.length > 1;
 
       if (!isMultiSection) {
-        // Single continuous grid
+        // Single continuous 8-column sleek grid
         grid.style.display = 'grid';
-        if (allAnswerRows.length > 30) {
-          grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(28px, 1fr))';
-          grid.style.gap = '4px';
-        } else {
-          grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(32px, 1fr))';
-          grid.style.gap = '5px';
-        }
+        grid.style.gridTemplateColumns = 'repeat(8, 1fr)';
+        grid.style.gap = '6px';
 
         allAnswerRows.forEach((row, globalIdx) => {
           const btn = document.createElement('button');
@@ -1848,6 +1832,18 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           }
         });
       }
+
+      // Update Question Matrix header pill and inline legend
+      const totalAnswered = Object.values(activeMap).filter(v => v && typeof v === 'string' && v.trim()).length;
+      const totalQuestions = allAnswerRows.length;
+      const matrixPill = document.getElementById('matrix-progress-pill');
+      if (matrixPill) {
+        matrixPill.textContent = `${totalAnswered} / ${totalQuestions}`;
+      }
+      const legendAnswered = document.getElementById('matrix-legend-answered');
+      if (legendAnswered) legendAnswered.textContent = totalAnswered;
+      const legendBlank = document.getElementById('matrix-legend-blank');
+      if (legendBlank) legendBlank.textContent = Math.max(0, totalQuestions - totalAnswered);
 
       updateProgressMetrics();
     }
@@ -2695,8 +2691,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           onStart() {
             window._isSpeechRecognitionEngaged = true;
             micBtn.classList.add('listening');
-            micBtn.style.background = 'linear-gradient(135deg, var(--grade-e, #FF0000), #990000)';
-            micBtn.style.borderColor = 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.5)';
+            micBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+            micBtn.style.borderColor = 'var(--grade-e, #ff0000)';
+            micBtn.style.boxShadow = '0 0 24px rgba(239, 68, 68, 0.75), 0 8px 16px rgba(0, 0, 0, 0.5)';
             micBtn.style.color = '#ffffff';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
@@ -2893,6 +2890,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const shouldShow = typeof show !== 'undefined' ? show : !isCurrentlyShown;
 
       popup.style.display = shouldShow ? 'flex' : 'none';
+      if (shouldShow && typeof updateNavGrid === 'function') {
+        updateNavGrid();
+      }
 
       const mainContent = document.getElementById('test-main');
       if (mainContent) {
@@ -3073,36 +3073,43 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       jumpToNextUnanswered();
     });
 
-    document.getElementById('cancel-submit-btn')?.addEventListener('click', () => {
-      document.getElementById('submit-modal')?.classList.add('hidden');
-      const activeMap = window.answeredMap || answeredMap;
-      const unanswered = allAnswerRows.filter(r => !activeMap[r.id] || !activeMap[r.id].trim()).length;
-      if (unanswered > 0) {
-        jumpToNextUnanswered();
-      }
-    });
-
-    document.getElementById('cancel-ready-btn')?.addEventListener('click', () => {
+    document.getElementById('cancel-submit-btn')?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
       document.getElementById('submit-modal')?.classList.add('hidden');
     });
 
-    document.getElementById('close-submit-modal-btn')?.addEventListener('click', () => {
+    document.getElementById('cancel-ready-btn')?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
       document.getElementById('submit-modal')?.classList.add('hidden');
     });
 
-    document.getElementById('confirm-submit-btn')?.addEventListener('click', async () => {
+    document.getElementById('close-submit-modal-btn')?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
       document.getElementById('submit-modal')?.classList.add('hidden');
-      await doSubmit();
     });
 
-    document.getElementById('btn-jump-incomplete-action')?.addEventListener('click', () => {
+    document.getElementById('confirm-submit-btn')?.addEventListener('click', async (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
+      document.getElementById('submit-modal')?.classList.add('hidden');
+      await doSubmit(false);
+    });
+
+    document.getElementById('btn-jump-incomplete-action')?.addEventListener('click', (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
       document.getElementById('submit-modal')?.classList.add('hidden');
       jumpToNextUnanswered();
     });
 
-    document.getElementById('danger-submit-btn')?.addEventListener('click', async () => {
+    document.getElementById('danger-submit-btn')?.addEventListener('click', async (e) => {
+      e?.preventDefault();
+      e?.stopPropagation();
       document.getElementById('submit-modal')?.classList.add('hidden');
-      await doSubmit();
+      await doSubmit(false);
     });
 
     document.getElementById('global-submit-btn')?.addEventListener('click', () => {

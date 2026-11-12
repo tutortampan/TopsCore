@@ -4,7 +4,7 @@
 >
 > **Primary requirement:** The project must remain restartable. Every meaningful change must be documented so a new or returning agent can continue from the exact known state without relying on conversation history.
 >
-> **Architecture:** Static HTML + CSS + modular JavaScript frontend, Supabase PostgreSQL + Storage + Auth/Edge Functions backend, deployable with Netlify/Vercel for the frontend and Supabase for backend services. **Do not introduce Django, Docker, Redis, Celery, or a separate traditional backend unless the user explicitly changes the architecture.**
+> **Architecture:** Static HTML + CSS + modular JavaScript frontend, Supabase PostgreSQL + Storage + Auth/Edge Functions backend, deployable with Netlify/Vercel for the frontend and Supabase for backend services.
 
 ---
 
@@ -81,10 +81,10 @@ STUDENT + CLASS
 
 ## 2.1 Admin primary navigation
 The admin navigation uses the **ABCD System** hierarchy:
-1. `A — ADMIN` (Executive Dashboard, Profiles, etc.)
-2. `B — BOARD` (Batches, Rosters, Progress)
-3. `C — CLASS` (Classes, Levels, Topics, Tests, Banks, Vaults)
-4. `D — DATA` (Audit Logs, Analytics, Exports)
+1. `A — ADMIN` (Executive Dashboard, Profiles, Curriculum & Level Master, Organization)
+2. `B — BOARD` (Batches, Rosters, Progress, Student Attendance)
+3. `C — CLASS` (Active Classes, Learning Sessions, Rosters, Class Tests)
+4. `D — DATA` (Vocabulary Vault, Item Banks, Modules, System Settings, Audit Logs)
 
 ## 2.2 Student business ID
 There is **no business-facing Student ID**. Use only internal database primary key/UUID. Never request or display Student ID in login, forms, lists, imports, or student-facing screens.
@@ -129,7 +129,12 @@ Centralized authoritative grading (Official Grading Scale):
 | E | Fail | 0% – 29% | Pure Red | `#FF0000` |
 
 ### Unified Color Rules:
-- **SSOT**: Colors reference `TOPSCORE_COLORS` in `js/grading.js` and `--grade-*` / `--eval-*` CSS variables in `css/style.css`.
+- **SSOT & One-Touch Global Propagation Protocol ("Rubah Satu Maka Rubah Semua")**:
+  - **Semua Merah Ikut Grade E**: Seluruh elemen bernuansa merah (indikator salah, tombol delete/purge, aksi bahaya, tanda bintang wajib `*`, alert kritis) WAJIB merujuk ke Grade E (`--grade-e`, `var(--grade-e)`, `TOPSCORE_COLORS.E`, atau `.text-fail`).
+  - **Semua Kuning Ikut Grade C**: Seluruh elemen bernuansa kuning (peringatan, latency alert, banner popover waktu, status draft/pending) WAJIB merujuk ke Grade C (`--grade-c`, `var(--grade-c)`, `TOPSCORE_COLORS.C`, atau `.text-warning`).
+  - **Semua Hijau Ikut Grade A**: Seluruh elemen bernuansa hijau (sukses, kelulusan, telemetry online, published status, tombol konfirmasi aman) WAJIB merujuk ke Grade A (`--grade-a`, `var(--grade-a)`, `TOPSCORE_COLORS.A`, atau `.text-success`).
+  - **Strict No-Hardcoding**: DILARANG KERAS mengetikkan kode hex mentah (`#ff0000`, `#ffff00`, `#00c000`) secara lepas di file CSS maupun JavaScript/HTML template. Semua styling wajib memanggil variabel CSS atau `TOPSCORE_COLORS` sehingga jika suatu hari warna diubah di `:root`, SELURUH elemen rapor dan UI berubah serentak dalam 1 langkah.
+  - **System Chrome Canvas**: Elemen non-semantik (kanvas workstation `#090D16`, sidebar `#0F172A`, border `rgba(255,255,255,0.08)`, metadata slate `#94A3B8`, tactical blue `#38BDF8`, indigo `#6366F1`) tetap menggunakan token palet sistem yang tenang dan profesional.
 - **Star (★) Exclusivity**: Star (100%) is strictly **Electric Pink** (`#ff2d87`). Exclusive to Star; never inherited by other components.
 - **Green Color Policy**: Green elements (capsules, buttons, correct answers) reference **Grade A (`#00c000ff`)**, never Star.
 - **Universal Dark Badge Text**: Round grade badges (`.grade-circle`) render dark slate (`#0F172A`) for ALL grade symbols (★, A, B, C, D, E), eliminating white text.
@@ -172,17 +177,8 @@ Material admin and security actions write structured audit records. Never log pl
 
 ---
 
-## 2.20 Declarative UI, Spatial & Workflow Invariants (Modular Specification Map)
-
-To preserve context window budget and prevent file truncation, operational, spatial, and workflow specifications are modularized into dedicated source-of-truth files. Agents must strictly follow the mandates detailed in these modular references:
-
-| Specification Domain | Authoritative Modular File | Key System Invariants Codified |
-| :--- | :--- | :--- |
-| **Spatial, Viewport & Tables** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Single-screen `100vh` lock (`overflow: hidden`), `#admin-console` `calc(100vh - 60px)`, native `display: table` lock, table-only vertical scrolling (`.table-wrap`), 50px lower panel & table footers, 10px container gap, dynamic column sizing & proportional width allocation, single-line text (`nowrap`), Excel vertical gridlines, and persistent column resizing. |
-| **Master Edit Mode & Styling** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Global Edit Mode toggle: absolute hiding of mutation buttons when OFF (`display: none !important`), flat grid inputs in Edit Mode ON (no capsule pills in tables), single-responsibility columns (1 info = 1 column). |
-| **Typographic Scale & Language** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Authoritative 8-tier typographic scale (`--tr-font-*`), zero sub-11px text, data cells weight 500 (bold reserved for headers), pure direct English (sole exception: vocabulary Indonesian meanings). |
-| **Canonical Components** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Centered loading states via canonical `getLoadingStateHtml(message)` in `js/admin/app.js`, single-line compact program chips (`CMP`, `EVN`, `SHR`, `EXP`). |
-| **Agent Execution Protocols** | [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md) | Mandatory `tasks.md` creation & center-tab pinning on proceed (Step Zero), prompt typo refinement (`### 🎯 Perbaikan Perintah`), plan naming & repository dual-write (`docs/plans/`), visual pre-flight checks, 100% automated verification (zero manual burden), editor tab hygiene (max 3 open tabs), post-milestone `/compact` recommendation. |
+## 2.20 Declarative UI, Spatial & Workflow Invariants
+Operational, spatial, typographic, and workflow specifications are modularized into dedicated source-of-truth files detailed in [# 4. MODULAR SPECIFICATION MAP](#4-modular-specification-map).
 
 ---
 
@@ -199,18 +195,18 @@ To preserve context window budget and prevent file truncation, operational, spat
 
 To prevent truncation under Antigravity's 24 KB per-file limit, detailed specifications are modularized into dedicated source-of-truth files:
 
-| Topic | Modular File Reference |
-| :--- | :--- |
-| **Product & Bootstrap Roadmap** | [`docs/ROADMAP.md`](file:///docs/ROADMAP.md) (Phases 0–14 historical & live track) |
-| **Live Project State & Restart Point** | [`docs/CURRENT_STATE.md`](file:///docs/CURRENT_STATE.md) (Single restart point) |
-| **Architectural Decisions (ADRs)** | [`docs/DECISIONS.md`](file:///docs/DECISIONS.md) (Permanent decision records) |
-| **Database Schema, Tables & RLS** | [`docs/DATABASE_SCHEMA.md`](file:///docs/DATABASE_SCHEMA.md) & `supabase/migrations/` |
-| **Edge Functions & Attempt Engine** | [`docs/EDGE_FUNCTIONS.md`](file:///docs/EDGE_FUNCTIONS.md) |
-| **Excel Ingestion Schemas** | [`docs/EXCEL_FORMATS.md`](file:///docs/EXCEL_FORMATS.md) |
-| **AI Continuation System & Templates** | [`docs/CONTINUATION_SYSTEM.md`](file:///docs/CONTINUATION_SYSTEM.md) |
-| **UI, Spatial & Table Invariants** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) |
-| **Agent Workflow & Execution Protocols** | [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md) |
-| **Master Governance Rules** | [`.antigravityrules`](file:///.antigravityrules) |
+| Topic | Modular File Reference | Key System Invariants Codified |
+| :--- | :--- | :--- |
+| **Product & Bootstrap Roadmap** | [`docs/ROADMAP.md`](file:///docs/ROADMAP.md) | Phases 0–14 historical and active evolution milestones. |
+| **Live Project State & Restart Point** | [`docs/CURRENT_STATE.md`](file:///docs/CURRENT_STATE.md) | Single authoritative restart point across restarts. |
+| **Architectural Decisions (ADRs)** | [`docs/DECISIONS.md`](file:///docs/DECISIONS.md) | Permanent architectural decision records. |
+| **Database Schema, Tables & RLS** | [`docs/DATABASE_SCHEMA.md`](file:///docs/DATABASE_SCHEMA.md) | Database schema, foreign keys, RLS policies, and migrations. |
+| **Edge Functions & Attempt Engine** | [`docs/EDGE_FUNCTIONS.md`](file:///docs/EDGE_FUNCTIONS.md) | Edge Functions, attempt lifecycle, and server scoring. |
+| **Excel Ingestion Schemas** | [`docs/EXCEL_FORMATS.md`](file:///docs/EXCEL_FORMATS.md) | Roster, question bank, and vocabulary Excel formats. |
+| **AI Continuation System & Templates** | [`docs/CONTINUATION_SYSTEM.md`](file:///docs/CONTINUATION_SYSTEM.md) | AI handoff, continuation triggers, and prompt templates. |
+| **UI, Spatial & Table Invariants** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Single-screen `100vh` lock (`overflow: hidden`), `#admin-console` `calc(100vh - 60px)`, native `display: table` lock, table-only vertical scrolling (`.table-wrap`), 50px lower panel & table footers, 10px container gap, dynamic column sizing & proportional width allocation, single-line text (`nowrap`), Excel vertical gridlines, Master Edit Mode (hiding mutation controls when OFF, flat grid inputs when ON), Authoritative 8-tier typographic scale (`--tr-font-*`), zero sub-11px text, and Centered loading states via canonical `getLoadingStateHtml(message)`. |
+| **Agent Workflow & Execution Protocols** | [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md) | Mandatory `tasks.md` creation & center-tab pinning on proceed (Step Zero), prompt typo refinement (`### 🎯 Perbaikan Perintah`), plan naming & repository dual-write (`docs/plans/`), mandatory 4-column Before & After visual planning matrix for all UI/Font/Color/Table changes, 100% automated verification (zero manual burden), editor tab hygiene (max 3 open tabs), automatic compaction advisory trigger (`/compact all`), and anti-yapping chat response limit (15–20 lines max when artifacts exist). |
+| **Master Governance Rules** | [`.antigravityrules`](file:///.antigravityrules) | Master index and domain governance rules. |
 
 ---
 

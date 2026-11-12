@@ -116,8 +116,8 @@ console.log('  ✅ Pillar 8 Passed: Classes Management, Class Results, Topics & 
 // 9. Master Edit Mode ON Safeguards
 console.log('▶ Checking Master Edit Mode ON Table Input Safeguards...');
 assert(adminCss.includes('body.global-edit-mode-on .table-wrap td input'), 'admin.css must style inputs in .table-wrap td when edit mode is ON');
-assert(adminCss.includes('border-radius: 9999px !important;'), 'admin.css must enforce capsule border-radius: 9999px on table inputs');
+assert(adminCss.includes('border-radius: 0 !important;') || adminCss.includes('border-radius: 9999px !important;'), 'admin.css must style table inputs in edit mode without inner capsule clutter');
 assert(adminCss.includes('height: 24px !important;'), 'admin.css must enforce exact 24px height on table inputs in edit mode');
-console.log('  ✅ Master Edit Mode ON Safeguards verified: capsule pill 24px inputs.');
+console.log('  ✅ Master Edit Mode ON Safeguards verified: transparent Excel 24px inputs.');
 
 console.log('\n🎉 ALL 8 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');

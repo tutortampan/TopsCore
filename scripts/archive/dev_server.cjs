@@ -4,11 +4,11 @@ const path = require('path');
 
 const PORT = 5500;
 const MIME_TYPES = {
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'text/javascript',
-  '.mjs': 'text/javascript',
-  '.json': 'application/json',
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
   '.svg': 'image/svg+xml',
@@ -16,9 +16,9 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let reqPath = req.url.split('?')[0];
+  let reqPath = decodeURI(req.url.split('?')[0].split('#')[0]);
   if (reqPath === '/' || reqPath === '') reqPath = '/index.html';
-  const filePath = path.join(process.cwd(), reqPath.replace(/^\//, ''));
+  const filePath = path.join(process.cwd(), reqPath);
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
@@ -27,10 +27,9 @@ const server = http.createServer((req, res) => {
       return;
     }
     const ext = path.extname(filePath).toLowerCase();
-    const mime = MIME_TYPES[ext] || 'application/octet-stream';
+    const contentType = MIME_TYPES[ext] || 'application/octet-stream';
     res.writeHead(200, {
-      'Content-Type': mime,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Content-Type': contentType,
       'Access-Control-Allow-Origin': '*'
     });
     fs.createReadStream(filePath).pipe(res);
@@ -38,6 +37,6 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Server running at http://127.0.0.1:${PORT}/`);
+  console.log(`TopsCore Dev Server listening at http://127.0.0.1:${PORT}`);
 });
 

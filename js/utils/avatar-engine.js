@@ -5,11 +5,11 @@
  */
 
 /**
- * Strips honorific prefix ('Mr.', 'Miss', 'Mrs.', 'Ms.') from student names.
+ * Strips honorific prefix ('Mister', 'Mr.', 'Miss', 'Mrs.', 'Ms.') from student names.
  */
 export function stripHonorific(name) {
   if (!name) return '';
-  return String(name).trim().replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
+  return String(name).trim().replace(/^(mister\.?|mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
 }
 
 /**
@@ -29,8 +29,8 @@ export function generateAvatarSvg(name = '', gender = '') {
   const isMale = g === 'male' || g === 'm' || g === 'laki-laki' || g === 'l';
   const isFemale = g === 'female' || g === 'f' || g === 'perempuan' || g === 'p';
   
-  const bgGrad1 = isMale ? '#3b82f6' : isFemale ? '#ec4899' : '#6366f1';
-  const bgGrad2 = isMale ? '#1d4ed8' : isFemale ? '#be185d' : '#4338ca';
+  const bgGrad1 = isMale ? '#3b82f6' : isFemale ? '#a855f7' : '#6366f1';
+  const bgGrad2 = isMale ? '#1d4ed8' : isFemale ? '#7e22ce' : '#4338ca';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" width="240" height="320">
   <defs>

@@ -199,9 +199,9 @@
     }
 
     .cascade-step-num.done {
-      background: rgba(var(--grade-star-rgb), 0.2);
-      border-color: rgba(var(--grade-star-rgb), 0.4);
-      color: var(--grade-star);
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: #38bdf8;
     }
 
     .cascade-title-wrap {
@@ -231,7 +231,7 @@
 
     .cascade-selection-label {
       font-size: 0.98rem;
-      color: #a78bfa;
+      color: #38bdf8;
       font-weight: 700;
       white-space: nowrap;
       overflow: hidden;
@@ -257,10 +257,10 @@
     .cascade-section.selected { margin-bottom: 0.38rem; }
     .cascade-section.selected .cascade-body { display: none; }
     .cascade-section.selected .cascade-inner {
-      border-color: rgba(var(--grade-star-rgb), 0.2);
-      background: rgba(var(--grade-star-rgb), 0.05);
+      border-color: rgba(56, 189, 248, 0.3);
+      background: rgba(56, 189, 248, 0.04);
     }
-    .cascade-section.selected .cascade-step-num { background: rgba(var(--grade-star-rgb), 0.2); border-color: rgba(var(--grade-star-rgb), 0.4); color: var(--grade-star); }
+    .cascade-section.selected .cascade-step-num { background: rgba(56, 189, 248, 0.15); border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; }
     .cascade-section.selected .cascade-label { color: rgba(255,255,255,0.7); }
 
     .cascade-body { padding: 1.25rem 1.25rem 1.5rem; }
@@ -282,7 +282,7 @@
       transition: border-color 0.2s;
       box-sizing: border-box;
     }
-    .cascade-search input:focus { border-color: rgba(139,92,246,0.5); }
+    .cascade-search input:focus { border-color: rgba(56, 189, 248, 0.6); box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15); }
     .cascade-search input::placeholder { color: rgba(255,255,255,0.25); }
     .cascade-search .search-icon {
       position: absolute;
@@ -326,21 +326,21 @@
     }
 
     .opt-card:hover {
-      background: rgba(139,92,246,0.12);
-      border-color: rgba(139,92,246,0.3);
+      background: rgba(56, 189, 248, 0.08);
+      border-color: rgba(56, 189, 248, 0.35);
       color: #fff;
       transform: translateX(3px);
     }
 
     .opt-card.active {
-      background: rgba(139,92,246,0.2);
-      border-color: rgba(139,92,246,0.5);
+      background: rgba(56, 189, 248, 0.14);
+      border-color: rgba(56, 189, 248, 0.6);
       color: #fff;
     }
 
     .opt-card-icon { font-size: 1.1rem; flex-shrink: 0; }
     .opt-card-name { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .opt-card-check { color: var(--grade-star); font-size: 1rem; display: none; }
+    .opt-card-check { color: #38bdf8; font-size: 1rem; display: none; }
     .opt-card.active .opt-card-check { display: block; }
 
     /* Empty & loading states */
@@ -394,13 +394,13 @@
     }
 
     .pin-digit:focus {
-      border-color: rgba(139,92,246,0.7);
-      box-shadow: 0 0 0 3px rgba(139,92,246,0.22);
+      border-color: rgba(56,189,248,0.7);
+      box-shadow: 0 0 0 3px rgba(56,189,248,0.22);
     }
 
     .pin-digit.filled {
-      border-color: rgba(52,211,153,0.5);
-      background: rgba(52,211,153,0.06);
+      border-color: rgba(0, 192, 0, 0.5);
+      background: rgba(0, 192, 0, 0.08);
     }
 
     .pin-actions {

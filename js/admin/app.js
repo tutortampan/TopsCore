@@ -1,7 +1,7 @@
-import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { DataGrid } from './datagrid.js?v=20261112_v425';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
 import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261106_v160';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven } from '../api.js?v=20261106_v160';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, calculateAutoDurationMinutes } from '../api.js?v=20261106_v160';
 
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
@@ -399,12 +399,12 @@ import {
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261106_v160';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261112_v425';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261106_v160';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261106_v160';
 import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v160';
 import { renderTests } from './tests-management.js?v=20261106_v160';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261110_v174';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261113_v441';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261110_v175';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261109_v173';
 import { renderModules } from './modules.js?v=20261106_v160';
@@ -414,8 +414,13 @@ import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal,
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
 import { renderClassesHub } from './classes-hub.js?v=20261106_v160';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261106_v160';
-import { openStudentFullEdit } from './student-management.js?v=20261106_v160';
-import { renderStudentsRegistration } from './student-registration.js?v=20261106_v160';
+import { openStudentFullEdit } from './student-management.js?v=20261112_v425';
+import { renderStudentsRegistration } from './student-registration.js?v=20261112_v425';
+
+if (typeof window !== 'undefined') {
+  window.renderStudentsRegistration = renderStudentsRegistration;
+  window.openStudentFullEdit = openStudentFullEdit;
+}
 
     // -- Primary Tab Switching Variables --
     const mobileTabs = document.querySelectorAll('.mobile-tab');
@@ -442,8 +447,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
       institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       tests: 'CLASS', 'test-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_tests: 'CLASS',
-      'class-panel': 'CLASS', 'class-hub': 'CLASS', vocab_vault: 'CLASS',
-      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', recalibrator: 'DATA', modules: 'DATA'
+      'class-panel': 'CLASS', 'class-hub': 'CLASS',
+      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', recalibrator: 'DATA', modules: 'DATA', vocab_vault: 'DATA'
     };
 
     // Mobile Bottom Tab Panels -> Primary Domain
@@ -1397,11 +1402,24 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               if (typeCounts[t] > max) { max = typeCounts[t]; answerType = t; }
             }
           }
-          const timeLimit = r?.working_duration_minutes || r?.time_limit_minutes || Math.floor((r?.time_limit_seconds || 3600) / 60);
+          const rawAns = r?.answer_type || answerType || 'spoken';
+          const isPhrase = r?.payload?.category === 'phrases' 
+            || r?.test_subtype?.includes('PHRASE') 
+            || (r?.shell_code && r.shell_code.includes('PHRASE')) 
+            || String(r?.title || '').toLowerCase().includes('phrase');
+          const category = isPhrase ? 'phrases' : 'words';
+
           const minScore = r?.minimum_required_score || 60;
           const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
           const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
           const qCount = (allQuestions || []).filter(q => q?.test_id === r?.id).length;
+          const effectiveQCount = _isDyn ? _vaultQ : qCount;
+
+          // Real-time dynamic duration calculation (SSOT):
+          // Automatically calibrated from question volume and per-item response rates
+          const timeLimit = (effectiveQCount > 0)
+            ? calculateAutoDurationMinutes(effectiveQCount, rawAns, category)
+            : (r?.working_duration_minutes || r?.time_limit_minutes || Math.floor((r?.time_limit_seconds || 3600) / 60));
 
           return {
             id: r?.id || '',
@@ -1664,7 +1682,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
           let gradeColor = 'rgba(255,255,255,0.4)';
           if (grade && grade !== '—' && grade !== '-') {
-            gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(averageScorePct) : (typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS?.E || '#FF0000'));
+            gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(averageScorePct) : (typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS?.E || 'var(--grade-e, #FF0000)'));
           }
 
           // Find latest submitted test
@@ -1916,7 +1934,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             `;
             const rightHtml = `
               <div style="display:inline-flex; align-items:center; gap:8px;">
-                <span class="badge" style="background:rgba(0,192,0,0.15); color:#00c000; border:1px solid rgba(0,192,0,0.3); font-size:11px; font-weight:700;">● ANALYTICS ACTIVE</span>
+                <span class="badge" style="background:rgba(var(--grade-a-rgb, 0,192,0),0.15); color:var(--grade-a, #00c000); border:1px solid rgba(var(--grade-a-rgb, 0,192,0),0.3); font-size:11px; font-weight:700;">● ANALYTICS ACTIVE</span>
               </div>
             `;
             setBottomInfobar(leftHtml, rightHtml);
@@ -2004,8 +2022,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   }
                   let displayTitle = escapeHtml(row.title);
                   displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--grade-c, #ffff00);">$1</span>');
-                  displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #f472b6;">$1</span>');
-                  displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: #f472b6;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #38bdf8;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: #38bdf8;">$1</span>');
                   return `<div class="fw-500" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:260px; max-width:600px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
                 }
               },
@@ -2037,7 +2055,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 render: (val, row) => {
                   let typeStr = escapeHtml(row.TestCategory || 'Task');
                   typeStr = typeStr.replace(/(QUIZ|TASK)/ig, '<span style="color: var(--grade-c, #ffff00); font-weight: 700;">$1</span>');
-                  typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #f472b6; font-weight: 700;">$1</span>');
+                  typeStr = typeStr.replace(/(EXAM|TEST)/ig, '<span style="color: #38bdf8; font-weight: 700;">$1</span>');
                   return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${typeStr}</div>`;
                 }
               },
@@ -2069,11 +2087,11 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   const isExamTest = isWeeklyExam(row._raw);
                   const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
                   if (!isEditMode) {
-                    return `<div style="display:inline-flex; align-items:center; justify-content:center; gap:3px; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; color:${isExamTest ? '#f472b6' : '#eab308'};"><span style="font-size:11px;">🎯</span><span>${currentMin}%</span></div>`;
+                    return `<div style="display:inline-flex; align-items:center; justify-content:center; gap:3px; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; color:${isExamTest ? '#38bdf8' : '#eab308'};"><span style="font-size:11px;">🎯</span><span>${currentMin}%</span></div>`;
                   }
                   return `
                     <div class="pass-pct-cell-wrap" style="display:inline-flex; align-items:center; justify-content:center; gap:2px;">
-                      <span style="font-size:11px; color:${isExamTest ? '#f472b6' : '#eab308'}; font-weight:700;">🎯</span>
+                      <span style="font-size:11px; color:${isExamTest ? '#38bdf8' : '#eab308'}; font-weight:700;">🎯</span>
                       <input type="number"
                              class="input-test-pass-score edit-mode-flat-input"
                              data-test-id="${testId}"
@@ -2872,7 +2890,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                     `;
                   }
 
-                  const color = isComplete ? '#00c000' : (earned > 0 ? '#38bdf8' : '#64748b');
+                  const color = isComplete ? 'var(--grade-a, #00c000)' : (earned > 0 ? '#38bdf8' : '#64748b');
                   return `
                     <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Tasks Progress: ${earned}/${maxT}${isComplete ? ' (Completed)' : ' (Incomplete)'}">
                       <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:500; color:${color}; font-variant-numeric:tabular-nums;">
@@ -3033,7 +3051,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                     : 0;
                   const color = typeof getGradeColorByScore === 'function'
                     ? getGradeColorByScore(themePct)
-                    : (themePct >= 60 ? '#FFFF00' : '#FF0000');
+                    : (themePct >= 60 ? 'var(--grade-c, #FFFF00)' : 'var(--grade-e, #FF0000)');
                   return `
                     <span class="asm-score asm-score-test test-score-theme-total"
                           style="color:${color} !important; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
@@ -3113,7 +3131,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               data: initialRosterData,
               pageSize: 50,
               stickyActionCol: false,
-              tableLayout: 'auto',
+              tableLayout: 'fixed',
               hideToolbar: true,
               rowClassName: (row) => row.hasRemedial ? 'row-remedial' : '',
               searchKeys: [],
@@ -3177,9 +3195,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 let cellsHtml = '';
                 visibleCols.forEach(col => {
                   if (col.key === 'batch') {
-                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:700; color:#FFFF00; font-size:12px;">★</td>`;
+                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:700; color:var(--grade-c, #FFFF00); font-size:12px;">★</td>`;
                   } else if (col.key === 'displayName') {
-                    cellsHtml += `<td class="col-sticky col-sticky-2" style="font-weight:700; color:#FFFF00; font-size:12px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
+                    cellsHtml += `<td class="col-sticky col-sticky-2" style="font-weight:700; color:var(--grade-c, #FFFF00); font-size:12px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
                   } else if (col.key === 'progressPct') {
                     const avgProgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgProg) : '#ffffff';
                     cellsHtml += `
@@ -3247,7 +3265,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       const avgPct = Math.round(pctSum / count);
                       const avgCol = typeof getGradeColorByScore === 'function'
                         ? getGradeColorByScore(avgPct)
-                        : (avgPct >= 60 ? '#FFFF00' : '#FF0000');
+                        : (avgPct >= 60 ? 'var(--grade-c, #FFFF00)' : 'var(--grade-e, #FF0000)');
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
@@ -3284,7 +3302,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                     });
                     if (sumMax > 0) {
                       const avgTaskPct = Math.round((sumTasks / sumMax) * 100);
-                      const avgTaskCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgTaskPct) : '#FFFF00';
+                      const avgTaskCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgTaskPct) : (TOPSCORE_COLORS?.C || 'var(--grade-c, #FFFF00)');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
                           <span style="color:${avgTaskCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Tasks Progress: ${avgTaskPct}% (${sumTasks}/${sumMax})">${avgTaskPct}%</span>
@@ -3310,7 +3328,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                     });
                     if (count > 0) {
                       const avgThemeScore = Math.round(totalScoreSum / count);
-                      const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemeScore) : '#FFFF00';
+                      const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemeScore) : (TOPSCORE_COLORS?.C || 'var(--grade-c, #FFFF00)');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
                           <span style="color:${avgScoreCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Score: ${avgThemeScore}%">${avgThemeScore}%</span>
@@ -3744,7 +3762,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
       } catch (e) {
         console.error('[renderClassHub error]:', e);
-        area.innerHTML = `<div class="empty-state"><p style="color:#FF0000;">Failed to load class data: ${escapeHtml(e?.message || 'Unknown error')}</p></div>`;
+        area.innerHTML = `<div class="empty-state"><p style="color:var(--grade-e, #FF0000);">Failed to load class data: ${escapeHtml(e?.message || 'Unknown error')}</p></div>`;
       }
     }
     window.renderClassHub = renderClassHub;
@@ -3910,6 +3928,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
       if (Test.title) parts.push(Test.title);
       return parts.length > 0 ? parts.join(' &middot; ') : (Test.title || 'Test');
     }
+    window.formatTestDisplayName = formatTestDisplayName;
 
     // ── DB Connection Status Banner ──
     async function initConnectionBanner() {
@@ -4123,7 +4142,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             break;
           case 'student-registration':
           case 'students-registration':
-          case 'import-students':     return loadSection('students');
+          case 'import-students':
+            await renderStudentsRegistration(area);
+            break;
           case 'test-hub':
           case 'import_ai_tests':
           case 'tests':
@@ -4327,26 +4348,21 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
     async function renderTestHub(area) {
       area.innerHTML = getLoadingStateHtml('Loading Test Hub...');
       try {
-        const [allTests, classes, results] = await Promise.all([
+        const [allTests, classes] = await Promise.all([
           adminFetchAll('tests', 'id, title, test_type, status, class_id, level_id, levels(name)'),
-          adminFetchAll('classes', 'id, name'),
-          adminFetchAll('test_results', 'final_score').catch(() => [])
+          adminFetchAll('classes', 'id, name')
         ]);
 
         const tasks = (allTests || []).filter(a => a.test_type === 'quiz' || a.category === 'TASK' || (a.test_subtype && a.test_subtype.includes('TASK')));
         const tests = (allTests || []).filter(a => a.test_type === 'exam' || a.category === 'EXAM' || (a.test_subtype && (a.test_subtype.includes('TEST') || a.test_subtype.includes('EXAM'))));
 
-        let passRate = "N/A";
-        if (results && results.length > 0) {
-            const passed = results.filter(r => (r.final_score || 0) >= 70).length;
-            passRate = Math.round((passed / results.length) * 100) + "%";
-        }
+        let passRate = "—";
 
         let tableHtml = (allTests || []).map(a => {
            const c = (classes||[]).find(x => x.id === a.class_id);
            const isExam = isWeeklyExam(a);
            const catLabel = isExam ? 'EXAM' : 'TASK';
-           const badgeColor = !isExam ? 'background:rgba(255,140,0,0.15);color:#FF8C00;border:1px solid rgba(255,140,0,0.3);' : 'background:rgba(255,0,0,0.15);color:#FF0000;border:1px solid rgba(255,0,0,0.3);';
+           const badgeColor = !isExam ? 'background:rgba(255,140,0,0.15);color:#FF8C00;border:1px solid rgba(255,140,0,0.3);' : 'background:rgba(var(--grade-e-rgb, 255,0,0),0.15);color:var(--grade-e, #FF0000);border:1px solid rgba(var(--grade-e-rgb, 255,0,0),0.3);';
            return `
              <tr style="border-bottom:1px solid var(--clr-border);">
                <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
@@ -4377,14 +4393,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 </div>
               </div>
               <div style="flex:1; min-width:200px; padding:1.5rem; background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; display:flex; align-items:center; gap:1rem;">
-                <div style="width:48px;height:48px;border-radius:50%;background:rgba(255,0,0,0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#FF0000;">🏆</div>
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(var(--grade-e-rgb, 255,0,0),0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--grade-e, #FF0000);">🏆</div>
                 <div>
                   <div style="font-size:1.8rem; font-weight:800; color:var(--clr-text-1); line-height:1;">${tests.length}</div>
                   <div style="font-size:0.75rem; color:var(--clr-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Total Tests</div>
                 </div>
               </div>
               <div style="flex:1; min-width:200px; padding:1.5rem; background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:12px; display:flex; align-items:center; gap:1rem;">
-                <div style="width:48px;height:48px;border-radius:50%;background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.1);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:${TOPSCORE_COLORS.STAR};">📈</div>
+                <div style="width:48px;height:48px;border-radius:50%;background:rgba(56,189,248,0.12);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:#38bdf8;">📈</div>
                 <div>
                   <div style="font-size:1.8rem; font-weight:800; color:var(--clr-text-1); line-height:1;">${passRate}</div>
                   <div style="font-size:0.75rem; color:var(--clr-text-muted); font-weight:600; text-transform:uppercase; letter-spacing:0.05em; margin-top:4px;">Avg. Pass Rate</div>
@@ -4525,12 +4541,12 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               <div style="display:flex; gap:0.5rem;">
                 ${isVocabClass ? `
                   <button class="btn btn-sm" id="cpanel-auto-gen-words" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Tests">⚡ Gen Words</button>
-                  <button class="btn btn-sm" id="cpanel-auto-gen-phrases" style="background:${TOPSCORE_COLORS.STAR};color:#0F172A;border:1px solid ${TOPSCORE_COLORS.STAR};font-weight:700;" title="Auto-Generate Phrases & Idioms">⚡ Gen Phrases</button>
+                  <button class="btn btn-sm" id="cpanel-auto-gen-phrases" style="background:#6366f1;color:#fff;border:1px solid #818cf8;font-weight:700;" title="Auto-Generate Phrases & Idioms">⚡ Gen Phrases</button>
                 ` : `
                   <button class="btn btn-sm" id="cpanel-auto-generate-btn" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Tests">⚡ Auto-Generate</button>
                 `}
                 <button class="btn btn-sm" id="cpanel-add-task-btn" style="background:rgba(245,158,11,0.9);color:#1a1a1a;border:1px solid rgba(245,158,11,0.4);font-weight:700;">📋 Add Task</button>
-                <button class="btn btn-sm" id="cpanel-add-test-btn" style="background:rgba(239,68,68,0.9);color:#fff;border:1px solid rgba(239,68,68,0.4);font-weight:700;">🏆 Add Test</button>
+                <button class="btn btn-sm" id="cpanel-add-test-btn" style="background:var(--grade-e, #FF0000);color:#fff;border:1px solid var(--grade-e, #FF0000);font-weight:700;">🏆 Add Test</button>
               </div>
             </div>
 
@@ -4650,7 +4666,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
       } catch (e) {
         console.error(e);
-        area.innerHTML = `<div class="empty-state"><p style="color:#FF0000;">Failed to load class panel.</p></div>`;
+        area.innerHTML = `<div class="empty-state"><p style="color:var(--grade-e, #FF0000);">Failed to load class panel.</p></div>`;
       }
     }
 
@@ -4988,7 +5004,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
       if (typeof window.showStudentProfileModal === 'function') {
         return window.showStudentProfileModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261106_v140');
+      const sm = await import('./student-management.js?v=20261112_v425');
       if (typeof sm.showStudentProfileModal === 'function') {
         return sm.showStudentProfileModal(studentId);
       }
@@ -5058,8 +5074,8 @@ window._deleteRecord = async (section, id, name) => {
         _cascadeStudentIds = students.map(s => s.id);
         titleEl.textContent = `Delete Batch "${escapeHtml(name)}"?`;
         msgEl.innerHTML = `
-          <div style="text-align:left; background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
-            <div style="font-weight:700; color:#FF0000; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
+          <div style="text-align:left; background:rgba(var(--grade-e-rgb, 255,0,0),0.12); border:1px solid rgba(var(--grade-e-rgb, 255,0,0),0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:var(--grade-e, #FF0000); font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
             <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
               This Batch currently has <strong>${students.length} enrolled student(s)</strong>.
             </div>
@@ -5103,8 +5119,8 @@ window._deleteRecord = async (section, id, name) => {
       if (bIds.length > 0 || studentCount > 0) {
         titleEl.textContent = `Delete Program "${escapeHtml(name)}"?`;
         msgEl.innerHTML = `
-          <div style="text-align:left; background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
-            <div style="font-weight:700; color:#FF0000; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
+          <div style="text-align:left; background:rgba(var(--grade-e-rgb, 255,0,0),0.12); border:1px solid rgba(var(--grade-e-rgb, 255,0,0),0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:var(--grade-e, #FF0000); font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Data Alert</div>
             <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
               This Program contains <strong>${bIds.length} batch(es)</strong> and <strong>${studentCount} student(s)</strong>.
             </div>
@@ -5159,8 +5175,8 @@ window._deleteRecord = async (section, id, name) => {
       if (pIds.length > 0 || bIds.length > 0 || studentCount > 0) {
         titleEl.textContent = `Delete Institution "${escapeHtml(name)}"?`;
         msgEl.innerHTML = `
-          <div style="text-align:left; background:rgba(255,0,0,0.12); border:1px solid rgba(255,0,0,0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
-            <div style="font-weight:700; color:#FF0000; font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Hierarchy Alert</div>
+          <div style="text-align:left; background:rgba(var(--grade-e-rgb, 255,0,0),0.12); border:1px solid rgba(var(--grade-e-rgb, 255,0,0),0.35); border-radius:8px; padding:12px; margin-bottom:12px;">
+            <div style="font-weight:700; color:var(--grade-e, #FF0000); font-size:0.95rem; margin-bottom:6px;">⚠️ Connected Hierarchy Alert</div>
             <div style="font-size:0.85rem; color:var(--clr-text-1); margin-bottom:6px;">
               This Institution contains <strong>${pIds.length} program(s)</strong>, <strong>${bIds.length} batch(es)</strong>, and <strong>${studentCount} student(s)</strong>.
             </div>
