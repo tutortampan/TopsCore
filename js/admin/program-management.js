@@ -125,7 +125,7 @@ export async function renderClasses(area) {
     data: gridData,
     pageSize: 50,
     searchKeys: ['institutionName', 'name'],
-    bulkActions: true,
+    bulkActions: false,  // Rule 13: Checkbox columns purged
     onRowClick: (row) => {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
@@ -257,7 +257,7 @@ export async function renderBatches(area) {
     data: gridData,
     pageSize: 50,
     searchKeys: ['program', 'name'],
-    bulkActions: true,
+    bulkActions: false,  // Rule 13: Checkbox columns purged
     onRowClick: (row) => {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">

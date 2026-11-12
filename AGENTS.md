@@ -34,6 +34,14 @@ The user has granted standing, unconditional permission to execute all `powershe
 ### 0.1.1 Git Commit & Push Restriction (STRICT STANDING RULE)
 **NEVER execute `git commit` or `git push` autonomously.** All commits and pushes are strictly gated: the agent MUST NOT commit or push changes until the user explicitly commands it ("no commit until I say so!"). All changes must remain uncommitted in the working tree for user review until explicit approval is given.
 
+### 0.1.2 Strict UTF-8 & Prohibition of PowerShell File Manipulation (STRICT STANDING RULE)
+**NEVER use PowerShell cmdlets (`Get-Content`, `Set-Content`, `Add-Content`, `Out-File`, or `-replace` one-liners) to read, edit, or write codebase files.**
+- Windows PowerShell 5.1 defaults to ANSI (Windows-1252), which mangles UTF-8 multibyte characters into mojibake corruption.
+- All file reads, creations, and edits MUST strictly be executed via:
+  1. Antigravity native file tools (`edit_file`, `write_file`, `read_file`), OR
+  2. Node.js scripts using explicit UTF-8 (`fs.readFileSync(file, 'utf8')`, `fs.writeFileSync(file, content, 'utf8')`).
+- PowerShell execution authority is strictly limited to running processes (`node ...`, `git ...`, tests, diagnostics), NEVER for in-line file editing or text piping.
+
 ---
 
 # 1. PRODUCT
@@ -164,82 +172,17 @@ Material admin and security actions write structured audit records. Never log pl
 
 ---
 
-## Declarative UI, Spatial & Workflow Invariants (Pointers to Modular Rules)
+## 2.20 Declarative UI, Spatial & Workflow Invariants (Modular Specification Map)
 
-The following operational and spatial rules are codified and enforced across the platform (see [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) and [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md)):
+To preserve context window budget and prevent file truncation, operational, spatial, and workflow specifications are modularized into dedicated source-of-truth files. Agents must strictly follow the mandates detailed in these modular references:
 
-### 2.20 Screen, Sub-Tab, and Route State Persistence on Reload/Refresh (/learn)
-Preserve active screen, hash, sub-tabs, and filters across browser reloads without disorienting redirects.
-
-### 2.21 Master Terminology & Spatial Architecture
-Strict terminology: Student Gate (`index.html`), Class Hub (`dashboard.html`), Class Lobby (`#classes-selector-modal`), Test Room (`test.html`), Result Scoreboard (`result.html`).
-
-### 2.22 Side Quest Protocol for Side Conversations (/btw)
-Isolate branched requests into dedicated `Side Quest — <Title>` plan artifacts without polluting primary roadmaps.
-
-### 2.23 Zero Outer Page Scroll & Table-Only Viewport Lock (/learn)
-`html` and `body` strictly enforce `100vh` viewport lock (`overflow: hidden !important;`). Layout `#admin-console` uses `height: calc(100vh - 60px) !important;` to compensate the 60px locked bottom banner.
-**Table-Only Vertical Scroll**: Vertical scrolling is permitted EXCLUSIVELY inside table body containers (`.table-wrap` / `tbody`) with sticky headers (`top: 0`) and sticky footers (`bottom: 0`). Toolbars collapse when Edit Mode is OFF.
-
-### 2.24 Global Master Edit Mode Across All Admin Pages (/learn)
-Global toggle in `admin-topbar`.
-**Absolute Hiding when OFF**: When Edit Mode is OFF, all edit/delete/add/override buttons and steppers are completely hidden (`display: none !important;`) across all admin domains.
-
-### 2.25 Mandatory Mockup Design & Current State Screenshot for All UI Proposals (/learn)
-UI plans must include Current State Screenshot (Before) and Proposed Visual Mockup (After) prior to production code changes.
-
-### 2.26 Mandatory Automated Verification & Zero Manual Verification Burden (/learn)
-All verification is programmatically executed via automated scripts. Zero manual burden on the user.
-
-### 2.27 Mandatory Task List Artifact & Real-Time Progress Tracking on Proceed (/learn)
-Step Zero: Create and pin `tasks.md` in center editor tab via `antigravity-ide.cmd -r` before modifying code.
-
-### 2.28 Mandatory Prompt Refinement & Structured Intent Clarification (/learn)
-Inspect user prompt for typos and present `### 🎯 Perbaikan Perintah (Typo Fixed)` before execution.
-
-### 2.29 Standard Plan Artifact Naming Convention & Repository Dual-Write (`docs/plans/`) (/learn)
-All plans use the date-prefixed format `YYYYMMDD - <Plan Name>.md`. To ensure plans persist across multiple laptops and Git clones, plans are dual-written: officially saved in `docs/plans/` in the workspace repository and mirrored in the active brain artifact directory for interactive session control.
-
-### 2.30 Pure Direct English UI Standard (Sole Exception: Vocab Vault Indonesian Meanings) (/learn)
-All UI text, labels, and system messages use direct English. Sole exception: vocabulary Indonesian meaning.
-
-### 2.31 Single-Responsibility Columns & Edit-Mode-Only Capsule Invariant (/learn)
-Every column holds strictly 1 metric. Zero capsule pill badges in view mode; capsule styling is reserved for inputs when Master Edit Mode is ON.
-
-### 2.32 Automatic Middle-Panel Tab Hygiene & Editor Cleanup Upon Process Completion (/learn)
-Do not leave lingering open source files. Only pin `tasks.md`. Enforce max 3 open editor tabs.
-
-### 2.33 Universal Lower Panel Architecture & Universal 10px Container Gap (/learn)
-Lower panel and table footers strictly enforce exact `50px` height. Every container, panel, card, table, and toolbar strictly maintains an exact `10px` gap (`gap: 10px !important; margin-bottom: 10px !important;`).
-
-### 2.34 Dynamic Column Sizing, Single-Line Text & Zero Dead Space Invariant (/learn)
-Tables expand 100% width with proportional dynamic space distribution: zero center voids, zero edge clustering. Flexible text columns expand proportionately, metric/exam columns fit snugly. Cells enforce `white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`. Rigid micro-widths (<50px) that clip headers are forbidden.
-
-### 2.35 Centered Loading States & Canonical Component Invariant (/learn)
-All loading spinners and indicators in Tutor's Room must strictly render centered horizontally and vertically (`display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; min-height: calc(100vh - 200px); flex: 1 1 0; margin: auto;`). All parent and tab containers (`#class-hub-tab-content`, `.workspace-content`) must enforce `width: 100% !important; height: 100% !important; flex: 1 1 0 !important;` to eliminate horizontal side-drifting and top-offsetting. Canonical helper `getLoadingStateHtml(message)` in `js/admin/app.js` is the authoritative component with direct English messaging.
-
-### 2.36 Mandatory Visual Pre-Flight Checklist & Subagent Gating (/learn)
-Embed pre-flight checklist in UI plans. Subagent delegation and code changes gated until checklist is verified.
-
-### 2.37 Context Window Budget Hygiene & Post-Milestone Compaction (/learn)
-Recommend `/compact` after completing multi-phase milestones.
-
-### 2.38 Universal Table Standardization Protocol & Construction Blueprint (/learn)
-All data tables across TopsCore strictly enforce the 8-pillar standardization invariant:
-1. **Spatial View Margins & Flush Base Docking**: Table container (`.table-wrap`) strictly adheres to `10px` top, `10px` sides, and `0px` bottom (`margin: 10px 10px 0 10px !important;`), flush docked to the 60px bottom banner (`#bottom-ad-banner`).
-2. **Uniform Font Size (12px) & Single-Line Text**: Header text (`th`), data cells (`td`), super-headers, and inputs strictly enforce uniform `font-size: 12px !important; line-height: 1.4 !important;`. Cells enforce `white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`.
-3. **Superscript Tag Standard**: Remedial tags (`<sup>R</sup>`) and waiver tags (`<sup>F</sup>`) strictly enforce `font-size: 1.0em !important; font-weight: 900 !important; vertical-align: super !important; line-height: 0 !important;`.
-4. **Two-Tier Sticky Header Locking**: Super-headers are sticky at `top: 0 !important; z-index: 20 !important; height: 24px !important;`, sub-headers are sticky at `top: 24px !important; z-index: 19 !important; height: 24px !important;` with solid opaque backgrounds (`#0d1527` / `#0b1120`). Single headers sticky at `top: 0 !important; z-index: 10 !important; height: 28px !important;`.
-5. **Small Table Anti-Ballooning & Zero Scrollbar**: In `fitMatrixToScreen()` and CSS, row heights are bounded between `24px` and `32px` (`min: 24px, max: 32px`). Small rosters (< 15 rows) do not stretch or balloon (`height: auto !important;`), and vertical scrollbars are dynamically eliminated (`overflow-y: hidden`).
-6. **Active-Only Sort Arrow (No Idle ⇅)**: The ambiguous idle `⇅` sort icon is strictly purged across all tables. Sort indicators `▲` (asc) or `▼` (desc) in tactical cyan (`#38bdf8`) appear EXCLUSIVELY when a column is actively clicked and sorted.
-7. **Pure Direct English & Grade Star Contrast**: All table headers, KPI labels, and modals use 100% direct English (Rule 2.30). Circular Star grade badges strictly enforce `#0F172A` dark slate text (Rule 2.10).
-8. **Master Edit Mode Table Input Safeguards**: In view mode (Edit Mode OFF), zero capsule pills around data. When Master Edit Mode is ON, interactive table inputs receive capsule styling (`border-radius: 9999px !important; height: 24px !important; font-size: 12px !important; padding: 2px 8px !important;`) to prevent row jumping or layout distortion.
-
-### 2.39 Tutor's Room 8-Tier Typographic Scale & Zero Sub-11px Invariant (/learn)
-Tutor's Room (`admin.html`) enforces an authoritative 8-tier typographic scale rooted in `:root` CSS variables (`--tr-font-*`):
-- Display (20px Outfit 800), Title (16px Outfit 700), Subtitle (14px Inter 600), Body (13px Inter 500), Table (12px Inter 500/700), Control (12px Inter 600), Caption (11px Inter 600), Mono (11px Mono 600).
-- **Zero Sub-11px Rule**: Absolutely no text element in Tutor's Room may render smaller than `11px`. Eradicate legacy `0.65rem` (8.3px), `0.70rem` (8.9px), `8pt`, and `8.5pt`.
-- **Weight Discipline & Zero Italic Degradation**: Standard data cells and descriptions use weight `500` (Medium); weight `700/800` is reserved for headers and active states. Purge unneeded italics on dark backgrounds.
+| Specification Domain | Authoritative Modular File | Key System Invariants Codified |
+| :--- | :--- | :--- |
+| **Spatial, Viewport & Tables** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Single-screen `100vh` lock (`overflow: hidden`), `#admin-console` `calc(100vh - 60px)`, native `display: table` lock, table-only vertical scrolling (`.table-wrap`), 50px lower panel & table footers, 10px container gap, dynamic column sizing & proportional width allocation, single-line text (`nowrap`), Excel vertical gridlines, and persistent column resizing. |
+| **Master Edit Mode & Styling** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Global Edit Mode toggle: absolute hiding of mutation buttons when OFF (`display: none !important`), flat grid inputs in Edit Mode ON (no capsule pills in tables), single-responsibility columns (1 info = 1 column). |
+| **Typographic Scale & Language** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Authoritative 8-tier typographic scale (`--tr-font-*`), zero sub-11px text, data cells weight 500 (bold reserved for headers), pure direct English (sole exception: vocabulary Indonesian meanings). |
+| **Canonical Components** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Centered loading states via canonical `getLoadingStateHtml(message)` in `js/admin/app.js`, single-line compact program chips (`CMP`, `EVN`, `SHR`, `EXP`). |
+| **Agent Execution Protocols** | [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md) | Mandatory `tasks.md` creation & center-tab pinning on proceed (Step Zero), prompt typo refinement (`### 🎯 Perbaikan Perintah`), plan naming & repository dual-write (`docs/plans/`), visual pre-flight checks, 100% automated verification (zero manual burden), editor tab hygiene (max 3 open tabs), post-milestone `/compact` recommendation. |
 
 ---
 
@@ -285,4 +228,5 @@ Every change must be executed atomically:
 - DO NOT invent business Student IDs.
 - DO NOT create Test Version entities.
 - DO NOT hardcode colors outside `TOPSCORE_COLORS` / CSS variables.
+- DO NOT use PowerShell (`Get-Content` / `Set-Content` / `Add-Content`) to modify code or documentation files.
 - DO NOT commit or push to Git until explicit user command.

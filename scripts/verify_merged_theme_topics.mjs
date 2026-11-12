@@ -1,7 +1,7 @@
-import { chromium } from 'playwright';
+import { chromium } from '@playwright/test';
 import path from 'path';
 
-const ARTIFACT_DIR = 'C:/Users/ASUS/.gemini/antigravity/brain/db70e579-3b54-4473-9eed-e7677e0d8525';
+const ARTIFACT_DIR = process.env.ARTIFACT_DIR || 'C:/Users/Top/.gemini/antigravity/brain/27d21bc9-3c91-40ba-b028-78a991797ece';
 
 async function run() {
   console.log('=== Verifying Merged Theme Topics in Theme Manager ===');
@@ -27,17 +27,17 @@ async function run() {
       const tpCode = r.querySelector('[data-action="edit-topic-code"]')?.value;
       const compositeCode = r.querySelector('.col-theme-composite-code')?.textContent.trim();
       const cells = Array.from(r.querySelectorAll('td')).map(td => td.textContent.trim());
-      // cells indices based on 19 columns:
-      // 0: LVL, 1: THEME, 2: TH-CD, 3: TOPIC, 4: TP-CD, 5: VERB, 6: NOUN, 7: ADJ, 8: OTH, 9: WORDS, 10: EXP, 11: PRV, 12: IDM, 13: OTH, 14: PHRASES, 15: TOTAL, 16: ASG-PRG, 17: CODE, 18: ACT
+      // cells indices based on reorganized 19 columns:
+      // 0: LVL, 1: TH-CD, 2: THEME, 3: TP-CD, 4: TOPIC, 5: CODE, 6: VERB, 7: NOUN, 8: ADJ, 9: OTH, 10: EXP, 11: PRV, 12: IDM, 13: OTH, 14: WORDS, 15: PHRASES, 16: TOTAL, 17: PROGRAMS, 18: ACT
       return {
         topic,
         thCode,
         tpCode,
         compositeCode,
-        verb: cells[5],
-        noun: cells[6],
-        words: cells[9],
-        total: cells[15]
+        verb: cells[6],
+        noun: cells[7],
+        words: cells[14],
+        total: cells[16]
       };
     });
   });

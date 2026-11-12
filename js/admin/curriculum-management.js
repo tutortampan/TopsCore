@@ -430,8 +430,8 @@ export async function renderCurriculum(area) {
 
       const getBatchSortIcon = (key) => {
         const cur = window._curriculumBatchSort || { key: 'finish', asc: false };
-        if (cur.key !== key) return '<span style="opacity:0.35;margin-left:4px;font-size:0.75rem;">↕</span>';
-        return cur.asc ? '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:0.75rem;">▲</span>' : '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:0.75rem;">▼</span>';
+        if (cur.key !== key) return ''; // Rule 2.38 Pillar 6: active-only sort arrow (no idle ↕)
+        return cur.asc ? '<span style="color:#38bdf8;margin-left:4px;font-size:0.75rem;">▲</span>' : '<span style="color:#38bdf8;margin-left:4px;font-size:0.75rem;">▼</span>';
       };
 
       // Render Program Tree Nodes

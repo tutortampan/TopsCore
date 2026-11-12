@@ -193,11 +193,12 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
               <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 75px; border-right: 1px solid rgba(255,255,255,0.08);" title="Program">PROG</th>
               <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Level">LVL</th>
               <th style="padding: 6px 8px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 65px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code (Level + ThemeCode + TopicCode)">CODE</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 80px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Lexicon Coordinate Code (TopicCode-W01..Wnn / P01..Pnn)">LEX-CD</th>
               <th style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Name">THEME</th>
               <th style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 160px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC</th>
               <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 85px; border-right: 1px solid rgba(255,255,255,0.08);" title="Word Type">TYPE</th>
-              <th style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);" title="Indonesian Meaning">INDONESIAN</th>
-              <th style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08);" title="English Word / Phrase">ENGLISH</th>
+              <th style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 26%; min-width: 200px; border-right: 1px solid rgba(255,255,255,0.08);" title="Indonesian Meaning">INDONESIAN</th>
+              <th style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 26%; min-width: 200px; border-right: 1px solid rgba(255,255,255,0.08);" title="English Word / Phrase">ENGLISH</th>
               <th class="edit-mode-only" style="padding: 6px 8px; font-weight: 800; color: #f87171; text-transform: uppercase; font-size: 12px; text-align: center; width: 55px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.1); z-index: 25;" title="Actions">ACT</th>
             </tr>
           </thead>
@@ -214,6 +215,24 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const isPhrase = ['expression', 'idiom', 'proverb'].includes(wt);
     if (mode === 'single_words') return !isPhrase;
     return isPhrase;
+  });
+
+  // Pre-index all words/phrases per composite topic with stable deterministic Lexicon Codes
+  const topicWordIndexMap = new Map();
+  const topicCounters = {};
+  _allWords.forEach(w => {
+    const cleanLvl = parseInt(w.target_level, 10) || 1;
+    const cleanThCode = (w.theme_code || 'A').trim().toUpperCase();
+    const rawTpCode = (w.topic_code || '1').trim();
+    const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '') || rawTpCode || '1';
+    const compositeTopic = `${cleanLvl}${cleanThCode}${cleanTpCode}`;
+
+    if (!topicCounters[compositeTopic]) topicCounters[compositeTopic] = 0;
+    topicCounters[compositeTopic]++;
+    const prefix = mode === 'phrases' ? 'P' : 'W';
+    const numStr = String(topicCounters[compositeTopic]).padStart(2, '0');
+    const lexCode = `${compositeTopic}-${prefix}${numStr}`;
+    topicWordIndexMap.set(w.id, lexCode);
   });
 
   function _syncVaultGridBottomBar(filtered, allModeWords, currentMode) {
@@ -367,7 +386,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     if (!filtered.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="10" style="text-align: center; padding: 30px; color: #64748b; font-size: 12px;">
+          <td colspan="11" style="text-align: center; padding: 30px; color: #64748b; font-size: 12px;">
             No vocabulary items found matching current filters.
           </td>
         </tr>
@@ -388,6 +407,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       const rawTpCode = (w.topic_code || '1').trim();
       const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '') || rawTpCode || '1';
       const compositeCode = `${cleanLvl}${cleanThCode}${cleanTpCode}`;
+      const lexCode = topicWordIndexMap.get(w.id) || compositeCode;
 
       const phraseOpts = `
         <option value="Expression"${wt === 'expression' ? ' selected' : ''}>Expression</option>
@@ -416,6 +436,9 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <span class="vault-cell-view" style="color:#a5b4fc;font-family:monospace;font-size:12px;font-weight:800;">${escapeHtml(compositeCode)}</span>
             <input type="text" maxlength="8" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="composite_code" value="${escapeHtml(compositeCode)}" style="text-align:center;font-family:monospace;font-weight:700;text-transform:uppercase;">
           </td>
+          <td class="col-vault-lexicon-code" style="padding: 6px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">
+            <span class="vault-cell-view" style="color:#38bdf8;font-family:monospace;font-size:11px;font-weight:800;">${escapeHtml(lexCode)}</span>
+          </td>
           <td class="editable-cell" style="padding: 6px 10px; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
             <span class="vault-cell-view" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</span>
             <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="theme" value="${escapeHtml(w.theme || '')}">
@@ -428,7 +451,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <span class="vault-cell-view" style="font-size:12px; color: ${typeColor}; font-weight: 700;">${escapeHtml(w.word_type || 'Vocab')}</span>
             <select class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="word_type">${typeOptionsHtml}</select>
           </td>
-          <td class="editable-cell" style="padding: 6px 12px; font-weight: 700; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+          <td class="editable-cell" style="padding: 6px 12px; font-weight: 500; color: #ffffff; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
             <span class="vault-cell-view" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</span>
             <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="indonesian" value="${escapeHtml(w.indonesian)}">
           </td>
@@ -565,6 +588,11 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           const codeSpan = tr?.querySelector('.col-vault-composite-code .vault-cell-view');
           if (codeInput) codeInput.value = newComp;
           if (codeSpan) codeSpan.textContent = newComp;
+          const lexSpan = tr?.querySelector('.col-vault-lexicon-code .vault-cell-view');
+          if (lexSpan && lexSpan.textContent.includes('-')) {
+            const parts = lexSpan.textContent.split('-');
+            lexSpan.textContent = `${newComp}-${parts[1]}`;
+          }
         } else if (field === 'english') {
           payload.english = newVal;
           word.english = newVal;
@@ -1816,10 +1844,19 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         if (topics.length === 0) return;
         visibleTopicsCount += topics.length;
 
-        // Assigned programs badge pills
+        // Assigned programs — Rule 11: single-line compact 3–4 letter short codes
+        const PROG_SHORT_CODE = {
+          'Camp': 'CMP', 'Evnikom': 'EVN', 'Sheraton': 'SHR', 'English Explorer': 'EXP'
+        };
+        const progFullNames = assignedProgs.map(p => p.name).join(', ');
         const assignedPillsHtml = assignedProgs.length > 0
-          ? assignedProgs.map(p => `<span class="badge-prog-pill" style="display:inline-flex;align-items:center;gap:4px;color:#4ade80;font-size:11px;font-weight:700;margin-right:6px;">🟢 ${escapeHtml(p.name)}</span>`).join('')
-          : `<span style="color:#64748b;font-size:11px;font-style:italic;">None Assigned</span>`;
+          ? `<span class="vault-programs-cell" title="${escapeHtml(progFullNames)}">${
+              assignedProgs.map(p => {
+                const code = PROG_SHORT_CODE[p.name] || (p.code || p.name).toUpperCase().slice(0, 4);
+                return `<span class="prog-chip" style="display:inline-flex;align-items:center;gap:3px;color:#4ade80;font-size:11px;font-weight:500;">🟢 ${code}</span>`;
+              }).join('<span style="color:#334155;font-size:10px;padding:0 1px;">·</span>')
+            }</span>`
+          : `<span style="color:#64748b;font-size:11px;">—</span>`;
 
         topics.forEach(tp => {
           const cleanTopicCode = (tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || (tp.topicCode || '1');
@@ -1829,40 +1866,42 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           rowsHtml += `
             <tr class="blueprint-table-row" data-level="${lvl}" data-theme-code="${thCode}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
               <!-- 1. LVL -->
-              <td class="editable-cell" style="text-align: center; font-weight: 800; font-size: 12px; color: #38bdf8; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td class="editable-cell" style="text-align: center; font-weight: 500; font-size: 12px; color: #38bdf8; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(lvlLabel)}</span>
                 <input type="number" min="1" max="6" class="vault-edit-input" data-action="edit-level" data-topic="${escapeHtml(tp.name)}" data-old-lvl="${lvl}" data-th-code="${thCode}" value="${lvl}" style="text-align:center;">
               </td>
-              <!-- 2. THEME -->
-              <td class="editable-cell" style="color: #ffffff; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
-                <span class="vault-cell-view">${escapeHtml(th.name || '—')}</span>
-                <input type="text" class="vault-edit-input" data-action="edit-theme-name" data-old-theme="${escapeHtml(th.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(th.name || '')}">
-              </td>
-              <!-- 3. TH-CD -->
+              <!-- 2. TH-CD -->
               <td class="editable-cell" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(thCode)}</span>
                 <input type="text" maxlength="4" class="vault-edit-input" data-action="edit-theme-code" data-old-th-code="${thCode}" data-lvl="${lvl}" value="${escapeHtml(thCode)}" style="text-align:center; text-transform:uppercase;">
               </td>
-              <!-- 4. TOPIC -->
-              <td class="editable-cell" style="color: #f1f5f9; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
-                <span class="vault-cell-view">${escapeHtml(tp.name)}</span>
-                <input type="text" class="vault-edit-input" data-action="edit-topic-name" data-old-topic="${escapeHtml(tp.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(tp.name)}">
+              <!-- 3. THEME -->
+              <td class="editable-cell" style="color: #ffffff; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(th.name || '—')}</span>
+                <input type="text" class="vault-edit-input" data-action="edit-theme-name" data-old-theme="${escapeHtml(th.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(th.name || '')}">
               </td>
-              <!-- 5. TP-CD -->
+              <!-- 4. TP-CD -->
               <td class="editable-cell" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(cleanTopicCode)}</span>
                 <input type="text" maxlength="6" class="vault-edit-input" data-action="edit-topic-code" data-topic="${escapeHtml(tp.name)}" data-old-tp-code="${escapeHtml(cleanTopicCode)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(cleanTopicCode)}" style="text-align:center;">
               </td>
-              <!-- 6. VERB -->
+              <!-- 5. TOPIC NAME -->
+              <td class="editable-cell" style="color: #f1f5f9; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                <span class="vault-cell-view">${escapeHtml(tp.name)}</span>
+                <input type="text" class="vault-edit-input" data-action="edit-topic-name" data-old-topic="${escapeHtml(tp.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(tp.name)}">
+              </td>
+              <!-- 6. CODE -->
+              <td class="col-theme-composite-code" style="text-align: center; font-family: monospace; font-weight: 800; color: #38bdf8; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+                ${escapeHtml(compositeCode)}
+              </td>
+              <!-- 7. VERB -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.verbCount}</td>
-              <!-- 7. NOUN -->
+              <!-- 8. NOUN -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.nounCount}</td>
-              <!-- 8. ADJ -->
+              <!-- 9. ADJ -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.adjCount}</td>
-              <!-- 9. OTH (Words) -->
+              <!-- 10. OTH (Words) -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsOtherCount}</td>
-              <!-- 10. WORDS -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.08); border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsCount}</td>
               <!-- 11. EXP -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.expCount}</td>
               <!-- 12. PRV -->
@@ -1871,11 +1910,13 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.idmCount}</td>
               <!-- 14. OTH (Phrases) -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">${tp.phrasesOtherCount}</td>
-              <!-- 15. PHRASES -->
+              <!-- 15. WORDS -->
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.08); border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsCount}</td>
+              <!-- 16. PHRASES -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #c084fc; background: rgba(192, 132, 252, 0.08); border-right: 1px solid rgba(255,255,255,0.1);">${tp.phrasesCount}</td>
-              <!-- 16. TOTAL -->
+              <!-- 17. TOTAL -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-right: 1px solid rgba(255,255,255,0.08);">${tp.totalCount}</td>
-              <!-- 17. ASG-PRG -->
+              <!-- 18. PROGRAMS -->
               <td style="padding: 6px 10px; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                   <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
@@ -1885,10 +1926,6 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                     ⚙️ Assign
                   </button>
                 </div>
-              </td>
-              <!-- 18. CODE -->
-              <td class="col-theme-composite-code" style="text-align: center; font-family: monospace; font-weight: 800; color: #38bdf8; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
-                ${escapeHtml(compositeCode)}
               </td>
               <!-- 19. ACT (Delete only when Edit ON) -->
               <td class="edit-mode-only" style="padding: 4px 6px; text-align: center; width: 45px; border-left: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap;">
@@ -1924,34 +1961,57 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
             <!-- Super-Headers Grouping -->
             <tr>
-              <th colspan="5" class="super-th" style="background:#0c192e; color:#38bdf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">HIERARCHY &amp; IDENTITY</th>
-              <th colspan="5" class="super-th" style="background:#131d36; color:#818cf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">WORDS BREAKDOWN</th>
-              <th colspan="5" class="super-th" style="background:#1a1936; color:#c084fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PHRASES BREAKDOWN</th>
-              <th class="super-th" style="background:#0f2922; color:#4ade80; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">SUMMARY</th>
-              <th class="super-th" style="background:#1e293b; color:#fb923c; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">MULTI-TENANT</th>
-              <th class="super-th" style="background:#0f172a; color:#a5b4fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">CODE</th>
+              <th colspan="6" class="super-th" style="background:#0c192e; color:#38bdf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">HIERARCHY &amp; IDENTITY</th>
+              <th colspan="4" class="super-th" style="background:#131d36; color:#818cf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">WORDS BREAKDOWN</th>
+              <th colspan="4" class="super-th" style="background:#1a1936; color:#c084fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PHRASES BREAKDOWN</th>
+              <th colspan="3" class="super-th" style="background:#0f2922; color:#4ade80; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">METRICS SUMMARY</th>
+              <th class="super-th" style="background:#1e293b; color:#fb923c; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PROGRAM ACCESS</th>
               <th class="super-th edit-mode-only" style="background:#3b1116; color:#f87171; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1);">ACTION</th>
             </tr>
             <!-- Sub-Headers (Exact 19 Columns) -->
             <tr>
+              <!-- 1. LVL -->
               <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);" title="Level">LVL</th>
+              <!-- 2. TH-CD -->
+              <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
+              <!-- 3. THEME -->
               <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; max-width: 120px; border-right: 1px solid rgba(255,255,255,0.1);" title="Theme Name">THEME</th>
-              <th style="padding: 6px 4px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Letter Code (e.g. A, B)">TH-CD</th>
-              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; max-width: 130px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC</th>
-              <th style="padding: 6px 4px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
+              <!-- 4. TP-CD -->
+              <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
+              <!-- 5. TOPIC NAME -->
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; max-width: 130px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC NAME</th>
+              <!-- 6. CODE -->
+              <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code (e.g. 1G1)">CODE</th>
+
+              <!-- 7. VERB -->
               <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Verb Count">VERB</th>
+              <!-- 8. NOUN -->
               <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Noun Count">NOUN</th>
+              <!-- 9. ADJ -->
               <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Adjective Count">ADJ</th>
+              <!-- 10. OTH -->
               <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Words Other (Adverbs, etc.)">OTH</th>
-              <th style="padding: 6px 4px; font-weight: 800; color: #60a5fa; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #1e3a5f;" title="Total Single Words">WORDS</th>
+
+              <!-- 11. EXP -->
               <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Expression Count">EXP</th>
+              <!-- 12. PRV -->
               <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Proverb Count">PRV</th>
+              <!-- 13. IDM -->
               <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Idiom Count">IDM</th>
+              <!-- 14. OTH -->
               <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
+
+              <!-- 15. WORDS -->
+              <th style="padding: 6px 4px; font-weight: 800; color: #60a5fa; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #1e3a5f;" title="Total Single Words">WORDS</th>
+              <!-- 16. PHRASES -->
               <th style="padding: 6px 4px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: #2e1e5f;" title="Total Phrases &amp; Idioms">PHRASES</th>
-              <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0f2922;" title="Grand Total">TOTAL</th>
-              <th style="padding: 6px 6px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 12px; width: 105px; border-right: 1px solid rgba(255,255,255,0.08);" title="Assigned Programs">ASG-PRG</th>
-              <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code">CODE</th>
+              <!-- 17. TOTAL -->
+              <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0f2922;" title="Grand Total Vocabulary">TOTAL</th>
+
+              <!-- 18. PROGRAMS -->
+              <th style="padding: 6px 6px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 12px; width: 105px; border-right: 1px solid rgba(255,255,255,0.08);" title="Assigned Programs">PROGRAMS</th>
+
+              <!-- 19. ACT -->
               <th class="edit-mode-only" style="padding: 6px 4px; font-weight: 800; color: #f87171; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center;" title="Action">ACT</th>
             </tr>
           </thead>
@@ -2147,7 +2207,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             input.value = cleanTp;
             if (viewSpan) viewSpan.textContent = cleanTp;
 
-            // Recalculate column 18 CODE in this row
+            // Recalculate column 6 CODE in this row
             const newComp = `${lvl}${thCode}${cleanTp}`;
             const compTd = tr?.querySelector('.col-theme-composite-code');
             if (compTd) compTd.textContent = newComp;
@@ -2185,7 +2245,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               viewSpan.textContent = shortLbl.toUpperCase();
             }
 
-            // Recalculate column 18 CODE in this row
+            // Recalculate column 6 CODE in this row
             const currentTpCode = tr?.querySelector('[data-action="edit-topic-code"]')?.value.trim() || '1';
             const newComp = `${newLvl}${thCode}${currentTpCode}`;
             const compTd = tr?.querySelector('.col-theme-composite-code');
@@ -2527,6 +2587,10 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
         topics.forEach(tp => {
           renderedCount++;
+          const cleanTopicNum = String(tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || String(tp.topicCode || '1');
+          const cleanThemeCode = String(thCode || th.code || 'A').trim().toUpperCase();
+          const compositeCode = `${lvl}${cleanThemeCode}${cleanTopicNum}`;
+
           const tpTask = findTaskForTopic(lvl, thCode, tp.topicCode, tp.name, targetClass?.id);
           const taskReady = Boolean(tpTask);
           const examReady = Boolean(thExam);
@@ -2539,12 +2603,12 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           const ansType = window._bpTopicAnswerTypes[tp.topicCode] || tpTask?.answer_type || (tpTask?.payload && tpTask.payload.answer_type) || 'spoken';
 
           rowsHtml += `
-            <tr class="blueprint-table-row" data-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
+            <tr class="blueprint-table-row" data-topic-code="${escapeHtml(compositeCode)}" data-raw-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
               <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
                 ${escapeHtml(lvlLabel)}
               </td>
               <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px; width: 55px;">
-                ${escapeHtml(tp.topicCode || '—')}
+                ${escapeHtml(compositeCode)}
               </td>
               <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px; min-width: 130px;">
                 ${escapeHtml(th.name || '—')}

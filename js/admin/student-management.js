@@ -32,6 +32,38 @@ function calculateAgeFromBirthDate(birthDateStr) {
   }
 }
 
+export function formatBirthDate(dob) {
+  if (!dob) return '—';
+  try {
+    const d = new Date(dob);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch (_) {
+    return String(dob);
+  }
+}
+
+export function formatLastEducation(edu) {
+  if (!edu) return '—';
+  try {
+    const parsed = typeof edu === 'string' ? JSON.parse(edu) : edu;
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const last = parsed[parsed.length - 1];
+      if (last.institution && last.year) {
+        return `${last.institution} (${last.year})`;
+      }
+      return last.institution || last.degree || last.level || '—';
+    }
+    if (typeof parsed === 'object' && parsed !== null) {
+      if (parsed.institution && parsed.year) return `${parsed.institution} (${parsed.year})`;
+      return parsed.institution || parsed.degree || parsed.level || '—';
+    }
+    return String(parsed);
+  } catch (_) {
+    return String(edu);
+  }
+}
+
 /**
  * Hierarchical sort comparator for student records:
  * 1. Active students on top, Inactive students at the bottom.
@@ -69,7 +101,7 @@ export function compareStudentsHierarchical(a, b) {
 
 export async function renderStudents(area) {
     const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allTests, allClasses] = await Promise.all([
-    adminFetchAll('students', 'id, name, gender, birth_date, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
+    adminFetchAll('students', 'id, name, gender, birth_date, education, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
     adminFetchAll('attempts', 'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, is_forgiven, forgiven_reason, forgiven_by, forgiven_at, is_remedial, tests(test_type, title, class_id)'),
     adminFetchAll('levels', 'id, name, level_number'),
     adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score'),
@@ -747,34 +779,35 @@ export async function renderStudents(area) {
       </div>
     ` : ''}
 
-    <div class="student-roster-toolbar d-flex align-center justify-between mb-2 flex-wrap gap-2 ${currentBatchStatus === 'alumni' || totalDuplicates > 0 ? 'has-visible-content' : ''}">
+    <div id="student-grid-container" style="flex:1 1 0; min-height:0; margin-bottom:10px; display:flex; flex-direction:column;"></div>
+
+    <div class="workspace-lower-panel student-roster-lower-panel" style="height:50px;min-height:50px;max-height:50px;line-height:50px;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#0f172a;border-top:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
       <div class="d-flex align-center gap-2">
         ${currentBatchStatus !== 'alumni' ? `
-          <button class="btn btn-success btn-sm fw-700 edit-mode-only" id="btn-promote-all-eligible" style="background:#00c000;border:1px solid #00c000;color:#000;" title="Promote all students who have passed all active level exams with >= 70%">
+          <button class="btn btn-success btn-sm fw-700 edit-mode-only" id="btn-promote-all-eligible" style="background:#00c000;border:1px solid #00c000;color:#000;height:30px;line-height:30px;padding:0 10px;" title="Promote all students who have passed all active level exams with >= 70%">
             🚀 NEXT (Promote All Eligible)
           </button>
         ` : `
           <div class="d-flex align-center gap-2">
             <span class="text-xs text-muted" style="font-weight:600;">Graduating Batch:</span>
-            <select id="select-alumni-batch" class="form-control form-control-sm" style="width:auto;min-width:180px;background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:6px;padding:4px 8px;font-size:0.75rem;">
+            <select id="select-alumni-batch" class="form-control form-control-sm" style="width:auto;min-width:180px;background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:4px;padding:2px 8px;font-size:0.75rem;height:28px;">
               <option value="all" ${(!window._alumniFilterBatchId || window._alumniFilterBatchId === 'all') ? 'selected' : ''}>🎓 All Graduating Batches</option>
               ${alumniBatchOptions}
             </select>
           </div>
         `}
-        <button class="btn btn-primary btn-sm fw-700 edit-mode-only" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;" title="Register New Student">
+        <button class="btn btn-primary btn-sm fw-700 edit-mode-only" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:30px;line-height:30px;padding:0 10px;" title="Register New Student">
           ➕ Add Student
         </button>
-        <button class="btn btn-secondary btn-sm fw-700 edit-mode-only" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;" title="Import Students from Excel / CSV">
+        <button class="btn btn-secondary btn-sm fw-700 edit-mode-only" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;height:30px;line-height:30px;padding:0 10px;" title="Import Students from Excel / CSV">
           📥 Import Excel / CSV
         </button>
       </div>
-      <div class="text-xs text-muted">
-        ${currentBatchStatus === 'alumni' ? '🎓 Displaying Alumni with Lifetime Universal Access' : ''}
+      <div class="text-xs text-muted d-flex align-center gap-3">
+        ${currentBatchStatus === 'alumni' ? '<span>🎓 Lifetime Universal Access</span>' : ''}
+        <span id="student-roster-count-meta" style="font-variant-numeric:tabular-nums;color:#94a3b8;">${filteredGridData.length} students</span>
       </div>
     </div>
-
-    <div id="student-grid-container"></div>
   `;
 
   const addStudentDirectBtn = document.getElementById('btn-add-student-direct');
@@ -823,7 +856,7 @@ export async function renderStudents(area) {
     }
 
     const headers = [
-      'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Age', 'Gender',
+      'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Gender', 'Age', 'DOB', 'Education',
       'Exam 1 (Theme A) Pts', 'Exam 2 (Theme B) Pts', 'Exam 3 (Theme C) Pts', 'Exam 4 (Theme D) Pts',
       'Total Exam Pts', 'Score (%)', 'Grade', 'Status'
     ];
@@ -842,8 +875,10 @@ export async function renderStudents(area) {
         'Batch': s.batchName || '—',
         'Current Level': s.levelName || '—',
         'Student Name': s.displayName || s.name || '—',
-        'Age': s.ageDisplay || '—',
         'Gender': (s.gender || '').toUpperCase() || '—',
+        'Age': s.ageDisplay || '—',
+        'DOB': formatBirthDate(s.birth_date),
+        'Education': formatLastEducation(s.education),
         'Exam 1 (Theme A) Pts': e1,
         'Exam 2 (Theme B) Pts': e2,
         'Exam 3 (Theme C) Pts': e3,
@@ -2185,12 +2220,12 @@ export async function renderStudents(area) {
   });
 
   // Build superHeaders: span class-name across its test/exam sub-columns
-  // Plus span blank headers for the fixed columns before (level/name/age/gender)
-  // and after (actions).
+  // Plus span blank headers for the fixed columns before (level, photo, gender, name, dob, age, education)
+  // and after (status, plus actions if inactive).
   const buildSuperHeaders = () => {
     if (activeClassColumns.length === 0) return null;
-    const fixed_before = 4; // level, name, age, gender (checkbox handled automatically by DataGrid)
-    const fixed_after = 1;  // actions (enrolled and status removed)
+    const fixed_before = 7; // level, photo, gender, name, dob, age, education
+    const fixed_after = currentBatchStatus === 'inactive' ? 2 : 1;  // status (+ actions if inactive)
     const sh = [];
     sh.push({ label: '', colSpan: fixed_before, style: 'background:var(--clr-bg-2);border:none;' });
     activeClassColumns.forEach(cls => {
@@ -2298,22 +2333,27 @@ export async function renderStudents(area) {
       const batchPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(batchOverallPct) : 'var(--grade-star, #00c000ff)';
 
       let cells = '';
-      // Checkbox column
-      cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:var(--grade-star, #00c000ff);font-weight:700;">★</td>`;
-
       visibleCols.forEach(col => {
         if (col.key === 'levelName') {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:var(--grade-star, #00c000ff);font-size:0.75rem;">BATCH AVG</td>`;
-        } else if (col.key === 'sortName') {
-          cells += `<td style="background:#0f172a;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#ffffff;font-size:0.78rem;">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;
-        } else if (col.key === 'ageDisplay') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
+        } else if (col.key === 'photo_url') {
+          cells += `<td style="background:#0f172a;border-top:2px solid var(--grade-star, #00c000ff);"></td>`;
         } else if (col.key === 'gender') {
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
+        } else if (col.key === 'sortName') {
+          cells += `<td style="background:#0f172a;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#ffffff;font-size:0.78rem;">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;
+        } else if (col.key === 'birth_date') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;font-size:0.75rem;">—</td>`;
+        } else if (col.key === 'ageDisplay') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
+        } else if (col.key === 'education') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;font-size:0.75rem;">—</td>`;
         } else if (col.key && (col.key.includes('_cls_exam') || col.key.includes('_cls_test_'))) {
           const avgVal = classExamAverages[col.key];
           const color = classExamColors[col.key] || 'var(--clr-text-1)';
           cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);font-weight:700;color:${color} !important;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.85;font-weight:normal;color:${color} !important;">pts</span>` : '—'}</td>`;
+        } else if (col.key === 'program_status') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid var(--grade-star, #00c000ff);color:#94a3b8;font-size:0.75rem;">—</td>`;
         } else if (col.label === 'Actions') {
           cells += `<td style="background:#0f172a;border-top:2px solid var(--grade-star, #00c000ff);"></td>`;
         } else {
@@ -2333,6 +2373,20 @@ export async function renderStudents(area) {
         const nameA = (a.displayName || a.name || '').toLowerCase();
         const nameB = (b.displayName || b.name || '').toLowerCase();
         return direction === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
+      }
+
+      if (sortKey === 'birth_date') {
+        const da = a.birth_date ? new Date(a.birth_date).getTime() : 0;
+        const db = b.birth_date ? new Date(b.birth_date).getTime() : 0;
+        if (da !== db) return direction === 'asc' ? da - db : db - da;
+      } else if (sortKey === 'education') {
+        const ea = formatLastEducation(a.education).toLowerCase();
+        const eb = formatLastEducation(b.education).toLowerCase();
+        if (ea !== eb) return direction === 'asc' ? ea.localeCompare(eb) : eb.localeCompare(ea);
+      } else if (sortKey === 'program_status') {
+        const sa = (a.program_status || 'in_progress').toLowerCase();
+        const sb = (b.program_status || 'in_progress').toLowerCase();
+        if (sa !== sb) return direction === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
       }
 
       // Column-specific comparison for class exams & tests
@@ -2377,7 +2431,7 @@ export async function renderStudents(area) {
       // Secondary tie-breaker: Institution -> Program -> Batch -> Level -> Name
       return compareStudentsHierarchical(a, b);
     },
-    bulkActions: true,
+    bulkActions: false,  // Rule 13: Checkbox columns purged
     onBulkAction: async (selectedIds) => {
       // Fetch data for dropdowns
       const [institutions, programs, batches, levels] = await Promise.all([
@@ -2554,7 +2608,7 @@ export async function renderStudents(area) {
         label: 'Level',
         sortable: true,
         align: 'center',
-        width: '75px',
+        width: '60px',
         render: (row) => {
           if (row.isAlumni || row.studentLevelNum === 0 || (row.levelName && row.levelName.toLowerCase() === 'alumni')) {
             return `<span style="color:#c084fc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;">🎓 Alumni</span>`;
@@ -2563,71 +2617,127 @@ export async function renderStudents(area) {
           return `<span style="color:#f8fafc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(shortLvl)}</span>`;
         }
       },
-      // 5. Name (Dynamic Column Sizing: Absorbs available horizontal space, zero dead void)
+      // 2. Photo (Round Avatar, Single-Responsibility Column 1, Click to Open Profile)
       {
-        key: 'sortName',
-        label: 'Name',
-        sortable: true,
-        width: '280px',
-        minWidth: '240px',
-        maxWidth: '340px',
+        key: 'photo_url',
+        label: 'Photo',
+        sortable: false,
+        align: 'center',
+        width: '48px',
+        minWidth: '45px',
         render: (row) => {
-          const isAlumni = Boolean(row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni');
           const avatarUri = row.photo_url || generateAvatarDataUri(row.displayName || row.name, row.gender);
           return `
-            <div class="d-flex align-center gap-3" style="min-width:200px; white-space:nowrap;">
-              <div style="position:relative;display:inline-block;">
-                <img src="${avatarUri}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';" style="width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">
-                ${isAlumni ? `<span style="position:absolute;bottom:-4px;right:-4px;font-size:0.85rem;" title="Alumni Graduate">🎓</span>` : ''}
-              </div>
-              <div>
-                <div class="fw-600" style="color:var(--clr-text-1);">
-                  ${escapeHtml(row.displayName)}
-                  ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size:0.65rem;">⚠️ Disconnected</span>` : ''}
-                  ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:8px;font-size:0.75rem;">⚠️ Remediation Pending</span>` : ''}
-                </div>
-              </div>
+            <div style="display:flex;align-items:center;justify-content:center;cursor:pointer;"
+                 onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
+                 title="Click to view student profile">
+              <img src="${avatarUri}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';"
+                   style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">
             </div>
           `;
         }
       },
-      // 6. Age
-      {
-        key: 'ageDisplay',
-        label: 'Age',
-        sortable: true,
-        align: 'center',
-        width: '80px',
-        render: (row) => {
-          if (!row.birth_date) {
-            return `<span title="Date of Birth not set — edit this student to add it" style="display:inline-flex;align-items:center;gap:3px;cursor:help;">
-              <span style="font-size:0.75rem;color:#f59e0b;font-weight:700;">⚠</span>
-              <span style="font-size:0.68rem;color:#f59e0b;font-weight:600;">No DOB</span>
-            </span>`;
-          }
-          return `<span class="text-sm fw-600">${row.ageDisplay}</span>`;
-        }
-      },
-      // 7. Gender (User requirement: "keterangan gender cukup pakai M/F")
+      // 3. Gender (Mr. / Miss., Placed Before Name After Photo, Inline Editable in Edit Mode)
       {
         key: 'gender',
         label: 'Gender',
         sortable: true,
         align: 'center',
         width: '65px',
+        minWidth: '55px',
         render: (row) => {
           const g = (row.gender || '').trim().toLowerCase();
-          if (g === 'male' || g === 'm') {
-            return `<span class="fw-700" style="color:#38bdf8;font-size:0.8rem;" title="Male">M</span>`;
+          const isM = g === 'male' || g === 'm';
+          const isF = g === 'female' || g === 'f';
+          const titleText = isM ? 'Mr.' : (isF ? 'Miss.' : '—');
+          const titleColor = isM ? '#38bdf8' : (isF ? '#f472b6' : 'var(--clr-text-3)');
+          return `
+            <div class="student-cell-view">
+              <span class="fw-700" style="color:${titleColor};font-size:0.8rem;">${titleText}</span>
+            </div>
+            <select class="student-inline-select student-gender-select" data-id="${row.id}" data-field="gender" onclick="event.stopPropagation();">
+              <option value="male" ${isM ? 'selected' : ''}>Mr.</option>
+              <option value="female" ${isF ? 'selected' : ''}>Miss.</option>
+            </select>
+          `;
+        }
+      },
+      // 4. Name (Single-Responsibility Column 2, Click to Open Profile in View Mode, Inline Input in Edit Mode)
+      {
+        key: 'sortName',
+        label: 'Name',
+        sortable: true,
+        width: '220px',
+        minWidth: '180px',
+        render: (row) => {
+          const isAlumni = Boolean(row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni');
+          return `
+            <div class="student-cell-view" style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
+                 onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
+                 title="${escapeHtml(row.displayName)}&#10;Click to view student profile">
+              <span style="color:var(--clr-text-1);font-weight:400;font-size:12px;">${escapeHtml(row.displayName)}</span>
+              ${isAlumni ? `<span style="font-size:0.85rem;margin-left:4px;" title="Alumni Graduate">🎓</span>` : ''}
+              ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size:0.65rem;">⚠️ Disconnected</span>` : ''}
+              ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:6px;font-size:0.75rem;">⚠️ Remediation</span>` : ''}
+            </div>
+            <input type="text" class="student-inline-input" data-id="${row.id}" data-field="name" value="${escapeHtml(row.name || row.displayName)}" placeholder="Student Name" onclick="event.stopPropagation();">
+          `;
+        }
+      },
+      // 5. DOB (Date of Birth placed BEFORE Age per user directive)
+      {
+        key: 'birth_date',
+        label: 'DOB',
+        sortable: true,
+        align: 'center',
+        width: '100px',
+        minWidth: '95px',
+        render: (row) => {
+          const dobFormatted = formatBirthDate(row.birth_date);
+          return `
+            <div class="student-cell-view">
+              ${dobFormatted === '—'
+                ? `<span style="font-size:0.68rem;color:#f59e0b;font-weight:400;">⚠ No DOB</span>`
+                : `<span style="font-size:12px;color:var(--clr-text-2);font-weight:400;font-variant-numeric:tabular-nums;">${escapeHtml(dobFormatted)}</span>`}
+            </div>
+            <input type="date" class="student-inline-input" data-id="${row.id}" data-field="birth_date" value="${row.birth_date || ''}" onclick="event.stopPropagation();">
+          `;
+        }
+      },
+      // 6. Age (Calculated from DOB)
+      {
+        key: 'ageDisplay',
+        label: 'Age',
+        sortable: true,
+        align: 'center',
+        width: '65px',
+        minWidth: '60px',
+        render: (row) => {
+          if (!row.birth_date) {
+            return `<span class="text-muted" style="font-size:12px;font-weight:400;">—</span>`;
           }
-          if (g === 'female' || g === 'f') {
-            return `<span class="fw-700" style="color:#f472b6;font-size:0.8rem;" title="Female">F</span>`;
-          }
-          return `<span class="text-muted fw-600" style="font-size:0.8rem;">&mdash;</span>`;
+          return `<span class="col-ageDisplay" style="color:var(--clr-text-2);font-size:12px;font-weight:400;font-variant-numeric:tabular-nums;">${row.ageDisplay}</span>`;
+        }
+      },
+      // 7. Education (Last Degree / School)
+      {
+        key: 'education',
+        label: 'Education',
+        sortable: true,
+        align: 'left',
+        width: '120px',
+        minWidth: '100px',
+        render: (row) => {
+          const eduStr = formatLastEducation(row.education);
+          return `
+            <div class="student-cell-view" title="${escapeHtml(eduStr)}">
+              <span style="font-size:12px;font-weight:400;color:var(--clr-text-2);">${escapeHtml(eduStr)}</span>
+            </div>
+            <input type="text" class="student-inline-input" data-id="${row.id}" data-field="education" value="${escapeHtml(eduStr === '—' ? (typeof row.education === 'string' ? row.education : '') : eduStr)}" placeholder="Education" onclick="event.stopPropagation();">
+          `;
         }
       },
       // 8–11. Dynamic Per-Class Columns (4 Theme Exams per active class)
-      // Replaces the previous static Score / Grade / PTS / Progress columns per user directive.
       ...(perClassColDefs.length > 0 ? perClassColDefs : [
         {
           key: 'completedTests',
@@ -2654,121 +2764,157 @@ export async function renderStudents(area) {
           `
         }
       ]),
-
+      // 12. Status (Program Status placed at the very end per user directive)
       {
+        key: 'program_status',
+        label: 'Status',
+        sortable: true,
+        align: 'center',
+        width: '95px',
+        minWidth: '90px',
+        render: (row) => {
+          const isInactive = ((row._raw || row).is_active === false);
+          const status = (row.program_status || 'IN_PROGRESS').toUpperCase();
+          let label = 'In Progress';
+          let color = '#38bdf8';
+          if (isInactive) {
+            label = 'Inactive';
+            color = '#94a3b8';
+          } else if (status === 'COMPLETED' || status === 'GRADUATED') {
+            label = 'Graduated';
+            color = '#4ade80';
+          }
+          return `
+            <div class="student-cell-view">
+              <span style="color:${color};font-size:12px;font-weight:400;">${label}</span>
+            </div>
+            <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
+              <option value="in_progress" ${!isInactive && status !== 'COMPLETED' && status !== 'GRADUATED' ? 'selected' : ''}>In Progress</option>
+              <option value="graduated" ${!isInactive && (status === 'COMPLETED' || status === 'GRADUATED') ? 'selected' : ''}>Graduated</option>
+              <option value="inactive" ${isInactive ? 'selected' : ''}>Inactive</option>
+            </select>
+          `;
+        }
+      },
+      // 13. Actions (Only rendered on Inactive Students tab per user directive to prevent accidental deletion)
+      ...(currentBatchStatus === 'inactive' ? [{
         label: 'Actions',
         className: 'actions-col',
         align: 'right',
-        width: '90px',
+        width: '85px',
         render: (row) => {
           const div = document.createElement('div');
-          div.className = 'student-actions-cell actions-col';
-          div.style.cssText = 'display:flex;align-items:center;justify-content:flex-end;gap:4px;';
-
-          // 1. Lifecycle Action Button: NEXT / HOLD / REPEAT
-          const lifeBtn = document.createElement('button');
-          lifeBtn.classList.add('edit-mode-only');
-          if (row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni') {
-            lifeBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
-            lifeBtn.title = '🔁 Repeat Level / Re-enroll (Alumni)';
-            lifeBtn.innerHTML = '🔁';
-            lifeBtn.onclick = (e) => {
-              e.stopPropagation();
-              if (window.openRepeatLevelModal) window.openRepeatLevelModal(row.id);
-            };
-          } else if (row.isEligibleNext) {
-            lifeBtn.className = 'btn btn-success btn-icon btn-sm student-action-btn edit-mode-only';
-            lifeBtn.title = '🚀 NEXT: Promote to Next Level (All active exams >= 70%)';
-            lifeBtn.style.cssText = 'background:#00c000;border:1px solid #00c000;color:#000;font-weight:700;';
-            lifeBtn.innerHTML = '🚀';
-            lifeBtn.onclick = (e) => {
-              e.stopPropagation();
-              if (window.promoteStudentNextLevel) window.promoteStudentNextLevel(row);
-            };
-          } else {
-            lifeBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
-            lifeBtn.title = '🔒 HOLD: All active level exams require >= 70% to unlock NEXT';
-            lifeBtn.style.cssText = 'opacity:0.6;';
-            lifeBtn.innerHTML = '🔒';
-            lifeBtn.onclick = (e) => {
-              e.stopPropagation();
-              if (typeof window.showStudentProgressDetails === 'function') {
-                window.showStudentProgressDetails(row.id);
-              }
-            };
-          }
-
-          // 2. Transfer Batch Button
-          const transferBtn = document.createElement('button');
-          transferBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
-          transferBtn.title = '🔄 Transfer Batch';
-          transferBtn.innerHTML = '🔄';
-          transferBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (window.openTransferBatchModal) window.openTransferBatchModal(row.id);
-          };
-
-          // 3. Details Button
-          const detailsBtn = document.createElement('button');
-          detailsBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
-          detailsBtn.title = 'Test Details (40 Modules Breakdown)';
-          detailsBtn.innerHTML = '📝';
-          detailsBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (typeof window.showStudentProgressDetails === 'function') {
-              window.showStudentProgressDetails(row.id);
-            }
-          };
-
-          // 4. Profile Button
-          const profileBtn = document.createElement('button');
-          profileBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn';
-          profileBtn.title = 'View Student Profile (Interactive Dashboard)';
-          profileBtn.innerHTML = '&#128100;';
-          profileBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (typeof window.showStudentProfileModal === 'function') {
-              window.showStudentProfileModal(row.id);
-            } else if (typeof window.openStudentProfile === 'function') {
-              window.openStudentProfile(row.id);
-            }
-          };
-
-          // 5. Edit Button
-          const editBtn = document.createElement('button');
-          editBtn.className = 'btn btn-secondary btn-icon btn-sm student-action-btn edit-mode-only';
-          editBtn.title = 'Edit Student';
-          editBtn.innerHTML = '✏️';
-          editBtn.onclick = (e) => {
-            e.stopPropagation();
-            if (window.openStudentFullEdit) {
-              window.openStudentFullEdit(row._raw || row, () => renderStudents(area));
-            } else if (window._editRecord) {
-              window._editRecord('students', row.id);
-            }
-          };
-
-          // 6. Delete Button
-          const delBtn = document.createElement('button');
-          delBtn.className = 'btn btn-danger btn-icon btn-sm student-action-btn edit-mode-only';
-          delBtn.title = 'Delete Student';
-          delBtn.innerHTML = '&#128465;';
-          delBtn.onclick = (e) => {
-             e.stopPropagation();
-             if (window._deleteRecord) window._deleteRecord('students', row.id, row.displayName);
-          };
-
-          div.appendChild(lifeBtn);
-          div.appendChild(transferBtn);
-          div.appendChild(detailsBtn);
-          div.appendChild(profileBtn);
-          div.appendChild(editBtn);
-          div.appendChild(delBtn);
+          div.className = 'student-actions-cell actions-col d-flex align-center justify-end gap-1';
+          div.innerHTML = `
+            <button class="btn btn-secondary btn-icon btn-sm" title="Restore to Active" onclick="event.stopPropagation();if(window.activateStudent)window.activateStudent('${row.id}');">🔄</button>
+            <button class="btn btn-danger btn-icon btn-sm" title="Delete Student" onclick="event.stopPropagation();if(window.deleteStudentDirect)window.deleteStudentDirect('${row.id}');">🗑️</button>
+          `;
           return div;
         }
-      }
+      }] : [])
     ]
   });
+
+  // Attach Inline Editing Auto-Save Listeners
+  gridContainer.addEventListener('change', async (e) => {
+    const target = e.target;
+    if (target.matches('.student-inline-input, .student-inline-select')) {
+      const studentId = target.dataset.id;
+      const field = target.dataset.field;
+      const value = target.value;
+      if (!studentId || !field) return;
+
+      const sb = await getSupabase();
+      if (!sb) return;
+
+      const updates = {};
+      if (field === 'gender') {
+        updates.gender = value;
+      } else if (field === 'name') {
+        updates.name = value.trim();
+      } else if (field === 'birth_date') {
+        updates.birth_date = value || null;
+      } else if (field === 'education') {
+        updates.education = value.trim();
+      } else if (field === 'program_status') {
+        if (value === 'inactive') {
+          updates.is_active = false;
+        } else {
+          updates.is_active = true;
+          updates.program_status = value.toUpperCase();
+        }
+      }
+
+      const { error } = await sb.from('students').update(updates).eq('id', studentId);
+      if (!error) {
+        clearAdminCache('students');
+        const cell = target.closest('td');
+        if (cell) {
+          const origBg = cell.style.background;
+          cell.style.background = 'rgba(0, 192, 0, 0.25)';
+          setTimeout(() => { cell.style.background = origBg; }, 600);
+        }
+        const s = filteredGridData.find(x => x.id === studentId);
+        if (s) {
+          if (field === 'name') {
+            s.name = updates.name;
+            s.displayName = updates.name;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) viewEl.textContent = updates.name;
+          } else if (field === 'birth_date') {
+            s.birth_date = updates.birth_date;
+            if (s.birth_date) {
+              const bd = new Date(s.birth_date);
+              const today = new Date();
+              let age = today.getFullYear() - bd.getFullYear();
+              const m = today.getMonth() - bd.getMonth();
+              if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
+              s.ageDisplay = age > 0 ? `${age} yrs` : '—';
+              const ageCell = target.closest('tr')?.querySelector('.col-ageDisplay');
+              if (ageCell) ageCell.textContent = s.ageDisplay;
+            }
+          } else if (field === 'gender') {
+            s.gender = updates.gender;
+          } else if (field === 'education') {
+            s.education = updates.education;
+          } else if (field === 'program_status') {
+            if (updates.is_active === false) {
+              renderStudents(area);
+            }
+          }
+        }
+        showToast('Saved changes', 'success');
+      } else {
+        showToast('Failed to save: ' + error.message, 'error');
+      }
+    }
+  });
+
+  gridContainer.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.matches('.student-inline-input')) {
+      e.target.blur();
+    }
+  });
+
+  window.activateStudent = async (studentId) => {
+    const sb = await getSupabase();
+    if (!sb) return;
+    const { error } = await sb.from('students').update({ is_active: true, program_status: 'IN_PROGRESS' }).eq('id', studentId);
+    if (!error) {
+      clearAdminCache('students');
+      showToast('Student restored to Active', 'success');
+      renderStudents(area);
+    } else {
+      showToast('Error restoring student: ' + error.message, 'error');
+    }
+  };
+
+  window.deleteStudentDirect = async (studentId) => {
+    if (!confirm('Are you sure you want to delete this inactive student? This will soft-delete the record.')) return;
+    await adminSoftDelete('students', studentId);
+    showToast('Student deleted', 'success');
+    renderStudents(area);
+  };
 
   // Toolbar hidden per user directive (hideToolbar: true) - students added via Student Registration and batch sizes are compact.
 }

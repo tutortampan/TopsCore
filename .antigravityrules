@@ -1,78 +1,45 @@
 # TOPSCORE MASTER GOVERNANCE RULES (.antigravityrules)
 
-## DOMAIN 1: CORE ARCHITECTURE, DATA INTEGRITY & POSTGREST SHIELD
-1. ABCD ARCHITECTURE:
-   - Primary 4-domain structure: [A] Admin, [B] Board, [C] Class, [D] Data.
-   - Terminology: Admin, Board, Class, Data, Assessment, Question. NEVER use legacy terms: Affair, Blueprint, or Challenge.
-2. FRONTEND SHIELD:
-   - ALWAYS use Optional Chaining (`?.`) and fallbacks (`||`, `??`) on DB rows, properties, prerequisites, and metadata. Wrap modals and DOM selectors in defensive existence checks.
-3. DATAGRID CELL SANITIZATION:
-   - Never render `[object Object]`. Automatically resolve nested dot notation keys to string properties (`.name`, `.title`, `.label`, or formatted JSON fallback).
-4. SECURITY & ANSWER KEY PROTECTION:
-   - Never leak `correct_answer_snapshot` or `accepted_answers_snapshot` during `IN_PROGRESS` attempts. Return snapshots only for verified finished attempts (`SUBMITTED`, `AUTO_SUBMITTED`, `COMPLETED`, `EXPIRED`).
-5. SUPABASE RELATIONSHIP DISAMBIGUATION:
-   - Disambiguate multi-foreign-key queries with explicit relationship hints (e.g., `institutions!institution_id(name)`). Maintain defensive in-memory fallback hydration.
-6. ERROR HANDLING & RESILIENCE:
-   - In `api.js`, gracefully catch Supabase 400/404/network errors. Return empty arrays `[]` or `{}` instead of crashing. Render actionable Error Boundaries with retry options.
-7. STRICT UTF-8 ENCODING:
-   - Enforce strict UTF-8 across HTML meta tags, API payloads, CSV/Excel parsers, and string sanitizers. Prevent mojibake characters.
-8. DATABASE INTEGRITY & SOFT-DELETE:
-   - Use Soft-Delete (`deleted_at IS NULL`) exclusively for business entities. NEVER execute raw hard-deletes (`DELETE FROM`) on historical results, attempts, or student records.
-9. POSTGREST ASYNC HANDLING:
-   - Supabase PostgrestFilterBuilder queries are Thenables, NOT true Promises. Never call `.catch()` directly on them. Always use `try { await ... } catch (err) {}`.
-10. DEFENSIVE PROPERTY SCOPING IN UI & MODALS:
-    - Explicitly define all counter variables before passing to view layers in modal/quiz loops to prevent `ReferenceError` crashes.
+> Master governance index. Detailed specs:
+> - UI & Tables: `.agents/rules/ui-invariants.md` & `AGENTS.md` Section 2.20
+> - Workflows: `.agents/rules/agent-workflow.md` & `AGENTS.md` Section 0
+> - Database & Schema: `docs/DATABASE_SCHEMA.md` & `AGENTS.md` Section 1–3
+
+## DOMAIN 1: CORE ARCHITECTURE & DATA INTEGRITY
+1. ABCD ARCHITECTURE: Strict hierarchy [A] Admin, [B] Board, [C] Class, [D] Data. Terminology: Admin, Board, Class, Data, Assessment, Question.
+2. FRONTEND SHIELD: Mandatory optional chaining (`?.`) and fallbacks (`||`, `??`) on all DB rows and DOM selectors.
+4. SECURITY & ANSWER KEY PROTECTION: Never leak `correct_answer_snapshot` during `IN_PROGRESS` attempts. Return snapshots only for finished attempts.
+5. SUPABASE RELATIONSHIP DISAMBIGUATION: Disambiguate multi-FK queries with explicit hints (`institutions!institution_id(name)`). Maintain fallback hydration.
+6. ERROR HANDLING & RESILIENCE: In `api.js`, catch Supabase errors gracefully. Return empty arrays/objects rather than crashing.
+7. STRICT UTF-8 ENCODING & ZERO POWERSHELL FILE MUTATION (/learn): Strict UTF-8 across all files. PERMANENT BAN: Never use PowerShell cmdlets (`Get-Content`, `Set-Content`, `Add-Content`, `-replace`) to read, edit, or write codebase files. Use native tools (`edit_file`, `write_file`) or Node.js (`fs.*FileSync(..., 'utf8')`). PowerShell is strictly for running CLI processes.
+8. DATABASE INTEGRITY & SOFT-DELETE: Use `deleted_at IS NULL` exclusively. Hard deletes (`DELETE FROM`) on historical results/attempts are forbidden.
+9. POSTGREST ASYNC HANDLING: Supabase queries are Thenables, NOT true Promises. Never call `.catch()` on them; use `try { await ... } catch (err) {}`.
 
 ## DOMAIN 2: DESIGN SYSTEM & COLOR SINGLE SOURCE OF TRUTH
-11. SINGLE SOURCE OF TRUTH COLORING:
-    - Never hardcode grade, percentage, points, or answer evaluation colors across CSS or JS modules.
-    - All colors must strictly reference `TOPSCORE_COLORS` in `js/grading.js` and corresponding `--grade-*` / `--eval-*` CSS variables in `css/style.css`.
-    - Star (★ / 100%) is strictly Electric Pink (`#ff2d87` / RGB `255, 45, 135`) with dark slate text (`#0F172A`) and ambient pink glow. Color is EXCLUSIVE to Star; NEVER inherited by other components.
-    - Grade A (90%–99%) is Pure Green (`#00c000ff`) and serves as the sole authoritative green reference for capsules, action buttons, and correct evaluations (`--eval-correct`).
-    - Grade B: Electric Lime (`#95ff00ff`), Grade C: Pure Yellow (`#FFFF00`), Grade D: Dark Orange (`#FF8C00`), Grade E: Pure Red (`#FF0000`).
-    - Round grade badges (`.grade-circle`): ALL symbols and letters (★, A, B, C, D, E) strictly render dark slate (`#0F172A`), universally eliminating white text.
-    - Points (PTS) dynamically follow `getGradeColorByScore()`.
+11. SINGLE SOURCE OF TRUTH COLORING: Never hardcode grade colors. Reference `TOPSCORE_COLORS` in `js/grading.js` and `--grade-*` in `css/style.css`.
+- Star (★ / 100%): Electric Pink (`#ff2d87`, dark slate `#0F172A` text, exclusive to Star).
+- Palette: Grade A Pure Green (`#00c000ff`), B Electric Lime (`#95ff00ff`), C Pure Yellow (`#FFFF00`), D Dark Orange (`#FF8C00`), E Pure Red (`#FF0000`).
+- Badges: Circular badges (`.grade-circle`) strictly render dark slate `#0F172A` text. Dynamic PTS follows `getGradeColorByScore()`.
 
 ## DOMAIN 3: SPATIAL LAYOUT, TABLE ARCHITECTURE & UI INVARIANTS
-15. UNIVERSAL TABLE ARCHITECTURE & ZERO PAGE SCROLL (STRICT INVARIANT) (/learn):
-    - Root `html` & `body`: `height: 100vh !important; max-height: 100vh !important; width: 100vw !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important;`.
-    - Locked base footer (`#bottom-ad-banner` / `.topscore-locked-banner`): fixed 60px height. Layout `#admin-console`: `height: calc(100vh - 60px) !important; max-height: calc(100vh - 60px) !important;` (zero outer scroll).
-    - Table-Only Vertical Scroll: Vertical scrolling is permitted EXCLUSIVELY inside table body containers (`.table-wrap` / `tbody`). Sticky headers (`thead th` top: 0), sticky footers (`tfoot` bottom: 0; empty collapse: `tfoot:empty { display: none !important; }`).
-    - Action toolbars: `flex: 0 0 auto !important; height: auto !important; min-height: 0 !important;`. When Edit Mode is OFF, toolbars containing only hidden `.edit-mode-only` buttons must completely collapse (`display: none !important; margin: 0 !important; padding: 0 !important;`). Designate grid containers with `flex: 1 1 0 !important; min-height: 0 !important;`.
-16. PURE DIRECT ENGLISH UI STANDARD (/learn):
-    - All UI, navigation menus, tab titles, table headers, status labels, buttons, tooltips, dialogs, toasts, and system messages across all pages (`index.html`, `dashboard.html`, `test.html`, `result.html`, `admin.html`) must use direct, professional English.
-    - Sole exception: Indonesian vocabulary meaning inside Vocabulary Vault (`vocabulary_vault.meaning`).
-17. SINGLE-RESPONSIBILITY COLUMNS (1 INFO = 1 COLUMN) (/learn):
-    - Every table column across all pages must strictly contain ONLY ONE metric or item. Never concatenate multiple distinct metrics into a single cell.
-18. NO-CAPSULE VIEW MODE & EDIT-MODE-ONLY CAPSULES (/learn):
-    - View mode (Edit Mode OFF): zero capsules, bordered pill boxes, or badges around data cells, scores, or statuses. Render clean, flat text with `font-variant-numeric: tabular-nums`.
-    - Capsule styling is strictly reserved for interactive editable inputs/steppers, appearing ONLY when Master Edit Mode is ON (`body.global-edit-mode-on`).
-20. UNIVERSAL LOWER PANEL ARCHITECTURE & 10PX CONTAINER GAP (/learn):
-    - Lower panel & table footers (`tfoot`): strictly `height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box;`, matching the 50px sidebar footer (`.sidebar-footer`).
-    - All containers, panels, cards, and tables must maintain an exact 10px gap (`gap: 10px !important;` or `margin-bottom: 10px !important;`).
-21. DYNAMIC COLUMN SIZING, SINGLE-LINE TEXT & ZERO DEAD SPACE INVARIANT (/learn):
-    - Zero dead space: tables expand to 100% width (`width: 100% !important;`). Dynamic content sizing (`table-layout: auto;`).
-    - Table cell text must NEVER wrap onto multiple lines (`white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`). Uniform balanced typography (`0.78rem`–`0.8rem`). No clipped text.
-22. CENTERED LOADING STATES & CANONICAL COMPONENT INVARIANT (/learn):
-    - All loading indicators and spinners in Tutor's Room must strictly render centered horizontally and vertically (`display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 100% !important; height: 100% !important; min-height: calc(100vh - 200px) !important; flex: 1 1 0 !important; margin: auto !important; box-sizing: border-box !important;`).
-    - Parent containers (`#class-hub-tab-content`, `.workspace-content`) must enforce `width: 100% !important; height: 100% !important; flex: 1 1 0 !important;` to eliminate horizontal side-drifting. Canonical helper: `getLoadingStateHtml(message)`. Direct English only.
-25. TUTOR'S ROOM 8-TIER TYPOGRAPHIC SCALE & ZERO SUB-11PX INVARIANT (/learn):
-    - 8-tier scale tokens: Display (20px Outfit 800), Title (16px Outfit 700), Subtitle (14px Inter 600), Body (13px Inter 500), Table (12px Inter 500/700), Control (12px Inter 600), Caption (11px Inter 600), Mono (11px Mono 600).
-    - Zero Sub-11px Rule: No text element in Tutor's Room may render smaller than 11px. Eradicate legacy `0.65rem` (8.3px), `0.70rem` (8.9px), `8pt`, and `8.5pt`.
-    - Standard data cells use weight 500; bold 700/800 is reserved for headers/titles. Purge unneeded italics on dark surfaces.
+*(Full specifications in `.agents/rules/ui-invariants.md`)*
+15. UNIVERSAL TABLE ARCHITECTURE & NATIVE TABLE LOCK (STRICT INVARIANT) (/learn):
+    - Root 100vh lock (`overflow: hidden !important;`). Console: `calc(100vh - 60px) !important`.
+    - Native Table Lock: HTML `<table>` elements are strictly `display: table !important` (NEVER flex or grid). Vertical scrolling is EXCLUSIVELY on `.table-wrap { overflow-y: auto; }`. Headers stick to top, footers stick to bottom flush above lower panel.
+16. PURE DIRECT ENGLISH UI STANDARD (/learn): All UI text, headers, menus, dialogs use direct English. Sole exception: Indonesian vocabulary meaning.
+17. SINGLE-RESPONSIBILITY COLUMNS & DOSSIER MODAL ON CLICK (/learn): Strictly 1 metric per column. Student Roster sequence: Level -> Photo (30px avatar) -> Gender (Mr./Miss.) -> Name -> DOB -> Age -> Education -> Class Exams -> Status. In active roster, Actions column is PURGED. Clicking on student Photo or Name opens their Dossier Profile modal. Student deletion is restricted exclusively to the Inactive Students tab to prevent accidental data loss.
+18. EXCEL-LIKE MASTER EDIT MODE & ZERO INNER CAPSULE (/learn): View mode: clean text, zero inputs. Edit Mode ON: cell and header gridlines (th, td) across ALL tables turn crisp WHITE (border-right: 1px solid rgba(255,255,255,0.45); border-bottom: 1px solid rgba(255,255,255,0.45)). Cell inputs have NO border, NO border-radius, and transparent background (filling cell seamlessly like an Excel spreadsheet, zero inner capsule/box). Changes to Name, Gender, DOB, Education, Exam Scores, and Status auto-sync immediately to Supabase and cache.
+20. UNIVERSAL LOWER PANEL ARCHITECTURE & 10PX CONTAINER GAP (/learn): Universal 10px container gap. All tables (thead, tbody, tfoot) are 100% contained within the workspace table container (#student-grid-container / .table-wrap). Table footers (tfoot) must NEVER enter the lower panel. The 50px Lower Panel (.workspace-lower-panel) is docked flush at base (0px margin to bottom banner and side panel) reserved exclusively for action buttons ([🚀 NEXT], [➕ Add Student], [📥 Import Excel]), search, and metadata. A strict 10px vertical gap separates the table container from the lower panel.
+21. DYNAMIC COLUMN SIZING, SINGLE-LINE TEXT & ZERO DEAD SPACE INVARIANT (/learn): Tables expand 100% width, dynamic proportional allocation, zero voids, nowrap cells (`white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`), Excel vertical dividers (`border-right`).
+22. CENTERED LOADING STATES: Spinners strictly centered horizontally and vertically via canonical `getLoadingStateHtml(message)` in direct English.
+25. TUTOR'S ROOM 8-TIER TYPOGRAPHIC SCALE & ZERO SUB-11PX INVARIANT (/learn): Font sizes strictly locked to `--tr-font-*` scale. Zero sub-11px text anywhere in Tutor's Room. Data cells weight 500; bold 700/800 for headers only.
+31. DYNAMIC COLUMN RESIZING WITH PERSISTENT WIDTH MEMORY (EXCEL-LIKE) (/learn): Column resize handles on `th`, double-click auto-size, localStorage width persistence (`initColumnResize`).
 
 ## DOMAIN 4: AGENT WORKFLOW, IDE HYGIENE & QUALITY VERIFICATION
-12. MANDATORY TASK LIST ON PROCEED:
-    - Step Zero Pre-Execution: The moment a plan is approved, immediately create `tasks.md` and launch it in the center editor tab (`& "$env:LOCALAPPDATA\Programs\Antigravity IDE\bin\antigravity-ide.cmd" -r "<path/to/tasks.md>"`) BEFORE any code changes. Render active checklist in chat response. Maintain real-time dynamic updates (`- [x]`).
-13. MANDATORY PROMPT & TYPO CORRECTION:
-    - ALWAYS inspect user prompts for typos and grammatical errors. Present corrected prompt at top under `### 🎯 Perbaikan Perintah (Typo Fixed)` before proceeding.
-14. PLAN NAMING STANDARD & REPOSITORY DUAL-WRITE PROTOCOL (/learn):
-    - All plan artifacts must strictly use date-prefixed format: `YYYYMMDD - <Plan Name>.md`.
-    - Multi-Device Git Persistence: Every plan artifact must be dual-written: officially saved in `docs/plans/YYYYMMDD - <Plan Name>.md` within the workspace repository (guaranteeing cross-device accessibility via Git push & pull) and mirrored in the active brain artifact directory (`<appDataDir>\brain\<conversation-id>\`) for interactive Antigravity chat features and the Proceed button.
-19. AUTOMATIC MIDDLE-PANEL TAB HYGIENE & POST-PROCESS FILE CLOSURE (/learn):
-    - Do not leave arbitrary files lingering in the middle editor tab group. ONLY the authoritative `tasks.md` progress anchor is focused and pinned. Configure editor limits (`workbench.editor.limit.enabled: true`, `max: 3`).
-23. MANDATORY VISUAL PRE-FLIGHT CHECKLIST & SUBAGENT GATING (/learn):
-    - Every implementation plan involving UI changes (`/plan`) must embed the authoritative Visual Pre-Flight Checklist (`.agents/skills/visual-preflight/examples/checklist_template.md`): (1) Current screenshot, (2) Proposed mockup, (3) 100vh lock, (4) 10px gap, (5) 50px lower panel, (6) nowrap columns, (7) zero dead space, (8) 100% Direct English. Verify via `scripts/verify_plan_preflight.mjs`. Subagent delegation gated until checklist is approved.
-24. CONTEXT WINDOW HYGIENE & POST-MILESTONE COMPACTION (/learn):
-    - Recommend `/compact` after completing multi-phase implementation milestones to free context tokens. Archive completed technical details in `docs/CHANGELOG.md` and `docs/DECISIONS.md`.
-
+*(Full protocols in `.agents/rules/agent-workflow.md` & `AGENTS.md` Section 0)*
+12. MANDATORY TASK LIST ON PROCEED: Create and pin `tasks.md` in center editor tab the moment a plan is approved before modifying code.
+13. MANDATORY PROMPT & TYPO CORRECTION: Inspect user prompt for typos and display `### 🎯 Perbaikan Perintah (Typo Fixed)` before execution.
+14. PLAN NAMING STANDARD & REPOSITORY DUAL-WRITE PROTOCOL (/learn): Save in `docs/plans/YYYYMMDD - <Plan Name>.md` and mirror in active brain artifact directory.
+19. AUTOMATIC MIDDLE-PANEL TAB HYGIENE & POST-PROCESS FILE CLOSURE (/learn): Only `tasks.md` is pinned. Maximum 3 open editor tabs.
+23. MANDATORY VISUAL PRE-FLIGHT CHECKLIST & SUBAGENT GATING (/learn): All UI plans must embed screenshot (Before) and mockup (After). Gated until checklist verified.
+24. CONTEXT WINDOW HYGIENE & POST-MILESTONE COMPACTION (/learn): Recommend `/compact` after completing multi-phase milestones.

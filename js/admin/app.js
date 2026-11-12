@@ -1198,7 +1198,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
         // Fetch ALL data relevant to this class and detailed test mapping
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
-        const [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
+        let [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
           adminFetchAll('tests').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
@@ -1918,7 +1918,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             pageSize: 50,
             hideToolbar: true,
             searchKeys: ['title', 'shellCode', 'status', 'TestCategory'],
-            bulkActions: true,
+            bulkActions: false,  // Rule 13: Checkbox columns purged
             customBulkActions: [
               {
                 label: '⚡ Bulk Edit',
@@ -2022,7 +2022,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                              min="1" max="100"
                              title="Type manual passing percentage (Enter / Blur to save)"
                              style="width:46px; height:22px; padding:0 2px; font-size:0.75rem; font-weight:700; text-align:center; background:#1e293b; border:1px solid rgba(255,255,255,0.2); border-radius:4px; color:#f8fafc;" />
-                      <span style="font-size:0.68rem; color:#94a3b8; font-weight:700;">%</span>
+                      <span style="font-size:11px; color:#94a3b8; font-weight:700;">%</span>
                     </div>
                   `;
                 }
@@ -2626,9 +2626,9 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
             });
 
-            // Dynamic super-headers: Semantic split into STUDENT IDENTITY (4 cols) and OVERALL PERFORMANCE (3 cols)
+            // Dynamic super-headers: Semantic split into STUDENT IDENTITY (2 cols) and OVERALL PERFORMANCE (3 cols)
             const dynamicSuperHeaders = [
-              { label: 'STUDENT IDENTITY', colSpan: 4, className: 'super-hdr super-hdr-identity' },
+              { label: 'STUDENT IDENTITY', colSpan: 2, className: 'super-hdr super-hdr-identity' },
               { label: 'OVERALL PERFORMANCE', colSpan: 3, className: 'super-hdr super-hdr-overall' }
             ];
 
@@ -2668,7 +2668,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 minWidth: '60px',
                 headerTitle: `Theme ${tc} Task Progress (Tasks Completed / Max Required)`,
                 title: `Theme ${tc} Task Progress`,
-                label: '<span class="test-subtag test-subtag-task" style="font-size:0.70rem; font-weight:800; color:#38bdf8; letter-spacing:0.02em;">TASK</span>',
+                label: '<span class="test-subtag test-subtag-task" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">TASK</span>',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
@@ -2677,7 +2677,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   const maxT = row[`theme_${tc}_task_max`] || 0;
                   const isComplete = Boolean(row[`theme_${tc}_task_completed`]);
                   if (maxT === 0) {
-                    return '<span class="asm-dot" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:700;" title="No tasks required">&middot;</span>';
+                    return '<span class="asm-dot" style="font-size:12px; font-weight:700;" title="No tasks required">&middot;</span>';
                   }
 
                   // Master Edit Mode ON: render inline interactive capsule input
@@ -2697,7 +2697,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                                onblur="window.saveRowManualTaskInput('${row.id}', '${tc}', ${maxT})"
                                onkeydown="if(event.key==='Enter'){this.blur();}"
                                onclick="event.stopPropagation();"
-                               style="width:28px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
+                               style="width:32px; height:24px; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
                         <span style="font-size:0.68rem; color:#94a3b8; font-weight:600; font-variant-numeric:tabular-nums;">/${maxT}</span>
                       </div>
                     `;
@@ -2706,7 +2706,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   const color = isComplete ? '#00c000' : (earned > 0 ? '#38bdf8' : '#64748b');
                   return `
                     <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Tasks Progress: ${earned}/${maxT}${isComplete ? ' (Completed)' : ' (Incomplete)'}">
-                      <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:var(--matrix-font-size, 0.75rem); font-weight:800; color:${color}; font-variant-numeric:tabular-nums;">
+                      <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:500; color:${color}; font-variant-numeric:tabular-nums;">
                         ${earned}/${maxT}
                       </span>
                     </div>
@@ -2722,7 +2722,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 minWidth: '60px',
                 headerTitle: `Theme ${tc} Exam Points`,
                 title: `Theme ${tc} Exam Points`,
-                label: '<span class="test-subtag test-subtag-test-pts" style="font-size:0.70rem; font-weight:800; color:#38bdf8; letter-spacing:0.02em;">PTS</span>',
+                label: '<span class="test-subtag test-subtag-test-pts" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">PTS</span>',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
@@ -2750,7 +2750,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                                onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
                                onkeydown="if(event.key==='Enter'){this.blur();}"
                                onclick="event.stopPropagation();"
-                               style="width:40px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
+                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
                       </div>
                     `;
                   }
@@ -2760,7 +2760,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   if (!isTaskCompleted) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
-                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
+                        <span style="font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
                       </div>
                     `;
                   }
@@ -2769,7 +2769,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   if (!hasExamAttempt || ptsVal === undefined || ptsVal === null || ptsVal < 0) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
-                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
+                        <span style="font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
                       </div>
                     `;
                   }
@@ -2785,7 +2785,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                     : (themePct >= 60 ? '#FFFF00' : '#FF0000');
                   return `
                     <span class="asm-score asm-score-test test-score-theme-total"
-                          style="color:${color} !important; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                          style="color:${color} !important; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
                           title="Theme ${tc} Total Exam Points: ${displayVal}">
                       ${displayVal}
                     </span>
@@ -2801,7 +2801,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 minWidth: '60px',
                 headerTitle: `Theme ${tc} Exam Score %`,
                 title: `Theme ${tc} Exam Score %`,
-                label: '<span class="test-subtag test-subtag-test-score" style="font-size:0.70rem; font-weight:800; color:#38bdf8; letter-spacing:0.02em;">SCR</span>',
+                label: '<span class="test-subtag test-subtag-test-score" style="font-size:11px; font-weight:700; color:#38bdf8; letter-spacing:0.02em;">SCR</span>',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
@@ -2828,7 +2828,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                                onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
                                onkeydown="if(event.key==='Enter'){this.blur();}"
                                onclick="event.stopPropagation();"
-                               style="width:38px; height:22px; background:#0b1120; border:1px solid #38bdf8; color:#fff; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); text-align:center; border-radius:3px; padding:0 1px;">
+                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
                       </div>
                     `;
                   }
@@ -2838,7 +2838,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   if (!isTaskCompleted) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
-                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
+                        <span style="font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));">🛑</span>
                       </div>
                     `;
                   }
@@ -2847,7 +2847,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   if (!hasExamAttempt || scoreVal === undefined || scoreVal === null || scoreVal < 0) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
-                        <span style="font-size:var(--matrix-font-size, 0.75rem); line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
+                        <span style="font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">🔒</span>
                       </div>
                     `;
                   }
@@ -2867,7 +2867,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   const cellColor = (isForgiven && scoreVal === 0) ? '#f59e0b' : color;
                   return `
                     <span class="asm-score asm-score-test test-score-theme-pct"
-                          style="color:${cellColor}; font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;"
+                          style="color:${cellColor}; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
                           title="Theme ${tc} Exam Score: ${scoreVal}%">
                       ${scoreVal}%${supBadge}
                     </span>
@@ -2950,25 +2950,22 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
 
                 let cellsHtml = '';
                 visibleCols.forEach(col => {
-                  if (col.key === 'instName') {
-                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:700; color:#FFFF00; font-size:var(--matrix-font-size, 0.75rem);">★</td>`;
-                  } else if (col.key === 'progName' || col.key === 'batch') {
-                    const stickyCls = col.key === 'progName' ? 'col-sticky-2' : 'col-sticky-3';
-                    cellsHtml += `<td class="col-sticky ${stickyCls} text-center" style="color:#94a3b8; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92);">—</td>`;
+                  if (col.key === 'batch') {
+                    cellsHtml += `<td class="col-sticky col-sticky-1 text-center" style="font-weight:700; color:#FFFF00; font-size:12px;">★</td>`;
                   } else if (col.key === 'displayName') {
-                    cellsHtml += `<td class="col-sticky col-sticky-4" style="font-weight:700; color:#FFFF00; font-size:var(--matrix-font-size, 0.75rem); white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
+                    cellsHtml += `<td class="col-sticky col-sticky-2" style="font-weight:700; color:#FFFF00; font-size:12px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;">★ CLASS AVERAGE</td>`;
                   } else if (col.key === 'progressPct') {
                     const avgProgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgProg) : '#ffffff';
                     cellsHtml += `
-                      <td class="col-sticky col-sticky-5 text-center">
-                        <div style="color:${avgProgColor}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1;">${avgProg}%</div>
+                      <td class="col-sticky col-sticky-3 text-center">
+                        <div style="color:${avgProgColor}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums; line-height:1;">${avgProg}%</div>
                       </td>
                     `;
                   } else if (col.key === 'totalEarnedScore') {
                     const avgPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgScore) : '#ffffff';
                     cellsHtml += `
-                      <td class="col-sticky col-sticky-6 text-center">
-                        <div style="font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; color:${avgPtsColor} !important;" title="Class Avg Exam Points: ${avgPts}">
+                      <td class="col-sticky col-sticky-4 text-center">
+                        <div style="font-weight:700; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${avgPtsColor} !important;" title="Class Avg Exam Points: ${avgPts}">
                           ${avgPts}
                         </div>
                       </td>
@@ -2976,14 +2973,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   } else if (col.key === 'grade') {
                     if (totalStudents === 0 || avgGrade === '—' || avgGrade === '-') {
                       cellsHtml += `
-                        <td class="col-sticky col-sticky-7 col-sticky-last text-center">
-                          <span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem);">—</span>
+                        <td class="col-sticky col-sticky-5 col-sticky-last text-center">
+                          <span class="text-muted" style="font-size:12px;">—</span>
                         </td>
                       `;
                     } else {
                       const cleanAvgGrade = String(avgGrade || '').trim().toUpperCase();
                       cellsHtml += `
-                        <td class="col-sticky col-sticky-7 col-sticky-last text-center">
+                        <td class="col-sticky col-sticky-5 col-sticky-last text-center">
                           ${isAvgGradeS
                             ? '<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star, #ff2d87); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Average Grade ★ (100%)">★</span>'
                             : `<span class="grid-grade-val" style="color:${avgGradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
@@ -3028,26 +3025,26 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Score: ${avgPct}%">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Score: ${avgPct}%">${avgPct}%</span>
                           </td>
                         `;
                       } else if (isTest && isPtsCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Points: ${avgSc}/${totalQ} pts (${avgPct}%)">${avgSc}</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Points: ${avgSc}/${totalQ} pts (${avgPct}%)">${avgSc}</span>
                           </td>
                         `;
                       } else {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Task Score: ${avgPct}% (${count} students)">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Task Score: ${avgPct}% (${count} students)">${avgPct}%</span>
                           </td>
                         `;
                       }
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -3064,13 +3061,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       const avgTaskCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgTaskPct) : '#FFFF00';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgTaskCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Tasks Progress: ${avgTaskPct}% (${sumTasks}/${sumMax})">${avgTaskPct}%</span>
+                          <span style="color:${avgTaskCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Tasks Progress: ${avgTaskPct}% (${sumTasks}/${sumMax})">${avgTaskPct}%</span>
                         </td>
                       `;
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -3090,13 +3087,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemeScore) : '#FFFF00';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgScoreCol}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Score: ${avgThemeScore}%">${avgThemeScore}%</span>
+                          <span style="color:${avgScoreCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Score: ${avgThemeScore}%">${avgThemeScore}%</span>
                         </td>
                       `;
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -3119,13 +3116,13 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       const avgThemeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemePct) : '#ffffff';
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgThemeColor}; font-weight:600; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts (${avgThemePct}%)">${avgThemePts}</span>
+                          <span style="color:${avgThemeColor}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Points: ${avgThemePts} pts (${avgThemePct}%)">${avgThemePts}</span>
                         </td>
                       `;
                     } else {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:var(--matrix-font-size, 0.75rem); line-height:1;" title="Unattempted">&middot;</span>
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
                         </td>
                       `;
                     }
@@ -3210,16 +3207,6 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   }
                 }
 
-                if (sortKey === 'instName') {
-                  const instCmp = (a.instName || '').localeCompare(b.instName || '', undefined, { sensitivity: 'base', numeric: true });
-                  if (instCmp !== 0) return direction === 'desc' ? -instCmp : instCmp;
-                }
-
-                if (sortKey === 'progName') {
-                  const progCmp = (a.progName || '').localeCompare(b.progName || '', undefined, { sensitivity: 'base', numeric: true });
-                  if (progCmp !== 0) return direction === 'desc' ? -progCmp : progCmp;
-                }
-
                 if (sortKey === 'batch') {
                   const batchCmp = (a.batch || '').localeCompare(b.batch || '', undefined, { sensitivity: 'base', numeric: true });
                   if (batchCmp !== 0) return direction === 'desc' ? -batchCmp : batchCmp;
@@ -3240,50 +3227,32 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
               },
               columns: [
                 {
-                  key: 'instName',
-                  label: 'INSTITUTION',
-                  className: 'col-sticky col-sticky-1',
-                  sortable: true,
-                  align: 'center',
-                  width: '80px',
-                  minWidth: '75px',
-                  render: (val, row) => `<span class="badge" style="background:rgba(255,255,255,0.08); font-weight:600; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); padding:1px 4px; border-radius:3px;" title="${escapeHtml(row.instName)}">${escapeHtml(row.instShort || row.instName)}</span>`
-                },
-                {
-                  key: 'progName',
-                  label: 'PROGRAM',
-                  className: 'col-sticky col-sticky-2',
-                  sortable: true,
-                  align: 'center',
-                  width: '85px',
-                  minWidth: '80px',
-                  render: (val, row) => `<div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); font-weight:500; color:var(--clr-text-2);" title="${escapeHtml(row.progName)}">${escapeHtml(row.progName)}</div>`
-                },
-                {
                   key: 'batch',
                   label: 'BATCH',
-                  className: 'col-sticky col-sticky-3',
+                  className: 'col-sticky col-sticky-1',
                   sortable: true,
                   align: 'center',
                   width: '65px',
                   minWidth: '60px',
-                  render: (val, row) => `<span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:600; font-size:calc(var(--matrix-font-size, 0.75rem) * 0.92); padding:1px 4px; border-radius:10px;" title="Batch ${escapeHtml(row.batch)}">${escapeHtml(row.batch)}</span>`
+                  render: (val, row) => `<span style="color:#38bdf8; font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1;" title="Batch ${escapeHtml(row.batch)}">${escapeHtml(row.batch)}</span>`
                 },
                 {
                   key: 'displayName',
                   label: 'STUDENT NAME',
-                  className: 'col-sticky col-sticky-4',
+                  className: 'col-sticky col-sticky-2',
                   sortable: true,
-                  width: '180px',
-                  minWidth: '150px',
+                  width: '220px',
+                  minWidth: '180px',
                   render: (val, row) => {
                     const origName = row.displayName || row.name || '';
                     const matrixName = (typeof formatMatrixStudentName === 'function')
-                      ? formatMatrixStudentName(origName, 19)
+                      ? formatMatrixStudentName(origName, 22)
                       : origName;
                     return `
-                      <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; display:flex; align-items:center; gap:2px;" title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}">
-                        <span style="color:var(--clr-text-1); font-size:var(--matrix-font-size, 0.75rem); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
+                      <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; display:flex; align-items:center; gap:2px; cursor:pointer;"
+                           onclick="event.stopPropagation(); if (typeof window.showStudentProfileModal === 'function') window.showStudentProfileModal('${row.id}');"
+                           title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}&#10;Click to view profile">
+                        <span style="color:var(--clr-text-1); font-size:12px; font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                           ${escapeHtml(matrixName)}
                         </span>
                       </div>
@@ -3293,7 +3262,7 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 {
                   key: 'progressPct',
                   label: 'PROGRESS',
-                  className: 'col-sticky col-sticky-5',
+                  className: 'col-sticky col-sticky-3',
                   sortable: true,
                   align: 'center',
                   width: '80px',
@@ -3305,14 +3274,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                       : 'var(--clr-text-3)';
                     const tip = row.progressTooltip || `${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)`;
                     return `
-                      <div style="color:${progColor}; font-size:var(--matrix-font-size, 0.75rem); font-weight:600; font-variant-numeric:tabular-nums; line-height:1;" title="${escapeHtml(tip)}">${row.progressPct}%</div>
+                      <div style="color:${progColor}; font-size:12px; font-weight:400; font-variant-numeric:tabular-nums; line-height:1;" title="${escapeHtml(tip)}">${row.progressPct}%</div>
                     `;
                   }
                 },
                 {
                   key: 'totalEarnedScore',
                   label: 'POINTS',
-                  className: 'col-sticky col-sticky-6',
+                  className: 'col-sticky col-sticky-4',
                   sortable: true,
                   align: 'center',
                   width: '75px',
@@ -3320,14 +3289,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                   render: (val, row) => {
                     const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
                     if (!isExamTaken && (!val || val === 0)) {
-                      return '<span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem);">—</span>';
+                      return '<span class="text-muted" style="font-size:12px;">—</span>';
                     }
                     const scoreColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
                       : '#ffffff';
                     const displayScore = Number(val || 0).toFixed(1).replace(/\.0$/, '');
                     return `
-                      <div style="font-weight:700; font-size:var(--matrix-font-size, 0.75rem); font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor} !important;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
+                      <div style="font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor} !important;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
                         ${displayScore}
                       </div>
                     `;
@@ -3336,14 +3305,14 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
                 {
                   key: 'grade',
                   label: 'GRADE',
-                  className: 'col-sticky col-sticky-7 col-sticky-last',
+                  className: 'col-sticky col-sticky-5 col-sticky-last',
                   sortable: true,
                   align: 'center',
                   width: '65px',
                   minWidth: '60px',
                   render: (val, row) => {
                     if (!row.grade || row.grade === '—' || row.grade === '-') {
-                      return '<span class="text-muted" style="font-size:var(--matrix-font-size, 0.75rem);" title="No exams completed">&mdash;</span>';
+                      return '<span class="text-muted" style="font-size:12px;" title="No exams completed">&mdash;</span>';
                     }
                     const isGradeS = row.grade === 'S' || row.grade === '★';
                     if (isGradeS) {
@@ -3821,8 +3790,8 @@ import { renderStudentsRegistration } from './student-registration.js?v=20261106
             await renderClassesHub(area);
             break;
           case 'institutions':
-          await renderUnifiedInstitutions(area);
-          break;
+          case 'batches':
+            return window.loadSection ? window.loadSection('organization') : renderCurriculum(area);
           case 'levels':
           case 'classes':             await renderClassList(area); break;
           case 'classes-org':         await _renderClassesModule(area); break;

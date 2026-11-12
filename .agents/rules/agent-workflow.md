@@ -39,8 +39,3 @@
 - After completing a multi-phase implementation milestone, recommend the `/compact` slash command to summarize trajectory and free context tokens.
 - Archive completed technical details in `docs/CHANGELOG.md` and `docs/DECISIONS.md`.
 
-## 8. Side Quest Protocol for Side Conversations (/btw)
-- Whenever an instruction or investigation originates from a side thread (`/btw`) or side-branched conversation:
-  1. Create a dedicated plan artifact named: `Side Quest — <Descriptive Title>`.
-  2. Isolate the request, technical diagnostic, and resolution without modifying the active milestone scope of the primary roadmap.
-

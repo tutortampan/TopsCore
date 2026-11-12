@@ -749,7 +749,7 @@ export async function loadClassLearningPath(classId) {
       searchKeys: ['title', 'status'],
       initialSortKey: 'order',
       initialSortAsc: true,
-      bulkActions: true,
+      bulkActions: false,  // Rule 13: Checkbox columns purged
       customBulkActions: [
         {
           label: 'Publish Selected',

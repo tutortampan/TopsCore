@@ -940,6 +940,8 @@ export async function generateTestQuestions(sb, test) {
     const themeCode = test.payload.theme_code;
     const topicCode = test.payload.topic_code;
     const themes = test.payload.themes;
+    const titleParts = (test.title || '').split(' - ');
+    const titleTopic = titleParts.length > 1 ? titleParts[1].trim() : null;
 
     let levelNum = 1;
     if (test.level_id) {
@@ -970,7 +972,9 @@ export async function generateTestQuestions(sb, test) {
         const candidateCodes = [
           String(topicCode).toUpperCase(),
           (/^[0-9]+$/.test(String(topicCode)) && themeCode) ? `${String(themeCode).toUpperCase()}${topicCode}` : null,
-          String(topicCode).replace(/^[A-Za-z]/, '')
+          String(topicCode).replace(/^[A-Za-z]/, ''),
+          (levelNum && themeCode && /^[0-9]+$/.test(String(topicCode))) ? `${levelNum}${String(themeCode).toUpperCase()}${topicCode}` : null,
+          (levelNum && themeCode) ? `${levelNum}${String(themeCode).toUpperCase()}${String(topicCode).replace(/^[A-Za-z]/, '')}` : null
         ].filter(Boolean);
         query = query.in('topic_code', candidateCodes);
       } else if (themes && Array.isArray(themes) && themes.length > 0) {
@@ -1006,7 +1010,9 @@ export async function generateTestQuestions(sb, test) {
         const candidateCodes = [
           String(topicCode).toUpperCase(),
           (/^[0-9]+$/.test(String(topicCode)) && themeCode) ? `${String(themeCode).toUpperCase()}${topicCode}` : null,
-          String(topicCode).replace(/^[A-Za-z]/, '')
+          String(topicCode).replace(/^[A-Za-z]/, ''),
+          (levelNum && themeCode && /^[0-9]+$/.test(String(topicCode))) ? `${levelNum}${String(themeCode).toUpperCase()}${topicCode}` : null,
+          (levelNum && themeCode) ? `${levelNum}${String(themeCode).toUpperCase()}${String(topicCode).replace(/^[A-Za-z]/, '')}` : null
         ].filter(Boolean);
         queryNoCat = queryNoCat.in('topic_code', candidateCodes);
       } else if (themes && Array.isArray(themes) && themes.length > 0) {
@@ -1030,6 +1036,26 @@ export async function generateTestQuestions(sb, test) {
           return { ...w, category: isPhrase ? 'phrases' : 'words' };
         });
       }
+    }
+
+    if ((!vaultData || vaultData.length === 0) && titleTopic) {
+      try {
+        let topicNameQuery = sb.from('vocabulary_vault')
+          .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
+          .is('deleted_at', null)
+          .eq('target_level', levelNum)
+          .ilike('topic', `%${titleTopic}%`)
+          .range(0, 4999);
+        if (testProgramId) topicNameQuery = topicNameQuery.eq('program_id', testProgramId);
+        const resTopic = await topicNameQuery;
+        if (!resTopic.error && resTopic.data && resTopic.data.length > 0) {
+          vaultData = resTopic.data.map(w => {
+            const wt = (w.word_type || '').toLowerCase();
+            const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+            return { ...w, category: isPhrase ? 'phrases' : 'words' };
+          });
+        }
+      } catch (_) {}
     }
 
     let vaultWords = vaultData || [];
@@ -1082,21 +1108,44 @@ export async function generateTestQuestions(sb, test) {
         return category === 'phrases' ? isPhrase : !isPhrase;
       });
 
-      // Secondary Safety Fallback: If strict theme/topic yielded 0 words, fallback to general words for this level
+      // Secondary Safety Fallback:
+      // STRICT TASK ISOLATION & ANTI CROSS-POLLINATION:
+      // Specific topic tasks must NEVER blindly pull words from other topics across the entire level!
+      const isTopicSpecificTask = Boolean(topicCode || (!isThemeTest && titleTopic));
       if (vaultWords.length === 0) {
-        console.warn(`[Vault Fallback] 0 words for theme ${themeCode}/topic ${topicCode}, pulling general level ${levelNum} vault items.`);
-        let generalVaultQuery = sb.from('vocabulary_vault')
-          .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
-          .is('deleted_at', null)
-          .eq('target_level', levelNum);
-        if (testProgramId) generalVaultQuery = generalVaultQuery.eq('program_id', testProgramId);
-        const { data: generalVault } = await generalVaultQuery.limit(100);
-        if (generalVault && generalVault.length > 0) {
-          vaultWords = generalVault.filter(w => {
-            const wt = (w.word_type || '').toLowerCase();
-            const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
-            return category === 'phrases' ? isPhrase : !isPhrase;
-          });
+        if (isTopicSpecificTask && titleTopic) {
+          let topicQuery = sb.from('vocabulary_vault')
+            .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
+            .is('deleted_at', null)
+            .eq('target_level', levelNum)
+            .ilike('topic', `%${titleTopic}%`);
+          if (testProgramId) topicQuery = topicQuery.eq('program_id', testProgramId);
+          const { data: topicFallback } = await topicQuery.limit(100);
+          if (topicFallback && topicFallback.length > 0) {
+            vaultWords = topicFallback.filter(w => {
+              const wt = (w.word_type || '').toLowerCase();
+              const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+              return category === 'phrases' ? isPhrase : !isPhrase;
+            });
+          }
+        }
+
+        // Only fallback to level-wide general words if this is a theme exam or level exam (never for single-topic tasks!)
+        if (vaultWords.length === 0 && !isTopicSpecificTask) {
+          console.warn(`[Vault Fallback] 0 words for theme ${themeCode}/topic ${topicCode}, pulling general level ${levelNum} vault items.`);
+          let generalVaultQuery = sb.from('vocabulary_vault')
+            .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
+            .is('deleted_at', null)
+            .eq('target_level', levelNum);
+          if (testProgramId) generalVaultQuery = generalVaultQuery.eq('program_id', testProgramId);
+          const { data: generalVault } = await generalVaultQuery.limit(100);
+          if (generalVault && generalVault.length > 0) {
+            vaultWords = generalVault.filter(w => {
+              const wt = (w.word_type || '').toLowerCase();
+              const isPhrase = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+              return category === 'phrases' ? isPhrase : !isPhrase;
+            });
+          }
         }
       }
 

@@ -1,3 +1,30 @@
+const _measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+const _measureCtx = _measureCanvas ? _measureCanvas.getContext('2d') : null;
+
+/**
+ * High-performance offscreen canvas text measurement to determine best-fit column width.
+ * Replaces expensive DOM cloning to guarantee smooth, sub-millisecond double-click auto-resizing.
+ */
+export function calculateColumnAutoWidth(th, cells = []) {
+  if (!_measureCtx || !th) return Math.max(60, th?.scrollWidth || 100);
+  const thStyle = window.getComputedStyle(th);
+  _measureCtx.font = `${thStyle.fontWeight || '700'} ${thStyle.fontSize || '12px'} ${thStyle.fontFamily || 'Inter, sans-serif'}`;
+  let maxWidth = _measureCtx.measureText(th.textContent.trim().replace(/\s+/g, ' ')).width + 28;
+  const sampleLimit = Math.min(cells.length, 60);
+  for (let i = 0; i < sampleLimit; i++) {
+    const cell = cells[i];
+    if (!cell || cell.classList.contains('table-spacer-cell') || cell.style.display === 'none') continue;
+    const input = cell.querySelector('input, select');
+    const text = input ? (input.value || input.placeholder || '') : cell.textContent.trim().replace(/\s+/g, ' ');
+    if (!text) continue;
+    const cellStyle = window.getComputedStyle(cell);
+    _measureCtx.font = `${cellStyle.fontWeight || '500'} ${cellStyle.fontSize || '12px'} ${cellStyle.fontFamily || 'Inter, sans-serif'}`;
+    const cellW = _measureCtx.measureText(text).width + 26;
+    if (cellW > maxWidth) maxWidth = cellW;
+  }
+  return Math.max(50, Math.min(550, Math.ceil(maxWidth)));
+}
+
 export class DataGrid {
   constructor({ container, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null, hideToolbar = false }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
@@ -176,6 +203,7 @@ export class DataGrid {
 
     this.renderHeaders();
     this.render();
+    this.initColumnResize();
   }
 
   renderHeaders() {
@@ -329,6 +357,128 @@ export class DataGrid {
           this.updateBulkUI();
         });
       }
+    }
+  }
+
+  /**
+   * Rule 15: Dynamic Column Resizing with Persistent Width Memory (Excel-Like)
+   * Attaches drag-resize handles to each th, auto-size on double-click,
+   * and persists widths to localStorage keyed by tableId.
+   */
+  initColumnResize(tableId) {
+    const tableEl = this.container?.querySelector('.datagrid-table');
+    const colgroup = this.container?.querySelector('.datagrid-colgroup');
+    if (!tableEl || !colgroup) return;
+
+    // Determine storage key
+    const storageKey = `topscore_col_widths_${tableId || this.container?.id || 'datagrid'}`;
+
+    // Load saved widths from localStorage
+    let savedWidths = {};
+    try {
+      savedWidths = JSON.parse(localStorage.getItem(storageKey) || '{}');
+    } catch (e) { savedWidths = {}; }
+
+    // Apply saved widths to colgroup <col> elements
+    const cols = colgroup.querySelectorAll('col');
+    cols.forEach((col, i) => {
+      if (savedWidths[i] != null) {
+        col.style.width = savedWidths[i] + 'px';
+      }
+    });
+
+    // Attach resize handles to each header th
+    const ths = this.thead?.querySelectorAll('th');
+    if (!ths || !ths.length) return;
+
+    ths.forEach((th, thIdx) => {
+      // Skip super-headers (they span multiple columns)
+      if (th.closest('.datagrid-super-header-row')) return;
+
+      // Skip existing handles
+      if (th.querySelector('.col-resize-handle')) return;
+
+      // Keep th positioning for the handle
+      if (getComputedStyle(th).position === 'static') {
+        th.style.position = 'relative';
+      }
+
+      const handle = document.createElement('div');
+      handle.className = 'col-resize-handle';
+      handle.title = 'Drag to resize column. Double-click to auto-size.';
+      th.appendChild(handle);
+
+      let startX = 0;
+      let startWidth = 0;
+      let colEl = null;
+
+      // Find the matching <col> (accounting for bulkActions col offset)
+      const colOffset = this.bulkActions ? 1 : 0;
+      const colIdx = thIdx + colOffset;
+
+      // mousedown — start drag
+      handle.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        startX = e.clientX;
+        colEl = cols[colIdx];
+        startWidth = colEl ? (parseInt(colEl.style.width) || th.getBoundingClientRect().width) : th.getBoundingClientRect().width;
+        handle.classList.add('dragging');
+        tableEl.style.tableLayout = 'fixed';
+
+        const onMouseMove = (me) => {
+          const delta = me.clientX - startX;
+          const newWidth = Math.max(40, Math.min(600, startWidth + delta));
+          if (colEl) colEl.style.width = newWidth + 'px';
+        };
+
+        const onMouseUp = (me) => {
+          handle.classList.remove('dragging');
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+          // Save to localStorage
+          const currentWidths = {};
+          cols.forEach((c, i) => {
+            const w = parseInt(c.style.width);
+            if (w) currentWidths[i] = w;
+          });
+          try { localStorage.setItem(storageKey, JSON.stringify(currentWidths)); } catch (err) {}
+        };
+
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mouseup', onMouseUp);
+      });
+
+      // double-click — auto-size best-fit smoothly with canvas measurement
+      handle.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        colEl = cols[colIdx];
+        if (!colEl) return;
+
+        const cells = Array.from(tableEl.querySelectorAll('tbody tr')).map(r => r.cells[thIdx]).filter(Boolean);
+        const autoWidth = calculateColumnAutoWidth(th, cells);
+        colEl.style.width = autoWidth + 'px';
+        th.style.width = autoWidth + 'px';
+
+        // Save
+        const currentWidths = {};
+        cols.forEach((c, i) => {
+          const w = parseInt(c.style.width);
+          if (w) currentWidths[i] = w;
+        });
+        try { localStorage.setItem(storageKey, JSON.stringify(currentWidths)); } catch (err) {}
+      });
+    });
+
+    // Double-click on super-header row resets all column widths
+    const superRow = this.thead?.querySelector('.datagrid-super-header-row');
+    if (superRow) {
+      superRow.addEventListener('dblclick', () => {
+        try { localStorage.removeItem(storageKey); } catch (err) {}
+        cols.forEach(col => col.style.width = '');
+        tableEl.style.tableLayout = '';
+      });
     }
   }
 
@@ -618,4 +768,81 @@ export class DataGrid {
     }
   }
 
+}
+
+// Authoritative Universal Column Resizer for Custom Tables (Rule 31 / Pillar 15)
+window.initColumnResize = function(tableElement, storageKey) {
+  if (!tableElement) return;
+  const ths = tableElement.querySelectorAll('thead th:not(.super-hdr)');
+  if (!ths || !ths.length) return;
+  const key = storageKey || `topscore_col_widths_${tableElement.id || 'custom_table'}`;
+  let savedWidths = {};
+  try { savedWidths = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
+  ths.forEach((th, idx) => {
+    if (savedWidths[idx]) th.style.width = savedWidths[idx] + 'px';
+    if (th.querySelector('.col-resize-handle')) return;
+    if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
+    const handle = document.createElement('div');
+    handle.className = 'col-resize-handle';
+    handle.title = 'Drag to resize column. Double-click to auto-size.';
+    th.appendChild(handle);
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const startX = e.clientX;
+      const startWidth = th.getBoundingClientRect().width;
+      handle.classList.add('dragging');
+      const onMove = (me) => {
+        const newW = Math.max(40, Math.min(600, startWidth + (me.clientX - startX)));
+        th.style.width = newW + 'px';
+      };
+      const onUp = () => {
+        handle.classList.remove('dragging');
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        const curWidths = {};
+        ths.forEach((t, i) => { const w = parseInt(t.style.width); if (w) curWidths[i] = w; });
+        try { localStorage.setItem(key, JSON.stringify(curWidths)); } catch (_) {}
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+    handle.addEventListener('dblclick', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const cells = Array.from(tableElement.querySelectorAll('tbody tr')).map(r => r.cells[idx]).filter(Boolean);
+      const autoW = calculateColumnAutoWidth(th, cells);
+      th.style.width = autoW + 'px';
+      const curWidths = {};
+      ths.forEach((t, i) => { const w = parseInt(t.style.width); if (w) curWidths[i] = w; });
+      try { localStorage.setItem(key, JSON.stringify(curWidths)); } catch (_) {}
+    });
+  });
+};
+
+// Universal auto-attach observer so all tables across all screens get column resizing (Rule 2.38 / Pillar 15)
+window.initAllTablesColumnResize = function() {
+  if (typeof document === 'undefined') return;
+  const tables = document.querySelectorAll('#admin-console table:not(.no-resize), .table-wrap table');
+  tables.forEach(table => {
+    if (!table.dataset.colResizeInit) {
+      table.dataset.colResizeInit = 'true';
+      window.initColumnResize(table);
+    }
+  });
+};
+
+if (typeof document !== 'undefined') {
+  // Observe DOM additions in #admin-console to automatically attach resize handles
+  const observer = new MutationObserver(() => {
+    window.initAllTablesColumnResize();
+  });
+  const consoleEl = document.getElementById('admin-console') || document.body;
+  if (consoleEl) {
+    observer.observe(consoleEl, { childList: true, subtree: true });
+  }
+  // Initial run on DOMContentLoaded or immediate
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', window.initAllTablesColumnResize);
+  } else {
+    window.initAllTablesColumnResize();
+  }
 }

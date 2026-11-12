@@ -3748,9 +3748,12 @@ tr.deleted-row td {
   flex-wrap: nowrap !important;
   padding: 0 14px !important;
   flex-shrink: 0 !important;
-  width: 100% !important;
+  width: calc(100% + 20px) !important;
+  margin-left: -10px !important;
+  margin-right: -10px !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
   z-index: 10 !important;
-  margin: 0 !important;
   overflow: hidden !important;
 }
 
@@ -3865,17 +3868,35 @@ body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content)
 }
 
 /* ============================================================
-   NO-CAPSULE VIEW MODE & EDIT-MODE-ONLY CAPSULES (Rule 18 / Sec 2.31)
+   UNIVERSAL NO-CAPSULE TABLE CELLS INVARIANT (Rule 18 / Rule 10 / Sec 2.31)
+   Zero capsules/pill boxes inside table cells in both View Mode and Edit Mode
    ============================================================ */
-/* In View Mode (Edit Mode OFF), table data cells must NOT render in capsule/badge mode */
-body:not(.global-edit-mode-on) .datagrid-table td .badge:not(.badge-grade-symbol),
-body:not(.global-edit-mode-on) .table-wrap td .badge:not(.badge-grade-symbol),
-body:not(.global-edit-mode-on) .table-wrap td .pill-box,
-body:not(.global-edit-mode-on) #blueprint-matrix-table td span.bp-capsule-badge {
+.datagrid-table td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+.table-wrap td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+.table-wrap td .pill-box,
+#blueprint-matrix-table td span.bp-capsule-badge,
+.table-wrap td .badge-tag,
+.datagrid-table td .badge-tag,
+.tree-grid-row-batches .badge-tag,
+#class-tests-grid td .badge:not(.badge-grade-symbol),
+#class-attendance-grid td .badge:not(.badge-grade-symbol):not(.grid-grade-star):not(.grid-grade-val),
+#admin-console table td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val) {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
   padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Rule 2.24: Pristine Read-Only View Mode — Hide Action Columns & Mutation Controls */
+body:not(.global-edit-mode-on) .tree-grid-header-batches div:last-child,
+body:not(.global-edit-mode-on) .tree-actions-right,
+body:not(.global-edit-mode-on) #class-tests-grid td:last-child,
+body:not(.global-edit-mode-on) #class-tests-grid th:last-child,
+body:not(.global-edit-mode-on) .student-action-btn,
+body:not(.global-edit-mode-on) th.col-actions,
+body:not(.global-edit-mode-on) td.col-actions {
+  display: none !important;
 }
 
 /* Tabular Nums for all numeric table data */
@@ -3892,7 +3913,7 @@ body:not(.global-edit-mode-on) #blueprint-matrix-table td span.bp-capsule-badge 
   background: rgba(255, 255, 255, 0.04) !important;
 }
 
-/* When Edit Mode is ON, editable interactive inputs receive capsule styling & zero-jitter 24px height */
+/* When Edit Mode is ON, table inputs become borderless, transparent Excel-like cells (no inner box/capsule) */
 body.global-edit-mode-on .datagrid-table td input,
 body.global-edit-mode-on .table-wrap td input,
 body.global-edit-mode-on .table-wrap td select,
@@ -3904,16 +3925,35 @@ body.global-edit-mode-on .matrix-table td select,
 body.global-edit-mode-on .admin-standard-table td input,
 body.global-edit-mode-on .admin-standard-table td select,
 body.global-edit-mode-on .bp-setting-input input,
-body.global-edit-mode-on .bp-setting-input select {
-  background: #0f172a !important;
-  border: 1px solid #6366f1 !important;
-  border-radius: 9999px !important;
+body.global-edit-mode-on .bp-setting-input select,
+body.global-edit-mode-on .student-inline-input,
+body.global-edit-mode-on .student-inline-select,
+body.global-edit-mode-on .input-matrix-exam-pts,
+body.global-edit-mode-on .input-matrix-exam-score,
+body.global-edit-mode-on .input-matrix-task-progress {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
   color: #ffffff !important;
+  font-family: var(--fm-font-sans) !important;
   font-size: 12px !important;
-  padding: 2px 8px !important;
-  height: 24px !important;
-  line-height: 1 !important;
+  font-weight: 400 !important;
+  padding: 2px 6px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 26px !important;
+  line-height: 1.2 !important;
   box-sizing: border-box !important;
+}
+
+body:not(.global-edit-mode-on) .student-inline-input,
+body:not(.global-edit-mode-on) .student-inline-select {
+  display: none !important;
+}
+body.global-edit-mode-on .student-cell-view {
+  display: none !important;
 }
 
 /* ============================================================
@@ -4413,7 +4453,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid tbody td {
   height: var(--matrix-row-height, 26px);
   padding: var(--matrix-cell-padding, 1px 1px) !important;
-  font-size: var(--matrix-font-size, 0.70rem);
+  font-size: 12px;
   vertical-align: middle;
   line-height: 1.1;
   box-sizing: border-box;
@@ -4434,7 +4474,7 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid th.super-hdr {
-  font-size: var(--matrix-badge-font, 0.58rem);
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -4527,7 +4567,7 @@ body.sidebar-collapsed .admin-main {
   border-top: 2px solid rgba(56, 189, 248, 0.5) !important;
   border-left: 1px solid rgba(56, 189, 248, 0.25) !important;
   font-weight: 800 !important;
-  font-size: 0.65rem !important;
+  font-size: 11px !important;
   letter-spacing: 0.04em !important;
   text-align: center !important;
 }
@@ -4550,7 +4590,7 @@ body.sidebar-collapsed .admin-main {
   justify-content: center;
   gap: 2px;
   font-family: inherit;
-  font-size: 0.62rem !important;
+  font-size: 11px !important;
   font-weight: 700 !important;
   padding: 2px 6px !important;
   border-radius: 8px !important;
@@ -4594,7 +4634,7 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th {
   padding: 2px 1px !important;
-  font-size: var(--matrix-badge-font, 0.58rem);
+  font-size: 11px;
   font-weight: 500;
   line-height: 1.1;
   height: 20px;
@@ -4630,19 +4670,17 @@ body.sidebar-collapsed .admin-main {
   z-index: 25 !important;
 }
 
-/* Individual Column Widths (7 Columns: INSTITUTION, PROGRAM, BATCH, STUDENT NAME, PROGRESS, POINTS, GRADE) - Streamlined for 100% Zero-Scroll Viewport Fit */
-#class-attendance-grid .col-sticky-1 { width: 80px !important; min-width: 75px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-2 { width: 85px !important; min-width: 80px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-3 { width: 65px !important; min-width: 60px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-4 { width: 180px !important; min-width: 150px !important; max-width: 220px !important; border-right: 2px solid rgba(255, 255, 255, 0.15) !important; }
-#class-attendance-grid .col-sticky-5 { min-width: 75px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-6 { min-width: 70px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-7 { min-width: 65px !important; text-align: center !important; }
+/* Individual Column Widths (5 Columns: BATCH, STUDENT NAME, PROGRESS, POINTS, GRADE) - Streamlined for 100% Zero-Scroll Viewport Fit */
+#class-attendance-grid .col-sticky-1 { width: 65px !important; min-width: 60px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-2 { width: 220px !important; min-width: 180px !important; max-width: 260px !important; border-right: 2px solid rgba(255, 255, 255, 0.15) !important; }
+#class-attendance-grid .col-sticky-3 { min-width: 75px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-4 { min-width: 70px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-5 { min-width: 65px !important; text-align: center !important; }
 
 /* Subheader Typography & Alignment Protection */
 #class-attendance-grid thead th:not(.super-hdr) {
   padding: 3px 4px !important;
-  font-size: 0.68rem !important;
+  font-size: 11px !important;
   white-space: nowrap !important;
   height: 24px !important;
 }
@@ -4688,7 +4726,7 @@ body.sidebar-collapsed .admin-main {
 
 /* Base number & score - Unbolded and Clean */
 #class-attendance-grid th.col-test .test-num {
-  font-size: var(--matrix-badge-font, 0.58rem) !important;
+  font-size: 11px !important;
   font-weight: 500 !important;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   display: inline-block;
@@ -4698,7 +4736,7 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid td.col-test .test-score,
 #class-attendance-grid td.col-test .asm-score {
-  font-size: var(--matrix-font-size, 0.70rem) !important;
+  font-size: 12px !important;
   font-weight: 500 !important;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
   font-variant-numeric: tabular-nums !important;
@@ -4712,7 +4750,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid .asm-dot {
   color: rgba(255, 255, 255, 0.22);
   font-weight: 400 !important;
-  font-size: var(--matrix-font-size, 0.70rem) !important;
+  font-size: 12px !important;
   line-height: 1;
   display: inline-block;
 }
@@ -4767,7 +4805,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-a,
 #class-attendance-grid tr:hover td.col-test-theme-score-a {
   border-right: 3px solid #38bdf8 !important;
-  box-shadow: 2px 0 8px rgba(56, 189, 248, 0.3) !important;
+  /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
 #class-attendance-grid thead th.col-test-theme-score-b,
@@ -4777,7 +4815,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-b,
 #class-attendance-grid tr:hover td.col-test-theme-score-b {
   border-right: 3px solid #c084fc !important;
-  box-shadow: 2px 0 8px rgba(192, 132, 252, 0.3) !important;
+  /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
 #class-attendance-grid thead th.col-test-theme-score-c,
@@ -4787,7 +4825,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-c,
 #class-attendance-grid tr:hover td.col-test-theme-score-c {
   border-right: 3px solid #fbbf24 !important;
-  box-shadow: 2px 0 8px rgba(251, 191, 36, 0.3) !important;
+  /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
 #class-attendance-grid thead th.col-test-theme-score-d,
@@ -4797,7 +4835,7 @@ body.sidebar-collapsed .admin-main {
 #class-attendance-grid tr.datagrid-summary-row td.col-test-theme-score-d,
 #class-attendance-grid tr:hover td.col-test-theme-score-d {
   border-right: 3px solid #34d399 !important;
-  box-shadow: 2px 0 8px rgba(52, 211, 153, 0.3) !important;
+  /* Rule 14: Zero neon glow — box-shadow removed */
 }
 
 #class-attendance-grid th.col-exam .test-num {
@@ -4814,7 +4852,7 @@ body.sidebar-collapsed .admin-main {
   background: rgba(255, 255, 255, 0.14) !important;
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
   font-weight: 600 !important;
-  font-size: 0.52rem !important;
+  font-size: 11px !important;
 }
 
 #class-attendance-grid td.col-exam {
@@ -4864,7 +4902,7 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid .test-num-total {
-  font-size: 0.52rem !important;
+  font-size: 11px !important;
   font-weight: 500 !important;
   letter-spacing: -0.01em !important;
   line-height: 1.1 !important;
@@ -4945,7 +4983,7 @@ body.sidebar-collapsed .admin-main {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 0.62rem !important;
+  font-size: 11px !important;
   font-weight: 600 !important;
   padding: 1px 4px !important;
   border-radius: 3px !important;
@@ -4975,9 +5013,9 @@ body.sidebar-collapsed .admin-main {
   font-size: var(--matrix-font-size, 0.75rem);
 }
 
+#class-attendance-grid td.col-sticky-3,
+#class-attendance-grid td.col-sticky-4,
 #class-attendance-grid td.col-sticky-5,
-#class-attendance-grid td.col-sticky-6,
-#class-attendance-grid td.col-sticky-7,
 #class-attendance-grid td.col-exam-score,
 #class-attendance-grid td.col-exam-pts,
 #class-attendance-grid td.col-test-theme-score,
@@ -5019,7 +5057,7 @@ body.sidebar-collapsed .admin-main {
   min-width: 19px !important;
   min-height: 19px !important;
   border-radius: 50% !important;
-  font-size: 0.68rem !important;
+  font-size: 11px !important;
   font-weight: 800 !important;
   line-height: 1 !important;
   text-align: center !important;
@@ -6422,7 +6460,7 @@ tfoot.datagrid-tfoot,
   background: rgba(255, 255, 255, 0.04) !important;
   border: 1px solid rgba(255, 255, 255, 0.08) !important;
   color: #cbd5e1 !important;
-  font-size: 0.68rem !important;
+  font-size: 11px !important;
   padding: 4px 8px !important;
   border-radius: 5px !important;
   cursor: pointer !important;
@@ -6441,7 +6479,7 @@ tfoot.datagrid-tfoot,
   color: #94a3b8 !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
-  font-size: 0.65rem !important;
+  font-size: 11px !important;
   letter-spacing: 0.4px !important;
   padding: 8px 12px !important;
   text-align: left !important;
@@ -6613,8 +6651,8 @@ tfoot.datagrid-tfoot,
 
 .asm-rep-badge {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 0.58rem !important;
-  font-weight: 800 !important;
+  font-size: 11px !important;              /* Rule 2.39: Zero sub-11px — was 0.58rem */
+  font-weight: 500 !important;             /* Rule 9: data cell weight 500 */
   font-variant-numeric: tabular-nums !important;
   letter-spacing: -0.2px !important;
   line-height: 1 !important;
@@ -7142,3 +7180,282 @@ body.role-tutor .col-manual-input {
   display: none !important;
 }
 
+
+/* ============================================================
+   PHASE 408 — Universal Table Polish Rules 9–15
+   AGENTS.md Rules 2.38 Pillars 9–15 | ui-invariants.md Rules 9–15
+   ============================================================ */
+
+/* ---- Rule 9: Header-Only Bold Discipline ---- */
+/* Data cells strictly font-weight: 500 (Medium). Bold reserved for headers only. */
+#class-attendance-grid tbody td,
+#student-roster-grid tbody td,
+.vocab-vault-table tbody td,
+.datagrid-table tbody td,
+.admin-standard-table tbody td {
+  font-weight: 500 !important;
+}
+/* Headers retain bold */
+#class-attendance-grid thead th,
+#student-roster-grid thead th,
+.vocab-vault-table thead th,
+.datagrid-table thead th,
+.admin-standard-table thead th {
+  font-weight: 700 !important;
+}
+
+/* ---- Rule 10: Flat Edit Grid Mode — Excel Borderless Inputs, Zero Inner Capsule ---- */
+body.global-edit-mode-on .datagrid-table td.editable-cell,
+body.global-edit-mode-on .vocab-vault-table td.editable-cell,
+body.global-edit-mode-on .admin-standard-table td.editable-cell {
+  outline: none !important;
+}
+body.global-edit-mode-on .datagrid-table td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on .vocab-vault-table td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on .admin-standard-table td input:not([type="checkbox"]):not([type="radio"]) {
+  border-radius: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+/* ---- Rule 11: Single-Line Compact Program Chips ---- */
+/* Programs column renders on one non-wrapping line with 3–4 letter codes */
+.vault-programs-cell,
+.programs-chip-row {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+}
+.vault-programs-cell .prog-chip,
+.programs-chip-row .prog-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+}
+
+/* ---- Rule 12: Flush Base Footer Docking & Native Table Lock ---- */
+/* Preserves native display: table so column widths remain 100% synchronized */
+.table-wrap {
+  overflow-y: auto !important;
+  overflow-x: auto !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+}
+.table-wrap table {
+  display: table !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+.table-wrap thead {
+  display: table-header-group !important;
+}
+.table-wrap thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 15 !important;
+}
+.table-wrap tbody {
+  display: table-row-group !important;
+}
+/* Option C Spacer Row: absorbs empty void so small rosters do not balloon and footer stays docked flush */
+.table-wrap tbody tr.table-spacer-row td {
+  height: auto !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  user-select: none !important;
+  pointer-events: none !important;
+}
+.table-wrap tfoot {
+  display: table-footer-group !important;
+  position: sticky !important;
+  bottom: 0 !important;
+  z-index: 12 !important;
+}
+.table-wrap tfoot tr,
+.table-wrap tfoot td {
+  background: #0d1527 !important;
+}
+
+/* ---- Rule 13: Zero Checkbox Columns (bulkActions purged) ---- */
+/* Belt-and-suspenders: hide any stray select-all column if it appears */
+.datagrid-select-all,
+th.col-select,
+td.col-select {
+  display: none !important;
+}
+
+/* ---- Rule 14: Zero Neon Glow on Score Columns ---- */
+/* All box-shadow on theme score dividers removed (done inline above) */
+/* Additional belt-and-suspenders global rule */
+#class-attendance-grid td[class*="col-test-theme-score"],
+#class-attendance-grid th[class*="col-test-theme-score"] {
+  box-shadow: none !important;
+}
+
+/* ---- Rule 15: Column Resize Handle Visual Standards ---- */
+/* Thin grab zone on right edge of each th */
+.table-wrap th,
+.datagrid-table th {
+  position: relative !important;
+}
+.col-resize-handle {
+  position: absolute !important;
+  right: -3px !important;
+  top: 0 !important;
+  width: 7px !important;
+  height: 100% !important;
+  cursor: col-resize !important;
+  background: transparent !important;
+  transition: background 0.15s ease !important;
+  z-index: 30 !important;
+  user-select: none !important;
+}
+.col-resize-handle:hover {
+  background: rgba(56, 189, 248, 0.6) !important;
+}
+.col-resize-handle.dragging {
+  background: #38bdf8 !important;
+}
+
+/* ---- Excel-like Table Column Gridlines (Rule 2.38 / Pillar 16) ---- */
+.table-wrap table th,
+.table-wrap table td,
+.datagrid-table th,
+.datagrid-table td,
+#admin-console table th,
+#admin-console table td {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.table-wrap table th:last-child,
+.table-wrap table td:last-child,
+.datagrid-table th:last-child,
+.datagrid-table td:last-child {
+  border-right: none !important;
+}
+
+.table-wrap table thead tr.has-super-headers th,
+.datagrid-super-header-row th {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+/* ---- Master Edit Mode: Crisp White Excel Column Gridlines (Rule 2.38 / Pillar 16) ---- */
+body.global-edit-mode-on .table-wrap table th,
+body.global-edit-mode-on .table-wrap table td,
+body.global-edit-mode-on .datagrid-table th,
+body.global-edit-mode-on .datagrid-table td,
+body.global-edit-mode-on #admin-console table th,
+body.global-edit-mode-on #admin-console table td,
+body.global-edit-mode-on #blueprint-matrix-table th,
+body.global-edit-mode-on #blueprint-matrix-table td {
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.global-edit-mode-on .table-wrap table th:last-child,
+body.global-edit-mode-on .table-wrap table td:last-child,
+body.global-edit-mode-on .datagrid-table th:last-child,
+body.global-edit-mode-on .datagrid-table td:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.global-edit-mode-on .table-wrap td:focus-within,
+body.global-edit-mode-on .datagrid-table td:focus-within,
+body.global-edit-mode-on #admin-console table td:focus-within {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ============================================================
+   UNIVERSAL TUTOR'S ROOM TABLE TYPOGRAPHY INVARIANT (Rule 16 / Sec 2.20)
+   1. Headers: Full Caps (UPPERCASE), Bold (700), 12px
+   2. Footers: Bold (700), 12px (not forced uppercase)
+   3. Table Body Cells: Regular (400), 12px (Strictly NO bolding)
+   4. Edit Mode Inputs/Selects: Same font family, 12px, Regular (400)
+   ============================================================ */
+
+#admin-console table thead th,
+.datagrid-table thead th,
+.table-wrap table thead th,
+#class-attendance-grid thead th,
+#blueprint-matrix-table thead th {
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  font-family: var(--fm-font-sans) !important;
+  white-space: nowrap !important;
+}
+
+#admin-console table thead th *,
+.datagrid-table thead th *,
+.table-wrap table thead th *,
+#class-attendance-grid thead th * {
+  text-transform: uppercase !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  font-family: var(--fm-font-sans) !important;
+}
+
+#admin-console table tfoot td,
+#admin-console table tfoot th,
+.datagrid-table tfoot td,
+.table-wrap table tfoot td,
+#class-attendance-grid tfoot td,
+.datagrid-summary-row td {
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  font-family: var(--fm-font-sans) !important;
+  white-space: nowrap !important;
+}
+
+#admin-console table tbody td,
+.datagrid-table tbody td,
+.table-wrap table tbody td,
+#class-attendance-grid tbody td,
+#blueprint-matrix-table tbody td {
+  font-weight: 400 !important;
+  font-size: 12px !important;
+  font-family: var(--fm-font-sans) !important;
+  white-space: nowrap !important;
+}
+
+#admin-console table tbody td span:not(.grid-grade-star):not(.grade-circle):not(.badge-grade-symbol):not(sup):not(.asm-rem-sup),
+#admin-console table tbody td div,
+#admin-console table tbody td a,
+.datagrid-table tbody td span:not(.grid-grade-star):not(.grade-circle):not(.badge-grade-symbol):not(sup):not(.asm-rem-sup),
+.datagrid-table tbody td div {
+  font-weight: 400 !important;
+  font-size: 12px !important;
+  font-family: var(--fm-font-sans) !important;
+}
+
+/* Edit Mode inputs and selects: 100% font parity with view mode to eliminate layout/font jumping */
+body.global-edit-mode-on #admin-console table td input,
+body.global-edit-mode-on #admin-console table td select,
+body.global-edit-mode-on .datagrid-table td input,
+body.global-edit-mode-on .datagrid-table td select,
+body.global-edit-mode-on .table-wrap td input,
+body.global-edit-mode-on .table-wrap td select,
+body.global-edit-mode-on .student-inline-input,
+body.global-edit-mode-on .student-inline-select,
+body.global-edit-mode-on .input-matrix-exam-pts,
+body.global-edit-mode-on .input-matrix-exam-score,
+body.global-edit-mode-on .input-matrix-task-progress {
+  font-family: var(--fm-font-sans) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+}
