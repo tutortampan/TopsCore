@@ -1,8 +1,12 @@
 # CURRENT STATE
 
-Last Updated: 2026-11-12 20:25 UTC+8
-Current Phase: Phase 421: 4-Column Theme Matrix Standard (Progress | Score | Points | Grade) [COMPLETE]
+Last Updated: 2026-11-12 20:45 UTC+8
+Current Phase: Phase 421: 4-Column Theme Matrix Standard & Roadmap Plans [COMPLETE]
 Status: COMPLETE
+
+## Active Roadmap Plans Ready for Review:
+- [`docs/plans/20261112 - Independent Retake and Self-Paced Exam Mode.md`](file:///docs/plans/20261112%20-%20Independent%20Retake%20and%20Self-Paced%20Exam%20Mode.md): Gating, timer, and score overwrite architecture for passed students taking self-paced exams.
+- [`docs/plans/20261112 - Peer-to-Peer 1-Hour Conversation Module with AI Evaluation.md`](file:///docs/plans/20261112%20-%20Peer-to-Peer%201-Hour%20Conversation%20Module%20with%20AI%20Evaluation.md): WebRTC P2P audio, Supabase Realtime signaling, 4-stage 60m discussion pacing, dual-channel STT, and 5-Pillar Gemini AI scoring.
 
 ## Completed Work (Phase 421):
 1. **4-Column Theme Matrix Standard (`js/admin/app.js`)**:
