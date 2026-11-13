@@ -100,14 +100,13 @@ export function compareStudentsHierarchical(a, b) {
 }
 
 export async function renderStudents(area) {
-    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allAssignments, allTests, allClasses] = await Promise.all([
+    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allTests, allClasses] = await Promise.all([
     adminFetchAll('students', 'id, name, gender, birth_date, education, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
     adminFetchAll('attempts', 'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, is_forgiven, forgiven_reason, forgiven_by, forgiven_at, is_remedial, tests(test_type, title, class_id)'),
     adminFetchAll('levels', 'id, name, level_number'),
     adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score'),
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
-    adminFetchAll('assignments', 'student_id, batch_id, test_id').catch(() => []),
     adminFetchAll('tests', 'id, title, test_type, shell_code, payload, display_order, category, level_id, class_id, program_id, institution_id, levels(name, level_number)').catch(() => []),
     adminFetchAll('classes', 'id, name, program_id, institution_id, is_active').catch(() => [])
   ]);
@@ -205,9 +204,6 @@ export async function renderStudents(area) {
     const validStatuses = ['submitted', 'auto_submitted', 'evaluated', 'graded'];
 
     // Map curriculum assignments & level-centric tests (Rule 2.5 & 2.7)
-    const sAssignments = (allAssignments || []).filter(a =>
-      a.student_id === s.id || (a.batch_id && a.batch_id === s.batch_id)
-    );
     const studentBatch = (allBatches || []).find(b => b.id === s.batch_id);
     const studentLevelId = s.level_id || studentBatch?.current_level_id;
     const levelAssesIds = studentLevelId ? (allTests || []).filter(a => {
@@ -215,7 +211,7 @@ export async function renderStudents(area) {
       const tProg = a.program_id || classesMap.get(a.class_id)?.program_id;
       return !tProg || !s.program_id || tProg === s.program_id;
     }).map(a => a.id) : [];
-    const assignedAssesIds = new Set([...sAssignments.map(a => a.test_id), ...levelAssesIds]);
+    const assignedAssesIds = new Set(levelAssesIds);
     const totalAssigned = assignedAssesIds.size || 40;
 
     const sAttemptsByAsm = new Map();
@@ -790,7 +786,7 @@ export async function renderStudents(area) {
     const eligibleStudents = filteredGridData.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0);
     const eligibleCount = eligibleStudents.length;
 
-    const leftHtml = `<div style="display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8;font-weight:600;">
+    const leftHtml = `<div style="display:inline-flex;align-items:center;gap:8px;font-size:11px;color:#94a3b8;font-weight:600;">
       <span>${currentBatchStatus === 'alumni' ? '🎓 Graduating Batch:' : 'Enrolled:'} <strong style="color:#f8fafc;">${count} Student${count !== 1 ? 's' : ''}</strong></span>
       ${currentBatchStatus === 'alumni' ? `<select id="select-alumni-batch-infobar" style="background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:4px;padding:2px 8px;font-size:0.75rem;height:28px;min-width:170px;">
         <option value="all" ${(!window._alumniFilterBatchId || window._alumniFilterBatchId === 'all') ? 'selected' : ''}>🎓 All Graduating Batches</option>
@@ -807,10 +803,10 @@ export async function renderStudents(area) {
 
     const rightHtml = `<div style="display:inline-flex;align-items:center;gap:8px;overflow-y:hidden;">
       ${currentBatchStatus !== 'alumni' ? `
-        <button type="button" id="btn-promote-all-eligible" style="${nextBtnStyle}height:30px;line-height:30px;padding:0 10px;font-size:12px;font-weight:700;border-radius:4px;cursor:pointer;" title="${nextBtnTitle}">🚀 NEXT (${eligibleCount} Eligible)</button>
+        <button type="button" id="btn-promote-all-eligible" style="${nextBtnStyle}height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size:11px !important;font-weight:700;border-radius:4px;cursor:pointer;" title="${nextBtnTitle}">🚀 NEXT (${eligibleCount} Eligible)</button>
       ` : ''}
-      <button type="button" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:30px;line-height:30px;padding:0 10px;font-size:12px;font-weight:700;border-radius:4px;cursor:pointer;" title="Register New Student">➕ Add Student</button>
-      <button type="button" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;height:30px;line-height:30px;padding:0 10px;font-size:12px;font-weight:700;border-radius:4px;cursor:pointer;" title="Import Students from Excel / CSV">📥 Import Excel / CSV</button>
+      <button type="button" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size:11px !important;font-weight:700;border-radius:4px;cursor:pointer;" title="Register New Student">➕ Add Student</button>
+      <button type="button" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size:11px !important;font-weight:700;border-radius:4px;cursor:pointer;" title="Import Students from Excel / CSV">📥 Import Excel / CSV</button>
     </div>`;
     window.setBottomInfobar(leftHtml, rightHtml);
 
@@ -1165,6 +1161,7 @@ export async function renderStudents(area) {
         const attId = btn.dataset.attId;
         const testId = btn.dataset.testId;
         const sId = btn.dataset.studentId;
+
         const reason = prompt('⚡ Skor F (Forgiven) — Prerogatif Mr. Top\n\nMasukkan alasan tertulis dispensasi (wajib diisi):');
         if (!reason || !reason.trim()) {
           showToast('Alasan dispensasi Skor F wajib diisi.', 'warning');
@@ -2696,7 +2693,7 @@ export async function renderStudents(area) {
             <div class="student-cell-view" style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                  onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
                  title="${escapeHtml(row.displayName)}&#10;Click to view student profile">
-              <span style="color:var(--clr-text-1);font-weight:400;font-size:12px;">${escapeHtml(row.displayName)}</span>
+              <span style="color:var(--clr-text-1);font-weight:400;font-size:11px;">${escapeHtml(row.displayName)}</span>
               ${isAlumni ? `<span style="font-size:0.85rem;margin-left:4px;" title="Alumni Graduate">🎓</span>` : ''}
               ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size:0.65rem;">⚠️ Disconnected</span>` : ''}
               ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:6px;font-size:0.75rem;">⚠️ Remediation</span>` : ''}
@@ -2719,7 +2716,7 @@ export async function renderStudents(area) {
             <div class="student-cell-view">
               ${dobFormatted === '—'
                 ? `<span style="font-size:0.68rem;color:#f59e0b;font-weight:400;">⚠ No DOB</span>`
-                : `<span style="font-size:12px;color:var(--clr-text-2);font-weight:400;font-variant-numeric:tabular-nums;">${escapeHtml(dobFormatted)}</span>`}
+                : `<span style="font-size:11px;color:var(--clr-text-2);font-weight:400;font-variant-numeric:tabular-nums;">${escapeHtml(dobFormatted)}</span>`}
             </div>
             <input type="date" class="student-inline-input" data-id="${row.id}" data-field="birth_date" value="${row.birth_date || ''}" onclick="event.stopPropagation();">
           `;
@@ -2735,9 +2732,9 @@ export async function renderStudents(area) {
         minWidth: '62px',
         render: (row) => {
           if (!row.birth_date) {
-            return `<span class="text-muted" style="font-size:12px;font-weight:400;">—</span>`;
+            return `<span class="text-muted" style="font-size:11px;font-weight:400;">—</span>`;
           }
-          return `<span class="col-ageDisplay" style="color:var(--clr-text-2);font-size:12px;font-weight:400;font-variant-numeric:tabular-nums;">${row.ageDisplay}</span>`;
+          return `<span class="col-ageDisplay" style="color:var(--clr-text-2);font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;">${row.ageDisplay}</span>`;
         }
       },
       // 7. Education (Last Degree / School)
@@ -2752,7 +2749,7 @@ export async function renderStudents(area) {
           const eduStr = formatLastEducation(row.education);
           return `
             <div class="student-cell-view" title="${escapeHtml(eduStr)}">
-              <span style="font-size:12px;font-weight:400;color:var(--clr-text-2);">${escapeHtml(eduStr)}</span>
+              <span style="font-size:11px;font-weight:400;color:var(--clr-text-2);">${escapeHtml(eduStr)}</span>
             </div>
             <input type="text" class="student-inline-input" data-id="${row.id}" data-field="education" value="${escapeHtml(eduStr === '—' ? (typeof row.education === 'string' ? row.education : '') : eduStr)}" placeholder="Education" onclick="event.stopPropagation();">
           `;
@@ -2807,7 +2804,7 @@ export async function renderStudents(area) {
           }
           return `
             <div class="student-cell-view">
-              <span style="color:${color};font-size:12px;font-weight:400;">${label}</span>
+              <span style="color:${color};font-size:11px;font-weight:400;">${label}</span>
             </div>
             <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
               <option value="in_progress" ${!isInactive && status !== 'COMPLETED' && status !== 'GRADUATED' ? 'selected' : ''}>In Progress</option>
@@ -2835,6 +2832,12 @@ export async function renderStudents(area) {
       }] : [])
     ]
   });
+
+  // Mount Column Resizing Memory (Phase 450)
+  const stuTable = gridContainer.querySelector('table');
+  if (stuTable && typeof window.initColumnResize === 'function') {
+    window.initColumnResize(stuTable, 'topscore_col_widths_student_roster_grid');
+  }
 
   // Attach Inline Editing Auto-Save Listeners
   gridContainer.addEventListener('change', async (e) => {

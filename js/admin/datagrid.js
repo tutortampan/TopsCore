@@ -847,7 +847,7 @@ export class DataGrid {
 // Authoritative Universal Column Resizer for Custom Tables (Rule 31 / Pillar 15)
 window.initColumnResize = function(tableElement, storageKey) {
   if (!tableElement) return;
-  const ths = tableElement.querySelectorAll('thead th:not(.super-hdr)');
+  const ths = tableElement.querySelectorAll('thead th:not(.super-hdr):not(.super-th):not([colspan])');
   if (!ths || !ths.length) return;
   const key = storageKey || `topscore_col_widths_${tableElement.id || 'custom_table'}`;
   let savedWidths = {};

@@ -69,3 +69,22 @@ To strictly protect the user's context window budget from premature exhaustion:
      - The clear, immediate next action step.
   3. **Zero Duplication**: The agent is strictly prohibited from re-summarizing, pasting large code blocks, or duplicating tables that already exist inside the artifact.
 
+## 9. Documentation Hygiene & Rolling-Window Protocol ("Anti-Bloat Governance")
+To prevent documentation files from accumulating thousands of obsolete lines that blow up token limits and cause truncation:
+1. **`docs/CHANGELOG.md` (Strict 25-Phase Rolling Window)**:
+   - Holds ONLY the latest **25 active phases** in ultra-condensed format (Header + 2–3 high-signal deliverable bullets).
+   - Whenever phase count reaches 26, the oldest phases MUST be flushed/appended to `docs/archive/` (e.g. `docs/archive/CHANGELOG_ARCHIVE_2.md`).
+   - Strictly forbidden: pasting console traces, verbose `Why` essays, test runner logs, or raw screenshot paths.
+2. **`docs/CURRENT_STATE.md` (Single Authoritative Restart Point)**:
+   - Strictly bounded to $\le 120$ lines (~10 KB).
+   - Contains ONLY: Current Phase & Status, Active System Architecture & Invariants, Recent Active Wave (latest ~5–8 milestones), Governance boundaries, and Next Exact Action.
+   - **STRICT PROHIBITION**: NEVER append long historical `Completed Work (Phase XXX)` logs to this file. All completed phase logs belong exclusively in `CHANGELOG.md`.
+3. **`tasks.md` vs `docs/TODO.md` Single Responsibility**:
+   - `tasks.md` in workspace root is the SOLE active task board for the ongoing user directive.
+   - Never append completed task dumps into `docs/TODO.md`.
+4. **`docs/SESSION_LOG.md` (Compact Format Only)**:
+   - Each session entry is strictly capped at $\le 4$ lines (Goal + 1–2 bullet outcomes).
+5. **`docs/plans/` Archival**:
+   - Plans from completed phases are routinely moved to `docs/plans/archive/` to keep `docs/plans/` clear for active work.
+
+

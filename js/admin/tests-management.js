@@ -87,7 +87,6 @@ export async function renderTests(area) {
 
   const [
     rawData,
-    allQuestions,
     allClasses,
     allLevels,
     allBoardClasses,
@@ -98,7 +97,6 @@ export async function renderTests(area) {
     answersRes
   ] = await Promise.all([
     adminFetchAll('tests'),
-    adminFetchAll('test_items', 'id, test_id, answer_type'),
     adminFetchAll('programs', 'id, name').catch(() => []),
     adminFetchAll('levels').catch(() => []),
     adminFetchAll('classes').catch(() => []),
@@ -449,7 +447,7 @@ export async function renderTests(area) {
 
     const progName = (classMap[r.program_id] || {}).name || (allClasses.find(c => c.id === r.program_id) || {}).name || 'Curriculum';
     const classBoardName = (boardClassMap[r.class_id] || {}).name || 'Class Board';
-    const qCount = r.total_questions || (allQuestions || []).filter(q => q.test_id === r.id).length || 40;
+    const qCount = r.total_questions || r.payload?.total_questions || (r.test_type === 'exam' ? 120 : 40);
     const prereqId = r.prerequisite_test_id || r.prerequisite_id;
     const prereqItem = prereqId ? TestMap[prereqId] : null;
     const prereqText = prereqItem ? (prereqItem.title || prereqItem.name) : '';
@@ -1695,18 +1693,12 @@ window._duplicateTest = async (testId) => {
 
     // 1. Fetch original Test
     const { data: rec, error: recErr } = await sb.from('tests')
-      .select('title, display_name, test_type, module_id, class_id, level_id, institution_id, working_duration_minutes, passing_score, instructions, status, settings, total_questions, dynamic_template, remedial_instructions, prerequisite_modules, unlock_conditions')
+      .select('*')
       .eq('id', testId)
       .single();
     if (recErr) throw new Error(recErr.message);
 
-    // 2. Fetch original questions
-    const { data: questions, error: qErr } = await sb.from('questions')
-      .select('topic_id, question_text, question_type, points, correct_answer, accepted_answers, options, explanation, media_url, order_index, difficulty, metadata')
-      .eq('test_id', testId);
-    if (qErr) throw new Error(qErr.message);
-
-    // 3. Duplicate Test
+    // 2. Duplicate Test
     const newTest = { ...rec };
     delete newTest.id;
     delete newTest.created_at;
@@ -1722,31 +1714,7 @@ window._duplicateTest = async (testId) => {
     const { data: createdTest, error: eErr } = await sb.from('tests').insert([newTest]).select().single();
     if (eErr) throw new Error(eErr.message);
 
-    // 4. Duplicate Questions
-    if (questions && questions.length > 0) {
-      const newQuestions = questions.map(q => {
-        const newQ = { ...q, test_id: createdTest.id };
-        delete newQ.id;
-        delete newQ.created_at;
-        delete newQ.updated_at;
-        delete newQ.deleted_at;
-        return newQ;
-      });
-      const { error: qInsertErr } = await sb.from('questions').insert(newQuestions);
-      if (qInsertErr) throw new Error(qInsertErr.message);
-    }
-
-    // 5. Duplicate Class Assignments
-    const { data: assignments } = await sb.from('Test_programs').select('program_id').eq('test_id', testId);
-    if (assignments && assignments.length > 0) {
-      const newAssignments = assignments.map(a => ({ test_id: createdTest.id, program_id: a.program_id }));
-      const { error: assignErr } = await sb.from('Test_programs').insert(newAssignments);
-      if (assignErr) throw new Error(assignErr.message);
-    }
-
-    clearAdminCache('Tests');
-    clearAdminCache('questions');
-    clearAdminCache('Test_programs');
+    clearAdminCache('tests');
 
     showToast('Test duplicated successfully!', 'success');
     window.loadSection(window._activeSectionAlias || window._currentSection || 'tests');
@@ -1763,103 +1731,8 @@ window.openTestBuilder = async (testId) => {
 };
 
 export async function renderQuestions(area) {
-  const [questions, rawTests] = await Promise.all([
-    adminFetchAll('test_items'),
-    adminFetchAll('tests', 'id, title, test_type').catch(() => [])
-  ]);
-
-  const TestMap = new Map((rawTests || []).map(e => [e.id, e]));
-
-  area.innerHTML = `
-    <div class="section-header">
-      <div>
-        <h2 class="section-title">Questions <span class="count-chip">${questions.length} Total</span></h2>
-        <p class="section-subtitle">Question item bank for Testinations</p>
-      </div>
-    </div>
-    <div id="questions-grid-container" class="card mt-4" style="padding:1rem;"></div>
-  `;
-
-  window._qRecords = {};
-  questions.forEach(q => { window._qRecords[q.id] = q; });
-
-  const gridData = questions.map(q => {
-    const matchedTest = TestMap.get(q.test_id);
-    const TestDisplay = matchedTest ? `${matchedTest.test_type ? matchedTest.test_type + ' — ' : ''}${matchedTest.title}` : (q.Tests ? window.formatTestDisplayName(q.Tests) : '—');
-    return {
-      id: q.id,
-      order: q.question_order,
-      text: q.question_text || '',
-      correctAnswer: q.correct_answer || '',
-      type: q.answer_type,
-      TestDisplay: TestDisplay,
-      _raw: q
-    };
-  });
-
-  new (DataGrid || window.DataGrid)({
-    container: 'questions-grid-container',
-    data: gridData,
-    pageSize: 50,
-    searchKeys: ['text', 'correctAnswer', 'TestDisplay'],
-    bulkActions: false,
-    onRowClick: (row) => {
-      const body = `
-        <div style="display:flex; flex-direction:column; gap:1rem;">
-          <div>
-            <h4 style="margin:0; font-size:1.2rem;">Question #${row.order}</h4>
-            <div class="text-muted text-sm">Test: <strong style="color:var(--fm-text-primary);">${escapeHtml(row.TestDisplay)}</strong></div>
-          </div>
-          <hr style="border-color:var(--fm-border-subtle); margin:0;">
-          <div>
-            <div class="text-sm text-muted mb-1">Question Text</div>
-            <div class="fw-600 p-2 rounded" style="background:var(--fm-bg-1);">${escapeHtml(row.text)}</div>
-          </div>
-          <div>
-            <div class="text-sm text-muted mb-1">Correct Answer</div>
-            <div class="fw-600 p-2 rounded" style="background:rgba(74,222,128,0.1);color:var(--clr-success,#4ade80);font-family:monospace;">${escapeHtml(row.correctAnswer)}</div>
-          </div>
-          <div>
-            <div class="text-sm text-muted mb-1">Answer Type</div>
-            <div class="fw-600"><span class="badge badge-info">${formatAnswerType(row.type)}</span></div>
-          </div>
-        </div>
-      `;
-      const footer = `
-        <button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>
-        <button class="btn btn-primary edit-mode-only" onclick="window.openCrudModal('questions', window._qRecords['${row.id}']); closeRecordDrawer();">Edit Question</button>
-      `;
-      if (window.openRecordDrawer) window.openRecordDrawer('Question Details', body, footer);
-    },
-    columns: [
-      { key: 'order', label: 'No', sortable: true, render: (val, row) => `<div class="text-center text-muted fw-700">${row ? (row.order ?? val) : val}</div>` },
-      {
-        key: 'text', label: 'Question Text', sortable: true, render: (val, row) => {
-          const str = String((row ? row.text : val) || '');
-          return `<div class="fw-600">${escapeHtml(str.slice(0, 70))}${str.length > 70 ? '...' : ''}</div>`;
-        }
-      },
-      {
-        key: 'correctAnswer', label: 'Correct Answer', sortable: true, render: (val, row) => {
-          const str = String((row ? row.correctAnswer : val) || '');
-          return `<div class="text-sm" style="color:var(--clr-success,#4ade80);font-family:monospace;">${escapeHtml(str.slice(0, 40))}${str.length > 40 ? '...' : ''}</div>`;
-        }
-      },
-      { key: 'type', label: 'Answer Type', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-info">${formatAnswerType((row ? row.type : val) || '')}</span></div>` },
-      { key: 'TestDisplay', label: 'Test Title', sortable: true, render: (val, row) => `<div class="text-muted text-sm">${escapeHtml(String((row ? row.TestDisplay : val) || '—'))}</div>` },
-      {
-        key: 'actions', label: 'Actions', sortable: false, render: (val, row) => {
-          const r = row || (typeof val === 'object' ? val : {}) || {};
-          return `
-          <div class="d-flex gap-2 justify-end">
-            <button class="btn btn-secondary btn-sm" onclick="window.openCrudModal('questions', window._qRecords['${r.id}'])">✏️</button>
-            <button class="btn btn-danger btn-sm" onclick="window._deleteRecord('questions', '${r.id}', 'Question #${r.order || ''}')">🗑️</button>
-          </div>
-        `;
-        }
-      }
-    ]
-  });
+  if (window.loadSection) return window.loadSection('vocab_vault');
+  area.innerHTML = '<div class="empty-state p-6 text-center"><p>Questions have been unified into Vocabulary Vault.</p></div>';
 }
 
 export async function renderResults(area) {

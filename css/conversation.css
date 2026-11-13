@@ -414,6 +414,266 @@
   transition: width 0.08s ease-out;
 }
 
+/* ============================================================
+   LIVING AVATAR STATE ENGINE & AUDIO WAVEFORM
+   4 States: IDLE, LISTENING, THINKING, SPEAKING
+   ============================================================ */
+.conv-living-avatar-stage {
+  background: radial-gradient(circle at 20% 50%, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.9) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.avatar-ripple-container {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avatar-ripple-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid rgba(56, 189, 248, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.living-avatar-core {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid #38bdf8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  transition: all 0.3s ease;
+}
+
+.avatar-face-visual {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.avatar-emoji-icon {
+  font-size: 16px;
+  line-height: 1;
+  transition: transform 0.2s ease;
+}
+
+.avatar-mouth-equalizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 8px;
+  margin-top: 2px;
+}
+
+.avatar-mouth-equalizer span {
+  width: 2px;
+  height: 2px;
+  background: #38bdf8;
+  border-radius: 1px;
+  transition: height 0.15s ease;
+}
+
+.avatar-state-hud {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.avatar-state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.avatar-state-pill .state-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+}
+
+.conv-waveform-canvas {
+  height: 28px;
+  width: 200px;
+  max-width: 100%;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* STATE 1: IDLE */
+.conv-living-avatar-stage[data-state="idle"] .living-avatar-core {
+  animation: avatarBreathe 3s ease-in-out infinite;
+  border-color: #38bdf8;
+}
+
+.avatar-state-pill.state-idle {
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.08);
+}
+.avatar-state-pill.state-idle .state-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+}
+
+@keyframes avatarBreathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+  }
+}
+
+/* STATE 2: LISTENING */
+.conv-living-avatar-stage[data-state="listening"] {
+  border-color: rgba(0, 192, 0, 0.4);
+}
+
+.conv-living-avatar-stage[data-state="listening"] .living-avatar-core {
+  border-color: var(--grade-a, #00c000ff);
+  box-shadow: 0 0 18px rgba(0, 192, 0, 0.5);
+}
+
+.conv-living-avatar-stage[data-state="listening"] .avatar-ripple-ring {
+  border-color: var(--grade-a, #00c000ff);
+  animation: ripplePulse 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+.conv-living-avatar-stage[data-state="listening"] .avatar-ripple-ring.ring-2 {
+  animation-delay: 0.6s;
+}
+.conv-living-avatar-stage[data-state="listening"] .avatar-ripple-ring.ring-3 {
+  animation-delay: 1.2s;
+}
+
+.avatar-state-pill.state-listening {
+  border-color: rgba(0, 192, 0, 0.4);
+  color: var(--grade-a, #00c000ff);
+  background: rgba(0, 192, 0, 0.1);
+}
+.avatar-state-pill.state-listening .state-dot {
+  background: var(--grade-a, #00c000ff);
+  box-shadow: 0 0 8px var(--grade-a, #00c000ff);
+  animation: dotBlink 0.8s ease-in-out infinite;
+}
+
+@keyframes ripplePulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* STATE 3: THINKING */
+.conv-living-avatar-stage[data-state="thinking"] {
+  border-color: rgba(129, 140, 248, 0.4);
+}
+
+.conv-living-avatar-stage[data-state="thinking"] .living-avatar-core {
+  border-color: #818cf8;
+  box-shadow: 0 0 16px rgba(129, 140, 248, 0.6);
+  animation: thinkingPulse 1.2s ease-in-out infinite alternate;
+}
+
+.avatar-state-pill.state-thinking {
+  border-color: rgba(129, 140, 248, 0.4);
+  color: #818cf8;
+  background: rgba(129, 140, 248, 0.12);
+}
+.avatar-state-pill.state-thinking .state-dot {
+  background: #818cf8;
+  box-shadow: 0 0 8px #818cf8;
+}
+
+@keyframes thinkingPulse {
+  0% { transform: scale(0.98); }
+  100% { transform: scale(1.06); }
+}
+
+/* STATE 4: SPEAKING */
+.conv-living-avatar-stage[data-state="speaking"] {
+  border-color: rgba(255, 45, 135, 0.5);
+  box-shadow: 0 0 15px rgba(255, 45, 135, 0.15);
+}
+
+.conv-living-avatar-stage[data-state="speaking"] .living-avatar-core {
+  border-color: var(--grade-star, #ff2d87);
+  box-shadow: 0 0 22px rgba(255, 45, 135, 0.6);
+}
+
+.conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span {
+  background: var(--grade-star, #ff2d87);
+  animation: mouthEq 0.6s ease-in-out infinite alternate;
+}
+.conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span:nth-child(1) { animation-delay: 0.1s; }
+.conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span:nth-child(2) { animation-delay: 0.3s; }
+.conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span:nth-child(3) { animation-delay: 0.0s; }
+.conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span:nth-child(4) { animation-delay: 0.2s; }
+.conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span:nth-child(5) { animation-delay: 0.4s; }
+
+.avatar-state-pill.state-speaking {
+  border-color: rgba(255, 45, 135, 0.5);
+  color: var(--grade-star, #ff2d87);
+  background: rgba(255, 45, 135, 0.12);
+}
+.avatar-state-pill.state-speaking .state-dot {
+  background: var(--grade-star, #ff2d87);
+  box-shadow: 0 0 8px var(--grade-star, #ff2d87);
+}
+
+@keyframes mouthEq {
+  0% { height: 2px; }
+  100% { height: 8px; }
+}
+
 /* Speaking Share Balance Gauge */
 .conv-share-container {
   background: rgba(255, 255, 255, 0.02);

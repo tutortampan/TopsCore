@@ -6,8 +6,8 @@
  * 1. Unified Theme Test Cards (Theme A, B, C, D): Words Test & Phrases Test unified into 1 Theme Card.
  * 2. 2 Distinct Session Opening Triggers: "🟢 Open Normal Session" & "🟡 Open Remedial Session".
  * 3. Smart Eligibility Engine:
- *    - Normal Mode: Prerequisite quizzes completed (>= 60%). Passed students remain visible for score improvement.
- *    - Remedial Mode: Prerequisite quizzes completed (>= 60%) & not passed (< 60% or not taken). Passed students are excluded from remedial.
+ *    - Normal Mode: Prerequisite tasks completed (>= 60%). Passed students remain visible for score improvement.
+ *    - Remedial Mode: Prerequisite tasks completed (>= 60%) & not passed (< 60% or not taken). Passed students are excluded from remedial.
  * 4. Late Student Addition (+ Late Arrival):
  *    - ONLY displays eligible students who are NOT yet enrolled in the exam session.
  *    - Enrolled students are 100% hidden.
@@ -427,7 +427,7 @@ export async function renderClassTestSessions(container, context = {}) {
               <label class="form-label" style="font-weight:800; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin:0;">
                 4. Enrolled Students <span style="color:#38bdf8; font-weight:700; text-transform:none;">(<span id="open-modal-student-count">0</span> selected)</span>
               </label>
-              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c,#fef08a); display:inline-flex; align-items:center; gap:5px; cursor:pointer; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:4px 8px; border-radius:5px;" title="Allow students who haven't completed quizzes to participate">
+              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c,#fef08a); display:inline-flex; align-items:center; gap:5px; cursor:pointer; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:4px 8px; border-radius:5px;" title="Allow students who haven't completed tasks to participate">
                 <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:13px; height:13px;">
                 <span>🛡️ Tutor Override</span>
               </label>
@@ -561,7 +561,7 @@ export async function renderClassTestSessions(container, context = {}) {
               <span id="live-modal-remaining" style="color:#ffffff; font-weight:800;">--m</span>
             </div>
 
-            <!-- Quick Add/Reduce Time Dropdown (Yellow #ffe600 per Rule 2.10) -->
+            <!-- Quick Add/Reduce Time Dropdown (Grade C Yellow per Rule 2.10) -->
             <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
               <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.78rem; font-weight:700; background:rgba(var(--grade-c-rgb, 255,255,0), 0.07); border:1px solid rgba(var(--grade-c-rgb, 255,255,0), 0.5); color:var(--grade-c, #ffff00); border-radius:6px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; letter-spacing:0.03em;" title="Adjust Remaining Exam Time (+ / -)">
                 <span>⏱️ Edit Session Time</span>
@@ -571,7 +571,7 @@ export async function renderClassTestSessions(container, context = {}) {
                 <!-- Yellow Header Banner -->
                 <div style="background:rgba(var(--grade-c-rgb, 255,255,0), 0.12); border:1px solid rgba(var(--grade-c-rgb, 255,255,0), 0.4); color:var(--grade-c, #ffff00); font-weight:800; font-size:0.70rem; padding:5px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between;">
                   <span>⏱️ ADJUST SESSION TIME</span>
-                  <span style="font-size:0.65rem; background:#0f172a; color:#ffe600; padding:1px 5px; border-radius:3px;">LIVE</span>
+                  <span style="font-size:0.65rem; background:#0f172a; color:var(--grade-c, #ffff00); padding:1px 5px; border-radius:3px;">LIVE</span>
                 </div>
 
                 <!-- Section 1: Add Time (+) -->
@@ -849,7 +849,7 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
             <tr style="background: rgba(30,41,59,0.6); border-bottom: 1px solid rgba(255,255,255,0.06);">
               <th colspan="2" style="padding:4px 10px; font-size:10px; color:#64748b;"></th>
               ${themesData.map(() => `
-                <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; font-weight:600; white-space:nowrap; border-left:1px solid rgba(255,255,255,0.08);">Quizzes</th>
+                <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; font-weight:600; white-space:nowrap; border-left:1px solid rgba(255,255,255,0.08);">Tasks</th>
                 <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; font-weight:600; white-space:nowrap;">Exam</th>
               `).join('')}
               <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; border-left:1px solid rgba(255,255,255,0.08);">Status</th>
@@ -869,7 +869,7 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
                 const tasks = theme.tasks || [];
                 const examIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
 
-                // Quiz avg
+                // Task avg
                 let totalScore = 0, attempted = 0;
                 tasks.forEach(task => {
                   const sAttempts = allAttempts.filter(a => a.student_id === s.id && a.test_id === task.id);
@@ -879,22 +879,23 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
                   }
                 });
                 const avgPct = tasks.length > 0 ? Math.round(totalScore / tasks.length) : 0;
-                const allQuizDone = tasks.length > 0 && attempted === tasks.length && avgPct >= 60;
+                const allTasksDone = tasks.length > 0 && attempted === tasks.length && avgPct >= 60;
+                const allQuizDone = allTasksDone; // Backward compatibility
 
-                // Quiz cell
-                let quizCellStyle, quizText;
+                // Task cell
+                let taskCellStyle, taskText;
                 if (tasks.length === 0) {
-                  quizCellStyle = 'color:#64748b;';
-                  quizText = '—';
-                } else if (allQuizDone) {
-                  quizCellStyle = 'color:var(--grade-a,#86efac); font-weight:800;';
-                  quizText = avgPct + '%';
+                  taskCellStyle = 'color:#64748b;';
+                  taskText = '—';
+                } else if (allTasksDone) {
+                  taskCellStyle = 'color:var(--grade-a,#86efac); font-weight:800;';
+                  taskText = avgPct + '%';
                 } else if (attempted > 0) {
-                  quizCellStyle = 'color:var(--grade-c,#fef08a); font-weight:700;';
-                  quizText = attempted + '/' + tasks.length;
+                  taskCellStyle = 'color:var(--grade-c,#fef08a); font-weight:700;';
+                  taskText = attempted + '/' + tasks.length;
                 } else {
-                  quizCellStyle = 'color:var(--grade-e,#fca5a5); font-weight:700;';
-                  quizText = '0/' + tasks.length;
+                  taskCellStyle = 'color:var(--grade-e,#fca5a5); font-weight:700;';
+                  taskText = '0/' + tasks.length;
                 }
 
                 // Exam status
@@ -908,14 +909,14 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
                   } else {
                     examChip = `<span style="display:inline-block; font-size:11px; font-weight:800; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-c-rgb,255,255,0),0.12); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.35);">🟡 ${Math.round(best)}%</span>`;
                   }
-                } else if (allQuizDone) {
+                } else if (allTasksDone) {
                   examChip = `<span style="display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-c-rgb,255,255,0),0.1); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.3);">Ready</span>`;
                 } else {
                   examChip = `<span style="display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-e-rgb,255,0,0),0.1); color:var(--grade-e,#fca5a5); border:1px solid rgba(var(--grade-e-rgb,255,0,0),0.25);">Incomplete</span>`;
                 }
 
                 return `
-                  <td style="padding:5px 8px; text-align:center; white-space:nowrap; border-left:1px solid rgba(255,255,255,0.06); font-size:11px; ${quizCellStyle}">${quizText}</td>
+                  <td style="padding:5px 8px; text-align:center; white-space:nowrap; border-left:1px solid rgba(255,255,255,0.06); font-size:11px; ${taskCellStyle}">${taskText}</td>
                   <td style="padding:5px 8px; text-align:center; white-space:nowrap;">${examChip}</td>
                 `;
               }).join('');
@@ -995,7 +996,7 @@ function renderThemeCard(theme, context) {
             <span class="duration-badge" style="font-size:11px; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);" title="Official Exam Duration">
               ⏱️ ${durationMins}m
             </span>
-            <span style="font-size:0.7rem; color:#94a3b8; font-weight:600;">
+            <span style="font-size:11px; color:#94a3b8; font-weight:600;">
               ${hasWords && hasPhrases ? '2 Mod' : '1 Mod'}
             </span>
           `}
@@ -1056,9 +1057,9 @@ function renderThemeCard(theme, context) {
             <span>⏱️</span> TIME
           </button>
           <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c, #ffff00); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb, 255,255,0), 0.18); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
-            <div style="background:#ffe600; color:#0f172a; font-weight:900; font-size:0.72rem; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
+            <div style="background:var(--grade-c, #FFFF00); color:#0f172a; font-weight:900; font-size:11px; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
               <span>⏱️ EDIT TIME &bull; THEME ${code}</span>
-              <span style="font-size:0.63rem; background:rgba(var(--grade-c-rgb,255,255,0),0.12); color:var(--grade-c, #ffff00); padding:1px 5px; border-radius:3px;">SESSION</span>
+              <span style="font-size:11px; background:rgba(0,0,0,0.25); color:#0f172a; padding:1px 5px; border-radius:3px; font-weight:800;">SESSION</span>
             </div>
 
             <!-- Add Time (+) -->
@@ -1477,7 +1478,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     if (displayList.length === 0) {
       listContainer.innerHTML = `
         <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
-          ${q ? `No students match "${escapeHtml(q)}".` : 'No eligible students found in this batch. Check 🛡️ Tutor Override to bypass quiz prerequisites.'}
+          ${q ? `No students match "${escapeHtml(q)}".` : 'No eligible students found in this batch. Check 🛡️ Tutor Override to bypass task prerequisites.'}
         </div>
       `;
     } else {
@@ -1521,7 +1522,7 @@ function openThemeSessionModal(container, theme, mode, context) {
     const ineligDetailsEl = modal.querySelector('#open-modal-ineligible-details');
     if (ineligTextEl) {
       if (tutorOverrideActive) {
-        ineligTextEl.textContent = `🛡️ Tutor Override Active (${selectableList.length} selectable). Prerequisite quizzes bypassed.`;
+        ineligTextEl.textContent = `🛡️ Tutor Override Active (${selectableList.length} selectable). Prerequisite tasks bypassed.`;
       } else {
         ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Ineligible students hidden.`;
       }
@@ -1536,6 +1537,19 @@ function openThemeSessionModal(container, theme, mode, context) {
             <span style="color:#f87171;">${escapeHtml(item.statusLabel)}</span>
           </div>
         `).join('');
+      }
+    }
+
+    // Zero-selected button guard
+    if (confirmBtn) {
+      const hasSelected = checkedStudentIds.size > 0;
+      confirmBtn.disabled = !hasSelected;
+      confirmBtn.style.opacity = hasSelected ? '1' : '0.5';
+      confirmBtn.style.cursor = hasSelected ? 'pointer' : 'not-allowed';
+      if (!hasSelected) {
+        confirmBtn.title = 'Select at least 1 student to unlock test';
+      } else {
+        confirmBtn.removeAttribute('title');
       }
     }
   };
@@ -1654,7 +1668,8 @@ function openThemeSessionModal(container, theme, mode, context) {
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
           isRemedial: isRemedial,
-          remedialStudentIds: isRemedial ? allowedStudentIds : []
+          remedialStudentIds: isRemedial ? allowedStudentIds : [],
+          answeringMode: _selectedAnswerModeWords
         }));
       }
       if (theme.phrasesTest) {
@@ -1668,7 +1683,8 @@ function openThemeSessionModal(container, theme, mode, context) {
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
           isRemedial: isRemedial,
-          remedialStudentIds: isRemedial ? allowedStudentIds : []
+          remedialStudentIds: isRemedial ? allowedStudentIds : [],
+          answeringMode: _selectedAnswerModePhrases
         }));
       }
 

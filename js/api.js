@@ -1223,11 +1223,7 @@ export async function generateTestQuestions(sb, test) {
       });
     }
   } else {
-    const { data } = await sb.from('test_items')
-      .select('id, question_id, question_text_snapshot, word_type_snapshot, options_snapshot, topic_snapshot, display_order, answer_type')
-      .eq('test_id', test.id)
-      .order('display_order');
-    questions = data || [];
+    questions = test.payload?.questions || [];
   }
   return questions;
 }
@@ -2072,12 +2068,8 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       'audit_logs',
       'site_settings',
       'levels',
-      'assignments',
-      'user_professionals',
       'modules',
-      'class_levels',   // junction table — no deleted_at column
-      'class_meetings',
-      'class_meeting_exceptions'
+      'class_levels'   // junction table — no deleted_at column
     ];
     if (!noDeletedAtTables.includes(normTable)) {
       query = query.is('deleted_at', null);
@@ -2203,7 +2195,6 @@ export async function adminSoftDelete(table, id) {
   const normTable = (table || '').toLowerCase().replace('-', '_');
   const sb = await getSupabase();
   if (normTable === 'tests') {
-    await sb.from('test_items').delete().eq('test_id', id);
     const { error } = await sb.from('tests').delete().eq('id', id);
     if (error) throw error;
     clearAdminCache(normTable);
@@ -2308,7 +2299,7 @@ export async function publishTestDefinition(id) {
 
 
 export async function createTestInstance(payload) {
-  return await adminInsert('assignments', payload);
+  return null; // Deprecated
 }
 
 
@@ -2385,122 +2376,13 @@ export async function mergeDuplicateStudents(duplicateGroups) {
   return results;
 }
 
-// --- Duplicate question detection & resequencing ---
+// --- Duplicate question detection & resequencing (Legacy Stubs) ---
 export async function detectDuplicateQuestions(testId) {
-  const sb = await getSupabase();
-  let query = sb.from('test_items')
-    .select('id, question_text_snapshot, test_id, display_order, options_snapshot, accepted_answers_snapshot, answer_type, created_at, tests!test_id(id, title)')
-    .is('deleted_at', null);
-  if (testId) query = query.eq('test_id', testId);
-  const { data, error } = await query;
-  if (error) {
-    console.warn('detectDuplicateQuestions query error:', error.message);
-    return {
-      totalSameTestDupCount: 0,
-      sameTestDuplicates: [],
-      sameTestOrderConflicts: [],
-      crossTestDuplicates: []
-    };
-  }
-  const questions = data || [];
-  const groups = {};
-  for (const q of questions) {
-    const text = (q.question_text_snapshot || '').trim().toLowerCase();
-    if (!text) continue;
-    const key = text + '|' + (q.test_id || '');
-    if (!groups[key]) groups[key] = [];
-    groups[key].push({
-      id: q.id,
-      test_id: q.test_id,
-      question_order: q.display_order,
-      display_order: q.display_order,
-      answer_type: q.answer_type || 'written',
-      answersCount: 0,
-      created_at: q.created_at,
-      question_text: q.question_text_snapshot,
-      options_json: q.options_snapshot,
-      correct_answer: Array.isArray(q.accepted_answers_snapshot) ? q.accepted_answers_snapshot[0] : (q.accepted_answers_snapshot || ''),
-      tests: q.tests
-    });
-  }
-
-  const sameTestDuplicates = Object.values(groups)
-    .filter(g => g.length > 1)
-    .map(g => ({
-      recommendedPrimaryId: g[0].id,
-      testTitle: g[0].tests?.title || 'Test',
-      testTitle: g[0].tests?.title || 'Test',
-      testId: g[0].test_id,
-      testId: g[0].test_id,
-      candidates: g
-    }));
-
-  return {
-    totalSameTestDupCount: sameTestDuplicates.length,
-    sameTestDuplicates,
-    sameTestOrderConflicts: [],
-    crossTestDuplicates: []
-  };
+  return { totalSameTestDupCount: 0, sameTestDuplicates: [], sameTestOrderConflicts: [], crossTestDuplicates: [] };
 }
-
-export async function resequenceTestQuestions(testId) {
-  const sb = await getSupabase();
-  const { data, error } = await sb.from('test_items')
-    .select('id, display_order')
-    .eq('test_id', testId)
-    .is('deleted_at', null)
-    .order('display_order', { ascending: true })
-    .order('created_at', { ascending: true });
-  if (error) throw error;
-  const updates = (data || []).map((q, idx) =>
-    sb.from('test_items').update({ display_order: idx + 1 }).eq('id', q.id)
-  );
-  await Promise.all(updates);
-  clearAdminCache('test_items');
-}
-
-export async function resolveDuplicateQuestionGroup(groupOrPrimaryId, keepIdOrDuplicateId) {
-  const sb = await getSupabase();
-  if (Array.isArray(groupOrPrimaryId)) {
-    const keepId = keepIdOrDuplicateId;
-    const toDelete = groupOrPrimaryId.filter(q => q.id !== keepId);
-    for (const q of toDelete) {
-      await sb.from('test_items').update({ deleted_at: new Date().toISOString() }).eq('id', q.id);
-    }
-  } else {
-    const primaryId = groupOrPrimaryId;
-    const duplicateId = keepIdOrDuplicateId;
-    try {
-      await sb.from('attempt_answers').update({ question_id: primaryId }).eq('question_id', duplicateId);
-    } catch (e) {
-      console.warn('Could not repoint attempt answers:', e.message);
-    }
-    await sb.from('test_items').update({ deleted_at: new Date().toISOString() }).eq('id', duplicateId);
-  }
-  clearAdminCache('test_items');
-}
-
-export async function batchResolveTestDuplicateQuestions(testId) {
-  const data = await detectDuplicateQuestions(testId);
-  const groups = data.sameTestDuplicates || (Array.isArray(data) ? data : []);
-  let repointedCount = 0;
-  for (const group of groups) {
-    const primaryId = group.recommendedPrimaryId || (group.candidates && group.candidates[0]?.id);
-    if (!primaryId || !group.candidates) continue;
-    for (const cand of group.candidates) {
-      if (cand.id !== primaryId) {
-        await resolveDuplicateQuestionGroup(primaryId, cand.id);
-        repointedCount++;
-      }
-    }
-  }
-  if (testId) await resequenceTestQuestions(testId);
-  return {
-    resolved: groups.length,
-    groupsResolved: groups.length,
-    totalRepointedAnswers: repointedCount
-  };
-}
+export async function resequenceTestQuestions(testId) { return; }
+export async function resolveDuplicateQuestionGroup(groupOrPrimaryId, keepIdOrDuplicateId) { return; }
+export async function batchResolveTestDuplicateQuestions(testId) { return { repointedCount: 0, deletedCount: 0 }; }
 
 // --- Recalibration engine ---
 export async function previewRecalibrateTest(testId) {
@@ -2592,29 +2474,22 @@ export async function toggleWordType(id, isActive) {
   if (error) throw error;
 }
 
-// --- Question bank ---
-export async function fetchCentralQuestions(filters = {}) {
+// --- Question bank (Unified into Vocabulary Vault) ---
+export async function fetchCentralQuestions(filters = {}) { return []; }
+export async function createCentralQuestion(payload) { return null; }
+export async function updateCentralQuestion(id, payload) { return null; }
+export async function deleteCentralQuestion(id) { return null; }
+
+export async function getTestQuestions(testOrId) {
+  if (!testOrId) return [];
+  if (typeof testOrId === 'object' && testOrId.payload?.questions) {
+    return testOrId.payload.questions;
+  }
   const sb = await getSupabase();
-  // Include topic name join so UI can display it
-  let query = sb.from('questions').select('*, topics(name, class_id)');
-  if (filters.test_id) query = query.eq('test_id', filters.test_id);
-  if (filters.class_id) query = query.eq('class_id', filters.class_id);
-  if (filters.topic_id) query = query.eq('topic_id', filters.topic_id);
-  const { data, error } = await query.order('created_at');
-  if (error) throw error;
-  return data || [];
-}
-
-export async function createCentralQuestion(payload) {
-  return await adminInsert('questions', payload);
-}
-
-export async function updateCentralQuestion(id, payload) {
-  return await adminUpdate('questions', id, payload);
-}
-
-export async function deleteCentralQuestion(id) {
-  return await adminSoftDelete('questions', id);
+  const testId = typeof testOrId === 'string' ? testOrId : testOrId?.id;
+  if (!testId) return [];
+  const { data } = await sb.from('tests').select('payload').eq('id', testId).single();
+  return data?.payload?.questions || [];
 }
 
 // --- Test definitions (admin CRUD) ---
@@ -2645,14 +2520,10 @@ export async function reorderTest(testId, newOrder, classId) {
 }
 
 export async function createTestDefinitionWithTopics(payload, topicIds = []) {
-  const newTest = await adminInsert('tests', payload);
   if (topicIds && topicIds.length > 0) {
-    const sb = await getSupabase();
-    const topicPayload = topicIds.map(tid => ({ test_id: newTest.id, topic_id: tid }));
-    const { error } = await sb.from('test_topics').insert(topicPayload);
-    if (error) throw error;
+    payload.payload = { ...(payload.payload || {}), topicIds };
   }
-  return newTest;
+  return await adminInsert('tests', payload);
 }
 
 export async function updateTestDefinition(id, payload) {
@@ -2660,17 +2531,10 @@ export async function updateTestDefinition(id, payload) {
 }
 
 export async function updateTestWithTopics(id, payload, topicIds = []) {
-  const updatedTest = await adminUpdate('tests', id, { ...payload, updated_at: new Date().toISOString() });
-  const sb = await getSupabase();
-  // Clear existing topics
-  await sb.from('test_topics').delete().eq('test_id', id);
-  // Insert new topics
   if (topicIds && topicIds.length > 0) {
-    const topicPayload = topicIds.map(tid => ({ test_id: id, topic_id: tid }));
-    const { error } = await sb.from('test_topics').insert(topicPayload);
-    if (error) throw error;
+    payload.payload = { ...(payload.payload || {}), topicIds };
   }
-  return updatedTest;
+  return await adminUpdate('tests', id, { ...payload, updated_at: new Date().toISOString() });
 }
 
 // --- Legacy Stubs for Deprecated Scheduling ---
@@ -3341,16 +3205,15 @@ export async function createVocabMasteryTest(config) {
     // 🔴 TEST TIER: Aggregates from selected TASK tests (Cumulative theme/grand test)
     if (!sourceTaskIds || !sourceTaskIds.length) throw new Error('sourceTaskIds required for TEST tier aggregation.');
 
-    // 1. Get all questions from the selected Tasks to extract their topics
-    const { data: aqs, error: aqErr } = await sb.from('test_items')
-      .select('topic_snapshot')
-      .in('test_id', sourceTaskIds);
-    if (aqErr) throw aqErr;
-
-    // 2. Extract unique topics
+    // 1. Extract unique topics from source tasks payload
+    const { data: sourceTests } = await sb.from('tests')
+      .select('payload')
+      .in('id', sourceTaskIds);
     const topicsSet = new Set();
-    (aqs || []).forEach(aq => {
-      if (aq.topic_snapshot) topicsSet.add(aq.topic_snapshot);
+    (sourceTests || []).forEach(t => {
+      const top = t.payload?.topic || t.payload?.topics;
+      if (Array.isArray(top)) top.forEach(x => topicsSet.add(x));
+      else if (top) topicsSet.add(top);
     });
     sourceTopics = [...topicsSet];
 
@@ -3377,10 +3240,12 @@ export async function createVocabMasteryTest(config) {
     // @deprecated — Legacy tier. Use tier='TEST' for new tests.
     // Kept for backward compatibility with existing student data.
     if (!sourceQuizIds.length) throw new Error('sourceQuizIds required for EXAM tier.');
-    const { data: aqs } = await sb.from('test_items').select('topic_snapshot').in('test_id', sourceQuizIds);
+    const { data: sourceTests } = await sb.from('tests').select('payload').in('id', sourceQuizIds);
     const topicsSet = new Set();
-    (aqs || []).forEach(aq => {
-      if (aq.topic_snapshot) topicsSet.add(aq.topic_snapshot);
+    (sourceTests || []).forEach(t => {
+      const top = t.payload?.topic || t.payload?.topics;
+      if (Array.isArray(top)) top.forEach(x => topicsSet.add(x));
+      else if (top) topicsSet.add(top);
     });
     sourceTopics = [...topicsSet];
     let q = sb.from('vocabulary_vault')
@@ -3535,12 +3400,10 @@ export async function createVocabMasteryTest(config) {
     };
   });
 
-  const CHUNK = 200;
-  for (let i = 0; i < aqRows.length; i += CHUNK) {
-    const chunk = aqRows.slice(i, i + CHUNK);
-    const { error: qErr } = await sb.from('test_items').insert(chunk);
-    if (qErr) throw qErr;
-  }
+  // Modern tests store questions directly in payload
+  await sb.from('tests').update({
+    payload: { questions: aqRows, total_questions: aqRows.length }
+  }).eq('id', testId);
 
   clearApiCache('vault');
   clearApiCache('tests');
@@ -4698,11 +4561,7 @@ export async function upsertDynamicTestShell(config) {
   if (existing) {
     const { error } = await sb.from('tests').update(asmData).eq('id', existing.id);
     if (error) throw error;
-    if (effectiveAnswerType) {
-      try {
-        await sb.from('test_items').update({ answer_type: effectiveAnswerType }).eq('test_id', existing.id);
-      } catch (_) {}
-    }
+
     return { testId: existing.id, action: 'updated' };
   } else {
     asmData.created_at = new Date().toISOString();
@@ -4816,12 +4675,7 @@ export async function updateClassTestsConfig(params = {}) {
     const { error: updErr } = await sb.from('tests').update(updateData).eq('id', row.id);
     if (updErr) throw updErr;
 
-    // Keep test_questions in sync if answer_type changed
-    if (updateData.answer_type) {
-      try {
-        await sb.from('test_items').update({ answer_type: updateData.answer_type }).eq('test_id', row.id);
-      } catch (_) {}
-    }
+
   }
 
   clearApiCache('tests');
@@ -5250,7 +5104,7 @@ export async function fetchActiveTestSession(testId, batchId = null) {
   };
 }
 
-export async function openTestSession({ testId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [] }) {
+export async function openTestSession({ testId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [], answeringMode = null }) {
   const sb = await getSupabase();
   const { data: existing, error: fetchErr } = await sb.from('tests')
     .select('id, payload')
@@ -5270,7 +5124,8 @@ export async function openTestSession({ testId, batchId, allocatedMinutes, allow
     auto_close_at: autoClose.toISOString(),
     allowed_student_ids: Array.isArray(allowedStudentIds) ? allowedStudentIds : [],
     is_remedial: Boolean(isRemedial),
-    remedial_student_ids: Array.isArray(remedialStudentIds) ? remedialStudentIds : []
+    remedial_student_ids: Array.isArray(remedialStudentIds) ? remedialStudentIds : [],
+    answering_mode: answeringMode || null
   };
 
   const updatedPayload = {

@@ -127,6 +127,31 @@
             </div>
           </div>
 
+          <!-- 🤖 LIVING AVATAR STATE ENGINE (IDLE | LISTENING | THINKING | SPEAKING) -->
+          <div class="conv-living-avatar-stage" id="living-avatar-stage" data-state="idle">
+            <div class="avatar-ripple-container">
+              <div class="avatar-ripple-ring ring-1"></div>
+              <div class="avatar-ripple-ring ring-2"></div>
+              <div class="avatar-ripple-ring ring-3"></div>
+              <div class="living-avatar-core" id="living-avatar-core">
+                <div class="avatar-face-visual">
+                  <span class="avatar-emoji-icon" id="avatar-emoji-icon">🤖</span>
+                  <div class="avatar-mouth-equalizer" id="avatar-mouth-equalizer">
+                    <span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="avatar-state-hud">
+              <div class="avatar-state-pill state-idle" id="avatar-state-badge">
+                <span class="state-dot"></span>
+                <span class="state-label" id="avatar-state-text">IDLE &bull; READY</span>
+              </div>
+              <!-- Real-time Oscilloscope Waveform Canvas -->
+              <canvas id="conv-waveform-canvas" class="conv-waveform-canvas" width="220" height="28"></canvas>
+            </div>
+          </div>
+
           <!-- Speaking Balance Gauge -->
           <div class="conv-share-container">
             <div class="conv-share-labels">

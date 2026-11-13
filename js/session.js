@@ -218,4 +218,17 @@ if (typeof window !== 'undefined') {
   window.setGlobalEditMode = setGlobalEditMode;
   window.toggleGlobalEditMode = toggleGlobalEditMode;
   window.initGlobalEditMode = initGlobalEditMode;
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('global-edit-mode-on')) {
+      setGlobalEditMode(false);
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-safety-hud-exit')) {
+      e.preventDefault();
+      setGlobalEditMode(false);
+    }
+  });
 }

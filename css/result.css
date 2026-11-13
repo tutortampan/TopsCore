@@ -2345,3 +2345,222 @@ body.result-page.tier-glow-active #bottom-ad-banner {
   background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb), 0.12), transparent 75%), #070b19 !important;
   box-shadow: 0 -4px 18px rgba(var(--tier-rgb), 0.15) !important;
 }
+
+/* ============================================================
+   A4 PRINTABLE REPORT CARD ENGINE & MEDIA PRINT STYLES
+   ============================================================ */
+#printable-report-card.print-only,
+.print-only {
+  display: none !important;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 12mm 15mm;
+}
+
+@media print {
+  html, body {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  #result-page-header,
+  .dashboard-header,
+  #result-hero-section,
+  .result-hero,
+  #bottom-ad-banner,
+  .topscore-locked-banner,
+  .result-action-slot,
+  #toggle-answers-btn,
+  #back-dashboard-btn,
+  #btn-print-result {
+    display: none !important;
+  }
+
+  #printable-report-card.print-only {
+    display: block !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  .print-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #0f172a;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .print-brand-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #2563eb !important;
+    margin-bottom: 4px;
+  }
+
+  .print-app-title {
+    font-size: 20px;
+    font-weight: 900;
+    color: #0f172a !important;
+    margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
+  }
+
+  .print-inst-meta {
+    font-size: 11px;
+    color: #64748b !important;
+    margin: 0;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .print-report-badge {
+    text-align: right;
+  }
+
+  .print-cert-seal {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0f172a !important;
+  }
+
+  .print-timestamp {
+    display: block;
+    font-size: 11px;
+    color: #64748b !important;
+    margin-top: 4px;
+  }
+
+  .print-student-bar {
+    display: flex;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+  }
+
+  .print-info-col {
+    flex: 1;
+  }
+
+  .print-info-col-right {
+    text-align: right;
+  }
+
+  .print-field-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b !important;
+    margin-bottom: 2px;
+  }
+
+  .print-student-name,
+  .print-test-title,
+  .print-test-status {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a !important;
+  }
+
+  .print-metrics-summary {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .print-metric-card {
+    flex: 1;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 10px;
+    text-align: center;
+  }
+
+  .print-metric-num {
+    font-size: 22px;
+    font-weight: 900;
+    color: #0f172a !important;
+  }
+
+  .print-metric-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b !important;
+    text-transform: uppercase;
+  }
+
+  .print-table-wrap {
+    margin-bottom: 24px;
+  }
+
+  .print-table-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #0f172a !important;
+    margin-bottom: 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .print-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+
+  .print-table th,
+  .print-table td {
+    padding: 6px 8px;
+    border: 1px solid #cbd5e1;
+    color: #0f172a !important;
+  }
+
+  .print-table th {
+    background: #f1f5f9;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .print-signature-section {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 36px;
+    padding-top: 16px;
+  }
+
+  .print-sign-box {
+    width: 180px;
+    text-align: center;
+  }
+
+  .print-sign-line {
+    border-top: 1px solid #0f172a;
+    margin-top: 48px;
+    margin-bottom: 4px;
+  }
+
+  .print-sign-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #64748b !important;
+  }
+}

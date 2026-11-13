@@ -46,8 +46,8 @@ export async function renderRecycleBin(container) {
       <button class="btn btn-primary btn-xs recycle-tab-btn" data-type="all">All Entities</button>
       <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="students">Students</button>
       <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="programs">Classes (Programs)</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="Tests">Tests (Tests)</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="questions">Questions</button>
+      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="tests">Tests</button>
+      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="vocabulary_vault">Vocabulary</button>
     </div>
 
     <!-- Aggregated Table -->
@@ -70,18 +70,18 @@ export async function renderRecycleBin(container) {
     if (wrap) wrap.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning Recycle Bin...');
 
     try {
-      const [stds, progs, Tests, quests] = await Promise.all([
+      const [stds, progs, tests, vocab] = await Promise.all([
         adminFetchDeleted('students').catch(() => []),
         adminFetchDeleted('programs').catch(() => []),
-        adminFetchDeleted('Tests').catch(() => []),
-        adminFetchDeleted('questions').catch(() => [])
+        adminFetchDeleted('tests').catch(() => []),
+        adminFetchDeleted('vocabulary_vault').catch(() => [])
       ]);
 
       const items = [
         ...stds.map(r => ({ ...r, _table: 'students', _entityType: 'Student', _name: r.name || 'Unnamed Student' })),
         ...progs.map(r => ({ ...r, _table: 'programs', _entityType: 'Class', _name: r.name || 'Unnamed Class' })),
-        ...Tests.map(r => ({ ...r, _table: 'Tests', _entityType: 'Test', _name: r.title || r.title || 'Unnamed Test' })),
-        ...quests.map(r => ({ ...r, _table: 'questions', _entityType: 'Question', _name: r.question_text || 'Unnamed Question' }))
+        ...tests.map(r => ({ ...r, _table: 'tests', _entityType: 'Test', _name: r.title || 'Unnamed Test' })),
+        ...vocab.map(r => ({ ...r, _table: 'vocabulary_vault', _entityType: 'Vocabulary', _name: r.english || r.indonesian || 'Unnamed Word' }))
       ];
 
       items.sort((a, b) => new Date(b.deleted_at) - new Date(a.deleted_at));
@@ -812,11 +812,10 @@ export async function renderDataHealth(container) {
   document.getElementById('btn-health-scan-orphans')?.addEventListener('click', async () => {
     showLoading('Auditing relational database integrity...');
     try {
-      const [students, Tests, attempts, questions, attemptAnswers, progress] = await Promise.all([
+      const [students, Tests, attempts, attemptAnswers, progress] = await Promise.all([
         adminFetchAll('students', 'id, name, deleted_at'),
         adminFetchAll('tests', 'id, title, deleted_at'),
         adminFetchAll('attempts', 'id, student_id, test_id, status, created_at'),
-        adminFetchAll('test_items', 'id, test_id, question_text'),
         adminFetchAll('attempt_answers', 'id, attempt_id'),
         adminFetchAll('progress', 'id, student_id').catch(() => [])
       ]);
@@ -830,9 +829,7 @@ export async function renderDataHealth(container) {
         (a.test_id && !TestIdSet.has(a.test_id))
       );
 
-      const orphanedQuestions = (questions || []).filter(q => 
-        q.test_id && !TestIdSet.has(q.test_id)
-      );
+      const orphanedQuestions = [];
 
       const orphanedAnswers = (attemptAnswers || []).filter(ans => 
         ans.attempt_id && !attemptIdSet.has(ans.attempt_id)

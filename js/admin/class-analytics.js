@@ -130,72 +130,123 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
 
   try {
     const sb = await getSupabase();
-    const { data: attempts, error: attErr } = await sb.from('attempts')
-      .select(`
-        id, test_id, student_id, percentage, grade, status,
-        attempt_answers (
-          id, question_id, student_answer, correct_answer_snapshot, accepted_answers_snapshot, score, is_correct, evaluation_result, question_snapshot
-        )
-      `)
-      .in('test_id', testIds)
-      .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
 
+    // Step 1: Query attempts for tests in this class
+    let attQuery = sb.from('attempts')
+      .select('id, test_id, student_id, percentage, grade, status, is_best_score, created_at')
+      .in('test_id', testIds)
+      .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+      .order('created_at', { ascending: false });
+
+    // Optional student scoping if class students list provided
+    const studentIds = (allStudents || []).map(s => s.id).filter(Boolean);
+    if (studentIds.length > 0) {
+      attQuery = attQuery.in('student_id', studentIds);
+    }
+
+    const { data: rawAttempts, error: attErr } = await attQuery;
     if (attErr) throw attErr;
+
+    // Deduplicate: Keep best attempt per student per test (or latest submitted)
+    const bestAttemptsMap = new Map();
+    for (const a of (rawAttempts || [])) {
+      const key = `${a.student_id}_${a.test_id}`;
+      if (!bestAttemptsMap.has(key)) {
+        bestAttemptsMap.set(key, a);
+      } else {
+        const existing = bestAttemptsMap.get(key);
+        if (a.is_best_score && !existing.is_best_score) {
+          bestAttemptsMap.set(key, a);
+        } else if ((a.percentage ?? 0) > (existing.percentage ?? 0)) {
+          bestAttemptsMap.set(key, a);
+        }
+      }
+    }
+    const representativeAttempts = Array.from(bestAttemptsMap.values());
+    const attemptIds = representativeAttempts.map(a => a.id);
+
+    // Map attemptId -> attempt record for O(1) linking
+    const attemptRecordMap = new Map();
+    representativeAttempts.forEach(a => attemptRecordMap.set(a.id, a));
+
+    // Step 2: Fetch attempt_answers in chunked batches (50 attempt_ids per batch)
+    // Pull only required columns (excluding massive accepted_answers_snapshot)
+    let allAnswers = [];
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < attemptIds.length; i += CHUNK_SIZE) {
+      const chunk = attemptIds.slice(i, i + CHUNK_SIZE);
+      const { data: ansChunk, error: ansErr } = await sb.from('attempt_answers')
+        .select('id, attempt_id, question_id, student_answer, correct_answer_snapshot, score, is_correct, evaluation_result, question_snapshot')
+        .in('attempt_id', chunk);
+
+      if (ansErr) {
+        console.warn('[ClassAnalytics] Chunk fetch error, continuing with available data:', ansErr.message);
+        break;
+      }
+      if (ansChunk && ansChunk.length > 0) {
+        allAnswers.push(...ansChunk);
+      }
+    }
 
     // Aggregate by vocabulary target
     const vocabAggregation = new Map();
 
-    (attempts || []).forEach(att => {
+    allAnswers.forEach(ans => {
+      const att = attemptRecordMap.get(ans.attempt_id) || {};
       const tInfo = testMap[att.test_id] || {};
       const sName = studentMap[att.student_id] || 'Student';
 
-      (att.attempt_answers || []).forEach(ans => {
-        const qSnap = ans.question_snapshot || {};
-        let target = (ans.correct_answer_snapshot || qSnap.target_word || qSnap.prompt || '').trim();
-        if (!target) return;
+      const qSnap = ans.question_snapshot || {};
+      let target = (ans.correct_answer_snapshot || qSnap.target_word || qSnap.prompt || '').trim();
+      if (!target) return;
 
-        // Clean target
-        const rawKey = target.toLowerCase();
-        let translation = qSnap.translation || qSnap.clue || qSnap.indonesian || '—';
-        let category = qSnap.word_type || qSnap.category || (target.includes(' ') ? 'Phrase' : 'Word');
-        let answerType = qSnap.answer_type || 'written';
+      const rawAns = (ans.student_answer || '').trim();
+      const isTimeoutOrBlank = !rawAns || ans.evaluation_result === 'timeout' || ans.evaluation_result === 'unanswered';
 
-        if (!vocabAggregation.has(rawKey)) {
-          vocabAggregation.set(rawKey, {
-            key: rawKey,
-            targetWord: target,
-            translation,
-            category,
-            answerType,
-            testTitles: new Set(),
-            totalAttempts: 0,
-            incorrectCount: 0,
-            mistakeFrequencies: {},
-            mistakesList: []
-          });
-        }
+      // User directive: Do not count questions that are wrong due to timeout/blank
+      if (isTimeoutOrBlank) return;
 
-        const entry = vocabAggregation.get(rawKey);
-        entry.totalAttempts++;
-        if (tInfo.title) entry.testTitles.add(tInfo.title);
+      // Clean target
+      const rawKey = target.toLowerCase();
+      let translation = qSnap.translation || qSnap.clue || qSnap.indonesian || qSnap.question_text || '—';
+      let category = qSnap.word_type || qSnap.category || (target.includes(' ') ? 'Phrase' : 'Word');
+      let answerType = qSnap.answer_type || 'written';
 
-        const score = typeof ans.score === 'number' ? ans.score : (ans.is_correct ? 1 : 0);
-        const isWrong = score < 1;
+      if (!vocabAggregation.has(rawKey)) {
+        vocabAggregation.set(rawKey, {
+          key: rawKey,
+          targetWord: target,
+          translation,
+          category,
+          answerType,
+          testTitles: new Set(),
+          totalAttempts: 0,
+          incorrectCount: 0,
+          mistakeFrequencies: {},
+          mistakesList: []
+        });
+      }
 
-        if (isWrong) {
-          entry.incorrectCount++;
-          const studentAns = (ans.student_answer || '').trim() || '(Blank/Timeout)';
-          entry.mistakeFrequencies[studentAns] = (entry.mistakeFrequencies[studentAns] || 0) + 1;
-          entry.mistakesList.push({
-            studentId: att.student_id,
-            studentName: sName,
-            studentAnswer: studentAns,
-            score,
-            evalResult: ans.evaluation_result || 'incorrect',
-            testTitle: tInfo.title || 'Exam'
-          });
-        }
-      });
+      const entry = vocabAggregation.get(rawKey);
+      entry.totalAttempts++;
+      if (tInfo.title) entry.testTitles.add(tInfo.title);
+
+      const score = typeof ans.score === 'number' ? ans.score : (ans.is_correct ? 1 : 0);
+      const isWrong = score < 1;
+
+      if (isWrong) {
+        entry.incorrectCount++;
+        const studentAns = rawAns;
+        entry.mistakeFrequencies[studentAns] = (entry.mistakeFrequencies[studentAns] || 0) + 1;
+        entry.mistakesList.push({
+          studentId: att.student_id,
+          studentName: sName,
+          studentAnswer: studentAns,
+          score,
+          evalResult: ans.evaluation_result || 'incorrect',
+          testTitle: tInfo.title || 'Exam'
+        });
+      }
     });
 
     const items = Array.from(vocabAggregation.values()).map(item => {

@@ -1,16 +1,4 @@
 
-function speakEnglishWord(text) {
-  if (!text || !('speechSynthesis' in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US';
-  u.rate = 0.95;
-  const voices = window.speechSynthesis.getVoices();
-  const enVoice = voices.find(v => (v.lang === 'en-US' || v.lang.startsWith('en')) && (v.name.includes('Natural') || v.name.includes('Google') || v.name.includes('Samantha') || v.name.includes('Female')));
-  if (enVoice) u.voice = enVoice;
-  window.speechSynthesis.speak(u);
-}
-
 /**
  * vocab-vault.js
  * Admin Vocabulary Vault Console — Domain C (Class) Section
@@ -499,14 +487,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="indonesian" value="${escapeHtml(w.indonesian)}">
           </td>
           <td class="editable-cell" style="padding: 6px 12px; color: #ffffff; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
-            <span class="vault-cell-view" title="${escapeHtml(w.english)}">
-              <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1);" title="Listen Native Pronunciation">🔊</button>
-              ${escapeHtml(w.english)}
-            </span>
-            <div class="vault-edit-wrapper" style="align-items:center;gap:4px;width:100%;">
-              <button type="button" class="btn-vault-speak" data-speak="${escapeHtml(w.english)}" style="background:transparent; border:none; cursor:pointer; font-size:12px; color:#38bdf8;" title="Listen Native Pronunciation">🔊</button>
-              <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="english" value="${escapeHtml(w.english)}" style="flex:1;">
-            </div>
+            <span class="vault-cell-view" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</span>
+            <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="english" value="${escapeHtml(w.english)}">
           </td>
           <td class="edit-mode-only" style="padding: 6px 8px; text-align: center; width: 55px; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
             <button type="button" class="btn-del-mini" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:14px;padding:2px 4px;">🗑️</button>
@@ -514,17 +496,6 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
         </tr>
       `;
     }).join('');
-
-    // Native Speech Pronunciation Handler
-    tbody.querySelectorAll('.btn-vault-speak').forEach(btn => {
-      btn.onclick = (e) => {
-        e.stopPropagation();
-        const text = btn.getAttribute('data-speak');
-        speakEnglishWord(text);
-        btn.style.transform = 'scale(1.25)';
-        setTimeout(() => { btn.style.transform = 'scale(1)'; }, 250);
-      };
-    });
 
     // Delete handlers
     tbody.querySelectorAll('[data-del-vault]').forEach(btn => {
@@ -636,14 +607,6 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             const parts = lexSpan.textContent.split('-');
             lexSpan.textContent = `${newComp}-${parts[1]}`;
           }
-        } else if (field === 'english') {
-          payload.english = newVal;
-          word.english = newVal;
-          if (viewSpan) {
-            viewSpan.innerHTML = `<button type="button" class="btn-vault-speak" data-speak="${escapeHtml(newVal)}" style="background:transparent; border:none; cursor:pointer; padding:0 4px; font-size:12px; color:var(--clr-accent-1, #6366f1);" title="Listen Native Pronunciation">🔊</button> ${escapeHtml(newVal)}`;
-          }
-          const speakBtn = cell?.querySelector('.btn-vault-speak');
-          if (speakBtn) speakBtn.setAttribute('data-speak', newVal);
         } else if (field === 'word_type') {
           payload.word_type = newVal;
           word.word_type = newVal;
@@ -2102,14 +2065,14 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
 
       <!-- Modernized Flat Data Table (Flush to top, only table container scrolls) -->
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
         <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
           <colgroup>
             <col style="width: 45px;">
             <col style="width: 48px;">
             <col style="width: 140px;">
             <col style="width: 48px;">
-            <col style="min-width: 260px; width: auto;">
+            <col style="min-width: 240px;">
             <col style="width: 50px;">
             <col style="width: 30px;">
             <col style="width: 30px;">
@@ -2128,12 +2091,12 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
             <!-- Super-Headers Grouping -->
             <tr>
-              <th colspan="6" class="super-th" style="background:#0c192e; color:#38bdf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">HIERARCHY &amp; IDENTITY</th>
-              <th colspan="4" class="super-th" style="background:#131d36; color:#818cf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">WORDS BREAKDOWN</th>
-              <th colspan="4" class="super-th" style="background:#1a1936; color:#c084fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PHRASES BREAKDOWN</th>
-              <th colspan="3" class="super-th" style="background:#0f2922; color:#4ade80; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">METRICS SUMMARY</th>
-              <th class="super-th" style="background:#1e293b; color:#fb923c; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PROGRAM ACCESS</th>
-              <th class="super-th edit-mode-only" style="background:#3b1116; color:#f87171; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1);">ACTION</th>
+              <th colspan="6" class="super-th super-hdr" style="background:#0c192e; color:#38bdf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">HIERARCHY &amp; IDENTITY</th>
+              <th colspan="4" class="super-th super-hdr" style="background:#131d36; color:#818cf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">WORDS BREAKDOWN</th>
+              <th colspan="4" class="super-th super-hdr" style="background:#1a1936; color:#c084fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PHRASES BREAKDOWN</th>
+              <th colspan="3" class="super-th super-hdr" style="background:#0f2922; color:#4ade80; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">METRICS SUMMARY</th>
+              <th class="super-th super-hdr" style="background:#1e293b; color:#fb923c; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PROGRAM ACCESS</th>
+              <th class="super-th super-hdr edit-mode-only" style="background:#3b1116; color:#f87171; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1);">ACTION</th>
             </tr>
             <!-- Sub-Headers (Exact 19 Columns) -->
             <tr>
@@ -2142,10 +2105,10 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               <!-- 2. TH-CD -->
               <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
               <!-- 3. THEME -->
-              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.1);" title="Theme Name">THEME</th>
+              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 140px; border-right: 1px solid rgba(255,255,255,0.1);" title="Theme Name">THEME</th>
               <!-- 4. TP-CD -->
               <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
-              <!-- 5. TOPIC NAME -->
+              <!-- 5. TOPIC NAME (Flex Primary) -->
               <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC NAME</th>
               <!-- 6. CODE -->
               <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code (e.g. 1G1)">CODE</th>
@@ -2445,6 +2408,11 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   };
 
   bindRowActionHandlers();
+
+  const themeTable = document.getElementById('theme-manager-flat-table');
+  if (themeTable && typeof window.initColumnResize === 'function') {
+    window.initColumnResize(themeTable, 'topscore_col_widths_theme-manager-flat-table');
+  }
 }
 
 // ─── Theme Institution & Program Assignment Modal ────────────

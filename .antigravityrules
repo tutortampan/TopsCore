@@ -1,13 +1,18 @@
 # TOPSCORE MASTER GOVERNANCE RULES (.antigravityrules)
 
-> Master governance index. Detailed specs:
-> - UI & Tables: `.agents/rules/ui-invariants.md` & `AGENTS.md` Section 2.20
-> - Workflows: `.agents/rules/agent-workflow.md` & `AGENTS.md` Section 0
-> - Database & Schema: `docs/DATABASE_SCHEMA.md` & `AGENTS.md` Section 1–3
+> **Quick Navigation Map (SSOT Architecture):**
+> - 🎨 **Color & Grading Scale SSOT**: [`AGENTS.md` Section 2.10](file:///AGENTS.md#210-grade)
+> - 📐 **UI, Viewport & Table Invariants SSOT**: [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md)
+> - ✍️ **8-Tier Typography & Font Scale SSOT**: [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) (Section 8)
+> - 🤖 **Agent Workflow & Execution Protocols SSOT**: [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md)
+> - 🗄️ **Database Schema & RLS Policies SSOT**: [`docs/DATABASE_SCHEMA.md`](file:///docs/DATABASE_SCHEMA.md)
+> - 📜 **Changelog & Documentation Hygiene SSOT**: [`docs/CHANGELOG.md`](file:///docs/CHANGELOG.md) & [`AGENTS.md` Section 5.3](file:///AGENTS.md)
+
+---
 
 ## DOMAIN 1: CORE ARCHITECTURE & DATA INTEGRITY
-1. ABCD ARCHITECTURE: Strict hierarchy [A] Admin, [B] Board, [C] Class, [D] Data. Terminology: Admin, Board, Class, Data, Assessment, Question.
-2. FRONTEND SHIELD: Mandatory optional chaining (`?.`) and fallbacks (`||`, `??`) on all DB rows and DOM selectors.
+1. ABCD ARCHITECTURE: Strict hierarchy: `[A] Admin`, `[B] Board`, `[C] Class`, `[D] Data`.
+2. FRONTEND SHIELD: Mandatory optional chaining (`?.`) and fallbacks (`||`, `??`) on all DB records and DOM selectors.
 4. SECURITY & ANSWER KEY PROTECTION: Never leak `correct_answer_snapshot` during `IN_PROGRESS` attempts. Return snapshots only for finished attempts.
 5. SUPABASE RELATIONSHIP DISAMBIGUATION: Disambiguate multi-FK queries with explicit hints (`institutions!institution_id(name)`). Maintain fallback hydration.
 6. ERROR HANDLING & RESILIENCE: In `api.js`, catch Supabase errors gracefully. Return empty arrays/objects rather than crashing.
@@ -15,37 +20,47 @@
 8. DATABASE INTEGRITY & SOFT-DELETE: Use `deleted_at IS NULL` exclusively. Hard deletes (`DELETE FROM`) on historical results/attempts are forbidden.
 9. POSTGREST ASYNC HANDLING: Supabase queries are Thenables, NOT true Promises. Never call `.catch()` on them; use `try { await ... } catch (err) {}`.
 
+---
+
 ## DOMAIN 2: DESIGN SYSTEM & COLOR SINGLE SOURCE OF TRUTH
-11. SINGLE SOURCE OF TRUTH COLORING: Never hardcode grade colors. Reference `TOPSCORE_COLORS` in `js/grading.js` and `--grade-*` in `css/style.css`.
-- Star (★ / 100%): Electric Pink (`#ff2d87`, dark slate `#0F172A` text, exclusive to Star).
+*(Authoritative Table: [`AGENTS.md` Section 2.10](file:///AGENTS.md#210-grade) & Detailed Tokens: [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md))*
+11. SINGLE SOURCE OF TRUTH COLORING: Never hardcode grade colors. Reference CSS variables (`--grade-*`) and `TOPSCORE_COLORS` in `js/grading.js`.
+- Star (★, 100%): Strictly **Electric Pink** (`#ff2d87`, dark slate `#0F172A` text, exclusive to Star).
 - Palette: Grade A Pure Green (`#00c000ff`), B Electric Lime (`#95ff00ff`), C Pure Yellow (`#FFFF00`), D Dark Orange (`#FF8C00`), E Pure Red (`#FF0000`).
 - Badges: Circular badges (`.grade-circle`) strictly render dark slate `#0F172A` text. Dynamic PTS follows `getGradeColorByScore()`.
-
-## DOMAIN 3: SPATIAL LAYOUT, TABLE ARCHITECTURE & UI INVARIANTS
-*(Full specifications in `.agents/rules/ui-invariants.md`)*
-15. UNIVERSAL TABLE ARCHITECTURE & NATIVE TABLE LOCK (STRICT INVARIANT) (/learn):
-    - Root 100vh lock (`overflow: hidden !important;`). Console: `calc(100vh - 60px) !important`.
-    - Native Table Lock: HTML `<table>` elements are strictly `display: table !important` (NEVER flex or grid). Vertical scrolling is EXCLUSIVELY on `.table-wrap { overflow-y: auto; }`. Headers stick to top, footers stick to bottom flush above lower panel.
-16. PURE DIRECT ENGLISH UI STANDARD (/learn): All UI text, headers, menus, dialogs use direct English. Sole exception: Indonesian vocabulary meaning.
-17. SINGLE-RESPONSIBILITY COLUMNS & DOSSIER MODAL ON CLICK (/learn): Strictly 1 metric per column. Student Roster sequence: Level -> Photo (30px avatar) -> Gender (Mr./Miss.) -> Name -> DOB -> Age -> Education -> Class Exams -> Status. In active roster, Actions column is PURGED. Clicking on student Photo or Name opens their Dossier Profile modal. Student deletion is restricted exclusively to the Inactive Students tab to prevent accidental data loss.
-18. EXCEL-LIKE MASTER EDIT MODE & ZERO INNER CAPSULE (/learn): View mode: clean text, zero inputs. Edit Mode ON: cell and header gridlines (th, td) across ALL tables turn crisp WHITE (border-right: 1px solid rgba(255,255,255,0.45); border-bottom: 1px solid rgba(255,255,255,0.45)). Cell inputs have NO border, NO border-radius, and transparent background (filling cell seamlessly like an Excel spreadsheet, zero inner capsule/box). Changes to Name, Gender, DOB, Education, Exam Scores, and Status auto-sync immediately to Supabase and cache.
-20. UNIVERSAL LOWER PANEL ARCHITECTURE & 10PX CONTAINER GAP (/learn): Universal 10px container gap. All tables (thead, tbody, tfoot) are 100% contained within the workspace table container (#student-grid-container / .table-wrap). Table footers (tfoot) must NEVER enter the lower panel. The 50px Lower Panel (.workspace-lower-panel) is docked flush at base (0px margin to bottom banner and side panel) reserved exclusively for action buttons ([🚀 NEXT], [➕ Add Student], [📥 Import Excel]), search, and metadata. A strict 10px vertical gap separates the table container from the lower panel.
-21. DYNAMIC COLUMN SIZING, SINGLE-LINE TEXT & ZERO DEAD SPACE INVARIANT (/learn): Tables expand 100% width, dynamic proportional allocation, zero voids, nowrap cells (`white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`), Excel vertical dividers (`border-right`).
-22. CENTERED LOADING STATES: Spinners strictly centered horizontally and vertically via canonical `getLoadingStateHtml(message)` in direct English.
-25. TUTOR'S ROOM 8-TIER TYPOGRAPHIC SCALE & ZERO SUB-11PX INVARIANT (/learn): Font sizes strictly locked to `--tr-font-*` scale. Zero sub-11px text anywhere in Tutor's Room. Data cells weight 500; bold 700/800 for headers only.
-31. DYNAMIC COLUMN RESIZING WITH PERSISTENT WIDTH MEMORY (EXCEL-LIKE) (/learn): Column resize handles on `th`, double-click auto-size, localStorage width persistence (`initColumnResize`).
-
-## DOMAIN 4: AGENT WORKFLOW, IDE HYGIENE & QUALITY VERIFICATION
-*(Full protocols in `.agents/rules/agent-workflow.md` & `AGENTS.md` Section 0)*
-12. MANDATORY TASK LIST ON PROCEED: Create and pin `tasks.md` in center editor tab the moment a plan is approved before modifying code.
-13. MANDATORY PROMPT & TYPO CORRECTION: Inspect user prompt for typos and display `### 🎯 Perbaikan Perintah (Typo Fixed)` before execution.
-14. PLAN NAMING STANDARD & REPOSITORY DUAL-WRITE PROTOCOL (/learn): Save in `docs/plans/YYYYMMDD - <Plan Name>.md` and mirror in active brain artifact directory.
-19. AUTOMATIC MIDDLE-PANEL TAB HYGIENE & POST-PROCESS FILE CLOSURE (/learn): Only `tasks.md` is pinned. Maximum 3 open editor tabs.
-23. MANDATORY BEFORE & AFTER VISUAL SPECIFICATION PROTOCOL (/learn): Any task involving UI layout, Font (size, weight, style), Color (hex, tokens), or Tables MUST present an explicit 4-column Before & After Comparative Matrix (exact current state vs proposed target state, with mockups/code) in the plan artifact before any code is modified.
-24. AUTOMATIC COMPACTION ADVISORY TRIGGER & ANTI-YAPPING DISCIPLINE (/learn): AI cannot invoke slash commands autonomously. The agent MUST conclude its response with a prominent /compact all call-to-action banner immediately upon milestone completion or when conversation depth reaches >= 20 turns. Responses accompanying artifacts are strictly capped at 15-20 lines (zero repetitive yapping).
 26. UNIVERSAL SINGLE-SOURCE COLOR PROPAGATION ("RUBAH SATU MAKA RUBAH SEMUA") (/learn):
     - All Red elements follow Grade E (`--grade-e` / `var(--grade-e)` / `TOPSCORE_COLORS.E` / `.text-fail`).
     - All Yellow elements follow Grade C (`--grade-c` / `var(--grade-c)` / `TOPSCORE_COLORS.C` / `.text-warning`).
     - All Green elements follow Grade A (`--grade-a` / `var(--grade-a)` / `TOPSCORE_COLORS.A` / `.text-success`).
     - Star Pink (`#ff2d87`) remains 100% exclusive to Star 100%. System chrome uses neutral workstation tokens.
-    - Zero raw hardcoded hex literals in CSS or JS. Any change to a central token in :root must instantaneously propagate across the entire application in a single step.
+    - Zero raw hardcoded hex literals in CSS or JS. Any change to a central token in `:root` must instantaneously propagate across the entire application in a single step.
+
+---
+
+## DOMAIN 3: SPATIAL LAYOUT, TABLE ARCHITECTURE & UI INVARIANTS
+*(Full specifications in [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md))*
+15. UNIVERSAL TABLE ARCHITECTURE & NATIVE TABLE LOCK (STRICT INVARIANT) (/learn): Root `100vh` lock (`overflow: hidden !important;`). Console: `calc(100vh - 60px) !important;`. Native HTML `<table>` elements are strictly `display: table !important`. Vertical scrolling is EXCLUSIVELY on `.table-wrap { overflow-y: auto; }`. Sticky thead at top, sticky tfoot at bottom.
+16. PURE DIRECT ENGLISH UI STANDARD (/learn): All UI text, headers, menus, dialogs use direct English. Sole exception: Indonesian vocabulary meaning.
+17. SINGLE-RESPONSIBILITY COLUMNS & DOSSIER MODAL ON CLICK (/learn): Strictly 1 metric per column. Student Roster sequence: Level -> Photo -> Gender -> Name -> DOB -> Age -> Education -> Class Exams -> Status. Clicking photo/name opens Dossier Profile modal. Student deletion restricted exclusively to Inactive Students tab.
+18. EXCEL-LIKE MASTER EDIT MODE & ZERO INNER CAPSULE (/learn): View mode: clean text, zero inputs. Edit Mode ON: cell and header gridlines turn crisp white. Inputs have transparent background filling cell seamlessly like an Excel spreadsheet without inner capsule.
+20. UNIVERSAL LOWER PANEL ARCHITECTURE & 10PX CONTAINER GAP (/learn): Universal 10px container gap. All tables are contained within workspace container. Table footers never enter the lower panel. The 50px Lower Panel (`.workspace-lower-panel`) is docked flush at base reserved for action buttons, search, and KPIs.
+21. DYNAMIC COLUMN SIZING, SINGLE-LINE TEXT & ZERO DEAD SPACE INVARIANT (/learn): Tables expand 100% width, dynamic proportional allocation, zero voids, nowrap cells (`white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`), Excel vertical dividers (`border-right`).
+22. CENTERED LOADING STATES: Spinners strictly centered horizontally and vertically via canonical `getLoadingStateHtml(message)` in direct English.
+25. TUTOR'S ROOM 8-TIER TYPOGRAPHIC SCALE & ZERO SUB-11PX INVARIANT (/learn): Font sizes strictly locked to `--tr-font-*` scale. Zero sub-11px text anywhere in Tutor's Room. Data cells weight 500; bold 700/800 for headers only.
+31. DYNAMIC COLUMN RESIZING WITH PERSISTENT WIDTH MEMORY (EXCEL-LIKE) (/learn): Column resize handles on `th`, double-click auto-size, localStorage width persistence (`initColumnResize`).
+
+---
+
+## DOMAIN 4: AGENT WORKFLOW, IDE HYGIENE & QUALITY VERIFICATION
+*(Full protocols in [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md))*
+12. MANDATORY TASK LIST ON PROCEED: Create and pin `tasks.md` in center editor tab the moment a plan is approved before modifying code.
+13. MANDATORY PROMPT & TYPO CORRECTION: Inspect user prompt for typos and display `### 🎯 Perbaikan Perintah (Typo Fixed)` before execution.
+14. PLAN NAMING STANDARD & REPOSITORY DUAL-WRITE PROTOCOL (/learn): Save in `docs/plans/YYYYMMDD - <Plan Name>.md` and mirror in active brain artifact directory.
+19. AUTOMATIC MIDDLE-PANEL TAB HYGIENE & POST-PROCESS FILE CLOSURE (/learn): Only `tasks.md` is pinned. Maximum 3 open editor tabs.
+23. MANDATORY BEFORE & AFTER VISUAL SPECIFICATION PROTOCOL (/learn): Any task involving UI layout, Font, Color, or Tables MUST present an explicit 4-column Before & After Comparative Matrix before modifying code.
+24. AUTOMATIC COMPACTION ADVISORY TRIGGER & ANTI-YAPPING DISCIPLINE (/learn): AI cannot invoke slash commands autonomously. Conclude response with `/compact all` banner immediately upon milestone completion or $\ge 20$ turns.
+27. DOCUMENTATION HYGIENE & ROLLING-WINDOW PROTOCOL (/learn):
+    - `docs/CHANGELOG.md`: Strict rolling window of 25 latest phases in ultra-condensed format (~150–200 lines). Older phases flush to `docs/archive/`.
+    - `docs/CURRENT_STATE.md`: Single restart point strictly bounded to $\le 120$ lines (~10 KB). Never append historical phase narratives.
+    - `tasks.md` vs `docs/TODO.md`: `tasks.md` in root is sole active task board. Never dump completed task checklists into `docs/TODO.md`.
+    - `docs/SESSION_LOG.md`: Compact format capped at $\le 4$ lines per session.

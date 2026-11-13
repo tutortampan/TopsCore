@@ -152,7 +152,9 @@ if (!session) {
       circle.style.strokeDasharray = circumference;
       circle.style.strokeDashoffset = circumference; // start empty
 
-      circle.style.stroke = typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.B || '#95ff00ff');
+      circle.style.stroke = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR')
+        ? TOPSCORE_COLORS.STAR
+        : (typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.B || '#95ff00ff'));
 
       const duration = 1400;
       const start = performance.now();
@@ -855,6 +857,11 @@ if (!session) {
         // Fetch student identity, institutional metadata, and photo
         let studentFullName = session.student_name || 'Student';
         let studentGender = session.gender || '';
+        let resolvedInstName = session.institution_name || 'Cake English Course';
+        let resolvedProgName = (session.program_name || 'CAMP').toUpperCase();
+        let resolvedBatchName = session.batch_name || '133';
+        let resolvedLvlName = session.level_name || '3rd Level';
+
         const targetStudentId = attempt.student_id || session.student_id;
         try {
           const supabase = await getSupabase();
@@ -873,15 +880,15 @@ if (!session) {
               const metaBatchEl = document.getElementById('meta-batch');
               const metaLvlEl = document.getElementById('meta-lvl');
 
-              const instName = st.institutions?.name || session.institution_name || 'Cake English Course';
-              const progName = (st.programs?.name || session.program_name || 'CAMP').toUpperCase();
-              const batchName = st.batches?.name || session.batch_name || '133';
-              const lvlName = asmData?.levels?.name || st.levels?.name || session.level_name || '3rd Level';
+              if (st.institutions?.name) resolvedInstName = st.institutions.name;
+              if (st.programs?.name) resolvedProgName = st.programs.name.toUpperCase();
+              if (st.batches?.name) resolvedBatchName = st.batches.name;
+              if (asmData?.levels?.name || st.levels?.name) resolvedLvlName = asmData?.levels?.name || st.levels?.name;
 
-              if (metaInstEl) metaInstEl.textContent = instName;
-              if (metaProgEl) metaProgEl.textContent = progName;
-              if (metaBatchEl) metaBatchEl.textContent = batchName;
-              if (metaLvlEl) metaLvlEl.textContent = lvlName;
+              if (metaInstEl) metaInstEl.textContent = resolvedInstName;
+              if (metaProgEl) metaProgEl.textContent = resolvedProgName;
+              if (metaBatchEl) metaBatchEl.textContent = resolvedBatchName;
+              if (metaLvlEl) metaLvlEl.textContent = resolvedLvlName;
             }
             if (st && st.photo_url) {
               const avatarImg = document.getElementById('result-avatar-img');
@@ -950,7 +957,9 @@ if (!session) {
 
         const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');
         const currentTier = isGradeSOr100 ? '★' : grade;
-        let gradeColor = typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.STAR || '#00c000ff');
+        let gradeColor = isGradeSOr100
+          ? TOPSCORE_COLORS.STAR
+          : (typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.B || '#95ff00ff'));
         const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
 
         // Immediate application of dynamic tier colors and variables across page
@@ -1336,6 +1345,24 @@ if (!session) {
         if (loadingEl) loadingEl.classList.add('hidden');
         if (contentEl) contentEl.classList.remove('hidden');
 
+        // Populate printable diagnostic report card for parent review / PDF export
+        populatePrintableReportCard({
+          instName: resolvedInstName,
+          progName: resolvedProgName,
+          batchName: resolvedBatchName,
+          lvlName: resolvedLvlName,
+          studentName: studentFullName,
+          testTitle: asmRawTitle || `${titleType} - ${titleTopic}`,
+          correct,
+          partial,
+          wrong,
+          points: formattedPoints,
+          pct,
+          grade: (isGradeSOr100 ? '★' : grade),
+          isRemedial,
+          answers
+        });
+
         // Launch unified top-to-bottom sequential cascade animation
         await runResultEntranceSequence({
           targetPct: pct,
@@ -1359,6 +1386,100 @@ if (!session) {
           <p class="text-muted">${escapeHtml(e.message)}</p>
           <a href="dashboard.html" class="btn btn-primary mt-4">Back to Class</a>
         `;
+      }
+    }
+
+    function populatePrintableReportCard({
+      instName,
+      progName,
+      batchName,
+      lvlName,
+      studentName,
+      testTitle,
+      correct,
+      partial,
+      wrong,
+      points,
+      pct,
+      grade,
+      isRemedial,
+      answers
+    }) {
+      const metaEl = document.getElementById('print-inst-meta');
+      if (metaEl) {
+        metaEl.textContent = `${instName || 'CEC'} • ${progName || 'CAMP'} • BATCH ${batchName || '—'} • ${lvlName || '—'}`;
+      }
+      const timeEl = document.getElementById('print-timestamp');
+      if (timeEl) {
+        timeEl.textContent = new Date().toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+      const nameEl = document.getElementById('print-student-name');
+      if (nameEl) nameEl.textContent = studentName || '—';
+
+      const titleEl = document.getElementById('print-test-title');
+      if (titleEl) titleEl.textContent = testTitle || '—';
+
+      const corrEl = document.getElementById('print-correct-count');
+      if (corrEl) corrEl.textContent = correct;
+
+      const partEl = document.getElementById('print-partial-count');
+      if (partEl) partEl.textContent = partial;
+
+      const wrongEl = document.getElementById('print-wrong-count');
+      if (wrongEl) wrongEl.textContent = wrong;
+
+      const ptsEl = document.getElementById('print-points');
+      if (ptsEl) ptsEl.textContent = points;
+
+      const scorePctEl = document.getElementById('print-score-pct');
+      if (scorePctEl) {
+        const finalVal = (pct % 1 === 0 ? Math.round(pct) : pct.toFixed(1)) + '%';
+        const remHtml = isRemedial ? '<sup class="test-rem-sup" style="font-size:0.6em;vertical-align:super;font-weight:900;margin-left:2px;">R</sup>' : '';
+        scorePctEl.innerHTML = finalVal + remHtml;
+      }
+
+      const gradeSymEl = document.getElementById('print-grade-symbol');
+      if (gradeSymEl) gradeSymEl.textContent = (grade === 'S' ? '★' : grade);
+
+      const gradePredEl = document.getElementById('print-grade-predicate');
+      if (gradePredEl) gradePredEl.textContent = getAchievementStatus(grade, pct);
+
+      const tbody = document.getElementById('print-breakdown-tbody');
+      if (tbody && Array.isArray(answers)) {
+        tbody.innerHTML = answers.map((a, idx) => {
+          const snap = typeof a.question_snapshot === 'string'
+            ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+            : (a.question_snapshot || {});
+          const promptText = snap.indonesian || snap.prompt || snap.question || '—';
+          const studentAns = a.student_answer || '—';
+          const targetAns = a.correct_answer_snapshot || snap.english || snap.correct_answer || '—';
+          const cat = getEvalCategory(a);
+          let resBadge = '<span class="print-badge-correct">CORRECT</span>';
+          let pts = '1.0';
+          if (cat === 'minor_spelling_error') {
+            resBadge = '<span class="print-badge-partial">PARTIAL</span>';
+            pts = '0.5';
+          } else if (cat === 'incorrect') {
+            resBadge = '<span class="print-badge-wrong">INCORRECT</span>';
+            pts = '0.0';
+          }
+          return `
+            <tr>
+              <td style="text-align:center; font-weight:700;">${idx + 1}</td>
+              <td>${escapeHtml(promptText)}</td>
+              <td><strong>${escapeHtml(studentAns)}</strong></td>
+              <td>${escapeHtml(String(targetAns))}</td>
+              <td>${resBadge}</td>
+              <td style="text-align:center; font-weight:700;">${pts}</td>
+            </tr>
+          `;
+        }).join('');
       }
     }
 
@@ -2026,6 +2147,11 @@ if (!session) {
       if (e.key === 'Escape') {
         closeAnswersModal();
       }
+    });
+
+    // Wire up Print Report Trigger
+    document.getElementById('btn-print-result')?.addEventListener('click', () => {
+      window.print();
     });
 
     loadResult();

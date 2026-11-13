@@ -15,7 +15,7 @@ All admin screens strictly obey the Master Edit Mode toggle in `admin-topbar`:
 - **Universal Synchronization**: In-place edits to Student Name, Gender, DOB, Education, Exam Scores, and Status auto-sync immediately to Supabase and cache, updating all dependent views from a single source of truth.
 
 ## 3. Universal Lower Panel Architecture, Table Workspace Containment & 10px Container Gap
-- **Strict 50px Height Alignment**: The lower panel (`.workspace-lower-panel`) strictly has an exact height of `50px` (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box;`), seamlessly matching the 50px sidebar footer (`.sidebar-footer`). Table summary rows (`tfoot`) strictly enforce `32px` height (`height: 32px !important; min-height: 32px !important; max-height: 32px !important; line-height: 32px !important;`), harmoniously matching data row cadence (`24px–28px`).
+- **Strict 40px Height Alignment**: The lower panel (`.workspace-lower-panel`) strictly has an exact height of `40px` (`height: 40px !important; min-height: 40px !important; max-height: 40px !important; box-sizing: border-box;`), seamlessly matching the 40px sidebar footer (`.sidebar-footer`). Table summary rows (`tfoot`) strictly enforce `32px` height (`height: 32px !important; min-height: 32px !important; max-height: 32px !important; line-height: 32px !important;`), harmoniously matching data row cadence (`24px–28px`).
 - **Table Workspace Containment & Lower Panel Separation**: All tables (`thead`, `tbody`, `tfoot`) live 100% inside the workspace container (`#student-grid-container` / `.table-wrap`). Table footers (`tfoot`) must NEVER enter the lower panel.
 - **Lower Panel Payload**: Docked flush at the bottom (0px margin to bottom banner and side panel) reserved exclusively for action toolbars (`[🚀 NEXT]`, `[➕ Add Student]`, `[📥 Import Excel/CSV]`), summary info, search, and triage pills.
 - **Universal 10px Container Gap Invariant**: Every card, panel, table container, workspace toolbar, and banner across all admin screens strictly enforces an exact 10px gap (`gap: 10px !important;` or `margin-bottom: 10px !important;`). A strict 10px gap separates the table container from the lower panel.
@@ -47,13 +47,13 @@ All admin screens strictly obey the Master Edit Mode toggle in `admin-topbar`:
 ## 8. Universal Table Standardization Protocol & Construction Blueprint
 All data tables across TopsCore strictly enforce the 8-pillar standardization invariant:
 1. **Spatial View Margins & Flush Base Docking**: Table container (`.table-wrap`) strictly adheres to `10px` top, `10px` sides, and `0px` bottom (`margin: 10px 10px 0 10px !important;`), flush docked to the 60px bottom banner (`#bottom-ad-banner`).
-2. **Uniform Font Size (12px) & Single-Line Text**: Header text (`th`), data cells (`td`), super-headers, and inputs strictly enforce uniform `font-size: 12px !important; line-height: 1.4 !important;`. Cell text must NEVER wrap (`white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`).
+2. **Uniform Font Size (11px) & Single-Line Text**: Header text (`th`), data cells (`td`), super-headers, and inputs strictly enforce uniform `font-size: 11px !important; line-height: 1.3 !important;`. Cell text must NEVER wrap (`white-space: nowrap !important; text-overflow: ellipsis; overflow: hidden;`).
 3. **Superscript Tag Standard**: Remedial tags (`<sup>R</sup>`) and waiver tags (`<sup>F</sup>`) strictly enforce `font-size: 1.0em !important; font-weight: 900 !important; vertical-align: super !important; line-height: 0 !important;`.
 4. **Two-Tier Sticky Header Locking**: Super-headers are sticky at `top: 0 !important; z-index: 20 !important; height: 24px !important;`, sub-headers are sticky at `top: 24px !important; z-index: 19 !important; height: 24px !important;` with solid opaque backgrounds (`#0d1527` / `#0b1120`). Single headers sticky at `top: 0 !important; z-index: 10 !important; height: 28px !important;`.
-5. **Small Table Anti-Ballooning & Sticky Footer Docking**: In `fitMatrixToScreen()` and CSS, row heights are bounded between `24px` and `32px` (`min: 24px, max: 32px`). Small rosters (< 15 rows) do not stretch or balloon (`height: auto !important;`), empty space is absorbed cleanly by an invisible `<tr class="table-spacer-row"><td colspan="..."></td></tr>` in `tbody`, and vertical scrollbars are dynamically eliminated (`overflow-y: hidden`). Summary rows (`tfoot`, `BATCH AVG`, Grand Totals) must ALWAYS remain docked at the bottom of the table container (`position: sticky; bottom: 0;`), flush against the 50px lower panel. DILARANG KERAS menerapkan `display: flex` pada tabel untuk docking footer.
+5. **Small Table Anti-Ballooning & Sticky Footer Docking**: In `fitMatrixToScreen()` and CSS, row heights are bounded between `24px` and `32px` (`min: 24px, max: 32px`). Small rosters (< 15 rows) do not stretch or balloon (`height: auto !important;`), empty space is absorbed cleanly by an invisible `<tr class="table-spacer-row"><td colspan="..."></td></tr>` in `tbody`, and vertical scrollbars are dynamically eliminated (`overflow-y: hidden`). Summary rows (`tfoot`, `BATCH AVG`, Grand Totals) must ALWAYS remain docked at the bottom of the table container (`position: sticky; bottom: 0;`), flush against the 40px lower panel. DILARANG KERAS menerapkan `display: flex` pada tabel untuk docking footer.
 6. **Active-Only Sort Arrow (No Idle ⇅)**: The ambiguous idle `⇅` sort icon is strictly purged across all tables. Sort indicators `▲` (asc) or `▼` (desc) in tactical cyan (`#38bdf8`) appear EXCLUSIVELY when a column is actively clicked and sorted.
 7. **Pure Direct English & Grade Star Contrast**: All table headers, KPI labels, and modals use 100% direct English (Rule 2.30). Circular Star grade badges strictly enforce `#0F172A` dark slate text (Rule 2.10).
-8. **Master Edit Mode Table Input Safeguards**: In both view mode and edit mode, zero capsule pills around data. When Master Edit Mode is ON, interactive table inputs are completely flat, borderless, and transparent (`border: none !important; border-radius: 0 !important; background: transparent !important; height: 24px !important; font-size: 12px !important; padding: 2px 6px !important;`), framed solely by the crisp white Excel table cell gridlines.
+8. **Master Edit Mode Table Input Safeguards**: In both view mode and edit mode, zero capsule pills around data. When Master Edit Mode is ON, interactive table inputs are completely flat, borderless, and transparent (`border: none !important; border-radius: 0 !important; background: transparent !important; height: 24px !important; font-size: 11px !important; padding: 2px 6px !important;`), framed solely by the crisp white Excel table cell gridlines.
 
 ## 9. Header-Only Bold Discipline & Zero Data Cell Bold Overuse
 - **Headers & Sub-headers**: Font weight `700` (Bold) or `800` (Extra Bold).
@@ -85,8 +85,8 @@ All data tables across TopsCore strictly enforce the 8-pillar standardization in
   - `--tr-font-title`: 16px Outfit 700 (`-0.01em`)
   - `--tr-font-subtitle`: 14px Inter 600 (`normal`)
   - `--tr-font-body`: 13px Inter 500 (`normal`)
-  - `--tr-font-table`: 12px Inter 500/700 (`normal`)
-  - `--tr-font-control`: 12px Inter 600 (`0.02em`)
+  - `--tr-font-table`: 11px Inter 500/700 (`normal`)
+  - `--tr-font-control`: 11px Inter 600 (`0.02em`)
   - `--tr-font-caption`: 11px Inter 600 (`0.03em`)
   - `--tr-font-mono`: 11px JetBrains Mono / monospace 600 (`normal`)
 - **Zero Sub-11px Rule**: Absolutely no text element in Tutor's Room (`admin.html`) may render with a font size smaller than `11px`. Eradicate all instances of `0.65rem` (8.3px), `0.70rem` (8.9px), `8pt`, and `8.5pt`.
@@ -123,6 +123,7 @@ All data tables across TopsCore strictly enforce the 8-pillar standardization in
 | Audit & Activity Log | `desk.js` | `new_value` (DETAILS), minWidth 260px | ~600px | 860px ✅ |
 | Central Question Bank | `class.js` | `question_text` (QUESTION TEXT), minWidth 240px | ~640px | 880px ✅ |
 | Vocabulary Vault | `vocab-vault.js` | `indonesian` (INDONESIAN), minWidth 220px | ~800px | 1020px ✅ |
+| Theme Manager | `vocab-vault.js` | `topic` (TOPIC NAME), minWidth 240px | ~854px | 1094px ✅ |
 
 ## 16. Universal Single-Source Color Governance & One-Touch Propagation Invariant
 All colors across TopsCore LMS strictly obey the single-source-of-truth color tokenization architecture ("Rubah satu, maka rubah semua"):

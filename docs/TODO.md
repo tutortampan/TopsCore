@@ -1,982 +1,353 @@
-# ACTIVE DIRECTIVE: PHASE 373 — VOCABULARY VAULT CACHE BUSTERS & TAB COUNT POLISH [COMPLETE]
+# TopsCore LMS — Directives & Task Log (Phases 47–373)
 
-- [x] Task 1: Bump `vocab-vault.js` import cache buster across `js/admin/app.js`, `classes-management.js`, `panel-c-builder.js`, and `tests-management.js` to `?v=20261109_v172`.
-- [x] Task 2: Bump `admin.html` stylesheets and scripts to `?v=20261109_v172`, bump `sw.js` cache name to `topscore-cache-option-a-v97`.
-- [x] Task 3: Polish `buildVaultTabs` in `js/admin/vocab-vault.js`: set `themesCount` for `🗺️ Theme Manager` and `topicsCount` for `⚡ Theme Blueprint`.
-- [x] Task 4: Ensure default landing on `theme_manager` on first load via `topscore_admin_vault_tab_v2`.
-- [x] Task 5: Verify all automated test suites (31/31 split test, 28/28 badges test, 132/132 10-run E2E test).
-- [x] Task 6: Commit and push changes to `origin/main`.
+> **Format:** Compact Directives Log. All legacy directives cataloged below are verified complete. Active task management is maintained in [`tasks.md`](file:///tasks.md).
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 372 — VOCABULARY VAULT UX SPLIT (THEME MANAGER & BLUEPRINT) & LIVE WORDS EXAM WRITTEN MODE [COMPLETE]
-
-- [x] Task 1: Split monolithic 16+ column Topic Blueprint in `js/admin/vocab-vault.js` into two dedicated tabs: `theme_manager` (🗺️ Theme Manager) and `blueprint` (⚡ Theme Blueprint).
-- [x] Task 2: Implement dedicated Theme Manager view: replace 7 crowded POS columns with a single summary chip (`40 items (30W · 10P)`), expand multi-tenant program distribution columns with high-contrast badges (`🟢 Active` / `⚪ —`), and protect with EDIT MODE toggle.
-- [x] Task 3: Implement dedicated Theme Blueprint view: Glassmorphic Hero Command Bar with Target Program dropdown, Level selector tabs, Pacing snapshot chips, `⚡ Auto-Generate All Tests` action, and real-time Test Readiness Matrix (`✅ Ready` vs `⚠️ Missing`).
-- [x] Task 4: Enforce Rule 2.20 route and state persistence across reloads via URL hash (`#vocab_vault?tab=...`) and bidirectional `localStorage`.
-- [x] Task 5: Root-cause analyze live exam issue on `2C-WORDS-EXAM`: update `tests` table (`answer_type: 'written'`), update `attempt_answers.question_snapshot` to `written` for all 8 active student attempts (440 questions each, zero progress lost).
-- [x] Task 6: Harden `js/test.js` and `supabase/functions/start-test/index.ts` to guarantee written mode for Words Exam.
-- [x] Task 7: Bump cache busters (`test.html?v=20261109_v171`, `sw.js` cache name `topscore-cache-option-a-v96`).
-- [x] Task 8: Verify 100% test suite passing (`scripts/test_vocab_7x7_and_leveling_e2e.mjs`, `scripts/test_multi_program_theme_blueprint_v166.mjs`).
+## PHASE 373 — VOCABULARY VAULT CACHE BUSTERS & TAB COUNT POLISH [COMPLETE]
+- Bump `vocab-vault.js` import cache buster across `js/admin/app.js`, `classes-management.js`, `panel-c-builder.js`, and `tests-management.js` to `?v=20261109_v172`.
+- Bump `admin.html` stylesheets and scripts to `?v=20261109_v172`, bump `sw.js` cache name to `topscore-cache-option-a-v97`.
+- Polish `buildVaultTabs` in `js/admin/vocab-vault.js`: set `themesCount` for `🗺️ Theme Manager` and `topicsCount` for `⚡ Theme Blueprint`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 339 — MOBILE VIEWPORT EMULATION ENGINE & OPTIMIZED AI EXTENSIONS STACK [COMPLETE]
-
-- [x] Task 1: Audit and reorganize `.vscode/extensions.json` into 5 curated categories: Mobile Viewport & Live Emulation, CSS & Visual Accuracy, HTML & Asset Productivity, Code Quality & Runtime Safety, and AI Pair Programming & Architecture.
-- [x] Task 2: Build 1-click mobile viewport emulation engine `scripts/open_mobile_preview.mjs` using Playwright system browser integration (390x800, touch, DPR 2x).
-- [x] Task 3: Support automated mobile snapshots (`--screenshot`, `--all-screenshots`) for `dashboard.html`, `result.html`, `index.html`, `test.html`, `admin.html`.
-- [x] Task 4: Add npm scripts in `package.json` (`preview:mobile`, `preview:result`, `preview:admin`, `preview:all`) and VS Code tasks in `.vscode/tasks.json`.
-- [x] Task 5: Add `.mobile_previews/` to `.gitignore`.
-- [x] Task 6: Verify with automated CI test suite `npm.cmd test` (100% PASS).
+## PHASE 372 — VOCABULARY VAULT UX SPLIT (THEME MANAGER & BLUEPRINT) & LIVE WORDS EXAM WRITTEN MODE [COMPLETE]
+- Split monolithic 16+ column Topic Blueprint in `js/admin/vocab-vault.js` into two dedicated tabs: `theme_manager` (🗺️ Theme Manager) and `blueprint` (⚡ Theme Blueprint).
+- Implement dedicated Theme Manager view: replace 7 crowded POS columns with a single summary chip (`40 items (30W · 10P)`), expand multi-tenant program distribution columns with high-contrast badges...
+- Implement dedicated Theme Blueprint view: Glassmorphic Hero Command Bar with Target Program dropdown, Level selector tabs, Pacing snapshot chips, `⚡ Auto-Generate All Tests` action, and real-time T...
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 338 — COMPLETED TESTS "RETRY" PLAY BUTTON, TOP-7 TASK GRADE CHIPS, EXAM SKY BLUE TITLE & LEADERBOARD (YOU) ELIMINATION [COMPLETE]
-
-- [x] Task 1: Remove `(You)` text tag in leaderboard (`js/dashboard.js`), replace with Sky Blue `#38bdf8` bold font and text glow to prevent long student names from truncating.
-- [x] Task 2: Lock Next Test card to strict left-alignment (`text-align: left; align-items: flex-start;`).
-- [x] Task 3: Visual hierarchy for Completed Tests: Exam titles in bold Sky Blue (`#38bdf8`), Task titles in White (`#f8fafc`).
-- [x] Task 4: Update Completed Tests column header to `RETRY` (in `dashboard.html`), and render compact Play button (`▶`) with dynamic border, background, and icon fill matching the score/grade tier.
-- [x] Task 5: Implement Task Top-7 rolling retention logic: calculate/display the 7 highest scores per Task, sorted from lowest to highest across 7 mini grade chips.
-- [x] Task 6: Update `scripts/test_vocab_dashboard_blueprint.mjs` and bump cache busters across all 8 files to `v=20261106_v148` (SW `topscore-cache-option-a-v76`).
-- [x] Task 7: Execute full regression test verification (100% PASS).
+## PHASE 339 — MOBILE VIEWPORT EMULATION ENGINE & OPTIMIZED AI EXTENSIONS STACK [COMPLETE]
+- Audit and reorganize `.vscode/extensions.json` into 5 curated categories: Mobile Viewport & Live Emulation, CSS & Visual Accuracy, HTML & Asset Productivity, Code Quality & Runtime Safety, and AI P...
+- Build 1-click mobile viewport emulation engine `scripts/open_mobile_preview.mjs` using Playwright system browser integration (390x800, touch, DPR 2x).
+- Support automated mobile snapshots (`--screenshot`, `--all-screenshots`) for `dashboard.html`, `result.html`, `index.html`, `test.html`, `admin.html`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 326 — UNIVERSAL BOTTOM BANNER OVERHAUL ("TOPSCORE BY MR. TOP") [COMPLETE]
-
-- [x] Task 1: Replace legacy banner text across all pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with `<span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>`.
-- [x] Task 2: Enlarge and embolden typography across `style.css`, `admin.css`, `dashboard.css`, `test.css`, `result.css` (`font-size: clamp(1rem, 2.8vw, 1.15rem); font-weight: 800;` on container; `font-size: clamp(1.05rem, 3vw, 1.25rem); font-weight: 900;` on brand with ambient cyan glow; `font-size: clamp(1rem, 2.8vw, 1.15rem); font-weight: 800;` on author with white slate text).
-- [x] Task 3: Build automated test suite `scripts/test_bottom_banner_universal.mjs` verifying 100% presence and correct styling across all pages.
-- [x] Task 4: Integrate test suite into `package.json` test runner.
-- [x] Task 5: Execute full regression verification across all 7 test suites (100% PASS).
+## PHASE 338 — COMPLETED TESTS "RETRY" PLAY BUTTON, TOP-7 TASK GRADE CHIPS, EXAM SKY BLUE TITLE & LEADERBOARD (YOU) ELIMINATION [COMPLETE]
+- Remove `(You)` text tag in leaderboard (`js/dashboard.js`), replace with Sky Blue `#38bdf8` bold font and text glow to prevent long student names from truncating.
+- Lock Next Test card to strict left-alignment (`text-align: left; align-items: flex-start;`).
+- Visual hierarchy for Completed Tests: Exam titles in bold Sky Blue (`#38bdf8`), Task titles in White (`#f8fafc`).
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 325 — VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT [COMPLETE]
-
-- [x] Task 1: Conduct `/grill-me` architectural interview on user-uploaded blueprint diagram (`media_1793897504100_ef4a45a9.png`).
-- [x] Task 2: Implement 60px Header with Door Icon (`🚪`, `#btn-change-class`), Class Name Brand, and Logout; eliminate separate Classes Bar to save 60px vertical space.
-- [x] Task 3: Implement 150px Metadata Card with breadcrumb header, Score, Clickable photo 70px to open profile modal, Grade symbol, and student full name.
-- [x] Task 4: Implement 50px Grade Description Card supporting Purple Tier (`#8B5CF6`) for new students (`LET'S GO`) and alumni (`ALUMNI` Grade `X`).
-- [x] Task 5: Implement 70px Next Test Card featuring Row 1 (50px) Next Test Full Name + 3-State Action Icon (Repetition numbers 1-7 for task drills, Yellow Padlock `🔒` when waiting for exam, Green Play `▶️` when exam is unlocked by tutor), and Row 2 (20px) 7 Rainbow Boxes (Red to Purple).
-- [x] Task 6: Implement Dynamic Leaderboard (Tab 1: Points-First ranking) and Completed Tests Table (Tab 2: ordered from latest accessible test downwards, columns: `NO` | `TEST NAME` | `SCORE` | `GRADE` | `RETRY BUTTON ONLY`).
-- [x] Task 7: Extend `js/grading.js` with Grade `X` (Alumni), `TOPSCORE_COLORS.X = '#8B5CF6'`, and `LET'S GO` status.
-- [x] Task 8: Build automated test suite `scripts/test_vocab_dashboard_blueprint.mjs` verifying DOM, styles, and logic hooks (100% PASS).
+## PHASE 326 — UNIVERSAL BOTTOM BANNER OVERHAUL ("TOPSCORE BY MR. TOP") [COMPLETE]
+- Replace legacy banner text across all pages (`index.html`, `admin.html`, `dashboard.html`, `test.html`, `result.html`) with `<span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-auth...
+- Enlarge and embolden typography across `style.css`, `admin.css`, `dashboard.css`, `test.css`, `result.css` (`font-size: clamp(1rem, 2.8vw, 1.15rem); font-weight: 800;` on container; `font-size: cla...
+- Build automated test suite `scripts/test_bottom_banner_universal.mjs` verifying 100% presence and correct styling across all pages.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 300 — UNIFIED TOPIC BLUEPRINT CASCADING ROWSPAN MATRIX (OPSI B) [COMPLETE]
-
-- [x] Task 1: Analyze user mockups (Gambar 1 current, Gambar 2 outline, Gambar 3 grouped, Gambar 4 inline, and user-approved Opsi B).
-- [x] Task 2: Implement multi-level hierarchical grouping (Level $\rightarrow$ Theme $\rightarrow$ Topics) in `_renderTopicBlueprintTab` in `js/admin/vocab-vault.js`.
-- [x] Task 3: Build 11-column cascading `rowspan` matrix: `LEVEL` | `THEME CODE` | `THEME` | `TOPIC CODE` | `TOPIC` | `VERB` | `NOUN` | `ADJECTIVE` | `PHRASE` | `TOTAL` | `ACTION`.
-- [x] Task 4: Implement zero-layout-break live search (`#vault-topic-search`) with instantaneous `rowspan` recalculation on every keystroke.
-- [x] Task 5: Integrate unified toolbar filter tabs `[ 🎯 ALL LEVELS (23) ]`, `[ 🎯 1st (0) ]`, `[ 🎯 2nd (15) ]`, `[ 🎯 3rd (8) ]` and bottom infobar actions (`⚡ Auto-Generate`, `⚒️ Merge Topics`).
-- [x] Task 6: Add dark theme styling rules in `css/admin.css` (`#blueprint-matrix-table`, `.cell-level-group`, `.cell-theme-code`, `.cell-theme-name`).
-- [x] Task 7: Bump cache buster query parameter to `v=20261103_v113` across `admin.html`, `js/admin/app.js`, `js/admin/classes-management.js`, and `js/admin/vocab-vault.js`.
-- [x] Task 8: Verify with automated syntax validation (`node scripts/check_all_js_syntax.cjs`), CI parity suite (`npm.cmd test`), and live Playwright browser screenshot (`blueprint_opsi_b_verified.png`).
+## PHASE 325 — VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT [COMPLETE]
+- Conduct `/grill-me` architectural interview on user-uploaded blueprint diagram (`media_1793897504100_ef4a45a9.png`).
+- Implement 60px Header with Door Icon (`🚪`, `#btn-change-class`), Class Name Brand, and Logout; eliminate separate Classes Bar to save 60px vertical space.
+- Implement 150px Metadata Card with breadcrumb header, Score, Clickable photo 70px to open profile modal, Grade symbol, and student full name.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 299 — REALTIME FULL STUDENT JOURNEY & HOUSEKEEPING RESET [COMPLETE]
-
-- [x] Task 1: Execute full realtime student journey (2nd Level $\rightarrow$ 3rd Level) with account `"Test"` on live Supabase PostgreSQL (46 distinct tests, 262 real DB attempts per run).
-- [x] Task 2: Fix runtime bugs discovered during live runs:
-  - `themeCodeFallback` reference error in `js/api.js`.
-  - Flexible exam lockout bypass in `startTest` Edge Function & API fallback.
-  - Proportional points normalization in `computeUnifiedScore` (`js/grading.js`).
-  - Direct DB mode for fast test execution (`TOPSCORE_DIRECT_DB === '1'`).
-  - Standardized compact level badges (`1st`, `2nd`, `3rd`, `Alumni`) across all admin tables.
-- [x] Task 3: Complete 4 consecutive defect-free cycles (1,048 real database attempts submitted, 100% deterministic score 141.9/150 pts).
-- [x] Task 4: Build automated reset utility `scripts/reset_test_student.mjs`.
-- [x] Task 5: Execute clean housekeeping reset: purge all 66 attempts and 3,280 attempt answers for student `"Test"`, restore to 2nd Level (Batch 134, active, PIN 1234).
+## PHASE 300 — UNIFIED TOPIC BLUEPRINT CASCADING ROWSPAN MATRIX (OPSI B) [COMPLETE]
+- Analyze user mockups (Gambar 1 current, Gambar 2 outline, Gambar 3 grouped, Gambar 4 inline, and user-approved Opsi B).
+- Implement multi-level hierarchical grouping (Level $\rightarrow$ Theme $\rightarrow$ Topics) in `_renderTopicBlueprintTab` in `js/admin/vocab-vault.js`.
+- Build 11-column cascading `rowspan` matrix: `LEVEL` | `THEME CODE` | `THEME` | `TOPIC CODE` | `TOPIC` | `VERB` | `NOUN` | `ADJECTIVE` | `PHRASE` | `TOTAL` | `ACTION`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 292 — VOCABULARY VAULT INSTITUTION, PROGRAM & LEVEL INTEGRATION [COMPLETE]
-
-- [x] Task 1: Update `fetchVaultWords` in `js/api.js` to select joined relations `institutions(id, name, code)` and `programs(id, name, code)`.
-- [x] Task 2: Update `js/admin/vocab-vault.js` Words and Phrases grid table:
-  - Add explicit columns to `<thead>`: `Institution`, `Program`, `Level`.
-  - Render stylized pill badges in `renderRows` for `cell-institution` (Cyan `#38bdf8`), `cell-program` (Purple `#c084fc`), and `cell-level` (Slate `#f8fafc`).
-  - Add dynamic `vault-level-filter` dropdown to toolbar populated from `words.target_level` using `toOrdinalLevel`.
-  - Maintain empty state `colspan="11"` and row edit mode compatibility.
-- [x] Task 3: Overhaul `Topic Blueprint` in `js/admin/vocab-vault.js`:
-  - Add prominent Institution (`INST: CEC`) and Program (`PROG: CAMP`) badges to the blueprint toolbar.
-  - Implement interactive Level Selector buttons (`[ 🎯 2ND LEVEL ]`, `[ 🎯 3RD LEVEL ]`) dynamically detected from vault records.
-  - Add dual view mode switcher: `[ 🗺️ Board ]` and `[ 📊 Table ]`.
-  - In Board View: Add metadata hierarchy row `[CEC] [Camp] [2nd Level / 3rd Level]` to every single topic card.
-  - In Table View: Add explicit columns for `Institution`, `Program`, `Level`, `T.Code`, `Theme`, `Topic Code`, `Topic`, `Verbs`, `Adjs`, `Nouns`, `Phrases`, `Total Items`, and `Actions`.
-  - Update bottom infobar chips with Institution, Program, and Level metadata.
-- [x] Task 4: Verify with automated tests `node scripts/check_all_js_syntax.cjs`, `node scripts/test_result_page_parity.cjs`, and `node scripts/verify_green_star_grading.mjs` (100% PASS).
+## PHASE 299 — REALTIME FULL STUDENT JOURNEY & HOUSEKEEPING RESET [COMPLETE]
+- Execute full realtime student journey (2nd Level $\rightarrow$ 3rd Level) with account `"Test"` on live Supabase PostgreSQL (46 distinct tests, 262 real DB attempts per run).
+- Fix runtime bugs discovered during live runs:
+- Complete 4 consecutive defect-free cycles (1,048 real database attempts submitted, 100% deterministic score 141.9/150 pts).
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 290 — SIDE PANEL PERPETUAL ALPHABETICAL ORDERING FOR ABCD GROUPS [COMPLETE]
-
-- [x] Task 1: Audit admin sidebar navigation structure across all 4 ABCD domains (`A — ADMIN`, `B — BOARD`, `C — CLASS`, `D — SYSTEM & DATA`).
-- [x] Task 2: Reorder static HTML in `admin.html`:
-  - Domain A: Curriculum (`classes-hub`) $\rightarrow$ Dashboard (`dashboard`) $\rightarrow$ Organization (`organization`).
-  - Domain B: `#sidebar-programs-list` $\rightarrow$ Students Registration (`student-registration`).
-  - Domain C: `#sidebar-classes-list` $\rightarrow$ Test Analytics (`tests`) $\rightarrow$ Vocabulary Vault (`vocab_vault`).
-  - Domain D: Modules (`modules`) $\rightarrow$ System Settings (`settings`).
-- [x] Task 3: Configure `display: contents;` in `css/admin.css` for `#sidebar-programs-list`, `#sidebar-classes-list`, `.sidebar-program-group`, and `.sidebar-class-group` ensuring seamless flexbox item flow and `order` support.
-- [x] Task 4: Implement `sortAllSidebarDomains()` and `initSidebarAlphabeticalObserver()` with `requestAnimationFrame` debouncing in `js/admin/admin-init.js` for continuous alphabetical persistence.
-- [x] Task 5: Change batch sorting from descending to ascending (`(a.name).localeCompare(b.name, undefined, { numeric: true })`) in `js/admin/app.js` and ensure sorted cache persistence.
-- [x] Task 6: Verify with automated tests `scripts/test_sidebar_alphabetical_verification.cjs`, `scripts/check_all_js_syntax.cjs`, and parity suites (100% PASS).
+## PHASE 292 — VOCABULARY VAULT INSTITUTION, PROGRAM & LEVEL INTEGRATION [COMPLETE]
+- Update `fetchVaultWords` in `js/api.js` to select joined relations `institutions(id, name, code)` and `programs(id, name, code)`.
+- Update `js/admin/vocab-vault.js` Words and Phrases grid table:
+- Overhaul `Topic Blueprint` in `js/admin/vocab-vault.js`:
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 285 — VOCAB 7×7 & LEVEL PROGRESSION MASTER SYSTEM [COMPLETE]
-
-### 🔴 Phase 1: Total Terminology Unification (Quiz $\rightarrow$ Task 100%) [COMPLETE]
-- [x] Task 1.1: `AGENTS.md` update hierarchy & display formula from `Quiz` to `Task` (Rule 1.3, 1.4, 2.5, 2.6).
-- [x] Task 1.2: `js/dashboard.js`: Replace all `isQuiz` / `Quiz` references, badges, and labels with `isTask` / `Task`.
-- [x] Task 1.3: `js/admin/app.js`: Update metric summary chips and table category renderer from `Quizzes` $\rightarrow$ `Tasks`.
-- [x] Task 1.4: `js/admin/vocab-vault.js`: Update bottom infobar labels from `Quizzes:` $\rightarrow$ `Tasks:`.
-- [x] Task 1.5: `js/admin/crud-modals.js` & `js/admin/auto-gen-modal.js`: Modernize all modal labels, alerts, and placeholders from `Quiz` $\rightarrow$ `Task`.
-- [x] Task 1.6: `supabase/seed.sql` & Database: Standardize all test titles containing `* Quiz` to `* Task` and shell codes to `*-TASK`.
-
-### 🟡 Phase 2: Engine 7×7 Repetitive Mastery & Hard Gate Exam [COMPLETE]
-- [x] Task 2.1: `js/api.js`: Implement `fetchStudentTaskPassCounts(studentId, classId)` calculating passed attempts ($\ge 70\%$).
-- [x] Task 2.2: `js/dashboard.js`: Render dynamic `task-progress-chip` with `X/7` status per Task row.
-- [x] Task 2.3: `css/dashboard.css`: Implement 5-tier gamified color palette (Red `0/7`, Orange `1-2`, Yellow `3-4`, Lime `5-6`, Green Star `7/7`).
-- [x] Task 2.4: `js/dashboard.js` & `js/test.js`: Enforce Hard Gate — lock Exam button 🔒 until all Tasks in that topic reach `7/7 Complete`.
-- [x] Task 2.5: Automated test: Create and verify test script `scripts/test_task_7x7_logic.mjs`.
-
-### 🟡 Phase 3: Exam Words Written Mode & Passing Score 70% [COMPLETE]
-- [x] Task 3.1: Database: Ensure `answer_type = 'written'` on all Words Exam records.
-- [x] Task 3.2: `js/test.js`: Verify text input `<input type="text">` rendering with Damerau-Levenshtein typo tolerance (Rule 2.13).
-- [x] Task 3.3: `supabase/functions/start-test/index.ts` & `js/dashboard.js`: Standardize passing score threshold to $\ge 70\%$.
-- [x] Task 3.4: Automated test: Update and verify test script `scripts/test_sequential_exam_prerequisite.mjs` with 70% threshold.
-
-### 🟢 Phase 4: Class 2nd Vocabulary (Batch 134) Activation [COMPLETE]
-- [x] Task 4.1: Reactivate `2nd Vocabulary` class (`VOCAB_2ND`, Level: `2nd Level`) in Supabase database.
-- [x] Task 4.2: Verify Level 2 Theme A & B curriculum is strictly Words-Only (no phrases).
-- [x] Task 4.3: Connect Batch 134 to `2nd Level` to automatically inherit `2nd Vocabulary`.
-
-### 🔵 Phase 5: Level Progression System, Lifecycle Actions UI, Batch Transfer & Skor F [COMPLETE]
-- [x] Task 5.1: `levels` table synchronization: update Level 0 to `Alumni` (Description: `Completed`), update `toOrdinalLevel(0)` to `'Alumni'`.
-- [x] Task 5.2: `js/admin/student-management.js`: Implement Lifecycle actions: `NEXT` (promote), `HOLD` (locked), `RETRY` (repeat attempt), and `REPEAT` (re-enroll Alumni).
-- [x] Task 5.3: Implement `Transfer Batch` modal with `Inherit Batch Level` option.
-- [x] Task 5.4: Implement Remedial Cap 60% (`60%ᴿ` Yellow C) and `Skor F (Forgiven)` pure score modal (`55%ᶠ` Red E) with audit log for Mr. Top.
-- [x] Task 5.5: `admin.html#students`: Implement dedicated `🎓 Alumni` tab with `Program - Batch` header filter.
-- [x] Task 5.6: `js/dashboard.js`: Implement Cumulative Retroactive Access (`level_number <= student_level_number`) and Alumni Universal Access via Class button.
-
-### 🟣 Phase 6: Multi-Tenant Vocabulary Vault & 11-Column Import/Export [COMPLETE]
-- [x] Task 6.1: Add `institution_id` and `program_id` columns to `vocabulary_vault`.
-- [x] Task 6.2: Attribute all existing `vocabulary_vault` records to CEC (`f51d4c2c-7c24-42ef-8d8f-b0f3e524a447`) and Camp (`11deb53c-434a-44b0-83ca-1cc9b239cab3`).
-- [x] Task 6.3: `js/admin/crud-modals.js`: Implement cascading dropdowns `[Institution] -> [Program] -> [Class] -> [Level]` for Test creation.
-- [x] Task 6.4: `js/api.js` & `js/admin/vocab-vault.js`: Update Excel import & export to official 11-column standard (`Institution`, `Program`, `Level`, `Category`, `Theme Code`, `Theme`, `Topic Code`, `Topic`, `Type`, `Indonesian`, `English`).
-- [x] Task 6.5: `js/api.js:autoGenerateTestsHierarchy`: Filter vault words strictly matching active class `institution_id + program_id + target_level`.
-
-### 🏁 Phase 7: Full E2E Check System (10× Consecutive Pass Protocol) [COMPLETE]
-- [x] Task 7.1: Build master E2E test runner `scripts/test_vocab_7x7_and_leveling_e2e.mjs`.
-- [x] Task 7.2: Run 10 consecutive full realtime E2E test cycles across all 6 pillars.
-- [x] Task 7.3: Enforce Zero-Defect Policy: auto-restart to Cycle 1 on any failure until 10/10 runs pass with 0 errors.
+## PHASE 290 — SIDE PANEL PERPETUAL ALPHABETICAL ORDERING FOR ABCD GROUPS [COMPLETE]
+- Audit admin sidebar navigation structure across all 4 ABCD domains (`A — ADMIN`, `B — BOARD`, `C — CLASS`, `D — SYSTEM & DATA`).
+- Reorder static HTML in `admin.html`:
+- Configure `display: contents;` in `css/admin.css` for `#sidebar-programs-list`, `#sidebar-classes-list`, `.sidebar-program-group`, and `.sidebar-class-group` ensuring seamless flexbox item flow and...
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 279 — MILESTONE DENOMINATOR STANDARDIZATION & ROSTER MONOTONICITY [COMPLETE]
-
-- [x] Task 1: Standardized `computeMilestoneExamMastery` denominator in `js/grading.js` to use `Math.max(canonicalMax, attemptTotalQ)` (1,900 points canonical curriculum) to eliminate early test version denominator compression.
-- [x] Task 2: Restored Syazida Shinda Debi canonical denominator to 1,900 PTS ($1308.5 / 1900 = 69\% \rightarrow \text{Grade C}$), achieving strict grade monotonicity.
-- [x] Task 3: Inserted Muhammad Alimae Pasya Theme B offline score (147 PTS) into Supabase PostgreSQL, bringing total points to 264.5 PTS.
-- [x] Task 4: Permanently resolved IDE save conflict by configuring `"files.autoSave": "onFocusChange"` and `"files.saveConflictResolution": "overwriteFileOnDisk"`.
-- [x] Task 5: Verified DataGrid DOM null-guards across all methods and confirmed 0 console errors.
-- [x] Task 6: Bumped cache busters across application to `v103` and service worker to `v52`.
+## PHASE 285 — VOCAB 7×7 & LEVEL PROGRESSION MASTER SYSTEM [COMPLETE]
+- Task 1.1: `AGENTS.md` update hierarchy & display formula from `Quiz` to `Task` (Rule 1.3, 1.4, 2.5, 2.6).
+- Task 1.2: `js/dashboard.js`: Replace all `isQuiz` / `Quiz` references, badges, and labels with `isTask` / `Task`.
+- Task 1.3: `js/admin/app.js`: Update metric summary chips and table category renderer from `Quizzes` $\rightarrow$ `Tasks`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 278 — SMART WEB PROCTORED SHIELD & FULLSCREEN INTEGRATION [COMPLETE]
-
-- [x] Task 1: Implemented Fullscreen API auto-activation via pre-exam focus modal `#pre-exam-focus-modal` with DND checklist in `js/test.js`.
-- [x] Task 2: De-weaponized long-press touch gestures on mobile devices by suppressing `contextmenu` events without cheat strikes.
-- [x] Task 3: Hardened test runner touch selection and callouts in `css/test.css`.
-- [x] Task 4: Configured 10-second `_blurGraceTimer` to absorb temporary system or WhatsApp notification banners.
-- [x] Task 5: Extended warning countdown to 60 seconds with calm chime (`startCalmTone`) to prevent student panic.
+## PHASE 279 — MILESTONE DENOMINATOR STANDARDIZATION & ROSTER MONOTONICITY [COMPLETE]
+- Standardized `computeMilestoneExamMastery` denominator in `js/grading.js` to use `Math.max(canonicalMax, attemptTotalQ)` (1,900 points canonical curriculum) to eliminate early test version denomina...
+- Restored Syazida Shinda Debi canonical denominator to 1,900 PTS ($1308.5 / 1900 = 69\% \rightarrow \text{Grade C}$), achieving strict grade monotonicity.
+- Inserted Muhammad Alimae Pasya Theme B offline score (147 PTS) into Supabase PostgreSQL, bringing total points to 264.5 PTS.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 269 — FULL-HEIGHT WORKSPACE, CUMULATIVE CURRICULUM GRADING & GREEN TEST BASELINE [COMPLETE]
-
-- [x] Task 1: Verified `#student-grid-container` and its parent `.admin-content:has(#student-grid-container)` flex layout fills 100% of workspace height (`calc(100vh - 50px - 50px)`), eliminating empty black space above `#bottom-ad-banner`.
-- [x] Task 2: Updated `scripts/test_student_dashboard_exam_parity.mjs` assertions to reflect authoritative cumulative curriculum mastery (Pasya 90/1900 pts = 5% Grade E).
-- [x] Task 3: Verified all automated test suites pass 100% (`npm.cmd test`, `test:grading`, `test:prereq`, `test:duration`).
-- [x] Task 4: Committed and pushed changes to `origin main` (commit `5073ef8`).
+## PHASE 278 — SMART WEB PROCTORED SHIELD & FULLSCREEN INTEGRATION [COMPLETE]
+- Implemented Fullscreen API auto-activation via pre-exam focus modal `#pre-exam-focus-modal` with DND checklist in `js/test.js`.
+- De-weaponized long-press touch gestures on mobile devices by suppressing `contextmenu` events without cheat strikes.
+- Hardened test runner touch selection and callouts in `css/test.css`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 268 — REDUNDANT TOOLBAR ELIMINATION & STRICT 10PX PANEL SPACING [COMPLETE]
-
-- [x] Task 1: Completely removed redundant `Search... (Ctrl+K)` and `[Columns]` toolbar above the Class Hub attendance matrix using `hideToolbar: true` in `DataGrid` constructor and CSS display none rules.
-- [x] Task 2: Standardized all panel gaps, card distances, and layout margins to strictly **10px** across `css/admin.css` and `css/dashboard.css`.
-- [x] Task 3: Maximized workspace height and width with 0 wasted empty areas down to the footer infobar.
-- [x] Task 4: Bumped cache busters to `?v=20261101_v97` and service worker cache to `topscore-cache-option-a-v45`.
+## PHASE 269 — FULL-HEIGHT WORKSPACE, CUMULATIVE CURRICULUM GRADING & GREEN TEST BASELINE [COMPLETE]
+- Verified `#student-grid-container` and its parent `.admin-content:has(#student-grid-container)` flex layout fills 100% of workspace height (`calc(100vh - 50px - 50px)`), eliminating empty black spa...
+- Updated `scripts/test_student_dashboard_exam_parity.mjs` assertions to reflect authoritative cumulative curriculum mastery (Pasya 90/1900 pts = 5% Grade E).
+- Verified all automated test suites pass 100% (`npm.cmd test`, `test:grading`, `test:prereq`, `test:duration`).
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 267 — ARI & AUNUL SCORE AUDIT & STRICT INTER-THEME GATING [COMPLETE]
-
-- [x] Task 1: Audited all attempts across Supabase database for Aunul Fikri Yasir and Ari Wahyu Darma, confirming high quiz scores (87.5% - 100%) and clarifying the `ALL (EXAMS ONLY)` vs `THEME A (8)` matrix view filtering.
-- [x] Task 2: Eliminated unshielded `isSessLive` prerequisite override in `js/dashboard.js`, ensuring live tutor sessions still enforce strict prior-theme academic passing criteria.
-- [x] Task 3: Enforced universal Inter-Theme prerequisite gating across `js/dashboard.js`, `js/api.js`, `supabase/functions/start-test/index.ts`, and `js/admin/tests-access.js`.
-- [x] Task 4: Synchronized cache busters to `?v=20261101_v95` and service worker to `topscore-cache-option-a-v43`.
+## PHASE 268 — REDUNDANT TOOLBAR ELIMINATION & STRICT 10PX PANEL SPACING [COMPLETE]
+- Completely removed redundant `Search... (Ctrl+K)` and `[Columns]` toolbar above the Class Hub attendance matrix using `hideToolbar: true` in `DataGrid` constructor and CSS display none rules.
+- Standardized all panel gaps, card distances, and layout margins to strictly **10px** across `css/admin.css` and `css/dashboard.css`.
+- Maximized workspace height and width with 0 wasted empty areas down to the footer infobar.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 266 — PROGRESS-FIRST RANKING, CUMULATIVE CURRICULUM GRADING & CROSS-THEME PREREQUISITE GATING [COMPLETE]
-
-- [x] Task 1: Re-ordered leaderboard comparator in `js/admin/app.js`: `PROG %` DESC (Progress First) -> `PTS` DESC (Total Exam Points) -> `SCORE %` DESC -> `lastSubmittedAt` ASC.
-- [x] Task 2: Upgraded `computeMilestoneExamMastery` in `js/grading.js` to derive Grade and Overall Score from total points earned divided by total expected curriculum points (1,900 points on 3rd Vocabulary), eliminating artificial grade inflation for low-progress students.
-- [x] Task 3: Added Cross-Theme Sequential Exam Prerequisite in `evaluateStudentsEligibility` (`js/admin/tests-access.js`), client fallback `startTest` (`js/api.js`), and Edge Function `start-test`: taking Theme B, C, or D strictly requires passing all exams in the prior theme (>= 60%).
-- [x] Task 4: Passed deep code health audit with 0 errors, bumped cache buster to `?v=20261101_v94` and service worker to `topscore-cache-option-a-v42`.
+## PHASE 267 — ARI & AUNUL SCORE AUDIT & STRICT INTER-THEME GATING [COMPLETE]
+- Audited all attempts across Supabase database for Aunul Fikri Yasir and Ari Wahyu Darma, confirming high quiz scores (87.5% - 100%) and clarifying the `ALL (EXAMS ONLY)` vs `THEME A (8)` matrix vie...
+- Eliminated unshielded `isSessLive` prerequisite override in `js/dashboard.js`, ensuring live tutor sessions still enforce strict prior-theme academic passing criteria.
+- Enforced universal Inter-Theme prerequisite gating across `js/dashboard.js`, `js/api.js`, `supabase/functions/start-test/index.ts`, and `js/admin/tests-access.js`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 265 — FULL-HEIGHT WORKSPACE INTEGRATION FOR STUDENT ROSTER & DATAGRIDS [COMPLETE]
-
-- [x] Task 1: Stripped outer redundant `.card` class and inline padding from `#student-grid-container` in `js/admin/student-management.js`.
-- [x] Task 2: Added full-height flex integration for `.admin-content:has(#student-grid-container)` and primary grid views in `css/admin.css`, filling 100% of the available viewport from topbar to the locked bottom footer.
-- [x] Task 3: Pinned summary row `★ BATCH AVERAGE` at the bottom of the table wrapper with sleek thin scrollbar and mobile responsive query.
-- [x] Task 4: Bumped cache busters to `?v=20261101_v93` and service worker cache to `topscore-cache-option-a-v41`.
+## PHASE 266 — PROGRESS-FIRST RANKING, CUMULATIVE CURRICULUM GRADING & CROSS-THEME PREREQUISITE GATING [COMPLETE]
+- Re-ordered leaderboard comparator in `js/admin/app.js`: `PROG %` DESC (Progress First) -> `PTS` DESC (Total Exam Points) -> `SCORE %` DESC -> `lastSubmittedAt` ASC.
+- Upgraded `computeMilestoneExamMastery` in `js/grading.js` to derive Grade and Overall Score from total points earned divided by total expected curriculum points (1,900 points on 3rd Vocabulary), el...
+- Added Cross-Theme Sequential Exam Prerequisite in `evaluateStudentsEligibility` (`js/admin/tests-access.js`), client fallback `startTest` (`js/api.js`), and Edge Function `start-test`: taking Theme...
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 259 — REAL-TIME DYNAMIC PACING BADGE IN TEST RUNNER [COMPLETE]
-
-- [x] Task 1: Added real-time pacing indicator pill `#test-pacing-indicator` calculating seconds-per-unanswered-question on every timer tick in `js/test.js`.
-- [x] Task 2: Styled 3 pacing states in `css/test.css`: Comfortable (>= 30s/q, Green), Moderate (15s–29s/q, Yellow), Urgent (< 15s/q, Pulsing Red).
-- [x] Task 3: Verified 40/40 JS syntax checks PASS and 0 console errors across all 5 primary entrypoints.
-- [x] Task 4: Synchronized cache busters to `?v=20261101_v89`.
+## PHASE 265 — FULL-HEIGHT WORKSPACE INTEGRATION FOR STUDENT ROSTER & DATAGRIDS [COMPLETE]
+- Stripped outer redundant `.card` class and inline padding from `#student-grid-container` in `js/admin/student-management.js`.
+- Added full-height flex integration for `.admin-content:has(#student-grid-container)` and primary grid views in `css/admin.css`, filling 100% of the available viewport from topbar to the locked bott...
+- Pinned summary row `★ BATCH AVERAGE` at the bottom of the table wrapper with sleek thin scrollbar and mobile responsive query.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 258 — CLASSROOM 3D FLASHCARD DRILL DI CLASS HUB [COMPLETE]
-
-- [x] Task 1: Added interactive `🎴 Drill` button in each Theme column header of the Bottlenecks board in `js/admin/tests-management.js`.
-- [x] Task 2: Injected `class-flashcard-modal` in `admin.html` with front-back 3D flipping, native audio pronunciation, and presenter keyboard shortcuts (Space, Arrow keys, P).
-- [x] Task 3: Enabled live classroom presentation of top bottleneck vocabulary on TV/projector screens.
-- [x] Task 4: Verified 40/40 JS syntax checks PASS, E2E console tests PASS.
+## PHASE 259 — REAL-TIME DYNAMIC PACING BADGE IN TEST RUNNER [COMPLETE]
+- Added real-time pacing indicator pill `#test-pacing-indicator` calculating seconds-per-unanswered-question on every timer tick in `js/test.js`.
+- Styled 3 pacing states in `css/test.css`: Comfortable (>= 30s/q, Green), Moderate (15s–29s/q, Yellow), Urgent (< 15s/q, Pulsing Red).
+- Verified 40/40 JS syntax checks PASS and 0 console errors across all 5 primary entrypoints.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 257 — MODULAR MILESTONE CHUNKS & EXAM FATIGUE ELIMINATION [COMPLETE]
-
-- [x] Task 1: Implemented automatic milestone chunking for cumulative multi-theme exams (such as Theme D High-Frequency Words Exam with 640 questions) in `js/test.js`.
-- [x] Task 2: Dynamically structured questions into 4 sequential Milestone Sections (Theme A, B, C, D) with `Next Milestone ➔` navigation.
-- [x] Task 3: Grouped question navigation matrix into foldable chapter blocks, eliminating mobile DOM lag and cognitive fatigue.
-- [x] Task 4: Preserved single authoritative PostgreSQL timer and attempt lifecycle without database schema modification.
+## PHASE 258 — CLASSROOM 3D FLASHCARD DRILL DI CLASS HUB [COMPLETE]
+- Added interactive `🎴 Drill` button in each Theme column header of the Bottlenecks board in `js/admin/tests-management.js`.
+- Injected `class-flashcard-modal` in `admin.html` with front-back 3D flipping, native audio pronunciation, and presenter keyboard shortcuts (Space, Arrow keys, P).
+- Enabled live classroom presentation of top bottleneck vocabulary on TV/projector screens.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 256 — SMART BOTTLENECK PRACTICE DI STUDENT LOBBY [COMPLETE]
-
-- [x] Task 1: Implemented `setupLobbyFlashcards()` and `openLobbyFlashcardsForAttempt()` in `js/dashboard.js`.
-- [x] Task 2: Added `🎯 Focus Practice: X Missed Words` trigger button in Achievement Status card and `🎯 Practice Missed Words` button on locked remedial exam cards in `dashboard.html`.
-- [x] Task 3: Universalized 3D flashcard modal styling in `css/style.css` with 3D card flipping and native TTS pronunciation audio.
-- [x] Task 4: Preserved URL hash route `#practice` per Rule 2.20.
+## PHASE 257 — MODULAR MILESTONE CHUNKS & EXAM FATIGUE ELIMINATION [COMPLETE]
+- Implemented automatic milestone chunking for cumulative multi-theme exams (such as Theme D High-Frequency Words Exam with 640 questions) in `js/test.js`.
+- Dynamically structured questions into 4 sequential Milestone Sections (Theme A, B, C, D) with `Next Milestone ➔` navigation.
+- Grouped question navigation matrix into foldable chapter blocks, eliminating mobile DOM lag and cognitive fatigue.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 250 — ACTIVE BATCH AUTO-SELECTION, SIDEBAR SYNCHRONIZATION & CACHE V81 [COMPLETE]
-
-- [x] Task 1: Scoped sidebar Domain B strictly to active batches (`is_active: true`), hiding inactive/past batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality SH-26`, `Hospitality TP-26`).
-- [x] Task 2: Added auto-detection and selection of the active batch in `student-management.js` and synchronized the active highlight class on the sidebar item.
-- [x] Task 3: Formatted `#topbar-title` to display Program + Batch name (e.g. `Camp 133`).
-- [x] Task 4: Removed redundant columns (`INSTITUTION`, `PROGRAM`, `BATCH`, `ENROLLED`, `STATUS`) from Student Roster table.
-- [x] Task 5: Verified 0 rogue color matches across 57 files (`scripts/deep_color_audit.mjs`).
-- [x] Task 6: Headless Chrome E2E health check passed with 0 console errors across all 5 primary pages.
-- [x] Task 7: Cache busters synchronized to `?v=20261101_v81`.
+## PHASE 256 — SMART BOTTLENECK PRACTICE DI STUDENT LOBBY [COMPLETE]
+- Implemented `setupLobbyFlashcards()` and `openLobbyFlashcardsForAttempt()` in `js/dashboard.js`.
+- Added `🎯 Focus Practice: X Missed Words` trigger button in Achievement Status card and `🎯 Practice Missed Words` button on locked remedial exam cards in `dashboard.html`.
+- Universalized 3D flashcard modal styling in `css/style.css` with 3D card flipping and native TTS pronunciation audio.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 246 — STUDENT ROSTER BATCH SCOPE & DEFAULT ACTIVE TAB [COMPLETE]
-
-- [x] Task 1: Scoped student roster topbar status counts (`Active`, `Inactive`, `All`) strictly to `window._filterBatchId` (or active batches in program if no specific batch is selected).
-- [x] Task 2: Resolved root cause of 28 inactive / 50 total students (historical batches in Camp program). For Batch 133, counts are now precisely Active: 22, Inactive: 2, All: 24.
-- [x] Task 3: Ensured opening Student Roster always defaults to the **Active Students** (`active`) tab first, eliminating disorienting starts on `All Students`.
-- [x] Task 4: Verified 40/40 JS syntax checks PASS, `scripts/test_student_roster_counts_and_active_default.mjs` PASS.
+## PHASE 250 — ACTIVE BATCH AUTO-SELECTION, SIDEBAR SYNCHRONIZATION & CACHE V81 [COMPLETE]
+- Scoped sidebar Domain B strictly to active batches (`is_active: true`), hiding inactive/past batches (`Camp 132`, `Camp 131`, `Camp 123`, `Hospitality SH-26`, `Hospitality TP-26`).
+- Added auto-detection and selection of the active batch in `student-management.js` and synchronized the active highlight class on the sidebar item.
+- Formatted `#topbar-title` to display Program + Batch name (e.g. `Camp 133`).
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 245 — COMPREHENSIVE STUDENT DIFFICULTY ANALYSIS & EXAM SYSTEM PROPOSAL [COMPLETE]
-
-- [x] Task 1: Investigated 94,746 attempt answers in Supabase to diagnose root causes of student bottlenecks and timeouts across Themes A, B, C, D.
-- [x] Task 2: Discovered 1,528 `CHEAT_ATTEMPT` audit logs caused by mobile virtual keyboard `window.blur` events and implemented mobile guard in `js/test.js`.
-- [x] Task 3: Extended cheat countdown grace period from 10s to 30s before auto-submit.
-- [x] Task 4: Upgraded `classifyStudentError` to use `cleanPunctuationAndSymbols` for hyphenated/spaced compound words (`well-written` vs `well written`).
-- [x] Task 5: Conducted exhaustive student-by-student cross-check of all 22 active students in Batch 133, verifying 100% pure student scores without artificial overrides.
-- [x] Task 6: Authored comprehensive analytical proposal `STUDENT_DIFFICULTY_AND_EXAM_SYSTEM_PROPOSAL.md`.
+## PHASE 246 — STUDENT ROSTER BATCH SCOPE & DEFAULT ACTIVE TAB [COMPLETE]
+- Scoped student roster topbar status counts (`Active`, `Inactive`, `All`) strictly to `window._filterBatchId` (or active batches in program if no specific batch is selected).
+- Resolved root cause of 28 inactive / 50 total students (historical batches in Camp program). For Batch 133, counts are now precisely Active: 22, Inactive: 2, All: 24.
+- Ensured opening Student Roster always defaults to the **Active Students** (`active`) tab first, eliminating disorienting starts on `All Students`.
 
 ---
 
-
-
-- [x] Task 1: Streamlined Gender display across Student Roster (`#students`) and Class Students Tab (`#class-hub?tab=students`) to pure bold `M` (`#38bdf8`) and `F` (`#f472b6`) without unicode icons (`♂`/`♀`).
-- [x] Task 2: Replaced redundant `Score`, `Grd`, and `Progress` columns on Student Roster with 4 dedicated `Exam 1`, `Exam 2`, `Exam 3`, `Exam 4` columns representing each theme's total exam points.
-- [x] Task 3: Verified 100% parity between Student Roster exam points and Class Hub Attendance matrix for all students in Batch 133.
-- [x] Task 4: Removed non-existent column `tests.total_questions` from query so all 40 class tests load flawlessly without falling back to dashes.
-- [x] Task 5: Bumped cache busters across all entrypoints and modules to `?v=20261101_v73`.
-- [x] Task 6: Verified 40/40 JS files syntax validation PASS (`node --check`).
+## PHASE 245 — COMPREHENSIVE STUDENT DIFFICULTY ANALYSIS & EXAM SYSTEM PROPOSAL [COMPLETE]
+- Investigated 94,746 attempt answers in Supabase to diagnose root causes of student bottlenecks and timeouts across Themes A, B, C, D.
+- Discovered 1,528 `CHEAT_ATTEMPT` audit logs caused by mobile virtual keyboard `window.blur` events and implemented mobile guard in `js/test.js`.
+- Extended cheat countdown grace period from 10s to 30s before auto-submit.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 237 — FIX TEST ANALYTICS PACING DRAWER DOM LEAK ON CLASS HUB [COMPLETE]
-
-- [x] Task 1: Diagnosed DOM leak where `#tac-pacing-drawer` was appended to `document.body` while its CSS lived in transient `<style>` in `#admin-content-area`.
-- [x] Task 2: Relocated all pacing drawer CSS rules permanently into `css/admin.css` with persistent fixed positioning and backdrop styling.
-- [x] Task 3: Implemented automated cleanup in `loadSection()` (`js/admin/app.js`) to unmount any orphaned drawer and backdrop when navigating away from `#tests`.
-- [x] Task 4: Verified 40/40 JS syntax checks PASS, visual verification confirms no orphan tables below Class Hub matrix.
+## PHASE 237 — FIX TEST ANALYTICS PACING DRAWER DOM LEAK ON CLASS HUB [COMPLETE]
+- Diagnosed DOM leak where `#tac-pacing-drawer` was appended to `document.body` while its CSS lived in transient `<style>` in `#admin-content-area`.
+- Relocated all pacing drawer CSS rules permanently into `css/admin.css` with persistent fixed positioning and backdrop styling.
+- Implemented automated cleanup in `loadSection()` (`js/admin/app.js`) to unmount any orphaned drawer and backdrop when navigating away from `#tests`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 235 — PURE ACADEMIC DATA RESTORATION & ELIMINATION OF ALL FORGIVEN & REMEDIAL OVERRIDES [COMPLETE]
-
-- [x] Task 1: Stripped `forgiven_student_ids` from ALL 40 tests in `3rd Vocabulary` in Supabase database.
-- [x] Task 2: Removed all ad-hoc Forgiven and Remedial override logic, toolbar buttons (`⚡ Forgive`), student row triggers, and red `^F` superscript renderers from `js/admin/app.js` and `css/admin.css`.
-- [x] Task 3: Restored authentic test progression (PROG %): only tests with genuine submitted attempts increment progress.
-- [x] Task 4: Restored genuine theme summary columns (`SCORE THEME %`, `TOT EXAM PTS`): unattempted themes render clean neutral dots (`·`) instead of 0% or `0%^F`.
-- [x] Task 5: Cleaned leftover synthetic `correct_count` anomalies on zero-answer attempts and synchronized `is_best_score = true` across 1,480 attempts.
-- [x] Task 6: Verified 100% authentic student exam and quiz scores, points, and grades without artificial inflation or synthetic overrides.
+## PHASE 235 — PURE ACADEMIC DATA RESTORATION & ELIMINATION OF ALL FORGIVEN & REMEDIAL OVERRIDES [COMPLETE]
+- Stripped `forgiven_student_ids` from ALL 40 tests in `3rd Vocabulary` in Supabase database.
+- Removed all ad-hoc Forgiven and Remedial override logic, toolbar buttons (`⚡ Forgive`), student row triggers, and red `^F` superscript renderers from `js/admin/app.js` and `css/admin.css`.
+- Restored authentic test progression (PROG %): only tests with genuine submitted attempts increment progress.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 210 — FULL ROUTE & SUB-TAB STATE PERSISTENCE ALIGNMENT (RULE 2.20) [COMPLETE]
-
-- [x] Task 1: Synchronized `history.replaceState` into `_switchClassHubTab` (`#class-hub?tab=...`), `_switchSettingTab` (`#settings?tab=...`), `_switchVaultTab` (`#vocab_vault?tab=...`), `_switchStudentRegTab` (`#student-registration?tab=...`), and `_switchClassTestAnalytics` (`#tests?class_id=...`).
-- [x] Task 2: Verified bidirectional sync between URL address bar, `localStorage`, and view rendering.
-- [x] Task 3: Eliminated disorienting redirects on browser refresh (F5) or background data sync.
-- [x] Task 4: Bumped cache busters across `admin.html` to `?v=20261031_v50`.
-- [x] Task 5: Verified 40/40 JS syntax checks PASS, 100% dashboard parity, 0 git commit / 0 git push.
+## PHASE 210 — FULL ROUTE & SUB-TAB STATE PERSISTENCE ALIGNMENT (RULE 2.20) [COMPLETE]
+- Synchronized `history.replaceState` into `_switchClassHubTab` (`#class-hub?tab=...`), `_switchSettingTab` (`#settings?tab=...`), `_switchVaultTab` (`#vocab_vault?tab=...`), `_switchStudentRegTab` (...
+- Verified bidirectional sync between URL address bar, `localStorage`, and view rendering.
+- Eliminated disorienting redirects on browser refresh (F5) or background data sync.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 209 — CLASS HUB DATAGRID CLEAN TYPOGRAPHY GRADE ALIGNMENT [COMPLETE]
-
-- [x] Task 1: Replaced dense filled circular badges (`grade-circle`) in Class Attendance DataGrid with sleek, bold colored typography (`.grid-grade-val`).
-- [x] Task 2: Harmonized `GRD`, `PROG`, and `PTS` into a unified typography hierarchy without button-like circle distractions in data rows.
-- [x] Task 3: Rendered Star tier (★) with pure green color (`--grade-star`) and subtle glow (`--grade-star-glow`) at `0.92rem`.
-- [x] Task 4: Rendered Letters A-E crisp at `0.86rem` with `font-weight: 800`.
-- [x] Task 5: Updated summary footer row (`avgGradeBadge`) to match clean typography standard.
-- [x] Task 6: Added `.grid-grade-val` and `.grid-grade-val.grid-grade-star` rules in `css/admin.css`.
-- [x] Task 7: Verified 40/40 JS syntax checks PASS, 100% parity PASS.
+## PHASE 209 — CLASS HUB DATAGRID CLEAN TYPOGRAPHY GRADE ALIGNMENT [COMPLETE]
+- Replaced dense filled circular badges (`grade-circle`) in Class Attendance DataGrid with sleek, bold colored typography (`.grid-grade-val`).
+- Harmonized `GRD`, `PROG`, and `PTS` into a unified typography hierarchy without button-like circle distractions in data rows.
+- Rendered Star tier (★) with pure green color (`--grade-star`) and subtle glow (`--grade-star-glow`) at `0.92rem`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 208 — TEST ANALYTICS DRILL-DOWN STATE ALIGNMENT & CACHE REFRESH [COMPLETE]
-
-- [x] Task 1: Attached `hardestQs20` and `themeTop20` directly onto `window._testAnalyticsState` for drill-down modal parity (`cardKey === 'wall'`).
-- [x] Task 2: Updated `_openTestDetailDrawer` to filter submitted attempts only and exclude timeout blanks from per-test hardest question calculations.
-- [x] Task 3: Bumped cache busters across `admin.html` and `js/admin/app.js` to `?v=20261031_v48`.
-- [x] Task 4: Verified 40/40 JS files syntax passing cleanly, 0 git commit / 0 git push.
+## PHASE 208 — TEST ANALYTICS DRILL-DOWN STATE ALIGNMENT & CACHE REFRESH [COMPLETE]
+- Attached `hardestQs20` and `themeTop20` directly onto `window._testAnalyticsState` for drill-down modal parity (`cardKey === 'wall'`).
+- Updated `_openTestDetailDrawer` to filter submitted attempts only and exclude timeout blanks from per-test hardest question calculations.
+- Bumped cache busters across `admin.html` and `js/admin/app.js` to `?v=20261031_v48`.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 207 — TEST ANALYTICS SUBMITTED-ATTEMPT ISOLATION [COMPLETE]
-
-- [x] Task 1: Isolated Test Analytics question and error calculations to officially submitted student attempts (`att.status === 'submitted' || att.status === 'auto_submitted' || att.submitted_at`).
-- [x] Task 2: Filtered out unsubmitted drafts and abandoned in-progress sessions.
-- [x] Task 3: Automated verification: 40/40 JS syntax checks PASS, 100% classifier tests PASS.
-
----
-
-# ACTIVE DIRECTIVE: PHASE 206 — SCREEN, SUB-TAB & ROUTE STATE PERSISTENCE ON RELOAD / DYNAMIC UPDATE [COMPLETE]
-
-- [x] Task 1: Decoupled URL Hash Route & Query Parsing (`parseHashRoute` in `js/admin/app.js`)
-  - Extracted base sections, sub-tabs (`/` or `:`), and URL search parameters (`?`).
-  - Expanded `aliasSectionMap` and `sectionTitles` for 100% route recognition (`vocabulary`, `system-settings`, `test-analytics`, `test-sessions`, `batches`, `programs`).
-  - Synchronized background route restoration when opening `#profile-<studentId>`.
-
-- [x] Task 2: Sub-Tab & Active Filter State Synchronization across Admin Views
-  - Class Hub: Persisted active sub-tab (`topscore_admin_class_hub_tab`) and selected class ID (`topscore_selected_class_id`).
-  - Test Analytics: Persisted selected class track filter (`topscore_admin_tests_class_id`).
-  - Vocabulary Vault: Persisted active tab (`topscore_admin_vault_tab`).
-  - System Settings: Persisted active tab (`topscore_admin_settings_tab`).
-  - Student Registration: Persisted active tab (`topscore_admin_student_reg_tab`).
-
-- [x] Task 3: Modal Hash Routing & Background Continuity across Admin and Student Dashboard
-  - Admin (`js/admin/student-management.js`): Integrated `#profile-<studentId>` and `#dossier-<studentId>` with URL hash and restored background section on close. Preserved active section in remedial and bulk updates.
-  - Student Dashboard (`js/dashboard.js`): Persisted active class selection (`topscore_student_last_class_id`) upon reload and background sync. Synchronized URL hash for `#profile`, `#profile-history`, `#levels-<classId>`, and `#select-class` with `restoreDashboardHashRoute()`.
-  - Codified Section 2.20 in `AGENTS.md` per user `/learn` mandate.
-
-- [x] Task 4: Workspace Settings Optimization & Git Discipline (`.vscode/settings.json`)
-  - Configured smooth scrolling, smooth cursor, bracket guides, function calls completion, side-by-side diff view.
-  - Set `git.autofetch: false` and `git.confirmSync: true` adhering to standing 0 git commit directive.
-
-- [x] Task 5: Testing, Parity Verification & Cache Busting
-  - 40/40 JS syntax checks PASS (`node scripts/check_all_js_syntax.cjs`).
-  - 100% Student Dashboard Parity tests PASS (`scripts/test_student_dashboard_exam_parity.mjs`).
-  - Bumped cache busters to `?v=20261031_v47` across entrypoints.
-  - Logged architectural decision `DECISION-033`.
+## PHASE 207 — TEST ANALYTICS SUBMITTED-ATTEMPT ISOLATION [COMPLETE]
+- Isolated Test Analytics question and error calculations to officially submitted student attempts (`att.status === 'submitted' || att.status === 'auto_submitted' || att.submitted_at`).
+- Filtered out unsubmitted drafts and abandoned in-progress sessions.
+- Automated verification: 40/40 JS syntax checks PASS, 100% classifier tests PASS.
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 184 — 10-ROUND FULL-SYSTEM E2E AUDIT & RELIABILITY GATE [COMPLETE]
-
-- [x] Task 1: 10-Round Verification Battery (`scratch/run_full_system_10_iterations_audit.mjs`)
-  - Executed 10 consecutive full-system iterations across all 8 verification test suites (~17m runtime).
-  - 100% 0-error pass rate achieved across all iterations with exit code 0.
-
-- [x] Task 2: Subagent & Adversarial Audit Synchronization
-  - Updated `js/grading.js`: Disambiguated Grade A color to `#10B981` (eliminating collision with Star tier `★` `#22C55E`).
-  - Updated `scripts/verify_admin_class_hub_ui.mjs`: Corrected ranking assertion to reflect production live ranking (`sukeIdx < sofaIdx`).
-  - Updated `scripts/test_submit_and_duration.mjs`: Relaxed quiz duration assertion to accept standard 5m and 10m configurations.
-  - Updated `.gitignore`: Added `scripts/*.png`.
-
-- [x] Task 3: Comprehensive Verification Gate
-  - `npm test`: 100% PASS (syntax check, cache manifest, student dashboard exam parity).
-  - `node scripts/verify_green_star_grading.mjs`: 100% PASS.
-  - `node scripts/test_submit_and_duration.mjs`: 100% PASS.
-  - `node scripts/verify_admin_class_hub_ui.mjs`: 100% PASS.
+## PHASE 206 — SCREEN, SUB-TAB & ROUTE STATE PERSISTENCE ON RELOAD / DYNAMIC UPDATE [COMPLETE]
+- Decoupled URL Hash Route & Query Parsing (`parseHashRoute` in `js/admin/app.js`)
+- Sub-Tab & Active Filter State Synchronization across Admin Views
+- Modal Hash Routing & Background Continuity across Admin and Student Dashboard
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 174 — ELIMINATION OF PUNCTUATION & CONTRACTION EQUIVALENCE [COMPLETE]
-
-- [x] Task 1: English Contractions & Apostrophe Expansion Pipeline
-  - Built comprehensive `ENGLISH_CONTRACTIONS` dictionary in `js/grading.js`.
-  - Normalized curly/smart quotes (`’`, `‘`, `‚`, `‛`, `` ` ``, `´`) to ASCII `'`.
-  - Fixed order of operations: contractions expanded before symbol stripping.
-  - Handled speech-to-text transcriptions without apostrophes (`im`, `ill`, `dont`, `cant`, `wont`).
-
-- [x] Task 2: Comprehensive Punctuation & Typographical Symbol Elimination
-  - Stripped `.`, `,`, `!`, `?`, `-`, `–`, `—`, `_`, `;`, `:`, `(`, `)`, `[`, `]`, `{`, `}`, `"`, `'`, `` ` ``, `~`, `*`, `&`, `^`, `%`, `$`, `#`, `@`, `+`, `\`, `/`.
-  - Preserved whitespace collapsing and clean trimming.
-
-- [x] Task 3: Server Edge Function Parity
-  - Updated `cleanPunctuationAndSymbols` in `supabase/functions/submit-test/index.ts` with identical contractions mapping.
-  - Bumped Service Worker cache to `topscore-cache-option-a-v20` across all HTML entrypoints.
-
-- [x] Task 4: Automated Verification
-  - 10/10 test cases in `scratch/test_phrase_eval.mjs` passed with 1.0 point (Correct).
-  - 40/40 JS syntax checks passed.
-  - Full CI test suite passed 100%.
+## PHASE 184 — 10-ROUND FULL-SYSTEM E2E AUDIT & RELIABILITY GATE [COMPLETE]
+- 10-Round Verification Battery (`scratch/run_full_system_10_iterations_audit.mjs`)
+- Subagent & Adversarial Audit Synchronization
+- Comprehensive Verification Gate
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 173 — VOCABULARY QUIZ DURATION 5M STANDARDIZATION [COMPLETE]
-
-- [x] Task 1: Update Existing Database Quizzes
-  - Queried 40 tests in Supabase PostgreSQL; updated 16 Words Quizzes from 10m to 5m.
-  - Verified 32/32 Quizzes operate on 5 minutes (`quizzes.every(q => q.working_duration_minutes === 5) === true`).
-  - Verified Exams remain untouched (90m/120m).
-
-- [x] Task 2: Standardize Auto-Generator Default Setting
-  - Updated `js/admin/auto-gen-modal.js`: `prefillTaskDur = 5`, updated input default to 5 minutes.
-  - Updated `js/api.js`: `updateClassTestsConfig` and `autoGenerateTestsHierarchy` default fallbacks set to 5 minutes.
-
-- [x] Task 3: Automated Browser & CI Verification
-  - Live Edge test confirmed table shows `⏱️ 5m` for all quizzes, 0 errors.
-  - `npm.cmd test`: 100% ALL PASS.
+## PHASE 174 — ELIMINATION OF PUNCTUATION & CONTRACTION EQUIVALENCE [COMPLETE]
+- English Contractions & Apostrophe Expansion Pipeline
+- Comprehensive Punctuation & Typographical Symbol Elimination
+- Server Edge Function Parity
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 172 — TRANSFORMATION OF TEST MANAGEMENT INTO "TEST ANALYTICS" HUB [COMPLETE]
-
-- [x] Task 1: Navigation Nomenclature & Section Title Standardization
-  - Renamed menu item in `admin.html` under Domain C to `📊 Test Analytics`.
-  - Updated section title in `js/admin/app.js` to `'Test Analytics'`.
-  - Bumped SW cache to `v19` and registration queries.
-
-- [x] Task 2: 8 High-Density Operational Intelligence Cards Engine (`js/admin/tests-management.js`)
-  - Integrated parallel fetch of `attempts`, `audit_logs`, `students`, and recent `attempt_answers`.
-  - Built 8 Cards: Integrity Radar, Mastery & FAPR, The Wall (Hardest Words), Pacing Velocity, Remedial Watchlist, Test Spectrum, Linguistic Mastery, and AI Speech Quality.
-  - Implemented real Supabase calculations with safe fallback guards.
-
-- [x] Task 3: Enriched 40 Tests Performance DataGrid
-  - Added operational columns: `TAKERS`, `AVG SCORE` (with TopsCore official grade predicates), `REM %` (with official `%ᴿ`), `PACING`, and `INTEGRITY`.
-  - Upgraded onRowClick drawer to Test Analytics & Blueprint Inspector.
-
-- [x] Task 4: Automated Browser & CI Verification
-  - Playwright live Edge browser test: 8/8 cards detected, 40 test rows active, 0 console errors.
-  - Screenshot verified: `test_analytics_verified.png`.
-  - `npm.cmd test`: 100% PASS across 40 JS files and full test suite.
+## PHASE 173 — VOCABULARY QUIZ DURATION 5M STANDARDIZATION [COMPLETE]
+- Update Existing Database Quizzes
+- Standardize Auto-Generator Default Setting
+- Automated Browser & CI Verification
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 171 — UNIFY TOPIC MANAGER & BLUEPRINT INTO ZERO-SCROLL "TOPIC BLUEPRINT" [COMPLETE]
-
-- [x] Task 1: Consolidate Vault Navigation Tabs (`js/admin/vocab-vault.js`)
-  - Merged `Test Blueprint` and `Topic Manager` into single tab `Topic Blueprint`.
-  - Streamlined topbar tabs to 3: `Topic Blueprint`, `Vocabulary Words`, `Phrases & Idioms`.
-
-- [x] Task 2: Implement 4-Thematic Columns Zero-Scroll Grid (`js/admin/vocab-vault.js`)
-  - Created `_renderTopicBlueprintTab` replacing legacy vertical lists.
-  - Divided viewport into 4 equal columns: Theme A Workplace, Theme B Tourism, Theme C CCU, Theme D High-Frequency.
-  - Rendered all 16 topic cards with inline action buttons (✏️ Rename, 🗑️ Delete) and POS breakdown chips (`20V · 10A · 10N · 10P = 50`).
-  - Added anchored Milestone Exam footers for Words Exam and Phrases Exam scales.
-  - Constrained height to `calc(100vh - 120px)`: 0 vertical scroll, 0 horizontal scroll.
-
-- [x] Task 3: Unified Toolbar & Action Controls
-  - Live topic/theme search filter.
-  - `Merge Similar Topics` modal trigger.
-  - `Reset All` vault words trigger.
-  - `⚡ Auto-Generate from Blueprint` trigger (top toolbar and bottom infobar).
-
-- [x] Task 4: Headless Browser & Zero-Scroll Automated Verification
-  - Live test confirmed: 4 columns, 16 topics, 0 console errors, `hasVerticalScroll: false`.
-  - Full test suite `npm.cmd test` passed 100%.
+## PHASE 172 — TRANSFORMATION OF TEST MANAGEMENT INTO "TEST ANALYTICS" HUB [COMPLETE]
+- Navigation Nomenclature & Section Title Standardization
+- 8 High-Density Operational Intelligence Cards Engine (`js/admin/tests-management.js`)
+- Enriched 40 Tests Performance DataGrid
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 170 — RESOLUTION OF TUTOR'S ROOM (CLASS HUB) BLANK RENDERING & ES MODULE PARITY [COMPLETE]
-
-- [x] Task 1: Fix ES Module Export Mismatch for `isExam` (`js/app.js`, `js/api.js`)
-  - Added `isExam` to import from `./grading.js` and export in `js/app.js` and `js/api.js`.
-  - Bound `window.isExam = isExam` and `window.isWeeklyExam = isExam`.
-
-- [x] Task 2: Fix Undeclared `weeklyCompletedStudents` in DataGrid summaryRow (`js/admin/app.js`)
-  - Added alias `const weeklyCompletedStudents = examCompletedStudents;` at line 2042.
-  - Hardened line 2106 to guard `totalEarnedScore` summary style with `hasExamCompletions`.
-
-- [x] Task 3: Cache Synchronization & Version Bumping (`admin.html`, `sw.js`)
-  - Updated `admin.html` script query parameter to `js/admin/app.js?v=20261029`.
-  - Bumped Service Worker cache name to `topscore-cache-option-a-v18`.
-
-- [x] Task 4: Headless Browser & Test Suite Verification
-  - Live Edge Playwright test on `http://127.0.0.1:5500/admin.html#class-hub`: 24/24 student rows detected, 0 console errors.
-  - `npm.cmd test`: 100% PASS (syntax check, SW manifest, student dashboard parity).
-  - Cleaned null bytes from `docs/CHANGELOG.md`.
+## PHASE 171 — UNIFY TOPIC MANAGER & BLUEPRINT INTO ZERO-SCROLL "TOPIC BLUEPRINT" [COMPLETE]
+- Consolidate Vault Navigation Tabs (`js/admin/vocab-vault.js`)
+- Implement 4-Thematic Columns Zero-Scroll Grid (`js/admin/vocab-vault.js`)
+- Unified Toolbar & Action Controls
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 159 — POINTS-FIRST LEADERBOARD RANKING, MILESTONE PROGRESSION & ADMIN TABLE ERGONOMICS [COMPLETE]
-
-- [x] Task 1: Milestone Progression Engine (`js/grading.js`, `js/api.js`, `js/app.js`)
-  - Created authoritative `computeMilestoneExamMastery(examEntries, allClassExams)`.
-  - Passing Milestone Theme $N$ ($\ge 60\%$) queues Milestone Theme $N+1$ into the denominator with 0 earned points.
-  - Zero-exam edge cases return neutral `—` for score/grade and `0 pts`.
-
-- [x] Task 2: Points-First Leaderboard Hierarchy (`js/admin/app.js`, `js/dashboard.js`)
-  - Solved Suke Ajai ranking inversion: primary sort is `Global PTS DESC`.
-  - Tie-breakers: 1st `PTS DESC` -> 2nd `SCORE % DESC` -> 3rd `PROG % DESC` -> 4th `lastSubmittedAt ASC` -> 5th Clean Name Alphabetical.
-  - Admin Class Hub DataGrid default sort key set to `initialSortKey: 'totalEarnedScore'`.
-
-- [x] Task 3: Admin Class Hub Ergonomics (`js/admin/app.js`)
-  - Stripped `Mr.` and `Miss` honorific titles from student name column in Admin Class Hub (`admin.html#class-hub`) using `cleanStudentName()`.
-  - Formatted daily quiz columns to display Score % (`100%`, `98%`, etc.) instead of points.
-  - Formatted quiz footer class average cells to display average percentage score.
-
-- [x] Task 4: Automated Verification & Live Browser Test
-  - Unit/parity test suite `scripts/test_student_dashboard_exam_parity.mjs` passed 100%.
-  - Playwright headless browser test `scripts/verify_admin_class_hub_ui.mjs` confirmed: PTS sorted DESC by default, no honorifics in names, quiz cells display %, Sofa Maria Ulfa ranked above Suke Ajai in live DOM.
-  - Verified 39 JS files syntax (`check_all_js_syntax.cjs`) passed with 0 errors.
+## PHASE 170 — RESOLUTION OF TUTOR'S ROOM (CLASS HUB) BLANK RENDERING & ES MODULE PARITY [COMPLETE]
+- Fix ES Module Export Mismatch for `isExam` (`js/app.js`, `js/api.js`)
+- Fix Undeclared `weeklyCompletedStudents` in DataGrid summaryRow (`js/admin/app.js`)
+- Cache Synchronization & Version Bumping (`admin.html`, `sw.js`)
 
 ---
 
-# ACTIVE DIRECTIVE: PHASE 58 — STRICT ACTIVE-ONLY BATCH DROPDOWNS & LEVEL 0 SEMANTICS ("UNDER LEVEL 1")
-
-- [x] Task 1: Enforce Strict Active-Only Filtering in Live Session Controller (`js/admin/assessment-access.js`)
-  - Filtered `_cachedBatches` to strictly `b.is_active !== false && !b.deleted_at`.
-  - Excluded inactive batches (`Batch 131`, `Batch 132`, `Batch TP-2026`).
-  - Updated section title to "1. TARGET ACTIVE BATCH".
-
-- [x] Task 2: Level 0 Semantics ("Under Level 1", NOT "All Levels") (`levels` DB, `js/admin/assessment-access.js`, `js/api.js`, `js/dashboard.js`)
-  - Updated database `levels` row `b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2` (`level_number = 0`) to `name = 'Level 0'` and `description = 'Pre-Level / Foundation (Under Level 1)'`.
-  - When assessment targets Level 1, 2, or 3, exclude Level 0 batches (`bLevelNum === 0`).
-  - Purged hardcoded `'All Levels'` fallback in `assessment-access.js`.
-  - Removed `isAllLevels = true` for Level 0 in `js/api.js` (line 2142).
-  - Ensured Level 0 classes do not display under Level 1, 2, or 3 in `js/dashboard.js` (line 1034).
-  - Renamed Vocabulary Vault `'Level 0 (Universal)'` to `'Level 0 (Pre-Level)'`.
-
-- [x] Task 3: Audit Other Operational Batch Dropdowns
-  - Enforced `b.is_active !== false && !b.deleted_at` in Single Student Edit Modal and Bulk Batch Edit Modal in `js/admin/student-management.js`.
-  - Enforced active-only batches in Class Assignment Modal in `js/admin/class.js`.
-
-- [x] Task 4: Automated Verification & E2E Audits
-  - Playwright Live Session test (`scratch/verify_live_session_dropdown.mjs`): verified dropdown contains ONLY active batches (`Batch 123`, `Batch 133`), 0 inactive, 0 Level 0, 0 "All Levels".
-  - Captured verified screenshot: `screenshot_live_session_active_batches_only.png`.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 159 — POINTS-FIRST LEADERBOARD RANKING, MILESTONE PROGRESSION & ADMIN TABLE ERGONOMICS [COMPLETE]
+- Milestone Progression Engine (`js/grading.js`, `js/api.js`, `js/app.js`)
+- Points-First Leaderboard Hierarchy (`js/admin/app.js`, `js/dashboard.js`)
+- Admin Class Hub Ergonomics (`js/admin/app.js`)
 
 ---
 
-# PHASE 56 — SOFT-DELETED ASSESSMENT FILTERING & STUDENT DASHBOARD RECOVERY
-
-- [x] Task 1: API Data Layer Remediation (`js/api.js`)
-  - `fetchAssessments()`: Added `deleted_at` to `.select(...)` and `.is('deleted_at', null)` by default.
-  - `fetchAssessmentsForStudentLevel()`: Added `deleted_at` to `.select(...)` and `.is('deleted_at', null)`.
-  - `fetchAllStudentAttempts()`: Added `assessments(..., deleted_at, status)` to join and fallback.
-
-- [x] Task 2: Student Dashboard Up-Next Hero Banner & Daily Task (`js/dashboard.js`)
-  - Excluded soft-deleted assessments in `renderNextAssignmentHero`.
-  - Daily task now picks active test `3A-Vocabulary Test - Workplace` instead of defunct `3rd Vocabulary A1 Phrases Task`.
-
-- [x] Task 3: Overall Score & Grade Recovery per AGENTS.md §2.8 (`js/dashboard.js`)
-  - Excluded soft-deleted/unavailable assessments from `bestMap` in `computeOverallStats`.
-  - Restored King Test's overall score from 56% (Grade C) to 70% (Grade C/B tier).
-
-- [x] Task 4: Curriculum Class Progress Bar Recalibration (`js/dashboard.js`)
-  - Filtered soft-deleted assessments from `classAssms` denominator in `renderClasses`.
-  - Restored Vocabulary progress bar from 13% to 20% (4 completed out of 20 active tasks).
-
-- [x] Task 5: Completed Assessments List & Batch Leaderboard Clean-up (`js/dashboard.js`)
-  - Filtered soft-deleted attempts in `renderCompletedAssessmentsBottom`, removing defunct 0% "⚠️ Retake" card.
-  - Filtered soft-deleted attempts in `loadBatchLeaderboard`, synchronizing leaderboard score to 70% (4 completed).
-  - Filtered soft-deleted attempts in `setupProfileModal` history table.
-
-- [x] Task 6: Automated Verification & E2E Audits
-  - Automated Playwright verification (`scratch/capture_dashboard_fixed.mjs`): captured `screenshot_dashboard_king_test_fixed.png`.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 58 — STRICT ACTIVE-ONLY BATCH DROPDOWNS & LEVEL 0 SEMANTICS ("UNDER LEVEL 1")
+- Enforce Strict Active-Only Filtering in Live Session Controller (`js/admin/assessment-access.js`)
+- Level 0 Semantics ("Under Level 1", NOT "All Levels") (`levels` DB, `js/admin/assessment-access.js`, `js/api.js`, `js/dashboard.js`)
+- Audit Other Operational Batch Dropdowns
 
 ---
 
-# PHASE 55 — ALPHABETICAL SORTING & FILTERING FOR STUDENT WHITELIST, BATCHES & TESTS
-
-- [x] Task 1: Student Attendance Whitelist Alphabetical Sorting (A → Z) (`js/admin/assessment-access.js`)
-  - Enrolled students sort alphabetically by name (A to Z) by default.
-  - Added `#btn-sort-students` toggle button (`🔤 A → Z` / `🔤 Z → A`) in modal whitelist header.
-  - Added `#session-student-search` input to filter students in real-time with full selection state preservation via `_checkedStudentIds`.
-
-- [x] Task 2: Natural Alphanumeric Sorting for Batches (`js/admin/assessment-access.js`)
-  - Batches inside `<optgroup>` options sorted via `localeCompare(..., { numeric: true })`.
-
-- [x] Task 3: Alphabetical Tests Table Sorting & Interactive Column Headers (`js/admin/assessment-access.js`)
-  - Initialized tests table in alphabetical order by title (3A -> 3B -> 3C -> 3D).
-  - Added `#access-sort-select` dropdown and clickable `.th-sortable` column headers.
-
-- [x] Task 4: Automated Verification & E2E Audits
-  - Automated Playwright verification (`scratch/test_alphabetical_sort.mjs`): All 24 students verified sorted alphabetically A-Z (Asti first, Suharto last). Toggle sort and search filter verified. Saved screenshot `screenshot_whitelist_sorted_az.png`.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 56 — SOFT-DELETED ASSESSMENT FILTERING & STUDENT DASHBOARD RECOVERY
+- API Data Layer Remediation (`js/api.js`)
+- Student Dashboard Up-Next Hero Banner & Daily Task (`js/dashboard.js`)
+- Overall Score & Grade Recovery per AGENTS.md §2.8 (`js/dashboard.js`)
 
 ---
 
-# PHASE 54 — ASSESSMENT ACCESS BATCH LOADING & SMART CATEGORIZATION
-
-- [x] Task 1: Resolve Database Column Error in Batch Query (`js/admin/assessment-access.js`)
-  - Fixed query in `adminFetchAll('batches', ...)` from requesting non-existent column `status` to `id, name, program_id, current_level_id, is_active, deleted_at`.
-  - Added `programs` fetch in `Promise.all` and updated `classes` query to include `level_id`.
-
-- [x] Task 2: Smart Categorization & Rich Metadata (`js/admin/assessment-access.js`)
-  - Correlated test's `level_id` and class `program_id` to available batches.
-  - Grouped into `<optgroup label="🎯 Related Batches (<Class> • <Level>)">` and `<optgroup label="Other Batches">`.
-  - Enriched labels with student counts, program name, and level metadata (e.g. `Batch 133 (24 Students • Camp • 3rd Level)`).
-
-- [x] Task 3: Auto-Selection & Whitelist Checklist Auto-Load (`js/admin/assessment-access.js`)
-  - Auto-selects the direct matching related active batch upon opening modal (`Batch 133`).
-  - Dispatches `change` event immediately to load all 24 enrolled student checkboxes without requiring manual selection.
-
-- [x] Task 4: Automated Verification & E2E Audits
-  - Automated Playwright verification (`scratch/test_assessment_access_modal.mjs`) verified related optgroup, Batch 133 auto-selected, 24 student checkboxes populated, and captured screenshot.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed with 0 failures and 0 console errors.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 55 — ALPHABETICAL SORTING & FILTERING FOR STUDENT WHITELIST, BATCHES & TESTS
+- Student Attendance Whitelist Alphabetical Sorting (A → Z) (`js/admin/assessment-access.js`)
+- Natural Alphanumeric Sorting for Batches (`js/admin/assessment-access.js`)
+- Alphabetical Tests Table Sorting & Interactive Column Headers (`js/admin/assessment-access.js`)
 
 ---
 
-# PHASE 53 — REMOVE TOP HEADER & ZERO-SCROLL DYNAMIC VIEWPORT SCALING FOR CLASS ATTENDANCE MATRIX
-
-- [x] Task 1: Removal of Top Header & DataGrid Toolbar (`js/admin/app.js`, `js/admin/datagrid.js`, `css/admin.css`)
-  - Removed card header (`📋 Class Roster (Attendance) 25 ENROLLED` and `Batch: Active Batches Only` filter).
-  - Added `hideToolbar: true` to `DataGrid` and suppressed `.datagrid-toolbar` and `.datagrid-pagination`.
-  - Reclaimed over 160px of vertical space, allowing the attendance matrix table to start directly at the top.
-
-- [x] Task 2: Dynamic Responsive Row & Font Sizing (`js/admin/app.js`, `css/admin.css`)
-  - Implemented `fitMatrixToScreen()` to dynamically calculate available height (`window.innerHeight - rect.top - bannerHeight - 6`).
-  - Dynamically calculates row height (`--matrix-row-height`), font size (`--matrix-font-size`), badge font size (`--matrix-badge-font`), and cell padding (`--matrix-cell-padding`).
-  - Attached resize listener and RAF to dynamically recalculate on window resize or zoom.
-  - Made `PROG` column single line compact (`${row.progressPct}%` with tooltip) to ensure strict uniform row heights.
-
-- [x] Task 3: Zero-Scroll Viewport Geometry (`css/admin.css`)
-  - Subtracted 38px bottom banner from `.admin-content:has(#class-attendance-grid)` height (`calc(100vh - 56px - 38px)`).
-  - Verified `adminContentHasScroll: false` and `tableWrapHasScroll: false`.
-  - All 25 student rows and the summary row (★ CLASS AVERAGE) are 100% visible simultaneously without any vertical scrolling.
-
-- [x] Task 4: Automated Verification & E2E Audits
-  - Automated Playwright verification (`scratch/test_attendance_matrix_layout.mjs`) verified zero scrollbars, dynamic row height (28px on 900px viewport), and captured screenshot.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 54 — ASSESSMENT ACCESS BATCH LOADING & SMART CATEGORIZATION
+- Resolve Database Column Error in Batch Query (`js/admin/assessment-access.js`)
+- Smart Categorization & Rich Metadata (`js/admin/assessment-access.js`)
+- Auto-Selection & Whitelist Checklist Auto-Load (`js/admin/assessment-access.js`)
 
 ---
 
-# PHASE 52 — SPLIT SCORE AND GRADE (GRD) COLUMNS IN CLASS ATTENDANCE MATRIX
-
-- [x] Task 1: SuperHeaders Colspan Expansion (`js/admin/app.js`)
-  - Expanded `STUDENT DETAILS` super-header `colSpan` from 7 to 8 to accommodate independent SCORE and GRD columns.
-
-- [x] Task 2: Standalone SCORE and GRD Columns (`js/admin/app.js`)
-  - Added standalone `SCORE` column (`key: 'averageScorePct'`, label: `SCORE`, width: `45px`) displaying solely the student's average score percentage (e.g., `96%`).
-  - Modified `GRD` column (`key: 'grade'`, label: `GRD`, width: `35px`) to render purely the styled grade badge (e.g., `<span class="badge">[ A ]</span>`) without merging score text.
-  - Column sequence under `STUDENT DETAILS`: `INST` -> `PROGRAM` -> `BATCH` -> `STUDENT NAME` -> `PROG` -> `SCORE` -> `GRD` -> `PTS`.
-
-- [x] Task 3: Summary Row Alignment (`js/admin/app.js`)
-  - Updated `summaryRow` callback to render `${avgScore}%` in the `SCORE` column and purely the `${avgGrade}` badge in the `GRD` column.
-
-- [x] Task 4: Verification & Automated Audits
-  - Automated Playwright verification (`scratch/test_attendance_matrix_layout.mjs`) verified 8 student detail column headers, top 5 student rows with separate `score: '96%'` and `grd: 'A'`, and summary row `{ score: '78%', grd: 'B' }`.
-  - Visual inspection confirms flawless alignment without layout breaks.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 53 — REMOVE TOP HEADER & ZERO-SCROLL DYNAMIC VIEWPORT SCALING FOR CLASS ATTENDANCE MATRIX
+- Removal of Top Header & DataGrid Toolbar (`js/admin/app.js`, `js/admin/datagrid.js`, `css/admin.css`)
+- Dynamic Responsive Row & Font Sizing (`js/admin/app.js`, `css/admin.css`)
+- Zero-Scroll Viewport Geometry (`css/admin.css`)
 
 ---
 
-# PHASE 51 — ACTIVE STUDENTS ENROLLED TAB & TASK POINTS 50-POINT MAX ALIGNMENT
-
-- [x] Task 1: Topbar Tab Active Enrolled Students Count (`js/admin/app.js`)
-  - Updated Class Hub topbar tab to count active batch students only: `val: activeBatchStudents.length` (displays `25`), with label `Active Enrolled Students`.
-  - Resolves confusion between 50 total curriculum enrollments (including alumni/inactive batches) and 25 active students in the attendance roster.
-
-- [x] Task 2: Task Attempt Points Recalibration to 50 Max Points (`scratch/recalibrate_task_points_50.mjs`, `js/admin/app.js`)
-  - Recalibrated all 82 student TASK attempt pairs in Level 3: Words (max 40) + Phrases (max 10) = 50 Max Points.
-  - Unggul's task scores: Task 1: `49/50`, Task 2: `50/50`, Task 3: `50/50`, Test: `101.5/120` -> Total PTS: `250.5 pts`.
-  - Asmul's task scores: Task 1: `47/50`, Task 2: `43/50`, Task 3: `42/50`, Test: `116.5/120` -> Total PTS: `248.5 pts`.
-  - Cleaned up 62 secondary attempts with scores > 50 in database so no task attempt exceeds total questions.
-  - Updated `totalQ` fallbacks to 50 for tasks and 120 for tests in `js/admin/app.js`.
-  - Prioritized `is_best_score: true` when selecting `bestAtt`.
-
-- [x] Task 3: Verification & Audits
-  - Automated Playwright verification (`scratch/test_attendance_matrix_layout.mjs`) verified points (49, 50, 50, 101.5), PTS (250.5 pts), and active tab.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 52 — SPLIT SCORE AND GRADE (GRD) COLUMNS IN CLASS ATTENDANCE MATRIX
+- SuperHeaders Colspan Expansion (`js/admin/app.js`)
+- Standalone SCORE and GRD Columns (`js/admin/app.js`)
+- Summary Row Alignment (`js/admin/app.js`)
 
 ---
 
-# PHASE 50 — CLASS ROSTER ATTENDANCE MATRIX POINTS (POIN) DISPLAY & PTS ACCUMULATION
-
-- [x] Task 1: Assessment Columns (1-20) Points Display (`js/admin/app.js`)
-  - Updated matrix cell renderer to display raw points (`displayVal = (sc % 1 !== 0) ? sc.toFixed(1) : sc`), e.g., `101.5` on Column 4, rather than percentage score (`85`).
-  - Tooltip updated to clearly show points and percentage: `Points: ${displayVal}/${totalQ} pts (${Math.round(pct)}%)`.
-
-- [x] Task 2: Cumulative Points (PTS) & Column Sort Value Normalization (`js/admin/app.js`)
-  - Standardized `totalEarnedScore` and `rowScoreSortVals` to sum and sort by raw earned points (`rawEarned`), restoring Unggul's PTS to `400.5 pts` ($99 + 100 + 100 + 101.5$) and Asmul's to `396.5 pts`.
-  - Added decimal point formatting to PTS cell rendering (`400.5 pts`).
-  - Standardized bottom summary row column average to average points (`pts`).
-
-- [x] Task 3: Verification & Audits
-  - Automated Playwright verification (`scratch/test_attendance_matrix_layout.mjs`) verified points display (`101.5`) and PTS (`400.5 pts`).
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 passed.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 51 — ACTIVE STUDENTS ENROLLED TAB & TASK POINTS 50-POINT MAX ALIGNMENT
+- Topbar Tab Active Enrolled Students Count (`js/admin/app.js`)
+- Task Attempt Points Recalibration to 50 Max Points (`scratch/recalibrate_task_points_50.mjs`, `js/admin/app.js`)
+- Verification & Audits
 
 ---
 
-# PHASE 49 — CLASS ROSTER ATTENDANCE MATRIX 20-COLUMN LAYOUT & THEME ALIGNMENT
-
-- [x] Task 1: Dynamic Theme SuperHeaders Colspan Generation (`js/admin/app.js`)
-  - Replaced hardcoded `colSpan: 8, 10, 10, 12` with dynamic theme grouping based on `classAssessments`.
-  - Accurately aligns Theme A (colSpan 4), Theme B (colSpan 5), Theme C (colSpan 6), and Theme D (colSpan 5) across 20 assessment columns.
-
-- [x] Task 2: Elimination of Hardcoded Test Column Highlights (`js/admin/app.js`)
-  - Removed obsolete hardcoded array `testColNumbers = [7, 8, 17, 18, 29, 30, 39, 40]`.
-  - Dynamic `isTest` evaluation highlights strictly columns 4, 9, 15, and 20 as Tests (`.col-asm-test`, pink). Columns 7, 8, 17, 18 restored to Tasks (`.col-asm-task`, cyan).
-
-- [x] Task 3: Normalization of Cell Display Values & Total Points (PTS) (`js/admin/app.js`)
-  - Normalized matrix cell display value to `Math.round(pct)` (0–100 scale). Preserved raw points in tooltip (`${displayVal}% (${sc}/${totalQ} pts)`).
-  - Normalized student `PTS` sum and sort values to normalized percentage points: Unggul's score corrected from `400.5 pts` to `384 pts` ($99 + 100 + 100 + 85$), perfectly matching his 96% Grade A.
-  - Standardized bottom summary row class averages to percentage scale.
-
-- [x] Task 4: Verification & Automated Audits
-  - Automated Playwright verification (`scratch/test_attendance_matrix_layout.mjs`) verified SuperHeaders, column classes, and student rows.
-  - Full E2E audit (`scratch/full_e2e_system_audit.mjs`): 17/17 checks passed, 0 failures, 0 console errors.
-  - Strict git freeze maintained: 0 commits, 0 pushes. All changes remain local.
+## PHASE 50 — CLASS ROSTER ATTENDANCE MATRIX POINTS (POIN) DISPLAY & PTS ACCUMULATION
+- Assessment Columns (1-20) Points Display (`js/admin/app.js`)
+- Cumulative Points (PTS) & Column Sort Value Normalization (`js/admin/app.js`)
+- Verification & Audits
 
 ---
 
-# PHASE 48 — UNIFIED VOCABULARY TASK & TEST SYSTEM, SPOKEN/WRITTEN ANSWER TYPES & SCORE MERGE
-
-- [x] Task 1: Auto-Generator Unification (`js/api.js`)
-  - Updated `upsertDynamicAssessmentShell` and `autoGenerateAssessmentsHierarchy` to generate 1 unified Vocab Task per topic and 1 unified Vocab Test per theme.
-  - Standardized Shell Codes per user formula:
-    * Tasks: `${levelNum}${themeCode}${topicCode} Vocab Task` (e.g., `3A1 Vocab Task`)
-    * Tests: `${levelNum}${themeCode} Vocab Test` (e.g., `3A Vocab Test`)
-  - Standardized Titles per user formula:
-    * Tasks: `${levelNum}${themeCode}${topicCode}-Vocabulary Task - [Topic Name]`
-    * Tests: `${levelNum}${themeCode}-Vocabulary Test - [Theme Name]`
-  - Standardized Default Answer Types:
-    * Tasks: `'spoken'` (speech_to_text for pronunciation & speaking practice)
-    * Tests: `'written'` (virtual keyboard for spelling & written recall)
-    * User/tutor customization preserved if changed.
-
-- [x] Task 2: Student Attempt & Score Merging for Matching Topics (`scratch/execute_merge_migration.mjs`)
-  - Consolidated 20 assessment groups (16 Tasks + 4 Tests) into unified primary assessments.
-  - Soft-deleted 20 legacy companion phrase shells (`deleted_at = now()`) with zero data loss.
-  - Reassigned 117 secondary attempts safely to primary unified assessments.
-  - Merged and recalibrated 85 student scores: averaged top scores of words & phrases ($(P_w + P_p) / 2$), updated grade per centralized grading table, and marked singular `is_best_score: true` (0 duplicates).
-
-- [x] Task 3: Linear Prerequisite Chain Rebuild
-  - Re-linked 20 nodes in clean linear progression:
-    `3A1 Vocab Task` -> `3A2 Vocab Task` -> `3A3 Vocab Task` -> `3A Vocab Test` -> `3B1 Vocab Task` -> ... -> `3D Vocab Test`.
-
-- [x] Task 4: End-to-End System Verification
-  - Automated tests verified: `scratch/test_phase47_e2e.mjs` (9/9 passed).
-  - Syntax check: `node --check` passed across 100% of JS files.
-  - Strict git freeze honored (0 commits, 0 pushes).
+## PHASE 49 — CLASS ROSTER ATTENDANCE MATRIX 20-COLUMN LAYOUT & THEME ALIGNMENT
+- Dynamic Theme SuperHeaders Colspan Generation (`js/admin/app.js`)
+- Elimination of Hardcoded Test Column Highlights (`js/admin/app.js`)
+- Normalization of Cell Display Values & Total Points (PTS) (`js/admin/app.js`)
 
 ---
 
-# PHASE 47 — ASSESSMENT ACCESS, LIVE TEST SESSIONS & UNIFIED WORDS/PHRASES TEST
-
-- [x] Task 1: Database & API Layer for Test Sessions & Dynamic Duration
-- [x] Task 2: Dedicated Admin Panel "Assessment Access" (`admin.html` & `js/admin/assessment-access.js`)
-- [x] Task 3: Student Dashboard Always-Visible "Next Assignment / Test Arena" Panel (`dashboard.html` & `js/dashboard.js`)
-- [x] Task 4: Unified Words & Phrases Test Two-Stage Randomization (`js/api.js`)
-- [x] Task 5: End-to-End Automated Verification & Playwright Testing
+## PHASE 48 — UNIFIED VOCABULARY TASK & TEST SYSTEM, SPOKEN/WRITTEN ANSWER TYPES & SCORE MERGE
+- Auto-Generator Unification (`js/api.js`)
+- Student Attempt & Score Merging for Matching Topics (`scratch/execute_merge_migration.mjs`)
+- Linear Prerequisite Chain Rebuild
 
 ---
 
-
-## 🚀 MASTER DEV TASK LIST (TOPSCORE SYSTEM)
-
-### ✅ PHASE 32: STUDENT DASHBOARD AVATAR SCALING, GLOW HIERARCHY & BATCH STANDINGS (SELESAI)
-- [x] 1. Penskalaan visual avatar dashboard dari 60px ke 86px dominan dengan clipping melingkar dan glow borders tanpa merusak layout vertikal.
-- [x] 2. Skema grading & glow hierarchy lengkap: 100% menggunakan simbol Bintang Bersinar (⭐) dengan golden glow aura, Grade A–F dengan tiered colors dan soft glow.
-- [x] 3. Batch Leaderboard / Standings Matrix dual-dock tab (`[ 🏆 Batch Standings ] [ 📋 Completed ]`) dengan rank indicator pill (`RANK #1`) dan 4-level tie-breaker sorting.
-- [x] 4. Royal Title & Crown Mechanics: Batch champion mendapatkan floating crown (👑) di atas avatar dan dynamic title `King <Name>` / `Queen <Name>` real-time.
-- [x] 5. Preservasi 100% zero-scroll mobile geometry (`100dvh`) dan `#bottom-ad-banner` (28px) di dasar layar.
-- [x] 6. Verifikasi otomatis Playwright pada iPhone 14 (390x844) dan Android Small (360x640) lulus 100%.
-
----
-
-## 📜 GRAND ROADMAP (PHASE 1 - 11)
-
-## ✅ PHASE 1-3: SYSTEM RESCUE & DATABASE HYGIENE (SELESAI)
-
-- [x] 1. Perbaikan arsitektur database (Membuang tabel lawas, menyatukan relasi `batches`, `levels`, dan `classes`).
-- [x] 2. Pembersihan skema dan dekomisioning fitur usang.
-- [x] 3. Pembaruan API dan Pipeline Murid (Logika naik level/Level-Up otomatis).
-
-## ✅ PHASE 4: DUAL-AXIS WORKSPACE & MODUL SEMUA KELAS/LEVEL (SELESAI)
-
-- [x] 1. Pembuatan Dual-Axis Workspace (Sumbu Y: Kelas, Sumbu X: Level) di dashboard Admin.
-- [x] 2. Adaptasi Modul untuk Semua Kelas & Level.
-- [x] 3. Pembuatan Modal Pembuat Ujian (Assessment Builder) per-level dan per-kelas.
-
-## ✅ PHASE 5: VOCABULARY VAULT UI & MANAGEMENT (SELESAI)
-
-- [x] 1. Mengganti nama tab menjadi "Topic Mapping".
-- [x] 2. Membuat Sticky Top Panel agar navigasi tidak hilang saat di-scroll.
-- [x] 3. Menambahkan Summary Cards (Total Words, Themes, Topics).
-- [x] 4. Menambahkan Filter "Target Level" (SD, SMP, SMA).
-- [x] 5. Menambahkan sistem Pagination (Tampilkan 50, 100, Infinite).
-- [x] 6. Memperbaiki logika Auto-Fix pendeteksi Tipe Kata & Frasa.
-- [x] 7. Menambahkan fitur Bulk Delete Selected (Hapus Massal).
-
-## ✅ PHASE 6: ASSESSMENT GENERATOR & ENGINE (SELESAI)
-
-- [x] 1. Implementasi Backend Generator Statis ke `assessment_questions` saat Blueprint disimpan.
-- [x] 2. Assessment Blueprint UX — pemisahan eksplisit Voice vs Typing vs MCQ.
-- [x] 3. Review Algoritma Pengecoh (Distractors) — Phrase Recognition mengambil tipe kata setara.
-- [x] 4. Review Alur Murid — Task: Speech-to-Text, Test: Typing.
-
-## ✅ PHASE 7: BLUEPRINT KELAS & SOP SATU PINTU (SELESAI)
-
-- [x] 1. Pembersihan Database & Sinkronisasi (soft-delete duplikat/orphan).
-- [x] 2. Inisialisasi Kelas Wajib Tiap Level.
-
-## ✅ PHASE 8: PERAKITAN 5 KELAS UTAMA (SELESAI)
-
-- [x] 1. Kelas Vocabulary (Level 1, 2, 3)
-- [x] 2. Kelas Basic English (Level 1)
-- [x] 3. Kelas Storytelling (Level 1)
-- [x] 4. Kelas Telling Story (Level 2)
-- [x] 5. Kelas Public Speaking (Level 2)
-- [x] 6. Kelas Speaking Projects (Level 3)
-
-## ✅ PHASE 9: FINALISASI MOBILE UI — STUDENT EXPERIENCE (SELESAI)
-
-- [x] 1. Dashboard Murid: Hirarki Level → Kelas → Daftar Task & Test.
-- [x] 2. Sequential Lock UI: Efek gembok pada modul terkunci.
-- [x] 3. Routing Otomatis: ke halaman AI yang tepat (Kamera, Mic, MCQ, dll).
-- [x] 4. Review General Assessment UX: Desain frosted glass diterapkan di semua tampilan tes.
-
-## ✅ PHASE 10: MAINTENANCE & DATA PIPELINE (SELESAI)
-
-- [x] 1. Verify Excel Data Import (Vault): Kolom `Theme Code` & `Topic Code` terbaca → verified (inserted:1).
-- [x] 2. Test Real-Time Sync (Dynamic Shell): Vault updates → Shells ter-generate → verified (tasks:1, tests:1, updated:2).
-- [x] 3. Blueprint Theme Ordering: Tema diurutkan berdasarkan `theme_code` (numeric-aware). Tema tanpa kode turun ke bawah.
-
----
-
-## 🆕 PHASE 11: POLISH & STABILISATION (NEXT UP)
-
-- [x] **11.1.** Blueprint — Verify Theme Order Live: Confirmed ✅ — Order is WORKPLACE → TOURISM → CCU → HIGH-FREQUENCY (by theme_code, not alphabetically). CCU is no longer first.
-- [x] **11.2.** Vault Inline Edit: Verified ✅ — Save handler reads theme_code & topic_code, uppercases, saves to DB, updates in-memory word, then calls filterAndRender() which rebuilds Blueprint immediately.
-- [x] **11.3.** Student Flow — End-to-End Test: Selesaikan satu percobaan penuh Vocabulary Task (Dynamic Shell) dan konfirmasi kata-kata Vault termuat benar. (Verified ✅: 40 Vault words mapped, Edge Functions start & submit passed, 100% score Grade S recorded).
-- [x] **11.4.** Clean Up Test Data: Deleted 6 mock vault rows + 2 assessment shells (TEST_TH_1 / TEST_TP_1) from Level 1. ✅
-- [x] **11.5.** Admin Security Review: Pastikan route admin-only (Vault, Blueprint, Assessment Builder) sudah diproteksi RLS dan Edge Function auth.
-
----
-
-## 🚀 PHASE 12: DEEP SYSTEM AUDIT REMEDIATION (TASK_LIST.md)
-
-Detailed tracker maintained in [TASK_LIST.md](file:///d:/TopsCore/TASK_LIST.md):
-- [x] TASK-01 | FOUC Prevention & Synchronous Head Session Guards | HIGH | depends: none | criteria: instant redirect without visual flicker
-- [x] TASK-02 | Cache-Busting Version Alignment (?v=4.9.8) & sw.js URL Pattern Repair | HIGH | depends: none | criteria: unified query strings and working offline cache
-- [x] TASK-03 | PostgreSQL Stored Procedure `auto_close_expired_attempts` Migration | HIGH | depends: none | criteria: live `public.attempts` target table and RPC parameter support
-- [x] TASK-04 | Deprecate Client-Side Scoring Fallback in API | CRITICAL | depends: none | criteria: remove client scoring per AGENTS.md §1.4
-- [x] TASK-05 | Server-Authoritative Emergency Fallback RPC (SECURITY DEFINER) | CRITICAL | depends: TASK-04 | criteria: secure fallback submissions through RLS
-- [x] TASK-06 | Anti-Cheat Hardening (Clipboard, DevTools, Strikes & Mobile Inputs) | MEDIUM | depends: none | criteria: blocked copy/paste/F12 and 3-strike policy
-- [x] TASK-07 | Conceal Answer Keys in Exam Network Payload & Sanitize Snapshots | HIGH | depends: none | criteria: zero correct answers in active exam payload
-- [x] TASK-08 | Database Query Projection Auditing (Replace `.select('*')`) | MEDIUM | depends: none | criteria: explicit column projections on high-volume tables
-- [x] TASK-09 | Debounced Autosave Buffer for Real-Time Keystrokes & Transcripts | MEDIUM | depends: none | criteria: 400ms debounced buffer on input event
-- [x] TASK-10 | Student Profile Media & Storage Migration (Base64 -> Storage / SVG) | MEDIUM | depends: none | criteria: WebP storage bucket upload and zero-egress SVG avatars
-- [x] TASK-11 | Honorific Prefix Stripping in Alphabetical Student Sorting & Avatars | HIGH | depends: none | criteria: true alphabetical sorting by personal names
-
----
-
-## ⚡ PHASE 24: HEURISTIC AUDIT REMEDIATION — CORE STABILITY & INTEGRITY
-
-- [x] **TASK-24-01** | Unified Asset Versioning Alignment (?v=5.2.2) & Service Worker Cache Fix | HIGH | depends: none | criteria: All HTML/JS imports aligned to ?v=5.2.2; sw.js precache matched & covers modular scripts
-- [x] **TASK-24-02** | Centralize & Deduplicate `escapeHtml` / `escHtml` and Name Utilities | HIGH | depends: none | criteria: Single source in js/app.js & avatar-engine.js; 19 redundant copies removed
-- [x] **TASK-24-03** | Mobile Viewport Truncation & Touch Target Safety (`assessment.html`) | HIGH | depends: none | criteria: .assessment-main-content allows vertical scroll on screens <640px/focus; 100vw removed
-- [x] **TASK-24-04** | API Error Handling & Submission Fallback Reliability | HIGH | depends: none | criteria: No blank catch (_) blocks in api.js; assessment.html stops premature redirect on submit failure
-- [x] **TASK-24-05** | High-Volume Search Input Debounce & DataGrid Memory Leak Fix | MEDIUM | depends: none | criteria: 200ms debounce on vocab-vault & index searches; datagrid.js cleans up keydown listener
-
----
-
-## 📦 PHASE 25: MODULARIZATION & ARCHITECTURE REFACTORING
-
-- [x] **TASK-25-01** | Extract Monolithic CSS from HTML Shells (index, dashboard, assessment, result) | MEDIUM | depends: TASK-24-01 | criteria: 1,560+ lines of inline CSS extracted to modular external stylesheets
-  - [x] 25.1.1: Extract `index.html` inline `<style>` (504 lines) to `css/auth.css` & link via `css/auth.css?v=5.2.2`.
-  - [x] 25.1.2: Merge `dashboard.html` inline `<style>` (411 lines) into `css/dashboard.css` & link via `css/dashboard.css?v=5.2.2`.
-  - [x] 25.1.3: Extract `assessment.html` inline `<style>` (542 lines) to `css/assessment.css` & link via `css/assessment.css?v=5.2.2`.
-  - [x] 25.1.4: Extract `result.html` inline `<style>` (142 lines) to `css/result.css` & link via `css/result.css?v=5.2.2`.
-  - [x] 25.1.5: Register `css/auth.css`, `css/assessment.css`, and `css/result.css` in `sw.js` cache manifest.
-- [x] **TASK-25-02** | Extract Monolithic JS from HTML Shells (index, dashboard, assessment, result) | MEDIUM | depends: TASK-24-01, TASK-24-02 | criteria: 4,770+ lines of inline JS extracted to js/auth.js, js/dashboard.js, js/assessment.js, js/result.js
-  - [x] 25.2.1: Extract `index.html` module script (462 lines) to `js/auth.js` & link via `./js/auth.js?v=5.2.2`. Keep head guard inline.
-  - [x] 25.2.2: Extract `dashboard.html` module script (2,125 lines) to `js/dashboard.js` & link via `./js/dashboard.js?v=5.2.2`. Keep head guard inline.
-  - [x] 25.2.3: Extract `assessment.html` module scripts (1,628 lines) to `js/assessment.js` & link via `./js/assessment.js?v=5.2.2`. Keep head guard inline.
-  - [x] 25.2.4: Extract `result.html` module script (476 lines) to `js/result.js` & link via `./js/result.js?v=5.2.2`. Keep head guard inline.
-  - [x] 25.2.5: Register extracted scripts in `sw.js` precache & verify syntax with `node --check`.
-- [x] **TASK-25-03** | Consolidate Competing Student Profile Modals in Admin | MEDIUM | depends: TASK-24-02 | criteria: Single authoritative student profile modal in js/admin/student-management.js
-  - [x] 25.3.1: Delegate `openStudentProfile` to `showStudentProfileModal` in `js/admin/app.js` and `js/admin/class.js`.
-  - [x] 25.3.2: Verify zero regression across all table profile triggers (`B — BOARD`, `C — CLASS`, Class Hub, and Assessment details).
-- [x] **TASK-25-04** | Offline CDN Fallbacks & Third-Party Elimination | LOW | depends: none | criteria: Local SheetJS fallback; ui-avatars.com replaced with local SVG data URIs
-  - [x] 25.4.1: Replace external `ui-avatars.com` image endpoints in `assessment.html` / `js/assessment.js` with local SVG data URIs via `createInitialsSvgDataUri`.
-  - [x] 25.4.2: Bundle SheetJS locally in `js/vendor/xlsx.full.min.js`, configure local loader with CDN fallback, and add to `sw.js`.
-- [x] **TASK-25-05** | Automated E2E Regression Verification & Continuation State Sync | MEDIUM | depends: TASK-25-01..TASK-25-04 | criteria: All pages render with 0 errors; state files updated
-
----
-
-## 🎓 PHASE 26: ACADEMIC ENGINE, SEQUENTIAL PREREQUISITES & ROSTER MATRIX
-
-- [x] **TASK-26-01** | Fix Student Progress Calculation & Cumulative Mastery Grade Formula | HIGH | depends: none | criteria: `completion_pct = (completed_assessments_count / total_class_assessments) * 100`; authoritative cumulative mastery grade (unattempted count as 0); default sort `PTS` descending
-- [x] **TASK-26-02** | Standalone Student Info Columns & Text-Only Identity | MEDIUM | depends: none | criteria: Dedicated columns `INST` (~65px), `PROGRAM` (~65px), `BATCH` (~55px), `STUDENT NAME` (~140px, text-only, 0 avatars/initials); compact `PROG` (~50px), `GRD` (~40px), `PTS` (~55px)
-- [x] **TASK-26-03** | 40-Column Dense Assessment Matrix (Zero Horizontal Scrollbar) | CRITICAL | depends: TASK-26-01, TASK-26-02 | criteria: `table-layout: fixed; width: 100%; overflow-x: hidden !important;`; remaining width evenly distributed across 1..40; 4 super-headers; magenta accents on Test columns (7, 8, 17, 18, 29, 30, 39, 40); clean "pts" formatting; "★ CLASS AVERAGE" summary row; score cell click opens `result.html?attempt_id=...` in new tab
-- [x] **TASK-26-04** | Standardize Assessment Codes & Sequential Prerequisites | HIGH | depends: none | criteria: Code format `[Level][Theme][Topic]-[TYPE]-[TIER]`; sequential `prerequisite_assessment_id` chain (1 -> 2 -> ... -> 40) in DB
-- [x] **TASK-26-05** | Playwright Automated Matrix Verification & Screenshot Validation | HIGH | depends: TASK-26-01..TASK-26-04 | criteria: Automated test verifies zero horizontal overflow, score cell new tab opening, and outputs `class_roster_matrix_phase26_verified.png`
-
----
-
-## 🎯 PHASE 27: UNLOCKED/TAKEABLE ASSESSMENT CALIBRATION & FLEXIBLE SORTING
-
-- [x] **TASK-27-01** | Calibrate Student Score (%) & Grade (GRD) Strictly on Taken/Unlocked Modules | CRITICAL | depends: none | criteria: Student Score = `sum(best_percentage_on_taken) / count(taken_assessments)`; Grade = `getGrade(average_score)`; locked/unopened assessments strictly excluded from score denominator
-- [x] **TASK-27-02** | Differentiate Progress (PROG) vs Student Score/Grade | HIGH | depends: TASK-27-01 | criteria: PROG reflects completion (`completed_count / total_class_assessments * 100`, e.g. "15% 6/40 Done"); GRD displays score % and grade badge (e.g. "100% S")
-- [x] **TASK-27-03** | Flexible Multi-Criteria Column Sorting in Class Roster | HIGH | depends: TASK-27-01 | criteria: Clicking PTS sorts by total cumulative points; clicking PROG sorts by curriculum completion; clicking GRD sorts by mastery percentage; default first-click sort direction is descending for academic performance metrics
-- [x] **TASK-27-04** | Authoritative Grading Engine Synchronization (`api.js`, `class.js`, `dashboard.js`, `app.js`) | HIGH | depends: TASK-27-01 | criteria: Centralized `calculateOverallStudentScore` exported in `api.js` & `grading.js`; synchronized across class roster, dashboard banner, and class reports
-- [x] **TASK-27-05** | Automated Playwright Verification & Screenshot Validation | HIGH | depends: TASK-27-01..TASK-27-04 | criteria: Verified that student with perfect scores on taken assessments displays 100% Grade S without being dragged down by locked modules; screenshot `class_roster_calibrated_scores.png`
-
----
-
-## 🎯 PHASE 31: TYPOGRAPHY POLISH, TABULAR NUMS & MATRIX REFINEMENTS
-
-- [x] **TASK-31-01** | Tabular Numbers for Data Grids, Timers & Metrics | HIGH | depends: none | criteria: `font-variant-numeric: tabular-nums;` applied across `.table-wrap`, `.data-grid`, `.datagrid-table`, `#class-attendance-grid`, `#assessment-timer`, `#timer-display`, `.result-summary-val`, `.badge`, `.score-val`, `.matrix-cell`
-- [x] **TASK-31-02** | Font-Weight Hierarchy & Contrast Elevation | MEDIUM | depends: none | criteria: Elevate muted text tokens from `#64748B` to `#94A3B8` / `#CBD5E1`; Headings/KPIs 700, Tables/Buttons 500/600, Subtitles/helpers 400
-- [x] **TASK-31-03** | Student Roster PROGRAM Column & Age Sanitization | HIGH | depends: none | criteria: Standalone PROGRAM column rendered between INSTITUTION and BATCH; `birth_date` null/0 renders `—` (0 standalone "0 yrs"); `.actions-col` enforces `gap: 6px;`
-- [x] **TASK-31-04** | Class Roster Attendance Matrix Native Tooltips & Summary Row | HIGH | depends: none | criteria: 40 assessment header cells equipped with active native `title` tooltips; docked summary row `★ CLASS AVERAGE (KELAS)` displays class-wide completion and average points
-- [x] **TASK-31-05** | Playwright Desktop Verification (1600x900) & Strict Git Freeze | HIGH | depends: TASK-31-01..TASK-31-04 | criteria: 100% PASS rate across all verified views; 0 commits, 0 pushes
-
+## PHASE 47 — ASSESSMENT ACCESS, LIVE TEST SESSIONS & UNIFIED WORDS/PHRASES TEST
+- Database & API Layer for Test Sessions & Dynamic Duration
+- Dedicated Admin Panel "Assessment Access" (`admin.html` & `js/admin/assessment-access.js`)
+- Student Dashboard Always-Visible "Next Assignment / Test Arena" Panel (`dashboard.html` & `js/dashboard.js`)

@@ -33,6 +33,12 @@ class ConversationRoomApp {
         'stakeholder alignment'
       ]
     };
+
+    this.avatarState = 'idle';
+    this.currentVolume = 0;
+    this.remoteVolume = 0;
+    this._avatarIdleTimer = null;
+    this._animFrame = null;
   }
 
   async init() {
@@ -41,12 +47,81 @@ class ConversationRoomApp {
     this._parseUrlParams();
 
     this._bindDomEvents();
+    this.initWaveformVisualizer();
+    this.setAvatarState('idle');
 
     if (!this.roomCode) {
       this._showLobbyModal();
     } else {
       await this.joinRoom(this.roomCode);
     }
+  }
+
+  setAvatarState(state) {
+    const stage = document.getElementById('living-avatar-stage');
+    const badge = document.getElementById('avatar-state-badge');
+    const text = document.getElementById('avatar-state-text');
+    const norm = String(state || 'idle').toLowerCase();
+
+    if (stage) stage.dataset.state = norm;
+    if (badge) {
+      badge.className = `avatar-state-pill state-${norm}`;
+    }
+    if (text) {
+      const labels = {
+        idle: 'IDLE • READY',
+        listening: '🎙️ LISTENING...',
+        thinking: '🧠 THINKING...',
+        speaking: '🔊 SPEAKING...'
+      };
+      text.textContent = labels[norm] || norm.toUpperCase();
+    }
+    this.avatarState = norm;
+  }
+
+  initWaveformVisualizer() {
+    const canvas = document.getElementById('conv-waveform-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let phase = 0;
+
+    const render = () => {
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.clearRect(0, 0, width, height);
+
+      // Determine wave amplitude and color based on avatarState and current volume
+      const state = this.avatarState || 'idle';
+      let amp = 3;
+      let strokeColor = 'rgba(56, 189, 248, 0.4)'; // idle blue
+
+      if (state === 'listening') {
+        amp = Math.max(8, (this.currentVolume || 0) * 0.4);
+        strokeColor = '#00c000'; // Grade A Green
+      } else if (state === 'thinking') {
+        amp = 5 + Math.sin(phase * 2) * 3;
+        strokeColor = '#818cf8'; // Indigo
+      } else if (state === 'speaking') {
+        amp = Math.max(12, (this.remoteVolume || 0) * 0.5);
+        strokeColor = '#ff2d87'; // Star Pink
+      }
+
+      ctx.beginPath();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = strokeColor;
+
+      for (let x = 0; x < width; x++) {
+        const y = height / 2 + Math.sin((x * 0.05) + phase) * amp * Math.sin((x / width) * Math.PI);
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      phase += (state === 'idle' ? 0.04 : 0.12);
+      this._animFrame = requestAnimationFrame(render);
+    };
+
+    render();
   }
 
   _loadStudentSession() {
@@ -237,12 +312,30 @@ class ConversationRoomApp {
         if (bar) bar.style.width = `${vol}%`;
         const card = document.getElementById('speaker-card-self');
         if (card) card.classList.toggle('speaking', vol > 15);
+
+        this.currentVolume = vol;
+        if (vol > 15) {
+          this.setAvatarState('listening');
+          clearTimeout(this._avatarIdleTimer);
+          this._avatarIdleTimer = setTimeout(() => {
+            if (this.avatarState === 'listening') this.setAvatarState('idle');
+          }, 1200);
+        }
       },
       onRemoteVolume: (vol) => {
         const bar = document.getElementById('vu-bar-peer');
         if (bar) bar.style.width = `${vol}%`;
         const card = document.getElementById('speaker-card-peer');
         if (card) card.classList.toggle('speaking', vol > 15);
+
+        this.remoteVolume = vol;
+        if (vol > 15) {
+          this.setAvatarState('speaking');
+          clearTimeout(this._avatarIdleTimer);
+          this._avatarIdleTimer = setTimeout(() => {
+            if (this.avatarState === 'speaking') this.setAvatarState('idle');
+          }, 1200);
+        }
       },
       onConnectionStateChange: (state) => {
         if (state === 'connected') {
@@ -560,6 +653,7 @@ if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
     const app = new ConversationRoomApp();
     window.conversationRoomApp = app;
+    window.convRoomApp = app;
     app.init().catch(err => console.error('[Room] Init failed:', err));
   });
 }

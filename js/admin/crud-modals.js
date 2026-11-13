@@ -908,15 +908,7 @@ function _initCrudModals() {
             }
           }
           if (normTarget === 'tests' && payloadToSave.answer_type && _editId) {
-            // Also synchronize questions in test_questions for this test
-            try {
-              const sb = await getSupabase();
-              if (sb) {
-                await sb.from('test_items').update({ answer_type: payloadToSave.answer_type }).eq('test_id', _editId);
-              }
-            } catch (qErr) {
-              console.warn('[crud-modals] Note: test_questions answer_type sync notice:', qErr);
-            }
+            // Modern tests encapsulate answer_type within the tests record itself
           }
           if (targetTable === 'classes') {
             try {
@@ -1656,16 +1648,9 @@ function _initBulkEditModal() {
           }
         }
 
-        // 3. If answer_type changed, also sync test_items in one atomic batch
+        // 3. If answer_type changed, modern tests encapsulate it directly in tests record
         if (chkAns && ansVal) {
-          try {
-            await sb
-              .from('test_items')
-              .update({ answer_type: ansVal })
-              .in('test_id', _bulkEditSelectedIds);
-          } catch (qErr) {
-            console.warn('[BulkEdit] Note: test_items sync returned:', qErr);
-          }
+          // No separate test_items table exists in modern schema
         }
 
         // Invalidate caches so UI immediately displays new values

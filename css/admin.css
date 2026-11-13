@@ -43,9 +43,9 @@
   --tr-font-title: 700 16px/1.25 'Outfit', sans-serif;
   --tr-font-subtitle: 600 14px/1.3 'Inter', sans-serif;
   --tr-font-body: 500 13px/1.4 'Inter', sans-serif;
-  --tr-font-table: 500 12px/1.4 'Inter', sans-serif;
-  --tr-font-table-hdr: 700 12px/1.4 'Inter', sans-serif;
-  --tr-font-control: 600 12px/1.3 'Inter', sans-serif;
+  --tr-font-table: 500 11px/1.4 'Inter', sans-serif;
+  --tr-font-table-hdr: 700 11px/1.4 'Inter', sans-serif;
+  --tr-font-control: 600 11px/1.3 'Inter', sans-serif;
   --tr-font-caption: 600 11px/1.3 'Inter', sans-serif;
   --tr-font-mono: 600 11px/1.4 'JetBrains Mono', monospace;
 
@@ -54,8 +54,8 @@
   --tr-size-title: 16px;
   --tr-size-subtitle: 14px;
   --tr-size-body: 13px;
-  --tr-size-table: 12px;
-  --tr-size-control: 12px;
+  --tr-size-table: 11px;
+  --tr-size-control: 11px;
   --tr-size-caption: 11px;
   --tr-size-mono: 11px;
 
@@ -4844,8 +4844,8 @@ body.sidebar-collapsed .admin-main {
   border-bottom: 2px solid rgba(255, 255, 255, 0.18) !important;
 }
 
-#class-attendance-grid th.col-exam-score,
-#class-attendance-grid td.col-exam-score {
+#class-attendance-grid th.col-exam-score:not(.col-test-theme-score),
+#class-attendance-grid td.col-exam-score:not(.col-test-theme-score) {
   width: 36px !important;
   min-width: 36px !important;
   max-width: 38px !important;
@@ -4853,8 +4853,8 @@ body.sidebar-collapsed .admin-main {
   border-right: none !important;
 }
 
-#class-attendance-grid th.col-exam-pts,
-#class-attendance-grid td.col-exam-pts {
+#class-attendance-grid th.col-exam-pts:not(.col-test-theme-total),
+#class-attendance-grid td.col-exam-pts:not(.col-test-theme-total) {
   width: 36px !important;
   min-width: 36px !important;
   max-width: 38px !important;
@@ -4991,12 +4991,12 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid .test-subtag {
-  font-size: 0.40rem !important;
-  font-weight: 500 !important;
-  letter-spacing: 0 !important;
-  margin-top: 1px !important;
-  line-height: 1 !important;
-  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  margin-top: 0 !important;
+  line-height: 1.2 !important;
+  color: #38bdf8 !important;
   white-space: nowrap !important;
 }
 
@@ -5007,9 +5007,10 @@ body.sidebar-collapsed .admin-main {
 
 #class-attendance-grid .test-subtag-wrd { color: #ffffff !important; }
 #class-attendance-grid .test-subtag-phr { color: #ffffff !important; }
-#class-attendance-grid .test-subtag-test-pts { color: #ffffff !important; }
-#class-attendance-grid .test-subtag-test-score { color: #ffffff !important; }
-#class-attendance-grid .test-subtag-test-grade { color: #ffffff !important; }
+#class-attendance-grid .test-subtag-task { color: #38bdf8 !important; }
+#class-attendance-grid .test-subtag-test-pts { color: #38bdf8 !important; }
+#class-attendance-grid .test-subtag-test-score { color: #38bdf8 !important; }
+#class-attendance-grid .test-subtag-test-grade { color: #38bdf8 !important; }
 
 /* Remedial Row & Value Styling (No special color; color follows score, small R tag inherits color) */
 #class-attendance-grid tbody tr.row-remedial {
@@ -7525,7 +7526,7 @@ body.global-edit-mode-on #admin-console table td:focus-within {
 #blueprint-matrix-table thead th {
   text-transform: uppercase !important;
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-family: var(--fm-font-sans) !important;
   white-space: nowrap !important;
 }
@@ -7536,7 +7537,7 @@ body.global-edit-mode-on #admin-console table td:focus-within {
 #class-attendance-grid thead th * {
   text-transform: uppercase !important;
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-family: var(--fm-font-sans) !important;
 }
 
@@ -7547,7 +7548,7 @@ body.global-edit-mode-on #admin-console table td:focus-within {
 #class-attendance-grid tfoot td,
 .datagrid-summary-row td {
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-family: var(--fm-font-sans) !important;
   white-space: nowrap !important;
 }
@@ -7558,7 +7559,7 @@ body.global-edit-mode-on #admin-console table td:focus-within {
 #class-attendance-grid tbody td,
 #blueprint-matrix-table tbody td {
   font-weight: 400 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-family: var(--fm-font-sans) !important;
   white-space: nowrap !important;
 }
@@ -7569,7 +7570,7 @@ body.global-edit-mode-on #admin-console table td:focus-within {
 .datagrid-table tbody td span:not(.grid-grade-star):not(.grade-circle):not(.badge-grade-symbol):not(sup):not(.asm-rem-sup),
 .datagrid-table tbody td div {
   font-weight: 400 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-family: var(--fm-font-sans) !important;
 }
 
@@ -7586,7 +7587,7 @@ body.global-edit-mode-on .input-matrix-exam-pts,
 body.global-edit-mode-on .input-matrix-exam-score,
 body.global-edit-mode-on .input-matrix-task-progress {
   font-family: var(--fm-font-sans) !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 400 !important;
   text-transform: none !important;
 }
@@ -7613,4 +7614,135 @@ body.global-edit-mode-on .table-wrap td select option,
   background: #0f172a !important;
   color: #f8fafc !important;
   padding: 4px 8px !important;
+}
+
+
+/* ==========================================================================
+   Phase 449: Master Edit Mode Safety HUD & Standardized 32px Toolbars
+   ========================================================================== */
+
+#master-edit-safety-hud {
+  display: none;
+  height: 32px;
+  min-height: 32px;
+  max-height: 32px;
+  background: linear-gradient(90deg, rgba(255, 255, 0, 0.12), rgba(255, 204, 0, 0.08));
+  border-top: 1.5px solid var(--grade-c, #FFFF00);
+  border-bottom: 1.5px solid rgba(255, 255, 0, 0.25);
+  box-shadow: 0 4px 15px rgba(255, 255, 0, 0.08);
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif);
+  font-size: 11px;
+  color: var(--grade-c, #FFFF00);
+  z-index: 99;
+}
+
+body.global-edit-mode-on #master-edit-safety-hud {
+  display: flex !important;
+}
+
+body.global-edit-mode-off #master-edit-safety-hud {
+  display: none !important;
+}
+
+.safety-hud-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.safety-hud-badge {
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #0F172A;
+  background: var(--grade-c, #FFFF00);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.safety-hud-text {
+  color: #E2E8F0;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.safety-hud-text kbd {
+  background: #1E293B;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: #38BDF8;
+}
+
+.safety-hud-exit-btn {
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+  font-weight: 750 !important;
+  background: #1E293B !important;
+  border: 1px solid var(--grade-c, #FFFF00) !important;
+  color: var(--grade-c, #FFFF00) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.safety-hud-exit-btn:hover {
+  background: var(--grade-c, #FFFF00) !important;
+  color: #0F172A !important;
+}
+
+/* Standardized 32px Search & Filter Toolbars across Workstation */
+.table-toolbar-32,
+.table-toolbar-unified,
+.workspace-filter-toolbar {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
+  font-size: 11px !important;
+}
+
+.toolbar-input-32,
+.toolbar-input-38,
+.table-toolbar-unified input[type="text"],
+.table-toolbar-unified input[type="search"],
+.table-toolbar-unified select,
+.workspace-filter-toolbar input,
+.workspace-filter-toolbar select {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+}
+
+.toolbar-btn-32,
+.toolbar-btn-38,
+.table-toolbar-unified .btn,
+.workspace-filter-toolbar .btn {
+  height: 28px !important;
+  min-height: 28px !important;
+  max-height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
 }

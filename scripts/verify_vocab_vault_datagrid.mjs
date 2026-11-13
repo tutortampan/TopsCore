@@ -67,7 +67,7 @@ assert(
 // -------------------------------------------------------------
 console.log('\n▶ Pillar 2: Checking Table Header <th> Invariants...');
 
-const theadMatch = vaultContent.match(/<table id="vault-table"[\s\S]*?<thead>([\s\S]*?)<\/thead>/);
+const theadMatch = vaultContent.match(/<table id="vault-table"[\s\S]*?<thead[^>]*>([\s\S]*?)<\/thead>/);
 assert(theadMatch, '<thead> of #vault-table successfully extracted');
 
 const thead = theadMatch ? theadMatch[1] : '';

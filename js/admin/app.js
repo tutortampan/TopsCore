@@ -402,10 +402,10 @@ import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261112_v425';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261106_v160';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261106_v160';
-import { renderTopics, renderWordTypes, renderCentralQuestionBank, renderCentralQuestionImport, renderResults, renderClassInstances } from './class.js?v=20261106_v160';
+import { renderTopics, renderWordTypes, renderResults } from './class.js?v=20261106_v160';
 import { renderTests } from './tests-management.js?v=20261106_v160';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261113_v441';
-import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261110_v175';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261113_v446';
+import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261109_v173';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261106_v160';
@@ -532,13 +532,13 @@ if (typeof window !== 'undefined') {
       'academy-batches': 'institutions',
 
       // Questions & Topics
-      'board-bank': 'questions',
+      'board-bank': 'vocab_vault',
       'board-wordtypes': 'question_types',
       'board-topics': 'topics',
-      'board-import': 'import-questions',
-      'board-export': 'export-questions',
-      'class-assignments': 'assignments',
-      'tests-assignments': 'assignments',
+      'board-import': 'vocab_vault',
+      'board-export': 'vocab_vault',
+      'class-assignments': 'class-hub',
+      'tests-assignments': 'class-hub',
       'class-results': 'results',
       'tests-results': 'results',
       'levels': 'class-hub',
@@ -546,7 +546,7 @@ if (typeof window !== 'undefined') {
       'question-types': 'question_types',
       'word-types': 'question_types',
       'wordtypes': 'question_types',
-      'work-records': 'work_records',
+      'work-records': 'profile',
       'cv': 'cv_generator',
       'cv-generator': 'cv_generator'
     };
@@ -1202,13 +1202,12 @@ if (typeof window !== 'undefined') {
 
         // Fetch ALL data relevant to this class and detailed test mapping
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
-        let [allClasses, allTests, allStudents, allPrograms, allBatches, allQuestions, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
+        let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
           adminFetchAll('tests').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
-          adminFetchAll('test_items', 'id, test_id, answer_type').catch(() => []),
           adminFetchAll('levels').catch(() => []),
           adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
           adminFetchAll('attempts').catch(() => []),
@@ -1390,29 +1389,17 @@ if (typeof window !== 'undefined') {
           const status = r?.status || r?.test_type || 'draft';
           const TestCategory = (r?.category || r?.test_type || 'Task');
 
-          let answerType = r?.answer_type || '';
-          const asmQs = (allQuestions || []).filter(q => q?.test_id === r?.id);
-          if (!answerType && asmQs.length > 0) {
-            const typeCounts = {};
-            asmQs.forEach(q => {
-              if (q.answer_type) typeCounts[q.answer_type] = (typeCounts[q.answer_type] || 0) + 1;
-            });
-            let max = 0;
-            for (const t in typeCounts) {
-              if (typeCounts[t] > max) { max = typeCounts[t]; answerType = t; }
-            }
-          }
-          const rawAns = r?.answer_type || answerType || 'spoken';
-          const isPhrase = r?.payload?.category === 'phrases' 
-            || r?.test_subtype?.includes('PHRASE') 
-            || (r?.shell_code && r.shell_code.includes('PHRASE')) 
+          const rawAns = r?.answer_type || 'spoken';
+          const isPhrase = r?.payload?.category === 'phrases'
+            || r?.test_subtype?.includes('PHRASE')
+            || (r?.shell_code && r.shell_code.includes('PHRASE'))
             || String(r?.title || '').toLowerCase().includes('phrase');
           const category = isPhrase ? 'phrases' : 'words';
 
           const minScore = r?.minimum_required_score || 60;
           const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
           const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
-          const qCount = (allQuestions || []).filter(q => q?.test_id === r?.id).length;
+          const qCount = r?.total_questions || r?.payload?.total_questions || (r?.test_type === 'exam' ? 120 : 40);
           const effectiveQCount = _isDyn ? _vaultQ : qCount;
 
           // Real-time dynamic duration calculation (SSOT):
@@ -1429,7 +1416,7 @@ if (typeof window !== 'undefined') {
             level: levelDisplay,
             order: r?.display_order ?? r?.order_index ?? 1,
             prereq: prereqTitle,
-            answerType: formatAnswerType(answerType),
+            answerType: formatAnswerType(rawAns),
             questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
             TestCategory,
             timeLimit,
@@ -1969,7 +1956,7 @@ if (typeof window !== 'undefined') {
               className,
               currentClass,
               classTests,
-              allStudents,
+              allStudents: classStudents,
               allBatches,
               batchMap
             });
@@ -4071,7 +4058,7 @@ if (typeof window !== 'undefined') {
           case 'levels':
           case 'classes':             await renderClassList(area); break;
           case 'classes-org':         await _renderClassesModule(area); break;
-          case 'class_instances':     await renderClassInstances(area); break;
+          case 'class_instances':     return loadSection('class-hub');
           case 'class-detail':        await renderClassDetail(area); break;
           case 'topics':              await renderTopics(area); break;
           case 'question_types':          await renderWordTypes(area); break;
@@ -4162,7 +4149,7 @@ if (typeof window !== 'undefined') {
           case 'dashboard':           await renderDashboard(area); break;
           case 'profile':             await renderAdminProfile(area); break;
           case 'schedule':            await renderAdminSchedule(area); break;
-          case 'work_records':        await renderWorkRecords(area); break;
+          case 'work_records':        return loadSection('profile');
           case 'cv_generator':        await renderCVGenerator(area); break;
 
           default: area.innerHTML = `<div class="empty-state"><div class="empty-state__icon">&#128679;</div><h3>${sectionTitles[section] || section}</h3><p>This section is under development.</p></div>`;
@@ -4809,12 +4796,12 @@ if (typeof window !== 'undefined') {
           <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('levels')">&#128200; Levels</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('topics')">&#127991;&#65039; Topics</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('questions')">&#10067; Question Bank</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">&#128218; Vocabulary Vault</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('question_types')">&#128284; Validation Dictionary</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('class_instances')">&#128197; Class Instances</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('class-hub')">&#128197; Class Hub</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('health')">&#9889; Recalibrator</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import-questions')">&#128229; Import Questions</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('export-questions')">&#128228; Export Questions</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">&#128229; Import Vault</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">&#128228; Export Vault</button>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import_ai_tests')">&#129302; Import AI Tests</button>
           </div>
         </div>
@@ -4847,7 +4834,7 @@ if (typeof window !== 'undefined') {
               <td class="text-right">
                 <div class="d-flex gap-2 justify-end">
                   <button class="btn btn-outline btn-sm" data-nav-topics="${r.id}" title="View Topics in ${escapeHtml(r.name)}">Topics &rarr;</button>
-                  <button class="btn btn-info btn-sm" data-nav-bank="${r.id}" title="Question Bank">&#10067; Question Bank</button>
+                  <button class="btn btn-info btn-sm" data-nav-bank="${r.id}" title="Vocabulary Vault">&#128218; Vault</button>
                   <button class="btn btn-secondary btn-sm" data-edit-subj="${r.id}">Edit</button>
                   <button class="btn btn-danger btn-sm" data-del-subj="${r.id}">Delete</button>
                 </div>
@@ -4872,7 +4859,7 @@ if (typeof window !== 'undefined') {
           const rec = window._subjRecords[sid];
           window._filterClassId = sid;
           window._filterClassName = rec ? rec.name : '';
-          loadSection('questions');
+          loadSection('vocab_vault');
         });
       });
       tbody.querySelectorAll('[data-edit-subj]').forEach(btn => {
@@ -5053,8 +5040,15 @@ window._deleteRecord = async (section, id, name) => {
 
   if (!modal || !msgEl) return;
 
-  titleEl.textContent = `Delete ${(_deleteSection || 'Record').replace(/s$/, '').replace(/^\w/, c => c.toUpperCase())}?`;
-  confirmBtn.textContent = 'Delete';
+  titleEl.textContent = 'PERMANENT DELETION';
+  const targetValEl = document.getElementById('delete-target-val');
+  if (targetValEl) {
+    const secLabel = (_deleteSection || 'Record').replace(/s$/, '').toUpperCase();
+    const displayName = name ? `${name}` : '';
+    const idSnippet = id ? `(ID: ${id.substring(0, 8)}...)` : '';
+    targetValEl.textContent = `${secLabel}: ${displayName} ${idSnippet}`.trim();
+  }
+  confirmBtn.innerHTML = '🗑️ Delete Record';
   confirmBtn.disabled = false;
   confirmBtn.className = 'btn btn-danger';
 
@@ -5195,7 +5189,7 @@ window._deleteRecord = async (section, id, name) => {
   }
 
   // Default simple soft delete message
-  msgEl.textContent = `Soft-delete "${name}"? Historical data is preserved.`;
+  msgEl.textContent = `Are you sure you want to delete this record? This action will remove the record from active view. Historical data is preserved.`;
   modal.classList.remove('hidden');
 };
 
@@ -5267,3 +5261,25 @@ window.openDuplicateStudentsModal = openDuplicateStudentsModal;
 window.openDuplicateQuestionsModal = openDuplicateQuestionsModal;
 window.loadSection = loadSection;
 window.openStudentProfile = openStudentProfile;
+
+
+// Wire Master Edit Mode Safety HUD exit & ESC key listener (Phase 449)
+document.addEventListener('DOMContentLoaded', () => {
+  const exitBtn = document.getElementById('btn-safety-hud-exit');
+  if (exitBtn) {
+    exitBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (typeof window.setGlobalEditMode === 'function') {
+        window.setGlobalEditMode(false);
+      }
+    });
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && document.body.classList.contains('global-edit-mode-on')) {
+      if (typeof window.setGlobalEditMode === 'function') {
+        window.setGlobalEditMode(false);
+      }
+    }
+  });
+});

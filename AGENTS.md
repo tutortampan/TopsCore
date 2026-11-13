@@ -226,3 +226,10 @@ Every change must be executed atomically:
 - DO NOT hardcode colors outside `TOPSCORE_COLORS` / CSS variables.
 - DO NOT use PowerShell (`Get-Content` / `Set-Content` / `Add-Content`) to modify code or documentation files.
 - DO NOT commit or push to Git until explicit user command.
+- DO NOT dump long historical phase narratives into `docs/CURRENT_STATE.md`.
+
+## 5.3 Documentation Hygiene & Rolling Window Protocol
+1. **`docs/CHANGELOG.md`**: Strict rolling window of **25 latest phases** in ultra-condensed format (Header + 2–3 high-signal deliverable bullets). Phases older than 25 must be flushed to `docs/archive/`.
+2. **`docs/CURRENT_STATE.md`**: Strictly bounded to $\le 120$ lines as the authoritative restart point (current phase, system invariants, latest ~5–8 milestones, and next action). Historical phase narratives belong exclusively in `CHANGELOG.md`.
+3. **`tasks.md` vs `docs/TODO.md`**: Active task checklist is strictly maintained in `tasks.md` in root. Never dump completed micro-tasks into `docs/TODO.md`.
+4. **`docs/SESSION_LOG.md`**: Capped at $\le 4$ lines per session (Goal + 1–2 bullet deliverables).

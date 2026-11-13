@@ -1,4 +1,4 @@
-import { adminFetchAll } from '../api.js?v=20261106_v160';
+import { adminFetchAll, getTestQuestions } from '../api.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 
@@ -45,26 +45,15 @@ async function renderExportQuestions(area) {
     showLoading('Preparing Excel export…');
 
     try {
-      const sb = await getSupabase();
-      let questions = [];
-      const [directQRes, testClasses] = await Promise.all([
-        sb.from('test_items').select('*').eq('test_id', testId),
-        sb.from('assignments').select('programs(name)').eq('test_id', testId)
-      ]);
-      questions = directQRes?.data || [];
+      let questions = selectedTest?.payload?.questions || [];
       if (!questions.length) {
         try {
-          const { data: sections } = await sb.from('Test_sections').select('id').eq('test_id', testId);
-          const sectionIds = (sections || []).map(s => s.id);
-          if (sectionIds.length > 0) {
-            const { data: secQ } = await sb.from('questions').select('*').in('section_id', sectionIds).is('deleted_at', null);
-            if (secQ && secQ.length > 0) questions = secQ;
-          }
+          questions = await getTestQuestions(selectedTest);
         } catch (_) {}
       }
 
-      const sortedQuestions = questions.sort((a,b) => (a.question_order || 0) - (b.question_order || 0));
-      const programName = testClasses?.data?.[0]?.programs?.name || selectedTest?.programs?.name || 'Program';
+      const sortedQuestions = questions.slice().sort((a,b) => (a.question_order || a.display_order || 0) - (b.question_order || b.display_order || 0));
+      const programName = selectedTest?.programs?.name || 'Program';
       const instName = selectedTest?.institutions?.name || 'TOP';
 
       const excelData = sortedQuestions.map((q, idx) => ({
