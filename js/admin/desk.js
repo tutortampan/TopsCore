@@ -17,11 +17,12 @@ import {
   testSupabaseConnection,
   previewRecalibrateTest,
   applyRecalibrateTest
-} from '../api.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 // escapeHtml / escHtml imported canonically
 
@@ -112,10 +113,10 @@ export async function renderRecycleBin(container) {
       <table class="table w-100">
         <thead>
           <tr>
-            <th style="width:110px;">Entity Type</th>
-            <th>Name / Description</th>
-            <th class="text-center" style="width:180px;">Deleted At</th>
-            <th class="text-right" style="width:190px;">Actions</th>
+            <th style="width:110px;">ENTITY TYPE</th>
+            <th>NAME / DESCRIPTION</th>
+            <th class="text-center" style="width:180px;">DELETED AT</th>
+            <th class="text-right" style="width:190px;">ACTIONS</th>
           </tr>
         </thead>
         <tbody>
@@ -129,7 +130,7 @@ export async function renderRecycleBin(container) {
 
       html += `
         <tr>
-          <td><span class="badge ${badgeClass}" style="font-size:0.75rem;">${item._entityType}</span></td>
+          <td><span style="font-size: 12px; color:var(--clr-text-2); font-weight:500;">${item._entityType}</span></td>
           <td>
             <div class="fw-600" style="color:var(--clr-text-1);">${escapeHtml(item._name)}</div>
             <div class="text-xs text-muted" style="font-family:monospace;">ID: ${item.id}</div>
@@ -137,10 +138,10 @@ export async function renderRecycleBin(container) {
           <td class="text-center text-sm text-muted">${item.deleted_at ? new Date(item.deleted_at).toLocaleString() : '&mdash;'}</td>
           <td class="text-right">
             <button class="btn btn-secondary btn-xs btn-restore-item edit-mode-only" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Restore to active view">
-              &#9851; Restore
+              Restore
             </button>
             <button class="btn btn-danger btn-xs btn-purge-item edit-mode-only" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Permanently delete from database" style="margin-left:4px;">
-              &#128128; Purge
+              Purge
             </button>
           </td>
         </tr>
@@ -221,20 +222,20 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
     <div class="purge-modal-overlay" id="purge-modal-backdrop">
       <div class="purge-modal-box">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:2rem;line-height:1;">&#9888;&#65039;</div>
+          <div style="font-size: 30px;line-height:1;">&#9888;&#65039;</div>
           <div>
-            <h3 style="margin:0;font-size:1.25rem;color:var(--grade-e, #FF0000);font-weight:700;">Permanent Purge Warning</h3>
+            <h3 style="margin:0;font-size: 16px;color:var(--grade-e);font-weight:700;">Permanent Purge Warning</h3>
             <div class="text-xs text-muted">Irreversible Database Action</div>
           </div>
         </div>
 
-        <p style="font-size:0.875rem;line-height:1.5;color:#cbd5e1;margin-bottom:1rem;">
-          You are about to permanently purge <strong style="color:#f8fafc;">${escapeHtml(name)}</strong> (<code style="color:var(--grade-e, #FF0000);">${table}</code>).
+        <p style="font-size:12px;line-height:1.5;color:#cbd5e1;margin-bottom:1rem;">
+          You are about to permanently purge <strong style="color:#f8fafc;">${escapeHtml(name)}</strong> (<code style="color:var(--grade-e);">${table}</code>).
           This action will permanently delete this row and cannot be undone.
         </p>
 
         <div style="margin-bottom:1rem;">
-          <label style="font-size:0.75rem;font-weight:700;color:var(--grade-e, #FF0000);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">
+          <label style="font-size: 12px;font-weight:700;color:var(--grade-e);text-transform:uppercase;letter-spacing:0.05em;display:block;margin-bottom:4px;">
             Type "CONFIRM" to unlock permanent purge:
           </label>
           <input type="text" class="purge-confirm-input" id="purge-confirm-text" placeholder="CONFIRM" autocomplete="off" />
@@ -320,7 +321,7 @@ export async function renderAuditLog(area) {
     <div class="antigravity-card p-3 mb-4 d-flex gap-3 align-center flex-wrap" style="border:1px solid var(--clr-border);">
       <div style="min-width:200px;">
         <label class="text-xs text-muted d-block mb-1">Filter Action Category</label>
-        <select id="audit-filter-action" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
+        <select id="audit-filter-action" class="form-control" style="padding:6px 10px;font-size: 12px;">
           <option value="">&mdash; All Event Categories &mdash;</option>
           <option value="AUTH">Logins &amp; Authentication</option>
           <option value="CRUD">CRUD Operations (Create/Delete/Update)</option>
@@ -331,7 +332,7 @@ export async function renderAuditLog(area) {
 
       <div style="flex:1;min-width:240px;">
         <label class="text-xs text-muted d-block mb-1">Search Actor / Target / Context</label>
-        <input type="text" id="audit-search-input" class="form-control" placeholder="Search by actor, entity type, action..." style="padding:6px 10px;font-size:0.85rem;" />
+        <input type="text" id="audit-search-input" class="form-control" placeholder="Search by actor, entity type, action..." style="padding:6px 10px;font-size: 12px;" />
       </div>
 
       <div class="d-flex align-end" style="padding-top:18px;">
@@ -364,8 +365,8 @@ export async function renderAuditLog(area) {
       sortable: true,
       width: '130px',
       render: (val, row) => `
-        <span class="badge badge-info" style="font-size:11px; font-weight:600;">${escapeHtml(val || 'ADMIN')}</span>
-        ${row.actor_user_id ? `<div style="font-size:11px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); margin-top:2px;" title="${escapeHtml(row.actor_user_id)}">${escapeHtml(String(row.actor_user_id).substring(0, 8))}…</div>` : ''}
+        <span class="badge badge-info" style="font-size: 12px; font-weight:600;">${escapeHtml(val || 'ADMIN')}</span>
+        ${row.actor_user_id ? `<div style="font-size: 12px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); margin-top:2px;" title="${escapeHtml(row.actor_user_id)}">${escapeHtml(String(row.actor_user_id).substring(0, 8))}…</div>` : ''}
       `
     },
     {
@@ -379,7 +380,7 @@ export async function renderAuditLog(area) {
         const isSuccess = act.includes('create') || act.includes('restore') || act.includes('insert');
         const isInfo = act.includes('login') || act.includes('auth');
         const badgeClass = isSecurity ? 'badge-danger' : (isSuccess ? 'badge-success' : (isInfo ? 'badge-info' : 'badge-neutral'));
-        return `<span class="badge ${badgeClass}" style="font-size:11px; font-weight:700; white-space:nowrap;">${escapeHtml(val || '—')}</span>`;
+        return `<span class="badge ${badgeClass}" style="font-size: 12px; font-weight:700; white-space:nowrap;">${escapeHtml(val || '—')}</span>`;
       }
     },
     {
@@ -389,7 +390,7 @@ export async function renderAuditLog(area) {
       width: '120px',
       render: (val, row) => {
         if (!val) return `<span style="color:var(--clr-text-3, #94a3b8); font-size:12px;">—</span>`;
-        return `<div style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-weight:500; white-space:nowrap;">${escapeHtml(val)}${row.entity_id ? ` <span style="font-family:var(--font-mono, monospace); font-size:11px; color:var(--clr-text-3, #94a3b8);" title="${escapeHtml(row.entity_id)}">(${escapeHtml(String(row.entity_id).substring(0, 8))}…)</span>` : ''}</div>`;
+        return `<div style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-weight:500; white-space:nowrap;">${escapeHtml(val)}${row.entity_id ? ` <span style="font-family:var(--font-mono, monospace); font-size: 12px; color:var(--clr-text-3, #94a3b8);" title="${escapeHtml(row.entity_id)}">(${escapeHtml(String(row.entity_id).substring(0, 8))}…)</span>` : ''}</div>`;
       }
     },
     {
@@ -408,7 +409,7 @@ export async function renderAuditLog(area) {
             detailsText = escapeHtml(String(row.new_value));
           }
         } else if (row.entity_type) {
-          detailsText = `<span style="color:var(--clr-text-3, #94a3b8);">Entity:</span> <strong style="font-weight:500; color:var(--clr-text-1, #f8fafc);">${escapeHtml(row.entity_type)}</strong> (ID: <code style="font-size:11px; color:var(--clr-primary, #38bdf8);">${escapeHtml(row.entity_id || '—')}</code>)`;
+          detailsText = `<span style="color:var(--clr-text-3, #94a3b8);">Entity:</span> <strong style="font-weight:500; color:var(--clr-text-1, #f8fafc);">${escapeHtml(row.entity_type)}</strong> (ID: <code style="font-size: 12px; color:var(--clr-primary, #38bdf8);">${escapeHtml(row.entity_id || '—')}</code>)`;
         } else {
           detailsText = `<span style="color:var(--clr-text-3, #94a3b8);">—</span>`;
         }
@@ -517,7 +518,7 @@ export async function renderDataHealth(container) {
       </div>
       <div class="d-flex align-center gap-2" id="sync-heartbeat-badge">
         <span class="heartbeat-dot pulse-emerald" id="health-heartbeat-dot"></span>
-        <span class="text-xs fw-700" id="health-heartbeat-text" style="color:#00c000ff;">Supabase Live</span>
+        <span class="text-xs fw-700" id="health-heartbeat-text" style="color:var(--grade-a);">Supabase Live</span>
       </div>
     </div>
 
@@ -528,25 +529,25 @@ export async function renderDataHealth(container) {
           <span class="text-xs text-muted text-uppercase fw-700">WebSocket / DB Latency</span>
           <button class="btn btn-ghost btn-xs" id="btn-ping-latency" title="Measure latency">&#9889; Ping</button>
         </div>
-        <div style="font-size:1.75rem;font-weight:700;color:#38bdf8;" id="metric-latency">Measuring...</div>
+        <div style="font-size: 20px;font-weight:700;color:#38bdf8;" id="metric-latency">Measuring...</div>
         <div class="text-xs text-muted mt-1" id="metric-latency-desc">Testing roundtrip response</div>
       </div>
 
       <div class="antigravity-card p-4">
         <div class="text-xs text-muted text-uppercase fw-700 mb-2">Storage Usage (Transient Blobs)</div>
-        <div style="font-size:1.75rem;font-weight:700;color:var(--clr-success, #00c000ff);" id="metric-storage">0.00 MB</div>
+        <div style="font-size: 20px;font-weight:700;color:var(--clr-success);" id="metric-storage">0.00 MB</div>
         <div class="text-xs text-muted mt-1">Zero audio blobs persisted (Low-Egress)</div>
       </div>
 
       <div class="antigravity-card p-4">
         <div class="text-xs text-muted text-uppercase fw-700 mb-2">Active Students</div>
-        <div style="font-size:1.75rem;font-weight:700;color:#f8fafc;" id="metric-students">&mdash;</div>
+        <div style="font-size: 20px;font-weight:700;color:#f8fafc;" id="metric-students">&mdash;</div>
         <div class="text-xs text-muted mt-1">Enrolled &amp; active records</div>
       </div>
 
       <div class="antigravity-card p-4">
         <div class="text-xs text-muted text-uppercase fw-700 mb-2">Tests &amp; Attempts</div>
-        <div style="font-size:1.75rem;font-weight:700;color:#f8fafc;" id="metric-Tests">&mdash;</div>
+        <div style="font-size: 20px;font-weight:700;color:#f8fafc;" id="metric-Tests">&mdash;</div>
         <div class="text-xs text-muted mt-1" id="metric-attempts-desc">Test attempts logged</div>
       </div>
     </div>
@@ -558,13 +559,13 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
         <div>
           <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="font-size:2rem;background:rgba(59,130,246,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128100;</div>
+            <div style="font-size: 30px;background:rgba(59,130,246,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128100;</div>
             <div>
-              <h3 style="font-weight:700;margin:0 0 4px 0;font-size:1.1rem;">Student Profile Duplicates</h3>
+              <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Student Profile Duplicates</h3>
               <div class="text-xs text-muted">Identical names within the same cohort</div>
             </div>
           </div>
-          <p style="font-size:0.85rem;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
+          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
             Detect students registered under duplicate records. Safely merge duplicate profiles, transferring historical attempts to the authoritative ID.
           </p>
         </div>
@@ -577,13 +578,13 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
         <div>
           <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="font-size:2rem;background:rgba(250,204,21,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#9889;</div>
+            <div style="font-size: 30px;background:rgba(250,204,21,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#9889;</div>
             <div>
-              <h3 style="font-weight:700;margin:0 0 4px 0;font-size:1.1rem;">Question Bank Duplicates</h3>
+              <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Question Bank Duplicates</h3>
               <div class="text-xs text-muted">Duplicate text or order conflicts</div>
             </div>
           </div>
-          <p style="font-size:0.85rem;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
+          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
             Identify duplicate questions across the centralized question bank or within the same test to maintain question uniqueness.
           </p>
         </div>
@@ -596,13 +597,13 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
         <div>
           <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="font-size:2rem;background:rgba(16,185,129,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128737;&#65039;</div>
+            <div style="font-size: 30px;background:rgba(16,185,129,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128737;&#65039;</div>
             <div>
-              <h3 style="font-weight:700;margin:0 0 4px 0;font-size:1.1rem;">Orphaned Records &amp; Integrity</h3>
+              <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Orphaned Records &amp; Integrity</h3>
               <div class="text-xs text-muted">Audits relational foreign keys &amp; integrity</div>
             </div>
           </div>
-          <p style="font-size:0.85rem;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
+          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
             Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
@@ -617,15 +618,15 @@ export async function renderDataHealth(container) {
     <div class="antigravity-card p-5 mt-4" id="card-test-recalibration" style="border: 1px solid rgba(245, 158, 11, 0.25);">
       <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
         <div class="d-flex align-center gap-3">
-          <div style="font-size: 1.8rem; background: rgba(245, 158, 11, 0.12); padding: 0.5rem; border-radius: 10px; line-height: 1;">⚡</div>
+          <div style="background: rgba(245, 158, 11, 0.12); padding: 0.5rem; border-radius: 10px; line-height: 1; color: var(--grade-c);">${getSvgIcon('zap', 20)}</div>
           <div>
-            <h3 style="font-weight: 700; margin: 0 0 2px 0; font-size: 1.15rem;">Test Engine Recalibration</h3>
+            <h3 style="font-weight: 700; margin: 0 0 2px 0; font-size: 16px;">Test Engine Recalibration</h3>
             <p class="text-xs text-muted" style="margin: 0;">
               Recalculate historical submitted student attempts after updating questions, adding multiple correct answers (separated by <code>;</code> or <code>|</code>), or enabling hyphen tolerance
             </p>
           </div>
         </div>
-        <span class="badge badge-warning" style="font-weight: 700; font-size: 0.75rem;">Domain D Maintenance</span>
+        <span class="badge badge-warning" style="font-weight: 700; font-size: 12px;">Domain D Maintenance</span>
       </div>
 
       <div class="d-flex align-center gap-3 flex-wrap mt-3" style="background: rgba(255, 255, 255, 0.02); padding: 14px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.06);">
@@ -636,8 +637,8 @@ export async function renderDataHealth(container) {
           </select>
         </div>
         <div class="d-flex gap-2 align-end" style="padding-top: 18px;">
-          <button class="btn btn-primary" id="btn-preview-recal" disabled style="height: 38px;">🔍 Preview Recalibration</button>
-          <button class="btn btn-primary" id="btn-apply-recal" disabled style="height: 38px; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">⚡ Apply Recalibration</button>
+          <button class="btn btn-primary" id="btn-preview-recal" disabled style="height: 38px;">${getSvgIcon('search', 14)} Preview Recalibration</button>
+          <button class="btn btn-primary" id="btn-apply-recal" disabled style="height: 38px; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">${getSvgIcon('zap', 14)} Apply Recalibration</button>
         </div>
       </div>
 
@@ -646,27 +647,27 @@ export async function renderDataHealth(container) {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;">
           <div class="glass-card p-3 text-center">
             <div class="text-xs text-muted mb-1">Total Questions</div>
-            <div class="fw-700" style="font-size: 1.4rem;" id="recal-metric-questions">0</div>
+            <div class="fw-700" style="font-size: 20px;" id="recal-metric-questions">0</div>
           </div>
           <div class="glass-card p-3 text-center">
             <div class="text-xs text-muted mb-1">Submitted Attempts</div>
-            <div class="fw-700" style="font-size: 1.4rem;" id="recal-metric-attempts">0</div>
+            <div class="fw-700" style="font-size: 20px;" id="recal-metric-attempts">0</div>
           </div>
           <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--clr-primary, #6366f1);">
             <div class="text-xs text-muted mb-1">Affected Attempts</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
+            <div class="fw-700" style="font-size: 20px; color: var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
           </div>
-          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-a, #00c000ff);">
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-a);">
             <div class="text-xs text-muted mb-1">Status: FAIL &rarr; PASS</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: var(--grade-a, #00c000ff);" id="recal-metric-fail-pass">0</div>
+            <div class="fw-700" style="font-size: 20px; color: var(--grade-a);" id="recal-metric-fail-pass">0</div>
           </div>
-          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-e, #FF0000);">
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-e);">
             <div class="text-xs text-muted mb-1">Status: PASS &rarr; FAIL</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: var(--grade-e, #FF0000);" id="recal-metric-pass-fail">0</div>
+            <div class="fw-700" style="font-size: 20px; color: var(--grade-e);" id="recal-metric-pass-fail">0</div>
           </div>
           <div class="glass-card p-3 text-center" style="border-left: 3px solid #38bdf8;">
             <div class="text-xs text-muted mb-1">Score Increases</div>
-            <div class="fw-700" style="font-size: 1.4rem; color: #38bdf8;" id="recal-metric-increases">0</div>
+            <div class="fw-700" style="font-size: 20px; color: #38bdf8;" id="recal-metric-increases">0</div>
           </div>
         </div>
       </div>
@@ -677,7 +678,7 @@ export async function renderDataHealth(container) {
           <div class="fw-700 text-sm">Attempt Preview Changes</div>
           <div class="d-flex align-center gap-2">
             <label class="text-xs text-muted">Filter:</label>
-            <select class="form-control" id="recal-filter-view" style="width: auto; padding: 3px 8px; font-size: 0.8rem; height: 30px;">
+            <select class="form-control" id="recal-filter-view" style="width: auto; padding: 3px 8px; font-size: 12px; height: 30px;">
               <option value="affected">Affected Students Only</option>
               <option value="all">All Students</option>
             </select>
@@ -687,16 +688,16 @@ export async function renderDataHealth(container) {
           <table style="width: 100%;">
             <thead>
               <tr>
-                <th class="text-left">Student Name</th>
-                <th class="text-left">Program</th>
-                <th class="text-center">Old Score</th>
-                <th class="text-center">New Score</th>
-                <th class="text-center">Old %</th>
-                <th class="text-center">New %</th>
-                <th class="text-center">Old Grade</th>
-                <th class="text-center">New Grade</th>
-                <th class="text-center">Status Change</th>
-                <th class="text-center">Answers Changed</th>
+                <th class="text-left">PROGRAM</th>
+                <th class="text-left">STUDENT NAME</th>
+                <th class="text-center">OLD SCORE</th>
+                <th class="text-center">NEW SCORE</th>
+                <th class="text-center">OLD %</th>
+                <th class="text-center">NEW %</th>
+                <th class="text-center">OLD GRADE</th>
+                <th class="text-center">NEW GRADE</th>
+                <th class="text-center">STATUS CHANGE</th>
+                <th class="text-center">ANSWERS CHANGED</th>
               </tr>
             </thead>
             <tbody id="recal-table-body"></tbody>
@@ -708,7 +709,7 @@ export async function renderDataHealth(container) {
     <!-- Confirmation Modal for Recalibration -->
     <div class="modal-backdrop hidden" id="recal-confirm-modal" role="dialog" aria-modal="true">
       <div class="modal-box" style="max-width: 480px; text-align: center;">
-        <div style="font-size: 2.8rem; margin-bottom: 1rem;">⚡</div>
+        <div style="margin-bottom: 1rem; color: var(--grade-c);">${getSvgIcon('zap', 35)}</div>
         <h3 class="mb-2">Confirm Test Recalibration?</h3>
         <p class="text-muted text-sm mb-4">
           This will safely update historical submitted scores, percentages, grades, and student progression using the authoritative grading engine.
@@ -720,7 +721,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-3 justify-between">
           <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
-          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">✅ Yes, Apply Changes</button>
+          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">${getSvgIcon('check-circle', 14)} Yes, Apply Changes</button>
         </div>
       </div>
     </div>
@@ -743,21 +744,21 @@ export async function renderDataHealth(container) {
       if (res.connected) {
         if (latency < 400) {
           if (dot) dot.className = 'heartbeat-dot pulse-emerald';
-          if (text) { text.textContent = 'Supabase Connected'; text.style.color = 'var(--clr-success, #00c000ff)'; }
+          if (text) { text.textContent = 'Supabase Connected'; text.style.color = 'var(--clr-success)'; }
           if (latDesc) latDesc.textContent = 'Optimal connection speed';
         } else {
           if (dot) dot.className = 'heartbeat-dot pulse-amber';
-          if (text) { text.textContent = 'High Latency'; text.style.color = 'var(--clr-warning, #FFFF00)'; }
+          if (text) { text.textContent = 'High Latency'; text.style.color = 'var(--clr-warning)'; }
           if (latDesc) latDesc.textContent = 'Moderate response delay';
         }
       } else {
         if (dot) dot.className = 'heartbeat-dot pulse-red';
-        if (text) { text.textContent = 'Offline / Disconnected'; text.style.color = 'var(--clr-danger, #FF0000)'; }
+        if (text) { text.textContent = 'Offline / Disconnected'; text.style.color = 'var(--clr-danger)'; }
         if (latDesc) latDesc.textContent = res.error || 'Connection failed';
       }
     } catch (e) {
       if (dot) dot.className = 'heartbeat-dot pulse-red';
-      if (text) { text.textContent = 'Network Error'; text.style.color = 'var(--clr-danger, #FF0000)'; }
+      if (text) { text.textContent = 'Network Error'; text.style.color = 'var(--clr-danger)'; }
       if (latEl) latEl.textContent = 'Error';
     }
   };
@@ -844,8 +845,8 @@ export async function renderDataHealth(container) {
       const resultsHTML = `
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
           <div class="antigravity-card p-4 text-center" style="border:1px solid ${totalIssues === 0 ? 'rgba(var(--grade-a-rgb, 0, 192, 0), 0.3)' : 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.3)'};">
-            <div style="font-size:2.5rem;margin-bottom:0.25rem;">${totalIssues === 0 ? '&#9989;' : '&#9888;&#65039;'}</div>
-            <h3 style="font-weight:700;margin:0 0 4px 0;color:${totalIssues === 0 ? 'var(--clr-success, #00c000ff)' : 'var(--clr-warning, #FFFF00)'};">
+            <div style="font-size: 35px;margin-bottom:0.25rem;">${totalIssues === 0 ? '&#9989;' : '&#9888;&#65039;'}</div>
+            <h3 style="font-weight:700;margin:0 0 4px 0;color:${totalIssues === 0 ? 'var(--clr-success)' : 'var(--clr-warning)'};">
               ${totalIssues === 0 ? 'All Relational Constraints Healthy' : `${totalIssues} Integrity Issue(s) Detected`}
             </h3>
             <p class="text-xs text-muted" style="margin:0;">
@@ -856,25 +857,25 @@ export async function renderDataHealth(container) {
           <div style="display:grid;grid-template-columns:repeat(2, 1fr);gap:1rem;">
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Orphaned Attempts</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${orphanedAttempts.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
+              <div style="font-size: 20px;font-weight:700;color:${orphanedAttempts.length ? 'var(--clr-danger)' : 'var(--clr-success)'};">
                 ${orphanedAttempts.length}
               </div>
             </div>
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Orphaned Questions</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${orphanedQuestions.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
+              <div style="font-size: 20px;font-weight:700;color:${orphanedQuestions.length ? 'var(--clr-danger)' : 'var(--clr-success)'};">
                 ${orphanedQuestions.length}
               </div>
             </div>
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Unlinked Answers</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${orphanedAnswers.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
+              <div style="font-size: 20px;font-weight:700;color:${orphanedAnswers.length ? 'var(--clr-danger)' : 'var(--clr-success)'};">
                 ${orphanedAnswers.length}
               </div>
             </div>
             <div class="antigravity-card p-3">
               <div class="text-xs text-muted mb-1">Dangling Progress</div>
-              <div style="font-size:1.4rem;font-weight:700;color:${danglingProgress.length ? 'var(--clr-danger, #FF0000)' : 'var(--clr-success, #00c000ff)'};">
+              <div style="font-size: 20px;font-weight:700;color:${danglingProgress.length ? 'var(--clr-danger)' : 'var(--clr-success)'};">
                 ${danglingProgress.length}
               </div>
             </div>
@@ -945,27 +946,27 @@ export async function renderDataHealth(container) {
 
             let statusBadge = '<span class="badge badge-neutral">No Change</span>';
             if (isStatusPass) {
-              statusBadge = '<span class="badge badge-success fw-700">FAIL &rarr; PASS ✨</span>';
+              statusBadge = '<span class="badge badge-success fw-700">Fail &rarr; Pass</span>';
             } else if (isStatusFail) {
-              statusBadge = '<span class="badge badge-danger fw-700">PASS &rarr; FAIL ⚠️</span>';
+              statusBadge = '<span class="badge badge-danger fw-700">Pass &rarr; Fail</span>';
             } else if (item.isAffected) {
               statusBadge = isScoreUp ? '<span class="badge badge-info">+ Score Up</span>' : '<span class="badge badge-warning">- Score Down</span>';
             }
 
             const changedAnswersCount = item.questions ? item.questions.filter(q => q.isAffected).length : 0;
 
-              const oldSymbol = (item.oldGrade === 'S' || parseFloat(item.oldPercentage) >= 100) ? '⭐' : item.oldGrade;
-              const newSymbol = (item.newGrade === 'S' || parseFloat(item.newPercentage) >= 100) ? '⭐' : item.newGrade;
+              const oldSymbol = (item.oldGrade === 'S' || item.oldGrade === '★' || parseFloat(item.oldPercentage) >= 100) ? '★' : item.oldGrade;
+              const newSymbol = (item.newGrade === 'S' || item.newGrade === '★' || parseFloat(item.newPercentage) >= 100) ? '★' : item.newGrade;
               const tr = document.createElement('tr');
               tr.innerHTML = `
-                <td class="fw-600">${escapeHtml(item.studentName)}</td>
                 <td class="text-muted text-sm">${escapeHtml(item.programName)}</td>
+                <td class="fw-600">${escapeHtml(item.studentName)}</td>
                 <td class="text-center text-muted">${item.oldScore}</td>
                 <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newScore}</td>
                 <td class="text-center text-muted">${item.oldPercentage}%</td>
                 <td class="text-center fw-700 ${isScoreUp ? 'text-success' : isScoreDown ? 'text-danger' : ''}">${item.newPercentage}%</td>
-                <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${oldSymbol}</span></td>
-                <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${newSymbol}</span></td>
+                <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size: 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${oldSymbol}</span></td>
+                <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size: 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${newSymbol}</span></td>
                 <td class="text-center">${statusBadge}</td>
                 <td class="text-center"><span class="badge ${changedAnswersCount > 0 ? 'badge-primary' : 'badge-neutral'}">${changedAnswersCount} q</span></td>
               `;
@@ -1085,7 +1086,7 @@ export async function renderSettings(area) {
       </div>
       <div class="d-flex align-center gap-2">
         <button class="btn btn-primary edit-mode-only" id="btn-save-all-settings" style="font-weight:700; display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 1.25rem; box-shadow: 0 4px 14px rgba(37,99,235,0.35);">
-          💾 Save All Settings
+          ${getSvgIcon('save', 14)} Save All Settings
         </button>
       </div>
     </div>
@@ -1095,9 +1096,9 @@ export async function renderSettings(area) {
       <!-- 1. The Cost Guard Engine Card (Crucial) -->
       <div class="antigravity-card p-5" style="border-color:rgba(255,0,0,0.3);box-shadow:0 20px 40px rgba(255,0,0,0.08);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:1.5rem;">&#128737;&#65039;</div>
+          <div style="font-size: 20px;">&#128737;&#65039;</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:var(--grade-e, #FF0000);font-weight:700;">The Cost Guard Engine</h3>
+            <h3 style="font-size: 16px;margin:0;color:var(--grade-e);font-weight:700;">The Cost Guard Engine</h3>
             <div class="text-xs text-muted">Global AI Token Bankruptcy Defense</div>
           </div>
         </div>
@@ -1118,16 +1119,16 @@ export async function renderSettings(area) {
         </div>
 
         <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-save-cost-guard" style="font-weight:700;">
-          &#128274; Save Cost Guard Limits
+          ${getSvgIcon('lock', 13)} Save Cost Guard Limits
         </button>
       </div>
 
       <!-- 1.5 Test Security & Anti-Cheat Engine Card -->
       <div class="antigravity-card p-5" style="border-color:rgba(255, 255, 0, 0.3);box-shadow:0 20px 40px rgba(255, 255, 0, 0.08);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:1.5rem;">🛡️</div>
+          <div style="color:var(--grade-c);">${getSvgIcon('shield', 22)}</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:var(--grade-c, #FFFF00);font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
+            <h3 style="font-size: 16px;margin:0;color:var(--grade-c);font-weight:700;">Test Security &amp; Anti-Cheat Engine</h3>
             <div class="text-xs text-muted">Controls for exam-taking integrity</div>
           </div>
         </div>
@@ -1160,26 +1161,26 @@ export async function renderSettings(area) {
 
         <!-- Sound Type Picker -->
         <div class="form-group mb-3" id="sound-picker-group">
-          <label class="form-label text-sm fw-600 mb-2">🔊 Alert Sound Style</label>
+          <label class="form-label text-sm fw-600 mb-2">${getSvgIcon('volume-2', 14)} Alert Sound Style</label>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.4rem 0.8rem;">
             ${[
-              { id: 'police_siren', emoji: '🚨', label: 'Police Siren' },
-              { id: 'alarm_beep',   emoji: '📢', label: 'Alarm Beeps' },
-              { id: 'red_alert',    emoji: '🔴', label: 'Red Alert' },
-              { id: 'buzzer',       emoji: '🔔', label: 'Buzzer' },
-              { id: 'warning_tone', emoji: '⚠️', label: 'Warning Tone' },
-              { id: 'laser_blast',  emoji: '⚡', label: 'Laser Blast' },
-              { id: 'rapid_fire',   emoji: '💥', label: 'Rapid Fire' },
-              { id: 'klaxon',       emoji: '🛥️', label: 'Klaxon' },
-              { id: 'whistle',      emoji: '🏉', label: 'Whistle' },
-              { id: 'dj_drop',      emoji: '🎧', label: 'DJ Drop' },
-              { id: 'custom',       emoji: '📁', label: 'Custom Upload' },
+              { id: 'police_siren', icon: 'shield', label: 'Police Siren' },
+              { id: 'alarm_beep',   icon: 'volume-2', label: 'Alarm Beeps' },
+              { id: 'red_alert',    icon: 'alert-triangle', label: 'Red Alert' },
+              { id: 'buzzer',       icon: 'clock', label: 'Buzzer' },
+              { id: 'warning_tone', icon: 'alert-triangle', label: 'Warning Tone' },
+              { id: 'laser_blast',  icon: 'zap', label: 'Laser Blast' },
+              { id: 'rapid_fire',   icon: 'zap', label: 'Rapid Fire' },
+              { id: 'klaxon',       icon: 'volume-2', label: 'Klaxon' },
+              { id: 'whistle',      icon: 'activity', label: 'Whistle' },
+              { id: 'dj_drop',      icon: 'activity', label: 'DJ Drop' },
+              { id: 'custom',       icon: 'upload', label: 'Custom Upload' },
             ].map(s => `
               <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.03);transition:background 0.15s;" class="sound-opt-label">
-                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:var(--grade-c, #FFFF00);" />
-                <span style="font-size:0.95rem;">${s.emoji}</span>
+                <input type="radio" name="anti_cheat_sound_type" value="${s.id}" ${(settings.anti_cheat_sound_type || 'police_siren') === s.id ? 'checked' : ''} style="accent-color:var(--grade-c);" />
+                <span style="color:var(--clr-primary, #38bdf8);">${getSvgIcon(s.icon, 14)}</span>
                 <span class="text-xs fw-600">${s.label}</span>
-                <button type="button" class="btn-preview-sound" data-sound="${s.id}" title="Preview" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size:0.8rem;opacity:0.7;padding:0 2px;" tabindex="-1">▶</button>
+                <button type="button" class="btn-preview-sound" data-sound="${s.id}" title="Preview" style="margin-left:auto;background:none;border:none;cursor:pointer;font-size: 12px;opacity:0.7;padding:0 2px;" tabindex="-1">▶</button>
               </label>`).join('')}
           </div>
         </div>
@@ -1189,7 +1190,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm fw-600">Upload Custom Alert Sound</label>
           <div class="text-xs text-muted mb-1">MP3, WAV, or OGG — stored in browser settings (max ~2 MB)</div>
           <input type="file" id="setting-custom-sound-file" accept="audio/*" class="form-control" style="padding:0.35rem;" />
-          ${settings.anti_cheat_custom_sound_b64 ? `<div class="text-xs mt-1" style="color:#00c000ff;">✅ Custom sound uploaded. Uploading a new file will replace it.</div>` : ''}
+          ${settings.anti_cheat_custom_sound_b64 ? `<div class="text-xs mt-1" style="color:var(--grade-a);">${getSvgIcon('check-circle', 12)} Custom sound uploaded. Uploading a new file will replace it.</div>` : ''}
         </div>
 
         <div class="form-group mb-4">
@@ -1199,16 +1200,16 @@ export async function renderSettings(area) {
         </div>
 
         <button class="btn btn-primary btn-sm w-100 edit-mode-only" id="btn-save-anti-cheat" style="font-weight:700;">
-          🛡️ Save Security Settings
+          ${getSvgIcon('shield', 14)} Save Security Settings
         </button>
       </div>
 
       <!-- 2. Secure API Key Vault Card -->
       <div class="antigravity-card p-5">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:1.5rem;">&#128272;</div>
+          <div style="font-size: 20px;">&#128272;</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:var(--clr-primary);font-weight:700;">API Key Vault</h3>
+            <h3 style="font-size: 16px;margin:0;color:var(--clr-primary);font-weight:700;">API Key Vault</h3>
             <div class="text-xs text-muted">Masked credentials for LLM integration</div>
           </div>
         </div>
@@ -1244,7 +1245,7 @@ export async function renderSettings(area) {
 
       <!-- 3. Global Platform Configuration Card -->
       <div class="antigravity-card p-5">
-        <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--clr-text-1);">Global Platform Configuration</h3>
+        <h3 style="font-size: 16px;margin-bottom:1rem;color:var(--clr-text-1);">Global Platform Configuration</h3>
         
         <div class="form-group mb-3">
           <label class="form-label text-sm">Site Name</label>
@@ -1268,7 +1269,7 @@ export async function renderSettings(area) {
 
       <!-- 4. Security & Administrator Credentials Card -->
       <div class="antigravity-card p-5">
-        <h3 style="font-size:1.1rem;margin-bottom:1rem;color:var(--clr-text-1);">Administrator Authentication</h3>
+        <h3 style="font-size: 16px;margin-bottom:1rem;color:var(--clr-text-1);">Administrator Authentication</h3>
         <p class="text-xs text-muted mb-3">Configure custom local credentials or restore default master admin access.</p>
 
         <div class="form-group mb-3">
@@ -1293,9 +1294,9 @@ export async function renderSettings(area) {
       <!-- 4b. Security & Tutor Proctor Credentials Card -->
       <div class="antigravity-card p-5">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:1.5rem;">🔐</div>
+          <div style="color:var(--clr-primary, #38bdf8);">${getSvgIcon('lock', 22)}</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:var(--clr-text-1);font-weight:700;">Tutor Proctor Credentials</h3>
+            <h3 style="font-size: 16px;margin:0;color:var(--clr-text-1);font-weight:700;">Tutor Proctor Credentials</h3>
             <div class="text-xs text-muted">Open/Close Exam &amp; Check Score Access</div>
           </div>
         </div>
@@ -1324,9 +1325,9 @@ export async function renderSettings(area) {
       <!-- 5. Workspace Scratchpad -->
       <div class="antigravity-card p-5">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:1.5rem;">&#128201;</div>
+          <div style="color:var(--clr-primary, #38bdf8);">${getSvgIcon('edit', 22)}</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:var(--clr-text-1);font-weight:700;">Workspace Scratchpad</h3>
+            <h3 style="font-size: 16px;margin:0;color:var(--clr-text-1);font-weight:700;">Workspace Scratchpad</h3>
             <div class="text-xs text-muted">Jot down quick notes, queries, or reminders.</div>
           </div>
         </div>
@@ -1336,17 +1337,17 @@ export async function renderSettings(area) {
       <!-- 6. Danger Zone: Vocabulary Vault Master Reset -->
       <div class="antigravity-card p-5" style="border: 1px solid rgba(255, 0, 0, 0.45); box-shadow: 0 10px 30px rgba(255, 0, 0, 0.12); background: rgba(15, 23, 42, 0.65);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size:1.5rem;">⚠️</div>
+          <div style="color:var(--grade-e);">${getSvgIcon('alert-triangle', 22)}</div>
           <div>
-            <h3 style="font-size:1.1rem;margin:0;color:var(--grade-e, #FF0000);font-weight:700;">Danger Zone: Vocabulary Vault Reset</h3>
+            <h3 style="font-size: 16px;margin:0;color:var(--grade-e);font-weight:700;">Danger Zone: Vocabulary Vault Reset</h3>
             <div class="text-xs text-muted">Master Reset for Vocabulary Vault Items</div>
           </div>
         </div>
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
-          Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: var(--grade-e, #FF0000);">RESET</strong> to confirm.
+          Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: var(--grade-e);">RESET</strong> to confirm.
         </p>
         <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-danger-reset-vault" style="font-weight:700; height: 36px;">
-          🗑️ Master Reset Vocabulary Vault
+          ${getSvgIcon('trash', 14)} Master Reset Vocabulary Vault
         </button>
       </div>
 
@@ -1601,7 +1602,7 @@ export async function renderSettings(area) {
         upserts.push(sb.from('site_settings').upsert({ key: 'anti_cheat_custom_sound_b64', value: customSoundB64, updated_at: new Date().toISOString() }, { onConflict: 'key' }));
       }
       await Promise.all(upserts);
-      if (!silent) showToast('🛡️ Security Settings saved!', 'success');
+      if (!silent) showToast('Security Settings saved!', 'success');
       return true;
     } catch (err) {
       if (!silent) showToast('Failed to save security settings: ' + err.message, 'error');
@@ -1727,7 +1728,7 @@ export async function renderSettings(area) {
   // Danger Zone: Master Reset Vocabulary Vault
   // ---------------------------------------------------------
   document.getElementById('btn-danger-reset-vault')?.addEventListener('click', async () => {
-    if (!confirm('⚠️ DANGER: This will permanently delete ALL words and phrases from the Vocabulary Vault. Are you sure you want to proceed?')) return;
+    if (!confirm('DANGER: This will permanently delete ALL words and phrases from the Vocabulary Vault. Are you sure you want to proceed?')) return;
     const confirmText = prompt('Type RESET in capital letters to confirm permanent deletion:');
     if (confirmText?.trim() !== 'RESET') {
       showToast('Master reset cancelled.', 'info');

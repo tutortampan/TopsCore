@@ -12,9 +12,23 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261112_v425" />
-  <link rel="stylesheet" href="css/admin.css?v=20261113_v449" />
+  <link rel="stylesheet" href="css/style.css?v=20261115_v522" />
+  <!-- TopsCore Consolidated Master Workstation Stylesheet (Minified) -->
+  <link rel="stylesheet" href="css/admin.min.css?v=20261115_v523" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
+
+  <!-- High-Performance Parallel ES Module Preload Graph -->
+  <link rel="modulepreload" href="./js/api.js?v=20261115_v522" />
+  <link rel="modulepreload" href="./js/supabase.js?v=20261106_v160" />
+  <link rel="modulepreload" href="./js/session.js?v=20261106_v160" />
+  <link rel="modulepreload" href="./js/grading.js?v=20261115_v522" />
+  <link rel="modulepreload" href="./js/svg-icons.js?v=20261114_v493" />
+  <link rel="modulepreload" href="./js/admin/datagrid.js?v=20261115_v523" />
+  <link rel="modulepreload" href="./js/admin/admin-init.js?v=20261114_v517" />
+  <link rel="modulepreload" href="./js/admin/app.js?v=20261115_v523" />
+  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261115_v523" />
+  <link rel="modulepreload" href="./js/admin/classes-hub.js?v=20261114_v510" />
+  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261114_v516" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261107_v161';"></script>
@@ -52,7 +66,7 @@
     <div class="orb orb-2"></div>
     <div class="auth-card">
       <div class="auth-brand">
-        <div class="brand-icon">🛡️</div>
+        <div class="brand-icon"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
         <h1>TUTOR'S ROOM</h1>
         <p>Tops Core — ABCD System</p>
       </div>
@@ -78,58 +92,58 @@
 
     <!-- Sidebar -->
     <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
-      <div class="sidebar-logo">
-        <div class="logo-text">TOPS CORE</div>
-        <button type="button" id="global-edit-mode-toggle" class="btn btn-sm btn-edit-mode-global mode-off" aria-label="Toggle Global Edit Mode" title="Toggle Global Edit Mode">
-          <span class="edit-mode-dot"></span>
-          <span class="edit-mode-icon">🔒</span>
-          <span class="edit-mode-label">EDIT: OFF</span>
+      <div class="sidebar-logo sidebar-corner-top" title="Tutor's Room">
+        <button type="button" class="btn btn-sm btn-sidebar-exit" id="admin-logout-btn" title="Exit Console" aria-label="Exit Console">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-exit-svg"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
         </button>
+        <div class="sidebar-corner-text" id="sidebar-user-role-label">
+          <span class="corner-main-label">ADMIN</span>
+        </div>
       </div>
 
       <!-- ABCD Architecture Primary Sidebar (ADMIN, BOARD, CLASS, DESK) -->
       <nav class="admin-nav" aria-label="Navigation">
         <!-- DOMAIN A: Admin (Executive Workspace) -->
         <div class="nav-domain-group" data-domain="admin">
-          <div class="nav-domain-header"><span class="domain-icon">&#128188;</span>A &mdash; Admin</div>
-          <div class="admin-nav-item" data-sub="classes-hub"><span class="nav-icon">&#127891;</span>Curriculum</div>
-          <div class="admin-nav-item active" data-sub="dashboard"><span class="nav-icon">&#128202;</span>Dashboard</div>
-          <div class="admin-nav-item" data-sub="organization"><span class="nav-icon">&#127970;</span>Organization</div>
+          <div class="nav-domain-header"><span class="domain-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg></span><span>A &mdash; Admin</span></div>
+          <div class="admin-nav-item" data-sub="classes-hub"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg></span><span>Curriculum</span></div>
+          <div class="admin-nav-item active" data-sub="dashboard"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg></span><span>Dashboard</span></div>
+          <div class="admin-nav-item" data-sub="organization"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="9" y1="22" x2="9" y2="22.01"></line><line x1="15" y1="22" x2="15" y2="22.01"></line><line x1="8" y1="6" x2="10" y2="6"></line><line x1="14" y1="6" x2="16" y2="6"></line><line x1="8" y1="10" x2="10" y2="10"></line><line x1="14" y1="10" x2="16" y2="10"></line><line x1="8" y1="14" x2="10" y2="14"></line><line x1="14" y1="14" x2="16" y2="14"></line></svg></span><span>Organization</span></div>
         </div>
+
+        <div class="nav-domain-divider"></div>
 
         <!-- DOMAIN B: Board (Registry & Roster) -->
         <div class="nav-domain-group" data-domain="board">
-          <div class="nav-domain-header"><span class="domain-icon">&#128208;</span>B &mdash; Board</div>
+          <div class="nav-domain-header"><span class="domain-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></span><span>B &mdash; Board</span></div>
           <div id="sidebar-programs-list"></div>
         </div>
 
+        <div class="nav-domain-divider"></div>
+
         <!-- DOMAIN C: Class (Active Learning Classes) -->
         <div class="nav-domain-group" data-domain="class">
-          <div class="nav-domain-header"><span class="domain-icon">&#9889;</span>C &mdash; Class</div>
+          <div class="nav-domain-header"><span class="domain-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span><span>C &mdash; Class</span></div>
           <div id="sidebar-classes-list"></div>
         </div>
 
+        <div class="nav-domain-divider"></div>
+
         <!-- DOMAIN D: DATA (System Administration, Security & Master Repositories) -->
         <div class="nav-domain-group" data-domain="desk">
-          <div class="nav-domain-header"><span class="domain-icon">&#128737;&#65039;</span>D &mdash; System & Data</div>
-          <div class="admin-nav-item" data-sub="modules"><span class="nav-icon">&#129513;</span>Modules (Core Blocks)
-          </div>
-          <div class="admin-nav-item" data-sub="settings"><span class="nav-icon">&#9881;&#65039;</span>System Settings
-          </div>
-          <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon">&#128214;</span>Vocabulary Vault
-          </div>
+          <div class="nav-domain-header"><span class="domain-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span><span>D &mdash; System & Data</span></div>
+          <div class="admin-nav-item" data-sub="modules"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span>Modules (Core Blocks)</span></div>
+          <div class="admin-nav-item" data-sub="settings"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span><span>System Settings</span></div>
+          <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span><span>Vocabulary Vault</span></div>
         </div>
       </nav>
 
-      <div class="sidebar-footer">
-        <div class="admin-user-chip">
-          <div class="user-avatar" id="sidebar-user-avatar">A</div>
-          <div class="user-info">
-            <div class="user-name">Tutor's Room</div>
-            <div class="user-role" id="sidebar-user-role-label">admin</div>
-          </div>
-          <button class="btn btn-ghost btn-icon btn-sm btn-logout" id="admin-logout-btn"
-            title="Logout" aria-label="Logout">🚪</button>
+      <div class="sidebar-footer sidebar-corner-bottom">
+        <button type="button" id="global-edit-mode-toggle" class="btn btn-sm btn-edit-mode-global mode-off" aria-label="Toggle Global Edit Mode" title="Toggle Global Edit Mode">
+          <span class="edit-mode-label">OFF</span>
+        </button>
+        <div class="sidebar-corner-text">
+          <span class="corner-main-label">EDIT MODE</span>
         </div>
       </div>
     </aside>
@@ -145,17 +159,6 @@
         </div>
         <div class="admin-topbar-actions" id="admin-topbar-actions"></div>
       </header>
-
-  <!-- Master Edit Mode Safety HUD (Phase 449) -->
-  <aside id="master-edit-safety-hud" class="master-edit-safety-hud" role="alert" aria-live="assertive">
-    <div class="safety-hud-content">
-      <span class="safety-hud-badge">⚠️ MASTER EDIT MODE ACTIVE</span>
-      <span class="safety-hud-text">Cells are directly editable. Changes save live. Press <kbd>ESC</kbd> or click to exit.</span>
-    </div>
-    <button type="button" class="btn btn-sm safety-hud-exit-btn" id="btn-safety-hud-exit" title="Exit Master Edit Mode">
-      <span>🔒 EXIT EDIT MODE</span>
-    </button>
-  </aside>
 
       <main class="admin-content" id="admin-content-area">
         <!-- loadSection renders here -->
@@ -182,7 +185,7 @@
         <button class="btn btn-ghost btn-icon" id="close-crud-modal" aria-label="Close">✕</button>
       </div>
       <form id="crud-form" novalidate></form>
-      <div class="d-flex gap-3 justify-between mt-6">
+      <div class="modal-footer">
         <button type="button" class="btn btn-secondary" id="crud-cancel-btn">Cancel</button>
         <button type="submit" form="crud-form" class="btn btn-primary" id="crud-save-btn">Save</button>
       </div>
@@ -193,16 +196,22 @@
   <div class="modal-backdrop hidden" id="delete-modal" role="dialog" aria-modal="true"
     aria-labelledby="delete-modal-title">
     <div class="modal-box modal-box-delete">
-      <div class="delete-icon">⚠️</div>
+      <div class="delete-icon">
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--grade-e)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
       <h3 id="delete-modal-title">PERMANENT DELETION</h3>
       <p class="text-muted text-sm" id="delete-modal-message">Are you sure you want to delete this record? This action will remove the record from active view.</p>
       <div class="delete-target-pill" id="delete-target-pill">
         <span class="delete-target-label">Target Item</span>
         <span class="delete-target-val" id="delete-target-val">—</span>
       </div>
-      <div class="d-flex gap-3 justify-between w-100 delete-btn-row">
+      <div class="modal-footer w-100">
         <button class="btn btn-secondary flex-1" id="delete-cancel-btn">Cancel</button>
-        <button class="btn btn-danger flex-1" id="delete-confirm-btn">🗑️ Delete Record</button>
+        <button class="btn btn-danger flex-1" id="delete-confirm-btn">Delete Record</button>
       </div>
     </div>
   </div>
@@ -213,7 +222,7 @@
     <div class="modal-box modal-box-lg">
       <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="dup-students-modal-title" class="modal-title-lg">&#128269; Duplicate Students Review &amp; Resolver
+          <h3 id="dup-students-modal-title" class="modal-title-lg">Duplicate Students Review &amp; Resolver
           </h3>
           <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify
             their TEST attempts and progress.</p>
@@ -225,15 +234,15 @@
       <div class="d-flex align-center justify-between flex-wrap gap-3 mb-4">
         <div class="d-flex gap-2">
           <button class="btn btn-primary btn-sm dup-stud-tab-btn" data-scope="same_class" id="tab-btn-same-class">
-            &#127979; Same Class Duplicates (<span id="dup-stud-same-count">0</span>)
+            Same Class Duplicates (<span id="dup-stud-same-count">0</span>)
           </button>
           <button class="btn btn-secondary btn-sm dup-stud-tab-btn" data-scope="cross_class" id="tab-btn-cross-class">
-            &#127760; Cross-Class Same Name (<span id="dup-stud-cross-count">0</span>)
+            Cross-Class Same Name (<span id="dup-stud-cross-count">0</span>)
           </button>
         </div>
         <div class="d-flex gap-2">
           <button class="btn btn-warning btn-sm font-bold" id="btn-merge-all-visible-students">
-            &#9889; Quick Merge All Groups
+            Quick Merge All Groups
           </button>
         </div>
       </div>
@@ -254,7 +263,7 @@
     <div class="modal-box modal-box-lg">
       <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="dup-questions-modal-title" class="modal-title-lg">&#128269; Duplicate Questions Review &amp;
+          <h3 id="dup-questions-modal-title" class="modal-title-lg">Duplicate Questions Review &amp;
             Resequencer</h3>
           <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within Tests and auto-resequence
             question orders seamlessly.</p>
@@ -274,19 +283,19 @@
           </div>
           <div class="d-flex gap-2 pt-16">
             <button class="btn btn-primary btn-sm dup-q-tab-btn" data-qtab="same_test" id="tab-btn-q-same">
-              &#9888;&#65039; Same-Test Duplicates (<span id="dup-q-same-count">0</span>)
+              Same-Test Duplicates (<span id="dup-q-same-count">0</span>)
             </button>
             <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="order_conflicts" id="tab-btn-q-order">
-              &#128290; Order Conflicts (<span id="dup-q-order-count">0</span>)
+              Order Conflicts (<span id="dup-q-order-count">0</span>)
             </button>
             <button class="btn btn-secondary btn-sm dup-q-tab-btn" data-qtab="cross_test" id="tab-btn-q-cross">
-              &#127760; Cross-Test Duplicates (<span id="dup-q-cross-count">0</span>)
+              Cross-Test Duplicates (<span id="dup-q-cross-count">0</span>)
             </button>
           </div>
         </div>
         <div class="d-flex align-end pt-16">
           <button class="btn btn-danger btn-sm font-bold-nowrap" id="btn-batch-clean-test-questions">
-            &#9889; Clean All &amp; Resequence (1..N)
+            Clean All &amp; Resequence (1..N)
           </button>
         </div>
       </div>
@@ -307,7 +316,7 @@
     <div class="modal-box modal-box-lg bulk-edit-modal-box">
       <div class="modal-header modal-header-bordered">
         <div>
-          <h3 id="bulk-edit-tests-title" class="modal-title-lg">⚡ Bulk Edit Tests</h3>
+          <h3 id="bulk-edit-tests-title" class="modal-title-lg">Bulk Edit Tests</h3>
           <p class="text-xs text-muted modal-subtitle" id="bulk-edit-tests-subtitle">Modify duration, answer type, and passing score across multiple tests simultaneously.</p>
         </div>
         <button class="btn btn-ghost btn-icon" id="close-bulk-edit-tests-modal" aria-label="Close">✕</button>
@@ -333,7 +342,7 @@
               <input type="checkbox" id="bulk-check-duration" class="bulk-edit-checkbox"
                 title="Enable duration adjustment" />
               <label for="bulk-check-duration" class="bulk-edit-field-label">
-                ⏱️ Change Test Duration (Minutes)
+                Change Test Duration (Minutes)
               </label>
             </div>
             <div id="bulk-wrap-duration" class="bulk-edit-field-wrap">
@@ -343,11 +352,11 @@
                 <label for="bulk-input-duration" class="text-sm text-muted">Minutes per attempt session</label>
               </div>
               <div class="bulk-edit-preset-row">
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">⚡ 5 Minutes (Quiz)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-5">5 Minutes (Task)</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-15">15 Minutes</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-30">30 Minutes</button>
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-60">60 Minutes</button>
-                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">🏆 120 Minutes (Exam)</button>
+                <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-dur-120">120 Minutes (Exam)</button>
               </div>
             </div>
           </div>
@@ -358,15 +367,15 @@
               <input type="checkbox" id="bulk-check-answertype" class="bulk-edit-checkbox"
                 title="Enable answer type change" />
               <label for="bulk-check-answertype" class="bulk-edit-field-label">
-                🗣️ Change Answer Type
+                Change Answer Type
               </label>
             </div>
             <div id="bulk-wrap-answertype" class="bulk-edit-field-wrap">
               <select id="bulk-select-answertype" class="form-control bulk-edit-select" title="Select answer type" aria-label="Answer Type">
-                <option value="spoken">🗣️ Spoken (Speech to Text / Voice)</option>
-                <option value="written">✍️ Written (Direct Typed Text)</option>
-                <option value="selection">🔘 Selection (Multiple Choice / Dropdown)</option>
-                <option value="mixed">🔀 Mixed</option>
+                <option value="spoken">Spoken (Speech to Text / Voice)</option>
+                <option value="written">Written (Direct Typed Text)</option>
+                <option value="selection">Selection (Multiple Choice / Dropdown)</option>
+                <option value="mixed">Mixed</option>
               </select>
               <p class="text-xs text-muted bulk-edit-help-text">Automatically synchronizes all question items in test_items.</p>
             </div>
@@ -378,7 +387,7 @@
               <input type="checkbox" id="bulk-check-minscore" class="bulk-edit-checkbox"
                 title="Enable passing score change" />
               <label for="bulk-check-minscore" class="bulk-edit-field-label">
-                🎯 Change Passing Score (%)
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> Change Passing Score (%)
               </label>
             </div>
             <div id="bulk-wrap-minscore" class="bulk-edit-field-wrap">
@@ -403,13 +412,13 @@
               <input type="checkbox" id="bulk-check-order" class="bulk-edit-checkbox"
                 title="Enable question order change" />
               <label for="bulk-check-order" class="bulk-edit-field-label">
-                🔀 Change Question Order
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><polyline points="16 3 21 3 21 8"></polyline><line x1="4" y1="20" x2="21" y2="3"></line><polyline points="21 16 21 21 16 21"></polyline><line x1="15" y1="15" x2="21" y2="21"></line><line x1="4" y1="4" x2="9" y2="9"></line></svg> Change Question Order
               </label>
             </div>
             <div id="bulk-wrap-order" class="bulk-edit-field-wrap">
               <select id="bulk-select-order" class="form-control bulk-edit-select" title="Select question order" aria-label="Question Order">
-                <option value="random">🔀 Random (Shuffled Questions)</option>
-                <option value="sequential">➡️ Sequential (Ordered Questions)</option>
+                <option value="random">Random (Shuffled Questions)</option>
+                <option value="sequential">Sequential (Ordered Questions)</option>
               </select>
             </div>
           </div>
@@ -420,13 +429,13 @@
       <div class="modal-footer modal-footer-bordered bulk-edit-footer">
         <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Cancel</button>
         <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
-          <span>💾 Apply Changes</span> (<span id="bulk-save-count">0</span> Tests)
+          <span>Apply Changes</span> (<span id="bulk-save-count">0</span> Tests)
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ✨ RECORD DRAWER ✨ -->
+  <!-- RECORD DRAWER -->
   <div id="datagrid-drawer-overlay" class="datagrid-drawer-overlay hidden" onclick="closeRecordDrawer()"></div>
   <div id="datagrid-drawer" class="datagrid-drawer">
     <div class="datagrid-drawer-header">
@@ -467,14 +476,17 @@
         <table class="roster-table">
           <thead>
             <tr>
-              <th class="text-left">Student Name</th>
-              <th class="text-right">Enrollment Type</th>
+              <th class="text-left">STUDENT NAME</th>
+              <th class="text-right">ENROLLMENT TYPE</th>
             </tr>
           </thead>
           <tbody id="roster-modal-tbody">
             <!-- Dynamic rows -->
           </tbody>
         </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('roster-modal').classList.add('hidden')">Close</button>
       </div>
     </div>
   </div>
@@ -484,7 +496,7 @@
     <div class="modal-box modal-box-add-class">
       <div class="modal-header modal-header-add-class">
         <div>
-          <h3 class="modal-title-lg">➕ Add Class</h3>
+          <h3 class="modal-title-lg">Add Class</h3>
           <p class="text-xs text-muted modal-subtitle" id="add-class-level-label">Inheriting Level</p>
         </div>
         <button class="btn btn-ghost btn-icon"
@@ -507,61 +519,34 @@
           <span class="text-muted text-sm">Loading levels...</span>
         </div>
       </div>
-      <div class="d-flex gap-2 justify-end mt-4">
-        <button class="btn btn-ghost"
+      <div class="modal-footer">
+        <button class="btn btn-secondary"
           onclick="document.getElementById('add-class-modal').classList.add('hidden')">Cancel</button>
         <button class="btn btn-primary" id="add-class-save-btn">Save Class</button>
       </div>
     </div>
   </div>
 
-    <!-- 🎴 Classroom 3D Flashcard Drill Modal (Bottleneck Master) -->
-  <div class="flashcard-modal-backdrop hidden" id="class-flashcard-modal" role="dialog" aria-modal="true" aria-label="Classroom Flashcard Drill">
-    <div class="flashcard-modal-card" style="max-width: 540px;">
-      <div class="flashcard-modal-header">
-        <div class="flashcard-header-title-wrap">
-          <h2 class="flashcard-modal-title" id="class-fc-modal-title">🎴 Classroom Bottleneck Drill</h2>
-          <span class="flashcard-modal-counter" id="class-fc-progress-counter">Card 1 of 20</span>
-        </div>
-        <button class="flashcard-close-btn" id="close-class-flashcard-btn" type="button" aria-label="Close">✕</button>
-      </div>
-
-      <div class="flashcard-stage" style="padding: 1.5rem 1.25rem;">
-        <div class="flip-card" id="class-active-flip-card" style="height: 260px;">
-          <div class="flip-card-inner" id="class-active-flip-inner">
-            <!-- Front Side: Prompt & Common Mistakes -->
-            <div class="flip-card-front">
-              <div class="fc-pos-pill" id="class-fc-front-pos">WORD</div>
-              <h3 class="fc-front-prompt" id="class-fc-front-prompt" style="font-size: 1.5rem;">Prompt</h3>
-              <div class="fc-front-student-ans" id="class-fc-front-errors" style="font-size: 0.8rem; margin-top: 6px; text-align: center; max-width: 90%;">Common mistakes: <span>—</span></div>
-              <div class="fc-tap-hint">👆 Tap card or press [Space] to reveal target</div>
-            </div>
-            <!-- Back Side: English Target & Pronunciation Audio -->
-            <div class="flip-card-back">
-              <span class="fc-target-label">TARGET VOCABULARY</span>
-              <h2 class="fc-back-target" id="class-fc-back-target" style="font-size: 1.8rem;">Target</h2>
-              <button type="button" class="fc-speak-btn" id="class-fc-speak-btn" title="Listen to Native Pronunciation">🔊 Listen [P]</button>
-              <div class="fc-tap-hint">👆 Tap card or press [Space] to flip back</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="flashcard-footer-controls">
-        <button class="btn btn-secondary btn-sm" id="class-fc-btn-prev" type="button">← Prev [←]</button>
-        <button class="btn btn-primary btn-sm" id="class-fc-btn-flip" type="button">🔄 Flip [Space]</button>
-        <button class="btn btn-secondary btn-sm" id="class-fc-btn-next" type="button">Next → [→]</button>
-      </div>
-    </div>
-  </div>
-
-<script type="module" src="./js/admin/admin-init.js?v=20261111_v175"></script>
-  <script type="module" src="js/admin/app.js?v=20261113_v449"></script>
+  <script type="module" src="./js/svg-icons.js?v=20261114_v493"></script>
+  <script type="module" src="./js/admin/admin-init.js?v=20261114_v517"></script>
+  <script type="module" src="js/admin/app.js?v=20261115_v523"></script>
 
 
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">
-    <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
+    <div class="banner-brand-content">
+      <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
+    </div>
+    <!-- Master Edit Mode Active Bottom Banner (60px) -->
+    <aside id="master-edit-safety-hud" class="master-edit-safety-hud" role="alert" aria-live="assertive">
+      <div class="safety-hud-content">
+        <span class="safety-hud-badge">MASTER EDIT MODE ACTIVE</span>
+        <span class="safety-hud-text">Cells are directly editable. Changes save live. Press <kbd>ESC</kbd> or click to exit.</span>
+      </div>
+      <button type="button" class="btn btn-sm safety-hud-exit-btn" id="btn-safety-hud-exit" title="Exit Master Edit Mode">
+        <span>EXIT EDIT MODE</span>
+      </button>
+    </aside>
   </div>
 </body>
 

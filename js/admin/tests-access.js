@@ -1,10 +1,10 @@
 /**
  * TopsCore — Test Access & Live Test Sessions Controller (v5.8.0)
  * Integrated under Domain C: Class Hub (Vocabulary Class & Curriculum).
- * 
+ *
  * Features:
  * 1. Unified Theme Test Cards (Theme A, B, C, D): Words Test & Phrases Test unified into 1 Theme Card.
- * 2. 2 Distinct Session Opening Triggers: "🟢 Open Normal Session" & "🟡 Open Remedial Session".
+ * 2. 2 Distinct Session Opening Triggers: "Open Normal Session" & "Open Remedial Session".
  * 3. Smart Eligibility Engine:
  *    - Normal Mode: Prerequisite tasks completed (>= 60%). Passed students remain visible for score improvement.
  *    - Remedial Mode: Prerequisite tasks completed (>= 60%) & not passed (< 60% or not taken). Passed students are excluded from remedial.
@@ -26,18 +26,19 @@ import {
   extendIndividualAttemptTime,
   reopenStudentAttempt,
   getGrade
-} from '../api.js?v=20261106_v160';
-import { getGradeColorByScore, GRADE_PALETTE } from '../grading.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
+import { getSupabase } from '../supabase.js';
+import { getGradeColorByScore, getInvertedGradeColor, GRADE_PALETTE } from '../grading.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 
 const THEME_PALETTES = {
-  'A': { color: '#38bdf8', bgRgba: 'rgba(56, 189, 248, 0.08)', borderRgba: 'rgba(56, 189, 248, 0.25)' },
-  'B': { color: '#a855f7', bgRgba: 'rgba(168, 85, 247, 0.08)', borderRgba: 'rgba(168, 85, 247, 0.25)' },
-  'C': { color: '#f59e0b', bgRgba: 'rgba(245, 158, 11, 0.08)', borderRgba: 'rgba(245, 158, 11, 0.25)' },
-  'D': { color: '#10b981', bgRgba: 'rgba(16, 185, 129, 0.08)', borderRgba: 'rgba(16, 185, 129, 0.25)' },
-  'G': { color: '#06b6d4', bgRgba: 'rgba(6, 182, 212, 0.08)', borderRgba: 'rgba(6, 182, 212, 0.25)' }
+  'A': { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.08)', borderRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.35)' },
+  'B': { color: 'var(--quad-b, #ff8c00)', bgRgba: 'rgba(var(--quad-b-rgb, 255, 140, 0), 0.08)', borderRgba: 'rgba(var(--quad-b-rgb, 255, 140, 0), 0.35)' },
+  'C': { color: 'var(--quad-c, #95ff00)', bgRgba: 'rgba(var(--quad-c-rgb, 149, 255, 0), 0.08)', borderRgba: 'rgba(var(--quad-c-rgb, 149, 255, 0), 0.35)' },
+  'D': { color: 'var(--quad-d, #c084fc)', bgRgba: 'rgba(var(--quad-d-rgb, 192, 132, 252), 0.08)', borderRgba: 'rgba(var(--quad-d-rgb, 192, 132, 252), 0.35)' },
+  'G': { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.08)', borderRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.35)' }
 };
-const DEFAULT_THEME_PALETTE = { color: '#38bdf8', bgRgba: 'rgba(56, 189, 248, 0.08)', borderRgba: 'rgba(56, 189, 248, 0.25)' };
+const DEFAULT_THEME_PALETTE = { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.08)', borderRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.35)' };
 
 let _activeClassHubContext = null;
 let _selectedBatchId = null;
@@ -74,20 +75,20 @@ export async function renderClassTestSessions(container, context = {}) {
   } = context;
 
   // Program isolation: determine current class's program_id
-  const classProgramId = currentClass?.program_id || 
-    context.classProgramId || 
+  const classProgramId = currentClass?.program_id ||
+    context.classProgramId ||
     (context.allClasses?.find(c => c.id === classId)?.program_id);
-  const classProgramName = currentClass?.programs?.name || 
-    context.programName || 
+  const classProgramName = currentClass?.programs?.name ||
+    context.programName ||
     (context.allPrograms?.find(p => p.id === classProgramId)?.name) || '';
 
   // Active batches strictly filtered by program_id to prevent cross-program leak
-  const activeBatches = (allBatches || []).filter(b => 
-    !b.deleted_at && 
-    b.is_active !== false && 
+  const activeBatches = (allBatches || []).filter(b =>
+    !b.deleted_at &&
+    b.is_active !== false &&
     (!classProgramId || b.program_id === classProgramId)
   );
-  
+
   if (!_selectedBatchId || !activeBatches.some(b => b.id === _selectedBatchId)) {
     // Default to the first active batch with students or active batch in storage
     const saved = localStorage.getItem('topscore_active_test_batch');
@@ -99,9 +100,9 @@ export async function renderClassTestSessions(container, context = {}) {
   }
 
   // Active batch students
-  const activeBatchStudents = (allStudents || []).filter(s => 
-    s.batch_id === _selectedBatchId && 
-    !s.deleted_at && 
+  const activeBatchStudents = (allStudents || []).filter(s =>
+    s.batch_id === _selectedBatchId &&
+    !s.deleted_at &&
     s.is_active !== false
   );
 
@@ -193,6 +194,22 @@ export async function renderClassTestSessions(container, context = {}) {
       const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
       return ac > now;
     };
+
+    // Auto-sync: Cleanly lock expired sessions in DB if tutor left them running
+    if (wordsTest && sessW && sessW.status === 'UNLOCKED') {
+      const ac = sessW.auto_close_at ? new Date(sessW.auto_close_at).getTime() : 0;
+      if (ac && ac <= now) {
+        closeTestSession(wordsTest.id).catch(err => console.warn('[Auto-sync] Close expired wordsTest notice:', err?.message || err));
+        sessW.status = 'LOCKED';
+      }
+    }
+    if (phrasesTest && sessP && sessP.status === 'UNLOCKED') {
+      const ac = sessP.auto_close_at ? new Date(sessP.auto_close_at).getTime() : 0;
+      if (ac && ac <= now) {
+        closeTestSession(phrasesTest.id).catch(err => console.warn('[Auto-sync] Close expired phrasesTest notice:', err?.message || err));
+        sessP.status = 'LOCKED';
+      }
+    }
 
     const wLive = _sessIsLive(sessW);
     const pLive = _sessIsLive(sessP);
@@ -290,47 +307,50 @@ export async function renderClassTestSessions(container, context = {}) {
 
     const leftHtml = `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
-        <span>📚 Scope: <strong style="color:#ffffff;">${themesData.length} Themes (${totalExamsCount} Exams)</strong></span>
+        <span>Scope: <strong style="color:#ffffff;">${themesData.length} Themes (${totalExamsCount} Exams)</strong></span>
         <span>&bull;</span>
         <span>${classTests.length} Total Modules</span>
       </div>
     `;
     const centerHtml = `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
-        <span style="color:#cbd5e1; font-weight:700;">🎯 Batch ${escapeHtml(selectedBatch?.name || '')} (${activeBatchStudents.length} Students):</span>
-        <span style="color:${readyPct === 100 ? '#86efac' : '#fde047'}; font-weight:800;">Theme ${selTheme?.code || 'A'}: ${readyRatio} Ready (${readyPct}%)</span>
+        <span style="color:#cbd5e1; font-weight:700;">Batch ${escapeHtml(selectedBatch?.name || '')} (${activeBatchStudents.length} Students):</span>
+        <span style="color:${getGradeColorByScore(readyPct)}; font-weight:800;">Theme ${selTheme?.code || 'A'}: ${readyRatio} Ready (${readyPct}%)</span>
       </div>
     `;
     const rightHtml = `
       <div style="display:inline-flex; align-items:center; gap:8px;">
-        <span class="badge" style="background:${liveCount > 0 ? 'rgba(var(--grade-a-rgb, 0,192,0),0.15)' : 'rgba(56,189,248,0.12)'}; color:${liveCount > 0 ? 'var(--grade-a, #00c000)' : '#38bdf8'}; border:1px solid ${liveCount > 0 ? 'rgba(var(--grade-a-rgb, 0,192,0),0.3)' : 'rgba(56,189,248,0.25)'}; font-size:11px; font-weight:800;">
-          ${liveCount > 0 ? `🟢 ${liveCount} SESSIONS LIVE` : '⏸️ SESSIONS STANDBY (0 LIVE)'}
+        <span class="badge" style="background:${liveCount > 0 ? 'rgba(var(--grade-a-rgb),0.15)' : 'rgba(var(--quad-c-rgb, 149, 255, 0),0.12)'}; color:${liveCount > 0 ? 'var(--grade-a)' : 'var(--quad-c, #95ff00)'}; border:1px solid ${liveCount > 0 ? 'rgba(var(--grade-a-rgb),0.3)' : 'rgba(var(--quad-c-rgb, 149, 255, 0),0.25)'}; font-size: 12px; font-weight:800;">
+          ${liveCount > 0 ? `${liveCount} SESSIONS LIVE` : 'SESSIONS STANDBY (0 LIVE)'}
         </span>
       </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
   }
 
+  // Pre-load Empirical Exam Analytics Data for all themes
+  const analyticsData = await loadThemeExamAnalyticsData(themesData, context);
+
   container.innerHTML = `
-    <div class="test-sessions-tab-wrapper" style="padding: 2px 0 16px;">
+    <div class="test-sessions-tab-wrapper" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden; padding: 2px 0 0;">
       <!-- Single-Line Sleek Top Toolbar (Streamlined & Compact) -->
-      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);">
+      <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); flex-shrink: 0;">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.08em; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:5px;">
-            <span>🔐</span> TEST SESSIONS
+          <span style="font-size: 12px; text-transform:uppercase; letter-spacing:0.08em; font-weight:800; color:var(--quad-c, #95ff00); display:flex; align-items:center; gap:5px;">
+            TEST SESSIONS
           </span>
           <span style="color:rgba(255,255,255,0.2);">|</span>
-          <span style="font-size:0.95rem; font-weight:800; color:#ffffff;">
+          <span style="font-size: 16px; font-weight:800; color:#ffffff;">
             ${escapeHtml(className || 'Vocabulary')}
           </span>
-          ${classProgramName ? `<span style="font-size:0.7rem; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-weight:700;">Program: ${escapeHtml(classProgramName)}</span>` : ''}
+          ${classProgramName ? `<span style="font-size: 12px; padding:2px 7px; border-radius:4px; background:rgba(var(--quad-c-rgb, 149, 255, 0),0.12); color:var(--quad-c, #95ff00); border:1px solid rgba(var(--quad-c-rgb, 149, 255, 0),0.25); font-weight:700;">Program: ${escapeHtml(classProgramName)}</span>` : ''}
         </div>
 
         <div style="display:flex; align-items:center; gap:10px;">
-          <label for="test-session-batch-select" style="font-size:0.78rem; font-weight:700; color:#cbd5e1; margin:0; white-space:nowrap;">
-            🎯 Target Batch:
+          <label for="test-session-batch-select" style="font-size: 12px; font-weight:700; color:#cbd5e1; margin:0; white-space:nowrap;">
+            Target Batch:
           </label>
-          <select id="test-session-batch-select" class="form-control" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3); color:#ffffff; padding:5px 10px; border-radius:6px; font-weight:700; font-size:0.82rem; min-width:180px; cursor:pointer;">
+          <select id="test-session-batch-select" class="form-control" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3); color:#ffffff; padding:5px 10px; border-radius:6px; font-weight:700; font-size: 12px; min-width:180px; cursor:pointer;">
             ${activeBatches.map(b => {
               const bStuds = (allStudents || []).filter(s => s.batch_id === b.id && !s.deleted_at && s.is_active !== false).length;
               const isSel = b.id === _selectedBatchId;
@@ -338,157 +358,164 @@ export async function renderClassTestSessions(container, context = {}) {
             }).join('')}
           </select>
 
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-test-sessions" style="padding:5px 10px; font-size:0.78rem; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
-            <span>🔄</span> Refresh
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-test-sessions" style="padding:5px 10px; font-size: 12px; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
+            Refresh
           </button>
         </div>
       </div>
 
-      <!-- Theme Cards Grid (Spacious & Compact Layout) -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 14px;">
+      <!-- Theme Cards Grid (Spacious & Compact Layout, Exact 10px Gap) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-bottom: 10px; flex-shrink: 0;">
         ${themesData.map(theme => renderThemeCard(theme, context)).join('')}
       </div>
 
-      <!-- Batch Student Readiness Matrix Table -->
-      <div id="batch-readiness-matrix-container">
-        ${renderBatchReadinessMatrix(activeBatchStudents, themesData, context, _selectedMatrixTheme)}
+      <!-- Theme Exam Analytics Board (4-Column Zero-Capsule Table: TARGET | MISTAKE | COUNT | RATE) -->
+      <div id="theme-exam-analytics-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+        ${renderThemeExamAnalyticsBoard(themesData, context, analyticsData)}
       </div>
     </div>
 
     <!-- Modal 1: Open Test Session (Normal / Remedial) -->
     <div id="modal-theme-open-session" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:820px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
+      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:920px; max-height:92vh; height:640px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
 
-        <!-- Modal Header -->
-        <div style="padding:18px 24px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start; flex-shrink:0;">
-          <div>
-            <div id="open-modal-theme-badge" style="display:inline-block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:2px 8px; border-radius:4px; margin-bottom:4px;">THEME A</div>
-            <h3 id="open-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff;">Open Test Session</h3>
-            <div id="open-modal-subtitle" style="font-size:12px; color:#94a3b8; margin-top:2px;">Words Exam &amp; Phrases Exam unlocked simultaneously.</div>
-          </div>
-          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-open-modal" style="color:#94a3b8; font-size:1.25rem; padding:4px 8px;">✕</button>
-        </div>
+        <!-- Modal Body: 2-column grid (Left: Config Panel 38%, Right: Full Student Table 62%) -->
+        <div style="display:grid; grid-template-columns:38% 62%; gap:0; overflow:hidden; flex:1; min-height:0;">
 
-        <!-- Modal Body: 2-column grid -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:0; overflow:hidden; flex:1; min-height:0;">
+          <!-- LEFT: Settings (Judul, Tipe, Enrolled, Target Batch, Cara Jawab, Durasi, Tutor Override) -->
+          <div style="padding:14px 16px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; border-right:1px solid rgba(255,255,255,0.07); background:rgba(0,0,0,0.15);">
 
-          <!-- LEFT: Settings (Batch + Answering Mode + Duration) -->
-          <div style="padding:20px 20px 20px 24px; overflow-y:auto; display:flex; flex-direction:column; gap:18px; border-right:1px solid rgba(255,255,255,0.07);">
-
-            <!-- 1. Target Test Batch -->
-            <div>
-              <label class="form-label" style="font-weight:800; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; display:block;">1. Target Test Batch</label>
-              <select id="open-modal-batch-select" class="form-control" style="width:100%; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:9px 12px; border-radius:7px; font-weight:600; font-size:13px;">
-                ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
-              </select>
-              <div id="open-modal-mode-banner" style="margin-top:10px; border-radius:7px; padding:9px 12px; font-size:12px; font-weight:600; line-height:1.4;"><!-- populated dynamically --></div>
+            <!-- Header Info: Tipe Sesi di ATAS (Pure Colored Font, Zero Capsule), Judul Tema di BAWAHNYA -->
+            <div style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
+              <div id="open-modal-theme-badge" style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; line-height:1.2; margin-bottom:2px; color:var(--grade-a);">EXAM SESSION</div>
+              <h3 id="open-modal-title" style="margin:0; font-size:16px; font-weight:800; color:#ffffff; line-height:1.2;">Theme A — Workplace</h3>
             </div>
 
-            <!-- 2. Answering Mode -->
+            <!-- Enrolled Students Summary Badge -->
+            <div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; padding:6px 10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:6px;">
+              Enrolled: <span id="open-modal-student-count" style="color:#38bdf8; font-weight:800; text-transform:none;">0 selected</span>
+            </div>
+
+            <!-- 1. Target Test Batch (Compact Dropdown) -->
             <div>
-              <label class="form-label" style="font-weight:800; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px; display:block;">2. Answering Mode</label>
-              <div style="margin-bottom:12px;">
-                <div style="font-size:12px; font-weight:700; color:#93c5fd; margin-bottom:6px;">📝 Words Exam</div>
-                <div style="display:flex; gap:6px; flex-wrap:wrap;" id="open-modal-words-mode-pills">
-                  <button type="button" class="answer-mode-pill active" data-exam="words" data-mode="typing" style="font-size:12px; padding:5px 12px; border-radius:5px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:700; cursor:pointer;">⌨️ Typing</button>
-                  <button type="button" class="answer-mode-pill" data-exam="words" data-mode="multiple_choice" style="font-size:12px; padding:5px 12px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer;">🔘 Multiple Choice</button>
-                  <button type="button" class="answer-mode-pill" data-exam="words" data-mode="voice" style="font-size:12px; padding:5px 12px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer;">🎙️ Voice</button>
+              <label class="form-label" style="font-weight:800; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Target Batch</label>
+              <select id="open-modal-batch-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:600; font-size:12px;">
+                ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
+              </select>
+            </div>
+
+            <!-- 2. Answering Mode (Vertical Stacked Arrangement) -->
+            <div>
+              <label class="form-label" style="font-weight:800; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">2. Answering Mode</label>
+
+              <div style="margin-bottom:6px;">
+                <div style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:2px;">Words Exam</div>
+                <div style="display:flex; flex-direction:column; gap:3px;" id="open-modal-words-mode-pills">
+                  <button type="button" class="answer-mode-pill active" data-exam="words" data-mode="written" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:700; cursor:pointer; text-align:left; display:flex; align-items:center;">Written</button>
+                  <button type="button" class="answer-mode-pill" data-exam="words" data-mode="multiple_choice" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Multiple Choice</button>
+                  <button type="button" class="answer-mode-pill" data-exam="words" data-mode="spoken" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Spoken</button>
                 </div>
               </div>
+
               <div>
-                <div style="font-size:12px; font-weight:700; color:#c4b5fd; margin-bottom:6px;">💬 Phrases Exam</div>
-                <div style="display:flex; gap:6px; flex-wrap:wrap;" id="open-modal-phrases-mode-pills">
-                  <button type="button" class="answer-mode-pill active" data-exam="phrases" data-mode="chips" style="font-size:12px; padding:5px 12px; border-radius:5px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:700; cursor:pointer;">🧩 Chips</button>
-                  <button type="button" class="answer-mode-pill" data-exam="phrases" data-mode="typing" style="font-size:12px; padding:5px 12px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer;">⌨️ Typing</button>
-                  <button type="button" class="answer-mode-pill" data-exam="phrases" data-mode="voice" style="font-size:12px; padding:5px 12px; border-radius:5px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer;">🎙️ Voice</button>
+                <div style="font-size:12px; font-weight:700; color:#a855f7; margin-bottom:2px;">Phrases Exam</div>
+                <div style="display:flex; flex-direction:column; gap:3px;" id="open-modal-phrases-mode-pills">
+                  <button type="button" class="answer-mode-pill active" data-exam="phrases" data-mode="written" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:700; cursor:pointer; text-align:left; display:flex; align-items:center;">Written</button>
+                  <button type="button" class="answer-mode-pill" data-exam="phrases" data-mode="multiple_choice" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Multiple Choice</button>
+                  <button type="button" class="answer-mode-pill" data-exam="phrases" data-mode="spoken" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Spoken</button>
                 </div>
               </div>
             </div>
 
             <!-- 3. Duration Allocation -->
             <div>
-              <label class="form-label" style="font-weight:800; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; display:block;">3. Duration Allocation (Minutes)</label>
-              <div id="open-modal-duration-suggestion" style="font-size:12px; color:var(--grade-c,#fef08a); margin-bottom:8px; font-weight:600; display:flex; align-items:center; gap:6px;">
-                <span>⚡</span> <span id="open-modal-duration-suggestion-text">Auto-calculating...</span>
+              <label class="form-label" style="font-weight:800; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">3. Duration Allocation</label>
+              <div id="open-modal-duration-suggestion" style="font-size:12px; color:var(--grade-c); margin-bottom:4px; font-weight:600; display:flex; align-items:center; gap:6px;">
+                <span id="open-modal-duration-suggestion-text">Auto-calculating...</span>
               </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:100px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:9px 12px; border-radius:7px; font-weight:800; font-size:1.1rem;">
-                <span style="font-size:12px; color:#94a3b8; line-height:1.5;">Minutes<br><span style="font-size:11px; color:#64748b;">Timer syncs to this value</span></span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:70px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                <span style="font-size:12px; color:#94a3b8; line-height:1.2;">Minutes</span>
+              </div>
+            </div>
+
+            <!-- 4. Tutor Override (Placed below Duration Allocation) -->
+            <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:auto;">
+              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:8px; cursor:pointer;" title="Allow students who haven't completed tasks to participate">
+                <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:15px; height:15px; accent-color:var(--grade-c);">
+                <span style="font-weight:700;">Tutor Override</span>
+              </label>
+              <div style="font-size:12px; color:#64748b; margin-top:2px; line-height:1.2;">
+                Bypass task prerequisites for ineligible students
               </div>
             </div>
 
           </div>
 
-          <!-- RIGHT: Students -->
-          <div style="padding:20px 24px 20px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
-
-            <!-- Section header -->
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
-              <label class="form-label" style="font-weight:800; font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin:0;">
-                4. Enrolled Students <span style="color:#38bdf8; font-weight:700; text-transform:none;">(<span id="open-modal-student-count">0</span> selected)</span>
-              </label>
-              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c,#fef08a); display:inline-flex; align-items:center; gap:5px; cursor:pointer; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); padding:4px 8px; border-radius:5px;" title="Allow students who haven't completed tasks to participate">
-                <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:13px; height:13px;">
-                <span>🛡️ Tutor Override</span>
-              </label>
-            </div>
+          <!-- RIGHT: Full Student Table (3 Columns: NO | NAME | STATUS) -->
+          <div style="padding:18px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; height:100%;">
 
             <!-- Search + sort + select buttons -->
-            <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
-              <input type="text" id="open-modal-student-search" placeholder="🔍 Search student..." class="form-control" style="font-size:12px; padding:5px 10px; flex:1; min-width:70px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:5px;">
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="padding:5px 9px; font-size:12px; font-weight:600; white-space:nowrap;">🔤 A→Z</button>
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="padding:5px 9px; font-size:12px; font-weight:600;">✅ All</button>
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="padding:5px 9px; font-size:12px; font-weight:600;">❌ None</button>
+            <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
+              <input type="text" id="open-modal-student-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:32px; padding:4px 10px; flex:1; min-width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:5px;">
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="height:32px; padding:0 12px; font-size:12px; font-weight:600; white-space:nowrap;">A → Z</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="height:32px; padding:0 12px; font-size:12px; font-weight:600;">All</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="height:32px; padding:0 12px; font-size:12px; font-weight:600;">None</button>
             </div>
 
-            <!-- Student list -->
-            <div id="open-modal-students-list" style="max-height:280px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:5px; flex:1;">
-              <!-- Populated dynamically -->
-            </div>
-
-            <!-- Ineligible notice -->
-            <div id="open-modal-ineligible-summary" style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
-              <span id="open-modal-ineligible-text">ℹ️ Loading eligibility...</span>
-              <button type="button" id="btn-toggle-ineligible-view" class="btn btn-ghost btn-xs" style="font-size:11px; color:#38bdf8; padding:0 4px; text-decoration:underline;">View Details</button>
-            </div>
-            <div id="open-modal-ineligible-details" class="hidden" style="max-height:120px; overflow-y:auto; background:rgba(0,0,0,0.4); border:1px dashed rgba(255,255,255,0.1); border-radius:6px; padding:8px; font-size:12px;">
-              <!-- Populated with ineligible list -->
+            <!-- Student Table (All Students Present, Ineligible Disabled unless Override Active) -->
+            <div class="table-wrap" style="flex:1; min-height:0; height:100%; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px; background:rgba(0,0,0,0.25);">
+              <table class="table" style="width:100%; border-collapse:collapse; font-size:12px; display:table; margin:0; table-layout:fixed;">
+                <thead>
+                  <tr style="background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); height:40px;">
+                    <th style="position:sticky; top:0; background:#1e293b; z-index:5; padding:6px 8px; text-align:center; font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700; width:50px;">NO</th>
+                    <th style="position:sticky; top:0; background:#1e293b; z-index:5; padding:6px 12px; text-align:center; font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700;">NAME</th>
+                    <th style="position:sticky; top:0; background:#1e293b; z-index:5; padding:6px 12px; text-align:center; font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700; width:220px;">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody id="open-modal-students-table-body">
+                  <!-- Populated dynamically with ALL students -->
+                </tbody>
+              </table>
             </div>
 
           </div>
         </div>
 
-        <!-- Modal Footer -->
+        <!-- Modal Footer: Status summary on left, Cancel & Unlock on right -->
         <div style="padding:14px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25); flex-shrink:0;">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-open-modal" style="color:#94a3b8; font-size:13px;">Cancel</button>
-          <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="font-weight:700; padding:9px 24px; display:flex; align-items:center; gap:8px; font-size:13px;">
-            <span>🔓</span> Unlock Test Now
-          </button>
+          <div id="open-modal-footer-summary" style="font-size:12px; color:#94a3b8; font-weight:600;"></div>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button type="button" class="btn btn-ghost" id="btn-cancel-open-modal" style="color:#94a3b8; font-size:12px; padding:8px 16px;">Cancel</button>
+            <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:6px; font-size:12px;">
+              Unlock Test Now
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Modal 2: Add Late Arrival Students to Live Session -->
     <div id="modal-theme-add-late" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:580px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
+      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:640px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
         <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
-            <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:800;">👥 Live Test Session in Progress</div>
-            <h3 id="late-modal-theme-title" style="margin:2px 0 0; font-size:1.25rem; font-weight:800; color:#ffffff;">Theme Test Name</h3>
-            <div id="late-modal-batch-name" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">Batch Name</div>
+            <div style="font-size: 12px; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:800;">Live Test Session in Progress</div>
+            <h3 id="late-modal-theme-title" style="margin:2px 0 0; font-size: 16px; font-weight:800; color:#ffffff;">Theme Test Name</h3>
+            <div id="late-modal-batch-name" style="font-size: 12px; color:#94a3b8; margin-top:2px;">Batch Name</div>
           </div>
-          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-late-modal" style="color:#94a3b8; font-size:1.25rem; padding:4px 8px;">✕</button>
+          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-late-modal" style="color:#94a3b8; font-size: 16px; padding:4px 8px;">✕</button>
         </div>
 
         <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
           <!-- Live Global Countdown & Mode Alert -->
           <div style="background:rgba(99, 102, 241, 0.12); border:1px solid rgba(99, 102, 241, 0.35); border-radius:8px; padding:12px 14px;">
             <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-              <div style="font-size:0.85rem; font-weight:700; color:#a5b4fc; display:flex; align-items:center; gap:6px;">
-                <span>⏳ Global Remaining Session Time:</span>
-                <span id="late-modal-remaining-time" style="color:#ffffff; font-size:1.05rem; font-weight:800;">-- Mins</span>
+              <div style="font-size: 12px; font-weight:700; color:#a5b4fc; display:flex; align-items:center; gap:6px;">
+                <span>Global Remaining Session Time:</span>
+                <span id="late-modal-remaining-time" style="color:#ffffff; font-size: 16px; font-weight:800;">-- Mins</span>
               </div>
-              <div id="late-modal-mode-badge" style="font-size:0.75rem; font-weight:700; padding:2px 8px; border-radius:4px;">
+              <div id="late-modal-mode-badge" style="font-size: 12px; font-weight:700; padding:2px 8px; border-radius:4px;">
                 NORMAL
               </div>
             </div>
@@ -500,21 +527,21 @@ export async function renderClassTestSessions(container, context = {}) {
           <!-- Unenrolled Eligible Students Checklist -->
           <div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-              <label class="form-label" style="font-weight:700; font-size:0.85rem; color:#ffffff; margin:0;">
+              <label class="form-label" style="font-weight:700; font-size: 12px; color:#ffffff; margin:0;">
                 Select Late Arrival Students (<span id="late-modal-selected-count" style="color:#38bdf8;">0</span> Selected)
               </label>
               <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="late-modal-search" placeholder="🔍 Search name..." class="form-control" style="font-size:0.75rem; padding:4px 8px; width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="padding:4px 8px; font-size:0.75rem;">✅ All</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="padding:4px 8px; font-size:0.75rem;">❌ None</button>
+                <input type="text" id="late-modal-search" placeholder="Search name..." class="form-control" style="font-size: 12px; padding:4px 8px; width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="padding:4px 8px; font-size: 12px;">All</button>
+                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="padding:4px 8px; font-size: 12px;">None</button>
               </div>
             </div>
 
             <!-- Tutor Override for Late Arrival -->
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; margin-bottom:8px;">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.78rem; font-weight:700; color:#fbbf24; margin:0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:rgba(var(--grade-c-rgb),0.08); border:1px solid rgba(var(--grade-c-rgb),0.25); border-radius:6px; margin-bottom:8px;">
+            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size: 12px; font-weight:700; color:var(--grade-c); margin:0;">
               <input type="checkbox" id="late-modal-override-checkbox" style="width:15px; height:15px; cursor:pointer;">
-              <span>🛡️ Tutor Override (Allow all late arrival students)</span>
+              <span>Tutor Override (Allow all late arrival students)</span>
             </label>
           </div>
           <div id="late-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
@@ -529,163 +556,74 @@ export async function renderClassTestSessions(container, context = {}) {
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
           <button type="button" class="btn btn-ghost" id="btn-cancel-late-modal" style="color:#94a3b8;">Cancel</button>
           <button type="button" class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
-            <span>💾</span> Add Students to Test
+            Add Students to Test
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Modal 3: Live Test Session Monitor & Student Controller -->
+    <!-- Modal 3: Live Test Session Monitor & Student Controller (Tier 3: 960px Wide Modal per §1.5) -->
     <div id="modal-theme-live-monitor" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="modal-box card" style="background:#0b1329; border:1px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:1050px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
-        <!-- Modal Header -->
-        <div style="padding:18px 24px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.85); flex-wrap:wrap; gap:12px;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <span id="live-modal-theme-badge" style="font-size:0.75rem; font-weight:800; text-transform:uppercase; letter-spacing:0.06em; padding:4px 10px; border-radius:6px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3);">THEME A</span>
-            <div>
-              <h3 id="live-modal-title" style="margin:0; font-size:1.25rem; font-weight:800; color:#ffffff; display:flex; align-items:center; gap:8px;">
-                <span>👁️</span> Live Test Session Monitor
-              </h3>
-              <div id="live-modal-subtitle" style="font-size:0.8rem; color:#94a3b8; margin-top:2px;">
-                Real-time Progress, Alarm &amp; Scoring
-              </div>
-            </div>
+      <div class="modal-box card" style="background:#0b1329; border:1px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:960px; height:75vh; max-height:75vh; min-height:500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <!-- Standardized 60px Dual-Line Title Area (§1.5.1 Centered Title & Stacked Subtitle Invariant) -->
+        <div class="title-area dual-line" style="position:relative; padding:0 24px; height:60px; min-height:60px; max-height:60px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:center; align-items:center; background:rgba(15,23,42,0.85); box-sizing:border-box; flex-shrink:0;">
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:calc(100% - 80px); overflow:hidden;">
+            <span id="live-modal-theme-badge" style="display:none;"></span>
+            <h3 id="live-modal-title" style="margin:0; font-size:16px; font-weight:700; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#ffffff; letter-spacing:0.02em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              LIVE TEST SESSION MONITOR
+            </h3>
+            <span id="live-modal-subtitle" style="font-size:12px; font-weight:500; color:#94a3b8; margin-top:2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              Real-time Progress, Alarm &amp; Scoring
+            </span>
           </div>
 
-          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <div id="live-modal-mode-badge" style="font-size:0.75rem; font-weight:800; padding:4px 10px; border-radius:6px; background:rgba(0,192,0,0.15); border:1px solid #00c000ff; color:#86efac;">
-              NORMAL
-            </div>
-            <div style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:4px 10px; font-size:0.8rem; font-weight:700; color:#38bdf8; display:flex; align-items:center; gap:6px;">
-              <span>⏳ Remaining:</span>
-              <span id="live-modal-remaining" style="color:#ffffff; font-weight:800;">--m</span>
-            </div>
+          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-live-modal" style="position:absolute; right:16px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:16px; padding:0; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0;" title="Close">✕</button>
+        </div>
 
-            <!-- Quick Add/Reduce Time Dropdown (Grade C Yellow per Rule 2.10) -->
-            <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
-              <button type="button" class="btn btn-sm" id="btn-live-modal-add-time" style="padding:5px 12px; font-size:0.78rem; font-weight:700; background:rgba(var(--grade-c-rgb, 255,255,0), 0.07); border:1px solid rgba(var(--grade-c-rgb, 255,255,0), 0.5); color:var(--grade-c, #ffff00); border-radius:6px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; letter-spacing:0.03em;" title="Adjust Remaining Exam Time (+ / -)">
-                <span>⏱️ Edit Session Time</span>
-                <span style="font-size:0.65rem;">▼</span>
-              </button>
-              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; top:calc(100% + 6px); background:#0f172a; border:2px solid var(--grade-c, #ffff00); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb, 255,255,0), 0.18); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
-                <!-- Yellow Header Banner -->
-                <div style="background:rgba(var(--grade-c-rgb, 255,255,0), 0.12); border:1px solid rgba(var(--grade-c-rgb, 255,255,0), 0.4); color:var(--grade-c, #ffff00); font-weight:800; font-size:0.70rem; padding:5px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between;">
-                  <span>⏱️ ADJUST SESSION TIME</span>
-                  <span style="font-size:0.65rem; background:#0f172a; color:var(--grade-c, #ffff00); padding:1px 5px; border-radius:3px;">LIVE</span>
-                </div>
+        <!-- Standardized In-Window Sub-Panel & Toolbar (§1.5.3 Strict 40px Height, 30px Controls & 5px Margin) -->
+        <div style="padding:0 24px; height:40px; min-height:40px; max-height:40px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:nowrap; background:rgba(15,23,42,0.6); border-bottom:1px solid rgba(255,255,255,0.06); box-sizing:border-box;">
+          <div style="display:flex; gap:5px; flex-wrap:nowrap; align-items:center;" id="live-modal-filter-tabs">
+            <button type="button" class="btn live-filter-btn active" data-filter="all" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">All (<span id="tab-cnt-all">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="in_progress" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">In Progress (<span id="tab-cnt-in-progress">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="submitted" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">Submitted (<span id="tab-cnt-submitted">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="not_started" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">Not Started (<span id="tab-cnt-not-started">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="alarm" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">Alarm (<span id="tab-cnt-alarm">0</span>)</button>
+          </div>
 
-                <!-- Section 1: Add Time (+) -->
-                <div>
-                  <div style="font-size:0.65rem; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                    <span>🟢</span> ADD TIME (+)
-                  </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                    <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      +5 Min
-                    </button>
-                    <button type="button" class="btn-add-time-option" data-mins="10" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      +10 Min
-                    </button>
-                    <button type="button" class="btn-add-time-option" data-mins="15" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      +15 Min
-                    </button>
-                    <button type="button" class="btn-add-time-option" data-mins="30" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      +30 Min
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Section 2: Reduce Time (-) -->
-                <div>
-                  <div style="font-size:0.65rem; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                    <span>🔴</span> REDUCE TIME (-)
-                  </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                    <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      -5 Min
-                    </button>
-                    <button type="button" class="btn-add-time-option" data-mins="-10" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      -10 Min
-                    </button>
-                    <button type="button" class="btn-add-time-option" data-mins="-15" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      -15 Min
-                    </button>
-                    <button type="button" class="btn-add-time-option" data-mins="-30" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
-                      -30 Min
-                    </button>
-                  </div>
-                </div>
-
-                <!-- Section 3: Custom Button -->
-                <button type="button" id="btn-add-time-custom" style="width:100%; text-align:center; background:rgba(var(--grade-c-rgb, 255,255,0), 0.07); border:1px dashed rgba(var(--grade-c-rgb, 255,255,0), 0.5); color:var(--grade-c, #ffff00); padding:6px 8px; border-radius:6px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
-                  <span>⚙️</span> Custom Minutes (+ / -)...
-                </button>
-              </div>
-            </div>
-
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-live-modal-refresh" style="padding:5px 12px; font-size:0.8rem; font-weight:700; display:inline-flex; align-items:center; gap:6px;">
-              <span>🔄</span> Refresh
+          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+            <button type="button" class="btn btn-secondary" id="btn-live-modal-refresh" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; border-radius:4px; color:#cbd5e1; white-space:nowrap;" title="Manual Refresh">
+              Refresh
             </button>
-            <button type="button" class="btn btn-ghost btn-icon" id="btn-close-live-modal" style="color:#94a3b8; font-size:1.3rem; padding:4px 8px;">✕</button>
-          </div>
-        </div>
-
-        <!-- KPI Summary Grid -->
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; padding:14px 24px; background:rgba(0,0,0,0.3); border-bottom:1px solid rgba(255,255,255,0.06);">
-          <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#94a3b8; text-transform:uppercase;">👥 Total Students</div>
-            <div id="kpi-live-total" style="font-size:1.4rem; font-weight:800; color:#ffffff; margin-top:2px;">0</div>
-          </div>
-          <div style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#60a5fa; text-transform:uppercase;">🟢 In Progress</div>
-            <div id="kpi-live-in-progress" style="font-size:1.4rem; font-weight:800; color:#38bdf8; margin-top:2px;">0</div>
-          </div>
-          <div style="background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#34d399; text-transform:uppercase;">✅ Completed</div>
-            <div id="kpi-live-submitted" style="font-size:1.4rem; font-weight:800; color:#00c000ff; margin-top:2px;">0</div>
-          </div>
-          <div style="background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#fbbf24; text-transform:uppercase;">⏳ Not Started</div>
-            <div id="kpi-live-not-started" style="font-size:1.4rem; font-weight:800; color:#fbbf24; margin-top:2px;">0</div>
-          </div>
-          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px;">
-            <div style="font-size:0.7rem; font-weight:700; color:#f87171; text-transform:uppercase;">🚨 Total Alarms</div>
-            <div id="kpi-live-alarms" style="font-size:1.4rem; font-weight:800; color:var(--grade-e, #FF0000); margin-top:2px;">0</div>
-          </div>
-        </div>
-
-        <!-- Filter & Search Bar -->
-        <div style="padding:12px 24px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; background:rgba(15,23,42,0.4); border-bottom:1px solid rgba(255,255,255,0.06);">
-          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="live-modal-filter-tabs">
-            <button type="button" class="btn btn-xs btn-primary live-filter-btn active" data-filter="all">All (<span id="tab-cnt-all">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="in_progress">🟢 In Progress (<span id="tab-cnt-in-progress">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="submitted">✅ Submitted (<span id="tab-cnt-submitted">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="not_started">⏳ Not Started (<span id="tab-cnt-not-started">0</span>)</button>
-            <button type="button" class="btn btn-xs btn-secondary live-filter-btn" data-filter="alarm">🚨 Alarm Triggered (<span id="tab-cnt-alarm">0</span>)</button>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:10px;">
-            <label style="display:flex; align-items:center; gap:6px; font-size:0.75rem; color:#cbd5e1; cursor:pointer;">
-              <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer;">
-              <span>⚡ Auto-Refresh (5s)</span>
+            <label style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#cbd5e1; cursor:pointer; user-select:none; margin:0; white-space:nowrap;">
+              <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer; width:13px; height:13px;">
+              <span>Auto-Refresh (5s)</span>
             </label>
-            <input type="text" id="live-modal-search" placeholder="🔍 Search student..." class="form-control" style="font-size:0.78rem; padding:4px 10px; width:150px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:6px;">
+            <input type="text" id="live-modal-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:30px; padding:0 10px; width:130px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
           </div>
         </div>
 
-        <!-- Sortable Live Monitor Table Container -->
+        <!-- Sortable Live Monitor Table Container (Zero Horizontal Scroll & Fixed Layout per §1.1 & §4.4) -->
         <div style="padding:14px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column;">
-          <div class="live-monitor-table-wrapper">
-            <table class="live-monitor-table">
+          <div class="live-monitor-table-wrapper" style="overflow-x:hidden !important; overflow-y:auto; flex:1; border-radius:8px; border:1px solid rgba(255, 255, 255, 0.08); background:#080d1a;">
+            <table class="live-monitor-table" style="width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:12px;">
+              <colgroup>
+                <col style="width:85px;">
+                <col style="min-width:230px;">
+                <col style="width:130px;">
+                <col style="width:120px;">
+                <col style="width:85px;">
+                <col style="width:85px;">
+                <col style="width:65px;">
+              </colgroup>
               <thead>
                 <tr>
-                  <th class="sortable-th" data-sort-key="name">NAME <span class="sort-icon" id="th-sort-name"></span></th>
-                  <th class="sortable-th" data-sort-key="status">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
-                  <th class="sortable-th" data-sort-key="progress">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
-                  <th class="sortable-th" data-sort-key="score">SCORE (REALTIME) <span class="sort-icon" id="th-sort-score"></span></th>
-                  <th style="text-align: center; width: 85px;">PEEK</th>
-                  <th class="sortable-th" data-sort-key="alarm" style="text-align: center; width: 120px;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
-                  <th style="text-align: right; width: 190px;">ACTION</th>
+                  <th style="text-align:center;">BATCH</th>
+                  <th class="sortable-th" data-sort-key="name" style="text-align:center;">NAME <span class="sort-icon" id="th-sort-name"></span></th>
+                  <th class="sortable-th" data-sort-key="status" style="text-align:center;">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
+                  <th class="sortable-th" data-sort-key="progress" style="text-align:center;">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
+                  <th class="sortable-th" data-sort-key="score" style="text-align:center;">SCORE <span class="sort-icon" id="th-sort-score"></span></th>
+                  <th class="sortable-th" data-sort-key="alarm" style="text-align:center;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
+                  <th style="text-align:center;">EXPEL</th>
                 </tr>
               </thead>
               <tbody id="live-modal-table-body">
@@ -696,11 +634,86 @@ export async function renderClassTestSessions(container, context = {}) {
           <div id="live-modal-students-container" style="display:none;"></div>
         </div>
 
-        <!-- Modal Footer -->
-        <div style="padding:12px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.3); font-size:0.78rem; color:#94a3b8;">
-          <span id="live-modal-footer-info">Exam status updated in real-time.</span>
-          <div style="display:flex; gap:8px;">
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-close-live-modal-footer" style="color:#cbd5e1;">Close</button>
+        <!-- Standardized 60px CTA Panel (§1.5.2 Strict 60px Height, Left Operational Panel & Right 40px Close Button) -->
+        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); box-sizing:border-box; flex-shrink:0;">
+          <!-- Left Operational Controls: NORMAL/REMEDIAL -> EDIT TIME -> TIME (Neutral Idle with Glowing Hover/Active) -->
+          <div style="display:flex; align-items:center; gap:8px;">
+            <!-- 1. Keterangan Normal/Remedial (Button with green/yellow font, neutral idle, color glow on hover) -->
+            <button type="button" class="btn btn-session-mode mode-normal" id="live-modal-mode-badge" style="cursor:default;" title="Session Mode">
+              NORMAL (FULL SCORE)
+            </button>
+
+            <!-- 2. Edit Session Time Button (with Pop-up Menu, yellow font, neutral idle, yellow glow on hover) -->
+            <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
+              <button type="button" class="btn btn-session-edit-time" id="btn-live-modal-add-time" title="Adjust Remaining Exam Time (+ / -)">
+                <span>EDIT TIME</span>
+                <span style="font-size:10px;">▲</span>
+              </button>
+              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; left:0; bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
+                <!-- Yellow Header Banner -->
+                <div style="background:rgba(var(--grade-c-rgb), 0.12); border:1px solid rgba(var(--grade-c-rgb), 0.4); color:var(--grade-c); font-weight:800; font-size:12px; padding:5px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between;">
+                  <span>ADJUST SESSION TIME</span>
+                  <span style="font-size:12px; background:#0f172a; color:var(--grade-c); padding:1px 5px; border-radius:3px;">LIVE</span>
+                </div>
+
+                <!-- Section 1: Add Time (+) -->
+                <div>
+                  <div style="font-size:12px; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                    ADD TIME (+)
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +5 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +10 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +15 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      +30 Min
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Section 2: Reduce Time (-) -->
+                <div>
+                  <div style="font-size:12px; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                    REDUCE TIME (-)
+                  </div>
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -5 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -10 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -15 Min
+                    </button>
+                    <button type="button" class="btn-add-time-option" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                      -30 Min
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Section 3: Custom Button -->
+                <button type="button" id="btn-add-time-custom" style="width:100%; text-align:center; background:rgba(var(--grade-c-rgb), 0.07); border:1px dashed rgba(var(--grade-c-rgb), 0.5); color:var(--grade-c); padding:6px 8px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
+                  Custom Minutes (+ / -)...
+                </button>
+              </div>
+            </div>
+
+            <!-- 3. Time Button (Neutral font, neutral idle, subtle white glow on hover) -->
+            <button type="button" class="btn btn-session-time" id="btn-live-modal-time" title="Remaining Exam Time">
+              <span style="font-weight:600; color:#94a3b8;">TIME:</span>
+              <span id="live-modal-remaining" style="font-weight:800; font-variant-numeric:tabular-nums; color:#ffffff;">--m</span>
+            </button>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px;">
+            <button type="button" class="btn btn-secondary" id="btn-close-live-modal-footer" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:12px; font-weight:600; border-radius:4px; box-sizing:border-box; color:#cbd5e1;">Close</button>
           </div>
         </div>
       </div>
@@ -708,35 +721,34 @@ export async function renderClassTestSessions(container, context = {}) {
 
     <!-- Modal 4: Kick Student Confirmation Modal -->
     <div id="modal-kick-student-confirm" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10005; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:2px solid var(--grade-e, #FF0000); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(var(--grade-e-rgb, 255,0,0),0.35);">
+      <div class="modal-box card" style="background:#0f172a; border:2px solid var(--grade-e); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(var(--grade-e-rgb),0.35);">
         <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
-          <span style="font-size:1.6rem;">🚨</span>
           <div>
-            <h4 style="margin:0; font-size:1.15rem; font-weight:800; color:#f87171;">Expel Student from Exam</h4>
-            <div id="kick-confirm-student-name" style="font-size:0.85rem; color:#cbd5e1; margin-top:2px;">Student Name</div>
+            <h4 style="margin:0; font-size: 16px; font-weight:800; color:var(--grade-e);">Expel Student from Exam</h4>
+            <div id="kick-confirm-student-name" style="font-size: 12px; color:#cbd5e1; margin-top:2px;">Student Name</div>
           </div>
         </div>
-        <div style="padding:20px; font-size:0.85rem; color:#cbd5e1; display:flex; flex-direction:column; gap:12px;">
+        <div style="padding:20px; font-size: 12px; color:#cbd5e1; display:flex; flex-direction:column; gap:12px;">
           <div>Select an action for the student's active exam attempt:</div>
           <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
             <input type="radio" name="kick_action" value="submit" checked style="margin-top:3px; cursor:pointer;">
             <div>
-              <div style="font-weight:700; color:#ffffff;">📥 Submit &amp; Grade Current Answers</div>
-              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Student's exam is stopped immediately. Current answers are saved and graded automatically.</div>
+              <div style="font-weight:700; color:#ffffff;">Submit &amp; Grade Current Answers</div>
+              <div style="font-size: 12px; color:#94a3b8; margin-top:2px;">Student's exam is stopped immediately. Current answers are saved and graded automatically.</div>
             </div>
           </label>
           <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
             <input type="radio" name="kick_action" value="cancel" style="margin-top:3px; cursor:pointer;">
             <div>
-              <div style="font-weight:700; color:#f87171;">⛔ Cancel Exam (Score 0 / Cancelled)</div>
-              <div style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Exam is voided and the attempt status is set to 'cancelled' with score 0.</div>
+              <div style="font-weight:700; color:var(--grade-e);">Cancel Exam (Score 0 / Cancelled)</div>
+              <div style="font-size: 12px; color:#94a3b8; margin-top:2px;">Exam is voided and the attempt status is set to 'cancelled' with score 0.</div>
             </div>
           </label>
         </div>
-        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="color:#94a3b8;">Cancel</button>
-          <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="background:var(--grade-e, #FF0000); border-color:var(--grade-e, #cc0000); font-weight:800; padding:8px 18px; display:inline-flex; align-items:center; gap:6px;">
-            <span>🚫</span> Expel Now
+        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); box-sizing:border-box;">
+          <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="height:40px; min-height:40px; line-height:38px; padding:0 18px; font-size:12px; font-weight:600; border-radius:4px; box-sizing:border-box; color:#94a3b8;">Cancel</button>
+          <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="height:40px; min-height:40px; line-height:38px; background:var(--grade-e); border-color:var(--grade-e, #cc0000); font-weight:700; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; display:inline-flex; align-items:center; gap:6px;">
+            Expel Now
           </button>
         </div>
       </div>
@@ -744,62 +756,24 @@ export async function renderClassTestSessions(container, context = {}) {
 
     <!-- Modal 5: Student Alarm Detail & Forgive Modal -->
     <div id="modal-student-alarm-detail" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:10010; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(239,68,68,0.35); border-radius:12px; width:100%; max-width:540px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
-        <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(239,68,68,0.12);">
+      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(var(--grade-e-rgb),0.35); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(var(--grade-e-rgb),0.12);">
           <div style="display:flex; align-items:center; gap:10px;">
-            <span style="font-size:1.5rem;">🚨</span>
             <div>
-              <h4 id="alarm-detail-student-name" style="margin:0; font-size:1.1rem; font-weight:800; color:#ffffff;">Log Alarm Anti-Cheat</h4>
-              <div id="alarm-detail-meta" style="font-size:0.75rem; color:#fca5a5; margin-top:2px;">Exam integrity warning history</div>
+              <h4 id="alarm-detail-student-name" style="margin:0; font-size: 16px; font-weight:800; color:#ffffff;">Log Alarm Anti-Cheat</h4>
+              <div id="alarm-detail-meta" style="font-size: 12px; color:#fca5a5; margin-top:2px;">Exam integrity warning history</div>
             </div>
           </div>
-          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-alarm-detail" style="color:#94a3b8; font-size:1.3rem;">✕</button>
+          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-alarm-detail" style="color:#94a3b8; font-size: 16px;">✕</button>
         </div>
         <div id="alarm-detail-logs-list" style="padding:16px 20px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
           <!-- Items injected dynamically -->
         </div>
-        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.3); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-          <button type="button" class="btn btn-sm" id="btn-clear-student-alarms" style="background:rgba(245,158,11,0.2); border:1px solid #f59e0b; color:#fbbf24; font-size:0.78rem; font-weight:700; padding:6px 12px; border-radius:6px; cursor:pointer;">
-            🔄 Reset / Forgive Student Alarms
+        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(15,23,42,0.6); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; box-sizing:border-box;">
+          <button type="button" class="btn" id="btn-clear-student-alarms" style="height:40px; min-height:40px; line-height:38px; background:rgba(var(--grade-c-rgb),0.12); border:1px solid var(--grade-c); color:var(--grade-c); font-size: 12px; font-weight:700; padding:0 14px; border-radius:4px; cursor:pointer; box-sizing:border-box;">
+            Reset / Forgive Student Alarms
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-alarm-detail" style="font-size:0.78rem; padding:6px 14px;">Close</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal 6: Inspect Student Live Answers Modal -->
-    <div id="modal-student-live-answers" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:10010; padding:16px;">
-      <div class="modal-box card" style="background:#0b1329; border:1px solid rgba(56,189,248,0.35); border-radius:14px; width:100%; max-width:850px; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.95);">
-        <!-- Header -->
-        <div style="padding:16px 22px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.9); flex-wrap:wrap; gap:10px;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <div style="width:38px; height:38px; border-radius:50%; background:#0284c7; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.05rem; box-shadow:0 2px 10px rgba(2,132,199,0.4);" id="inspect-answers-avatar">
-              S
-            </div>
-            <div>
-              <h4 id="inspect-answers-student-name" style="margin:0; font-size:1.15rem; font-weight:800; color:#ffffff;">Student Live Answer Sheet</h4>
-              <div id="inspect-answers-meta" style="font-size:0.75rem; color:#94a3b8; margin-top:2px;">Real-time progress and answer status</div>
-            </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div id="inspect-answers-score-badge" style="padding:4px 12px; border-radius:6px; font-size:0.82rem; font-weight:800; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">
-              Accuracy: --
-            </div>
-            <button type="button" class="btn btn-ghost btn-icon" id="btn-close-inspect-answers" style="color:#94a3b8; font-size:1.3rem;">✕</button>
-          </div>
-        </div>
-
-        <!-- Answers List Container -->
-        <div id="inspect-answers-content" style="padding:16px 22px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px;">
-          <!-- Dynamically populated answer rows -->
-        </div>
-
-        <!-- Footer -->
-        <div style="padding:14px 22px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(0,0,0,0.35); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
-          <div style="display:flex; gap:8px;" id="inspect-answers-quick-actions">
-            <!-- Dynamic student actions: +10m, Resume -->
-          </div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-dismiss-inspect-answers" style="font-size:0.8rem; padding:6px 16px;">Close</button>
+          <button type="button" class="btn btn-secondary" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; font-size: 12px; font-weight:600; padding:0 16px; border-radius:4px; box-sizing:border-box;">Close</button>
         </div>
       </div>
     </div>
@@ -809,138 +783,252 @@ export async function renderClassTestSessions(container, context = {}) {
 }
 
 /**
- * Renders the Batch Student Readiness & Exam Eligibility Matrix Table
+ * Loads empirical exam mistake analytics across themes
  */
-function renderBatchReadinessMatrix(students, themesData, context, _ignoredThemeCode) {
-  const { allAttempts = [] } = context;
-  if (!themesData || themesData.length === 0) return '';
+async function loadThemeExamAnalyticsData(themesData, context = {}) {
+  // 1. If window._themeTop20 is already populated (from tests-management), format and return it
+  if (window._themeTop20 && Object.keys(window._themeTop20).length > 0) {
+    const formatted = {};
+    (themesData || []).forEach(t => {
+      const qs = window._themeTop20[t.code] || [];
+      formatted[t.code] = qs.map(q => {
+        let rawWrong = (q.topErrors && q.topErrors[0]) ? q.topErrors[0].answer : (q.commonWrong || '—');
+        let cleanWrong = String(rawWrong || '').replace(/^["']|["']$/g, '').trim() || '—';
+        return {
+          text: q.text,
+          commonWrong: cleanWrong,
+          fail: q.fail != null ? q.fail : (q.failCount || 0),
+          failRate: q.failRate != null ? q.failRate : 0,
+          dominantErrorLabel: q.dominantErrorLabel || 'Spelling'
+        };
+      });
+    });
+    return formatted;
+  }
+
+  // 2. In-memory cache check
+  if (window._testSessionsAnalyticsCache) {
+    return window._testSessionsAnalyticsCache;
+  }
+
+  // 3. Authoritative Query: Aggregates attempt_answers across all tests in active class
+  // Identical data source powering the Class Test Analytics tab (class-analytics.js)
+  try {
+    const sb = await getSupabase();
+    if (!sb) return {};
+
+    const classTests = context.classTests || [];
+    const testIds = [];
+    const testIdToTheme = {};
+
+    // Map theme exams and tasks from themesData
+    (themesData || []).forEach(t => {
+      if (t.wordsTest?.id) {
+        testIds.push(t.wordsTest.id);
+        testIdToTheme[t.wordsTest.id] = t.code;
+      }
+      if (t.phrasesTest?.id) {
+        testIds.push(t.phrasesTest.id);
+        testIdToTheme[t.phrasesTest.id] = t.code;
+      }
+      (t.tasks || []).forEach(tsk => {
+        if (tsk.id) {
+          testIds.push(tsk.id);
+          testIdToTheme[tsk.id] = t.code;
+        }
+      });
+    });
+
+    // Also map any remaining tests in context.classTests
+    classTests.forEach(t => {
+      if (!t.id || testIdToTheme[t.id]) return;
+      testIds.push(t.id);
+      const pl = t.payload || {};
+      const tc = (pl.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+      if (['A', 'B', 'C', 'D'].includes(tc)) {
+        testIdToTheme[t.id] = tc;
+      }
+    });
+
+    if (testIds.length === 0) return {};
+
+    const { data: attempts, error: attErr } = await sb.from('attempts')
+      .select('id, test_id, student_id, percentage, is_best_score')
+      .in('test_id', testIds)
+      .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+      .order('created_at', { ascending: false })
+      .limit(600);
+
+    if (attErr || !attempts || attempts.length === 0) return {};
+
+    // Deduplicate best attempt per student per test exactly like class-analytics.js
+    const bestAttemptsMap = new Map();
+    for (const a of attempts) {
+      const key = `${a.student_id || ''}_${a.test_id}`;
+      if (!bestAttemptsMap.has(key)) {
+        bestAttemptsMap.set(key, a);
+      } else {
+        const existing = bestAttemptsMap.get(key);
+        if (a.is_best_score && !existing.is_best_score) {
+          bestAttemptsMap.set(key, a);
+        } else if ((a.percentage ?? 0) > (existing.percentage ?? 0)) {
+          bestAttemptsMap.set(key, a);
+        }
+      }
+    }
+    const repAttempts = Array.from(bestAttemptsMap.values());
+    const attemptIds = repAttempts.map(a => a.id);
+
+    const attemptToTheme = {};
+    repAttempts.forEach(a => {
+      attemptToTheme[a.id] = testIdToTheme[a.test_id] || 'A';
+    });
+
+    const allAnswers = [];
+    const CHUNK_SIZE = 50;
+    for (let i = 0; i < attemptIds.length; i += CHUNK_SIZE) {
+      const chunk = attemptIds.slice(i, i + CHUNK_SIZE);
+      const { data: ansChunk, error: ansErr } = await sb.from('attempt_answers')
+        .select('attempt_id, student_answer, correct_answer_snapshot, is_correct, evaluation_result, question_snapshot')
+        .in('attempt_id', chunk)
+        .limit(1000);
+      if (ansErr) {
+        console.warn('[tests-access] Chunk fetch error:', ansErr.message);
+        break;
+      }
+      if (ansChunk && ansChunk.length > 0) {
+        allAnswers.push(...ansChunk);
+      }
+    }
+
+    const themeMaps = { A: {}, B: {}, C: {}, D: {} };
+
+    allAnswers.forEach(ans => {
+      const qSnap = ans.question_snapshot || {};
+      const target = (ans.correct_answer_snapshot || qSnap.target_word || qSnap.prompt || qSnap.question_text || '').trim();
+      if (!target) return;
+
+      const themeCode = qSnap.theme_code || attemptToTheme[ans.attempt_id] || 'A';
+      if (!themeMaps[themeCode]) themeMaps[themeCode] = {};
+      const qMap = themeMaps[themeCode];
+
+      if (!qMap[target]) {
+        qMap[target] = {
+          target,
+          total: 0,
+          fail: 0,
+          wrongAnswersCount: {},
+          evalTypes: {}
+        };
+      }
+
+      const qItem = qMap[target];
+      qItem.total++;
+
+      const rawAns = (ans.student_answer != null && typeof ans.student_answer === 'string') ? ans.student_answer.trim() : '';
+      const isTimeout = !rawAns || rawAns.toLowerCase() === 'timeout' || rawAns.toLowerCase() === '[timeout]' || rawAns.toLowerCase() === 'timed out' || rawAns.toLowerCase() === 'null';
+
+      if (isTimeout) return;
+
+      if (!ans.is_correct) {
+        qItem.fail++;
+        qItem.wrongAnswersCount[rawAns] = (qItem.wrongAnswersCount[rawAns] || 0) + 1;
+        const ev = ans.evaluation_result || 'spelling';
+        qItem.evalTypes[ev] = (qItem.evalTypes[ev] || 0) + 1;
+      }
+    });
+
+    const result = {};
+    (themesData || []).forEach(t => {
+      const code = t.code;
+      const qList = Object.values(themeMaps[code] || {}).filter(q => q.fail >= 1);
+      result[code] = qList.map(q => {
+        const sortedWrongs = Object.entries(q.wrongAnswersCount).sort((a, b) => b[1] - a[1]);
+        let rawWrong = sortedWrongs[0] ? sortedWrongs[0][0] : '—';
+        let cleanWrong = String(rawWrong || '').replace(/^["']|["']$/g, '').trim() || '—';
+        const failRate = q.total > 0 ? Math.round((q.fail / q.total) * 100) : 0;
+
+        let dominantType = 'Spelling';
+        const sortedTypes = Object.entries(q.evalTypes).sort((a, b) => b[1] - a[1]);
+        if (sortedTypes[0]) {
+          const tType = sortedTypes[0][0].toLowerCase();
+          if (tType.includes('literal')) dominantType = 'Literal';
+          else if (tType.includes('form')) dominantType = 'Word Form';
+          else if (tType.includes('vocab')) dominantType = 'Vocab Gap';
+          else dominantType = 'Spelling';
+        }
+
+        return {
+          text: q.target,
+          commonWrong: cleanWrong,
+          fail: q.fail,
+          failRate,
+          dominantErrorLabel: dominantType
+        };
+      }).sort((a, b) => b.failRate - a.failRate || b.fail - a.fail);
+    });
+
+    window._testSessionsAnalyticsCache = result;
+    return result;
+  } catch (err) {
+    console.warn('[tests-access] Error loading analytics:', err);
+    return {};
+  }
+}
+
+/**
+ * Renders an individual theme's 4-column analytics table (TARGET | MISTAKE | COUNT | RATE)
+ * Strictly flat text, zero capsules, electric blue typography (#38bdf8) for Mistake, and Inverted Score Color for Error Rate
+ */
+function renderThemeAnalyticsColumn(theme, questions = []) {
+  const code = theme.code;
+  const name = theme.name || `Theme ${code}`;
+  const color = theme.color || '#38bdf8';
+  const borderRgba = theme.borderRgba || 'rgba(255, 255, 255, 0.08)';
+
+  const rowsHtml = (!questions || questions.length === 0)
+    ? `<tr><td colspan="4" style="padding:14px 8px; text-align:center; color:#64748b; font-size: 12px;">No missed questions recorded yet</td></tr>`
+    : questions.map(q => {
+        const target = q.text || q.target || '—';
+        let rawMistake = q.commonWrong || (q.topErrors && q.topErrors[0] ? q.topErrors[0].answer : '') || '—';
+        // Strip any wrapping quotes per user directive
+        const cleanMistake = String(rawMistake).replace(/^["']|["']$/g, '').trim() || '—';
+        const failCount = q.fail != null ? q.fail : (q.failCount != null ? q.failCount : 0);
+        const failRate = q.failRate != null ? q.failRate : 0;
+        const rateColor = typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(failRate) : 'var(--grade-e)';
+
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+            <td style="padding:6px 8px; color:#ffffff; font-weight:600; font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06);" title="${escapeHtml(target)}">${escapeHtml(target)}</td>
+            <td style="padding:6px 8px; color:${rateColor}; font-weight:500; font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06);" title="${escapeHtml(cleanMistake)}">${escapeHtml(cleanMistake)}</td>
+            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:600; font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:50px;">${failCount}</td>
+            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:700; font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:52px;" title="Error Rate: ${failRate}%">${failRate}%</td>
+          </tr>
+        `;
+      }).join('');
+
+  const countLabel = (!questions || questions.length === 0) ? '0 Missed Items' : `${questions.length} Missed Items`;
 
   return `
-    <div class="card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 12px 16px; margin-top: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.3);">
-      <!-- Matrix Header -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <h4 style="margin: 0; font-size: 0.92rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 6px;">
-            <span>📊</span> Batch Student Readiness &amp; Exam Eligibility Matrix
-          </h4>
-          <span style="font-size: 0.72rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; background: rgba(56,189,248,0.12); color: #38bdf8; border: 1px solid rgba(56,189,248,0.25);">
-            ${students.length} Students
-          </span>
-        </div>
-        <div style="display:flex; gap:6px; flex-wrap:wrap;">
-          <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(var(--grade-a-rgb,0,192,0),0.12); color:var(--grade-a,#86efac); border:1px solid rgba(var(--grade-a-rgb,0,192,0),0.3); font-weight:700;">✓ Passed</span>
-          <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(var(--grade-c-rgb,255,255,0),0.12); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.3); font-weight:700;">🟡 Ready</span>
-          <span style="font-size:11px; padding:2px 8px; border-radius:4px; background:rgba(var(--grade-e-rgb,255,0,0),0.1); color:var(--grade-e,#fca5a5); border:1px solid rgba(var(--grade-e-rgb,255,0,0),0.25); font-weight:700;">⚠ Incomplete</span>
-        </div>
+    <div class="card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid ${borderRgba}; border-radius: 8px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.3); flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+      <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; flex-shrink: 0;">
+        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 800; color: ${color};">
+          <span style="color: ${color};">${code}</span> - ${escapeHtml(name)} <span style="color: #94a3b8; font-weight: 600;">Analytics</span>
+        </span>
+        <span style="font-size: 12px; color: #94a3b8; font-weight: normal; flex-shrink: 0;">${countLabel}</span>
       </div>
-
-      <!-- Matrix Table -->
-      <div class="table-wrap" style="max-height: 320px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
-        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 11px; margin: 0;">
+      <div class="analytics-table-wrap" style="flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important; position: relative !important; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 12px; display: table; margin: 0; table-layout: fixed;">
           <thead>
             <tr style="background: #1e293b; border-bottom: 1px solid rgba(255,255,255,0.1);">
-              <th style="padding: 8px 10px; text-align: center; width: 36px; font-size: 11px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important;">No</th>
-              <th style="padding: 8px 12px; text-align: left; font-size: 11px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important; min-width:120px;">Student Name</th>
-              ${themesData.map(theme => `<th colspan="2" style="padding: 8px 10px; text-align: center; font-size: 11px; color: ${theme.color || '#94a3b8'}; text-transform: uppercase; white-space: nowrap !important; border-left:1px solid rgba(255,255,255,0.08);">
-                Theme ${theme.code}<br><span style="font-size:10px; font-weight:600; color:#64748b;">${escapeHtml(theme.name)}</span>
-              </th>`).join('')}
-              <th style="padding: 8px 12px; text-align: center; font-size: 11px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important; border-left:1px solid rgba(255,255,255,0.08);">Overall</th>
-            </tr>
-            <tr style="background: rgba(30,41,59,0.6); border-bottom: 1px solid rgba(255,255,255,0.06);">
-              <th colspan="2" style="padding:4px 10px; font-size:10px; color:#64748b;"></th>
-              ${themesData.map(() => `
-                <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; font-weight:600; white-space:nowrap; border-left:1px solid rgba(255,255,255,0.08);">Tasks</th>
-                <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; font-weight:600; white-space:nowrap;">Exam</th>
-              `).join('')}
-              <th style="padding:4px 8px; text-align:center; font-size:10px; color:#64748b; border-left:1px solid rgba(255,255,255,0.08);">Status</th>
+              <th style="position: sticky; top: 0; background: #1e293b; z-index: 5; padding: 6px 8px; text-align: center; font-size: 12px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important; font-weight: 700; overflow: hidden; text-overflow: ellipsis;">TARGET</th>
+              <th style="position: sticky; top: 0; background: #1e293b; z-index: 5; padding: 6px 8px; text-align: center; font-size: 12px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important; font-weight: 700; overflow: hidden; text-overflow: ellipsis;">MISTAKE</th>
+              <th style="position: sticky; top: 0; background: #1e293b; z-index: 5; padding: 6px 4px; text-align: center; font-size: 12px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important; font-weight: 700; width: 50px;">COUNT</th>
+              <th style="position: sticky; top: 0; background: #1e293b; z-index: 5; padding: 6px 4px; text-align: center; font-size: 12px; color: #94a3b8; text-transform: uppercase; white-space: nowrap !important; font-weight: 700; width: 52px;" title="Error Rate (% Missed)">RATE</th>
             </tr>
           </thead>
           <tbody>
-            ${students.length === 0 ? `
-              <tr>
-                <td colspan="${2 + themesData.length * 2 + 1}" style="text-align: center; padding: 24px; color: #94a3b8;">
-                  No students found in this active batch.
-                </td>
-              </tr>
-            ` : students.map((s, idx) => {
-              let overallThemesPassed = 0;
-
-              const themeCells = themesData.map(theme => {
-                const tasks = theme.tasks || [];
-                const examIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
-
-                // Task avg
-                let totalScore = 0, attempted = 0;
-                tasks.forEach(task => {
-                  const sAttempts = allAttempts.filter(a => a.student_id === s.id && a.test_id === task.id);
-                  if (sAttempts.length > 0) {
-                    totalScore += Math.max(...sAttempts.map(a => Number(a.percentage || 0)));
-                    attempted++;
-                  }
-                });
-                const avgPct = tasks.length > 0 ? Math.round(totalScore / tasks.length) : 0;
-                const allTasksDone = tasks.length > 0 && attempted === tasks.length && avgPct >= 60;
-                const allQuizDone = allTasksDone; // Backward compatibility
-
-                // Task cell
-                let taskCellStyle, taskText;
-                if (tasks.length === 0) {
-                  taskCellStyle = 'color:#64748b;';
-                  taskText = '—';
-                } else if (allTasksDone) {
-                  taskCellStyle = 'color:var(--grade-a,#86efac); font-weight:800;';
-                  taskText = avgPct + '%';
-                } else if (attempted > 0) {
-                  taskCellStyle = 'color:var(--grade-c,#fef08a); font-weight:700;';
-                  taskText = attempted + '/' + tasks.length;
-                } else {
-                  taskCellStyle = 'color:var(--grade-e,#fca5a5); font-weight:700;';
-                  taskText = '0/' + tasks.length;
-                }
-
-                // Exam status
-                const examAttempts = allAttempts.filter(a => a.student_id === s.id && examIds.includes(a.test_id));
-                let examChip;
-                if (examAttempts.length > 0) {
-                  const best = Math.max(...examAttempts.map(a => Number(a.percentage || 0)));
-                  if (best >= 60) {
-                    overallThemesPassed++;
-                    examChip = `<span style="display:inline-block; font-size:11px; font-weight:800; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-a-rgb,0,192,0),0.15); color:var(--grade-a,#86efac); border:1px solid rgba(var(--grade-a-rgb,0,192,0),0.4);">✓ ${Math.round(best)}%</span>`;
-                  } else {
-                    examChip = `<span style="display:inline-block; font-size:11px; font-weight:800; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-c-rgb,255,255,0),0.12); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.35);">🟡 ${Math.round(best)}%</span>`;
-                  }
-                } else if (allTasksDone) {
-                  examChip = `<span style="display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-c-rgb,255,255,0),0.1); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.3);">Ready</span>`;
-                } else {
-                  examChip = `<span style="display:inline-block; font-size:11px; font-weight:700; padding:1px 7px; border-radius:4px; background:rgba(var(--grade-e-rgb,255,0,0),0.1); color:var(--grade-e,#fca5a5); border:1px solid rgba(var(--grade-e-rgb,255,0,0),0.25);">Incomplete</span>`;
-                }
-
-                return `
-                  <td style="padding:5px 8px; text-align:center; white-space:nowrap; border-left:1px solid rgba(255,255,255,0.06); font-size:11px; ${taskCellStyle}">${taskText}</td>
-                  <td style="padding:5px 8px; text-align:center; white-space:nowrap;">${examChip}</td>
-                `;
-              }).join('');
-
-              // Overall badge
-              const totalThemes = themesData.length;
-              let overallChip;
-              if (overallThemesPassed === totalThemes && totalThemes > 0) {
-                overallChip = `<span style="font-size:11px; font-weight:800; padding:2px 8px; border-radius:4px; background:rgba(var(--grade-a-rgb,0,192,0),0.15); color:var(--grade-a,#86efac); border:1px solid rgba(var(--grade-a-rgb,0,192,0),0.4);">★ All Passed</span>`;
-              } else if (overallThemesPassed > 0) {
-                overallChip = `<span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(var(--grade-c-rgb,255,255,0),0.1); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.3);">${overallThemesPassed}/${totalThemes} Passed</span>`;
-              } else {
-                overallChip = `<span style="font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(var(--grade-e-rgb,255,0,0),0.08); color:var(--grade-e,#fca5a5); border:1px solid rgba(var(--grade-e-rgb,255,0,0),0.2);">None</span>`;
-              }
-
-              return `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
-                  <td style="padding: 6px 10px; text-align: center; color: #64748b; font-family: monospace; white-space: nowrap;">${idx + 1}</td>
-                  <td style="padding: 6px 12px; font-weight: 700; color: #ffffff; white-space: nowrap; font-size:11px;">${escapeHtml(s.name || 'Student')}</td>
-                  ${themeCells}
-                  <td style="padding: 6px 12px; text-align: center; white-space: nowrap; border-left:1px solid rgba(255,255,255,0.08);">${overallChip}</td>
-                </tr>
-              `;
-            }).join('')}
+            ${rowsHtml}
           </tbody>
         </table>
       </div>
@@ -949,69 +1037,98 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
 }
 
 /**
- * Renders a single unified Theme Card - Modern Compact Glassmorphism with Outline Buttons
+ * Renders the 4-Theme Exam Analytics Board with 4-Column Zero-Capsule Tables
+ */
+function renderThemeExamAnalyticsBoard(themesData, context, analyticsData = {}) {
+  if (!themesData || themesData.length === 0) return '';
+
+  return `
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; flex: 1 1 0; min-height: 0; height: 100%;">
+      ${themesData.map(theme => renderThemeAnalyticsColumn(theme, analyticsData[theme.code] || [])).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Backward compatibility alias for renderBatchReadinessMatrix
+ */
+function renderBatchReadinessMatrix(students, themesData, context, _ignoredThemeCode) {
+  return renderThemeExamAnalyticsBoard(themesData, context);
+}
+
+/**
+ * Renders a single unified Theme Card - 250px Zero-Overflow Glassmorphism with Standard 12px Font & 10px Gap
  */
 function renderThemeCard(theme, context) {
-  const { 
-    code, 
-    name, 
-    color, 
-    bgRgba, 
-    borderRgba, 
-    wordsTest, 
-    phrasesTest, 
-    tasks, 
-    isLive, 
-    remainingMinutes, 
-    liveBatchName, 
-    allowedStudentIds = [], 
+  const {
+    code,
+    name,
+    color,
+    bgRgba,
+    borderRgba,
+    wordsTest,
+    phrasesTest,
+    tasks,
+    isLive,
+    remainingMinutes,
+    liveBatchName,
+    allowedStudentIds = [],
     isRemedial,
     eligibleNormalCount = 0,
     eligibleRemedialCount = 0,
     batchTotalStudents = 0
   } = theme;
 
-  const durationMins = wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60;
+  const wordsQ = wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0);
+  const phrasesQ = phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0);
+  const totalQ = wordsQ + phrasesQ;
+  const autoDur = totalQ > 0 ? Math.max(10, Math.ceil(totalQ * 1.5)) : (wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60);
+
   const enrolledCount = (allowedStudentIds && allowedStudentIds.length) ? allowedStudentIds.length : 0;
   const hasWords = Boolean(wordsTest);
   const hasPhrases = Boolean(phrasesTest);
   const readinessPct = batchTotalStudents > 0 ? Math.round((eligibleNormalCount / batchTotalStudents) * 100) : 0;
 
-  // Row 1: Test Metadata Header (Compact Glass)
-  const metadataBlock = `
-    <div class="card-block-metadata">
-      <div class="card-meta-top" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2px;">
-        <span class="theme-pill" style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:0.08em; padding:2px 7px; border-radius:4px; background:${bgRgba}; color:${color}; border:1px solid ${borderRgba};">
-          THEME ${code}
+  const examTitleStr = hasWords && hasPhrases
+    ? 'Words Exam & Phrases Exam'
+    : (hasWords ? 'Words Exam' : (hasPhrases ? 'Phrases Exam' : 'Tasks Only'));
+
+  // Top Group: Header Line, Exam Title Line, Standard 12px Metadata Box
+  const topBlock = `
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <!-- Line 1: Theme Code + Name + Readiness / Live Badge -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 2px; line-height: 1.4;">
+        <span style="font-size: 12px; font-weight: 800; color: ${color}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
+          <span style="color: ${color};">${code}</span> - ${escapeHtml(name)}
         </span>
-        <div style="display:flex; align-items:center; gap:6px;">
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           ${isLive ? `
-            <span style="font-size:11px; font-weight:800; padding:2px 6px; border-radius:4px; ${isRemedial ? 'background:rgba(var(--grade-c-rgb, 255,255,0),0.15); border:1px solid var(--grade-c, #FFFF00); color:var(--grade-c, #fef08a);' : 'background:rgba(var(--grade-a-rgb, 0,192,0),0.15); border:1px solid var(--grade-a, #00c000); color:var(--grade-a, #86efac);'}">
-              🟢 LIVE (${remainingMinutes}m)
-            </span>
-            <span class="duration-badge" style="font-size:11px; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);">
-              👥 ${escapeHtml(liveBatchName || '')} (${enrolledCount})
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isRemedial ? 'background:rgba(var(--grade-c-rgb),0.15); border:1px solid var(--grade-c); color:var(--grade-c, #fef08a);' : 'background:rgba(var(--grade-a-rgb),0.15); border:1px solid var(--grade-a); color:var(--grade-a, #86efac);'}">
+              LIVE (${remainingMinutes}m)
             </span>
           ` : `
-            <span class="duration-badge" style="font-size:11px; font-weight:700; color:#cbd5e1; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; border:1px solid rgba(255,255,255,0.1);" title="Official Exam Duration">
-              ⏱️ ${durationMins}m
-            </span>
-            <span style="font-size:11px; color:#94a3b8; font-weight:600;">
-              ${hasWords && hasPhrases ? '2 Mod' : '1 Mod'}
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${eligibleNormalCount === batchTotalStudents && batchTotalStudents > 0 ? 'background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a,#86efac); border:1px solid rgba(var(--grade-a-rgb),0.3);' : 'background:rgba(var(--grade-c-rgb),0.12); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb),0.3);'}">
+              ${eligibleNormalCount}/${batchTotalStudents} Ready (${readinessPct}%)
             </span>
           `}
         </div>
       </div>
-      <h4 style="margin:2px 0 0; font-size:1.05rem; font-weight:900; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(name)}">
-        ${escapeHtml(name)}
-      </h4>
-      <div style="font-size:11px; margin-top:2px; display:flex; justify-content:space-between; align-items:center;">
-        <span style="color:#93c5fd; font-weight:600;">
-          ${hasWords && hasPhrases ? '📝 Words &bull; 💬 Phrases' : (hasWords ? '📝 Words Exam' : (hasPhrases ? '💬 Phrases Exam' : 'Tasks Only'))}
-        </span>
-        <span style="font-size:11px; font-weight:800; padding:2px 7px; border-radius:4px; ${eligibleNormalCount === batchTotalStudents && batchTotalStudents > 0 ? 'background:rgba(var(--grade-a-rgb,0,192,0),0.15); color:var(--grade-a,#86efac); border:1px solid rgba(var(--grade-a-rgb,0,192,0),0.3);' : 'background:rgba(var(--grade-c-rgb,255,255,0),0.12); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb,255,255,0),0.3);'}">
-          👥 ${eligibleNormalCount}/${batchTotalStudents} READY (${readinessPct}%)
-        </span>
+
+      <!-- Line 2: Associated Exam Title -->
+      <div style="font-size: 12px; font-weight: 700; color: #93c5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
+        ${isLive ? `${examTitleStr} &bull; ${escapeHtml(liveBatchName || '')} (${enrolledCount})` : examTitleStr}
+      </div>
+
+      <!-- Line 3: Standard 12px Metadata Box -->
+      <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; line-height: 1.5;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+          <span style="color: #94a3b8; font-weight: 500;">Default Duration:</span>
+          <span style="color: #ffffff; font-weight: 700;">${autoDur} mins</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+          <span style="color: #94a3b8; font-weight: 500;">Question Count:</span>
+          <span style="color: #ffffff; font-weight: 700;">Words: ${wordsQ}, Phrases: ${phrasesQ}</span>
+        </div>
       </div>
     </div>
   `;
@@ -1019,102 +1136,100 @@ function renderThemeCard(theme, context) {
   // Row 2: Primary Action Row
   let row2Content = '';
   if (isLive) {
-    // LIVE VIEW: Full width button in Row 2 (Outline Royal Blue glow)
     row2Content = `
-      <div style="height:38px;">
+      <div style="height:36px;">
         <button type="button" class="btn btn-wireframe-live-view btn-theme-live-monitor" data-theme="${code}">
-          <span>👁️</span> LIVE VIEW &bull; REALTIME MONITOR (${enrolledCount} STUDENTS)
+          LIVE VIEW &bull; REALTIME MONITOR (${enrolledCount} STUDENTS)
         </button>
       </div>
     `;
   } else {
-    // Outline Normal & Remedial Buttons
     row2Content = `
-      <div class="card-block-row-buttons">
-        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" title="Open Normal Session (Full Score) - ${eligibleNormalCount} Eligible">
-          <span>🟢</span> NORMAL (${eligibleNormalCount})
+      <div class="card-block-row-buttons" style="display:flex; gap:10px;">
+        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none;" title="Open Normal Session (Full Score) - ${eligibleNormalCount} Eligible">
+          NORMAL (${eligibleNormalCount})
         </button>
-        <button type="button" class="btn btn-wireframe-remidi ${eligibleRemedialCount === 0 ? 'btn-dimmed' : ''} btn-theme-open-session" data-theme="${code}" data-mode="remedial" title="Open Remedial Session (Max 60%) - ${eligibleRemedialCount} Eligible" ${eligibleRemedialCount === 0 ? 'disabled' : ''}>
-          <span>🟡</span> REMEDI (${eligibleRemedialCount})
+        <button type="button" class="btn btn-wireframe-remidi ${eligibleRemedialCount === 0 ? 'btn-dimmed' : ''} btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="flex:1; ${eligibleRemedialCount > 0 ? 'border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none;' : ''}" title="Open Remedial Session (Max 60%) - ${eligibleRemedialCount} Eligible" ${eligibleRemedialCount === 0 ? 'disabled' : ''}>
+          REMEDI (${eligibleRemedialCount})
         </button>
       </div>
     `;
   }
 
-  // Row 3: Status / Secondary Controls
+  // Row 3: Secondary Action / Standby Box
   let row3Content = '';
   if (isLive) {
-    // +LATE STUDENTS | EDIT TIME | CLOSE SESSION
     row3Content = `
-      <div class="card-block-row-buttons" style="position:relative;">
-        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" title="Add Late Arrival Students">
-          <span>👥</span> +LATE
+      <div class="card-block-row-buttons" style="position:relative; display:flex; gap:8px;">
+        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" style="border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none;" title="Add Late Arrival Students">
+          +LATE
         </button>
 
         <!-- Edit Time Popover -->
         <div style="position:relative; flex:1; height:100%; display:flex;">
-          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%;" title="Edit Exam Time (+ / -)">
-            <span>⏱️</span> TIME
+          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none;" title="Edit Exam Time (+ / -)">
+            TIME
           </button>
-          <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c, #ffff00); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb, 255,255,0), 0.18); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
-            <div style="background:var(--grade-c, #FFFF00); color:#0f172a; font-weight:900; font-size:11px; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
-              <span>⏱️ EDIT TIME &bull; THEME ${code}</span>
-              <span style="font-size:11px; background:rgba(0,0,0,0.25); color:#0f172a; padding:1px 5px; border-radius:3px; font-weight:800;">SESSION</span>
+          <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
+            <div style="background:var(--grade-c); color:#0f172a; font-weight:900; font-size: 12px; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
+              <span>EDIT TIME &bull; THEME ${code}</span>
+              <span style="font-size: 12px; background:rgba(0,0,0,0.25); color:#0f172a; padding:1px 5px; border-radius:3px; font-weight:800;">SESSION</span>
             </div>
 
             <!-- Add Time (+) -->
             <div>
-              <div style="font-size:0.65rem; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                <span>🟢</span> ADD TIME (+)
+              <div style="font-size: 12px; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                ADD TIME (+)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">+5m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">+10m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">+15m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="background:rgba(var(--grade-a-rgb, 0,192,0), 0.08); border:1px solid rgba(var(--grade-a-rgb, 0,192,0), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">+30m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+5m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+10m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+15m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+30m</button>
               </div>
             </div>
 
             <!-- Reduce Time (-) -->
             <div>
-              <div style="font-size:0.65rem; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
-                <span>🔴</span> REDUCE TIME (-)
+              <div style="font-size: 12px; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                REDUCE TIME (-)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">-5m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-10" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">-10m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-15" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">-15m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-30" style="background:rgba(var(--grade-e-rgb, 255,0,0), 0.08); border:1px solid rgba(var(--grade-e-rgb, 255,0,0), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:0.73rem; font-weight:700; cursor:pointer;">-30m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-5m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-10m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-15m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-30m</button>
               </div>
             </div>
 
-            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="width:100%; text-align:center; background:rgba(var(--grade-c-rgb, 255,255,0), 0.07); border:1px dashed rgba(var(--grade-c-rgb, 255,255,0), 0.5); color:var(--grade-c, #ffff00); padding:6px 8px; border-radius:6px; font-size:0.73rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
-              <span>⚙️</span> Custom Minutes (+ / -)...
+            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="width:100%; text-align:center; background:rgba(var(--grade-c-rgb), 0.07); border:1px dashed rgba(var(--grade-c-rgb), 0.5); color:var(--grade-c); padding:6px 8px; border-radius:6px; font-size: 12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
+              Custom Minutes (+ / -)...
             </button>
           </div>
         </div>
 
         <!-- Close Session -->
-        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" title="Close Active Exam Session">
-          <span>🔒</span> CLOSE
+        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" style="border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:#fca5a5; background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); box-shadow:none;" title="Close Active Exam Session">
+          CLOSE
         </button>
       </div>
     `;
   } else {
-    // Standby Mode (Outline Style, Non-Alarming)
     row3Content = `
       <div class="box-wireframe-standby">
-        <span>⏸️</span> STANDBY &bull; AWAITING UNLOCK
+        STANDBY &bull; AWAITING UNLOCK
       </div>
     `;
   }
 
   return `
-    <div class="theme-test-card-frame">
-      <div class="theme-test-card-inner">
-        ${metadataBlock}
-        ${row2Content}
-        ${row3Content}
+    <div class="theme-test-card-frame" style="height:250px !important; min-height:250px !important; max-height:250px !important; padding:12px 14px !important; box-sizing:border-box !important; border:1px solid ${borderRgba} !important; background:#0f172a !important; border-radius:8px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; overflow:hidden !important;">
+      <div class="theme-test-card-inner" style="height:100% !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; background:transparent !important; border:none !important; padding:0 !important; overflow:hidden !important;">
+        ${topBlock}
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          ${row2Content}
+          ${row3Content}
+        </div>
       </div>
     </div>
   `;
@@ -1130,6 +1245,7 @@ function bindTestSessionsEvents(container, themesData, context) {
   const batchSelect = container.querySelector('#test-session-batch-select');
   batchSelect?.addEventListener('change', (e) => {
     _selectedBatchId = e.target.value;
+    window._testSessionsAnalyticsCache = null;
     try {
       localStorage.setItem('topscore_active_test_batch', _selectedBatchId);
     } catch(err) {}
@@ -1140,6 +1256,7 @@ function bindTestSessionsEvents(container, themesData, context) {
 
   // Refresh status
   container.querySelector('#btn-refresh-test-sessions')?.addEventListener('click', () => {
+    window._testSessionsAnalyticsCache = null;
     if (window.renderClassHub) {
       window.renderClassHub(document.getElementById('admin-content-area'));
     }
@@ -1227,7 +1344,7 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`⏱️ Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
+        showToast(`Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
@@ -1275,7 +1392,7 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`⏱️ Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
+        showToast(`Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
@@ -1305,7 +1422,7 @@ function bindTestSessionsEvents(container, themesData, context) {
         if (theme.phrasesTest) promises.push(closeTestSession(theme.phrasesTest.id));
         await Promise.all(promises);
 
-        showToast(`🔒 Test session Theme ${theme.code} closed successfully.`, 'success');
+        showToast(`Test session Theme ${theme.code} closed successfully.`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
@@ -1326,16 +1443,21 @@ function openThemeSessionModal(container, theme, mode, context) {
   _currentOpenModalTheme = theme;
   _currentOpenModalMode = mode;
 
-  const modal = container.querySelector('#modal-theme-open-session');
+  let modal = document.getElementById('modal-theme-open-session');
+  if (!modal && container) {
+    modal = container.querySelector('#modal-theme-open-session');
+  }
   if (!modal) return;
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
 
   const titleEl = modal.querySelector('#open-modal-title');
   const badgeEl = modal.querySelector('#open-modal-theme-badge');
-  const bannerEl = modal.querySelector('#open-modal-mode-banner');
   const batchSelect = modal.querySelector('#open-modal-batch-select');
   // --- Answering mode pill state ---
-  let _selectedAnswerModeWords = 'typing';
-  let _selectedAnswerModePhrases = 'chips';
+  let _selectedAnswerModeWords = 'written';
+  let _selectedAnswerModePhrases = 'written';
 
   // Bind answering mode pills
   modal.querySelectorAll('.answer-mode-pill').forEach(pill => {
@@ -1356,7 +1478,6 @@ function openThemeSessionModal(container, theme, mode, context) {
     });
   });
 
-
   // ── Auto-duration calculation ────────────────────────
   const _wordsQ = theme.wordsTest?.total_questions || 0;
   const _phrasesQ = theme.phrasesTest?.total_questions || 0;
@@ -1375,31 +1496,30 @@ function openThemeSessionModal(container, theme, mode, context) {
 
   const confirmBtn = modal.querySelector('#btn-confirm-open-session');
 
-  badgeEl.textContent = `THEME ${theme.code} • ${theme.name}`;
-  badgeEl.style.background = theme.bgRgba;
-  badgeEl.style.color = theme.color;
-  badgeEl.style.border = `1px solid ${theme.borderRgba}`;
-
   if (mode === 'normal') {
-    titleEl.innerHTML = `<span style="color:var(--grade-a, #00c000ff);">🟢 Open Normal Test Session</span>: Theme ${theme.code}`;
-    bannerEl.style.background = 'rgba(16, 185, 129, 0.12)';
-    bannerEl.style.border = '1px solid rgba(16, 185, 129, 0.35)';
-    bannerEl.style.color = '#34d399';
-    bannerEl.innerHTML = `
-      🟢 <strong>NORMAL SESSION (FULL SCORE)</strong>: Eligible students take the test for full curriculum scores. Students who already passed may retake to improve their highest score.
-    `;
-    confirmBtn.style.background = 'var(--grade-a, #00c000)';
-    confirmBtn.style.borderColor = '#059669';
+    if (titleEl) titleEl.textContent = `Theme ${theme.code} — ${theme.name || 'Workplace'}`;
+    if (badgeEl) {
+      badgeEl.textContent = 'EXAM SESSION';
+      badgeEl.style.background = 'transparent';
+      badgeEl.style.color = 'var(--grade-a)';
+      badgeEl.style.border = 'none';
+      badgeEl.style.padding = '0';
+    }
+    confirmBtn.style.background = 'var(--grade-a)';
+    confirmBtn.style.borderColor = 'var(--grade-a)';
+    confirmBtn.style.color = '#0f172a';
   } else {
-    titleEl.innerHTML = `<span style="color:#fbbf24;">🟡 Open Remedial Test Session</span>: Theme ${theme.code}`;
-    bannerEl.style.background = 'rgba(245, 158, 11, 0.12)';
-    bannerEl.style.border = '1px solid rgba(245, 158, 11, 0.35)';
-    bannerEl.style.color = '#fbbf24';
-    bannerEl.innerHTML = `
-      🟡 <strong>REMEDIAL SESSION (MAX 60% CAP)</strong>: Designated for students who have not passed (< 60%) or have not taken the test yet. Final effective score is capped at 60% (Grade C).
-    `;
-    confirmBtn.style.background = '#f59e0b';
-    confirmBtn.style.borderColor = '#d97706';
+    if (titleEl) titleEl.textContent = `Theme ${theme.code} — ${theme.name || 'Workplace'}`;
+    if (badgeEl) {
+      badgeEl.textContent = 'REMEDIAL SESSION';
+      badgeEl.style.background = 'transparent';
+      badgeEl.style.color = 'var(--grade-c)';
+      badgeEl.style.border = 'none';
+      badgeEl.style.padding = '0';
+    }
+    confirmBtn.style.background = 'var(--grade-c)';
+    confirmBtn.style.borderColor = 'var(--grade-c)';
+    confirmBtn.style.color = '#0f172a';
   }
 
   // Set selected batch
@@ -1407,11 +1527,17 @@ function openThemeSessionModal(container, theme, mode, context) {
     batchSelect.value = _selectedBatchId;
   }
 
+  // Clean student name helper: removes honorifics/titles (Mr., Miss, Mrs., Ms.)
+  const cleanStudentName = (rawName) => {
+    return String(rawName || 'Unnamed')
+      .replace(/^(Mr\.|Miss|Mrs\.|Ms\.)\s+/i, '')
+      .trim();
+  };
+
   // State for student checklist inside modal
   let checkedStudentIds = new Set();
   let studentSearchQuery = '';
   let studentSortOrder = 'asc';
-  let showIneligible = false;
   let tutorOverrideActive = false;
 
   const overrideCheckbox = modal.querySelector('#open-modal-override-checkbox');
@@ -1421,7 +1547,7 @@ function openThemeSessionModal(container, theme, mode, context) {
   const renderModalStudents = () => {
     const curBatchId = batchSelect.value;
     const batchStudents = (context.allStudents || []).filter(s => s.batch_id === curBatchId && !s.deleted_at && s.is_active !== false);
-    
+
     // Evaluate eligibility
     const evaluated = evaluateStudentsEligibility({
       students: batchStudents,
@@ -1436,116 +1562,116 @@ function openThemeSessionModal(container, theme, mode, context) {
     lastEvaluatedStudents = evaluated;
 
     const eligibleList = evaluated.filter(e => e.isEligible);
-    const ineligibleList = evaluated.filter(e => !e.isEligible);
 
     // Tutor Override is strictly manual (never auto-activated) so prerequisites are always respected by default
     tutorOverrideActive = Boolean(overrideCheckbox && overrideCheckbox.checked);
 
-    // Determine selectable list:
-    // If Tutor Override is active, include all students except those who already passed in Remedial mode
-    let selectableList = eligibleList;
-    if (tutorOverrideActive) {
-      selectableList = evaluated.filter(e => mode === 'normal' || !e.isAlreadyPassed);
-    }
+    // Selectable condition:
+    // If Tutor Override is active -> student is selectable (unless passed in Remedial mode)
+    // If Tutor Override is inactive -> only eligible students are selectable
+    const isStudentSelectable = (item) => {
+      if (tutorOverrideActive) {
+        return mode === 'normal' || !item.isAlreadyPassed;
+      }
+      return item.isEligible;
+    };
+
+    const selectableList = evaluated.filter(isStudentSelectable);
 
     // Initial check all selectable by default if first time
     if (checkedStudentIds.size === 0 && selectableList.length > 0) {
       selectableList.forEach(e => checkedStudentIds.add(e.student.id));
     }
 
-    // Update count display
+    // Update count display in left panel
     const countEl = modal.querySelector('#open-modal-student-count');
-    if (countEl) countEl.textContent = `${checkedStudentIds.size} / ${selectableList.length}`;
+    if (countEl) countEl.textContent = `Enrolled: ${checkedStudentIds.size} / ${selectableList.length} selected`;
 
-    // Filter by search
-    let displayList = selectableList;
+    // ALL students from the batch are rendered in the table (zero hidden voids)
+    let displayList = evaluated;
     const q = studentSearchQuery.trim().toLowerCase();
     if (q) {
-      displayList = displayList.filter(e => (e.student.name || '').toLowerCase().includes(q));
+      displayList = displayList.filter(e => {
+        const raw = (e.student.name || '').toLowerCase();
+        const clean = cleanStudentName(e.student.name).toLowerCase();
+        return raw.includes(q) || clean.includes(q);
+      });
     }
 
-    // Sort
+    // Sort by clean name
     displayList.sort((a, b) => {
-      const nA = (a.student.name || '').trim();
-      const nB = (b.student.name || '').trim();
+      const nA = cleanStudentName(a.student.name);
+      const nB = cleanStudentName(b.student.name);
       const cmp = nA.localeCompare(nB, undefined, { sensitivity: 'base', numeric: true });
       return studentSortOrder === 'asc' ? cmp : -cmp;
     });
 
-    const listContainer = modal.querySelector('#open-modal-students-list');
-    if (!listContainer) return;
+    const tableBody = modal.querySelector('#open-modal-students-table-body');
+    if (!tableBody) return;
 
     if (displayList.length === 0) {
-      listContainer.innerHTML = `
-        <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
-          ${q ? `No students match "${escapeHtml(q)}".` : 'No eligible students found in this batch. Check 🛡️ Tutor Override to bypass task prerequisites.'}
-        </div>
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="3" style="padding:24px 16px; text-align:center; color:#94a3b8; font-size:12px;">
+            ${q ? `No students match "${escapeHtml(q)}".` : 'No students found in this batch.'}
+          </td>
+        </tr>
       `;
     } else {
-      listContainer.innerHTML = displayList.map(item => {
+      tableBody.innerHTML = displayList.map((item, idx) => {
         const s = item.student;
-        const isChecked = checkedStudentIds.has(s.id);
-        const initial = (s.name || 'S').charAt(0).toUpperCase();
+        const selectable = isStudentSelectable(item);
+        const isChecked = checkedStudentIds.has(s.id) && selectable;
+        const cleanName = cleanStudentName(s.name);
 
-        let badgeBg = 'rgba(56, 189, 248, 0.15)';
-        let badgeColor = '#38bdf8';
+        let statusColor = '#38bdf8';
         if (item.statusType === 'success') {
-          badgeBg = 'rgba(16, 185, 129, 0.15)';
-          badgeColor = '#34d399';
+          statusColor = 'var(--grade-a)';
         } else if (item.statusType === 'amber') {
-          badgeBg = 'rgba(245, 158, 11, 0.15)';
-          badgeColor = '#fbbf24';
+          statusColor = 'var(--grade-c)';
         } else if (item.statusType === 'danger') {
-          badgeBg = 'rgba(239, 68, 68, 0.15)';
-          badgeColor = '#f87171';
+          statusColor = 'var(--grade-e)';
         }
 
+        const rowOpacity = selectable ? '1' : '0.45';
+        const disabledAttr = selectable ? '' : 'disabled';
+        const cursorStyle = selectable ? 'cursor:pointer;' : 'cursor:not-allowed;';
+        const tooltipTitle = selectable ? escapeHtml(cleanName) : `Ineligible: ${escapeHtml(item.reason || item.statusLabel)}. Check Tutor Override to enable.`;
+
         return `
-          <label style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); cursor:pointer;">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
-              <span style="width:24px; height:24px; border-radius:50%; background:var(--fm-accent-tactical, #2563eb); color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">
-                ${initial}
-              </span>
-              <span style="font-size:0.85rem; font-weight:600; color:#ffffff;">${escapeHtml(s.name || 'Unnamed')}</span>
-            </div>
-            <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:4px; background:${badgeBg}; color:${badgeColor}; white-space:nowrap;">
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.06); opacity:${rowOpacity}; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'" title="${tooltipTitle}">
+            <td style="padding:6px 8px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.06); width:50px;">
+              <label style="display:flex; align-items:center; justify-content:center; gap:6px; ${cursorStyle} margin:0;">
+                <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} ${disabledAttr} style="width:14px; height:14px; ${cursorStyle}">
+                <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:600; font-size:12px;">${idx + 1}</span>
+              </label>
+            </td>
+            <td style="padding:6px 12px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.06); color:#ffffff; font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(cleanName)}
+            </td>
+            <td style="padding:6px 12px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.06); color:${statusColor}; font-weight:700; font-size:12px; white-space:nowrap; width:220px;">
               ${escapeHtml(item.statusLabel)}
-            </span>
-          </label>
+            </td>
+          </tr>
         `;
       }).join('');
     }
 
-    // Ineligible summary notice
-    const ineligTextEl = modal.querySelector('#open-modal-ineligible-text');
-    const ineligDetailsEl = modal.querySelector('#open-modal-ineligible-details');
-    if (ineligTextEl) {
-      if (tutorOverrideActive) {
-        ineligTextEl.textContent = `🛡️ Tutor Override Active (${selectableList.length} selectable). Prerequisite tasks bypassed.`;
-      } else {
-        ineligTextEl.textContent = `ℹ️ ${ineligibleList.length} Ineligible students hidden.`;
-      }
-    }
-    if (ineligDetailsEl) {
-      if (ineligibleList.length === 0) {
-        ineligDetailsEl.innerHTML = `<span style="color:#94a3b8;">All students in this batch meet the eligibility criteria.</span>`;
-      } else {
-        ineligDetailsEl.innerHTML = ineligibleList.map(item => `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid rgba(255,255,255,0.04); color:#94a3b8;">
-            <span>${escapeHtml(item.student.name || '')}</span>
-            <span style="color:#f87171;">${escapeHtml(item.statusLabel)}</span>
-          </div>
-        `).join('');
-      }
+    // Footer summary
+    const summaryEl = modal.querySelector('#open-modal-footer-summary');
+    if (summaryEl) {
+      summaryEl.textContent = `Ready to unlock for ${checkedStudentIds.size} student${checkedStudentIds.size === 1 ? '' : 's'}`;
     }
 
-    // Zero-selected button guard
+    // Zero-selected button guard & dynamic confirm text
     if (confirmBtn) {
       const hasSelected = checkedStudentIds.size > 0;
       confirmBtn.disabled = !hasSelected;
       confirmBtn.style.opacity = hasSelected ? '1' : '0.5';
       confirmBtn.style.cursor = hasSelected ? 'pointer' : 'not-allowed';
+      confirmBtn.textContent = hasSelected
+        ? `Unlock for ${checkedStudentIds.size} Student${checkedStudentIds.size === 1 ? '' : 's'}`
+        : 'Unlock Test Now';
       if (!hasSelected) {
         confirmBtn.title = 'Select at least 1 student to unlock test';
       } else {
@@ -1554,8 +1680,8 @@ function openThemeSessionModal(container, theme, mode, context) {
     }
   };
 
-  // Checkbox listener
-  modal.querySelector('#open-modal-students-list')?.addEventListener('change', (e) => {
+  // Checkbox listener on table body
+  modal.querySelector('#open-modal-students-table-body')?.addEventListener('change', (e) => {
     if (e.target.classList.contains('open-student-checkbox')) {
       if (e.target.checked) checkedStudentIds.add(e.target.value);
       else checkedStudentIds.delete(e.target.value);
@@ -1568,6 +1694,21 @@ function openThemeSessionModal(container, theme, mode, context) {
     overrideCheckbox.onchange = (e) => {
       overrideCheckbox.dataset.userInteracted = 'true';
       tutorOverrideActive = e.target.checked;
+      // When override turned ON, auto-check all previously ineligible students
+      if (tutorOverrideActive) {
+        (lastEvaluatedStudents || []).forEach(e => {
+          if (mode === 'normal' || !e.isAlreadyPassed) {
+            checkedStudentIds.add(e.student.id);
+          }
+        });
+      } else {
+        // When override turned OFF, purge ineligible students from checked set
+        (lastEvaluatedStudents || []).forEach(e => {
+          if (!e.isEligible) {
+            checkedStudentIds.delete(e.student.id);
+          }
+        });
+      }
       renderModalStudents();
     };
   }
@@ -1580,66 +1721,65 @@ function openThemeSessionModal(container, theme, mode, context) {
   };
 
   // Search input
-  modal.querySelector('#open-modal-student-search').oninput = (e) => {
-    studentSearchQuery = e.target.value;
-    renderModalStudents();
-  };
+  const searchInput = modal.querySelector('#open-modal-student-search');
+  if (searchInput) {
+    searchInput.oninput = (e) => {
+      studentSearchQuery = e.target.value;
+      renderModalStudents();
+    };
+  }
 
   // Sort toggle
   const sortBtn = modal.querySelector('#btn-open-modal-sort');
-  sortBtn.onclick = () => {
-    studentSortOrder = studentSortOrder === 'asc' ? 'desc' : 'asc';
-    sortBtn.textContent = studentSortOrder === 'asc' ? '🔤 A → Z' : '🔤 Z → A';
-    renderModalStudents();
-  };
+  if (sortBtn) {
+    sortBtn.onclick = () => {
+      studentSortOrder = studentSortOrder === 'asc' ? 'desc' : 'asc';
+      sortBtn.textContent = studentSortOrder === 'asc' ? 'A → Z' : 'Z → A';
+      renderModalStudents();
+    };
+  }
 
   // Select all / deselect all
-  modal.querySelector('#btn-open-modal-select-all').onclick = () => {
-    const curBatchId = batchSelect.value;
-    const batchStudents = (context.allStudents || []).filter(s => s.batch_id === curBatchId && !s.deleted_at && s.is_active !== false);
-    const evaluated = evaluateStudentsEligibility({
-      students: batchStudents,
-      theme,
-      themeTasks: theme.tasks,
-      wordsTest: theme.wordsTest,
-      phrasesTest: theme.phrasesTest,
-      classTests: context.classTests || [],
-      allAttempts: context.allAttempts || [],
-      mode
-    });
-    // When Tutor Override is ON → select ALL students in batch regardless of eligibility
-    // When OFF → select only eligible students
-    if (tutorOverrideActive) {
-      evaluated.forEach(e => checkedStudentIds.add(e.student.id));
-    } else {
-      evaluated.filter(e => e.isEligible).forEach(e => checkedStudentIds.add(e.student.id));
-    }
-    renderModalStudents();
-  };
+  const selectAllBtn = modal.querySelector('#btn-open-modal-select-all');
+  if (selectAllBtn) {
+    selectAllBtn.onclick = () => {
+      (lastEvaluatedStudents || []).forEach(e => {
+        const selectable = tutorOverrideActive ? (mode === 'normal' || !e.isAlreadyPassed) : e.isEligible;
+        if (selectable) {
+          checkedStudentIds.add(e.student.id);
+        }
+      });
+      renderModalStudents();
+    };
+  }
 
-  modal.querySelector('#btn-open-modal-deselect-all').onclick = () => {
-    checkedStudentIds.clear();
-    renderModalStudents();
-  };
+  const deselectAllBtn = modal.querySelector('#btn-open-modal-deselect-all');
+  if (deselectAllBtn) {
+    deselectAllBtn.onclick = () => {
+      checkedStudentIds.clear();
+      renderModalStudents();
+    };
+  }
 
-  // Toggle ineligible view
+  // Safe removal / guard of ineligible toggle button
   const toggleIneligBtn = modal.querySelector('#btn-toggle-ineligible-view');
-  toggleIneligBtn.onclick = () => {
-    const details = modal.querySelector('#open-modal-ineligible-details');
-    showIneligible = !showIneligible;
-    if (showIneligible) {
-      details.classList.remove('hidden');
-      toggleIneligBtn.textContent = 'Hide Details';
-    } else {
-      details.classList.add('hidden');
-      toggleIneligBtn.textContent = 'View Details';
-    }
-  };
+  if (toggleIneligBtn) {
+    toggleIneligBtn.onclick = () => {
+      const details = modal.querySelector('#open-modal-ineligible-details');
+      if (details) {
+        showIneligible = !showIneligible;
+        details.classList.toggle('hidden', !showIneligible);
+        toggleIneligBtn.textContent = showIneligible ? 'Hide Details' : 'View Details';
+      }
+    };
+  }
 
   // Close handlers
   const closeModal = () => modal.classList.add('hidden');
-  modal.querySelector('#btn-close-open-modal').onclick = closeModal;
-  modal.querySelector('#btn-cancel-open-modal').onclick = closeModal;
+  const closeBtn = modal.querySelector('#btn-close-open-modal');
+  if (closeBtn) closeBtn.onclick = closeModal;
+  const cancelBtn = modal.querySelector('#btn-cancel-open-modal');
+  if (cancelBtn) cancelBtn.onclick = closeModal;
 
   // Confirm Unlock Session
   confirmBtn.onclick = async () => {
@@ -1694,7 +1834,7 @@ function openThemeSessionModal(container, theme, mode, context) {
 
       await Promise.all(promises);
 
-      showToast(`🔓 Test session Theme ${theme.code} (${mode.toUpperCase()}) successfully opened for ${allowedStudentIds.length} students (${duration} mins)!`, 'success');
+      showToast(`Test session Theme ${theme.code} (${mode.toUpperCase()}) successfully opened for ${allowedStudentIds.length} students (${duration} mins)!`, 'success');
       closeModal();
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
@@ -1730,15 +1870,15 @@ function openThemeLateModal(container, theme, context) {
   remainingEl.textContent = `${theme.remainingMinutes} Mins`;
 
   if (theme.isRemedial) {
-    modeBadgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
-    modeBadgeEl.style.border = '1px solid #f59e0b';
-    modeBadgeEl.style.color = '#fbbf24';
-    modeBadgeEl.textContent = '🟡 REMEDIAL (MAX 60%)';
+    modeBadgeEl.style.background = 'rgba(var(--grade-c-rgb), 0.2)';
+    modeBadgeEl.style.border = '1px solid var(--grade-c)';
+    modeBadgeEl.style.color = 'var(--grade-c)';
+    modeBadgeEl.textContent = 'REMEDIAL SESSION';
   } else {
-    modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
-    modeBadgeEl.style.border = '1px solid var(--grade-a, #00c000)';
-    modeBadgeEl.style.color = '#34d399';
-    modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
+    modeBadgeEl.style.background = 'rgba(var(--grade-a-rgb), 0.2)';
+    modeBadgeEl.style.border = '1px solid var(--grade-a)';
+    modeBadgeEl.style.color = 'var(--grade-a)';
+    modeBadgeEl.textContent = 'EXAM SESSION';
   }
 
   // Filter ONLY unenrolled batch students who are eligible!
@@ -1794,7 +1934,7 @@ function openThemeLateModal(container, theme, context) {
 
     if (list.length === 0) {
       listContainer.innerHTML = `
-        <div style="padding:16px; text-align:center; color:#94a3b8; font-size:0.8rem;">
+        <div style="padding:16px; text-align:center; color:#94a3b8; font-size: 12px;">
           ${q ? `No students match "${escapeHtml(q)}".` : 'All eligible students in this batch are already enrolled in the test.'}
         </div>
       `;
@@ -1804,18 +1944,19 @@ function openThemeLateModal(container, theme, context) {
     listContainer.innerHTML = list.map(item => {
       const s = item.student;
       const isChecked = checkedLateIds.has(s.id);
-      const initial = (s.name || 'S').charAt(0).toUpperCase();
+      const studentName = String(s.name || 'Unnamed').replace(/^(mr\.?|miss|mrs\.?|ms\.?)\s+/i, '').trim();
+      const initial = (studentName || 'S').charAt(0).toUpperCase();
 
       return `
         <label style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); cursor:pointer;">
           <div style="display:flex; align-items:center; gap:10px;">
             <input type="checkbox" class="late-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
-            <span style="width:24px; height:24px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:700;">
+            <span style="width:24px; height:24px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size: 12px; font-weight:700;">
               ${initial}
             </span>
-            <span style="font-size:0.85rem; font-weight:600; color:#ffffff;">${escapeHtml(s.name || 'Unnamed')}</span>
+            <span style="font-size: 12px; font-weight:600; color:#ffffff;">${escapeHtml(studentName)}</span>
           </div>
-          <span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(99, 102, 241, 0.2); color:#a5b4fc;">
+          <span style="font-size: 12px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(99, 102, 241, 0.2); color:#a5b4fc;">
             ${escapeHtml(item.statusLabel)}
           </span>
         </label>
@@ -1879,7 +2020,7 @@ function openThemeLateModal(container, theme, context) {
 
       await Promise.all(promises);
 
-      showToast(`👥 Successfully added ${studentIds.length} late student(s) to Theme ${theme.code}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
+      showToast(`Successfully added ${studentIds.length} late student(s) to Theme ${theme.code}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
       closeModal();
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
@@ -1933,25 +2074,22 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   const refreshBtn = modal.querySelector('#btn-live-modal-refresh');
   const footerInfoEl = modal.querySelector('#live-modal-footer-info');
 
-  themeBadgeEl.textContent = `THEME ${theme.code}`;
-  themeBadgeEl.style.background = theme.bgRgba;
-  themeBadgeEl.style.color = theme.color;
-  themeBadgeEl.style.border = `1px solid ${theme.borderRgba}`;
+  if (themeBadgeEl) {
+    themeBadgeEl.textContent = `Theme ${theme.code}`;
+  }
 
-  titleEl.innerHTML = `<span>👁️</span> Live Test Session Monitor: Theme ${theme.code}`;
+  titleEl.innerHTML = `LIVE TEST SESSION MONITOR: THEME ${theme.code}`;
   const modLabel = (theme.wordsTest && theme.phrasesTest) ? 'Words & Phrases Modules' : (theme.wordsTest ? 'Words Module' : (theme.phrasesTest ? 'Phrases Module' : 'Tasks Module'));
   subtitleEl.textContent = `${theme.name} Test • ${theme.liveBatchName} • ${modLabel}`;
 
-  if (theme.isRemedial) {
-    modeBadgeEl.style.background = 'rgba(245, 158, 11, 0.2)';
-    modeBadgeEl.style.border = '1px solid #f59e0b';
-    modeBadgeEl.style.color = '#fbbf24';
-    modeBadgeEl.textContent = '🟡 REMEDIAL (MAX 60%)';
-  } else {
-    modeBadgeEl.style.background = 'rgba(16, 185, 129, 0.2)';
-    modeBadgeEl.style.border = '1px solid var(--grade-a, #00c000)';
-    modeBadgeEl.style.color = '#34d399';
-    modeBadgeEl.textContent = '🟢 NORMAL (FULL SCORE)';
+  if (modeBadgeEl) {
+    if (theme.isRemedial) {
+      modeBadgeEl.className = 'btn btn-session-mode mode-remedial';
+      modeBadgeEl.textContent = 'REMEDIAL (MAX 60%)';
+    } else {
+      modeBadgeEl.className = 'btn btn-session-mode mode-normal';
+      modeBadgeEl.textContent = 'NORMAL (FULL SCORE)';
+    }
   }
 
   // 1-Second Live Countdown Ticker
@@ -1962,11 +2100,11 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   const updateRemainingDisplay = () => {
     const diffMs = targetEndMs - Date.now();
     if (diffMs <= 0) {
-      remainingEl.innerHTML = '<span style="color:#ef4444; font-weight:900;">⏰ HABIS</span>';
+      remainingEl.innerHTML = '<span style="color:var(--grade-e); font-weight:800;">HABIS</span>';
     } else {
       const mins = Math.floor(diffMs / 60000);
       const secs = Math.floor((diffMs % 60000) / 1000);
-      remainingEl.innerHTML = `<span style="color:#38bdf8; font-weight:800;">${mins}m ${secs < 10 ? '0' : ''}${secs}s</span>`;
+      remainingEl.innerHTML = `<span style="color:#ffffff; font-weight:800;">${mins}m ${secs < 10 ? '0' : ''}${secs}s</span>`;
     }
   };
   updateRemainingDisplay();
@@ -2006,12 +2144,12 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   function countCorrectAnswers(answersList) {
     let count = 0;
     (answersList || []).forEach(ans => {
-      const val = (ans.student_answer || '').trim().toLowerCase();
-      if (!val) return;
-      if (ans.is_correct === true || ans.score >= 1) {
+      if (ans.is_correct === true || (ans.score != null && ans.score >= 1)) {
         count++;
         return;
       }
+      const val = (ans.student_answer || '').trim().toLowerCase();
+      if (!val) return;
       let accepted = ans.accepted_answers_snapshot || [];
       if (typeof accepted === 'string') {
         try { accepted = JSON.parse(accepted); } catch { accepted = []; }
@@ -2031,12 +2169,14 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
   async function loadLiveData(silent = false) {
     if (!silent) {
-      studentsContainer.innerHTML = `
-        <div style="padding: 40px; text-align: center; color: #94a3b8;">
-          <div class="loading-spinner" style="margin: 0 auto 12px; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
-          <div style="font-size: 0.9rem; font-weight: 600;">Fetching live student status, answer progression, & alarms...</div>
-        </div>
-      `;
+      studentsContainer.innerHTML = (typeof window !== 'undefined' && typeof window.getLoadingStateHtml === 'function')
+        ? window.getLoadingStateHtml('Fetching live student status, answer progression, & alarms...')
+        : `
+          <div class="topscore-loading-center" style="min-height: 140px !important;">
+            <div class="spinner"></div>
+            <p class="loading-text">Fetching live student status, answer progression, & alarms...</p>
+          </div>
+        `;
     }
 
     try {
@@ -2054,10 +2194,28 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       const themeCodeUpper = (theme.code || 'B').toUpperCase();
       const themeCounts = THEME_EXPECTED_COUNTS[themeCodeUpper] || { words: 280, phrases: 70 };
 
+      // Helper to prioritize in_progress attempts, then newest created_at / started_at DESC
+      const getActiveOrLatestAttempt = (attempts, testId) => {
+        if (!testId || !attempts || attempts.length === 0) return null;
+        const matching = attempts.filter(a => a.test_id === testId);
+        if (matching.length === 0) return null;
+        matching.sort((a, b) => {
+          if (a.status === 'in_progress' && b.status !== 'in_progress') return -1;
+          if (b.status === 'in_progress' && a.status !== 'in_progress') return 1;
+          const timeA = new Date(a.created_at || a.started_at || 0).getTime();
+          const timeB = new Date(b.created_at || b.started_at || 0).getTime();
+          return timeB - timeA;
+        });
+        return matching[0];
+      };
+
       processedStudents = enrolledStudents.map(student => {
         const studAttempts = (sessionData.attempts || []).filter(a => a.student_id === student.id);
-        const wAtt = studAttempts.find(a => a.test_id === theme.wordsTest?.id);
-        const pAtt = studAttempts.find(a => a.test_id === theme.phrasesTest?.id);
+        const wAtt = getActiveOrLatestAttempt(studAttempts, theme.wordsTest?.id);
+        const pAtt = getActiveOrLatestAttempt(studAttempts, theme.phrasesTest?.id);
+
+        const totalAttemptCount = studAttempts.length;
+        const isRetake = totalAttemptCount > 1;
 
         const inProgressAtt = [wAtt, pAtt].find(a => a && a.status === 'in_progress');
         const hasSubmitted = [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
@@ -2065,20 +2223,20 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
         let status = 'not_started';
         let statusText = 'Not Started';
-        let statusColor = '#fbbf24';
+        let statusColor = 'var(--grade-c)';
 
         if (inProgressAtt) {
           status = 'in_progress';
-          statusText = 'In Progress';
+          statusText = isRetake ? 'In Progress (Retake)' : 'In Progress';
           statusColor = '#38bdf8';
         } else if (hasSubmitted) {
           status = 'submitted';
-          statusText = 'Submitted';
-          statusColor = 'var(--grade-a, #00c000ff)';
+          statusText = isRetake ? 'Submitted (Retake)' : 'Submitted';
+          statusColor = 'var(--grade-a)';
         } else if (hasCancelled) {
           status = 'cancelled';
           statusText = 'Cancelled / Ejected';
-          statusColor = 'var(--grade-e, #FF0000)';
+          statusColor = 'var(--grade-e)';
         }
 
         // Active module identification
@@ -2095,13 +2253,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         // Answers belonging specifically to target attempt
         const targetAnswers = targetAtt
           ? (sessionData.answers || []).filter(ans => ans.attempt_id === targetAtt.id)
-          : (studAttempts.length > 0 
-              ? (sessionData.answers || []).filter(ans => studAttempts.some(a => a.id === ans.attempt_id)) 
+          : (studAttempts.length > 0
+              ? (sessionData.answers || []).filter(ans => studAttempts.some(a => a.id === ans.attempt_id))
               : []);
 
-        const validAnswers = targetAnswers.filter(ans => ans.student_answer && ans.student_answer.trim());
-        const answeredCount = validAnswers.length;
-        
+        const validAnswers = targetAnswers.filter(ans => ans.student_answer ? ans.student_answer.trim() : true);
+        const answeredCount = (status === 'submitted' && targetAtt?.total_questions > 0)
+          ? targetAtt.total_questions
+          : validAnswers.length;
+
         // Accurate total questions calculation
         let totalQuestions = 0;
         if (targetAtt && targetAtt.total_questions > 0) {
@@ -2132,27 +2292,27 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         if (status === 'in_progress') {
           if (activitySecAgo !== null && activitySecAgo <= 90) {
             heartbeat = 'active';
-            heartbeatText = 'Actively Answering';
-            heartbeatColor = '#34d399';
+            heartbeatText = isRetake ? 'Actively Answering (Retake)' : 'Actively Answering';
+            heartbeatColor = 'var(--grade-a)';
             isPulsing = true;
           } else if (activitySecAgo !== null && activitySecAgo <= 300) {
             heartbeat = 'idle';
-            heartbeatText = `Idle ${Math.floor(activitySecAgo / 60)}m`;
-            heartbeatColor = '#fbbf24';
+            heartbeatText = isRetake ? `Idle ${Math.floor(activitySecAgo / 60)}m (Retake)` : `Idle ${Math.floor(activitySecAgo / 60)}m`;
+            heartbeatColor = 'var(--grade-c)';
           } else if (activitySecAgo !== null && activitySecAgo > 300) {
             heartbeat = 'away';
-            heartbeatText = `Inactive ${Math.floor(activitySecAgo / 60)}m`;
-            heartbeatColor = '#f87171';
+            heartbeatText = isRetake ? `Inactive ${Math.floor(activitySecAgo / 60)}m (Retake)` : `Inactive ${Math.floor(activitySecAgo / 60)}m`;
+            heartbeatColor = 'var(--grade-e)';
           } else {
             heartbeat = 'starting';
-            heartbeatText = 'Starting Exam';
+            heartbeatText = isRetake ? 'Starting Retake' : 'Starting Exam';
             heartbeatColor = '#38bdf8';
             isPulsing = true;
           }
         } else if (status === 'submitted') {
           heartbeat = 'completed';
-          heartbeatText = 'Finished';
-          heartbeatColor = '#00c000ff';
+          heartbeatText = isRetake ? 'Finished (Retake)' : 'Finished';
+          heartbeatColor = 'var(--grade-a)';
         }
 
         // Micro-activity feed
@@ -2177,7 +2337,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           const qPerMin = (answeredCount / elapsedMins).toFixed(1);
           const remainingQ = Math.max(0, totalQuestions - answeredCount);
           const etaMins = qPerMin > 0 ? Math.ceil(remainingQ / qPerMin) : 0;
-          velocityText = `⚡ ${qPerMin} q/m · ETA ~${etaMins}m`;
+          velocityText = `${qPerMin} q/m · ETA ~${etaMins}m`;
         }
 
         // Polished running score & evaluation
@@ -2271,8 +2431,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     } catch (err) {
       console.error('Error loading live test session data:', err);
       studentsContainer.innerHTML = `
-        <div style="padding: 30px; text-align: center; color: #f87171;">
-          <div>⚠️ Failed to load live monitor data: ${escapeHtml(err.message)}</div>
+        <div style="padding: 30px; text-align: center; color: var(--grade-e);">
+          <div>Failed to load live monitor data: ${escapeHtml(err.message)}</div>
           <button type="button" class="btn btn-secondary btn-sm" id="btn-retry-live-load" style="margin-top: 10px;">Retry</button>
         </div>
       `;
@@ -2289,17 +2449,62 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     const totalAlarms = processedStudents.reduce((acc, s) => acc + s.alarmCount, 0);
     const studentsWithAlarms = processedStudents.filter(s => s.alarmCount > 0).length;
 
-    modal.querySelector('#kpi-live-total').textContent = String(total);
-    modal.querySelector('#kpi-live-in-progress').textContent = String(inProgress);
-    modal.querySelector('#kpi-live-submitted').textContent = String(submitted);
-    modal.querySelector('#kpi-live-not-started').textContent = String(notStarted);
-    modal.querySelector('#kpi-live-alarms').innerHTML = `${totalAlarms} <span style="font-size:0.75rem; font-weight:600; color:#cbd5e1;">(${studentsWithAlarms} Students)</span>`;
+    // 1. Safe KPI updates (guarded for single triage bar where full KPI cards are streamlined)
+    const elKpiTotal = modal.querySelector('#kpi-live-total');
+    if (elKpiTotal) elKpiTotal.textContent = String(total);
+    const elKpiProg = modal.querySelector('#kpi-live-in-progress');
+    if (elKpiProg) elKpiProg.textContent = String(inProgress);
+    const elKpiSub = modal.querySelector('#kpi-live-submitted');
+    if (elKpiSub) elKpiSub.textContent = String(submitted);
+    const elKpiNot = modal.querySelector('#kpi-live-not-started');
+    if (elKpiNot) elKpiNot.textContent = String(notStarted);
 
-    modal.querySelector('#tab-cnt-all').textContent = String(total);
-    modal.querySelector('#tab-cnt-in-progress').textContent = String(inProgress);
-    modal.querySelector('#tab-cnt-submitted').textContent = String(submitted);
-    modal.querySelector('#tab-cnt-not-started').textContent = String(notStarted);
-    modal.querySelector('#tab-cnt-alarm').textContent = String(studentsWithAlarms);
+    const kpiAlarmsCard = modal.querySelector('#kpi-card-alarms');
+    const kpiAlarmsTitle = modal.querySelector('#kpi-title-alarms');
+    const kpiAlarmsValue = modal.querySelector('#kpi-live-alarms');
+
+    if (totalAlarms > 0) {
+      if (kpiAlarmsCard) {
+        kpiAlarmsCard.style.background = 'rgba(var(--grade-e-rgb), 0.1)';
+        kpiAlarmsCard.style.borderColor = 'var(--grade-e)';
+      }
+      if (kpiAlarmsTitle) kpiAlarmsTitle.style.color = 'var(--grade-e)';
+      if (kpiAlarmsValue) {
+        kpiAlarmsValue.style.color = 'var(--grade-e)';
+        kpiAlarmsValue.innerHTML = `${totalAlarms} <span style="font-size: 12px; font-weight:600; color:#fca5a5;">(${studentsWithAlarms} Students)</span>`;
+      }
+    } else {
+      if (kpiAlarmsCard) {
+        kpiAlarmsCard.style.background = 'rgba(255,255,255,0.03)';
+        kpiAlarmsCard.style.borderColor = 'rgba(255,255,255,0.08)';
+      }
+      if (kpiAlarmsTitle) kpiAlarmsTitle.style.color = '#94a3b8';
+      if (kpiAlarmsValue) {
+        kpiAlarmsValue.style.color = '#ffffff';
+        kpiAlarmsValue.innerHTML = `0 <span style="font-size: 12px; font-weight:500; color:#64748b;">(0 Students)</span>`;
+      }
+    }
+
+    // Streamlined Single Triage Bar Counters
+    const tabCntAll = modal.querySelector('#tab-cnt-all');
+    if (tabCntAll) tabCntAll.textContent = String(total);
+    const tabCntProg = modal.querySelector('#tab-cnt-in-progress');
+    if (tabCntProg) tabCntProg.textContent = String(inProgress);
+    const tabCntSub = modal.querySelector('#tab-cnt-submitted');
+    if (tabCntSub) tabCntSub.textContent = String(submitted);
+    const tabCntNot = modal.querySelector('#tab-cnt-not-started');
+    if (tabCntNot) tabCntNot.textContent = String(notStarted);
+    const tabCntAlarm = modal.querySelector('#tab-cnt-alarm');
+    if (tabCntAlarm) tabCntAlarm.textContent = String(studentsWithAlarms);
+
+    const alarmTabBtn = modal.querySelector('.live-filter-btn[data-filter="alarm"]');
+    if (alarmTabBtn) {
+      if (studentsWithAlarms > 0) {
+        alarmTabBtn.style.color = 'var(--grade-e)';
+      } else {
+        alarmTabBtn.style.color = '';
+      }
+    }
 
     // 2. Filter tabs active class
     modal.querySelectorAll('.live-filter-btn').forEach(btn => {
@@ -2366,7 +2571,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     if (displayList.length === 0) {
       tableBody.innerHTML = `
         <tr>
-          <td colspan="7" style="padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
+          <td colspan="8" style="padding: 40px 20px; text-align: center; color: #94a3b8; font-size: 12px;">
             ${q ? `No students matching "${escapeHtml(q)}".` : 'No students found in this filter.'}
           </td>
         </tr>
@@ -2376,135 +2581,101 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
     tableBody.innerHTML = displayList.map(item => {
       const s = item.student;
-      const initial = (s.name || 'S').charAt(0).toUpperCase();
+      const studentName = String(s.name || 'Unnamed').replace(/^(mr\.?|miss|mrs\.?|ms\.?)\s+/i, '').trim();
+      const initial = (studentName || 'S').charAt(0).toUpperCase();
       const scoreColor = item.isEvaluated ? getGradeColorByScore(item.effectiveScore) : '#64748b';
       const isRemedialCap = theme.isRemedial;
-      const scoreDisplay = item.isEvaluated 
+      const scoreDisplay = item.isEvaluated
         ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:0.65em; font-weight:900; color:inherit; margin-left:1px;">R</sup>' : ''}`
-        : '--';
+        : '—';
 
       const isStar = item.isEvaluated && (item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100);
-      const gradeText = isStar ? '★' : (item.isEvaluated ? item.grade : '-');
+      const gradeText = isStar ? '★' : (item.isEvaluated ? item.grade : '—');
       const circleText = isStar ? '#0f172a' : (item.isEvaluated ? '#0f172a' : '#64748b');
       const circleClass = isStar ? 'grade-circle-star' : `grade-circle-${(item.grade || 'e').toLowerCase()}`;
-
-      const gradeCircleHtml = item.isEvaluated ? `
-        <div class="grade-circle ${circleClass}" style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 800; background: ${scoreColor}; color: ${circleText}; box-shadow: 0 0 8px ${scoreColor}; flex-shrink: 0;">
-          ${gradeText}
-        </div>
-      ` : `
-        <div style="width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; background: rgba(255,255,255,0.06); color: #64748b; border: 1px dashed rgba(255,255,255,0.15); flex-shrink: 0;">
-          -
-        </div>
-      `;
 
       const hasAlarmAlert = item.alarmCount > 0;
       const rowClass = hasAlarmAlert ? 'live-table-row row-alarm-highlight' : 'live-table-row';
 
+      // Progress text & color per Rule 2.10
+      let progressColor = '#94a3b8';
+      let progressText = `${item.answeredCount} / ${item.totalQuestions} (0%)`;
+      if (item.status === 'not_started') {
+        progressColor = '#94a3b8';
+        progressText = `0 / ${item.totalQuestions} (0%)`;
+      } else {
+        progressColor = getGradeColorByScore(item.answeredPercent);
+        progressText = `${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)`;
+      }
+
       return `
         <tr class="${rowClass}">
-          <!-- 1. NAMA -->
-          <td>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <div style="position:relative; width:34px; height:34px; flex-shrink:0;">
-                <div style="width:100%; height:100%; border-radius:50%; background:#2563eb; color:#fff; display:flex; align-items:center; justify-content:center; font-size:0.9rem; font-weight:800; box-shadow:0 2px 6px rgba(0,0,0,0.3);">
-                  ${initial}
-                </div>
-                ${item.isPulsing ? `
-                  <span style="position:absolute; bottom:-1px; right:-1px; width:11px; height:11px; border-radius:50%; background:${item.heartbeatColor}; border:2px solid #0b1329; box-shadow:0 0 6px ${item.heartbeatColor}; animation:pulse 1.5s infinite;"></span>
-                ` : `
-                  <span style="position:absolute; bottom:-1px; right:-1px; width:9px; height:9px; border-radius:50%; background:${item.heartbeatColor}; border:2px solid #0b1329;"></span>
-                `}
-              </div>
-              <div>
-                <div style="font-size:0.88rem; font-weight:700; color:#ffffff;">${escapeHtml(s.name || 'Unnamed')}</div>
-                <div style="font-size:0.72rem; color:#94a3b8; display:flex; align-items:center; gap:4px; margin-top:2px;">
-                  <span style="background:rgba(255,255,255,0.06); padding:1px 6px; border-radius:3px; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(theme.liveBatchName || '')}</span>
-                </div>
-              </div>
+          <!-- 1. BATCH: Dedicated Column to the left of Name -->
+          <td style="text-align:center; white-space:nowrap; font-size:12px; font-weight:600; color:#94a3b8;">
+            ${escapeHtml(theme.liveBatchName || '—')}
+          </td>
+
+          <!-- 2. NAME: Flex Primary Column (Student Name only, zero parentheses, zero avatar/circle) -->
+          <td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px;">
+              <span style="font-weight:600; color:#ffffff;">${escapeHtml(studentName)}</span>
             </div>
           </td>
 
-          <!-- 2. STATUS TEST -->
-          <td>
-            <div style="display:inline-flex; align-items:center; gap:6px; font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:5px; background:rgba(255,255,255,0.05); color:${item.heartbeatColor}; border:1px solid rgba(255,255,255,0.08);">
-              <span style="width:7px; height:7px; border-radius:50%; background:${item.heartbeatColor};"></span>
+          <!-- 3. TEST STATUS: Borderless semantic text on single line, centered -->
+          <td style="text-align:center; white-space:nowrap;">
+            <span style="display:inline-flex; align-items:center; gap:6px; color:${item.heartbeatColor}; font-size:12px; font-weight:500;">
+              <span style="width:7px; height:7px; border-radius:50%; background:${item.heartbeatColor}; display:inline-block; flex-shrink:0;"></span>
               ${item.heartbeatText}
-            </div>
-            <div style="font-size:0.72rem; color:#cbd5e1; font-weight:600; margin-top:3px;">
-              ${escapeHtml(item.activeModule || 'Exam')}
-            </div>
+            </span>
           </td>
 
-          <!-- 3. PROGRESS -->
-          <td style="min-width: 170px;">
-            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px;">
-              <span style="color:#94a3b8;">Questions:</span>
-              <span style="font-weight:800; color:#ffffff;">${item.answeredCount} / ${item.totalQuestions} (${item.answeredPercent}%)</span>
-            </div>
-            <div style="height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;">
-              <div style="height:100%; width:${item.answeredPercent}%; background:linear-gradient(90deg, #3b82f6, #00c000ff); border-radius:3px; transition:width 0.3s ease;"></div>
-            </div>
-            <div style="font-size:0.7rem; color:#94a3b8; margin-top:3px; display:flex; align-items:center; gap:4px;">
-              <span style="color:#cbd5e1;">${item.activityFeed}</span>
-              ${item.velocityText ? `<span style="color:#38bdf8; font-weight:700;">&bull; ${item.velocityText}</span>` : ''}
-            </div>
+          <!-- 4. PROGRESS: Tabular single line, neutral when unstarted, centered -->
+          <td style="text-align:center; white-space:nowrap;">
+            <span style="font-size:12px; font-weight:500; color:${progressColor}; font-variant-numeric:tabular-nums;">
+              ${progressText}
+            </span>
           </td>
 
-          <!-- 4. SCORE (REALTIME) -->
-          <td>
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${gradeCircleHtml}
-              <div>
-                <div style="font-size:0.92rem; font-weight:800; color:${scoreColor};">
+          <!-- 5. SCORE: Single line, em dash if un-evaluated, centered -->
+          <td style="text-align:center; white-space:nowrap;">
+            ${item.isEvaluated ? `
+              <span style="display:inline-flex; align-items:center; gap:6px;">
+                <span class="grade-circle ${circleClass}" style="width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; background:${scoreColor}; color:${circleText}; flex-shrink:0;">
+                  ${gradeText}
+                </span>
+                <span style="font-size:12px; font-weight:500; color:${scoreColor}; font-variant-numeric:tabular-nums;">
                   ${scoreDisplay}
-                </div>
-                <div style="font-size:0.7rem; color:#94a3b8;">
-                  ${item.scoreLabel}
-                </div>
-              </div>
-            </div>
-          </td>
-
-          <!-- 5. PEEK -->
-          <td style="text-align:center;">
-            <button type="button" class="btn btn-xs btn-inspect-student-answers" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.35); color:#38bdf8; font-weight:700; font-size:0.75rem; padding:5px 9px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;" title="Inspect student answer sheet & attempt history">
-              <span>👁️</span> Peek
-            </button>
-          </td>
-
-          <!-- 6. ALARM -->
-          <td style="text-align:center;">
-            ${item.alarmCount === 0 ? `
-              <span style="font-size:0.75rem; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px;">
-                🛡️ 0 Clean
+                </span>
               </span>
             ` : `
-              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="font-size:0.75rem; font-weight:800; color:var(--grade-e, #FF0000); background:rgba(var(--grade-e-rgb, 255,0,0),0.2); border:1px solid var(--grade-e, #FF0000); padding:3px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:4px; box-shadow:0 0 10px rgba(var(--grade-e-rgb, 255,0,0),0.3); cursor:pointer;" title="Click to view details of ${item.alarmCount} anti-cheat alarms">
-                🚨 ${item.alarmCount}x ALARM 🔍
+              <span style="font-size:12px; font-weight:400; color:#64748b; font-variant-numeric:tabular-nums;">—</span>
+            `}
+          </td>
+
+          <!-- 6. ALARM: Borderless text (Green if 0, Red if > 0), centered -->
+          <td style="text-align:center; white-space:nowrap;">
+            ${item.alarmCount === 0 ? `
+              <span style="font-size:12px; font-weight:500; color:var(--grade-a);">
+                0 Clean
+              </span>
+            ` : `
+              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(studentName)}" style="font-size:12px; font-weight:600; color:var(--grade-e); cursor:pointer; text-decoration:underline;" title="Click to view details of ${item.alarmCount} anti-cheat alarms">
+                ${item.alarmCount}x Alarm
               </span>
             `}
           </td>
 
-          <!-- 7. ACTION -->
-          <td style="text-align:right;">
-            <div style="display:inline-flex; align-items:center; gap:5px; justify-content:flex-end;">
-              ${item.targetAtt && item.status === 'in_progress' ? `
-                <button type="button" class="btn btn-xs btn-student-add-time" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(var(--grade-c-rgb, 255,255,0), 0.07); border:1px solid rgba(var(--grade-c-rgb, 255,255,0), 0.5); color:var(--grade-c, #ffff00); font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Adjust exam time for this student (+ / -)">
-                  <span>⏱️</span> ±Time
-                </button>
-              ` : ''}
-
-              ${item.targetAtt && (item.status === 'submitted' || item.status === 'cancelled') ? `
-                <button type="button" class="btn btn-xs btn-student-reopen-attempt" data-attempt-id="${item.targetAtt.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); color:#34d399; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Reopen exam session for this student (Resume Attempt)">
-                  <span>🔄</span> Resume
-                </button>
-              ` : ''}
-
-              <button type="button" class="btn btn-xs btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(s.name || '')}" style="background:rgba(255,0,0,0.15); border:1px solid rgba(255,0,0,0.35); color:#ff6b6b; font-weight:700; font-size:0.75rem; padding:5px 8px; border-radius:6px; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="Expel student from exam session">
-                <span>🚫</span> Expel
-              </button>
-            </div>
+          <!-- 7. EXPEL: Single responsibility column with SVG vector icon -->
+          <td style="text-align:center; white-space:nowrap;">
+            <button type="button" class="btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(studentName)}" style="background:transparent; border:none; padding:4px; color:var(--grade-e); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:color 0.15s ease, transform 0.15s ease;" title="Expel student from exam session">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <line x1="18" y1="8" x2="23" y2="13"></line>
+                <line x1="23" y1="8" x2="18" y2="13"></line>
+              </svg>
+            </button>
           </td>
         </tr>
       `;
@@ -2521,138 +2692,11 @@ async function openThemeLiveMonitorModal(container, theme, context) {
           theme.allowedStudentIds = (theme.allowedStudentIds || []).filter(id => id !== studentId);
           await loadLiveData(false);
           const enrolledLabel = container.querySelector(`.btn-theme-live-monitor[data-theme="${theme.code}"]`);
-          if (enrolledLabel) enrolledLabel.innerHTML = `<span>👁️</span> Live Monitor & Exam Status (${theme.allowedStudentIds.length})`;
+          if (enrolledLabel) enrolledLabel.innerHTML = `Live Monitor & Exam Status (${theme.allowedStudentIds.length})`;
           if (window.renderClassHub) {
             // Background sync Class Hub if open
           }
         });
-      });
-    });
-
-    // Attach Inspect Live Answers listener
-    tableBody.querySelectorAll('.btn-inspect-student-answers').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const studentId = e.currentTarget.getAttribute('data-student-id');
-        const found = processedStudents.find(p => p.student.id === studentId);
-        if (!found) return;
-
-        const inspectModal = container.querySelector('#modal-student-live-answers');
-        if (!inspectModal) return;
-
-        inspectModal.querySelector('#inspect-answers-avatar').textContent = (found.student.name || 'S').charAt(0).toUpperCase();
-        inspectModal.querySelector('#inspect-answers-student-name').textContent = found.student.name || 'Student';
-        inspectModal.querySelector('#inspect-answers-meta').textContent = `${found.activeModule} • ${found.answeredCount} / ${found.totalQuestions} Questions Answered • ${found.heartbeatText}`;
-        inspectModal.querySelector('#inspect-answers-score-badge').textContent = `Accuracy: ${found.isEvaluated ? found.effectiveScore + '%' : '--'}`;
-
-        const contentBox = inspectModal.querySelector('#inspect-answers-content');
-        const answers = found.targetAnswers || [];
-
-        if (answers.length === 0) {
-          contentBox.innerHTML = `
-            <div style="padding: 30px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-              No answer records saved yet for this student.
-            </div>
-          `;
-        } else {
-          contentBox.innerHTML = answers.map((ans, idx) => {
-            const num = idx + 1;
-            const prompt = ans.question_snapshot || ans.topic_snapshot || `Question #${num}`;
-            const studentInput = (ans.student_answer || '').trim();
-            const isCorrect = ans.is_correct === true || ans.score >= 1;
-            const isPartial = ans.score > 0 && ans.score < 1;
-            const isAnswered = Boolean(studentInput);
-
-            let statusBadge = '';
-            if (!isAnswered) {
-              statusBadge = '<span style="color:#94a3b8; font-size:0.75rem; font-weight:700;">⏳ Not Answered</span>';
-            } else if (isCorrect) {
-              statusBadge = '<span style="color:#34d399; font-size:0.75rem; font-weight:800; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(16,185,129,0.3);">✅ Correct (1.0 pt)</span>';
-            } else if (isPartial) {
-              statusBadge = '<span style="color:#fbbf24; font-size:0.75rem; font-weight:800; background:rgba(245,158,11,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(245,158,11,0.3);">🟡 Partial (0.5 pt)</span>';
-            } else {
-              statusBadge = '<span style="color:#f87171; font-size:0.75rem; font-weight:800; background:rgba(239,68,68,0.15); padding:2px 8px; border-radius:4px; border:1px solid rgba(239,68,68,0.3);">❌ Incorrect (0 pt)</span>';
-            }
-
-            return `
-              <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:12px;">
-                <div style="flex:1;">
-                  <div style="font-size:0.75rem; font-weight:700; color:#38bdf8;">Question #${num}</div>
-                  <div style="font-size:0.85rem; font-weight:600; color:#ffffff; margin-top:2px;">${escapeHtml(prompt)}</div>
-                  <div style="font-size:0.8rem; color:#cbd5e1; margin-top:4px;">
-                    Student Answer: <strong style="color:${isAnswered ? '#ffffff' : '#64748b'};">${escapeHtml(studentInput || '(Empty)')}</strong>
-                  </div>
-                </div>
-                <div>${statusBadge}</div>
-              </div>
-            `;
-          }).join('');
-        }
-
-        // Quick actions in inspect modal
-        const quickBox = inspectModal.querySelector('#inspect-answers-quick-actions');
-        quickBox.innerHTML = '';
-        if (found.targetAtt && found.status === 'in_progress') {
-          const btnAddTime = document.createElement('button');
-          btnAddTime.className = 'btn btn-sm';
-          btnAddTime.style.cssText = 'background:rgba(var(--grade-c-rgb, 255,255,0), 0.07); border:1px solid rgba(var(--grade-c-rgb, 255,255,0), 0.5); color:var(--grade-c, #ffff00); font-weight:700; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer; letter-spacing:0.02em;';
-          btnAddTime.innerHTML = '⏱️ ± Adjust Student Time';
-          btnAddTime.onclick = async () => {
-            const input = prompt(
-              `Adjust exam time for ${found.student.name}:\n` +
-              `• Enter a positive number to extend (e.g. 10 or +10)\n` +
-              `• Enter a negative number to reduce (e.g. -5)\n` +
-              `Allowed range: -180 to +180 minutes (cannot be 0).`,
-              '10'
-            );
-            if (input === null) return;
-            const mins = parseInt(input.trim(), 10);
-            if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
-              showToast('Invalid minutes (enter a number between -180 and +180, non-zero)', 'warning');
-              return;
-            }
-
-            const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
-            showLoading();
-            try {
-              await extendIndividualAttemptTime(found.targetAtt.id, mins);
-              showToast(`⏱️ Time for ${found.student.name} successfully ${actionText}!`, 'success');
-              inspectModal.classList.add('hidden');
-              await loadLiveData(true);
-            } catch (err) {
-              showToast('Failed to adjust time: ' + err.message, 'error');
-            } finally {
-              hideLoading();
-            }
-          };
-          quickBox.appendChild(btnAddTime);
-        } else if (found.targetAtt && (found.status === 'submitted' || found.status === 'cancelled')) {
-          const btnResume = document.createElement('button');
-          btnResume.className = 'btn btn-sm';
-          btnResume.style.cssText = 'background:rgba(16,185,129,0.2); border:1px solid #10b981; color:#34d399; font-weight:700; font-size:0.78rem; padding:6px 12px; border-radius:6px; cursor:pointer;';
-          btnResume.innerHTML = '🔄 Unlock / Resume Attempt';
-          btnResume.onclick = async () => {
-            const confirmed = confirm(`Reopen exam session for ${found.student.name}?\nStatus will be restored to 'in_progress' and remaining time extended by +30 minutes.`);
-            if (!confirmed) return;
-            showLoading();
-            try {
-              await reopenStudentAttempt(found.targetAtt.id, 30);
-              showToast(`🔄 Exam for ${found.student.name} reopened successfully!`, 'success');
-              inspectModal.classList.add('hidden');
-              await loadLiveData(false);
-            } catch (err) {
-              showToast('Failed to reopen exam: ' + err.message, 'error');
-            } finally {
-              hideLoading();
-            }
-          };
-          quickBox.appendChild(btnResume);
-        }
-
-        const closeInspect = () => inspectModal.classList.add('hidden');
-        inspectModal.querySelector('#btn-close-inspect-answers').onclick = closeInspect;
-        inspectModal.querySelector('#btn-dismiss-inspect-answers').onclick = closeInspect;
-
-        inspectModal.classList.remove('hidden');
       });
     });
 
@@ -2681,7 +2725,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         showLoading();
         try {
           await extendIndividualAttemptTime(attemptId, mins);
-          showToast(`⏱️ Time for ${studentName} successfully ${actionText}!`, 'success');
+          showToast(`Time for ${studentName} successfully ${actionText}!`, 'success');
           await loadLiveData(true);
         } catch (err) {
           showToast('Failed to adjust student time: ' + err.message, 'error');
@@ -2704,7 +2748,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         showLoading();
         try {
           await reopenStudentAttempt(attemptId, 30);
-          showToast(`🔄 Exam for ${studentName} reopened successfully!`, 'success');
+          showToast(`Exam for ${studentName} reopened successfully!`, 'success');
           await loadLiveData(false);
         } catch (err) {
           showToast('Failed to reopen exam: ' + err.message, 'error');
@@ -2815,8 +2859,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         theme.remainingMinutes = res.remainingMinutes;
         remainingEl.textContent = `${res.remainingMinutes}m`;
         const resultMsg = mins > 0
-          ? `⏱️ Exam timer successfully extended by +${mins} minutes! Remaining time: ${res.remainingMinutes}m`
-          : `⏱️ Exam timer successfully reduced by ${Math.abs(mins)} minutes! Remaining time: ${res.remainingMinutes}m`;
+          ? `Exam timer successfully extended by +${mins} minutes! Remaining time: ${res.remainingMinutes}m`
+          : `Exam timer successfully reduced by ${Math.abs(mins)} minutes! Remaining time: ${res.remainingMinutes}m`;
         showToast(resultMsg, 'success', 5000);
         await loadLiveData(true);
         if (window.renderClassHub) {
@@ -2883,13 +2927,22 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       } catch (_) {}
       _realtimeChannel = null;
     }
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
     modal.classList.add('hidden');
   };
 
   modal.querySelector('#btn-close-live-modal').onclick = closeModal;
   modal.querySelector('#btn-close-live-modal-footer').onclick = closeModal;
 
-  // Auto-poll interval handling (5s heartbeat safety)
+  // Smart Visibility Guard: pause polling when browser tab is inactive to protect egress quota
+  const handleVisibilityChange = () => {
+    if (!document.hidden && !modal.classList.contains('hidden') && autoPollCheckbox?.checked) {
+      loadLiveData(true);
+    }
+  };
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Auto-poll interval handling (5s heartbeat safety with background tab suppression)
   const setupAutoPoll = () => {
     if (_livePollingTimer) {
       clearInterval(_livePollingTimer);
@@ -2897,9 +2950,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     }
     if (autoPollCheckbox && autoPollCheckbox.checked) {
       _livePollingTimer = setInterval(() => {
-        if (!modal.classList.contains('hidden')) {
+        if (!modal.classList.contains('hidden') && !document.hidden) {
           loadLiveData(true);
-        } else {
+        } else if (modal.classList.contains('hidden')) {
           clearInterval(_livePollingTimer);
           _livePollingTimer = null;
         }
@@ -2928,31 +2981,32 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   const metaEl = alarmModal.querySelector('#alarm-detail-meta');
   const listEl = alarmModal.querySelector('#alarm-detail-logs-list');
 
-  if (nameEl) nameEl.textContent = `${student.name || 'Student'} (${alarmsList.length}x ALARMS)`;
+  const studentName = String(student.name || 'Student').replace(/^(mr\.?|miss|mrs\.?|ms\.?)\s+/i, '').trim();
+  if (nameEl) nameEl.textContent = `${studentName} (${alarmsList.length}x ALARMS)`;
   if (metaEl) metaEl.textContent = `Batch ${theme.liveBatchName} • Theme ${theme.code} (${theme.name})`;
 
   if (listEl) {
     if (alarmsList.length === 0) {
       listEl.innerHTML = `
-        <div style="text-align:center; color:#34d399; padding:24px 10px; font-weight:700;">
-          🛡️ No integrity alarm records for this student.
+        <div style="text-align:center; color:var(--grade-a); padding:24px 10px; font-weight:700;">
+          No integrity alarm records for this student.
         </div>
       `;
     } else {
       listEl.innerHTML = alarmsList.map((item, idx) => {
-        const timeStr = item.time 
-          ? new Date(item.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WITA' 
+        const timeStr = item.time
+          ? new Date(item.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WITA'
           : '-';
         return `
           <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
             <div>
-              <div style="font-weight:700; color:#ffffff; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
-                <span style="color:var(--grade-e, #FF0000);">⚠️ Incident #${idx + 1}</span>
-                <span style="font-size:0.75rem; color:#fca5a5;">(Strike ${item.strike || 1})</span>
+              <div style="font-weight:700; color:#ffffff; font-size: 12px; display:flex; align-items:center; gap:6px;">
+                <span style="color:var(--grade-e);">Incident #${idx + 1}</span>
+                <span style="font-size: 12px; color:#fca5a5;">(Strike ${item.strike || 1})</span>
               </div>
-              <div style="font-size:0.78rem; color:#cbd5e1; margin-top:3px;">${escapeHtml(item.reason)}</div>
+              <div style="font-size: 12px; color:#cbd5e1; margin-top:3px;">${escapeHtml(item.reason)}</div>
             </div>
-            <div style="font-size:0.75rem; font-weight:700; color:#94a3b8; white-space:nowrap;">
+            <div style="font-size: 12px; font-weight:700; color:#94a3b8; white-space:nowrap;">
               ${timeStr}
             </div>
           </div>
@@ -2973,7 +3027,7 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
 
       try {
         await resetStudentTestAlarms({ studentId: student.id, testIds });
-        showToast(`✅ All alarms for ${student.name} successfully reset.`, 'success');
+        showToast(`All alarms for ${student.name} successfully reset.`, 'success');
         closeAlarmModal();
         if (onDone) onDone();
       } catch (err) {
@@ -3032,7 +3086,7 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
       await Promise.all(promises);
 
       const actionText = chosenAction === 'submit' ? 'Answers Submitted & Graded' : 'Exam Cancelled (Score 0)';
-      showToast(`🚫 ${studentName} successfully removed from exam session (${actionText}).`, 'success');
+      showToast(`${studentName} successfully removed from exam session (${actionText}).`, 'success');
       if (typeof onDone === 'function') {
         await onDone();
       }
@@ -3069,24 +3123,24 @@ function evaluateStudentEligibility(themeOrObj, students, allAttempts, mode = 'n
 
 /**
  * Smart Eligibility Engine:
- * Evaluates whether students meet prerequisite quizzes and prior exam status.
+ * Evaluates whether students meet prerequisite tasks and prior exam status.
  */
 function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, classTests = [], allAttempts = [], mode }) {
   const testMap = Object.fromEntries((classTests || []).map(t => [t.id, t]));
   const results = [];
-  const activeQuizzes = themeQuizzes || themeTasks || theme?.quizzes || theme?.tasks || [];
+  const activeTasks = themeTasks || themeQuizzes || theme?.tasks || theme?.quizzes || [];
 
   students.forEach(student => {
     const studAtts = (allAttempts || []).filter(a => a.student_id === student.id);
 
-    // 1. Prerequisite quizzes check:
+    // 1. Prerequisite tasks check:
     let prereqMet = true;
-    let completedQuizCount = 0;
+    let completedTaskCount = 0;
 
-    if (activeQuizzes.length > 0) {
-      for (const quiz of activeQuizzes) {
-        const quizAtts = studAtts.filter(a => (a.test_id || a.Test_id) === quiz.id);
-        const passedAtt = quizAtts.find(a => {
+    if (activeTasks.length > 0) {
+      for (const task of activeTasks) {
+        const taskAtts = studAtts.filter(a => (a.test_id || a.Test_id) === task.id);
+        const passedAtt = taskAtts.find(a => {
           const st = String(a.status || '').toLowerCase();
           const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
           const pct = parseFloat(a.percentage ?? 0);
@@ -3094,7 +3148,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
         });
 
         if (passedAtt) {
-          completedQuizCount++;
+          completedTaskCount++;
         } else {
           prereqMet = false;
         }
@@ -3173,9 +3227,12 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
 
     const hasTakenWords = wBestPct !== null;
     const hasTakenPhrases = pBestPct !== null;
-    const wordsPassed = hasTakenWords && wBestPct >= 60;
-    const phrasesPassed = hasTakenPhrases && pBestPct >= 60;
-    const isAlreadyPassed = (hasTakenWords || hasTakenPhrases) && (wordsPassed && phrasesPassed);
+    const wordsPassed = !wordsTest || (hasTakenWords && wBestPct >= 60);
+    const phrasesPassed = !phrasesTest || (hasTakenPhrases && pBestPct >= 60);
+
+    const hasAttempted = (Boolean(wordsTest) && hasTakenWords) || (Boolean(phrasesTest) && hasTakenPhrases);
+    const isAlreadyPassed = hasAttempted && wordsPassed && phrasesPassed;
+    const isFailed = hasAttempted && !isAlreadyPassed;
 
     let avgScore = null;
     if (hasTakenWords && hasTakenPhrases) avgScore = Math.round((wBestPct + pBestPct) / 2);
@@ -3189,57 +3246,65 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
 
     if (mode === 'normal') {
       // Normal Mode:
-      // - Prereq must be met.
-      // - If already passed: STILL eligible per user rule ("in case they want to try again for a higher score").
-      // - If prereq not met: NOT eligible unless tutor overrides.
+      // - Eligible ONLY if NOT yet taken the exam, prerequisites met, and prior theme passed.
+      // - Students who passed (>=60%) can retake independently in the student portal (excluded here).
+      // - Students who failed (<60%) must attend a Remedial session (excluded here).
       if (!priorThemePassed) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Prior Theme ${priorThemeCode} Incomplete`;
+        statusLabel = `Prior Theme ${priorThemeCode} Incomplete`;
         reason = `Must pass Theme ${priorThemeCode} Exams (≥60%) before taking Theme ${theme.code} Exam.`;
       } else if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Incomplete Quizzes (${completedQuizCount}/${activeQuizzes.length})`;
-        reason = `Incomplete prerequisite quizzes for Theme ${theme.code}.`;
+        statusLabel = `Incomplete Tasks (${completedTaskCount}/${activeTasks.length})`;
+        reason = `Incomplete prerequisite tasks for Theme ${theme.code}.`;
+      } else if (isAlreadyPassed) {
+        isEligible = false;
+        statusType = 'success';
+        statusLabel = `Passed (${avgScore}%) • Retake via Student Portal`;
+        reason = `Passed with ${avgScore}%. Self-paced retake available 24/7 in student portal.`;
+      } else if (isFailed) {
+        isEligible = false;
+        statusType = 'warning';
+        statusLabel = `Failed (${avgScore}%) • Needs Remedial`;
+        reason = `Exam attempted and score below 60%. Must take Remedial session.`;
       } else {
         isEligible = true;
-        if (isAlreadyPassed) {
-          statusType = 'success';
-          statusLabel = `✓ Passed (${avgScore}%) • Score Improvement`;
-          reason = `Passed with ${avgScore}%. Eligible to retake for higher score.`;
-        } else {
-          statusType = 'cyan';
-          statusLabel = `✓ Quizzes Completed (Exam Ready)`;
-          reason = `All ${activeQuizzes.length} prerequisite quizzes passed >= 60%.`;
-        }
+        statusType = 'cyan';
+        statusLabel = `Tasks Completed (Exam Ready)`;
+        reason = `All ${activeTasks.length} prerequisite tasks passed >= 60%. Eligible for normal exam.`;
       }
     } else {
       // Remedial Mode:
-      // - Must meet prerequisites first (all quizzes >= 60%).
-      // - If prereq NOT met: NOT ELIGIBLE (must finish quizzes first).
-      // - If already passed (>= 60%): NOT ELIGIBLE for remedial.
-      // - Eligible ONLY if prereq met AND previous exam score < 60% (needs remedial).
+      // - Eligible ONLY if prerequisites met AND student previously took exam and scored < 60%.
+      // - Students who have not taken the exam must take Normal first.
+      // - Students who already passed (>= 60%) retake independently via student portal.
       if (!prereqMet) {
         isEligible = false;
         statusType = 'danger';
-        statusLabel = `⚠️ Incomplete Quizzes (${completedQuizCount}/${activeQuizzes.length})`;
-        reason = `Prerequisite quizzes must be passed (≥60%) before taking remedial exam.`;
+        statusLabel = `Incomplete Tasks (${completedTaskCount}/${activeTasks.length})`;
+        reason = `Prerequisite tasks must be passed (≥60%) before taking remedial exam.`;
+      } else if (!hasAttempted) {
+        isEligible = false;
+        statusType = 'neutral';
+        statusLabel = `Exam Not Attempted (Take Normal First)`;
+        reason = `Student has not taken the normal exam yet. Must take normal exam first.`;
       } else if (isAlreadyPassed) {
         isEligible = false;
-        statusType = 'warning';
-        statusLabel = `Passed (${avgScore}%) — Remedial Ineligible`;
+        statusType = 'success';
+        statusLabel = `Passed (${avgScore}%) • Remedial Ineligible`;
         reason = `Student already passed normal exam (>= 60%), ineligible for remedial.`;
-      } else {
+      } else if (isFailed) {
         isEligible = true;
         statusType = 'amber';
-        if (avgScore !== null) {
-          statusLabel = `🟡 Remedial (Previous Score: ${avgScore}%)`;
-          reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial exam.`;
-        } else {
-          statusLabel = `🟡 Remedial (Quizzes Completed)`;
-          reason = `Prerequisites completed (≥60%), eligible for remedial/makeup exam.`;
-        }
+        statusLabel = `Remedial (Previous Score: ${avgScore}%)`;
+        reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial exam session.`;
+      } else {
+        isEligible = false;
+        statusType = 'neutral';
+        statusLabel = `Ineligible for Remedial`;
+        reason = `Student does not qualify for remedial session.`;
       }
     }
 
@@ -3250,12 +3315,14 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       statusType,
       reason,
       avgScore,
-      completedQuizCount,
-      completedTaskCount: completedQuizCount,
-      totalQuizzes: activeQuizzes.length,
-      totalTasks: activeQuizzes.length,
-      prereqMet,
+      hasAttempted,
       isAlreadyPassed,
+      isFailed,
+      completedTaskCount,
+      completedQuizCount: completedTaskCount, // Backward compatibility
+      totalTasks: activeTasks.length,
+      totalQuizzes: activeTasks.length, // Backward compatibility
+      prereqMet,
       wordsPassed,
       phrasesPassed,
       hasTakenWords,

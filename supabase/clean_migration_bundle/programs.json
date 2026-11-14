@@ -1,0 +1,57 @@
+[
+  {
+    "id": "c713dd10-4494-4ef5-924b-870681c782e4",
+    "institution_id": "cc7d5ee4-fe8b-4d1a-a578-09ff4e65af94",
+    "name": "English Explorer",
+    "is_active": false,
+    "created_at": "2026-10-09T06:14:02.812+00:00",
+    "updated_at": "2026-10-11T05:33:00.819+00:00",
+    "deleted_at": null,
+    "code": null,
+    "description": null
+  },
+  {
+    "id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "institution_id": "f51d4c2c-7c24-42ef-8d8f-b0f3e524a447",
+    "name": "Camp",
+    "is_active": true,
+    "created_at": "2026-09-25T18:46:47.497+00:00",
+    "updated_at": "2026-11-08T17:26:51.65493+00:00",
+    "deleted_at": null,
+    "code": "CAMP",
+    "description": null
+  },
+  {
+    "id": "d80f47ef-0683-4137-8430-f6cae33e98cc",
+    "institution_id": "637fea53-ca64-4e1c-8ff7-6fd4dbdd8260",
+    "name": "Tamata Persada",
+    "is_active": false,
+    "created_at": "2026-09-25T18:47:01.257+00:00",
+    "updated_at": "2026-11-08T17:26:51.862884+00:00",
+    "deleted_at": "2026-10-11T14:20:38.793+00:00",
+    "code": "TAMATA",
+    "description": null
+  },
+  {
+    "id": "cfeda206-a7a9-4979-a90c-ce7fd436fcd0",
+    "institution_id": "637fea53-ca64-4e1c-8ff7-6fd4dbdd8260",
+    "name": "Evnikom",
+    "is_active": true,
+    "created_at": "2026-11-06T13:12:51.498035+00:00",
+    "updated_at": "2026-11-10T11:23:09.403552+00:00",
+    "deleted_at": null,
+    "code": "EEC",
+    "description": "Evnikom English Class"
+  },
+  {
+    "id": "20d64d86-6e8b-4677-a3c9-e497fa5d9177",
+    "institution_id": "637fea53-ca64-4e1c-8ff7-6fd4dbdd8260",
+    "name": "Sheraton",
+    "is_active": true,
+    "created_at": "2026-09-25T18:47:14.44+00:00",
+    "updated_at": "2026-11-10T11:41:41.091645+00:00",
+    "deleted_at": null,
+    "code": "SHERATON",
+    "description": null
+  }
+]

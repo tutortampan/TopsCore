@@ -26,9 +26,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261113_v174" />
+  <link rel="stylesheet" href="css/style.css?v=20261115_v518" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261113_v174" />
-  <link rel="stylesheet" href="css/test.css?v=20261113_v175" />
+  <link rel="stylesheet" href="css/test.css?v=20261114_v481" />
 </head>
 <body class="test-page notranslate" translate="no">
 
@@ -42,10 +42,9 @@
 
   <!-- 2. Controls & Student Strip (50px): Give Up | Student Photo | Dynamic Timer -->
   <div class="test-controls-bar" id="test-controls-bar">
-    <!-- Left: Give up button (Red background, white flag) -->
+    <!-- Left: Give up button (Red background, clean bold text) -->
     <div class="test-giveup-wrap">
       <button id="giveup-btn" class="btn-giveup" onclick="window.openSubmitModal()" title="Give up / End Test">
-        <span class="giveup-flag-icon">🏳️</span>
         <span>Give up!</span>
       </button>
     </div>
@@ -57,12 +56,11 @@
 
     <!-- Right: Countdown Timer Badge (Dynamic Background Color green -> red) -->
     <div class="test-timer-wrap">
-      <div id="test-sync-indicator" class="sync-status-badge" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--clr-text-2,#94a3b8);background:rgba(255,255,255,0.06);padding:4px 10px;border-radius:20px;border:1px solid rgba(255,255,255,0.08);margin-right:8px;">
-        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--clr-success,#00c000ff);display:inline-block;"></span>
+      <div id="test-sync-indicator" class="sync-status-badge" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--clr-text-2,#94a3b8);margin-right:8px;">
+        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--clr-success);display:inline-block;"></span>
         <span id="sync-status-text">Saved</span>
       </div>
       <div class="test-timer shrink-0" id="test-timer">
-        <span class="timer-icon">⌛</span>
         <span id="timer-display" class="timer-display">18:02</span>
       </div>
     </div>
@@ -151,7 +149,7 @@
     </div>
 
     <div class="matrix-tip-box">
-      💡 Tap any question tile to navigate, or jump directly to next pending item.
+      Tap any question tile to navigate, or jump directly to next pending item.
     </div>
     
     <div class="matrix-footer">
@@ -165,7 +163,7 @@
   <!-- Pre-Exam Focus & Fullscreen Modal -->
   <div id="pre-exam-focus-modal" class="pre-exam-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pre-exam-focus-title">
     <div class="pre-exam-focus-box">
-      <div class="focus-icon">🛡️</div>
+      <div class="focus-icon"></div>
       <h2 id="pre-exam-focus-title" class="focus-title">Exam Preparation &amp; Focus</h2>
       <p class="focus-subtitle">This exam enforces focused testing and fullscreen mode.</p>
       
@@ -201,7 +199,7 @@
       </div>
 
       <button type="button" class="btn btn-primary btn-focus-start" id="btn-enter-fullscreen-start">
-        🚀 Enter Fullscreen &amp; Begin Exam
+        Enter Fullscreen &amp; Begin Exam
       </button>
     </div>
   </div>
@@ -222,7 +220,6 @@
 
       <!-- ELEMENT 3: BOTTOM RETURN BUTTON (MAX THUMB COMFORT, NO TAP HINT) -->
       <button type="button" class="btn btn-primary cheat-dismiss-btn" id="dismiss-cheat-btn">
-        <span>&#x26F6;</span>
         <span>RETURN TO TEST</span>
       </button>
 
@@ -240,7 +237,6 @@
       <div id="hazard-incomplete-wrap" class="hazard-layout-wrap">
         <!-- TIER 1: GIVE UP! ACTION BUTTON (RED ACCENT) -->
         <button type="button" class="hazard-btn hazard-btn-giveup" id="danger-submit-btn">
-          <span class="hazard-btn-icon">🏳️</span>
           <span>GIVE UP!</span>
         </button>
 
@@ -277,13 +273,12 @@
       <!-- COMPLETE STATE (When all questions answered: unanswered === 0) -->
       <div id="hazard-complete-wrap" class="hazard-layout-wrap hidden">
         <div class="hazard-block hazard-block-ready">
-          <div class="hazard-ready-icon">✅</div>
           <div class="hazard-ready-heading">READY TO SUBMIT</div>
           <p class="hazard-ready-sub">All <strong id="total-count-ready">40</strong> questions answered!</p>
         </div>
 
         <button type="button" class="hazard-btn hazard-btn-back-neon" id="confirm-submit-btn">
-          SUBMIT TEST 📋
+          SUBMIT TEST
         </button>
 
         <button type="button" class="hazard-btn hazard-btn-neutral" id="cancel-ready-btn">
@@ -294,7 +289,8 @@
     </div>
   </div>
 
-  <script type="module" src="./js/test.js?v=20261113_v175"></script>
+  <script type="module" src="./js/svg-icons.js?v=20261114_v487"></script>
+  <script type="module" src="./js/test.js?v=20261114_v487"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js?v=20261113_v175')

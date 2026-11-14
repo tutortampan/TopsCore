@@ -1,0 +1,459 @@
+/* ============================================================
+   TopsCore — ADMIN-EDITMODE.CSS
+   Modular Admin Workstation Stylesheet
+   ============================================================ */
+
+/* Rule 2.24: Pristine Read-Only View Mode — Hide Action Columns & Mutation Controls */
+body:not(.global-edit-mode-on) .tree-grid-header-batches div:last-child,
+body:not(.global-edit-mode-on) .tree-actions-right,
+body:not(.global-edit-mode-on) .student-action-btn,
+body:not(.global-edit-mode-on) th.col-actions,
+body:not(.global-edit-mode-on) td.col-actions {
+  display: none !important;
+}
+
+/* Tabular Nums for all numeric table data */
+.datagrid-table td,
+.table-wrap td,
+#blueprint-matrix-table td {
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* Subtle Row Hover Highlight for clean visual tracking without capsule clutter */
+.datagrid-table tbody tr:hover td,
+.table-wrap table tbody tr:hover td,
+#blueprint-matrix-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* When Edit Mode is ON, table inputs become borderless, transparent Excel-like cells (no inner box/capsule) */
+body.global-edit-mode-on .datagrid-table td input,
+body.global-edit-mode-on .table-wrap td input,
+body.global-edit-mode-on .table-wrap td select,
+body.global-edit-mode-on .datagrid-table td select,
+body.global-edit-mode-on .data-table td input,
+body.global-edit-mode-on .data-table td select,
+body.global-edit-mode-on .matrix-table td input,
+body.global-edit-mode-on .matrix-table td select,
+body.global-edit-mode-on .admin-standard-table td input,
+body.global-edit-mode-on .admin-standard-table td select,
+body.global-edit-mode-on .bp-setting-input input,
+body.global-edit-mode-on .bp-setting-input select,
+body.global-edit-mode-on .student-inline-input,
+body.global-edit-mode-on .student-inline-select,
+body.global-edit-mode-on .input-matrix-exam-pts,
+body.global-edit-mode-on .input-matrix-exam-score,
+body.global-edit-mode-on .input-matrix-task-progress {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+  font-family: var(--fm-font-sans) !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  padding: 2px 6px !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 26px !important;
+  line-height: 1.2 !important;
+  box-sizing: border-box !important;
+}
+
+body:not(.global-edit-mode-on) .student-inline-input,
+body:not(.global-edit-mode-on) .student-inline-select {
+  display: none !important;
+}
+body.global-edit-mode-on .student-cell-view {
+  display: none !important;
+}
+
+/* ============================================================
+   GLOBAL MASTER EDIT MODE (AGENTS.md Rule 2.24)
+   ============================================================ */
+.admin-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.btn-edit-mode-global {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  padding: 0 6px !important;
+  border-radius: var(--fm-radius-sm, 4px) !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.06em !important;
+  cursor: pointer !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  text-transform: uppercase !important;
+  box-sizing: border-box !important;
+}
+
+/* Edit Mode OFF: Netral (Matte Slate / Dark Neutral) */
+.btn-edit-mode-global.mode-off {
+  background: #1E293B !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #94A3B8 !important;
+  box-shadow: none !important;
+}
+
+.btn-edit-mode-global.mode-off:hover {
+  background: rgba(255, 255, 0, 0.12) !important;
+  border-color: var(--grade-c, #FFFF00) !important;
+  color: var(--grade-c, #FFFF00) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 0, 0.35) !important;
+}
+
+.btn-edit-mode-global.mode-off .edit-mode-dot {
+  display: none !important;
+}
+
+/* Edit Mode ON: Emas (Rich Cyber Gold) */
+.btn-edit-mode-global.mode-on {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.28) 0%, rgba(217, 119, 6, 0.38) 100%) !important;
+  border: 1.5px solid #FFD700 !important;
+  color: #FFD700 !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.45) !important;
+  text-shadow: 0 0 6px rgba(255, 215, 0, 0.6) !important;
+}
+
+.btn-edit-mode-global.mode-on:hover {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.45) 0%, rgba(217, 119, 6, 0.55) 100%) !important;
+  border-color: var(--grade-c, #FFFF00) !important;
+  color: var(--grade-c, #FFFF00) !important;
+  box-shadow: 0 0 16px rgba(255, 215, 0, 0.75) !important;
+}
+
+.btn-edit-mode-global.mode-on .edit-mode-dot {
+  display: none !important;
+}
+
+/* Zero-Leakage Hiding Rule: When Global Edit Mode is OFF, hide ALL editing controls across ALL pages */
+body:not(.global-edit-mode-on) .edit-mode-only,
+body:not(.global-edit-mode-on) .col-manual-input,
+body:not(.global-edit-mode-on) .btn-manual-input-toggle,
+body:not(.global-edit-mode-on) .manual-score-input,
+body:not(.global-edit-mode-on) .btn-edit,
+body:not(.global-edit-mode-on) .btn-delete,
+body:not(.global-edit-mode-on) .btn-edit-student,
+body:not(.global-edit-mode-on) .btn-configure-engine,
+body:not(.global-edit-mode-on) .btn-restore-item,
+body:not(.global-edit-mode-on) .btn-purge-item,
+body:not(.global-edit-mode-on) [data-action="edit"],
+body:not(.global-edit-mode-on) [data-action="delete"],
+body:not(.global-edit-mode-on) .row-action-delete,
+body:not(.global-edit-mode-on) .row-action-edit,
+body:not(.global-edit-mode-on) .btn-add-record,
+body:not(.global-edit-mode-on) .inline-edit-input,
+body:not(.global-edit-mode-on) .table-edit-actions,
+body:not(.global-edit-mode-on) .btn-merge-topics,
+body:not(.global-edit-mode-on) .btn-theme-edit-action,
+body:not(.global-edit-mode-on) .btn-topic-edit-action,
+body:not(.global-edit-mode-on) .btn-assign-popover-trigger,
+body:not(.global-edit-mode-on) .bp-setting-input,
+body:not(.global-edit-mode-on) .vault-inline-edit-btn,
+body:not(.global-edit-mode-on) .vault-inline-delete-btn,
+body:not(.global-edit-mode-on) .btn-add-theme-action,
+body:not(.global-edit-mode-on) .btn-add-topic-action {
+  display: none !important;
+}
+
+/* When Edit Mode is OFF, static view badges for test settings are visible */
+body:not(.global-edit-mode-on) .bp-setting-badge {
+  display: inline-flex !important;
+}
+
+/* When Edit Mode is ON, static badges are hidden, inline inputs are shown */
+body.global-edit-mode-on .bp-setting-badge {
+  display: none !important;
+}
+body.global-edit-mode-on .bp-setting-input {
+  display: inline-flex !important;
+}
+
+
+/* ---- Rule 10: Flat Edit Grid Mode — Excel Borderless Inputs, Zero Inner Capsule Across ALL Tables ---- */
+body.global-edit-mode-on table td.editable-cell,
+body.global-edit-mode-on .datagrid-table td.editable-cell,
+body.global-edit-mode-on .vocab-vault-table td.editable-cell,
+body.global-edit-mode-on .admin-standard-table td.editable-cell,
+body.global-edit-mode-on .table-wrap td.editable-cell {
+  outline: none !important;
+}
+body.global-edit-mode-on table td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on table td select,
+body.global-edit-mode-on .table-wrap td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on .table-wrap td select,
+body.global-edit-mode-on .datagrid-table td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on .datagrid-table td select,
+body.global-edit-mode-on .vocab-vault-table td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on .vocab-vault-table td select,
+body.global-edit-mode-on .admin-standard-table td input:not([type="checkbox"]):not([type="radio"]),
+body.global-edit-mode-on .admin-standard-table td select {
+  border-radius: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  height: 28px !important;
+  font-size: 12px !important;
+  padding: 2px 6px !important;
+  box-shadow: none !important;
+}
+
+
+/* ==========================================================================
+   MASTER EDIT MODE: UNIVERSAL CRISP WHITE EXCEL GRIDLINES INVARIANT (SSOT)
+   When Master Edit Mode is active (body.global-edit-mode-on), EVERY table across
+   the entire TopsCore LMS workspace MUST render crisp white Excel gridlines
+   (rgba(255, 255, 255, 0.45)) on all cells (th, td), outer edges, and headers.
+   Zero exceptions across all data grids, matrix tables, analytics, and modals.
+   ========================================================================== */
+body.global-edit-mode-on table th,
+body.global-edit-mode-on table td,
+body.global-edit-mode-on .table-wrap table th,
+body.global-edit-mode-on .table-wrap table td,
+body.global-edit-mode-on .datagrid-table th,
+body.global-edit-mode-on .datagrid-table td,
+body.global-edit-mode-on .data-table th,
+body.global-edit-mode-on .data-table td,
+body.global-edit-mode-on .matrix-table th,
+body.global-edit-mode-on .matrix-table td,
+body.global-edit-mode-on .admin-standard-table th,
+body.global-edit-mode-on .admin-standard-table td,
+body.global-edit-mode-on .vocab-vault-table th,
+body.global-edit-mode-on .vocab-vault-table td,
+body.global-edit-mode-on .live-monitor-table th,
+body.global-edit-mode-on .live-monitor-table td,
+body.global-edit-mode-on .tac-pacing-table th,
+body.global-edit-mode-on .tac-pacing-table td,
+body.global-edit-mode-on #admin-console table th,
+body.global-edit-mode-on #admin-console table td,
+body.global-edit-mode-on #vault-table th,
+body.global-edit-mode-on #vault-table td,
+body.global-edit-mode-on #theme-manager-flat-table th,
+body.global-edit-mode-on #theme-manager-flat-table td,
+body.global-edit-mode-on #blueprint-matrix-table th,
+body.global-edit-mode-on #blueprint-matrix-table td,
+body.global-edit-mode-on #class-attendance-grid th,
+body.global-edit-mode-on #class-attendance-grid td {
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.global-edit-mode-on table th:first-child,
+body.global-edit-mode-on table td:first-child,
+body.global-edit-mode-on .table-wrap table th:first-child,
+body.global-edit-mode-on .table-wrap table td:first-child,
+body.global-edit-mode-on .datagrid-table th:first-child,
+body.global-edit-mode-on .datagrid-table td:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.global-edit-mode-on table thead tr:first-child th,
+body.global-edit-mode-on .table-wrap table thead tr:first-child th,
+body.global-edit-mode-on .datagrid-table thead tr:first-child th {
+  border-top: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.global-edit-mode-on table th:last-child,
+body.global-edit-mode-on table td:last-child,
+body.global-edit-mode-on .table-wrap table th:last-child,
+body.global-edit-mode-on .table-wrap table td:last-child,
+body.global-edit-mode-on .datagrid-table th:last-child,
+body.global-edit-mode-on .datagrid-table td:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+body.global-edit-mode-on table td:focus-within,
+body.global-edit-mode-on .table-wrap td:focus-within,
+body.global-edit-mode-on .datagrid-table td:focus-within,
+body.global-edit-mode-on #admin-console table td:focus-within {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+
+/* ==========================================================================
+   Phase 449 / Phase 494: Master Edit Mode Active Banner in Bottom 60px Locked Footer
+   ========================================================================== */
+
+#bottom-ad-banner {
+  transition: background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+
+.banner-brand-content {
+  display: flex !important;
+  align-items: center !important;
+  width: 100% !important;
+}
+
+body:not(.global-edit-mode-on) .banner-brand-content,
+body.global-edit-mode-off .banner-brand-content {
+  display: flex !important;
+}
+
+body:not(.global-edit-mode-on) #master-edit-safety-hud,
+body.global-edit-mode-off #master-edit-safety-hud {
+  display: none !important;
+}
+
+/* Master Edit Mode Active: Dynamic Warning / Gold 60px Bottom Banner */
+body.global-edit-mode-on #bottom-ad-banner {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.16) 0%, rgba(20, 26, 40, 0.98) 35%, rgba(15, 23, 42, 0.98) 100%) !important;
+  border-top: 2px solid var(--grade-c, #FFFF00) !important;
+  box-shadow: 0 -4px 20px rgba(255, 215, 0, 0.15) !important;
+}
+
+body.global-edit-mode-on .banner-brand-content {
+  display: none !important;
+}
+
+body.global-edit-mode-on #master-edit-safety-hud {
+  display: flex !important;
+  width: 100% !important;
+  height: 100% !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  box-sizing: border-box !important;
+}
+
+#master-edit-safety-hud {
+  display: none;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif);
+  font-size: 12px;
+  color: var(--grade-c);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.safety-hud-content {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.safety-hud-badge {
+  font-weight: 850 !important;
+  letter-spacing: 0.05em !important;
+  color: #0F172A !important;
+  background: var(--grade-c) !important;
+  padding: 4px 10px !important;
+  border-radius: 4px !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  box-shadow: 0 0 10px rgba(255, 255, 0, 0.35) !important;
+  flex-shrink: 0 !important;
+}
+
+.safety-hud-text {
+  color: #E2E8F0 !important;
+  font-weight: 500 !important;
+  font-size: 12px !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+}
+
+.safety-hud-text kbd {
+  background: #1E293B !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 3px !important;
+  padding: 1px 6px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  color: #38BDF8 !important;
+}
+
+.safety-hud-exit-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  background: #1E293B !important;
+  border: 1.5px solid var(--grade-c) !important;
+  color: var(--grade-c) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.safety-hud-exit-btn:hover {
+  background: var(--grade-c) !important;
+  color: #0F172A !important;
+  box-shadow: 0 0 12px rgba(255, 255, 0, 0.4) !important;
+}
+
+/* Standardized 32px Search & Filter Toolbars across Workstation */
+.table-toolbar-32,
+.table-toolbar-unified,
+.workspace-filter-toolbar {
+  height: 32px !important;
+  min-height: 32px !important;
+  max-height: 32px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
+  font-size: 12px !important;
+}
+
+.toolbar-input-32,
+.toolbar-input-38,
+.table-toolbar-unified input[type="text"],
+/* In-Panel Inputs & Form Controls (Strict 30px Height in 40px Panels - 5px Margin Clearance) */
+.table-toolbar-unified input[type="search"],
+.table-toolbar-unified select,
+.workspace-lower-panel input,
+.workspace-lower-panel select,
+.workspace-filter-toolbar input,
+.workspace-filter-toolbar select {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+}
+
+/* In-Panel Buttons (Strict 30px Height in 40px Sub Panels & Toolbars - 5px Margin Clearance) */
+.toolbar-btn-30,
+.toolbar-btn-32,
+.toolbar-btn-38,
+.workspace-lower-panel .btn,
+.workspace-lower-panel button,
+.panel-inline-btn,
+.table-toolbar-unified .btn,
+.workspace-filter-toolbar .btn {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  border-radius: 4px !important;
+  box-sizing: border-box !important;
+}
+
+

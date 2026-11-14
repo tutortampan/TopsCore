@@ -47,10 +47,16 @@ const ADMIN_SESSION_KEY = 'topscore_admin_session';
 
 export function setStudentSession(data) {
   const session = {
+    ...data,
     student_id: data.student_id,
     student_name: data.student_name,
     gender: data.gender || null,
-    education: data.education || null,
+    birth_date: data.birth_date || null,
+    education_level: data.education_level || data.education || null,
+    education: data.education || data.education_level || null,
+    academic_history: data.academic_history || null,
+    province: data.province || null,
+    city: data.city || null,
     institution_id: data.institution_id || null,
     institution_name: data.institution_name || null,
     program_id: data.program_id,
@@ -62,7 +68,7 @@ export function setStudentSession(data) {
     level_id: data.level_id || null,
     level_number: data.level_number || null,
     level_name: data.level_name || null,
-    authenticated_at: new Date().toISOString(),
+    authenticated_at: data.authenticated_at || new Date().toISOString(),
   };
   sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
@@ -185,8 +191,8 @@ export function setGlobalEditMode(active) {
       btn.className = `btn btn-sm btn-edit-mode-global ${bool ? 'mode-on' : 'mode-off'}`;
       const icon = btn.querySelector('.edit-mode-icon');
       const label = btn.querySelector('.edit-mode-label');
-      if (icon) icon.textContent = bool ? '🔓' : '🔒';
-      if (label) label.textContent = bool ? 'EDIT: ON' : 'EDIT: OFF';
+      if (icon) icon.textContent = '';
+      if (label) label.textContent = bool ? 'ON' : 'OFF';
     }
   }
 

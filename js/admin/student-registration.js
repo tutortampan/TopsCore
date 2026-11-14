@@ -4,16 +4,24 @@
 import {
   adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName,
   normalizeStudentNameForMatch, clearAdminCache, sha256
-} from '../api.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading, updateLoadingProgress, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
+
+function renderLoadingState(msg = 'Loading...') {
+  if (typeof window !== 'undefined' && typeof window.getLoadingStateHtml === 'function') {
+    return window.getLoadingStateHtml(msg);
+  }
+  return `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${escapeHtml(msg)}</p></div>`;
+}
 
 export async function renderStudentsRegistration(area) {
   let activeTab = window._activeStudentRegTab || localStorage.getItem('topscore_admin_student_reg_tab') || 'bulk';
 
   const regTabs = [
-    { id: 'bulk', icon: '📥', title: 'Bulk Excel Import', label: 'Bulk Import (Excel / CSV)' },
-    { id: 'individual', icon: '👤', title: 'Add Student (Individual)', label: 'Add Student (Individual)' }
+    { id: 'bulk', icon: getSvgIcon('upload', 14), title: 'Bulk Excel Import', label: 'Bulk Import (Excel / CSV)' },
+    { id: 'individual', icon: getSvgIcon('user', 14), title: 'Add Student (Individual)', label: 'Add Student (Individual)' }
   ];
 
   window._switchStudentRegTab = async (tabId) => {
@@ -42,8 +50,8 @@ export async function renderStudentsRegistration(area) {
   }
 
   area.innerHTML = `
-    <div id="student-reg-workspace" style="padding-top: 0.5rem;">
-      <div class="spinner" style="margin: 2rem auto;"></div>
+    <div id="student-reg-workspace" style="display:flex; flex-direction:column; flex:1; height:100%; min-height:0;">
+      ${renderLoadingState('Loading registration workspace...')}
     </div>
   `;
   const container = document.getElementById('student-reg-workspace');
@@ -59,7 +67,7 @@ export async function renderStudentsRegistration(area) {
 // TAB 1: BULK EXCEL / CSV IMPORT
 // ============================================================
 async function renderBulkImportView(container) {
-  container.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`;
+  container.innerHTML = renderLoadingState('Loading bulk import options...');
 
   let allInsts = [];
   let allProgs = [];
@@ -67,9 +75,9 @@ async function renderBulkImportView(container) {
 
   try {
     const results = await Promise.allSettled([
-      adminFetchAll('institutions'),
-      adminFetchAll('programs'),
-      adminFetchAll('batches')
+      adminFetchAll('institutions', 'id, name, is_active'),
+      adminFetchAll('programs', 'id, name, is_active, institution_id'),
+      adminFetchAll('batches', 'id, name, is_active, program_id')
     ]);
     allInsts = (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) ? results[0].value : [];
     allProgs = (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) ? results[1].value : [];
@@ -85,24 +93,24 @@ async function renderBulkImportView(container) {
   container.innerHTML = `
     <div class="section-header" style="flex-shrink: 0; margin-bottom: 1rem;">
       <div>
-        <h2 class="section-title text-gradient" style="font-size: 1.4rem;">📥 Bulk Student Ingestion</h2>
+        <h2 class="section-title text-gradient" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">${getSvgIcon('upload', 20)} Bulk Student Ingestion</h2>
         <p class="section-subtitle">Import student rosters from Excel (.xlsx / .xls) or CSV. PINs automatically default to <strong>1234</strong> (SHA-256 hashed).</p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" id="btn-export-students-csv">📊 Export CSV</button>
-        <button class="btn btn-primary btn-sm" id="btn-dl-student-template">📥 Download Excel Template (.xlsx)</button>
+        <button class="btn btn-secondary btn-sm" id="btn-export-students-csv">${getSvgIcon('download', 14)} Export CSV</button>
+        <button class="btn btn-primary btn-sm" id="btn-dl-student-template">${getSvgIcon('download', 14)} Download Excel Template (.xlsx)</button>
       </div>
     </div>
 
     <div class="d-flex flex-wrap gap-4 align-stretch" style="margin-bottom: 1.5rem;">
       <!-- UPLOAD & OVERRIDES CARD -->
       <div class="glass-card p-5" style="flex: 1; min-width: 320px; max-width: 520px; display: flex; flex-direction: column; gap: 1rem;">
-        <h3 style="font-size: 1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
-          <span>⚙️</span> Target Scope (Default / Override)
+        <h3 style="font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+          <span>${getSvgIcon('settings', 16)}</span> Target Scope (Default / Override)
         </h3>
 
         <div class="form-group mb-2">
-          <label class="form-label" style="font-size: 0.78rem;">1. Target Institution</label>
+          <label class="form-label" style="font-size: 12px;">1. Target Institution</label>
           <select class="form-control" id="bulk-inst-select">
             <option value="">— Use Institution from Spreadsheet —</option>
             ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
@@ -111,7 +119,7 @@ async function renderBulkImportView(container) {
         </div>
 
         <div class="form-group mb-2">
-          <label class="form-label" style="font-size: 0.78rem;">2. Target Program</label>
+          <label class="form-label" style="font-size: 12px;">2. Target Program</label>
           <select class="form-control" id="bulk-prog-select">
             <option value="">— Use Program from Spreadsheet —</option>
             ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">${escapeHtml(p.name)}</option>`).join('')}
@@ -120,7 +128,7 @@ async function renderBulkImportView(container) {
         </div>
 
         <div class="form-group mb-3">
-          <label class="form-label" style="font-size: 0.78rem;">3. Target Batch</label>
+          <label class="form-label" style="font-size: 12px;">3. Target Batch</label>
           <select class="form-control" id="bulk-batch-select" disabled>
             <option value="">— Select Program First —</option>
           </select>
@@ -130,17 +138,17 @@ async function renderBulkImportView(container) {
         <!-- Interactive Drag & Drop Box -->
         <div class="student-reg-dropzone" id="bulk-dropzone">
           <input type="file" id="import-students-file" accept=".xlsx,.xls,.csv" style="display: none;" />
-          <span class="student-reg-dropzone-icon">📁</span>
-          <div style="font-size: 0.92rem; font-weight: 600; color: #fff;">Click to select or drag & drop file</div>
-          <div style="font-size: 0.75rem; color: var(--fm-text-muted); margin-top: 4px;">Supports Excel (.xlsx, .xls) and CSV (.csv)</div>
-          <div id="dropzone-file-name" style="margin-top: 8px; font-size: 0.8rem; font-weight: 700; color: #818cf8; display: none;"></div>
+          <span class="student-reg-dropzone-icon">${getSvgIcon('upload', 32)}</span>
+          <div style="font-size: 12px; font-weight: 600; color: #fff;">Click to select or drag & drop file</div>
+          <div style="font-size: 12px; color: var(--fm-text-muted); margin-top: 4px;">Supports Excel (.xlsx, .xls) and CSV (.csv)</div>
+          <div id="dropzone-file-name" style="margin-top: 8px; font-size: 12px; font-weight: 700; color: #818cf8; display: none;"></div>
         </div>
 
         <!-- Format Guide -->
         <div class="p-3 rounded mt-2" style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25);">
           <div class="d-flex align-center justify-between gap-2 mb-1">
             <span class="text-xs fw-700 text-gradient">SPREADSHEET COLUMN HEADERS</span>
-            <span class="badge badge-info" style="font-size: 0.68rem;">Case-Insensitive</span>
+            <span class="badge badge-info" style="font-size: 12px;">Case-Insensitive</span>
           </div>
           <div class="text-xs text-muted d-flex flex-column gap-1" style="line-height: 1.4;">
             <div>&bull; <b>Required:</b> <code>INSTITUTION</code>, <code>PROGRAM</code>, <code>BATCH</code>, <code>NAME</code></div>
@@ -154,7 +162,7 @@ async function renderBulkImportView(container) {
       <div class="glass-card p-5" id="bulk-preview-card" style="flex: 2; min-width: 400px; display: none; flex-direction: column;">
         <div class="d-flex align-center justify-between flex-wrap gap-3 pb-3 mb-3" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0;">Spreadsheet Preview</h3>
+            <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0;">Spreadsheet Preview</h3>
             <p class="text-xs text-muted" id="preview-row-count" style="margin: 2px 0 0 0;">0 students loaded from file</p>
           </div>
           <div class="d-flex align-center gap-2">
@@ -166,8 +174,8 @@ async function renderBulkImportView(container) {
         <!-- Summary Chips -->
         <div class="d-flex gap-2 flex-wrap mb-3" id="preview-summary-chips">
           <span class="badge badge-info" id="chip-total">Total: 0</span>
-          <span class="badge badge-success" id="chip-new">✨ New: 0</span>
-          <span class="badge badge-warning" id="chip-merge">🔄 Merge: 0</span>
+          <span class="badge badge-success" id="chip-new">${getSvgIcon('sparkles', 12)} New: 0</span>
+          <span class="badge badge-warning" id="chip-merge">${getSvgIcon('refresh', 12)} Merge: 0</span>
         </div>
 
         <div class="table-wrap table-compact" style="flex: 1; max-height: 480px; overflow-y: auto;">
@@ -175,12 +183,12 @@ async function renderBulkImportView(container) {
             <thead>
               <tr>
                 <th style="width: 38px; text-align: center;">#</th>
-                <th>Student Name</th>
-                <th>Institution</th>
-                <th>Program</th>
-                <th>Batch</th>
+                <th>STUDENT NAME</th>
+                <th>INSTITUTION</th>
+                <th>PROGRAM</th>
+                <th>BATCH</th>
                 <th style="width: 70px; text-align: center;">PIN</th>
-                <th style="width: 90px; text-align: center;">Status</th>
+                <th style="width: 90px; text-align: center;">STATUS</th>
               </tr>
             </thead>
             <tbody id="bulk-preview-tbody"></tbody>
@@ -396,6 +404,8 @@ async function renderBulkImportView(container) {
           const rawBatch = getVal(['batch', 'angkatan', 'batchname']);
           const rawGender = getVal(['gender', 'jeniskelamin', 'sex']);
           const rawBirth = getVal(['birthdate', 'dob', 'tanggallahir', 'birth_date']);
+          const rawProvince = getVal(['province', 'provinsi', 'prov']);
+          const rawCity = getVal(['city', 'kota', 'kabupaten', 'kabkot', 'district']);
           const rawPin = getVal(['pin', 'password', 'pass']) || '1234';
 
           // Resolve Institution
@@ -482,9 +492,11 @@ async function renderBulkImportView(container) {
 
           const item = {
             no: idx + 1,
-            name: formatStudentName(rawName, rawGender),
+            name: cleanStudentName(rawName),
             gender: rawGender || null,
             birthDate: rawBirth || null,
+            province: rawProvince || null,
+            city: rawCity || null,
             pin: rawPin,
             instId: finalInstId,
             instName: finalInstName || (rawInst ? `${rawInst} (Unmatched)` : '—'),
@@ -538,8 +550,8 @@ async function renderBulkImportView(container) {
 
     if (rowCountEl) rowCountEl.textContent = `${total} students parsed from file`;
     if (chipTotal) chipTotal.textContent = `Total: ${total}`;
-    if (chipNew) chipNew.textContent = `✨ New: ${newCount}`;
-    if (chipMerge) chipMerge.textContent = `🔄 Merge: ${mergeCount}`;
+    if (chipNew) chipNew.innerHTML = `${getSvgIcon('sparkles', 12)} New: ${newCount}`;
+    if (chipMerge) chipMerge.innerHTML = `${getSvgIcon('refresh', 12)} Merge: ${mergeCount}`;
 
     if (!tbody) return;
     tbody.innerHTML = parsedStudents.map(s => `
@@ -613,16 +625,19 @@ async function renderBulkImportView(container) {
         const pinHash = await sha256(s.pin || '1234');
 
         if (s.isExisting && s.existingId) {
-          await sb.from('students').update({
+          const updData = {
             batch_id: resolvedBatchId,
             pin_hash: pinHash,
             is_active: true,
             deleted_at: null,
             updated_at: new Date().toISOString()
-          }).eq('id', s.existingId);
+          };
+          if (s.province) updData.province = s.province;
+          if (s.city) updData.city = s.city;
+          await sb.from('students').update(updData).eq('id', s.existingId).catch(() => {});
           updatedCount++;
         } else {
-          const { data: created, error: insertErr } = await sb.from('students').insert({
+          const insData = {
             name: s.name,
             institution_id: s.instId || null,
             program_id: s.progId || null,
@@ -631,9 +646,19 @@ async function renderBulkImportView(container) {
             birth_date: s.birthDate || null,
             pin_hash: pinHash,
             is_active: true
-          }).select('id').single();
-
-          if (insertErr) throw insertErr;
+          };
+          if (s.province) insData.province = s.province;
+          if (s.city) insData.city = s.city;
+          let created = null;
+          try {
+            const res = await sb.from('students').insert(insData).select('id').single();
+            created = res.data;
+          } catch (_) {
+            delete insData.province;
+            delete insData.city;
+            const res = await sb.from('students').insert(insData).select('id').single();
+            created = res.data;
+          }
           insertedCount++;
           if (created) s.existingId = created.id;
         }
@@ -686,7 +711,7 @@ async function renderBulkImportView(container) {
 // TAB 2: INDIVIDUAL STUDENT REGISTRATION
 // ============================================================
 async function renderIndividualRegView(container) {
-  container.innerHTML = `<div class="spinner" style="margin: 2rem auto;"></div>`;
+  container.innerHTML = renderLoadingState('Loading student registration form...');
 
   let allInsts = [];
   let allProgs = [];
@@ -695,9 +720,9 @@ async function renderIndividualRegView(container) {
 
   try {
     const results = await Promise.allSettled([
-      adminFetchAll('institutions'),
-      adminFetchAll('programs'),
-      adminFetchAll('batches'),
+      adminFetchAll('institutions', 'id, name, is_active'),
+      adminFetchAll('programs', 'id, name, is_active, institution_id'),
+      adminFetchAll('batches', 'id, name, is_active, program_id'),
       adminFetchAll('students', 'id, name, gender, birth_date, is_active, created_at, institution_id, program_id, batch_id, institutions(name), programs(name), batches(name)')
     ]);
     allInsts = (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) ? results[0].value : [];
@@ -718,30 +743,30 @@ async function renderIndividualRegView(container) {
   container.innerHTML = `
     <div class="section-header" style="flex-shrink: 0; margin-bottom: 1rem;">
       <div>
-        <h2 class="section-title text-gradient" style="font-size: 1.4rem;">👤 Individual Student Registration</h2>
+        <h2 class="section-title text-gradient" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">${getSvgIcon('user', 20)} Individual Student Registration</h2>
         <p class="section-subtitle">Enroll an individual student directly into an institution, program, and batch with instant credentials.</p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-open-modal-add">🗂️ Open Full Edit Modal</button>
+        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-open-modal-add">${getSvgIcon('edit', 14)} Open Full Edit Modal</button>
       </div>
     </div>
 
     <!-- MAIN REGISTRATION FORM -->
     <div class="glass-card p-5 mb-5" style="max-width: 900px;">
-      <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
-        <span>📝</span> New Student Details
+      <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+        <span>${getSvgIcon('file-text', 16)}</span> New Student Details
       </h3>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem 1.25rem;">
         <!-- Full Name -->
         <div class="form-group" style="grid-column: 1 / -1;">
-          <label class="form-label" style="font-size: 0.78rem;">Full Name <span style="color: var(--grade-e, #FF0000);">*</span></label>
+          <label class="form-label" style="font-size: 12px;">Full Name <span style="color: var(--grade-e);">*</span></label>
           <input type="text" class="form-control" id="indiv-name" placeholder="e.g. Johnathan Doe" autocomplete="off" />
         </div>
 
         <!-- Gender / Honorific -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Honorific &amp; Gender</label>
+          <label class="form-label" style="font-size: 12px;">Honorific &amp; Gender</label>
           <select class="form-control" id="indiv-gender">
             <option value="">— Unassigned —</option>
             <option value="male">Mister (Male)</option>
@@ -751,13 +776,13 @@ async function renderIndividualRegView(container) {
 
         <!-- Date of Birth -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Date of Birth</label>
+          <label class="form-label" style="font-size: 12px;">Date of Birth</label>
           <input type="date" class="form-control" id="indiv-birth" />
         </div>
 
         <!-- Institution -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Institution <span style="color: var(--grade-e, #FF0000);">*</span></label>
+          <label class="form-label" style="font-size: 12px;">Institution <span style="color: var(--grade-e);">*</span></label>
           <select class="form-control" id="indiv-inst">
             <option value="">— Select Institution —</option>
             ${sortedInsts.map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
@@ -766,7 +791,7 @@ async function renderIndividualRegView(container) {
 
         <!-- Program -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Program <span style="color: var(--grade-e, #FF0000);">*</span></label>
+          <label class="form-label" style="font-size: 12px;">Program <span style="color: var(--grade-e);">*</span></label>
           <select class="form-control" id="indiv-prog">
             <option value="">— Select Program —</option>
             ${sortedProgs.map(p => `<option value="${p.id}" data-inst="${p.institution_id}">[${escapeHtml(p.name)}]</option>`).join('')}
@@ -776,8 +801,8 @@ async function renderIndividualRegView(container) {
         <!-- Batch -->
         <div class="form-group">
           <div class="d-flex align-center justify-between mb-1">
-            <label class="form-label" style="font-size: 0.78rem; margin: 0;">Batch <span style="color: var(--grade-e, #FF0000);">*</span></label>
-            <button type="button" class="btn btn-ghost btn-xs text-primary" id="btn-quick-new-batch" style="padding: 0; font-size: 0.72rem;">+ New Batch</button>
+            <label class="form-label" style="font-size: 12px; margin: 0;">Batch <span style="color: var(--grade-e);">*</span></label>
+            <button type="button" class="btn btn-ghost btn-xs text-primary" id="btn-quick-new-batch" style="padding: 0; font-size: 12px;">+ New Batch</button>
           </div>
           <select class="form-control" id="indiv-batch" disabled>
             <option value="">— Select Program First —</option>
@@ -786,14 +811,14 @@ async function renderIndividualRegView(container) {
 
         <!-- PIN -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Personal PIN <span style="color: var(--grade-e, #FF0000);">*</span></label>
+          <label class="form-label" style="font-size: 12px;">Personal PIN <span style="color: var(--grade-e);">*</span></label>
           <input type="text" class="form-control" id="indiv-pin" value="1234" autocomplete="new-password" />
           <span class="text-muted text-xs mt-1" style="display:block;">Default preset is 1234 (hashed on save).</span>
         </div>
 
         <!-- Account Status -->
         <div class="form-group">
-          <label class="form-label" style="font-size: 0.78rem;">Account Status</label>
+          <label class="form-label" style="font-size: 12px;">Account Status</label>
           <select class="form-control" id="indiv-active">
             <option value="true">Active (Eligible for tests)</option>
             <option value="false">Inactive / Suspended</option>
@@ -811,10 +836,10 @@ async function renderIndividualRegView(container) {
     <div class="glass-card p-5" style="max-width: 900px;">
       <div class="d-flex align-center justify-between flex-wrap gap-2 mb-3">
         <div>
-          <h3 style="font-size: 1rem; font-weight: 700; color: #fff; margin: 0;">📋 Recently Registered Students</h3>
+          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">${getSvgIcon('clipboard', 16)} Recently Registered Students</h3>
           <p class="text-xs text-muted" style="margin: 2px 0 0 0;">Latest 10 enrolled students in TopsCore</p>
         </div>
-        <button class="btn btn-ghost btn-xs" id="btn-refresh-recent">🔄 Refresh List</button>
+        <button class="btn btn-ghost btn-xs" id="btn-refresh-recent" style="display: inline-flex; align-items: center; gap: 4px;">${getSvgIcon('refresh', 14)} Refresh List</button>
       </div>
 
       <div class="table-wrap table-compact sticky-first">
@@ -822,12 +847,12 @@ async function renderIndividualRegView(container) {
           <thead>
             <tr>
               <th style="width: 38px; text-align: center;">#</th>
-              <th>Student Name</th>
-              <th>Program</th>
-              <th>Batch</th>
-              <th style="width: 95px; text-align: center;">Status</th>
-              <th style="width: 90px; text-align: center;">Enrolled</th>
-              <th style="width: 80px; text-align: center;">Actions</th>
+              <th>STUDENT NAME</th>
+              <th>PROGRAM</th>
+              <th>BATCH</th>
+              <th style="width: 95px; text-align: center;">STATUS</th>
+              <th style="width: 90px; text-align: center;">ENROLLED</th>
+              <th style="width: 80px; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
           <tbody id="indiv-recent-tbody">
@@ -835,7 +860,7 @@ async function renderIndividualRegView(container) {
               <tr>
                 <td colspan="7">
                   <div class="smart-empty-state">
-                    <span class="smart-empty-icon">👥</span>
+                    <span class="smart-empty-icon">${getSvgIcon('users', 32)}</span>
                     <div class="smart-empty-title">No students registered yet</div>
                     <div class="smart-empty-subtext">Use the registration form above to enroll your first student.</div>
                   </div>
@@ -853,11 +878,11 @@ async function renderIndividualRegView(container) {
                     ${s.is_active ? 'Active' : 'Inactive'}
                   </span>
                 </td>
-                <td style="text-align: center; font-size: 0.75rem; color: var(--fm-text-muted);">
+                <td style="text-align: center; font-size: 12px; color: var(--fm-text-muted);">
                   ${s.created_at ? s.created_at.split('T')[0] : '—'}
                 </td>
                 <td style="text-align: center;">
-                  <button class="btn btn-ghost btn-xs text-primary btn-edit-student edit-mode-only" data-id="${s.id}" title="Edit Profile">✏️ Edit</button>
+                  <button class="btn btn-ghost btn-xs text-primary btn-edit-student edit-mode-only" data-id="${s.id}" title="Edit Profile">${getSvgIcon('edit', 14)} Edit</button>
                 </td>
               </tr>
             `).join('')}
@@ -1012,7 +1037,8 @@ async function renderIndividualRegView(container) {
     const pin = document.getElementById('indiv-pin').value.trim() || '1234';
     const isActive = document.getElementById('indiv-active').value === 'true';
 
-    const formattedName = formatStudentName(rawName, gender);
+    // Rule 2.23: Clean student name stored in database without honorific prefix
+    const formattedName = cleanStudentName(rawName);
 
     saveBtn.disabled = true;
     saveBtn.textContent = 'Registering…';
@@ -1041,18 +1067,31 @@ async function renderIndividualRegView(container) {
 
       const pinHash = await sha256(pin);
 
-      const { data: createdStudent, error: insertErr } = await sb.from('students').insert({
+      const insPayload = {
         name: formattedName,
         institution_id: instId || null,
         program_id: progId,
         batch_id: batchId,
         gender,
         birth_date: birthDate,
+        province: 'Nusa Tenggara Barat',
+        city: 'Kota Mataram',
         pin_hash: pinHash,
         is_active: isActive
-      }).select('id, name, created_at, is_active, programs(name), batches(name)').single();
+      };
 
-      if (insertErr) throw insertErr;
+      let createdStudent = null;
+      try {
+        const res = await sb.from('students').insert(insPayload).select('id, name, created_at, is_active, programs(name), batches(name)').single();
+        if (res.error) throw res.error;
+        createdStudent = res.data;
+      } catch (_) {
+        delete insPayload.province;
+        delete insPayload.city;
+        const res = await sb.from('students').insert(insPayload).select('id, name, created_at, is_active, programs(name), batches(name)').single();
+        if (res.error) throw res.error;
+        createdStudent = res.data;
+      }
 
       // Initialize Progress (Level 1) strictly for active classes belonging to student's exact program and institution
       let classQ = sb.from('classes')

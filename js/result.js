@@ -5,11 +5,12 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven } from './api.js?v=20261106_v160';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName } from './api.js?v=20261106_v160';
 import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v160';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
+import { getSvgIcon } from './svg-icons.js?v=20261114_01';
 
 let session = getStudentSession();
 if (!session) {
@@ -55,11 +56,11 @@ if (!session) {
         WRITING: 'Writing',
         TEST: 'Exam',
         EXAM: 'Exam',
-        QUIZ: 'Quiz',
-        WORD_TASK: 'Word Quiz',
-        PHRASE_TASK: 'Phrase Quiz',
-        VOCAB_QUIZ: 'Word Quiz',
-        PHRASE_QUIZ: 'Phrase Quiz',
+        QUIZ: 'Task',
+        WORD_TASK: 'Word Task',
+        PHRASE_TASK: 'Phrase Task',
+        VOCAB_QUIZ: 'Word Task',
+        PHRASE_QUIZ: 'Phrase Task',
         VOCAB_TEST: 'Vocab Exam',
         VOCAB_EXAM: 'Vocab Exam',
         WORDS_TEST: 'Word Exam',
@@ -87,16 +88,16 @@ if (!session) {
       canvas.height = window.innerHeight;
 
       // Color palette per grade (Matte Modern)
-      const starColor = TOPSCORE_COLORS.STAR || '#ff2d87';
-      const aColor = TOPSCORE_COLORS.A || '#00c000ff';
-      const bColor = TOPSCORE_COLORS.B || '#95ff00ff';
-      const cColor = TOPSCORE_COLORS.C || '#FFFF00';
-      const dColor = TOPSCORE_COLORS.D || '#FF8C00';
-      const eColor = TOPSCORE_COLORS.E || '#FF0000';
+      const starColor = TOPSCORE_COLORS.STAR;
+      const aColor = TOPSCORE_COLORS.A;
+      const bColor = TOPSCORE_COLORS.B;
+      const cColor = TOPSCORE_COLORS.C;
+      const dColor = TOPSCORE_COLORS.D;
+      const eColor = TOPSCORE_COLORS.E;
       const palettes = {
         '★': [starColor, '#f472b6', '#be185d', '#fda4af'],
         S: [starColor, '#f472b6', '#be185d', '#fda4af'],
-        A: [aColor, '#86efac', '#4ade80', '#22c55e'],
+        A: [aColor, aColor, aColor, aColor],
         B: [bColor, '#d9f99d', TOPSCORE_COLORS.B, '#bef264'],
         C: [cColor, '#ffff99', TOPSCORE_COLORS.C, '#fef08a'],
         D: [dColor, '#fed7aa', TOPSCORE_COLORS.D, '#fdba74'],
@@ -154,7 +155,7 @@ if (!session) {
 
       circle.style.stroke = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR')
         ? TOPSCORE_COLORS.STAR
-        : (typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.B || '#95ff00ff'));
+        : (typeof getGradeColor === 'function' ? getGradeColor(grade) : TOPSCORE_COLORS.B);
 
       const duration = 1400;
       const start = performance.now();
@@ -534,8 +535,8 @@ if (!session) {
         }
         if (!nextTest) {
           container.innerHTML = `
-            <div style="background:rgba(52,211,153,0.08); border:1px solid rgba(52,211,153,0.22); border-radius:10px; padding:6px 12px; text-align:center; margin-bottom:4px;">
-              <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:#34D399; font-weight:700;">🎉 Level Curriculum Complete</div>
+            <div style="background:rgba(var(--grade-a-rgb),0.08); border:1px solid rgba(var(--grade-a-rgb),0.22); border-radius:10px; padding:6px 12px; text-align:center; margin-bottom:4px;">
+              <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--grade-a); font-weight:700;">Level Curriculum Complete</div>
               <div style="font-size:12px; font-weight:600; color:#E2E8F0; margin-top:2px;">All tests completed!</div>
             </div>
           `;
@@ -584,11 +585,11 @@ if (!session) {
             };
           } else {
             container.innerHTML = `
-              <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.35); border-radius:10px; padding:10px 14px; text-align:center;">
-                <div style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:#f59e0b; font-weight:800;">
-                  🔒 Next Milestone: ${escapeHtml(cleanTitle(nextName))}
+              <div style="background:rgba(var(--grade-c-rgb),0.1); border:1px solid rgba(var(--grade-c-rgb),0.35); border-radius:10px; padding:10px 14px; text-align:center;">
+                <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--grade-c); font-weight:800;">
+                  Next Milestone: ${escapeHtml(cleanTitle(nextName))}
                 </div>
-                <div style="font-size:0.8rem; color:#cbd5e1; margin-top:2px;">
+                <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">
                   Waiting for Tutor to unlock this test session during class.
                 </div>
               </div>
@@ -782,7 +783,8 @@ if (!session) {
         const asmData = attempt.tests || attempt.Tests;
         const testId = attempt.test_id || attempt.Test_id;
         const rawPct = Math.min(100.0, Math.max(0.0, parseFloat(attempt.percentage || 0)));
-        const isRemedial = Boolean(attempt.is_remedial_unlocked);
+        const isRemedial = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
+        const isForgiven = Boolean(attempt.is_forgiven);
 
         // SAFE EFFECTIVE SCORE RESOLUTION:
         // effective_score represents percentage (0.0 to 100.0), NEVER raw question points!
@@ -795,9 +797,9 @@ if (!session) {
           }
         }
         const pct = isRemedial ? Math.min(effPct, 60.0) : Math.min(effPct, 100.0);
-        const grade = getGrade(pct);
+        const grade = isForgiven ? 'F' : (isRemedial ? 'R' : getGrade(pct));
         const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
-        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || pct >= 100);
+        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || (pct >= 100 && !isRemedial && !isForgiven));
 
         // FEATURE 1: Launch grade-specific background particles
         launchBgParticles(grade);
@@ -928,14 +930,7 @@ if (!session) {
         // Render student name below divider in header card
         const nameLabel = document.getElementById('result-student-name-label');
         if (nameLabel && studentFullName) {
-          let formattedName = studentFullName.trim();
-          const gender = (studentGender || session.gender || '').toLowerCase();
-          const firstWord = (formattedName.split(/\s+/)[0] || '').toLowerCase();
-          if (!['mr.', 'mr', 'miss', 'ms.', 'ms', 'mrs.', 'mrs', 'king', 'queen'].includes(firstWord)) {
-            if (gender === 'male') formattedName = `Mr. ${formattedName}`;
-            else if (gender === 'female') formattedName = `Miss ${formattedName}`;
-          }
-          nameLabel.textContent = formattedName;
+          nameLabel.textContent = studentFullName;
         }
 
         // Authoritative Standard Grading System (Official Scale)
@@ -959,7 +954,7 @@ if (!session) {
         const currentTier = isGradeSOr100 ? '★' : grade;
         let gradeColor = isGradeSOr100
           ? TOPSCORE_COLORS.STAR
-          : (typeof getGradeColor === 'function' ? getGradeColor(grade) : (TOPSCORE_COLORS.B || '#95ff00ff'));
+          : (typeof getGradeColor === 'function' ? getGradeColor(grade) : TOPSCORE_COLORS.B);
         const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
 
         // Immediate application of dynamic tier colors and variables across page
@@ -1292,8 +1287,8 @@ if (!session) {
           if (heroSection && !document.getElementById('ai-narrative-card')) {
             const narrativeHtml = `
               <div id="ai-narrative-card" style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:0.85rem 1.1rem; margin:6px auto 0 auto; max-width:440px; text-align:left;">
-                <div style="font-size:0.7rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">✏️ Tutor Note</div>
-                <p style="font-size:0.82rem; color:#cbd5e1; line-height:1.55; margin:0;">${escapeHtml(attempt.narrative_report).replace(/\n/g, '<br>')}</p>
+                <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">${getSvgIcon('edit', 12)} Tutor Note</div>
+                <p style="font-size:12px; color:#cbd5e1; line-height:1.55; margin:0;">${escapeHtml(attempt.narrative_report).replace(/\n/g, '<br>')}</p>
               </div>
             `;
             heroSection.insertAdjacentHTML('beforeend', narrativeHtml);
@@ -1302,7 +1297,7 @@ if (!session) {
 
         // Render answer breakdown
         renderAnswers(answers);
-        setupFlashcardRecovery(answers);
+        
 
         // Attempt history (all attempts for this test)
         if (testId) {
@@ -1440,8 +1435,7 @@ if (!session) {
       const scorePctEl = document.getElementById('print-score-pct');
       if (scorePctEl) {
         const finalVal = (pct % 1 === 0 ? Math.round(pct) : pct.toFixed(1)) + '%';
-        const remHtml = isRemedial ? '<sup class="test-rem-sup" style="font-size:0.6em;vertical-align:super;font-weight:900;margin-left:2px;">R</sup>' : '';
-        scorePctEl.innerHTML = finalVal + remHtml;
+        scorePctEl.textContent = finalVal;
       }
 
       const gradeSymEl = document.getElementById('print-grade-symbol');
@@ -1501,29 +1495,29 @@ if (!session) {
 
       const rows = attempts.map(a => {
         const apct = parseFloat(a.percentage || 0).toFixed(1);
-        const ag   = a.grade || getGrade(parseFloat(apct));
+        const isRemRow = Boolean(a.is_remedial_unlocked || a.is_remedial);
+        const isForgivenRow = Boolean(a.is_forgiven);
+        const ag = isForgivenRow ? 'F' : (isRemRow ? 'R' : (a.grade || getGrade(parseFloat(apct))));
         const isThis = a.id === currentAttemptId;
         const isBestRow = (a.is_best_score && parseFloat(a.percentage || 0) === maxPct) || (maxPct > 0 && a.id === bestAttempt?.id);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
-        const isRemRow = Boolean(a.is_remedial_unlocked || a.is_remedial);
-        const remTag = isRemRow ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : '';
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
         const badgeStyle = isGradeS
           ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};border:1px solid ${TOPSCORE_COLORS.STAR};box-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB},0.45);`
-          : `background:${aTheme.hex}18;border:1.5px solid ${aTheme.border};color:${aTheme.hex};box-shadow:0 0 8px ${aTheme.glow};`;
+          : `background:${aTheme.hex || aTheme.color}18;border:1.5px solid ${aTheme.border || aTheme.color};color:${aTheme.hex || aTheme.color};box-shadow:0 0 8px ${aTheme.glow};`;
 
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
-            <td style="padding:8px 12px;font-size:0.82rem;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? TOPSCORE_COLORS.STAR : aTheme.hex};${isGradeS ? `text-shadow:0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6);` : ''}">${apct}%${remTag}</td>
+            <td style="padding:8px 12px;font-size:12px;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
+            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? TOPSCORE_COLORS.STAR : (aTheme.hex || aTheme.color)};${isGradeS ? `text-shadow:0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6);` : ''}">${apct}%</td>
             <td style="padding:8px 12px;">
-              <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:0.85rem;${badgeStyle}">${displayGrade}</span>
+              <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:12px;${badgeStyle}">${displayGrade}</span>
             </td>
             <td style="padding:8px 12px;">
-              ${isBestRow ? `<span style="font-size:0.72rem;font-weight:700;color:${TOPSCORE_COLORS.STAR};">&#11088; Best</span>` : ''}
-              ${isThis ? '<span style="font-size:0.72rem;color:#38bdf8;">&larr; This attempt</span>' : `<a href="result.html?attempt_id=${escapeHtml(a.id)}" style="font-size:0.72rem;color:var(--clr-text-3);text-decoration:underline;">View</a>`}
+              ${isBestRow ? `<span style="font-size:12px;font-weight:700;color:${TOPSCORE_COLORS.STAR};">Best</span>` : ''}
+              ${isThis ? '<span style="font-size:12px;color:#38bdf8;">&larr; This attempt</span>' : `<a href="result.html?attempt_id=${escapeHtml(a.id)}" style="font-size:12px;color:var(--clr-text-3);text-decoration:underline;">View</a>`}
             </td>
           </tr>
         `;
@@ -1531,15 +1525,15 @@ if (!session) {
 
       histSection.innerHTML = `
         <div style="background:var(--clr-card,rgba(30,41,59,0.8));border:1px solid var(--clr-border,rgba(255,255,255,0.08));border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
-          <h3 style="font-size:0.9rem;font-weight:700;color:var(--clr-text-1);margin:0 0 1rem;">&#128203; Attempt History</h3>
+          <h3 style="font-size:16px;font-weight:700;color:var(--clr-text-1);margin:0 0 1rem;text-transform:uppercase;letter-spacing:0.04em;">Attempt History</h3>
           <div class="table-responsive" style="max-height:280px;overflow-y:auto;overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">
               <thead>
                 <tr style="border-bottom:1px solid var(--clr-border);">
-                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">Date</th>
-                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">Score</th>
-                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">Grade</th>
-                  <th style="padding:8px 12px;font-size:0.72rem;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);"></th>
+                  <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">DATE</th>
+                  <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">SCORE</th>
+                  <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">GRADE</th>
+                  <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">ACTION</th>
                 </tr>
               </thead>
               <tbody>${rows}</tbody>
@@ -1563,8 +1557,7 @@ if (!session) {
           requestAnimationFrame(step);
         } else {
           const finalVal = (target % 1 === 0 ? Math.round(target) : target.toFixed(1)) + '%';
-          const remHtml = isRemedial ? '<sup class="test-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
-          el.innerHTML = finalVal + remHtml;
+          el.textContent = finalVal;
           if (typeof onComplete === 'function') onComplete();
         }
       }
@@ -1596,8 +1589,7 @@ if (!session) {
         const pctEl = document.getElementById('result-percentage');
         if (pctEl) {
           const finalVal = (targetPct % 1 === 0 ? Math.round(targetPct) : targetPct.toFixed(1)) + '%';
-          const remHtml = isRemedial ? '<sup class="test-rem-sup" style="font-size:0.55em;vertical-align:super;font-weight:900;margin-left:2px;color:inherit;line-height:0;">R</sup>' : '';
-          pctEl.innerHTML = finalVal + remHtml;
+          pctEl.textContent = finalVal;
         }
         const gradeValEl = document.getElementById('result-grade-val');
         if (gradeValEl) {
@@ -1763,395 +1755,3 @@ if (!session) {
       activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
       clearTimeout(safetyTimeout);
     }
-
-
-    // ===== 🗂️ FLASHCARD RECOVERY ENGINE =====
-    let _activeFlashcards = [];
-    let _currentFcIndex = 0;
-
-    window.setupFlashcardRecovery = setupFlashcardRecovery;
-    window.openFlashcardModal = openFlashcardModal;
-    function setupFlashcardRecovery(answers = []) {
-      const fcBtn = document.getElementById('open-flashcards-btn');
-      const fcBadge = document.getElementById('flashcard-badge-count');
-      if (!fcBtn) return;
-
-      // Filter answers where student had difficulty (incorrect, timeout, or partial)
-      _activeFlashcards = (answers || []).filter(a => {
-        const cat = getEvalCategory(a);
-        return cat === 'incorrect' || cat === 'minor_spelling_error';
-      });
-
-      if (_activeFlashcards.length === 0) {
-        fcBtn.classList.add('hidden');
-        return;
-      }
-
-      fcBtn.classList.remove('hidden');
-      if (fcBadge) fcBadge.textContent = _activeFlashcards.length;
-
-      fcBtn.onclick = () => openFlashcardModal();
-      document.getElementById('close-flashcard-btn')?.addEventListener('click', closeFlashcardModal);
-      document.getElementById('flashcard-modal')?.addEventListener('click', (e) => {
-        if (e.target.id === 'flashcard-modal') closeFlashcardModal();
-      });
-
-      const flipInner = document.getElementById('active-flip-inner');
-      const flipCard = document.getElementById('active-flip-card');
-      const toggleFlip = () => flipInner?.classList.toggle('flipped');
-
-      if (flipCard) flipCard.onclick = toggleFlip;
-      document.getElementById('fc-btn-flip')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleFlip();
-      });
-
-      document.getElementById('fc-btn-prev')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (_activeFlashcards.length === 0) return;
-        _currentFcIndex = (_currentFcIndex - 1 + _activeFlashcards.length) % _activeFlashcards.length;
-        renderFlashcardItem();
-      });
-
-      document.getElementById('fc-btn-next')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        if (_activeFlashcards.length === 0) return;
-        _currentFcIndex = (_currentFcIndex + 1) % _activeFlashcards.length;
-        renderFlashcardItem();
-      });
-
-      document.getElementById('fc-speak-btn')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const currentItem = _activeFlashcards[_currentFcIndex];
-        if (!currentItem) return;
-        const snap = typeof currentItem.question_snapshot === 'string'
-          ? (() => { try { return JSON.parse(currentItem.question_snapshot); } catch(_) { return {}; } })()
-          : (currentItem.question_snapshot || {});
-        const target = (snap.correct_answer || snap.answer || currentItem.correct_answer || '').split(/[;/,|]/)[0].trim();
-        if (target && 'speechSynthesis' in window) {
-          window.speechSynthesis.cancel();
-          const u = new SpeechSynthesisUtterance(target);
-          u.lang = 'en-US';
-          u.rate = 0.9;
-          window.speechSynthesis.speak(u);
-        }
-      });
-    }
-
-    function openFlashcardModal() {
-      const modal = document.getElementById('flashcard-modal');
-      if (!modal || _activeFlashcards.length === 0) return;
-      _currentFcIndex = 0;
-      renderFlashcardItem();
-      modal.classList.remove('hidden');
-    }
-
-    function closeFlashcardModal() {
-      const modal = document.getElementById('flashcard-modal');
-      if (modal) modal.classList.add('hidden');
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-    }
-
-    function renderFlashcardItem() {
-      const item = _activeFlashcards[_currentFcIndex];
-      if (!item) return;
-
-      const flipInner = document.getElementById('active-flip-inner');
-      if (flipInner) flipInner.classList.remove('flipped');
-
-      const snap = typeof item.question_snapshot === 'string'
-        ? (() => { try { return JSON.parse(item.question_snapshot); } catch(_) { return {}; } })()
-        : (item.question_snapshot || {});
-
-      const prompt = snap.question_text || snap.question || snap.soal || snap.indonesia || '—';
-      const pos = snap.word_type || snap.category || (snap.correct_answer?.includes(' ') ? 'Phrase' : 'Word');
-      const target = (snap.correct_answer || snap.answer || item.correct_answer || '—').split(/[;/,|]/)[0].trim();
-      const studentAns = (item.student_answer || '').trim() || '(No answer / Blank)';
-
-      const posEl = document.getElementById('fc-front-pos');
-      if (posEl) posEl.textContent = pos;
-
-      const promptEl = document.getElementById('fc-front-prompt');
-      if (promptEl) promptEl.textContent = prompt;
-
-      const studentAnsEl = document.getElementById('fc-front-student-ans');
-      if (studentAnsEl) {
-        studentAnsEl.innerHTML = `Your answer: <span style="color:var(--grade-e, #FF0000);">${escapeHtml(studentAns)}</span>`;
-      }
-
-      const backTargetEl = document.getElementById('fc-back-target');
-      if (backTargetEl) backTargetEl.textContent = target;
-
-      const counterEl = document.getElementById('fc-progress-counter');
-      if (counterEl) counterEl.textContent = `Card ${_currentFcIndex + 1} of ${_activeFlashcards.length}`;
-    }
-
-    function renderAnswers(answers) {
-      const container = document.getElementById('answers-list-container');
-      container.innerHTML = '';
-
-      // Sorting
-      const order = { 'incorrect': 1, 'minor_spelling_error': 2, 'correct': 3 };
-      answers.sort((a, b) => (order[getEvalCategory(a)] || 99) - (order[getEvalCategory(b)] || 99));
-
-      const correctCount = answers.filter(a => getEvalCategory(a) === 'correct').length;
-      const partialCount = answers.filter(a => getEvalCategory(a) === 'minor_spelling_error').length;
-      const wrongCount = answers.filter(a => getEvalCategory(a) === 'incorrect').length;
-
-      // Identify words vs phrases for section tabs
-      const phraseItems = answers.filter(a => {
-        const snap = typeof a.question_snapshot === 'string' ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })() : (a.question_snapshot || {});
-        const wt = (snap.word_type || '').toLowerCase();
-        const sec = (snap.test_section || '').toLowerCase();
-        return sec === 'phrases' || ['phrase', 'expression', 'idiom', 'proverb'].includes(wt);
-      });
-      const wordItems = answers.filter(a => !phraseItems.includes(a));
-      const hasSections = phraseItems.length > 0 && wordItems.length > 0;
-
-      let sectionFilter = 'all'; // 'all', 'words', 'phrases'
-      let currentFilter = 'all';  // 'all', 'incorrect', 'partial', 'correct'
-      let searchQuery = '';
-      let currentPage = 1;
-      const itemsPerPage = 50;
-
-      // Search and Filters Bar
-      const filterHtml = `
-        <div style="max-width: 680px; margin: 0 auto 1.5rem auto; display: flex; flex-direction: column; gap: 10px;">
-          <!-- Search Input -->
-          <div style="position: relative; width: 100%;">
-            <input type="search" id="ans-search-input" placeholder="Search question, prompt, or answer..." style="width: 100%; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 10px 14px 10px 38px; color: #f8fafc; font-size: 0.88rem; outline: none; transition: border-color 0.2s;" />
-            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); opacity: 0.5; pointer-events: none; font-size: 0.85rem;">🔍</span>
-          </div>
-
-          ${hasSections ? `
-          <!-- Section Tabs (Words vs Phrases) -->
-          <div class="d-flex flex-wrap gap-2 justify-center" id="section-filter-group">
-            <button class="ans-section-btn active" data-section="all">
-              All Sections (${answers.length})
-            </button>
-            <button class="ans-section-btn" data-section="words">
-              Part 1: Words (${wordItems.length})
-            </button>
-            <button class="ans-section-btn" data-section="phrases">
-              Part 2: Phrases (${phraseItems.length})
-            </button>
-          </div>
-          ` : ''}
-
-          <!-- Status Filter Chips -->
-          <div class="d-flex flex-wrap gap-2 justify-center" id="status-filter-group">
-            <button class="ans-filter-btn active" data-filter="all">All (${answers.length})</button>
-            <button class="ans-filter-btn" data-filter="incorrect">Incorrect (${wrongCount})</button>
-            <button class="ans-filter-btn" data-filter="partial">Partial (${partialCount})</button>
-            <button class="ans-filter-btn" data-filter="correct">Correct (${correctCount})</button>
-          </div>
-        </div>
-      `;
-      container.insertAdjacentHTML('beforeend', filterHtml);
-
-      const listContainer = document.createElement('div');
-      listContainer.id = 'answers-list-items';
-      container.appendChild(listContainer);
-
-      function renderList() {
-        let filtered = answers;
-
-        // Filter by section
-        if (sectionFilter === 'words') {
-          filtered = filtered.filter(a => wordItems.includes(a));
-        } else if (sectionFilter === 'phrases') {
-          filtered = filtered.filter(a => phraseItems.includes(a));
-        }
-
-        // Filter by status
-        if (currentFilter !== 'all') {
-          filtered = filtered.filter(a => {
-            if (currentFilter === 'incorrect') return getEvalCategory(a) === 'incorrect';
-            if (currentFilter === 'partial') return getEvalCategory(a) === 'minor_spelling_error';
-            if (currentFilter === 'correct') return getEvalCategory(a) === 'correct';
-            return true;
-          });
-        }
-
-        // Filter by search query
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase().trim();
-          filtered = filtered.filter(a => {
-            const snap = typeof a.question_snapshot === 'string' ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })() : (a.question_snapshot || {});
-            const qText = String(snap.question_text || snap.question || snap.indonesian || '').toLowerCase();
-            const sAns = String(a.student_answer || '').toLowerCase();
-            const cAns = String(a.correct_answer_snapshot || snap.english || '').toLowerCase();
-            return qText.includes(q) || sAns.includes(q) || cAns.includes(q);
-          });
-        }
-
-        const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-
-        const startIdx = (currentPage - 1) * itemsPerPage;
-        const pageItems = filtered.slice(startIdx, startIdx + itemsPerPage);
-
-        if (pageItems.length === 0) {
-          listContainer.innerHTML = `
-            <div style="text-align: center; padding: 2.5rem 1rem; color: #94a3b8; font-size: 0.9rem;">
-              No matching questions found for current search and filters.
-            </div>
-          `;
-          return;
-        }
-
-        let currentSection = '';
-        const listHtml = pageItems.map((a, idx) => {
-            const snap = typeof a.question_snapshot === 'string'
-            ? (() => { try { return JSON.parse(a.question_snapshot); } catch { return {}; } })()
-            : (a.question_snapshot || {});
-
-            const cat = getEvalCategory(a);
-            const isCorrect = cat === 'correct';
-            const isPartial = cat === 'minor_spelling_error';
-
-            const resultText  = isCorrect ? 'Correct' : isPartial ? 'Partial' : 'Incorrect';
-            const typeStr = isCorrect ? 'correct' : isPartial ? 'partial' : 'incorrect';
-            const colorHex = getEvaluationColor(cat);
-
-            const qNum = a.question_index !== undefined ? a.question_index + 1 : answers.indexOf(a) + 1;
-
-            const isPhrase = phraseItems.includes(a);
-            const partTag = hasSections
-              ? `<span style="font-size:0.68rem; font-weight:700; color:${isPhrase ? '#c084fc' : '#38bdf8'}; background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; margin-right:6px;">${isPhrase ? 'Part 2: Phrase' : 'Part 1: Word'}</span>`
-              : '';
-
-            let headerHtml = '';
-            if (currentSection !== typeStr && !searchQuery) {
-               currentSection = typeStr;
-               const title = isCorrect ? 'CORRECT' : isPartial ? 'PARTIAL' : 'INCORRECT';
-               const count = isCorrect ? correctCount : isPartial ? partialCount : wrongCount;
-               headerHtml = `
-                <div class="answer-section-header" style="margin: 1.5rem 0 0.75rem; text-align: center; color: #94a3b8; font-size: 0.75rem; font-weight: 700; letter-spacing: 2px;">
-                  ─── ${title} (${count}) ───
-                </div>
-               `;
-            }
-
-            const statusIcon = isCorrect ? '✅' : isPartial ? '⚠️' : '❌';
-
-            return `
-              ${headerHtml}
-              <div class="answer-row-compact" style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${colorHex}; border-radius:10px; padding:10px 14px; margin-bottom:8px; display:flex; flex-direction:column; gap:6px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                  <div style="font-size:0.86rem; font-weight:700; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                    <span style="margin-right:4px;">${statusIcon}</span> ${partTag}Q${qNum}. ${escapeHtml(snap.question_text || snap.question || snap.indonesian || 'Question')}
-                  </div>
-                  <div style="font-size:0.75rem; font-weight:700; color:${colorHex}; background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:6px; margin-left:10px; white-space:nowrap;">
-                    ${resultText} ${a.score ?? 0}pt
-                  </div>
-                </div>
-                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:0.8rem;">
-                  <span style="background:rgba(255,255,255,0.05); padding:3px 8px; border-radius:5px; color:#cbd5e1;">
-                    Your: <strong style="color:${isCorrect ? TOPSCORE_COLORS.CORRECT : TOPSCORE_COLORS.INCORRECT};">${escapeHtml(a.student_answer || '—')}</strong>
-                  </span>
-                  ${!isCorrect ? `
-                  <span style="background:rgba(var(--eval-correct-rgb), 0.12); border:1px solid rgba(var(--eval-correct-rgb), 0.25); padding:3px 8px; border-radius:5px; color:var(--eval-correct);">
-                    Correct: <strong style="color:${TOPSCORE_COLORS.CORRECT};">${escapeHtml(String(a.correct_answer_snapshot || snap.english || ''))}</strong>
-                  </span>
-                  ` : ''}
-                </div>
-              </div>
-            `;
-        }).join('');
-
-        let paginationHtml = '';
-        if (totalPages > 1) {
-            paginationHtml = `
-              <div class="d-flex align-center justify-center gap-3 mt-5 mb-4">
-                <button class="btn btn-secondary btn-sm ${currentPage === 1 ? 'opacity-50' : ''}" style="border:1px solid rgba(255,255,255,0.1);" onclick="window.changePage(-1)" ${currentPage === 1 ? 'disabled' : ''}>&larr; Prev</button>
-                <span style="font-size:0.85rem; font-weight: 600; color:#94a3b8;">Page ${currentPage} of ${totalPages} (${filtered.length} items)</span>
-                <button class="btn btn-secondary btn-sm ${currentPage === totalPages ? 'opacity-50' : ''}" style="border:1px solid rgba(255,255,255,0.1);" onclick="window.changePage(1)" ${currentPage === totalPages ? 'disabled' : ''}>Next &rarr;</button>
-              </div>
-            `;
-        }
-
-        listContainer.innerHTML = listHtml + paginationHtml;
-      }
-
-      window.changePage = (dir) => {
-        currentPage += dir;
-        renderList();
-        document.getElementById('answers-section')?.scrollIntoView({ behavior: 'smooth' });
-      };
-
-      renderList();
-
-      // Search Input Listener
-      const searchInput = document.getElementById('ans-search-input');
-      if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          searchQuery = e.target.value;
-          currentPage = 1;
-          renderList();
-        });
-      }
-
-      // Section Tabs Listener
-      const sectionBtns = container.querySelectorAll('.ans-section-btn');
-      sectionBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          sectionBtns.forEach(b => b.classList.remove('active'));
-          e.target.classList.add('active');
-          sectionFilter = e.target.dataset.section;
-          currentPage = 1;
-          renderList();
-        });
-      });
-
-      // Status Filter Chips Listener
-      const filterBtns = container.querySelectorAll('.ans-filter-btn');
-      filterBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          filterBtns.forEach(b => b.classList.remove('active'));
-          e.target.classList.add('active');
-          currentFilter = e.target.dataset.filter;
-          currentPage = 1;
-          renderList();
-        });
-      });
-
-      // Expose callback for clickable summary cards
-      currentFilterCallback = (newFilter) => {
-        currentFilter = newFilter;
-        currentPage = 1;
-        filterBtns.forEach(b => {
-          b.classList.toggle('active', b.dataset.filter === newFilter);
-        });
-        renderList();
-      };
-    }
-
-    // Wire up Modal Open & Close Triggers
-    document.getElementById('toggle-answers-btn')?.addEventListener('click', () => {
-      openAnswersModal('all');
-    });
-
-    document.getElementById('close-answers-modal-btn')?.addEventListener('click', closeAnswersModal);
-    document.getElementById('done-answers-modal-btn')?.addEventListener('click', closeAnswersModal);
-
-    // Close on backdrop click (outside card)
-    document.getElementById('answers-section')?.addEventListener('click', (e) => {
-      if (e.target.id === 'answers-section') {
-        closeAnswersModal();
-      }
-    });
-
-    // Close on Escape key
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        closeAnswersModal();
-      }
-    });
-
-    // Wire up Print Report Trigger
-    document.getElementById('btn-print-result')?.addEventListener('click', () => {
-      window.print();
-    });
-
-    loadResult();

@@ -1,0 +1,27 @@
+[
+  {
+    "key": "site_name",
+    "value": "TopsCore",
+    "updated_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "key": "site_theme",
+    "value": "dark",
+    "updated_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "key": "login_background_url",
+    "value": null,
+    "updated_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "key": "passing_threshold",
+    "value": "60",
+    "updated_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "key": "anti_cheat_enabled",
+    "value": "true",
+    "updated_at": "2026-10-05T01:22:46.432+00:00"
+  }
+]

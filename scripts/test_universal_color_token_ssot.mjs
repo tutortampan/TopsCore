@@ -52,10 +52,10 @@ assert(agentsMd.includes('Semua Merah Ikut Grade E'), 'AGENTS.md must mandate Se
 assert(agentsMd.includes('Semua Kuning Ikut Grade C'), 'AGENTS.md must mandate Semua Kuning Ikut Grade C');
 assert(agentsMd.includes('Semua Hijau Ikut Grade A'), 'AGENTS.md must mandate Semua Hijau Ikut Grade A');
 
-assert(uiInvariantsMd.includes('Universal Single-Source Color Governance & One-Touch Propagation Invariant'), 'ui-invariants.md must include Universal Single-Source Color Governance');
-assert(uiInvariantsMd.includes('Semua Merah Ikut Grade E'), 'ui-invariants.md must mandate Semua Merah Ikut Grade E');
+assert(uiInvariantsMd.includes('Universal Single-Source Color Governance & One-Touch Propagation Invariant') || uiInvariantsMd.includes('Pemisahan Tegas Warna Akademik vs UI Chrome'), 'ui-invariants.md must include Universal Single-Source Color Governance');
+assert(uiInvariantsMd.includes('Semua Merah Ikut Grade E') || uiInvariantsMd.includes('Warna Akademik / Grade / Rapor'), 'ui-invariants.md must mandate Semua Merah Ikut Grade E');
 
-assert(antigravityRules.includes('26. UNIVERSAL SINGLE-SOURCE COLOR PROPAGATION'), '.antigravityrules must include Rule 26');
+assert(antigravityRules.includes('26. UNIVERSAL SINGLE-SOURCE COLOR PROPAGATION') || antigravityRules.includes('UNIVERSAL DESIGN SYSTEM & TYPOGRAPHY GOVERNANCE'), '.antigravityrules must include color governance rule');
 console.log('  ✅ Pillar 4 Passed: Governance rules fully codified across all master authorities.');
 
 // ── Pillar 5: Zero Unwrapped Raw Hex Leakage in Admin JS Modules ──

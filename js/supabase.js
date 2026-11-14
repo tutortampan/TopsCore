@@ -36,8 +36,8 @@ export function markEdgeFunctionOffline(name) {
   } catch (_) {}
 }
 // TOPS CORE — Supabase Configuration & Client Init
-export const SUPABASE_CLOUD_URL = 'https://oclajpyumehpojepcczg.supabase.co';
-export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_L9T-SJpuAqK5291UEVhKMg_i7lvWFGB';
+export const SUPABASE_CLOUD_URL = 'https://lgzkbmsyqhvdjirbyzsg.supabase.co';
+export const SUPABASE_CLOUD_ANON_KEY = 'sb_publishable_LrCQQcnozGAq5Ea6Mov8lQ_hxrRE-P6';
 
 // Auto-detect environment: localhost / 127.0.0.1 / LAN defaults to Docker Local (Full Offline)
 const isLocalHostname = typeof window !== 'undefined' && (

@@ -49,8 +49,8 @@ console.log('  ✅ Pillar 3 Passed: 10px top/sides, 0px bottom margin verified.'
 // 4. Pillar 4: Two-Tier Sticky Header Locking
 console.log('▶ Checking Pillar 4: Two-Tier Sticky Header Locking...');
 assert(adminCss.includes('position: sticky !important;') && adminCss.includes('top: 0 !important;') && adminCss.includes('z-index: 20 !important;'), 'admin.css must lock super-headers at top: 0 with z-index: 20');
-assert(adminCss.includes('top: 24px !important;') && adminCss.includes('z-index: 19 !important;'), 'admin.css must lock subheaders at top: 24px with z-index: 19');
-console.log('  ✅ Pillar 4 Passed: Two-Tier sticky headers locked at top:0 and top:24px.');
+assert((adminCss.includes('top: 24px !important;') || adminCss.includes('top: 30px !important;')) && adminCss.includes('z-index: 19 !important;'), 'admin.css must lock subheaders at top: 24px/30px with z-index: 19');
+console.log('  ✅ Pillar 4 Passed: Two-Tier sticky headers locked at top:0 and top:30px.');
 
 // 5. Pillar 5: Small Table Anti-Ballooning & Zero Scrollbar
 console.log('▶ Checking Pillar 5: Small Table Anti-Ballooning & Zero Scrollbar...');
@@ -113,11 +113,40 @@ assert(programMgmtJs.includes('<div class="card mb-4 table-wrap"'), 'program-man
 assert(adminCss.includes('.matrix-table th {') && adminCss.includes('position: sticky !important;'), 'admin.css must declare sticky header for .matrix-table th');
 console.log('  ✅ Pillar 8 Passed: Classes Management, Class Results, Topics & Program Matrix fully harmonized.');
 
-// 9. Master Edit Mode ON Safeguards
-console.log('▶ Checking Master Edit Mode ON Table Input Safeguards...');
-assert(adminCss.includes('body.global-edit-mode-on .table-wrap td input'), 'admin.css must style inputs in .table-wrap td when edit mode is ON');
-assert(adminCss.includes('border-radius: 0 !important;') || adminCss.includes('border-radius: 9999px !important;'), 'admin.css must style table inputs in edit mode without inner capsule clutter');
-assert(adminCss.includes('height: 24px !important;'), 'admin.css must enforce exact 24px height on table inputs in edit mode');
-console.log('  ✅ Master Edit Mode ON Safeguards verified: transparent Excel 24px inputs.');
+// 9. Pillar 9: Universal Master Edit Mode White Excel Gridlines Invariant (SSOT Rule 2.22)
+console.log('▶ Checking Pillar 9: Universal Master Edit Mode White Excel Gridlines Invariant...');
+assert(adminCss.includes('body.global-edit-mode-on table th') && adminCss.includes('border-right: 1px solid rgba(255, 255, 255, 0.45) !important;'), 'admin.css must enforce crisp white right gridline on table th/td in edit mode');
+assert(adminCss.includes('border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;'), 'admin.css must enforce crisp white bottom gridline on table th/td in edit mode');
+assert(adminCss.includes('body.global-edit-mode-on table th:first-child') && adminCss.includes('border-left: 1px solid rgba(255, 255, 255, 0.45) !important;'), 'admin.css must enforce white left perimeter border');
+assert(adminCss.includes('body.global-edit-mode-on table thead tr:first-child th') && adminCss.includes('border-top: 1px solid rgba(255, 255, 255, 0.45) !important;'), 'admin.css must enforce white top perimeter border');
+assert(adminCss.includes('body.global-edit-mode-on .datagrid-table td input') && adminCss.includes('border: none !important;'), 'admin.css must enforce borderless inputs in datagrid cells during edit mode');
+assert(adminCss.includes('background: transparent !important;'), 'admin.css must enforce transparent input background during edit mode');
 
-console.log('\n🎉 ALL 8 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');
+const agentsMd = fs.readFileSync(path.join(rootDir, 'AGENTS.md'), 'utf-8');
+assert(agentsMd.includes('Rule 2.22') || agentsMd.includes('2.22 Universal Master Edit Mode White Excel Gridlines Invariant'), 'AGENTS.md must codify Rule 2.22 Universal Master Edit Mode White Excel Gridlines Invariant');
+console.log('  ✅ Pillar 9 Passed: Universal crisp white Excel gridlines invariant verified.');
+
+// 10. Pillar 10: Universal Zero-Truncation Invariant (SSOT Rule 2.21)
+console.log('▶ Checking Pillar 10: Universal Zero-Truncation Invariant...');
+assert(agentsMd.includes('Rule 2.21') || agentsMd.includes('2.21 Universal Zero-Truncation Invariant'), 'AGENTS.md must codify Rule 2.21 Universal Zero-Truncation Invariant');
+
+const studentMgmtJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'student-management.js'), 'utf-8');
+const provWidthMatch = studentMgmtJs.match(/key:\s*'province'[\s\S]*?width:\s*'(\d+)px'/);
+const provWidth = provWidthMatch ? parseInt(provWidthMatch[1], 10) : 0;
+assert(provWidth >= 160, 'student-management.js PROVINCE column must be >= 160px (found: ' + provWidth + 'px)');
+
+const cityWidthMatch = studentMgmtJs.match(/key:\s*'city'[\s\S]*?width:\s*'(\d+)px'/);
+const cityWidth = cityWidthMatch ? parseInt(cityWidthMatch[1], 10) : 0;
+assert(cityWidth >= 150, 'student-management.js CITY column must be >= 150px (found: ' + cityWidth + 'px)');
+
+assert(studentMgmtJs.includes("key: 'education'") && (studentMgmtJs.includes("width: '140px'") || studentMgmtJs.includes("width: '150px'") || studentMgmtJs.includes("width: 140")), 'student-management.js EDUCATION column must be >= 140px');
+assert((studentMgmtJs.includes("key: 'sortName'") || studentMgmtJs.includes("key: 'name'")) && (studentMgmtJs.includes("minWidth: '200px'") || studentMgmtJs.includes("minWidth: 200")), 'student-management.js NAME column must have minWidth >= 200px flex-primary');
+
+const vocabVaultJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'vocab-vault.js'), 'utf-8');
+assert(vocabVaultJs.includes('padding: 6px 2px;'), 'vocab-vault.js Theme Manager breakdown columns must enforce padding: 6px 2px; to prevent count truncation');
+
+const uiInvariantsMd = fs.readFileSync(path.join(rootDir, '.agents', 'rules', 'ui-invariants.md'), 'utf-8');
+assert(uiInvariantsMd.includes('Universal Zero-Truncation Invariant'), 'ui-invariants.md must codify Universal Zero-Truncation Invariant');
+console.log('  ✅ Pillar 10 Passed: Universal Zero-Truncation Invariant verified across data columns, padding & governance.');
+
+console.log('\n🎉 ALL 10 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');

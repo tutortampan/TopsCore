@@ -214,7 +214,7 @@ async function runRatioVerification() {
     await page.addInitScript(() => {
       const mockSession = {
         student_id: 'test-student-1',
-        student_name: 'Test Student',
+        student_name: 'Top',
         institution_id: 'test-inst-1',
         institution_name: 'CAKE ENGLISH COURSE',
         program_id: 'test-prog-1',

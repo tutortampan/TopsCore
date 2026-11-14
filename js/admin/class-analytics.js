@@ -5,7 +5,8 @@
 
 import { getSupabase } from '../supabase.js';
 import { escapeHtml } from '../api.js';
-import { TOPSCORE_COLORS, getGradeColorByScore } from '../grading.js';
+import { TOPSCORE_COLORS, getGradeColorByScore, getInvertedGradeColor } from '../grading.js';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 
 /**
  * Calculates Damerau-Levenshtein distance between two strings
@@ -41,7 +42,7 @@ function levenshteinDistance(a, b) {
  * Diagnoses why students missed this specific vocabulary item
  */
 function diagnoseErrorReason(targetWord, mistakesList, isSpokenMode = false) {
-  if (!mistakesList || mistakesList.length === 0) return { label: 'Safe', color: 'badge-success', icon: '✅' };
+  if (!mistakesList || mistakesList.length === 0) return { label: 'Safe', color: 'badge-success', icon: getSvgIcon('check-circle', 12) };
 
   let blankCount = 0;
   let spellingTypoCount = 0;
@@ -66,18 +67,18 @@ function diagnoseErrorReason(targetWord, mistakesList, isSpokenMode = false) {
   });
 
   if (blankCount / totalMistakes >= 0.45) {
-    return { label: 'Timeout / Blank', color: '#ef4444', icon: '⏱️', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.35)' };
+    return { label: 'Timeout / Blank', color: 'var(--grade-e)', icon: getSvgIcon('clock', 12), bg: 'rgba(var(--grade-e-rgb),0.15)', border: 'rgba(var(--grade-e-rgb),0.35)' };
   }
   if (isSpokenMode) {
-    return { label: 'STT / Audio Homophone', color: '#06b6d4', icon: '🎧', bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.35)' };
+    return { label: 'STT / Audio Homophone', color: '#06b6d4', icon: getSvgIcon('mic', 12), bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.35)' };
   }
   if (spellingTypoCount / totalMistakes >= 0.35) {
-    return { label: 'Spelling Typo', color: '#eab308', icon: '🔤', bg: 'rgba(234,179,8,0.15)', border: 'rgba(234,179,8,0.35)' };
+    return { label: 'Spelling Typo', color: 'var(--grade-c)', icon: getSvgIcon('edit', 12), bg: 'rgba(var(--grade-c-rgb),0.15)', border: 'rgba(var(--grade-c-rgb),0.35)' };
   }
   if (formCount / totalMistakes >= 0.3) {
-    return { label: 'Word Form / Root Error', color: '#f97316', icon: '🔄', bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)' };
+    return { label: 'Word Form / Root Error', color: '#f97316', icon: getSvgIcon('refresh', 12), bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)' };
   }
-  return { label: 'Distractor Trap / Concept Error', color: '#a855f7', icon: '🪤', bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)' };
+  return { label: 'Distractor Trap / Concept Error', color: '#a855f7', icon: getSvgIcon('alert-triangle', 12), bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)' };
 }
 
 /**
@@ -108,9 +109,9 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
   if (testIds.length === 0) {
     container.innerHTML = `
       <div class="card p-5 text-center text-muted" style="margin:0;">
-        <div style="font-size:2.5rem; margin-bottom:0.5rem;">📊</div>
+        <div style="margin-bottom:0.5rem; color:#94a3b8;">${getSvgIcon('bar-chart', 35)}</div>
         <h3 style="color:var(--clr-text-1); font-weight:700; margin-bottom:0.4rem;">No Tests in This Class Yet</h3>
-        <p style="font-size:0.85rem; max-width:420px; margin:0 auto;">Publish tasks or exams first in the <strong>Class Tests</strong> tab to begin gathering item-level mistake analytics.</p>
+        <p style="font-size: 12px; max-width:420px; margin:0 auto;">Publish tasks or exams first in the <strong>Class Tests</strong> tab to begin gathering item-level mistake analytics.</p>
       </div>
     `;
     return;
@@ -295,30 +296,30 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
           <div style="display:flex; align-items:center; gap:8px;">
             <!-- Mini Search Input (Opsi A: Compact & Elegant) -->
             <div style="position:relative; width:160px;">
-              <input type="text" id="analytics-quick-search" placeholder="🔍 Filter word..."
-                     style="width:100%; height:28px; background:#0b1120; border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:4px; padding:0 8px; font-size:0.75rem; outline:none;"
+              <input type="text" id="analytics-quick-search" placeholder="Filter word..."
+                     style="width:100%; height:28px; background:#0b1120; border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:4px; padding:0 8px; font-size: 12px; outline:none;"
                      autocomplete="off" />
             </div>
 
             <!-- Triage Pills with Official TopsCore Grading Colors -->
             <div class="analytics-triage-pills" style="display:inline-flex; align-items:center; gap:6px;">
-              <button type="button" class="btn btn-sm btn-analytics-pill active" data-filter="all" style="font-size:0.75rem; font-weight:700;">
-                🌐 All (${totalVocabCount})
+              <button type="button" class="btn btn-sm btn-analytics-pill active" data-filter="all" style="font-size: 12px; font-weight:700;">
+                ${getSvgIcon('globe', 12)} All (${totalVocabCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size:0.75rem; font-weight:700; background:rgba(var(--grade-e-rgb, 255,0,0),0.15); color:var(--grade-e, #ff0000); border:1px solid rgba(var(--grade-e-rgb, 255,0,0),0.35);">
-                🔴 Critical &gt;50% (${criticalCount})
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size: 12px; font-weight:700; background:rgba(var(--grade-e-rgb),0.15); color:var(--grade-e); border:1px solid rgba(var(--grade-e-rgb),0.35);">
+                <span class="status-dot dot-critical" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-e);margin-right:4px;"></span> Critical &gt;50% (${criticalCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size:0.75rem; font-weight:700; background:rgba(var(--grade-c-rgb, 255,255,0),0.15); color:var(--grade-c, #ffff00); border:1px solid rgba(var(--grade-c-rgb, 255,255,0),0.35);">
-                🟡 Needs Attention (${warningCount})
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size: 12px; font-weight:700; background:rgba(var(--grade-c-rgb),0.15); color:var(--grade-c); border:1px solid rgba(var(--grade-c-rgb),0.35);">
+                <span class="status-dot dot-warning" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-c);margin-right:4px;"></span> Needs Attention (${warningCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size:0.75rem; font-weight:700; background:rgba(var(--grade-a-rgb, 0,192,0),0.15); color:var(--grade-a, #00c000); border:1px solid rgba(var(--grade-a-rgb, 0,192,0),0.35);">
-                🟢 Safe (${safeCount})
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size: 12px; font-weight:700; background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a); border:1px solid rgba(var(--grade-a-rgb),0.35);">
+                <span class="status-dot dot-safe" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-a);margin-right:4px;"></span> Safe (${safeCount})
               </button>
             </div>
           </div>
 
-          <div style="display:flex; align-items:center; gap:12px; font-size:0.74rem; color:var(--clr-text-muted);">
-            <span>Class Error Average: <strong style="color:${avgErrorPct >= 50 ? 'var(--grade-e, #ff0000)' : (avgErrorPct >= 25 ? 'var(--grade-c, #ffff00)' : 'var(--grade-a, #00c000)')}; font-size:0.85rem;">${avgErrorPct}%</strong></span>
+          <div style="display:flex; align-items:center; gap:12px; font-size: 12px; color:var(--clr-text-muted);">
+            <span>Class Error Average: <strong style="color:${typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(avgErrorPct) : (avgErrorPct >= 50 ? 'var(--grade-e)' : (avgErrorPct >= 25 ? 'var(--grade-c)' : 'var(--grade-a)'))}; font-size: 12px;">${avgErrorPct}%</strong></span>
             <span>Total Evaluations: <strong style="color:var(--clr-text-1);">${totalAttemptsAll} attempts</strong></span>
           </div>
         </div>
@@ -334,10 +335,10 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         render: (row) => `
           <div style="display:flex; flex-direction:column; gap:2px;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-weight:800; font-size:0.88rem; color:var(--clr-text-1);">${escapeHtml(row.targetWord)}</span>
-              <span class="badge" style="font-size:0.65rem; padding:1px 5px; background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); font-weight:700;">${escapeHtml(row.category)}</span>
+              <span style="font-weight:700; font-size:12px; color:var(--clr-text-1);">${escapeHtml(row.targetWord)}</span>
+              <span class="badge" style="font-size: 12px; padding:1px 5px; background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); font-weight:600;">${escapeHtml(row.category)}</span>
             </div>
-            <div style="font-size:0.75rem; color:var(--clr-text-muted); font-style:italic;">${escapeHtml(row.translation)}</div>
+            <div style="font-size:12px; color:var(--clr-text-muted);">${escapeHtml(row.translation)}</div>
           </div>
         `
       },
@@ -347,10 +348,10 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         align: 'center',
         width: '95px',
         render: (row) => {
-          const color = row.errorRate >= 50 ? 'var(--grade-e, #FF0000)' : (row.errorRate >= 25 ? 'var(--grade-d, #FF8C00)' : 'var(--grade-a, #00c000ff)');
+          const color = typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(row.errorRate) : (row.errorRate >= 50 ? 'var(--grade-e)' : (row.errorRate >= 25 ? 'var(--grade-d)' : 'var(--grade-a)'));
           return `
             <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
-              <span style="font-weight:900; font-size:0.95rem; color:${color}; font-variant-numeric:tabular-nums;">${row.errorRate}%</span>
+              <span style="font-weight:900; font-size: 16px; color:${color}; font-variant-numeric:tabular-nums;">${row.errorRate}%</span>
               <div style="width:50px; height:4px; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
                 <div style="width:${row.errorRate}%; height:100%; background:${color};"></div>
               </div>
@@ -364,7 +365,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         align: 'center',
         width: '80px',
         render: (row) => `
-          <span style="font-weight:700; font-size:0.85rem; color:${row.incorrectCount > 0 ? '#ef4444' : '#22c55e'}; font-variant-numeric:tabular-nums;">
+          <span style="font-weight:700; font-size: 12px; color:${row.incorrectCount > 0 ? 'var(--grade-e)' : 'var(--grade-a)'}; font-variant-numeric:tabular-nums;">
             ${row.incorrectCount}
           </span>
         `
@@ -375,7 +376,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         align: 'center',
         width: '80px',
         render: (row) => `
-          <span style="font-weight:700; font-size:0.85rem; color:var(--clr-text-2); font-variant-numeric:tabular-nums;">
+          <span style="font-weight:700; font-size: 12px; color:var(--clr-text-2); font-variant-numeric:tabular-nums;">
             ${row.totalAttempts}
           </span>
         `
@@ -384,7 +385,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         key: 'topMistakesStr',
         label: 'STUDENT MISTAKES (TOP MISTAKES)',
         render: (row) => `
-          <div style="font-size:0.75rem; color:#f87171; font-family:monospace; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.topMistakesStr)}">
+          <div style="font-size: 12px; color:var(--grade-e); font-family:monospace; line-height:1.4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.topMistakesStr)}">
             ${escapeHtml(row.topMistakesStr)}
           </div>
         `
@@ -395,7 +396,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         align: 'center',
         width: '180px',
         render: (row) => `
-          <span class="badge" style="background:${row.diag.bg}; color:${row.diag.color}; border:1px solid ${row.diag.border}; font-size:0.72rem; font-weight:700; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+          <span class="badge" style="background:${row.diag.bg}; color:${row.diag.color}; border:1px solid ${row.diag.border}; font-size: 12px; font-weight:700; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
             <span>${row.diag.icon}</span>
             <span>${row.diag.label}</span>
           </span>
@@ -407,8 +408,8 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         align: 'center',
         width: '120px',
         render: (row) => `
-          <button type="button" class="btn btn-secondary btn-sm btn-inspect-vocab-mistakes" data-key="${escapeHtml(row.key)}" style="font-size:0.72rem; font-weight:700; padding:2px 8px;">
-            🔍 Student Details
+          <button type="button" class="btn btn-secondary btn-sm btn-inspect-vocab-mistakes" data-key="${escapeHtml(row.key)}" style="font-size: 12px; font-weight:700; padding:2px 8px;">
+            ${getSvgIcon('search', 12)} Student Details
           </button>
         `
       }
@@ -497,8 +498,8 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
     console.error('Error rendering class vocabulary analytics:', err);
     container.innerHTML = `
       <div class="card p-5 text-center" style="border-color:rgba(239,68,68,0.4); margin:0;">
-        <div style="font-size:2rem; margin-bottom:0.5rem;">⚠️</div>
-        <h3 style="color:#ef4444; font-weight:700; margin-bottom:0.4rem;">Failed to Load Class Analytics</h3>
+        <div style="margin-bottom:0.5rem; color:var(--grade-e);">${getSvgIcon('alert-triangle', 30)}</div>
+        <h3 style="color:var(--grade-e); font-weight:700; margin-bottom:0.4rem;">Failed to Load Class Analytics</h3>
         <p class="text-muted text-sm">${escapeHtml(err.message)}</p>
       </div>
     `;
@@ -520,26 +521,26 @@ function openVocabErrorDetailModal(item) {
   const mistakes = item.mistakesList || [];
 
   backdrop.innerHTML = `
-    <div class="modal-box" style="max-width:650px; width:100%; max-height:85vh; display:flex; flex-direction:column; background:#0f172a; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); overflow:hidden;">
+    <div class="modal-box" style="max-width:640px; width:100%; max-height:85vh; display:flex; flex-direction:column; background:#0f172a; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); overflow:hidden;">
       <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;">
         <div>
-          <h3 style="margin:0; font-size:1.1rem; font-weight:800; color:var(--clr-text-1);">
-            🔍 Student Details: <span style="color:#38bdf8;">${escapeHtml(item.targetWord)}</span>
+          <h3 style="margin:0; font-size: 16px; font-weight:800; color:var(--clr-text-1);">
+            Student Details: <span style="color:#38bdf8;">${escapeHtml(item.targetWord)}</span>
           </h3>
-          <div style="font-size:0.75rem; color:var(--clr-text-muted); margin-top:2px;">
+          <div style="font-size: 12px; color:var(--clr-text-muted); margin-top:2px;">
             ${escapeHtml(item.translation)} • ${item.incorrectCount} of ${item.totalAttempts} Students Incorrect (${item.errorRate}%)
           </div>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-vocab-error-modal" style="font-size:1.25rem; cursor:pointer;" aria-label="Close">✕</button>
+        <button class="btn btn-ghost btn-icon" id="close-vocab-error-modal" style="font-size: 16px; cursor:pointer;" aria-label="Close">✕</button>
       </div>
 
       <div class="modal-body" style="flex:1 1 0; min-height:0; overflow-y:auto; padding:1rem 1.25rem;">
         ${mistakes.length === 0 ? `
           <div class="text-center p-4 text-muted">No students missed this vocabulary item!</div>
         ` : `
-          <table class="table w-100" style="width:100%; border-collapse:collapse; font-size:0.8rem;">
+          <table class="table w-100" style="width:100%; border-collapse:collapse; font-size: 12px;">
             <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8; font-size:0.72rem;">
+              <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8; font-size: 12px;">
                 <th style="padding:6px 8px;">STUDENT NAME</th>
                 <th style="padding:6px 8px;">STUDENT ANSWER</th>
                 <th style="padding:6px 8px;">SCORE</th>
@@ -550,13 +551,13 @@ function openVocabErrorDetailModal(item) {
               ${mistakes.map(m => `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                   <td style="padding:8px; font-weight:700; color:var(--clr-text-1);">${escapeHtml(m.studentName)}</td>
-                  <td style="padding:8px; font-family:monospace; color:#ef4444; font-weight:700;">${escapeHtml(m.studentAnswer)}</td>
+                  <td style="padding:8px; font-family:monospace; color:var(--grade-e); font-weight:700;">${escapeHtml(m.studentAnswer)}</td>
                   <td style="padding:8px;">
-                    <span class="badge" style="background:${m.score > 0 ? 'rgba(234,179,8,0.15)' : 'rgba(239,68,68,0.15)'}; color:${m.score > 0 ? '#eab308' : '#ef4444'}; font-size:0.7rem; font-weight:800;">
+                    <span class="badge" style="background:${m.score > 0 ? 'rgba(var(--grade-c-rgb),0.15)' : 'rgba(var(--grade-e-rgb),0.15)'}; color:${m.score > 0 ? 'var(--grade-c)' : 'var(--grade-e)'}; font-size: 12px; font-weight:800;">
                       ${m.score} pt
                     </span>
                   </td>
-                  <td style="padding:8px; font-size:0.72rem; color:var(--clr-text-muted);">${escapeHtml(m.testTitle)}</td>
+                  <td style="padding:8px; font-size: 12px; color:var(--clr-text-muted);">${escapeHtml(m.testTitle)}</td>
                 </tr>
               `).join('')}
             </tbody>

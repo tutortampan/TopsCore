@@ -1,0 +1,122 @@
+[
+  {
+    "id": "738110df-6e37-4018-96b6-41faa7c5d7a1",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "133",
+    "enrollment_date": null,
+    "actual_final_date": null,
+    "is_active": true,
+    "created_at": "2026-10-08T21:20:34.17+00:00",
+    "updated_at": "2026-10-10T08:35:59.801+00:00",
+    "deleted_at": "2026-10-10T08:35:59.735+00:00",
+    "current_level_id": null
+  },
+  {
+    "id": "ae7b0bd4-dad3-4e6d-986c-dc759079979d",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "999",
+    "enrollment_date": "2026-01-01",
+    "actual_final_date": "2027-01-01",
+    "is_active": false,
+    "created_at": "2026-10-08T21:13:25.989+00:00",
+    "updated_at": "2026-10-16T23:14:05.569688+00:00",
+    "deleted_at": "2026-10-16T23:14:06.204+00:00",
+    "current_level_id": "51589e1a-d96e-496e-92a3-d9d350483555"
+  },
+  {
+    "id": "c0648c2d-34f2-4151-bf04-dabf2c5a78b9",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "131",
+    "enrollment_date": "2026-08-06",
+    "actual_final_date": "2026-09-01",
+    "is_active": false,
+    "created_at": "2026-09-25T18:48:43.919+00:00",
+    "updated_at": "2026-10-24T06:50:57.498727+00:00",
+    "deleted_at": null,
+    "current_level_id": "51589e1a-d96e-496e-92a3-d9d350483555"
+  },
+  {
+    "id": "ae6b427e-767a-447b-ba55-e83b58986ae1",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "123",
+    "enrollment_date": "2026-06-01",
+    "actual_final_date": "2026-12-30",
+    "is_active": false,
+    "created_at": "2026-10-09T06:14:53.179+00:00",
+    "updated_at": "2026-10-25T14:57:50.029238+00:00",
+    "deleted_at": null,
+    "current_level_id": "51589e1a-d96e-496e-92a3-d9d350483555"
+  },
+  {
+    "id": "2bb3f43a-d618-4f8a-9a98-31c157ff7a30",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "132",
+    "enrollment_date": "2026-09-06",
+    "actual_final_date": "2026-10-02",
+    "is_active": false,
+    "created_at": "2026-09-25T18:48:47.868+00:00",
+    "updated_at": "2026-11-02T23:00:40.658348+00:00",
+    "deleted_at": null,
+    "current_level_id": "51589e1a-d96e-496e-92a3-d9d350483555"
+  },
+  {
+    "id": "3e7288b7-a90e-4323-9b02-24e73991f0d7",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "134",
+    "enrollment_date": "2026-10-19",
+    "actual_final_date": "2026-11-14",
+    "is_active": true,
+    "created_at": "2026-11-02T18:19:36.30009+00:00",
+    "updated_at": "2026-11-04T06:13:02.111632+00:00",
+    "deleted_at": null,
+    "current_level_id": "9936683a-5b4a-4796-bb5d-a7fd8ecf0b71"
+  },
+  {
+    "id": "67108e07-e262-4707-b07e-970627061b54",
+    "program_id": "20d64d86-6e8b-4677-a3c9-e497fa5d9177",
+    "name": "SH-26",
+    "enrollment_date": "2026-06-06",
+    "actual_final_date": "2026-10-02",
+    "is_active": false,
+    "created_at": "2026-09-25T18:48:49.399+00:00",
+    "updated_at": "2026-11-08T22:32:33.744684+00:00",
+    "deleted_at": null,
+    "current_level_id": "b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2"
+  },
+  {
+    "id": "e68e2182-07a9-48c6-9174-b478e38ee022",
+    "program_id": "20d64d86-6e8b-4677-a3c9-e497fa5d9177",
+    "name": "TP-26",
+    "enrollment_date": "2026-06-06",
+    "actual_final_date": "2026-09-30",
+    "is_active": false,
+    "created_at": "2026-09-25T18:48:52.073+00:00",
+    "updated_at": "2026-11-08T22:32:33.994581+00:00",
+    "deleted_at": null,
+    "current_level_id": "b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2"
+  },
+  {
+    "id": "3b697c66-da5d-4a68-b823-ba3d06353852",
+    "program_id": "11deb53c-434a-44b0-83ca-1cc9b239cab3",
+    "name": "133",
+    "enrollment_date": "2026-10-05",
+    "actual_final_date": "2026-11-07",
+    "is_active": false,
+    "created_at": "2026-10-08T21:13:25.457+00:00",
+    "updated_at": "2026-11-08T22:36:23.955645+00:00",
+    "deleted_at": null,
+    "current_level_id": "51589e1a-d96e-496e-92a3-d9d350483555"
+  },
+  {
+    "id": "7d738758-ec15-459b-a9b4-7686589bd917",
+    "program_id": "cfeda206-a7a9-4979-a90c-ce7fd436fcd0",
+    "name": "EV-07",
+    "enrollment_date": "2026-11-04",
+    "actual_final_date": "2026-12-30",
+    "is_active": true,
+    "created_at": "2026-11-06T13:12:53.224806+00:00",
+    "updated_at": "2026-11-09T06:34:15.056887+00:00",
+    "deleted_at": null,
+    "current_level_id": "100120f3-ab12-4589-99da-cf65d11436b1"
+  }
+]

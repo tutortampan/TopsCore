@@ -1,6 +1,7 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261106_v160';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261114_v517';
 import { openCrudModal } from './crud-modals.js?v=20261106_v160';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 function formatDate(dateStr) {
   if (!dateStr) return '';
@@ -22,13 +23,13 @@ function getBatchPeriodInfo(startDateStr, endDateStr) {
       endDateFormatted: '—',
       dateRange: 'Not Scheduled',
       durationText: '',
-      statusBadge: `<span class="badge-tag badge-tag-completed" style="width: 100%; justify-content: center;">⚪ Unscheduled</span>`
+      statusBadge: `<span class="badge-tag badge-tag-completed" style="width: 100%; justify-content: center;"><span class="status-dot dot-draft"></span> Unscheduled</span>`
     };
   }
 
   const startFormatted = formatDate(startDateStr);
   const endFormatted = endDateStr ? formatDate(endDateStr) : '—';
-  const dateRange = `📅 ${startFormatted} – ${endFormatted}`;
+  const dateRange = `${getSvgIcon('calendar', 12)} ${startFormatted} – ${endFormatted}`;
 
   let durationText = '';
   let statusBadge = '';
@@ -52,26 +53,27 @@ function getBatchPeriodInfo(startDateStr, endDateStr) {
 
     if (now < start) {
       const daysUntil = Math.ceil((start - now) / (1000 * 60 * 60 * 24));
-      statusBadge = `<span class="badge-tag badge-tag-upcoming" style="width: 100%; justify-content: center;">🟡 Upcoming (${daysUntil}d)</span>`;
+      statusBadge = `<span class="badge-tag badge-tag-upcoming" style="width: 100%; justify-content: center;"><span class="status-dot dot-warning"></span> Upcoming (${daysUntil}d)</span>`;
       remainingText = `Starts in ${daysUntil}d`;
-      remainingBadge = `<span class="badge-tag" style="background:rgba(251,191,36,0.12);color:#fbbf24;border:1px solid rgba(251,191,36,0.3);width:100%;justify-content:center;font-size:0.72rem;">📅 ${daysUntil}d to start</span>`;
+      remainingBadge = `<span class="badge-tag" style="background:rgba(var(--grade-c-rgb),0.12);color:var(--grade-c);border:1px solid rgba(var(--grade-c-rgb),0.3);width:100%;justify-content:center;font-size: 12px;display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('calendar', 12)} ${daysUntil}d to start</span>`;
     } else if (now > end) {
-      statusBadge = `<span class="badge-tag badge-tag-completed" style="width: 100%; justify-content: center;">⚪ Completed</span>`;
+      statusBadge = `<span class="badge-tag badge-tag-completed" style="width: 100%; justify-content: center;"><span class="status-dot dot-draft"></span> Completed</span>`;
       remainingText = 'Done';
-      remainingBadge = `<span class="badge-tag" style="background:rgba(156,163,175,0.1);color:#9ca3af;border:1px solid rgba(156,163,175,0.2);width:100%;justify-content:center;font-size:0.72rem;">✓ Completed</span>`;
+      remainingBadge = `<span class="badge-tag" style="background:rgba(156,163,175,0.1);color:#9ca3af;border:1px solid rgba(156,163,175,0.2);width:100%;justify-content:center;font-size: 12px;">✓ Completed</span>`;
     } else {
       const daysLeft = Math.ceil((end - now) / (1000 * 60 * 60 * 24));
       const weeksLeft = Math.floor(daysLeft / 7);
       remainingText = weeksLeft >= 1 ? `${weeksLeft}w ${daysLeft % 7}d left` : `${daysLeft}d left`;
-      const urgentColor = daysLeft <= 14 ? '#f87171' : daysLeft <= 30 ? '#fb923c' : '#34d399';
-      remainingBadge = `<span class="badge-tag" style="background:rgba(${daysLeft <= 14 ? '248,113,113' : daysLeft <= 30 ? '251,146,60' : '52,211,153'},0.12);color:${urgentColor};border:1px solid rgba(${daysLeft <= 14 ? '248,113,113' : daysLeft <= 30 ? '251,146,60' : '52,211,153'},0.3);width:100%;justify-content:center;font-size:0.72rem;">⏳ ${remainingText}</span>`;
-      statusBadge = `<span class="badge-tag badge-tag-ongoing" style="width: 100%; justify-content: center;">🟢 Ongoing</span>`;
+      const urgentColor = daysLeft <= 14 ? 'var(--grade-e)' : daysLeft <= 30 ? 'var(--grade-d)' : 'var(--grade-a)';
+      const urgentRgb = daysLeft <= 14 ? 'var(--grade-e-rgb)' : daysLeft <= 30 ? 'var(--grade-d-rgb, 251,146,60)' : 'var(--grade-a-rgb)';
+      remainingBadge = `<span class="badge-tag" style="background:rgba(${urgentRgb},0.12);color:${urgentColor};border:1px solid rgba(${urgentRgb},0.3);width:100%;justify-content:center;font-size: 12px;display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('clock', 12)} ${remainingText}</span>`;
+      statusBadge = `<span class="badge-tag badge-tag-ongoing" style="width: 100%; justify-content: center;"><span class="status-dot dot-success"></span> Ongoing</span>`;
     }
   } else {
     if (now < start) {
-      statusBadge = `<span class="badge-tag badge-tag-upcoming" style="width: 100%; justify-content: center;">🟡 Upcoming</span>`;
+      statusBadge = `<span class="badge-tag badge-tag-upcoming" style="width: 100%; justify-content: center;"><span class="status-dot dot-warning"></span> Upcoming</span>`;
     } else {
-      statusBadge = `<span class="badge-tag badge-tag-ongoing" style="width: 100%; justify-content: center;">🟢 Ongoing</span>`;
+      statusBadge = `<span class="badge-tag badge-tag-ongoing" style="width: 100%; justify-content: center;"><span class="status-dot dot-success"></span> Ongoing</span>`;
     }
   }
 
@@ -334,7 +336,7 @@ export async function renderCurriculum(area) {
         const count = activeProgs.filter(p => p.institution_id === inst.id).length;
         return {
           id: inst.id,
-          icon: '🏢',
+          icon: getSvgIcon('building', 14),
           label: inst.name,
           title: inst.name,
           val: count
@@ -431,7 +433,7 @@ export async function renderCurriculum(area) {
       const getBatchSortIcon = (key) => {
         const cur = window._curriculumBatchSort || { key: 'finish', asc: false };
         if (cur.key !== key) return ''; // Rule 2.38 Pillar 6: active-only sort arrow (no idle ↕)
-        return cur.asc ? '<span style="color:#38bdf8;margin-left:4px;font-size:0.75rem;">▲</span>' : '<span style="color:#38bdf8;margin-left:4px;font-size:0.75rem;">▼</span>';
+        return cur.asc ? '<span style="color:#38bdf8;margin-left:4px;font-size: 12px;">▲</span>' : '<span style="color:#38bdf8;margin-left:4px;font-size: 12px;">▼</span>';
       };
 
       // Render Program Tree Nodes
@@ -439,11 +441,11 @@ export async function renderCurriculum(area) {
       if (displayedPrograms.length === 0) {
         treeNodesHtml = `
           <div class="card" style="padding: 2.5rem; text-align: center; background: var(--fm-bg-panel); border: 1px solid var(--fm-border-subtle); border-radius: var(--fm-radius-md);">
-            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🎓</div>
-            <h4 style="margin: 0 0 0.5rem 0; font-size: 1.1rem; color: var(--fm-text-primary);">
+            <div style="margin-bottom: 0.75rem;">${getSvgIcon('graduation-cap', 35)}</div>
+            <h4 style="margin: 0 0 0.5rem 0; font-size: 16px; color: var(--fm-text-primary);">
               ${searchQuery ? 'No matching records found.' : `No Programs yet for ${escapeHtml(activeInst.name)}.`}
             </h4>
-            <p style="margin: 0 0 1.25rem 0; font-size: 0.85rem; color: var(--fm-text-muted);">
+            <p style="margin: 0 0 1.25rem 0; font-size: 12px; color: var(--fm-text-muted);">
               ${searchQuery ? 'Try using a different search keyword.' : 'Create a new program to start organizing classes and batches.'}
             </p>
             ${!searchQuery ? `<button class="btn btn-primary edit-mode-only" onclick="window.openCurriculumAddProgram('${activeInst.id}')">+ Create New Program</button>` : ''}
@@ -485,25 +487,25 @@ export async function renderCurriculum(area) {
               return `
                 <div class="tree-grid-row-batches ${btcDimmed}">
                   <div class="d-flex align-center gap-2" style="min-width: 0;">
-                    <span style="font-size: 0.95rem;">🏷️</span>
-                    <span style="font-weight: 600; font-size: 0.88rem; color: var(--fm-text-primary);" class="text-truncate" title="${escapeHtml(batch.name)}">${escapeHtml(batch.name)}</span>
+                    <span style="font-size: 12px;">${getSvgIcon('tag', 12)}</span>
+                    <span style="font-weight: 600; font-size: 12px; color: var(--fm-text-primary);" class="text-truncate" title="${escapeHtml(batch.name)}">${escapeHtml(batch.name)}</span>
                   </div>
                   <div style="text-align: center;">
                     <span class="badge-tag badge-tag-level" style="width: 100%; justify-content: center; white-space: nowrap; ${!batch.current_level_id ? 'opacity: 0.7; font-style: italic;' : ''}">${escapeHtml(batch.current_level_id ? (typeof toShortLevel === 'function' ? toShortLevel(lvlName) : lvlName) : '—')}</span>
                   </div>
                   <div style="text-align: center;">
-                    <span class="badge-tag" style="background: rgba(99, 102, 241, 0.12); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.25); width: 100%; justify-content: center; cursor: pointer;" title="View ${studentCount} enrolled students in this batch" onclick="window._filterBatchId='${batch.id}'; window._filterBatchName='${escapeHtml(batch.name)}'; if(window.loadSection) window.loadSection('students');">
-                      👥 ${studentCount}
+                    <span class="badge-tag" style="background: rgba(99, 102, 241, 0.12); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.25); width: 100%; justify-content: center; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="View ${studentCount} enrolled students in this batch" onclick="window._filterBatchId='${batch.id}'; window._filterBatchName='${escapeHtml(batch.name)}'; if(window.loadSection) window.loadSection('students');">
+                      ${getSvgIcon('users', 12)} ${studentCount}
                     </span>
                   </div>
                   <div style="text-align: center;">
-                    <span class="badge-tag" style="background: rgba(255,255,255,0.06); color: var(--fm-text-secondary); border: 1px solid rgba(255,255,255,0.1); width: 100%; justify-content: center; text-align: center;" title="Batch Start: ${escapeHtml(periodInfo.startDateFormatted)}">
-                      ${periodInfo.hasDates ? '📅 ' + escapeHtml(periodInfo.startDateFormatted) : '—'}
+                    <span class="badge-tag" style="background: rgba(255,255,255,0.06); color: var(--fm-text-secondary); border: 1px solid rgba(255,255,255,0.1); width: 100%; justify-content: center; text-align: center; display: inline-flex; align-items: center; gap: 4px;" title="Batch Start: ${escapeHtml(periodInfo.startDateFormatted)}">
+                      ${periodInfo.hasDates ? `${getSvgIcon('calendar', 12)} ` + escapeHtml(periodInfo.startDateFormatted) : '—'}
                     </span>
                   </div>
                   <div style="text-align: center;">
-                    <span class="badge-tag" style="background: rgba(255,255,255,0.06); color: var(--fm-text-secondary); border: 1px solid rgba(255,255,255,0.1); width: 100%; justify-content: center; text-align: center;" title="Batch Finish: ${escapeHtml(periodInfo.endDateFormatted)}">
-                      ${periodInfo.hasDates && periodInfo.endDateFormatted !== '—' ? '🏁 ' + escapeHtml(periodInfo.endDateFormatted) : '—'}
+                    <span class="badge-tag" style="background: rgba(255,255,255,0.06); color: var(--fm-text-secondary); border: 1px solid rgba(255,255,255,0.1); width: 100%; justify-content: center; text-align: center; display: inline-flex; align-items: center; gap: 4px;" title="Batch Finish: ${escapeHtml(periodInfo.endDateFormatted)}">
+                      ${periodInfo.hasDates && periodInfo.endDateFormatted !== '—' ? `${getSvgIcon('calendar', 12)} ` + escapeHtml(periodInfo.endDateFormatted) : '—'}
                     </span>
                   </div>
                   <div style="text-align: center;">
@@ -520,11 +522,11 @@ export async function renderCurriculum(area) {
                       <input type="checkbox" onchange="window.toggleEntityActive('batches', '${batch.id}', this.checked)" ${batch.is_active ? 'checked' : ''}>
                       <span class="toggle-slider"></span>
                     </label>
-                    <button class="btn btn-secondary btn-sm edit-mode-only" style="padding: 3px 8px; font-size: 0.75rem;" onclick="window.openCurriculumEdit('batches', '${batch.id}')" title="Edit Batch">
-                      ✏️ Edit
+                    <button class="btn btn-secondary btn-sm edit-mode-only" style="padding: 3px 8px; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;" onclick="window.openCurriculumEdit('batches', '${batch.id}')" title="Edit Batch">
+                      ${getSvgIcon('edit', 12)} Edit
                     </button>
-                    <button class="btn btn-danger btn-sm edit-mode-only" style="padding: 3px 7px; font-size: 0.75rem;" onclick="window.deleteCurriculumRecord('batches', '${batch.id}', '${escapeHtml(batch.name)}')" title="Delete Batch">
-                      🗑️
+                    <button class="btn btn-danger btn-sm edit-mode-only" style="padding: 3px 7px; font-size: 12px;" onclick="window.deleteCurriculumRecord('batches', '${batch.id}', '${escapeHtml(batch.name)}')" title="Delete Batch">
+                      ${getSvgIcon('trash', 12)}
                     </button>
                   </div>
                 </div>
@@ -536,15 +538,15 @@ export async function renderCurriculum(area) {
           return `
             <div class="curriculum-tree-node ${isExpanded ? 'expanded' : ''} ${progDimmed}">
               <div class="curriculum-tree-header" onclick="window.toggleProgramNode('${prog.id}')">
-                <span style="font-size: 0.8rem; color: var(--fm-text-muted); width: 14px; text-align: center;">
+                <span style="font-size: 12px; color: var(--fm-text-muted); width: 14px; text-align: center;">
                   ${isExpanded ? '▼' : '▶'}
                 </span>
-                <span style="font-size: 1.2rem;">🎓</span>
+                <span style="font-size: 16px;">${getSvgIcon('graduation-cap', 16)}</span>
                 <div style="min-width: 0; flex: 1;">
                   <div class="d-flex align-center gap-2 flex-wrap">
-                    <span style="font-weight: 700; font-size: 1rem; color: var(--fm-text-primary);">${escapeHtml(prog.name)}</span>
+                    <span style="font-weight: 700; font-size: 16px; color: var(--fm-text-primary);">${escapeHtml(prog.name)}</span>
                     ${prog.code ? `<span class="badge-tag" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--fm-text-muted);">${escapeHtml(prog.code)}</span>` : ''}
-                    <span class="badge-tag" style="background: rgba(0, 192, 0, 0.15); color: #00c000ff; border: 1px solid rgba(0, 192, 0, 0.35); font-weight: 700;">${progBatches.length} Batches</span>
+                    <span class="badge-tag" style="background: rgba(var(--grade-a-rgb), 0.15); color: var(--grade-a); border: 1px solid rgba(0, 192, 0, 0.35); font-weight: 700;">${progBatches.length} Batches</span>
                   </div>
                   ${prog.description ? `<div class="text-xs text-muted mt-1 text-truncate" style="max-width: 600px;">${escapeHtml(prog.description)}</div>` : ''}
                 </div>
@@ -553,12 +555,12 @@ export async function renderCurriculum(area) {
                     <input type="checkbox" onchange="window.toggleProgramCascade('${prog.id}', this.checked)" ${prog.is_active ? 'checked' : ''}>
                     <span class="toggle-slider"></span>
                   </label>
-                  <button class="btn btn-primary btn-sm edit-mode-only" style="font-size: 0.75rem; padding: 4px 9px; background: var(--clr-success); border-color: var(--clr-success); color: #0F172A; font-weight: 700;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">+ Add Batch</button>
-                  <button class="btn btn-secondary btn-sm edit-mode-only" style="font-size: 0.75rem; padding: 4px 8px;" onclick="window.openCurriculumEdit('programs', '${prog.id}')" title="Edit Program">
-                    ✏️ Edit
+                  <button class="btn btn-primary btn-sm edit-mode-only" style="font-size: 12px; padding: 4px 9px; background: var(--clr-success); border-color: var(--clr-success); color: #0F172A; font-weight: 700;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">+ Add Batch</button>
+                  <button class="btn btn-secondary btn-sm edit-mode-only" style="font-size: 12px; padding: 4px 8px; display: inline-flex; align-items: center; gap: 4px;" onclick="window.openCurriculumEdit('programs', '${prog.id}')" title="Edit Program">
+                    ${getSvgIcon('edit', 12)} Edit
                   </button>
-                  <button class="btn btn-danger btn-sm edit-mode-only" style="font-size: 0.75rem; padding: 4px 7px;" onclick="window.deleteCurriculumRecord('programs', '${prog.id}', '${escapeHtml(prog.name)}')" title="Delete Program">
-                    🗑️
+                  <button class="btn btn-danger btn-sm edit-mode-only" style="font-size: 12px; padding: 4px 7px;" onclick="window.deleteCurriculumRecord('programs', '${prog.id}', '${escapeHtml(prog.name)}')" title="Delete Program">
+                    ${getSvgIcon('trash', 12)}
                   </button>
                 </div>
               </div>
@@ -568,10 +570,10 @@ export async function renderCurriculum(area) {
                   <div>
                     <div class="d-flex justify-between align-center mb-2">
                       <div class="curriculum-tree-group-title">
-                        <span>👥 Batches</span>
-                        <span class="badge-tag" style="font-size: 0.68rem; background: rgba(0, 192, 0, 0.15); color: #00c000ff; border: 1px solid rgba(0, 192, 0, 0.35); font-weight: 700;">${progBatches.length}</span>
+                        <span>${getSvgIcon('users', 14)} Batches</span>
+                        <span class="badge-tag" style="font-size: 12px; background: rgba(var(--grade-a-rgb), 0.15); color: var(--grade-a); border: 1px solid rgba(0, 192, 0, 0.35); font-weight: 700;">${progBatches.length}</span>
                       </div>
-                      <button class="btn btn-ghost btn-sm edit-mode-only" style="font-size: 0.72rem; padding: 2px 6px; color: var(--clr-success);" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')">
+                      <button class="btn btn-ghost btn-sm edit-mode-only" style="font-size: 12px; padding: 2px 6px; color: var(--clr-success);" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')">
                         + Add Batch
                       </button>
                     </div>
@@ -592,7 +594,7 @@ export async function renderCurriculum(area) {
               ${avatarHtml}
               <div style="min-width: 0;">
                 <div class="d-flex align-center gap-2 flex-wrap">
-                  <h3 style="margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--fm-text-primary); letter-spacing: -0.01em;">
+                  <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: var(--fm-text-primary); letter-spacing: -0.01em;">
                     ${escapeHtml(activeInst.name)}
                   </h3>
                   ${activeInst.code ? `<span class="badge-tag" style="background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); font-weight: 700;">${escapeHtml(activeInst.code)}</span>` : ''}
@@ -601,9 +603,9 @@ export async function renderCurriculum(area) {
                   </span>
                 </div>
                 <div class="d-flex align-center gap-3 flex-wrap mt-1 text-xs text-muted">
-                  ${activeInst.address ? `<span>📍 ${escapeHtml(activeInst.address)}</span>` : ''}
-                  ${activeInst.phone ? `<span>📞 ${escapeHtml(activeInst.phone)}</span>` : ''}
-                  ${activeInst.email ? `<span>✉️ ${escapeHtml(activeInst.email)}</span>` : ''}
+                  ${activeInst.address ? `<span style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('map-pin', 12)} ${escapeHtml(activeInst.address)}</span>` : ''}
+                  ${activeInst.phone ? `<span style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('phone', 12)} ${escapeHtml(activeInst.phone)}</span>` : ''}
+                  ${activeInst.email ? `<span style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('mail', 12)} ${escapeHtml(activeInst.email)}</span>` : ''}
                 </div>
               </div>
             </div>
@@ -614,14 +616,14 @@ export async function renderCurriculum(area) {
                 <input type="checkbox" onchange="window.toggleInstitutionCascade('${activeInst.id}', this.checked)" ${activeInst.is_active ? 'checked' : ''}>
                 <span class="toggle-slider"></span>
               </label>
-              <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.openCurriculumEdit('institutions', '${activeInst.id}')" title="Edit Institution Details (Logo, Address, Contact)">
-                ✏️ Edit Details
+              <button class="btn btn-secondary btn-sm edit-mode-only" style="display:inline-flex;align-items:center;gap:4px;" onclick="window.openCurriculumEdit('institutions', '${activeInst.id}')" title="Edit Institution Details (Logo, Address, Contact)">
+                ${getSvgIcon('edit', 14)} Edit Details
               </button>
               <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openCurriculumAddProgram('${activeInst.id}')" title="Add New Program to this Institution">
                 + Add Program
               </button>
               <button class="btn btn-danger btn-sm edit-mode-only" onclick="window.deleteCurriculumRecord('institutions', '${activeInst.id}', '${escapeHtml(activeInst.name)}')" title="Delete Institution">
-                🗑️
+                ${getSvgIcon('trash', 14)}
               </button>
             </div>
           </div>
@@ -629,14 +631,14 @@ export async function renderCurriculum(area) {
           <!-- Controls & Search Toolbar -->
           <div class="hub-toolbar mb-3">
             <div class="hub-toolbar-search">
-              <span style="color: var(--fm-text-muted); font-size: 0.9rem;">🔍</span>
-              <input type="text" id="curriculum-search-input" class="form-control" placeholder="Search Program or Batch..." value="${escapeHtml(searchQuery)}" style="padding: 5px 10px; font-size: 0.85rem; height: 32px; background: rgba(0,0,0,0.2);" />
+              <span style="color: var(--fm-text-muted); font-size: 12px; display:inline-flex;align-items:center;">${getSvgIcon('search', 12)}</span>
+              <input type="text" id="curriculum-search-input" class="form-control" placeholder="Search Program or Batch..." value="${escapeHtml(searchQuery)}" style="padding: 5px 10px; font-size: 12px; height: 32px; background: rgba(0,0,0,0.2);" />
             </div>
             <div class="d-flex align-center gap-2">
               <span class="text-xs text-muted">${instPrograms.length} Programs · ${totalBatches} Batches</span>
-              <button class="btn btn-secondary btn-sm" onclick="window.expandAllCurriculum()" style="font-size: 0.75rem; padding: 4px 8px;">Expand All</button>
-              <button class="btn btn-secondary btn-sm" onclick="window.collapseAllCurriculum()" style="font-size: 0.75rem; padding: 4px 8px;">Collapse All</button>
-              <button class="btn btn-ghost btn-sm edit-mode-only" onclick="window.openCrudModal('institutions', null)" style="font-size: 0.75rem; padding: 4px 8px; color: var(--clr-primary, #6366f1);">+ New Institution</button>
+              <button class="btn btn-secondary btn-sm" onclick="window.expandAllCurriculum()" style="font-size: 12px; padding: 4px 8px;">Expand All</button>
+              <button class="btn btn-secondary btn-sm" onclick="window.collapseAllCurriculum()" style="font-size: 12px; padding: 4px 8px;">Collapse All</button>
+              <button class="btn btn-ghost btn-sm edit-mode-only" onclick="window.openCrudModal('institutions', null)" style="font-size: 12px; padding: 4px 8px; color: var(--clr-primary, #6366f1);">+ New Institution</button>
             </div>
           </div>
 

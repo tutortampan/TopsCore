@@ -1,0 +1,2308 @@
+{
+  "admin.html": [
+    {
+      "lineNum": 148,
+      "text": "<button class=\"btn btn-ghost btn-icon\" id=\"sidebar-toggle\" aria-label=\"Toggle sidebar\">☰</button>"
+    },
+    {
+      "lineNum": 177,
+      "text": "<button class=\"btn btn-ghost btn-icon\" id=\"close-crud-modal\" aria-label=\"Close\">✕</button>"
+    },
+    {
+      "lineNum": 222,
+      "text": "<button class=\"btn btn-ghost btn-icon\" id=\"close-dup-students-modal\" aria-label=\"Close\">✕</button>"
+    },
+    {
+      "lineNum": 263,
+      "text": "<button class=\"btn btn-ghost btn-icon\" id=\"close-dup-questions-modal\" aria-label=\"Close\">✕</button>"
+    },
+    {
+      "lineNum": 314,
+      "text": "<button class=\"btn btn-ghost btn-icon\" id=\"close-bulk-edit-tests-modal\" aria-label=\"Close\">✕</button>"
+    },
+    {
+      "lineNum": 430,
+      "text": "<!-- ✨ RECORD DRAWER ✨ -->"
+    },
+    {
+      "lineNum": 458,
+      "text": "onclick=\"document.getElementById('roster-modal').classList.add('hidden')\">✕</button>"
+    },
+    {
+      "lineNum": 495,
+      "text": "onclick=\"document.getElementById('add-class-modal').classList.add('hidden')\">✕</button>"
+    }
+  ],
+  "dashboard.html": [
+    {
+      "lineNum": 100,
+      "text": "<span id=\"banner-avatar-crown\" class=\"avatar-crown-badge hidden\" title=\"Batch Champion\">👑</span>"
+    },
+    {
+      "lineNum": 227,
+      "text": "<button class=\"btn btn-ghost btn-icon btn-sm classes-selector-close-btn\" id=\"close-classes-selector-modal\" aria-label=\"Close\">✕</button>"
+    },
+    {
+      "lineNum": 449,
+      "text": "<button class=\"level-modal-close-btn\" id=\"close-level-modal\" aria-label=\"Close\">✕</button>"
+    },
+    {
+      "lineNum": 469,
+      "text": "<div class=\"gender-card-checkmark\">✓</div>"
+    },
+    {
+      "lineNum": 481,
+      "text": "<div class=\"gender-card-checkmark\">✓</div>"
+    },
+    {
+      "lineNum": 592,
+      "text": "<span class=\"camera-btn-icon\">📷</span>"
+    },
+    {
+      "lineNum": 601,
+      "text": "<span class=\"status-symbol\">✕</span>"
+    },
+    {
+      "lineNum": 608,
+      "text": "<span class=\"status-symbol\">✕</span>"
+    }
+  ],
+  "test.html": [
+    {
+      "lineNum": 134,
+      "text": "<button id=\"close-matrix-btn\" class=\"matrix-close-btn\" onclick=\"window.toggleMatrixPopup(false)\" aria-label=\"Close matrix\">✕</button>"
+    }
+  ],
+  "result.html": [
+    {
+      "lineNum": 53,
+      "text": "<!-- 📄 PRINTABLE A4 DIAGNOSTIC REPORT CARD (Strictly visible on @media print) -->"
+    },
+    {
+      "lineNum": 226,
+      "text": "<!-- Col 2: Grade Symbol (★ / A / B / C / D / E) -->"
+    }
+  ],
+  "offline.html": [
+    {
+      "lineNum": 93,
+      "text": "<div class=\"offline-icon\">📡</div>"
+    },
+    {
+      "lineNum": 102,
+      "text": "🔄 Retry Connection"
+    }
+  ],
+  "conversation.html": [
+    {
+      "lineNum": 34,
+      "text": "<div id=\"conv-timer\" class=\"conv-timer-display\">⏱️ 60:00</div>"
+    },
+    {
+      "lineNum": 130,
+      "text": "<!-- 🤖 LIVING AVATAR STATE ENGINE (IDLE | LISTENING | THINKING | SPEAKING) -->"
+    },
+    {
+      "lineNum": 138,
+      "text": "<span class=\"avatar-emoji-icon\" id=\"avatar-emoji-icon\">🤖</span>"
+    },
+    {
+      "lineNum": 183,
+      "text": "<span id=\"mic-icon\">🎙️</span>"
+    },
+    {
+      "lineNum": 187,
+      "text": "<span>📝</span>"
+    },
+    {
+      "lineNum": 195,
+      "text": "<span>✋</span>"
+    },
+    {
+      "lineNum": 203,
+      "text": "<span>➡️</span>"
+    },
+    {
+      "lineNum": 206,
+      "text": "<span>⏹️</span>"
+    },
+    {
+      "lineNum": 251,
+      "text": "<span id=\"modal-final-grade\" class=\"grade-circle\" style=\"width: 36px; height: 36px; font-size: 18px; font-weight: 800; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--grade-star); color: #0F172A;\">★</span>"
+    }
+  ],
+  "js\\api.js": [
+    {
+      "lineNum": 3205,
+      "text": "// 🔴 TEST TIER: Aggregates from selected TASK tests (Cumulative theme/grand test)"
+    },
+    {
+      "lineNum": 3793,
+      "text": "if (pct >= 100) return '★';"
+    },
+    {
+      "lineNum": 4052,
+      "text": "if (pct >= 100) return '★';"
+    }
+  ],
+  "js\\app.js": [
+    {
+      "lineNum": 75,
+      "text": "const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };"
+    }
+  ],
+  "js\\conversation-eval.js": [
+    {
+      "lineNum": 65,
+      "text": "if (compositeScore >= 100) { grade = '★'; predicate = 'Excellent'; }"
+    }
+  ],
+  "js\\conversation-room.js": [
+    {
+      "lineNum": 498,
+      "text": "timerElem.textContent = `⏱️ ${tick.formattedTotal}`;"
+    },
+    {
+      "lineNum": 584,
+      "text": "text: `✋ ${text}`,"
+    }
+  ],
+  "js\\dashboard.js": [
+    {
+      "lineNum": 146,
+      "text": "formattedName = `👑 ${cleanFullName}`;"
+    },
+    {
+      "lineNum": 160,
+      "text": "crownEl.textContent = '🎓';"
+    },
+    {
+      "lineNum": 164,
+      "text": "crownEl.textContent = '👑';"
+    },
+    {
+      "lineNum": 197,
+      "text": "badge.textContent = isLeader ? '👑 King (Male)' : '👨 Male (Mr.)';"
+    },
+    {
+      "lineNum": 200,
+      "text": "badge.textContent = isLeader ? '👑 Queen (Female)' : '👩 Female (Miss)';"
+    },
+    {
+      "lineNum": 203,
+      "text": "badge.textContent = '⏳ Unassigned';"
+    },
+    {
+      "lineNum": 397,
+      "text": "<option value=\"${recObj.value}\" ${activeVal === recObj.value ? 'selected' : ''}>★ ${recObj.label} (Recommended)</option>"
+    },
+    {
+      "lineNum": 436,
+      "text": "<option value=\"Kota Mataram\" ${preselectCity === 'Kota Mataram' ? 'selected' : ''}>★ Kota Mataram (Suggested)</option>"
+    },
+    {
+      "lineNum": 459,
+      "text": "<option value=\"${SUGGESTED_PROV}\" ${currentProvince === SUGGESTED_PROV ? 'selected' : ''}>★ ${SUGGESTED_PROV} (Suggested)</option>"
+    },
+    {
+      "lineNum": 645,
+      "text": "overlay.innerHTML = `<span style=\"text-align:center;padding:10px;\">📷 Camera preview unavailable.<br><span class=\"text-xs text-muted\">Please allow camera permission.</span></span>`;"
+    },
+    {
+      "lineNum": 671,
+      "text": "// Update Photo card & badge (Green ✓ or Red ✕)"
+    },
+    {
+      "lineNum": 678,
+      "text": "photoBadge.innerHTML = hasPhoto ? '<span class=\"status-symbol\">✓</span>' : '<span class=\"status-symbol\">✕</span>';"
+    },
+    {
+      "lineNum": 681,
+      "text": "// Update Mic card & badge (Green ✓ or Red ✕)"
+    },
+    {
+      "lineNum": 687,
+      "text": "micBadge.innerHTML = micReady ? '<span class=\"status-symbol\">✓</span>' : '<span class=\"status-symbol\">✕</span>';"
+    },
+    {
+      "lineNum": 970,
+      "text": "// ===== 🎓 AUTHORITATIVE EDUCATION TIMELINE ENGINE ====="
+    },
+    {
+      "lineNum": 1092,
+      "text": "confirmBtn.textContent = '✓ Confirm Academic Timeline & Continue';"
+    },
+    {
+      "lineNum": 1208,
+      "text": "welcomeLevelEl.textContent = isAlumni ? 'Alumni 🎓' : (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level');"
+    },
+    {
+      "lineNum": 1220,
+      "text": "title: '🎉 Level Up!',"
+    },
+    {
+      "lineNum": 1226,
+      "text": "showToast(`🎉 Congratulations! You have unlocked ${celebration}.`, 'success');"
+    },
+    {
+      "lineNum": 1339,
+      "text": "boxesHtml += `<span class=\"rep-box ${isPassed ? 'is-passed' : 'is-empty'}\" title=\"Pass ${i} of ${targetReps}\">${isPassed ? '✓' : i}</span>`;"
+    },
+    {
+      "lineNum": 1472,
+      "text": "<span class=\"next-test-icon next-asm-icon\">🏆</span>"
+    },
+    {
+      "lineNum": 1475,
+      "text": "<span style=\"font-size:12px; font-weight:800; color:${TOPSCORE_COLORS.STAR}; padding:2px 8px; border-radius:4px; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);\">✓ 100%</span>"
+    },
+    {
+      "lineNum": 1791,
+      "text": "const scoreText = pct === 100 ? '100% ★' : `${pct}%`;"
+    },
+    {
+      "lineNum": 2674,
+      "text": "<div style=\"font-size:20px;margin-bottom:0.5rem;\">⚠️</div>"
+    },
+    {
+      "lineNum": 2982,
+      "text": "? `<span class=\"badge\" style=\"background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);color:${TOPSCORE_COLORS.STAR};border:1px solid rgba(${TOPSCORE_COLORS.STAR_RGB},0.3);\">✓ Passed</span>`"
+    },
+    {
+      "lineNum": 3051,
+      "text": "<div style=\"font-size:16px;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}\">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class=\"test-rem-sup\" style=\"font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;\">R</sup>' : ''}</div>"
+    },
+    {
+      "lineNum": 3054,
+      "text": "${(grade === '★' || grade === 'S' || bestPct >= 100)"
+    },
+    {
+      "lineNum": 3055,
+      "text": "? `<div class=\"grade-star\" style=\"width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};\">★</div>`"
+    },
+    {
+      "lineNum": 3170,
+      "text": "let isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;"
+    },
+    {
+      "lineNum": 3175,
+      "text": "const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : (GRADE_PALETTE['★'] || {"
+    },
+    {
+      "lineNum": 3500,
+      "text": "const isStar = dispGrade === '★' || dispGrade === 'S';"
+    },
+    {
+      "lineNum": 3526,
+      "text": "// 2. SORT DESCENDING: Highest to Lowest (e.g. ★, ★, A, A, B, ...)"
+    },
+    {
+      "lineNum": 3544,
+      "text": "const isStar = dispGrade === '★' || dispGrade === 'S';"
+    },
+    {
+      "lineNum": 3554,
+      "text": "const isSt = item.grade === '★' || item.grade === 'S';"
+    },
+    {
+      "lineNum": 3896,
+      "text": "champNameEl.textContent = `👑 ${titleStr} (${champion.totalPoints} PTS • ${champion.overallScore}%)`;"
+    },
+    {
+      "lineNum": 3962,
+      "text": "<div class=\"leaderboard-grade-chip\" style=\"background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; color:${hasExam && (gradeSymbol === '★' || gradeSymbol === 'Star') ? TOPSCORE_COLORS.TEXT_STAR : (hasExam ? TOPSCORE_COLORS.TEXT_DARK : '#ffffff')} !important;\" title=\"${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}\">${gradeSymbol}</div>"
+    },
+    {
+      "lineNum": 4313,
+      "text": "icon: '⚠️',"
+    },
+    {
+      "lineNum": 4449,
+      "text": "icon: '🚪',"
+    }
+  ],
+  "js\\grading.js": [
+    {
+      "lineNum": 603,
+      "text": "* ★ (S) : 100%       - Excellent (Green / Hijau #00c000ff)"
+    },
+    {
+      "lineNum": 612,
+      "text": "if (num >= 100) return '★';"
+    },
+    {
+      "lineNum": 675,
+      "text": "STAR: '#ff2d87', // 100% Star ★ (Electric Pink - #ff2d87)"
+    },
+    {
+      "lineNum": 707,
+      "text": "TEXT_STAR: '#0F172A', // Deep dark slate star symbol on ★ badge (Universal Dark Standard)"
+    },
+    {
+      "lineNum": 730,
+      "text": "* Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)"
+    },
+    {
+      "lineNum": 733,
+      "text": "symbol: '★',"
+    },
+    {
+      "lineNum": 749,
+      "text": "'★': STAR_THEME,"
+    },
+    {
+      "lineNum": 863,
+      "text": "if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;"
+    },
+    {
+      "lineNum": 910,
+      "text": "return '★';"
+    },
+    {
+      "lineNum": 913,
+      "text": "if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {"
+    },
+    {
+      "lineNum": 914,
+      "text": "return '★';"
+    },
+    {
+      "lineNum": 921,
+      "text": "const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';"
+    },
+    {
+      "lineNum": 923,
+      "text": "return `<span class=\"grade-circle grade-circle-star\" title=\"Grade ★ (100% Excellent)\" style=\"${customStyle}\">★</span>`;"
+    },
+    {
+      "lineNum": 934,
+      "text": "const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';"
+    },
+    {
+      "lineNum": 935,
+      "text": "const effectiveKey = isStar ? '★' : g.toUpperCase();"
+    },
+    {
+      "lineNum": 937,
+      "text": "symbol: isStar ? '★' : g || '—',"
+    },
+    {
+      "lineNum": 963,
+      "text": "if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {"
+    },
+    {
+      "lineNum": 1005,
+      "text": "text: `${maxR}/${maxR} ✓ Complete`,"
+    }
+  ],
+  "js\\result.js": [
+    {
+      "lineNum": 97,
+      "text": "'★': [starColor, '#f472b6', '#be185d', '#fda4af'],"
+    },
+    {
+      "lineNum": 155,
+      "text": "circle.style.stroke = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR')"
+    },
+    {
+      "lineNum": 180,
+      "text": "if (g === 'R' || !['S', 'STAR', '★', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {"
+    },
+    {
+      "lineNum": 192,
+      "text": "'★': 'EXCELLENT',"
+    },
+    {
+      "lineNum": 193,
+      "text": "'⭐': 'EXCELLENT',"
+    },
+    {
+      "lineNum": 211,
+      "text": "// Victory Confetti Engine for Star (⭐) / 100%"
+    },
+    {
+      "lineNum": 799,
+      "text": "const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;"
+    },
+    {
+      "lineNum": 800,
+      "text": "const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || pct >= 100);"
+    },
+    {
+      "lineNum": 958,
+      "text": "const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');"
+    },
+    {
+      "lineNum": 959,
+      "text": "const currentTier = isGradeSOr100 ? '★' : grade;"
+    },
+    {
+      "lineNum": 963,
+      "text": "const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);"
+    },
+    {
+      "lineNum": 1056,
+      "text": "// Modern Pure Star Accent (★ Vector Badge for S / Star 100%, Letter for A-E / R)"
+    },
+    {
+      "lineNum": 1081,
+      "text": "const stampClass = (grade === '★' || grade === 'S') ? 'grade-star' : `grade-${grade}`;"
+    },
+    {
+      "lineNum": 1089,
+      "text": "const textGradeClass = (grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`;"
+    },
+    {
+      "lineNum": 1295,
+      "text": "<div style=\"font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;\">✏️ Tutor Note</div>"
+    },
+    {
+      "lineNum": 1361,
+      "text": "grade: (isGradeSOr100 ? '★' : grade),"
+    },
+    {
+      "lineNum": 1448,
+      "text": "if (gradeSymEl) gradeSymEl.textContent = (grade === 'S' ? '★' : grade);"
+    },
+    {
+      "lineNum": 1510,
+      "text": "const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;"
+    },
+    {
+      "lineNum": 1511,
+      "text": "const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');"
+    },
+    {
+      "lineNum": 1512,
+      "text": "const displayGrade = isGradeS ? '★' : ag;"
+    },
+    {
+      "lineNum": 1587,
+      "text": "const resolvedRgb = rgbColor || (TOPSCORE_COLORS && TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`]) || '0, 192, 0';"
+    },
+    {
+      "lineNum": 1588,
+      "text": "const resolvedTier = currentTier || (isGradeSOr100 ? '★' : grade);"
+    }
+  ],
+  "js\\test.js": [
+    {
+      "lineNum": 1276,
+      "text": "<div style=\"font-size:40px;margin-bottom:1rem;\">⚠️ </div>"
+    },
+    {
+      "lineNum": 1416,
+      "text": "<div style=\"font-size:40px;margin-bottom:1rem;\">⚠️</div>"
+    },
+    {
+      "lineNum": 1643,
+      "text": "showToast('⏱️ Finalizing your speech recording...', 'info', 1500);"
+    },
+    {
+      "lineNum": 1950,
+      "text": "<div style=\"font-size:40px;margin-bottom:1rem;\">⚠️</div>"
+    },
+    {
+      "lineNum": 2651,
+      "text": "switchTypingBtn.innerHTML = '⌨️ Type Instead';"
+    }
+  ],
+  "js\\admin\\admin-deck.js": [
+    {
+      "lineNum": 48,
+      "text": "${inst.logo_url ? `<img src=\"${inst.logo_url}\" style=\"width:24px;height:24px;object-fit:contain;border-radius:4px;\">` : '🏢'}"
+    },
+    {
+      "lineNum": 185,
+      "text": "<span>🛡️</span> TopsCore LMS"
+    },
+    {
+      "lineNum": 195,
+      "text": "<span class=\"fw-700\" style=\"color:var(--grade-a);\">★ 100% / Official</span>"
+    }
+  ],
+  "js\\admin\\app.js": [
+    {
+      "lineNum": 1907,
+      "text": "${getSvgIcon('book-open', 14)} Open Test Blueprint ↗"
+    },
+    {
+      "lineNum": 2170,
+      "text": "<option value=\"delete\" style=\"background:#0f172a; color:var(--grade-e);\">✕ Delete test</option>"
+    },
+    {
+      "lineNum": 2397,
+      "text": "if (btnAll) btnAll.textContent = `🌐 ALL (EXAMS ONLY)`;"
+    },
+    {
+      "lineNum": 2399,
+      "text": "if (btnA) btnA.textContent = `🟦 THEME A (${themeAsmCounts['A'] || 8})`;"
+    },
+    {
+      "lineNum": 2401,
+      "text": "if (btnB) btnB.textContent = `🟪 THEME B (${themeAsmCounts['B'] || 10})`;"
+    },
+    {
+      "lineNum": 2403,
+      "text": "if (btnC) btnC.textContent = `🟧 THEME C (${themeAsmCounts['C'] || 12})`;"
+    },
+    {
+      "lineNum": 2405,
+      "text": "if (btnD) btnD.textContent = `🟩 THEME D (${themeAsmCounts['D'] || 10})`;"
+    },
+    {
+      "lineNum": 2536,
+      "text": "if (typeof showToast === 'function') showToast(`✓ Theme ${themeCode} task progress (${earnedVal}/${maxTasks}) saved successfully!`, 'success');"
+    },
+    {
+      "lineNum": 2600,
+      "text": "if (typeof showToast === 'function') showToast('✓ Manual exam score saved successfully!', 'success');"
+    },
+    {
+      "lineNum": 2712,
+      "text": "if (typeof showToast === 'function') showToast(`✓ Manual scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');"
+    },
+    {
+      "lineNum": 3058,
+      "text": "// State 1: Incomplete tasks -> Red Stop Icon 🛑"
+    },
+    {
+      "lineNum": 3062,
+      "text": "<span style=\"font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,0,0,0.4));\">🛑</span>"
+    },
+    {
+      "lineNum": 3067,
+      "text": "// State 2: Tasks completed, exam not taken -> Yellow Lock Icon 🔒"
+    },
+    {
+      "lineNum": 3071,
+      "text": "<span style=\"font-size:12px; line-height:1; filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));\">🔒</span>"
+    },
+    {
+      "lineNum": 3131,
+      "text": "// State 3: Tasks completed & Exam taken -> Render Grade Symbol (★, A, B, C, D, E)"
+    },
+    {
+      "lineNum": 3133,
+      "text": "const isGradeS = themeGrade === '★' || themeGrade === 'S';"
+    },
+    {
+      "lineNum": 3140,
+      "text": "<span class=\"grid-grade-val grid-grade-star\" style=\"color:var(--grade-star); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;\" title=\"Theme ${tc} Grade ★ (100% Excellent)\">★</span>"
+    },
+    {
+      "lineNum": 3220,
+      "text": "const isAvgGradeS = avgGrade === '★' || avgGrade === 'S';"
+    },
+    {
+      "lineNum": 3228,
+      "text": "cellsHtml += `<td class=\"col-sticky col-sticky-1 text-center\" style=\"font-weight:700; color:var(--grade-c); font-size:12px;\">★</td>`;"
+    },
+    {
+      "lineNum": 3230,
+      "text": "cellsHtml += `<td class=\"col-sticky col-sticky-2\" style=\"font-weight:700; color:var(--grade-c); font-size:12px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.02em;\">★ CLASS AVERAGE</td>`;"
+    },
+    {
+      "lineNum": 3259,
+      "text": "? '<span class=\"grid-grade-val grid-grade-star\" style=\"color:var(--grade-star); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;\" title=\"Average Grade ★ (100%)\">★</span>'"
+    },
+    {
+      "lineNum": 3417,
+      "text": "const isAvgThemeGradeS = avgThemeGrade === '★' || avgThemeGrade === 'S';"
+    },
+    {
+      "lineNum": 3423,
+      "text": "? `<span class=\"grid-grade-val grid-grade-star\" style=\"color:var(--grade-star); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; line-height:1;\" title=\"Class Avg Theme ${tc} Grade ★\">★</span>`"
+    },
+    {
+      "lineNum": 3559,
+      "text": "title=\"${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;⚠️ Student has remedial score' : ''}&#10;Click to view profile\">"
+    },
+    {
+      "lineNum": 3622,
+      "text": "const isGradeS = row.grade === 'S' || row.grade === '★';"
+    },
+    {
+      "lineNum": 3624,
+      "text": "return `<span class=\"grid-grade-val grid-grade-star\" style=\"color:var(--grade-star); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;\" title=\"Exam Grade ★ (100% Excellent)\">★</span>`;"
+    },
+    {
+      "lineNum": 3823,
+      "text": "const subtitle = program && institution ? `${institution} ➔ ${program}` : 'Manage tests and vocabulary for this class';"
+    },
+    {
+      "lineNum": 4419,
+      "text": "<div style=\"width:48px;height:48px;border-radius:50%;background:rgba(var(--grade-c-rgb),0.1);display:flex;align-items:center;justify-content:center;font-size: 20px;color:var(--grade-c);\">📋</div>"
+    },
+    {
+      "lineNum": 4426,
+      "text": "<div style=\"width:48px;height:48px;border-radius:50%;background:rgba(var(--grade-e-rgb),0.1);display:flex;align-items:center;justify-content:center;font-size: 20px;color:var(--grade-e);\">🏆</div>"
+    },
+    {
+      "lineNum": 4433,
+      "text": "<div style=\"width:48px;height:48px;border-radius:50%;background:rgba(56,189,248,0.12);display:flex;align-items:center;justify-content:center;font-size: 20px;color:#38bdf8;\">📈</div>"
+    },
+    {
+      "lineNum": 4473,
+      "text": "area.innerHTML = `<div class=\"empty-state\"><div style=\"font-size: 35px;\">🎓</div><p>Select a class from the sidebar.</p></div>`;"
+    },
+    {
+      "lineNum": 4601,
+      "text": "<div class=\"empty-state\"><div style=\"font-size: 30px;margin-bottom:1rem;\">🧑‍🎓</div><p>No students currently eligible for this class.</p></div>"
+    },
+    {
+      "lineNum": 4646,
+      "text": "<div class=\"empty-state\"><div style=\"font-size: 30px;margin-bottom:1rem;\">📈</div><p>Gradebook will appear here.</p></div>"
+    },
+    {
+      "lineNum": 5115,
+      "text": "<div style=\"font-weight:700; color:var(--grade-e); font-size: 16px; margin-bottom:6px;\">⚠️ Connected Data Alert</div>"
+    },
+    {
+      "lineNum": 5160,
+      "text": "<div style=\"font-weight:700; color:var(--grade-e); font-size: 16px; margin-bottom:6px;\">⚠️ Connected Data Alert</div>"
+    },
+    {
+      "lineNum": 5216,
+      "text": "<div style=\"font-weight:700; color:var(--grade-e); font-size: 16px; margin-bottom:6px;\">⚠️ Connected Hierarchy Alert</div>"
+    }
+  ],
+  "js\\admin\\auto-gen-modal.js": [
+    {
+      "lineNum": 137,
+      "text": "<span style=\"font-size: 16px;\">⚡</span>"
+    },
+    {
+      "lineNum": 144,
+      "text": "<button type=\"button\" class=\"btn btn-ghost btn-sm\" id=\"wizard-close-btn\" style=\"color:#94a3b8; font-size: 16px; padding:2px 8px;\">✕</button>"
+    },
+    {
+      "lineNum": 153,
+      "text": "<span style=\"font-size: 16px;\">📘</span>"
+    },
+    {
+      "lineNum": 189,
+      "text": "⚡ 1. TASK SETTINGS (TASKS)"
+    },
+    {
+      "lineNum": 198,
+      "text": "⏱️ Words Task (<span id=\"words-task-calc-dur\">10m</span>)"
+    },
+    {
+      "lineNum": 214,
+      "text": "⏱️ Phrases Task (<span id=\"phrases-task-calc-dur\">5m</span>)"
+    },
+    {
+      "lineNum": 229,
+      "text": "<label for=\"wizard-quiz-min\" class=\"form-label\" style=\"font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;\">🎯 Min. Skor (%)</label>"
+    },
+    {
+      "lineNum": 241,
+      "text": "<label for=\"wizard-quiz-ans-words\" class=\"form-label\" style=\"font-size: 12px; color:var(--grade-c); font-weight:700; margin-bottom:2px; display:block;\">🗣️ Words Task</label>"
+    },
+    {
+      "lineNum": 243,
+      "text": "<option value=\"spoken\" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 15s)</option>"
+    },
+    {
+      "lineNum": 244,
+      "text": "<option value=\"written\" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>"
+    },
+    {
+      "lineNum": 245,
+      "text": "<option value=\"selection\" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>"
+    },
+    {
+      "lineNum": 246,
+      "text": "<option value=\"mixed\" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>"
+    },
+    {
+      "lineNum": 251,
+      "text": "<label for=\"wizard-quiz-ans-phrases\" class=\"form-label\" style=\"font-size: 12px; color:var(--grade-c); font-weight:700; margin-bottom:2px; display:block;\">🗣️ Phrases Task</label>"
+    },
+    {
+      "lineNum": 253,
+      "text": "<option value=\"spoken\" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 20s)</option>"
+    },
+    {
+      "lineNum": 254,
+      "text": "<option value=\"written\" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>"
+    },
+    {
+      "lineNum": 255,
+      "text": "<option value=\"selection\" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>"
+    },
+    {
+      "lineNum": 256,
+      "text": "<option value=\"mixed\" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>"
+    },
+    {
+      "lineNum": 266,
+      "text": "📝 2. EXAM SETTINGS (EXAMS)"
+    },
+    {
+      "lineNum": 273,
+      "text": "⏱️ <strong>Durasi Exam:</strong> Dihitung otomatis per detik/soal sesuai tema kumulatif (Words: 15s/item, Phrases: 20s/item). Sesi live tutor juga dapat menetapkan alokasi waktu sendiri saat membuka ujian."
+    },
+    {
+      "lineNum": 278,
+      "text": "<label for=\"wizard-test-ans-words\" class=\"form-label\" style=\"font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;\">🗣️ Words Exam</label>"
+    },
+    {
+      "lineNum": 280,
+      "text": "<option value=\"spoken\" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 15s)</option>"
+    },
+    {
+      "lineNum": 281,
+      "text": "<option value=\"selection\" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>"
+    },
+    {
+      "lineNum": 282,
+      "text": "<option value=\"written\" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>"
+    },
+    {
+      "lineNum": 283,
+      "text": "<option value=\"mixed\" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>"
+    },
+    {
+      "lineNum": 292,
+      "text": "<label for=\"wizard-test-ans-phrases\" class=\"form-label\" style=\"font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;\">🔘 Phrases Exam</label>"
+    },
+    {
+      "lineNum": 294,
+      "text": "<option value=\"selection\" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>🔘 Selection (Pilgan / 20s)</option>"
+    },
+    {
+      "lineNum": 295,
+      "text": "<option value=\"written\" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>✍️ Written (Mengetik / 30s)</option>"
+    },
+    {
+      "lineNum": 296,
+      "text": "<option value=\"spoken\" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>🗣️ Spoken (Lisan / 20s)</option>"
+    },
+    {
+      "lineNum": 297,
+      "text": "<option value=\"mixed\" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>🔀 Mixed (Campuran / 25s)</option>"
+    },
+    {
+      "lineNum": 306,
+      "text": "<label for=\"wizard-test-min\" class=\"form-label\" style=\"font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;\">🎯 Min. Skor (%)</label>"
+    },
+    {
+      "lineNum": 328,
+      "text": "⚡ Update Settings Only"
+    },
+    {
+      "lineNum": 333,
+      "text": "🚀 Generate &amp; Sinkronkan Soal"
+    },
+    {
+      "lineNum": 493,
+      "text": "btn.innerHTML = '<span>⏳ Updating...</span>';"
+    },
+    {
+      "lineNum": 522,
+      "text": "btn.innerHTML = '⚡ Update Settings Only';"
+    }
+  ],
+  "js\\admin\\class-analytics.js": [
+    {
+      "lineNum": 44,
+      "text": "if (!mistakesList || mistakesList.length === 0) return { label: 'Safe', color: 'badge-success', icon: '✅' };"
+    },
+    {
+      "lineNum": 69,
+      "text": "return { label: 'Timeout / Blank', color: 'var(--grade-e)', icon: '⏱️', bg: 'rgba(var(--grade-e-rgb),0.15)', border: 'rgba(var(--grade-e-rgb),0.35)' };"
+    },
+    {
+      "lineNum": 72,
+      "text": "return { label: 'STT / Audio Homophone', color: '#06b6d4', icon: '🎧', bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.35)' };"
+    },
+    {
+      "lineNum": 75,
+      "text": "return { label: 'Spelling Typo', color: 'var(--grade-c)', icon: '🔤', bg: 'rgba(var(--grade-c-rgb),0.15)', border: 'rgba(var(--grade-c-rgb),0.35)' };"
+    },
+    {
+      "lineNum": 78,
+      "text": "return { label: 'Word Form / Root Error', color: '#f97316', icon: '🔄', bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)' };"
+    },
+    {
+      "lineNum": 80,
+      "text": "return { label: 'Distractor Trap / Concept Error', color: '#a855f7', icon: '🪤', bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)' };"
+    },
+    {
+      "lineNum": 111,
+      "text": "<div style=\"font-size: 35px; margin-bottom:0.5rem;\">📊</div>"
+    },
+    {
+      "lineNum": 298,
+      "text": "<input type=\"text\" id=\"analytics-quick-search\" placeholder=\"🔍 Filter word...\""
+    },
+    {
+      "lineNum": 306,
+      "text": "🌐 All (${totalVocabCount})"
+    },
+    {
+      "lineNum": 309,
+      "text": "🔴 Critical &gt;50% (${criticalCount})"
+    },
+    {
+      "lineNum": 312,
+      "text": "🟡 Needs Attention (${warningCount})"
+    },
+    {
+      "lineNum": 315,
+      "text": "🟢 Safe (${safeCount})"
+    },
+    {
+      "lineNum": 411,
+      "text": "🔍 Student Details"
+    },
+    {
+      "lineNum": 500,
+      "text": "<div style=\"font-size: 30px; margin-bottom:0.5rem;\">⚠️</div>"
+    },
+    {
+      "lineNum": 533,
+      "text": "<button class=\"btn btn-ghost btn-icon\" id=\"close-vocab-error-modal\" style=\"font-size: 16px; cursor:pointer;\" aria-label=\"Close\">✕</button>"
+    }
+  ],
+  "js\\admin\\class.js": [
+    {
+      "lineNum": 641,
+      "text": "const gradeSymbol = (displayGrade === 'S' || displayGrade === '★' || effectivePct >= 100) ? '★' : displayGrade;"
+    },
+    {
+      "lineNum": 766,
+      "text": "showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');"
+    }
+  ],
+  "js\\admin\\classes-hub.js": [
+    {
+      "lineNum": 145,
+      "text": "{ id: 'all', icon: '🌐', label: 'All Institutions', val: activeClasses.length },"
+    },
+    {
+      "lineNum": 151,
+      "text": "return { id: inst.id, icon: '🏢', label: inst.name, val: cnt };"
+    },
+    {
+      "lineNum": 189,
+      "text": "const studentsHtml  = '<span class=\"badge-tag\" style=\"background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size: 12px;padding:2px 8px;\" title=\"' + eligibleCount + ' students eligible to take this class\">👥 ' + eligibleCount + '</span>';"
+    },
+    {
+      "lineNum": 216,
+      "text": "if (cur.key !== key) return '<span style=\"opacity:0.35;margin-left:4px;font-size: 12px;\">↕</span>';"
+    },
+    {
+      "lineNum": 283,
+      "text": "'<span class=\"classes-hub-collapse-icon\">' + (isExpanded ? '▼' : '▶') + '</span>' +"
+    },
+    {
+      "lineNum": 290,
+      "text": "'<button class=\"btn btn-secondary btn-sm edit-mode-only\" style=\"font-size: 12px;padding:4px 8px;\" onclick=\"window.openClassesHubEdit(\\'levels\\',\\'' + level.id + '\\')\">✏️ Edit</button>' +"
+    },
+    {
+      "lineNum": 291,
+      "text": "'<button class=\"btn btn-danger btn-sm edit-mode-only\"    style=\"font-size: 12px;padding:4px 7px;\" onclick=\"window.deleteClassesHubRecord(\\'levels\\',\\'' + level.id + '\\',\\'' + levelLabel + '\\')\">🗑️</button>' +"
+    },
+    {
+      "lineNum": 317,
+      "text": "'<span class=\"classes-hub-collapse-icon\">' + (isExpandedUnassigned ? '▼' : '▶') + '</span>' +"
+    },
+    {
+      "lineNum": 333,
+      "text": "'<span style=\"color:var(--fm-text-muted);font-size:12px;\">🔍</span>' +"
+    }
+  ],
+  "js\\admin\\classes-management.js": [
+    {
+      "lineNum": 27,
+      "text": "/** 🟡 ADD TASK — opens the correct Task wizard for the class */"
+    },
+    {
+      "lineNum": 50,
+      "text": "/** 🔴 ADD EXAM — opens the correct Exam wizard for the class */"
+    },
+    {
+      "lineNum": 112,
+      "text": "🎓 Classes"
+    },
+    {
+      "lineNum": 115,
+      "text": "🏢 Org"
+    },
+    {
+      "lineNum": 146,
+      "text": "<div style=\"font-size: 40px; margin-bottom:1rem;\">🎓</div>"
+    },
+    {
+      "lineNum": 267,
+      "text": "<span style=\"margin-right:8px; font-size: 16px;\">🏢</span> ${inst.name}"
+    },
+    {
+      "lineNum": 283,
+      "text": "<span style=\"margin-right:6px; font-size: 16px; opacity:0.8;\">📋</span> ${prog.name}"
+    },
+    {
+      "lineNum": 307,
+      "text": "<div><span style=\"margin-right:4px; font-size:12px;\">🎓</span> ${cls.name}</div>"
+    },
+    {
+      "lineNum": 364,
+      "text": "<h2 style=\"margin:0; font-size: 30px; font-weight:700;\">🏢 ${inst.name}</h2>"
+    },
+    {
+      "lineNum": 392,
+      "text": "<h2 style=\"margin:0; font-size: 30px; font-weight:700;\">📋 ${prog.name}</h2>"
+    },
+    {
+      "lineNum": 919,
+      "text": "case 'spoken': return '🎙️ Spoken';"
+    },
+    {
+      "lineNum": 921,
+      "text": "case 'selection': return '✅ Selection';"
+    },
+    {
+      "lineNum": 922,
+      "text": "case 'written': return '✏️ Written';"
+    }
+  ],
+  "js\\admin\\crud-modals.js": [
+    {
+      "lineNum": 112,
+      "text": "{ value: 'PUBLISHED', label: '👁️ PUBLISHED (Aktif / Bisa Dikerjakan)' },"
+    },
+    {
+      "lineNum": 113,
+      "text": "{ value: 'DRAFT', label: '📝 DRAFT (Konsep / Tersembunyi)' },"
+    },
+    {
+      "lineNum": 114,
+      "text": "{ value: 'UNPUBLISHED', label: '⏸️ UNPUBLISHED (Ditangguhkan)' },"
+    },
+    {
+      "lineNum": 115,
+      "text": "{ value: 'ARCHIVED', label: '📦 ARCHIVED (Arsip)' }"
+    },
+    {
+      "lineNum": 119,
+      "text": "{ value: 'spoken', label: '🗣️ Spoken (Speech to Text)' },"
+    },
+    {
+      "lineNum": 120,
+      "text": "{ value: 'written', label: '✍️ Written (Teks Langsung)' },"
+    },
+    {
+      "lineNum": 121,
+      "text": "{ value: 'selection', label: '🔘 Selection (Pilihan Ganda)' },"
+    },
+    {
+      "lineNum": 122,
+      "text": "{ value: 'mixed', label: '🔀 Mixed (Campuran)' }"
+    },
+    {
+      "lineNum": 126,
+      "text": "{ value: 'sequential', label: '➡️ Sequential (Berurutan)' },"
+    },
+    {
+      "lineNum": 127,
+      "text": "{ value: 'random', label: '🔀 Random (Diacak)' }"
+    },
+    {
+      "lineNum": 350,
+      "text": "{ label: '⚡ 5m (Task)', val: 5 },"
+    },
+    {
+      "lineNum": 354,
+      "text": "{ label: '📝 120m (Test)', val: 120 }"
+    },
+    {
+      "lineNum": 546,
+      "text": "durationHint.innerHTML = `<span style=\"color: var(--grade-a); font-weight: 600;\">⚡ 4 Weeks (Mon – Sat W4)</span>: Auto-calculated finish date (${endD}/${endM}/${endY})`;"
+    },
+    {
+      "lineNum": 566,
+      "text": "durationHint.innerHTML = `<span style=\"color: var(--grade-a); font-weight: 600;\">⚡ Scheduled Batch Duration</span>: Ends on ${parts[2]}/${parts[1]}/${parts[0]}`;"
+    },
+    {
+      "lineNum": 1147,
+      "text": "dupStudContent.innerHTML = '<div class=\"empty-state p-6 text-center\"><p>✅ No duplicate students found.</p></div>';"
+    },
+    {
+      "lineNum": 1245,
+      "text": "dupQContent.innerHTML = '<div class=\"empty-state p-6 text-center\"><p>✅ No duplicate questions found in this test scope.</p></div>';"
+    },
+    {
+      "lineNum": 1341,
+      "text": "dupQContent.innerHTML = '<div class=\"empty-state p-6 text-center\"><p>✅ No question order conflicts detected.</p></div>';"
+    },
+    {
+      "lineNum": 1397,
+      "text": "dupQContent.innerHTML = '<div class=\"empty-state p-6 text-center\"><p>✅ No cross-Test duplicate questions found.</p></div>';"
+    },
+    {
+      "lineNum": 1583,
+      "text": "showToast('Select at least one checkbox option (⏱️ Duration, 🗣️ Answer Type, or 🎯 Passing Score) to modify.', 'warning');"
+    },
+    {
+      "lineNum": 1599,
+      "text": "saveBtn.innerHTML = `<span>⏳ Saving...</span>`;"
+    }
+  ],
+  "js\\admin\\curriculum-management.js": [
+    {
+      "lineNum": 25,
+      "text": "statusBadge: `<span class=\"badge-tag badge-tag-completed\" style=\"width: 100%; justify-content: center;\">⚪ Unscheduled</span>`"
+    },
+    {
+      "lineNum": 31,
+      "text": "const dateRange = `📅 ${startFormatted} – ${endFormatted}`;"
+    },
+    {
+      "lineNum": 55,
+      "text": "statusBadge = `<span class=\"badge-tag badge-tag-upcoming\" style=\"width: 100%; justify-content: center;\">🟡 Upcoming (${daysUntil}d)</span>`;"
+    },
+    {
+      "lineNum": 57,
+      "text": "remainingBadge = `<span class=\"badge-tag\" style=\"background:rgba(var(--grade-c-rgb),0.12);color:var(--grade-c);border:1px solid rgba(var(--grade-c-rgb),0.3);width:100%;justify-content:center;font-size: 12px;\">📅 ${daysUntil}d to start</span>`;"
+    },
+    {
+      "lineNum": 59,
+      "text": "statusBadge = `<span class=\"badge-tag badge-tag-completed\" style=\"width: 100%; justify-content: center;\">⚪ Completed</span>`;"
+    },
+    {
+      "lineNum": 61,
+      "text": "remainingBadge = `<span class=\"badge-tag\" style=\"background:rgba(156,163,175,0.1);color:#9ca3af;border:1px solid rgba(156,163,175,0.2);width:100%;justify-content:center;font-size: 12px;\">✓ Completed</span>`;"
+    },
+    {
+      "lineNum": 68,
+      "text": "remainingBadge = `<span class=\"badge-tag\" style=\"background:rgba(${urgentRgb},0.12);color:${urgentColor};border:1px solid rgba(${urgentRgb},0.3);width:100%;justify-content:center;font-size: 12px;\">⏳ ${remainingText}</span>`;"
+    },
+    {
+      "lineNum": 69,
+      "text": "statusBadge = `<span class=\"badge-tag badge-tag-ongoing\" style=\"width: 100%; justify-content: center;\">🟢 Ongoing</span>`;"
+    },
+    {
+      "lineNum": 73,
+      "text": "statusBadge = `<span class=\"badge-tag badge-tag-upcoming\" style=\"width: 100%; justify-content: center;\">🟡 Upcoming</span>`;"
+    },
+    {
+      "lineNum": 75,
+      "text": "statusBadge = `<span class=\"badge-tag badge-tag-ongoing\" style=\"width: 100%; justify-content: center;\">🟢 Ongoing</span>`;"
+    },
+    {
+      "lineNum": 338,
+      "text": "icon: '🏢',"
+    },
+    {
+      "lineNum": 434,
+      "text": "if (cur.key !== key) return ''; // Rule 2.38 Pillar 6: active-only sort arrow (no idle ↕)"
+    },
+    {
+      "lineNum": 443,
+      "text": "<div style=\"font-size: 35px; margin-bottom: 0.75rem;\">🎓</div>"
+    },
+    {
+      "lineNum": 489,
+      "text": "<span style=\"font-size: 12px;\">🏷️</span>"
+    },
+    {
+      "lineNum": 497,
+      "text": "👥 ${studentCount}"
+    },
+    {
+      "lineNum": 502,
+      "text": "${periodInfo.hasDates ? '📅 ' + escapeHtml(periodInfo.startDateFormatted) : '—'}"
+    },
+    {
+      "lineNum": 507,
+      "text": "${periodInfo.hasDates && periodInfo.endDateFormatted !== '—' ? '🏁 ' + escapeHtml(periodInfo.endDateFormatted) : '—'}"
+    },
+    {
+      "lineNum": 525,
+      "text": "✏️ Edit"
+    },
+    {
+      "lineNum": 541,
+      "text": "${isExpanded ? '▼' : '▶'}"
+    },
+    {
+      "lineNum": 543,
+      "text": "<span style=\"font-size: 16px;\">🎓</span>"
+    },
+    {
+      "lineNum": 559,
+      "text": "✏️ Edit"
+    },
+    {
+      "lineNum": 572,
+      "text": "<span>👥 Batches</span>"
+    },
+    {
+      "lineNum": 605,
+      "text": "${activeInst.address ? `<span>📍 ${escapeHtml(activeInst.address)}</span>` : ''}"
+    },
+    {
+      "lineNum": 606,
+      "text": "${activeInst.phone ? `<span>📞 ${escapeHtml(activeInst.phone)}</span>` : ''}"
+    },
+    {
+      "lineNum": 607,
+      "text": "${activeInst.email ? `<span>✉️ ${escapeHtml(activeInst.email)}</span>` : ''}"
+    },
+    {
+      "lineNum": 619,
+      "text": "✏️ Edit Details"
+    },
+    {
+      "lineNum": 633,
+      "text": "<span style=\"color: var(--fm-text-muted); font-size: 12px;\">🔍</span>"
+    }
+  ],
+  "js\\admin\\datagrid.js": [
+    {
+      "lineNum": 95,
+      "text": "<button type=\"button\" class=\"datagrid-search-clear hidden\" style=\"position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--clr-text-3); cursor:pointer; font-size: 12px; padding:2px 4px;\" title=\"Clear search\">✕</button>"
+    }
+  ],
+  "js\\admin\\desk.js": [
+    {
+      "lineNum": 621,
+      "text": "<div style=\"font-size: 20px; background: rgba(245, 158, 11, 0.12); padding: 0.5rem; border-radius: 10px; line-height: 1;\">⚡</div>"
+    },
+    {
+      "lineNum": 712,
+      "text": "<div style=\"font-size: 35px; margin-bottom: 1rem;\">⚡</div>"
+    },
+    {
+      "lineNum": 958,
+      "text": "const oldSymbol = (item.oldGrade === 'S' || item.oldGrade === '★' || parseFloat(item.oldPercentage) >= 100) ? '★' : item.oldGrade;"
+    },
+    {
+      "lineNum": 959,
+      "text": "const newSymbol = (item.newGrade === 'S' || item.newGrade === '★' || parseFloat(item.newPercentage) >= 100) ? '★' : item.newGrade;"
+    },
+    {
+      "lineNum": 1129,
+      "text": "<div style=\"font-size: 20px;\">🛡️</div>"
+    },
+    {
+      "lineNum": 1164,
+      "text": "<label class=\"form-label text-sm fw-600 mb-2\">🔊 Alert Sound Style</label>"
+    },
+    {
+      "lineNum": 1167,
+      "text": "{ id: 'police_siren', emoji: '🚨', label: 'Police Siren' },"
+    },
+    {
+      "lineNum": 1168,
+      "text": "{ id: 'alarm_beep',   emoji: '📢', label: 'Alarm Beeps' },"
+    },
+    {
+      "lineNum": 1169,
+      "text": "{ id: 'red_alert',    emoji: '🔴', label: 'Red Alert' },"
+    },
+    {
+      "lineNum": 1170,
+      "text": "{ id: 'buzzer',       emoji: '🔔', label: 'Buzzer' },"
+    },
+    {
+      "lineNum": 1171,
+      "text": "{ id: 'warning_tone', emoji: '⚠️', label: 'Warning Tone' },"
+    },
+    {
+      "lineNum": 1172,
+      "text": "{ id: 'laser_blast',  emoji: '⚡', label: 'Laser Blast' },"
+    },
+    {
+      "lineNum": 1173,
+      "text": "{ id: 'rapid_fire',   emoji: '💥', label: 'Rapid Fire' },"
+    },
+    {
+      "lineNum": 1174,
+      "text": "{ id: 'klaxon',       emoji: '🛥️', label: 'Klaxon' },"
+    },
+    {
+      "lineNum": 1175,
+      "text": "{ id: 'whistle',      emoji: '🏉', label: 'Whistle' },"
+    },
+    {
+      "lineNum": 1176,
+      "text": "{ id: 'dj_drop',      emoji: '🎧', label: 'DJ Drop' },"
+    },
+    {
+      "lineNum": 1177,
+      "text": "{ id: 'custom',       emoji: '📁', label: 'Custom Upload' },"
+    },
+    {
+      "lineNum": 1183,
+      "text": "<button type=\"button\" class=\"btn-preview-sound\" data-sound=\"${s.id}\" title=\"Preview\" style=\"margin-left:auto;background:none;border:none;cursor:pointer;font-size: 12px;opacity:0.7;padding:0 2px;\" tabindex=\"-1\">▶</button>"
+    },
+    {
+      "lineNum": 1193,
+      "text": "${settings.anti_cheat_custom_sound_b64 ? `<div class=\"text-xs mt-1\" style=\"color:var(--grade-a);\">✅ Custom sound uploaded. Uploading a new file will replace it.</div>` : ''}"
+    },
+    {
+      "lineNum": 1297,
+      "text": "<div style=\"font-size: 20px;\">🔐</div>"
+    },
+    {
+      "lineNum": 1340,
+      "text": "<div style=\"font-size: 20px;\">⚠️</div>"
+    },
+    {
+      "lineNum": 1605,
+      "text": "if (!silent) showToast('🛡️ Security Settings saved!', 'success');"
+    },
+    {
+      "lineNum": 1695,
+      "text": "btn.innerHTML = '⏳ Saving All...';"
+    },
+    {
+      "lineNum": 1707,
+      "text": "showToast('✓ All settings saved and synced globally!', 'success');"
+    },
+    {
+      "lineNum": 1731,
+      "text": "if (!confirm('⚠️ DANGER: This will permanently delete ALL words and phrases from the Vocabulary Vault. Are you sure you want to proceed?')) return;"
+    },
+    {
+      "lineNum": 1742,
+      "text": "showToast('✓ Vocabulary Vault successfully reset. All items deleted.', 'success');"
+    }
+  ],
+  "js\\admin\\dossier_export.js": [
+    {
+      "lineNum": 242,
+      "text": "<div class=\"header-title\">🛡️ TOPS CORE ACADEMIC ADMINISTRATION</div>"
+    },
+    {
+      "lineNum": 286,
+      "text": ": `<div style=\"font-size: 30px; color:#94a3b8;\">👤</div>`"
+    },
+    {
+      "lineNum": 356,
+      "text": "<span style=\"font-size: 16px;\">🛡️</span>"
+    }
+  ],
+  "js\\admin\\forgiven-wizard-modal.js": [
+    {
+      "lineNum": 85,
+      "text": "<span style=\"font-size: 16px;\">🛡️</span>"
+    },
+    {
+      "lineNum": 97,
+      "text": "<button type=\"button\" id=\"btn-close-forgiven-modal\" style=\"background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;\">✕</button>"
+    },
+    {
+      "lineNum": 128,
+      "text": "✓ Select All"
+    },
+    {
+      "lineNum": 156,
+      "text": "⚡ Quick-Set Week 1 &amp; 2 (Forgive A1–B4 &amp; Exam A–B)"
+    },
+    {
+      "lineNum": 198,
+      "text": "📌 Formative Tasks (Prerequisite Gating Only):"
+    },
+    {
+      "lineNum": 214,
+      "text": "📝 Milestone Exam (Official Grade &amp; Points):"
+    },
+    {
+      "lineNum": 271,
+      "text": "↩️ Revoke Forgiven Status"
+    },
+    {
+      "lineNum": 282,
+      "text": "⚡ Apply Now"
+    },
+    {
+      "lineNum": 548,
+      "text": "submitBtn.textContent = '⏳ Processing...';"
+    },
+    {
+      "lineNum": 566,
+      "text": "submitBtn.textContent = '⚡ Apply Now';"
+    },
+    {
+      "lineNum": 597,
+      "text": "revokeBtn.textContent = '⏳ Revoking...';"
+    },
+    {
+      "lineNum": 613,
+      "text": "revokeBtn.textContent = '↩️ Revoke Forgiven Status';"
+    }
+  ],
+  "js\\admin\\imports-exports.js": [
+    {
+      "lineNum": 36,
+      "text": "<button class=\"btn btn-primary mt-2\" id=\"export-questions-btn\">📤 Download Excel (.xlsx)</button>"
+    }
+  ],
+  "js\\admin\\modules.js": [
+    {
+      "lineNum": 13,
+      "text": "{ id: 'm1', name: 'Point & Speak!', type: 'Visual Pronouns', desc: 'Real-time object and pronoun identification using image context.', status: 'Active', icon: '🎯', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nMedia (photos) must be processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and discarded.' },"
+    },
+    {
+      "lineNum": 14,
+      "text": "{ id: 'm2', name: 'Storytelling', type: 'Narrative Tense', desc: 'Evaluates past, present, and future tense continuity in a narrative flow.', status: 'Active', icon: '📖', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nEvaluate narrative tense (past/present/future continuity).' },"
+    },
+    {
+      "lineNum": 15,
+      "text": "{ id: 'm3', name: 'Conversation-based', type: 'Freeform Dialogue', desc: 'Open-ended contextual dialogue with the AI to test conversational agility.', status: 'Active', icon: '💬', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nOpen-ended contextual dialogue.' },"
+    },
+    {
+      "lineNum": 16,
+      "text": "{ id: 'm4', name: 'Multiple Choice', type: 'Standardized', desc: 'Classic multi-option evaluation for grammar and syntax precision.', status: 'Active', icon: '☑️', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nClassic multi-option evaluation.' },"
+    },
+    {
+      "lineNum": 17,
+      "text": "{ id: 'm5', name: 'Read Aloud / Pronunciation', type: 'Speech Analysis', desc: 'Deep phonetic analysis comparing spoken input against standard texts.', status: 'Active', icon: '🎙️', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nMedia (audio) must be processed transiently in the browser, sent directly to the AI API for evaluation, and discarded.' },"
+    },
+    {
+      "lineNum": 18,
+      "text": "{ id: 'm6', name: 'Turn-based Roleplay', type: 'Realtime WebSockets', desc: 'Simulated real-world scenarios requiring immediate contextual responses.', status: 'Active', icon: '🎭', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nReal-world scenario simulation via WebSockets.' },"
+    },
+    {
+      "lineNum": 19,
+      "text": "{ id: 'm7', name: 'Speaking Performance', type: '5 Pillars', desc: 'Comprehensive grading on Fluency, Pronunciation, Vocabulary, Grammar, and Comprehension.', status: 'Active', icon: '📊', directive: 'Direct English Only.\\\\nArchitecture: Stateless & Low-Egress.\\\\nEvaluate based on 5 Pillars: Fluency, Pronunciation, Vocabulary, Grammar, Comprehension.' },"
+    },
+    {
+      "lineNum": 20,
+      "text": "{ id: 'm8', name: 'Vocabulary Mastery', type: 'Written/Oral', desc: 'Rigorous testing of target lexicon including spelling, meaning, and usage.', status: 'Active', icon: '🧠', directive: 'Direct English Only.\\\\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\\\\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\\\\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' }"
+    },
+    {
+      "lineNum": 27,
+      "text": "<span>🧩 8 Core AI Evaluation Engines (Stateless &amp; Low-Egress)</span>"
+    },
+    {
+      "lineNum": 43,
+      "text": "<span>📦</span> Modules (Core Blocks)"
+    },
+    {
+      "lineNum": 127,
+      "text": "window.openRecordDrawer(`⚙️ Configure: ${modName}`, bodyHTML, footerHTML);"
+    }
+  ],
+  "js\\admin\\program-management.js": [
+    {
+      "lineNum": 103,
+      "text": "<span>🏛️ Filtered by Institution: <strong>${escapeHtml(window._filterInstitutionName || 'Selected Institution')}</strong> (${filteredData.length} programs)</span>"
+    },
+    {
+      "lineNum": 230,
+      "text": "<span>🏛️ Filtered by Program: <strong>${escapeHtml(window._filterProgramName || 'Selected Program')}</strong> (${filteredData.length} batches)</span>"
+    },
+    {
+      "lineNum": 434,
+      "text": "<button class=\"btn btn-ghost btn-xs text-secondary\" style=\"padding:0 4px;\" onclick='window._editRecord(\"institutions\", \"${inst.id}\", ${JSON.stringify(JSON.stringify(inst.raw))})' title=\"Edit\">✏️</button>"
+    },
+    {
+      "lineNum": 435,
+      "text": "<button class=\"btn btn-ghost btn-xs text-danger\" style=\"padding:0 4px;\" onclick='window._deleteRecord(\"institutions\", \"${inst.id}\", \"${escapeHtml(inst.name)}\")' title=\"Delete\">🗑️</button>"
+    },
+    {
+      "lineNum": 458,
+      "text": "<button class=\"btn btn-ghost btn-xs text-secondary\" style=\"padding:0 4px;\" onclick='window._editRecord(\"institutions\", \"${inst.id}\", ${JSON.stringify(JSON.stringify(inst.raw))})' title=\"Edit\">✏️</button>"
+    },
+    {
+      "lineNum": 459,
+      "text": "<button class=\"btn btn-ghost btn-xs text-danger\" style=\"padding:0 4px;\" onclick='window._deleteRecord(\"institutions\", \"${inst.id}\", \"${escapeHtml(inst.name)}\")' title=\"Delete\">🗑️</button>"
+    },
+    {
+      "lineNum": 467,
+      "text": "<button class=\"btn btn-ghost btn-xs text-secondary\" style=\"padding:0 4px;\" onclick='window._editRecord(\"programs\", \"${prog.id}\", ${JSON.stringify(JSON.stringify(prog.raw))})' title=\"Edit\">✏️</button>"
+    },
+    {
+      "lineNum": 468,
+      "text": "<button class=\"btn btn-ghost btn-xs text-danger\" style=\"padding:0 4px;\" onclick='window._deleteRecord(\"programs\", \"${prog.id}\", \"${escapeHtml(prog.name)}\")' title=\"Delete\">🗑️</button>"
+    },
+    {
+      "lineNum": 485,
+      "text": "const levelBadge = levelData ? `<span class=\"badge badge-primary\" style=\"white-space:nowrap;font-weight:700;\">🏷️ ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(levelData.name || levelData.level_number) : levelData.name)}</span>` : `<span class=\"badge badge-neutral\">No Level Set</span>`;"
+    },
+    {
+      "lineNum": 493,
+      "text": "<button class=\"btn btn-ghost btn-xs text-secondary\" style=\"padding:0 4px;\" onclick='window._editRecord(\"institutions\", \"${inst.id}\", ${JSON.stringify(JSON.stringify(inst.raw))})' title=\"Edit\">✏️</button>"
+    },
+    {
+      "lineNum": 494,
+      "text": "<button class=\"btn btn-ghost btn-xs text-danger\" style=\"padding:0 4px;\" onclick='window._deleteRecord(\"institutions\", \"${inst.id}\", \"${escapeHtml(inst.name)}\")' title=\"Delete\">🗑️</button>"
+    },
+    {
+      "lineNum": 502,
+      "text": "<button class=\"btn btn-ghost btn-xs text-secondary\" style=\"padding:0 4px;\" onclick='window._editRecord(\"programs\", \"${prog.id}\", ${JSON.stringify(JSON.stringify(prog.raw))})' title=\"Edit\">✏️</button>"
+    },
+    {
+      "lineNum": 503,
+      "text": "<button class=\"btn btn-ghost btn-xs text-danger\" style=\"padding:0 4px;\" onclick='window._deleteRecord(\"programs\", \"${prog.id}\", \"${escapeHtml(prog.name)}\")' title=\"Delete\">🗑️</button>"
+    },
+    {
+      "lineNum": 522,
+      "text": "<a href=\"#\" class=\"text-primary fw-600\" style=\"text-decoration: underline; font-size: 12px;\" onclick='event.preventDefault(); window._filterBatchId=\"${batch.id}\"; window._filterBatchName=\"${escapeHtml(batch.name)}\"; window.loadSection(\"students\");'>[ Manage Roster ↗ ]</a>"
+    },
+    {
+      "lineNum": 526,
+      "text": "<button class=\"btn btn-ghost btn-xs text-primary\" onclick=\"window._filterBatchId='${batch.id}'; window.loadSection('import-students')\">📥 Import</button>"
+    },
+    {
+      "lineNum": 527,
+      "text": "<button class=\"btn btn-ghost btn-xs text-secondary\" onclick='window._editRecord(\"batches\", \"${batch.id}\", ${JSON.stringify(JSON.stringify(batch.raw))})' title=\"Edit Batch\">✏️ Edit</button>"
+    },
+    {
+      "lineNum": 528,
+      "text": "<button class=\"btn btn-ghost btn-xs text-danger\" onclick='window._deleteRecord(\"batches\", \"${batch.id}\", \"${escapeHtml(batch.name)}\")' title=\"Delete Batch\">🗑️ Delete</button>"
+    }
+  ],
+  "js\\admin\\student-management.js": [
+    {
+      "lineNum": 602,
+      "text": "instName: s.institutions?.name || (s.institution_id ? '⚠ Unknown Institution' : '—'),"
+    },
+    {
+      "lineNum": 603,
+      "text": "progName: s.programs?.name || (s.program_id ? '⚠ Unknown Program' : '—'),"
+    },
+    {
+      "lineNum": 604,
+      "text": "batchName: s.batches?.name || (s.batch_id ? '⚠ Unknown Batch' : '— No Batch —'),"
+    },
+    {
+      "lineNum": 759,
+      "text": "{ id: 'active', icon: '🟢', label: 'Active Students', val: activeCount, valColor: 'var(--clr-success)' },"
+    },
+    {
+      "lineNum": 760,
+      "text": "{ id: 'inactive', icon: '⚪', label: 'Inactive Students', val: inactiveCount, valColor: '#94a3b8' },"
+    },
+    {
+      "lineNum": 761,
+      "text": "{ id: 'alumni', icon: '🎓', label: 'Alumni', val: alumniCount, valColor: '#a855f7' },"
+    },
+    {
+      "lineNum": 762,
+      "text": "{ id: 'all', icon: '👥', label: 'All Students', val: totalCount, valColor: 'var(--clr-accent-1, #38bdf8)' }"
+    },
+    {
+      "lineNum": 774,
+      "text": "<span style=\"font-size: 20px;\">⚠️</span>"
+    },
+    {
+      "lineNum": 783,
+      "text": "⚠️ Resolve All Duplicates"
+    },
+    {
+      "lineNum": 800,
+      "text": "<span>${currentBatchStatus === 'alumni' ? '🎓 Graduating Batch:' : 'Enrolled:'} <strong style=\"color:#f8fafc;\">${count} Student${count !== 1 ? 's' : ''}</strong></span>"
+    },
+    {
+      "lineNum": 802,
+      "text": "<option value=\"all\" ${(!window._alumniFilterBatchId || window._alumniFilterBatchId === 'all') ? 'selected' : ''}>🎓 All Graduating Batches</option>"
+    },
+    {
+      "lineNum": 816,
+      "text": "<button type=\"button\" id=\"btn-promote-all-eligible\" style=\"${nextBtnStyle}height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;\" title=\"${nextBtnTitle}\">🚀 NEXT (${eligibleCount} Eligible)</button>"
+    },
+    {
+      "lineNum": 818,
+      "text": "<button type=\"button\" id=\"btn-add-student-direct\" style=\"background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;\" title=\"Register New Student\">➕ Add Student</button>"
+    },
+    {
+      "lineNum": 819,
+      "text": "<button type=\"button\" id=\"btn-import-students-direct\" style=\"background:#1e293b;border:1px solid #334155;color:#f8fafc;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;\" title=\"Import Students from Excel / CSV\">📥 Import Excel / CSV</button>"
+    },
+    {
+      "lineNum": 954,
+      "text": "<button class=\"btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only\" data-att-id=\"${attId}\" style=\"padding:2px 6px; font-size: 12px;\" title=\"Revoke score exemption\">↩️</button>"
+    },
+    {
+      "lineNum": 961,
+      "text": "<button class=\"btn btn-ghost btn-xs btn-prog-toggle-rem edit-mode-only\" data-att-id=\"${attId}\" data-set-remedial=\"false\" style=\"padding:2px 6px; font-size: 12px;\" title=\"Revert remedial status (return to normal)\">↩️</button>"
+    },
+    {
+      "lineNum": 968,
+      "text": "🏷️ Remedial"
+    },
+    {
+      "lineNum": 972,
+      "text": "⚡ Exempt"
+    },
+    {
+      "lineNum": 1065,
+      "text": "<span class=\"badge\" style=\"${rec.globalGrade === 'S' || rec.globalGrade === '★' ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};font-weight:900;box-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB},0.45);border:1px solid ${TOPSCORE_COLORS.STAR};` : `background:${rec.overallColor};color:${TOPSCORE_COLORS?.TEXT_DARK || '#0F172A'};font-weight:800;`}font-size: 12px;padding:3px 10px;\">${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? '★' : rec.globalGrade}</span>"
+    },
+    {
+      "lineNum": 1087,
+      "text": "<span>🎓 Weekly Exams</span>"
+    },
+    {
+      "lineNum": 1151,
+      "text": "showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');"
+    },
+    {
+      "lineNum": 1175,
+      "text": "const reason = prompt('⚡ Skor F (Forgiven) — Prerogatif Mr. Top\\n\\nMasukkan alasan tertulis dispensasi (wajib diisi):');"
+    },
+    {
+      "lineNum": 1201,
+      "text": "showToast('⚡ Score Exemption (Forgiven) granted.', 'success');"
+    },
+    {
+      "lineNum": 1242,
+      "text": "showToast('↩️ Score exemption revoked.', 'success');"
+    },
+    {
+      "lineNum": 1345,
+      "text": "const genderIcon = (rec.gender || '').toLowerCase().startsWith('m') ? '♂️' : '♀️';"
+    },
+    {
+      "lineNum": 1365,
+      "text": "<span>🏛️ ${escapeHtml(rec.instName)}</span> &bull;"
+    },
+    {
+      "lineNum": 1366,
+      "text": "<span>👥 ${escapeHtml(rec.progName)}</span> &bull;"
+    },
+    {
+      "lineNum": 1367,
+      "text": "<span>🏷️ Batch ${escapeHtml(rec.batchName)}</span> &bull;"
+    },
+    {
+      "lineNum": 1368,
+      "text": "<span>⭐ ${escapeHtml(rec.levelName)}</span> &bull;"
+    },
+    {
+      "lineNum": 1369,
+      "text": "<span>🎂 ${escapeHtml(rec.ageDisplay || '—')}</span>"
+    },
+    {
+      "lineNum": 1384,
+      "text": "<span>🖨️</span> Dossier"
+    },
+    {
+      "lineNum": 1388,
+      "text": "<span>✏️</span> Edit"
+    },
+    {
+      "lineNum": 1391,
+      "text": "<button class=\"btn-icon\" id=\"btn-close-profile-modal\" style=\"background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;\">✕</button>"
+    },
+    {
+      "lineNum": 1403,
+      "text": "<div class=\"profile-kpi-val\" style=\"color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? `filter:drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6)); font-weight:900;` : ''}\">${rec.overallScoreStr || '—'}</div>"
+    },
+    {
+      "lineNum": 1428,
+      "text": "<button class=\"student-profile-tab-btn active\" data-tab=\"tests\">📝 Test Breakdown (${(rec.details || []).length || 40})</button>"
+    },
+    {
+      "lineNum": 1429,
+      "text": "<button class=\"student-profile-tab-btn\" data-tab=\"remediation\">⚠️ Remediation & Progression</button>"
+    },
+    {
+      "lineNum": 1430,
+      "text": "<button class=\"student-profile-tab-btn\" data-tab=\"account\">🔑 Account & Enrollment</button>"
+    },
+    {
+      "lineNum": 1493,
+      "text": "${hasAnswers ? `<span class=\"toggle-arrow\" id=\"modal-arrow-${attId}\" style=\"font-size: 12px; color:var(--clr-text-muted); transition:transform 0.2s;\">▶</span>` : '<span style=\"display:inline-block;width:12px;\"></span>'}"
+    },
+    {
+      "lineNum": 1504,
+      "text": "${d.is_completed ? '✔️ Completed' : d.is_in_progress ? '▶️ In Progress' : '🔔 Not Started'}"
+    },
+    {
+      "lineNum": 1528,
+      "text": "↩️ Normal"
+    },
+    {
+      "lineNum": 1530,
+      "text": "<span class=\"badge badge-success\" style=\"font-size: 12px;\">🔓 Remedial Authorized</span>"
+    },
+    {
+      "lineNum": 1533,
+      "text": "🏷️ Remedial"
+    },
+    {
+      "lineNum": 1543,
+      "text": "let badge = '<span class=\"badge badge-danger\" style=\"font-size: 12px;\">❌ Incorrect (0 pt)</span>';"
+    },
+    {
+      "lineNum": 1545,
+      "text": "badge = '<span class=\"badge badge-success\" style=\"font-size: 12px;\">✅ Correct (+1 pt)</span>';"
+    },
+    {
+      "lineNum": 1547,
+      "text": "badge = '<span class=\"badge badge-warning\" style=\"font-size: 12px;\">⚠️ Minor (+0.5 pt)</span>';"
+    },
+    {
+      "lineNum": 1599,
+      "text": "if (arrow) arrow.textContent = isHidden ? '▶' : '▼';"
+    },
+    {
+      "lineNum": 1620,
+      "text": "showToast(targetRemedial ? '🏷️ Score successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');"
+    },
+    {
+      "lineNum": 1641,
+      "text": "<div class=\"fw-700 text-sm mb-2\" style=\"color:${TOPSCORE_COLORS.D};\">⚠️ Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>"
+    },
+    {
+      "lineNum": 1658,
+      "text": "<div style=\"font-size: 30px; margin-bottom:4px;\">🎉</div>"
+    },
+    {
+      "lineNum": 1672,
+      "text": "<div class=\"fw-700 text-sm\" style=\"color:${TOPSCORE_COLORS.A};\">✔️ Configured (4-digit PIN)</div>"
+    },
+    {
+      "lineNum": 1890,
+      "text": "const displayGrade = grade === 'S' || grade === '★' ? '★' : grade;"
+    },
+    {
+      "lineNum": 1913,
+      "text": "<span style=\"font-size: 16px;\">🖨️</span>"
+    },
+    {
+      "lineNum": 1921,
+      "text": "<span>🖨️</span> Print / Save as PDF"
+    },
+    {
+      "lineNum": 1924,
+      "text": "<span>👤</span> View Profile"
+    },
+    {
+      "lineNum": 1926,
+      "text": "<button class=\"btn-icon\" id=\"btn-close-dossier-modal\" style=\"background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;\">✕</button>"
+    },
+    {
+      "lineNum": 1936,
+      "text": "🛡️ TOPS CORE ACADEMIC ADMINISTRATION"
+    },
+    {
+      "lineNum": 2049,
+      "text": "<span style=\"font-size: 16px;\">🛡️</span>"
+    },
+    {
+      "lineNum": 2404,
+      "text": "cells += `<td style=\"background:#0f172a;border-top:2px solid #334155;font-weight:700;color:#ffffff;font-size: 12px;\">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;"
+    },
+    {
+      "lineNum": 2484,
+      "text": "const rank = { '★': 7, 'S': 7, 'A': 6, 'B': 5, 'C': 4, 'D': 3, 'E': 2, 'F': 1 };"
+    },
+    {
+      "lineNum": 3103,
+      "text": "? `🎓 Promote ${row.displayName} to ALUMNI (Universal Access)?\\n\\nStudent has passed all active level exams with >= 70% (or forgiven/remedial).`"
+    },
+    {
+      "lineNum": 3104,
+      "text": ": `🚀 Promote ${row.displayName} from ${row.levelName} to ${targetLevel.name}?\\n\\nStudent has met the >= 70% passing threshold on all current level exams.`;"
+    },
+    {
+      "lineNum": 3126,
+      "text": "showToast(`🎓 ${row.displayName} has graduated to Alumni!`, 'success');"
+    },
+    {
+      "lineNum": 3128,
+      "text": "showToast(`🚀 ${row.displayName} successfully promoted to ${targetLevel.name}!`, 'success');"
+    },
+    {
+      "lineNum": 3158,
+      "text": "${s.isEligibleNext ? `<span class=\"badge\" style=\"background:var(--grade-a);color:#0F172A;font-weight:700;\">✅ Eligible</span>` : `<span class=\"badge\" style=\"background:rgba(var(--grade-e-rgb),0.15);border:1px solid rgba(var(--grade-e-rgb),0.3);color:var(--grade-e);\">⏳ Pending Exams</span>`}"
+    },
+    {
+      "lineNum": 3168,
+      "text": "<span style=\"font-size: 16px;\">🚀</span>"
+    },
+    {
+      "lineNum": 3174,
+      "text": "<button id=\"btn-close-promo-req\" style=\"background:none; border:none; color:#94a3b8; font-size: 16px; cursor:pointer; padding:4px;\">✕</button>"
+    },
+    {
+      "lineNum": 3226,
+      "text": "if (!confirm(`🚀 Promote ${eligible.length} eligible student(s) to their next levels?`)) return;"
+    },
+    {
+      "lineNum": 3255,
+      "text": "showToast(`🚀 Successfully promoted ${promotedCount} student(s)!`, 'success');"
+    },
+    {
+      "lineNum": 3300,
+      "text": "<span>🔄</span> Transfer Batch: <span style=\"color:#38bdf8;\">${escapeHtml(s.displayName)}</span>"
+    },
+    {
+      "lineNum": 3302,
+      "text": "<button id=\"tb-close\" style=\"background:none;border:none;color:#94a3b8;font-size: 16px;cursor:pointer;\">✕</button>"
+    },
+    {
+      "lineNum": 3338,
+      "text": "<option value=\"true\" selected>🟢 Active</option>"
+    },
+    {
+      "lineNum": 3339,
+      "text": "<option value=\"false\">🔒 HOLD / Inactive</option>"
+    },
+    {
+      "lineNum": 3400,
+      "text": "showToast(`🔄 Student transferred successfully.`, 'success');"
+    },
+    {
+      "lineNum": 3451,
+      "text": "<span>🔁</span> Repeat Level / Re-enroll: <span style=\"color:#a855f7;\">${escapeHtml(s.displayName)}</span>"
+    },
+    {
+      "lineNum": 3453,
+      "text": "<button id=\"rl-close\" style=\"background:none;border:none;color:#94a3b8;font-size: 16px;cursor:pointer;\">✕</button>"
+    },
+    {
+      "lineNum": 3480,
+      "text": "🔁 Confirm Re-enrollment"
+    },
+    {
+      "lineNum": 3527,
+      "text": "showToast(`🔁 ${s.displayName} successfully re-enrolled!`, 'success');"
+    },
+    {
+      "lineNum": 3576,
+      "text": "const saveIt = confirm(\"⚠️ You have unsaved profile changes.\\\\n\\\\nClick OK to SAVE and leave, or CANCEL to discard changes and leave.\");"
+    },
+    {
+      "lineNum": 3661,
+      "text": "📸 Upload (3:4)"
+    },
+    {
+      "lineNum": 3730,
+      "text": "<span>📈 Manual Level Assignment</span>"
+    }
+  ],
+  "js\\admin\\student-registration.js": [
+    {
+      "lineNum": 15,
+      "text": "{ id: 'bulk', icon: '📥', title: 'Bulk Excel Import', label: 'Bulk Import (Excel / CSV)' },"
+    },
+    {
+      "lineNum": 16,
+      "text": "{ id: 'individual', icon: '👤', title: 'Add Student (Individual)', label: 'Add Student (Individual)' }"
+    },
+    {
+      "lineNum": 88,
+      "text": "<h2 class=\"section-title text-gradient\" style=\"font-size: 20px;\">📥 Bulk Student Ingestion</h2>"
+    },
+    {
+      "lineNum": 92,
+      "text": "<button class=\"btn btn-secondary btn-sm\" id=\"btn-export-students-csv\">📊 Export CSV</button>"
+    },
+    {
+      "lineNum": 93,
+      "text": "<button class=\"btn btn-primary btn-sm\" id=\"btn-dl-student-template\">📥 Download Excel Template (.xlsx)</button>"
+    },
+    {
+      "lineNum": 101,
+      "text": "<span>⚙️</span> Target Scope (Default / Override)"
+    },
+    {
+      "lineNum": 133,
+      "text": "<span class=\"student-reg-dropzone-icon\">📁</span>"
+    },
+    {
+      "lineNum": 162,
+      "text": "<button class=\"btn btn-primary btn-sm\" id=\"btn-confirm-save\">✓ Confirm &amp; Save Students</button>"
+    },
+    {
+      "lineNum": 169,
+      "text": "<span class=\"badge badge-success\" id=\"chip-new\">✨ New: 0</span>"
+    },
+    {
+      "lineNum": 170,
+      "text": "<span class=\"badge badge-warning\" id=\"chip-merge\">🔄 Merge: 0</span>"
+    },
+    {
+      "lineNum": 545,
+      "text": "if (chipNew) chipNew.textContent = `✨ New: ${newCount}`;"
+    },
+    {
+      "lineNum": 546,
+      "text": "if (chipMerge) chipMerge.textContent = `🔄 Merge: ${mergeCount}`;"
+    },
+    {
+      "lineNum": 738,
+      "text": "<h2 class=\"section-title text-gradient\" style=\"font-size: 20px;\">👤 Individual Student Registration</h2>"
+    },
+    {
+      "lineNum": 742,
+      "text": "<button class=\"btn btn-secondary btn-sm edit-mode-only\" id=\"btn-open-modal-add\">🗂️ Open Full Edit Modal</button>"
+    },
+    {
+      "lineNum": 749,
+      "text": "<span>📝</span> New Student Details"
+    },
+    {
+      "lineNum": 822,
+      "text": "<button class=\"btn btn-primary btn-sm\" id=\"btn-save-indiv-student\" style=\"min-width: 150px;\">✓ Register Student</button>"
+    },
+    {
+      "lineNum": 831,
+      "text": "<h3 style=\"font-size: 16px; font-weight: 700; color: #fff; margin: 0;\">📋 Recently Registered Students</h3>"
+    },
+    {
+      "lineNum": 834,
+      "text": "<button class=\"btn btn-ghost btn-xs\" id=\"btn-refresh-recent\">🔄 Refresh List</button>"
+    },
+    {
+      "lineNum": 855,
+      "text": "<span class=\"smart-empty-icon\">👥</span>"
+    },
+    {
+      "lineNum": 877,
+      "text": "<button class=\"btn btn-ghost btn-xs text-primary btn-edit-student edit-mode-only\" data-id=\"${s.id}\" title=\"Edit Profile\">✏️ Edit</button>"
+    },
+    {
+      "lineNum": 1055,
+      "text": "saveBtn.textContent = '✓ Register Student';"
+    },
+    {
+      "lineNum": 1124,
+      "text": "saveBtn.textContent = '✓ Register Student';"
+    }
+  ],
+  "js\\admin\\test-builder.js": [
+    {
+      "lineNum": 232,
+      "text": "<div style=\"font-size: 20px;\">🔒</div>"
+    },
+    {
+      "lineNum": 245,
+      "text": "<button class=\"btn btn-secondary btn-sm\" id=\"btn-save-draft\">💾 Save as Draft</button>"
+    },
+    {
+      "lineNum": 246,
+      "text": "<button class=\"btn btn-success btn-sm\" id=\"btn-publish-test\">🚀 Publish &amp; Freeze Snapshot</button>"
+    }
+  ],
+  "js\\admin\\test-system-settings-modal.js": [
+    {
+      "lineNum": 44,
+      "text": "<span style=\"font-size: 16px;\">⚙️</span>"
+    },
+    {
+      "lineNum": 56,
+      "text": "<button type=\"button\" id=\"btn-close-settings-modal\" style=\"background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;\">✕</button>"
+    },
+    {
+      "lineNum": 66,
+      "text": "📌 Task Repetition Target (Passing Count)"
+    },
+    {
+      "lineNum": 86,
+      "text": "🎯 Minimum Task Passing Score (%)"
+    },
+    {
+      "lineNum": 106,
+      "text": "📝 Minimum Exam Passing Score (%)"
+    },
+    {
+      "lineNum": 125,
+      "text": "🌐 Settings Application Scope"
+    },
+    {
+      "lineNum": 158,
+      "text": "\">💾 Save Settings</button>"
+    },
+    {
+      "lineNum": 183,
+      "text": "saveBtn.textContent = '⏳ Saving...';"
+    },
+    {
+      "lineNum": 200,
+      "text": "saveBtn.textContent = '💾 Save Settings';"
+    }
+  ],
+  "js\\admin\\tests-access.js": [
+    {
+      "lineNum": 7,
+      "text": "* 2. 2 Distinct Session Opening Triggers: \"🟢 Open Normal Session\" & \"🟡 Open Remedial Session\"."
+    },
+    {
+      "lineNum": 491,
+      "text": "<button type=\"button\" class=\"btn btn-ghost btn-icon\" id=\"btn-close-late-modal\" style=\"color:#94a3b8; font-size: 16px; padding:4px 8px;\">✕</button>"
+    },
+    {
+      "lineNum": 641,
+      "text": "<button type=\"button\" class=\"btn btn-ghost btn-icon\" id=\"btn-close-live-modal\" style=\"color:#94a3b8; font-size: 16px; padding:4px 8px; width:30px; height:30px; display:flex; align-items:center; justify-content:center;\">✕</button>"
+    },
+    {
+      "lineNum": 773,
+      "text": "<button type=\"button\" class=\"btn btn-ghost btn-icon\" id=\"btn-close-alarm-detail\" style=\"color:#94a3b8; font-size: 16px;\">✕</button>"
+    },
+    {
+      "lineNum": 805,
+      "text": "<button type=\"button\" class=\"btn btn-ghost btn-icon\" id=\"btn-close-inspect-answers\" style=\"color:#94a3b8; font-size: 16px;\">✕</button>"
+    },
+    {
+      "lineNum": 2590,
+      "text": "const isStar = item.isEvaluated && (item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100);"
+    },
+    {
+      "lineNum": 2591,
+      "text": "const gradeText = isStar ? '★' : (item.isEvaluated ? item.grade : '—');"
+    }
+  ],
+  "js\\admin\\tests-management.js": [
+    {
+      "lineNum": 349,
+      "text": "spelling: '[🔤 Spelling]',"
+    },
+    {
+      "lineNum": 351,
+      "text": "word_form: '[🔄 Word Form]',"
+    },
+    {
+      "lineNum": 352,
+      "text": "vocab_gap: '[💡 Vocab Gap]'"
+    },
+    {
+      "lineNum": 422,
+      "text": "pacingBadgeHtml = '<span class=\"tac-badge\" style=\"background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);\">⚪ No Data</span>';"
+    },
+    {
+      "lineNum": 425,
+      "text": "pacingBadgeHtml = '<span class=\"tac-badge\" style=\"background:rgba(var(--grade-e-rgb),0.12); color:var(--grade-e); border:1px solid rgba(var(--grade-e-rgb),0.3);\">⚠️ High Timeout</span>';"
+    },
+    {
+      "lineNum": 428,
+      "text": "pacingBadgeHtml = '<span class=\"tac-badge\" style=\"background:rgba(var(--grade-c-rgb),0.12); color:var(--grade-c); border:1px solid rgba(var(--grade-c-rgb),0.3);\">🟠 Rushed</span>';"
+    },
+    {
+      "lineNum": 431,
+      "text": "pacingBadgeHtml = '<span class=\"tac-badge\" style=\"background:rgba(var(--grade-a-rgb),0.12); color:var(--grade-a); border:1px solid rgba(var(--grade-a-rgb),0.3);\">🟢 Comfortable</span>';"
+    },
+    {
+      "lineNum": 434,
+      "text": "pacingBadgeHtml = '<span class=\"tac-badge\" style=\"background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);\">🔵 Normal</span>';"
+    },
+    {
+      "lineNum": 511,
+      "text": "const gradeCounts = { '★': 0, 'A': 0, 'B': 0, 'C': 0, 'D': 0, 'E': 0 };"
+    },
+    {
+      "lineNum": 623,
+      "text": "<div class=\"tac-drawer-title\">⏱️ Test-by-Test Completion &amp; Pacing</div>"
+    },
+    {
+      "lineNum": 629,
+      "text": "<input type=\"text\" id=\"tac-drawer-search\" class=\"tac-drawer-search\" placeholder=\"🔍 Search test title or shell code...\" oninput=\"window._onPacingDrawerSearch(this.value)\" />"
+    },
+    {
+      "lineNum": 664,
+      "text": "${r.isExam ? '🎓 Exam' : '⚡ Task'}"
+    },
+    {
+      "lineNum": 671,
+      "text": "<div style=\"font-weight:700; color:#f8fafc; font-size: 12px;\">⏱️ ${r.durDisplay}</div>"
+    },
+    {
+      "lineNum": 702,
+      "text": "<div style=\"font-size: 20px; margin-bottom:6px;\">🔍</div>"
+    },
+    {
+      "lineNum": 1239,
+      "text": "ℹ️ Active Track: <strong id=\"tac-empty-track-name\" style=\"color:#fff;\">${escapeHtml(currentClassObj.name)}</strong> has no published tests configured yet. Select <strong>3rd Vocabulary</strong> or <strong>All Classes</strong> in the top bar to inspect curriculum health and analytics."
+    },
+    {
+      "lineNum": 1246,
+      "text": "<div class=\"tac-pacing-icon\">⏱️</div>"
+    },
+    {
+      "lineNum": 1259,
+      "text": "<div class=\"tac-diag-title\">⚠️ Student Error Diagnosis:</div>"
+    },
+    {
+      "lineNum": 1262,
+      "text": "<span>🔤</span>"
+    },
+    {
+      "lineNum": 1272,
+      "text": "<span>🔄</span>"
+    },
+    {
+      "lineNum": 1277,
+      "text": "<span>💡</span>"
+    },
+    {
+      "lineNum": 1282,
+      "text": "<span>⏳</span>"
+    },
+    {
+      "lineNum": 1291,
+      "text": "<span>⏱️ Test Pacing &amp; Duration Drawer</span>"
+    },
+    {
+      "lineNum": 1292,
+      "text": "<span class=\"tac-drawer-arrow\">➔</span>"
+    },
+    {
+      "lineNum": 1330,
+      "text": "<span class=\"tac-badge-time\">⏱️ ${q.avgTimeSec}s</span>"
+    },
+    {
+      "lineNum": 1346,
+      "text": "❌ \"${escapeHtml(e.answer)}\""
+    },
+    {
+      "lineNum": 1362,
+      "text": "<div style=\"font-size: 20px; margin-bottom: 6px;\">✨</div>"
+    },
+    {
+      "lineNum": 1507,
+      "text": "case 'spoken': return '🎙️ Spoken';"
+    },
+    {
+      "lineNum": 1510,
+      "text": "case 'selection': return '✅ Selection';"
+    },
+    {
+      "lineNum": 1673,
+      "text": "<div class=\"fw-600\" style=\"font-size: 20px;\">${row.score}% <span class=\"badge badge-primary text-sm ml-2\" style=\"background:${getGradeColorByScore(parseFloat(row.score))}22;color:${getGradeColorByScore(parseFloat(row.score))};border:1px solid ${getGradeColorByScore(parseFloat(row.score))};\">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>"
+    },
+    {
+      "lineNum": 1708,
+      "text": "{ key: 'grade', label: 'GRADE', sortable: true, render: (val, row) => `<div class=\"text-center\"><span class=\"badge badge-primary fw-800\" style=\"background:${getGradeColorByScore(parseFloat(row?.score))}22;color:${getGradeColorByScore(parseFloat(row?.score))};border:1px solid ${getGradeColorByScore(parseFloat(row?.score))};\">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },"
+    },
+    {
+      "lineNum": 1882,
+      "text": "levelBadge.textContent = `🎯 ${lvlName}`;"
+    },
+    {
+      "lineNum": 1944,
+      "text": "title = '🚨 Anti-Cheat & Academic Integrity Inspector';"
+    },
+    {
+      "lineNum": 2031,
+      "text": "title = '🎯 First-Attempt Pass Rate & Grade Health';"
+    },
+    {
+      "lineNum": 2037,
+      "text": "{ sym: '★', label: 'Excellent', range: '100%', color: TOPSCORE_COLORS.STAR, count: st.gradeCounts['★'] || 0 },"
+    },
+    {
+      "lineNum": 2082,
+      "text": "title = '🧱 Curriculum Bottlenecks — Top 20 Most Missed Questions';"
+    },
+    {
+      "lineNum": 2116,
+      "text": "title = '⏱️ Pacing Velocity & 24-Hour WITA Peak Traffic Heatmap';"
+    },
+    {
+      "lineNum": 2178,
+      "text": "title = '👥 Remedial Watchlist & Struggle Index';"
+    },
+    {
+      "lineNum": 2271,
+      "text": "title = '🧬 Linguistic Mastery & Parts of Speech Overview';"
+    },
+    {
+      "lineNum": 2277,
+      "text": "{ name: 'Noun', icon: '📦', tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },"
+    },
+    {
+      "lineNum": 2278,
+      "text": "{ name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: 'var(--grade-c)' },"
+    },
+    {
+      "lineNum": 2279,
+      "text": "{ name: 'Adjective', icon: '🎨', tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },"
+    },
+    {
+      "lineNum": 2280,
+      "text": "{ name: 'Phrase / Idiom', icon: '💬', tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: 'var(--grade-a)' },"
+    },
+    {
+      "lineNum": 2304,
+      "text": "<strong style=\"color:#f8fafc;\">💡 Linguistic Insight:</strong> Nouns currently demonstrate the highest retention (84%), while conversational idioms and phrases require reinforcement drills due to colloquial variation."
+    },
+    {
+      "lineNum": 2309,
+      "text": "title = '🎙️ AI Speech Evaluation Quality & Audio Review Queue';"
+    },
+    {
+      "lineNum": 2478,
+      "text": "if (!flags || flags === 0) return '<span style=\"color:' + TOPSCORE_COLORS.CORRECT + '; font-size: 12px; font-weight:700;\">🛡️ Clean</span>';"
+    },
+    {
+      "lineNum": 2479,
+      "text": "return '<span style=\"color:' + TOPSCORE_COLORS.E + '; font-size: 12px; font-weight:700;\">⚠️ ' + flags + ' Flags</span>';"
+    },
+    {
+      "lineNum": 2548,
+      "text": "<div class=\"text-xs fw-700 text-info uppercase mb-2\">📊 Real-Time Test Telemetry</div>"
+    },
+    {
+      "lineNum": 2567,
+      "text": "<strong>⏱️ ${r?.pacingVal || '—'}</strong>"
+    },
+    {
+      "lineNum": 2577,
+      "text": "<div class=\"text-xs fw-700 uppercase mb-2\" style=\"color:var(--grade-c); letter-spacing:0.5px;\">🧱 Top 3 Hardest Questions in this Test</div>"
+    },
+    {
+      "lineNum": 2604,
+      "text": "📊 View Student Submissions"
+    }
+  ],
+  "js\\admin\\vocab-vault.js": [
+    {
+      "lineNum": 94,
+      "text": "{ id: 'theme_manager', icon: '🗺️', val: themesCount, title: 'Theme Manager', label: 'Theme Manager' },"
+    },
+    {
+      "lineNum": 95,
+      "text": "{ id: 'blueprint', icon: '⚡', val: topicsCount, title: 'Test Blueprint', label: 'Test Blueprint' },"
+    },
+    {
+      "lineNum": 96,
+      "text": "{ id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },"
+    },
+    {
+      "lineNum": 97,
+      "text": "{ id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }"
+    },
+    {
+      "lineNum": 152,
+      "text": "let title = mode === 'single_words' ? '📦 Words' : '💬 Phrases';"
+    },
+    {
+      "lineNum": 265,
+      "text": "<input type=\"search\" id=\"vault-search\" placeholder=\"🔍 Search...\" value=\"${escapeHtml(searchVal)}\" style=\"width: 160px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 8px; outline: none;\">"
+    },
+    {
+      "lineNum": 319,
+      "text": "<button class=\"btn btn-secondary btn-sm\" id=\"btn-import-vault\" style=\"height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;\">📥 Import</button>"
+    },
+    {
+      "lineNum": 320,
+      "text": "<button class=\"btn btn-secondary btn-sm\" id=\"btn-export-vault\" style=\"height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;\">📤 Export</button>"
+    },
+    {
+      "lineNum": 321,
+      "text": "<button class=\"btn btn-secondary btn-sm\" id=\"btn-check-duplicates\" style=\"height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;\">🔍 Dups</button>"
+    },
+    {
+      "lineNum": 381,
+      "text": "btnExp.innerHTML = '⏳ Exporting...';"
+    },
+    {
+      "lineNum": 388,
+      "text": "btnExp.innerHTML = '📤 Export';"
+    },
+    {
+      "lineNum": 496,
+      "text": "<button type=\"button\" class=\"btn-del-mini\" data-del-vault=\"${escapeHtml(w.id)}\" title=\"Delete word\" style=\"background:transparent;border:none;cursor:pointer;color:var(--grade-e);font-size:12px;padding:2px 4px;\">🗑️</button>"
+    },
+    {
+      "lineNum": 956,
+      "text": "<span style=\"background:rgba(var(--grade-a-rgb),0.15);color:var(--grade-a);border:1px solid rgba(var(--grade-a-rgb),0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;\">📦 Single Words: ${vocabRows.length} (${vocabDupes} dupes)</span>"
+    },
+    {
+      "lineNum": 957,
+      "text": "<span style=\"background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;\">💬 Phrases: ${phraseRows.length} (${phraseDupes} dupes)</span>"
+    },
+    {
+      "lineNum": 958,
+      "text": "<span style=\"background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;\">🔍 Unique Questions: ${uniqueIndoCount}</span>"
+    },
+    {
+      "lineNum": 959,
+      "text": "<span style=\"background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;\">📑 Themes: ${uniqueThemes} | Topics: ${uniqueTopics}</span>"
+    },
+    {
+      "lineNum": 1804,
+      "text": "<input type=\"search\" id=\"vault-topic-search\" placeholder=\"🔍 Search Theme or Topic...\" value=\"${escapeHtml(window._vaultTopicSearchQuery || '')}\" style=\"width: 200px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;\">"
+    },
+    {
+      "lineNum": 1807,
+      "text": "<button type=\"button\" class=\"btn-theme-curriculum-tab\" data-lvl=\"ALL\" style=\"height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}\">🎯 ALL (${totalTopicsAll})</button>"
+    },
+    {
+      "lineNum": 1844,
+      "text": "<button class=\"btn btn-secondary btn-sm edit-mode-only\" id=\"btn-theme-bottom-merge\" style=\"height: 32px; font-size: 12px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;\" title=\"Merge Similar Topics\">⚒️ Merge Topics</button>"
+    },
+    {
+      "lineNum": 1951,
+      "text": "return `<span class=\"prog-chip\" style=\"display:inline-flex;align-items:center;gap:3px;color:var(--grade-a);font-size: 12px;font-weight:500;\">🟢 ${code}</span>`;"
+    },
+    {
+      "lineNum": 2037,
+      "text": "⚙️ Assign"
+    },
+    {
+      "lineNum": 2043,
+      "text": "<button type=\"button\" class=\"btn-del-topic-mini\" data-topic=\"${escapeHtml(tp.name)}\" title=\"Delete Topic\" style=\"background:transparent;border:none;cursor:pointer;color:var(--grade-e);font-size:12px;padding:2px 4px;\">🗑️</button>"
+    },
+    {
+      "lineNum": 2430,
+      "text": "<h3 style=\"margin:0; font-size: 16px; font-weight:800; color:#f8fafc;\">🏛️ Assign Theme to Programs</h3>"
+    },
+    {
+      "lineNum": 2433,
+      "text": "<button class=\"btn btn-ghost btn-sm close-modal-btn\" style=\"color:#94a3b8; font-size:16px; cursor:pointer;\">✕</button>"
+    },
+    {
+      "lineNum": 2726,
+      "text": "<input type=\"search\" id=\"bp-search-input\" placeholder=\"🔍 Search Topics...\" style=\"width: 140px; height: 28px; font-size: 12px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;\">"
+    },
+    {
+      "lineNum": 2727,
+      "text": "<button class=\"btn btn-secondary btn-sm\" id=\"btn-bp-settings\" style=\"height: 28px; font-size: 12px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;\" title=\"Test System Settings\">⚙️ Test Settings</button>"
+    },
+    {
+      "lineNum": 2728,
+      "text": "<button class=\"btn btn-primary btn-sm\" id=\"btn-bp-autogen\" style=\"background: var(--clr-primary); font-size: 12px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 5px;\" title=\"Auto-Generate Curriculum Tests\">⚡ Auto-Generate All Tests</button>"
+    },
+    {
+      "lineNum": 2840,
+      "text": "${ansType === 'written' ? '✍️ Written' : (ansType === 'hybrid' ? '🔄 Hybrid' : '🗣️ Spoken')}"
+    },
+    {
+      "lineNum": 2844,
+      "text": "<option value=\"spoken\" ${ansType === 'spoken' ? 'selected' : ''}>🗣️ Spoken</option>"
+    },
+    {
+      "lineNum": 2845,
+      "text": "<option value=\"written\" ${ansType === 'written' ? 'selected' : ''}>✍️ Written</option>"
+    },
+    {
+      "lineNum": 2846,
+      "text": "<option value=\"hybrid\" ${ansType === 'hybrid' ? 'selected' : ''}>🔄 Hybrid</option>"
+    },
+    {
+      "lineNum": 2854,
+      "text": "? `<span style=\"color: var(--grade-a); font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;\">✓ Ready</span>`"
+    },
+    {
+      "lineNum": 2861,
+      "text": "? `<span style=\"color: var(--grade-a); font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;\">✓ Ready</span>`"
+    },
+    {
+      "lineNum": 2876,
+      "text": "<div style=\"font-size: 25px; margin-bottom: 6px;\">🗺️</div>"
+    },
+    {
+      "lineNum": 3481,
+      "text": "<strong style=\"color:#a5b4fc; font-size: 12px;\">⚡ Manual Topic Merge</strong>"
+    },
+    {
+      "lineNum": 3492,
+      "text": "<div style=\"font-size: 16px; color:#94a3b8; align-self:flex-end; padding-bottom:6px;\">➔</div>"
+    },
+    {
+      "lineNum": 3545,
+      "text": "showToast(`✓ Topic \"${src}\" successfully merged into \"${tgt}\"!`, 'success');"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261106_v160';
     import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v160';
     import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v160';
+import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -483,7 +484,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         if (dismissBtn) dismissBtn.style.display = 'none';
         if (overlay) overlay.style.display = 'flex';
         startPoliceSiren();
-        showToast(`🚨 Exam terminated: Warning limit (${MAX_STRIKES} strikes) exceeded.`, 'error', 6000);
+        showToast(`Exam terminated: Warning limit (${MAX_STRIKES} strikes) exceeded.`, 'error', 6000);
         setTimeout(() => {
           stopPoliceSiren();
           dismissCheatAlert();
@@ -507,8 +508,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (dismissBtn) {
         dismissBtn.style.display = 'flex';
         dismissBtn.innerHTML = isFinalWarning 
-          ? '<span>&#x26F6;</span><span>RETURN TO TEST (FINAL)</span>'
-          : '<span>&#x26F6;</span><span>RETURN TO TEST</span>';
+          ? '<span>RETURN TO TEST (FINAL)</span>'
+          : '<span>RETURN TO TEST</span>';
       }
 
       if (overlay) overlay.style.display = 'flex';
@@ -530,7 +531,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           isCheatAlertActive = false;
           stopPoliceSiren();
           dismissCheatAlert();
-          showToast('🚨 Exam terminated: Warning countdown reached 0.', 'error', 6000);
+          showToast('Exam terminated: Warning countdown reached 0.', 'error', 6000);
           doSubmit(true);
         }
       }, 500);
@@ -540,10 +541,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       // Re-verify translator state — do NOT permit dismiss if translation is still actively altering the page!
       const activeTrans = checkTranslationArtifacts();
       if (activeTrans) {
-        showToast(`🚨 Translation active (${activeTrans})! Please turn off Translate in your browser.`, 'error', 6000);
+        showToast(`Translation active (${activeTrans})! Please turn off Translate in your browser.`, 'error', 6000);
         const reasonEl = document.getElementById('cheat-reason');
         if (reasonEl) {
-          reasonEl.textContent = `🚨 CANNOT RESUME: ${activeTrans}! Please disable Translation (select "Show original English") to continue your exam.`;
+          reasonEl.textContent = `CANNOT RESUME: ${activeTrans}! Please disable Translation (select "Show original English") to continue your exam.`;
         }
         return false;
       }
@@ -794,7 +795,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           if (Date.now() >= cheatDeadline) {
             stopPoliceSiren();
             dismissCheatAlert();
-            showToast('🚨 Exam terminated: Warning countdown expired while away.', 'error', 6000);
+            showToast('Exam terminated: Warning countdown expired while away.', 'error', 6000);
             doSubmit(true);
             return;
           } else {
@@ -826,7 +827,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           if (Date.now() >= cheatDeadline) {
             stopPoliceSiren();
             dismissCheatAlert();
-            showToast('🚨 Exam terminated: Warning countdown expired while away.', 'error', 6000);
+            showToast('Exam terminated: Warning countdown expired while away.', 'error', 6000);
             doSubmit(true);
             return;
           } else {
@@ -1084,7 +1085,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           if (main) {
             main.innerHTML = `
               <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
-                <h2 class="fw-800 text-xl mb-3" style="color:#f87171;">🔒 Test Unavailable</h2>
+                <h2 class="fw-800 text-xl mb-3" style="color:var(--grade-e);">${getSvgIcon('lock', 20)} Test Unavailable</h2>
                 <p class="text-sm" style="color:var(--clr-text-2);">This test is unavailable or has been archived by your tutor. Retakes are not available.</p>
                 <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
               </div>
@@ -1100,7 +1101,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           if (main) {
             main.innerHTML = `
               <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
-                <h2 class="fw-800 text-xl mb-3" style="color:var(--clr-text-1);">🔒 Test Locked</h2>
+                <h2 class="fw-800 text-xl mb-3" style="color:var(--clr-text-1);">${getSvgIcon('lock', 20)} Test Locked</h2>
                 <p class="text-sm" style="color:var(--clr-text-2);">Waiting for your tutor to unlock this session in class.</p>
                 <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
               </div>
@@ -1272,8 +1273,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             mainEl.style.minHeight = '100%';
             mainEl.innerHTML = `
               <div class="question-card text-center" style="padding:2.5rem 1.5rem;text-align:center;width:100%;max-width:380px;margin:auto;">
-                <div style="font-size:3.5rem;margin-bottom:1rem;">⚠️ </div>
-                <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:0.75rem;">No Questions Found</h3>
+                <div style="margin-bottom:1rem; color:var(--grade-c);">${getSvgIcon('alert-triangle', 40)}</div>
+                <h3 style="font-size:20px;font-weight:700;margin-bottom:0.75rem;">No Questions Found</h3>
                 <p class="text-muted" style="max-width:440px;margin:0 auto 1.5rem;line-height:1.6;">
                   This test does not have any questions yet or the session needs to be refreshed.
                 </p>
@@ -1411,15 +1412,15 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             main.style.alignItems = 'center';
             main.style.minHeight = '70vh';
             main.innerHTML = `
-              <div class="glass-panel text-center p-5 mx-auto" style="max-width:540px;background:rgba(18,24,38,0.96);border:1px solid rgba(245,158,11,0.35);border-radius:16px;box-shadow:0 20px 45px rgba(0,0,0,0.6);padding:2.5rem 1.75rem;text-align:center;">
-                <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
-                <h2 class="fw-800 text-xl mb-3" style="color:#fbbf24;font-size:1.4rem;font-weight:800;margin-bottom:0.75rem;">Prerequisite Incomplete</h2>
-                <p class="text-sm" style="color:#e2e8f0;line-height:1.6;margin-bottom:1.75rem;font-size:0.95rem;">
+              <div class="glass-panel text-center p-5 mx-auto" style="max-width:540px;background:rgba(18,24,38,0.96);border:1px solid rgba(var(--grade-c-rgb),0.35);border-radius:16px;box-shadow:0 20px 45px rgba(0,0,0,0.6);padding:2.5rem 1.75rem;text-align:center;">
+                <div style="margin-bottom:1rem; color:var(--grade-c);">${getSvgIcon('alert-triangle', 40)}</div>
+                <h2 class="fw-800 text-xl mb-3" style="color:var(--grade-c);font-size:20px;font-weight:800;margin-bottom:0.75rem;">Prerequisite Incomplete</h2>
+                <p class="text-sm" style="color:#e2e8f0;line-height:1.6;margin-bottom:1.75rem;font-size:16px;">
                   ${escapeHtml(errMsg.replace(/^Error:\s*/, ''))}
                 </p>
                 <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
                   ${e?.prereqTestId ? `
-                    <button class="btn btn-primary" onclick="window.location.href='test.html?id=${e.prereqTestId}'" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 14px rgba(16,185,129,0.35);">
+                    <button class="btn btn-primary" onclick="window.location.href='test.html?id=${e.prereqTestId}'" style="background:linear-gradient(135deg,var(--grade-a) 0%,#009900 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;box-shadow:0 4px 14px rgba(var(--grade-a-rgb),0.35);">
                       Go to Prerequisite Task &rarr;
                     </button>
                   ` : ''}
@@ -1456,14 +1457,14 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             if (st === 'cancelled') {
               isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
-              alert('🚨 Sesi ujian Anda telah dibatalkan / dihentikan oleh Pengawas / Tutor.');
+              alert('Sesi ujian Anda telah dibatalkan / dihentikan oleh Pengawas / Tutor.');
               window.location.href = 'dashboard.html';
               return;
             }
             if (st === 'auto_submitted') {
               isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
-              alert('🚨 Sesi ujian Anda telah dikumpulkan oleh Pengawas / Tutor.');
+              alert('Sesi ujian Anda telah dikumpulkan oleh Pengawas / Tutor.');
               window.location.href = `result.html?attempt_id=${attemptData.id}`;
               return;
             }
@@ -1477,7 +1478,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
                 attemptData.expires_at = att.expires_at;
                 const currentSec = (testsections && testsections[currentSectionIndex]) || null;
                 startTimer(currentSec);
-                showToast(`⏱️ Waktu ujian Anda telah diperpanjang oleh Tutor (+${addedMinutes} menit)!`, 'success', 6000);
+                showToast(`Waktu ujian Anda telah diperpanjang oleh Tutor (+${addedMinutes} menit)!`, 'success', 6000);
               }
             }
           }
@@ -1494,7 +1495,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
                 isTestActive = false;
                 clearInterval(_sessionHeartbeatTimer);
-                alert('🚨 Akses Anda ke sesi ujian ini telah dicabut oleh Pengawas / Tutor.');
+                alert('Akses Anda ke sesi ujian ini telah dicabut oleh Pengawas / Tutor.');
                 window.location.href = 'dashboard.html';
                 return;
               }
@@ -1530,7 +1531,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
        const nameEl = document.getElementById('test-main-title') || document.getElementById('test-name');
        if (nameEl) nameEl.textContent = testDisplayName + (testsections.length > 1 ? ` - ${currentSection?.title || `Section ${index + 1}`}` : '');
        const metaEl = document.getElementById('test-meta');
-       if (metaEl) metaEl.textContent = `${allAnswerRows.length} Questions · ${session.student_name}`;
+       if (metaEl) metaEl.textContent = `${allAnswerRows.length} Questions · ${session.student_name || 'Student'}`;
 
        buildNavGrid();
        startTimer(currentSection);
@@ -1598,10 +1599,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         onWarning(remaining) {
           if (remaining <= 120) {
             timerEl.classList.add('critical');
-            showToast('&#9888;&#65039; Less than 2 minutes remaining!', 'warning', 5000);
+            showToast('Less than 2 minutes remaining!', 'warning', 5000);
           } else {
             timerEl.classList.add('warning');
-            showToast('&#9201; 5 minutes remaining.', 'warning', 4000);
+            showToast('5 minutes remaining.', 'warning', 4000);
           }
         },
         onExpire() {
@@ -1709,13 +1710,13 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           secHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid rgba(255, 255, 255, 0.08);';
 
           const titleSpan = document.createElement('span');
-          titleSpan.style.cssText = `font-size:0.82rem; font-weight:800; color:${(secIdx === currentSectionIndex) ? '#38bdf8' : '#e2e8f0'}; letter-spacing:0.3px; display:inline-flex; align-items:center; gap:6px;`;
-          const activeTag = (secIdx === currentSectionIndex) ? '<span style="font-size:0.65rem;background:#0284c7;color:#ffffff;padding:2px 6px;border-radius:4px;font-weight:700;">ACTIVE</span>' : '';
+          titleSpan.style.cssText = `font-size:12px; font-weight:800; color:${(secIdx === currentSectionIndex) ? '#38bdf8' : '#e2e8f0'}; letter-spacing:0.3px; display:inline-flex; align-items:center; gap:6px;`;
+          const activeTag = (secIdx === currentSectionIndex) ? '<span style="font-size:12px;background:#0284c7;color:#ffffff;padding:2px 6px;border-radius:4px;font-weight:700;">ACTIVE</span>' : '';
           titleSpan.innerHTML = `${sec.title || `Section ${secIdx + 1}`} (${secRows.length} Questions) ${activeTag}`;
 
           const progressSpan = document.createElement('span');
           progressSpan.id = `matrix-sec-count-${secIdx}`;
-          progressSpan.style.cssText = 'font-size:0.74rem; color:#94a3b8; font-weight:600;';
+          progressSpan.style.cssText = 'font-size:12px; color:#94a3b8; font-weight:600;';
 
           secHeader.appendChild(titleSpan);
           secHeader.appendChild(progressSpan);
@@ -1946,9 +1947,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         if (main) {
           main.innerHTML = `
             <div class="question-card text-center" style="padding:2.5rem 1.5rem;text-align:center;width:100%;max-width:380px;margin:auto;">
-              <div style="font-size:3rem;margin-bottom:1rem;">⚠️</div>
-              <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:0.75rem;">Question Unavailable</h3>
-              <p class="text-muted" style="font-size:0.88rem;margin-bottom:1.5rem;">Could not load question item. Please return to dashboard or retry.</p>
+              <div style="margin-bottom:1rem; color:var(--grade-c);">${getSvgIcon('alert-triangle', 40)}</div>
+              <h3 style="font-size:16px;font-weight:700;margin-bottom:0.75rem;">Question Unavailable</h3>
+              <p class="text-muted" style="font-size:12px;margin-bottom:1.5rem;">Could not load question item. Please return to dashboard or retry.</p>
               <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
             </div>
           `;
@@ -1963,7 +1964,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (isCurrentlyUnanswered && isTestActive) {
         window._questionPacingTimer = setTimeout(() => {
           if (currentIndex === idx && (!answeredMap[row.id] || !answeredMap[row.id].trim()) && isTestActive) {
-            showToast('💡 Stuck? Tap Next to skip and return later before time runs out!', 'info', 6000);
+            showToast('Stuck? Tap Next to skip and return later before time runs out!', 'info', 6000);
           }
         }, 45000);
       }
@@ -2099,19 +2100,19 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         metadataTable.innerHTML = `
           <!-- Row 1 Left: Theme name only -->
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
+            <span style="color:#38bdf8; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
           </div>
           <!-- Row 1 Right: Category name only -->
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#34d399; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
+            <span style="color:var(--grade-a); font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
           </div>
           <!-- Row 2 Left: Topic name only -->
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#f8fafc; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+            <span style="color:#f8fafc; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
           </div>
           <!-- Row 2 Right: Type name only -->
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
+            <span style="color:#cbd5e1; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
           </div>
         `;
         main.appendChild(metadataTable);
@@ -2154,16 +2155,16 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         metadataTable.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:32px !important; max-height:42px !important; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:3px; align-items:center; box-sizing:border-box; margin:0 auto !important;';
         metadataTable.innerHTML = `
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#38bdf8; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
+            <span style="color:#38bdf8; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTheme)}">${escapeHtml(displayTheme)}</span>
           </div>
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#34d399; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
+            <span style="color:var(--grade-a); font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayCategory)}">${escapeHtml(displayCategory)}</span>
           </div>
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#f8fafc; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
+            <span style="color:#f8fafc; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayTopic)}">${escapeHtml(displayTopic)}</span>
           </div>
           <div style="height:100%; min-height:100%; max-height:100%; display:flex; align-items:center; justify-content:center; padding:0 8px; background:rgba(15, 23, 42, 0.75); border:1px solid rgba(255, 255, 255, 0.08); border-radius:6px; box-sizing:border-box; backdrop-filter:blur(10px);">
-            <span style="color:#cbd5e1; font-size:10px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
+            <span style="color:#cbd5e1; font-size:12px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; text-align:center;" title="${escapeHtml(displayType)}">${escapeHtml(displayType)}</span>
           </div>
         `;
         main.appendChild(metadataTable);
@@ -2243,7 +2244,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         const isLastSection = (currentSectionIndex === testsections.length - 1);
         if (isLast) {
           if (isLastSection) {
-            bottomNext.textContent = 'Submit 📋';
+            bottomNext.textContent = 'Submit';
             bottomNext.className = 'btn-nav-next is-submit';
             bottomNext.style.background = '';
             bottomNext.style.color = '';
@@ -2255,7 +2256,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
               openSubmitModal();
             };
           } else {
-            bottomNext.textContent = 'Next Sec ➔';
+            bottomNext.innerHTML = `Next Sec ${getSvgIcon('arrow-right', 14)}`;
             bottomNext.className = 'btn-nav-next is-next-sec';
             bottomNext.style.background = '';
             bottomNext.style.color = '';
@@ -2267,7 +2268,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             };
           }
         } else {
-          bottomNext.textContent = 'Next ➔';
+          bottomNext.innerHTML = `Next ${getSvgIcon('arrow-right', 14)}`;
           bottomNext.className = 'btn-nav-next';
           bottomNext.style.background = '';
           bottomNext.style.color = '';
@@ -2316,12 +2317,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       container.innerHTML = '';
       const unanswered = answerRows.map((r, i) => ({ r, i })).filter(({ r }) => !answeredMap[r.id] || !answeredMap[r.id].trim());
       if (unanswered.length === 0) {
-        container.innerHTML = `<div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);"><div class="speech-all-answered-msg">✅ All ${answerRows.length} questions answered!</div></div>`;
+        container.innerHTML = `<div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);"><div class="speech-all-answered-msg">All ${answerRows.length} questions answered!</div></div>`;
         return;
       }
       const panel = document.createElement('div');
       panel.className = 'speech-unanswered-panel';
-      panel.innerHTML = `<div class="speech-unanswered-title">⚡ ${unanswered.length} unanswered — tap to jump</div><div class="speech-unanswered-chips" id="unanswered-chips"></div>`;
+      panel.innerHTML = `<div class="speech-unanswered-title">${unanswered.length} unanswered — tap to jump</div><div class="speech-unanswered-chips" id="unanswered-chips"></div>`;
       container.appendChild(panel);
       const chipsEl = panel.querySelector('#unanswered-chips');
       unanswered.forEach(({ i }) => {
@@ -2373,7 +2374,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         btn.setAttribute('tabindex', '0');
         btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:clamp(12.5px, 3.2vw, 14.5px); font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
 
-        btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:11.5px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
+        btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
 
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -2492,11 +2493,11 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       if (targetPhraseWords >= 2) {
         wordCounter = document.createElement('div');
         wordCounter.className = 'phrase-word-counter';
-        wordCounter.style.cssText = 'font-size:11.5px; font-weight:700; color:#94a3b8; margin-top:2px; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:10px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
+        wordCounter.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; margin-top:2px; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:4px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
         updateWordCount = (val) => {
           const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
           const isDone = words >= targetPhraseWords;
-          wordCounter.innerHTML = `✍️ <span style="color:${isDone ? 'var(--clr-success, #00c000ff)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
+          wordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
         };
         updateWordCount(ta.value);
         area.appendChild(wordCounter);
@@ -2510,12 +2511,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         const hintBtn = document.createElement('button');
         hintBtn.type = 'button';
         hintBtn.className = 'task-hint-btn';
-        hintBtn.innerHTML = '💡 Hint';
+        hintBtn.innerHTML = 'Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
-        hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:var(--grade-c); background:rgba(var(--grade-c-rgb),0.12); border:1px solid rgba(var(--grade-c-rgb),0.3); border-radius:4px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
 
         const hintDisplay = document.createElement('div');
-        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#fbbf24; margin-top:3px; display:none;';
+        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:var(--grade-c); margin-top:3px; display:none;';
         const mask = primaryTarget.split(' ').map(w => {
           if (w.length <= 2) return w;
           return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
@@ -2558,7 +2559,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
     function renderSpeech(area, controlArea, row, savedAnswer, snap = {}) {
       if (!isSpeechSupported()) {
-        area.innerHTML = '<div style="color:#fbbf24; text-align:center; font-size:14px; font-weight:700;">Speech Unavailable</div>';
+        area.innerHTML = '<div style="color:var(--grade-c); text-align:center; font-size:12px; font-weight:700;">Speech Unavailable</div>';
         renderWritten(area, controlArea, row, savedAnswer, snap, getVirtualKeyboard());
         return;
       }
@@ -2567,12 +2568,12 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       topRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; flex-shrink:0;';
       const langSelect = document.createElement('select');
       langSelect.className = 'speech-lang-select';
-      langSelect.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 8px; font-size:11.5px; font-weight:600; outline:none;';
+      langSelect.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 8px; font-size:12px; font-weight:600; outline:none;';
       langSelect.innerHTML = `<option value="en-US">🇺🇸 EN-US</option><option value="en-GB">🇬🇧 EN-UK</option>`;
       const statusEl = document.createElement('div');
-      statusEl.style.cssText = 'font-weight:700; font-size:11.5px; color:#94a3b8; display:flex; align-items:center; gap:8px;';
-      statusEl.textContent = savedAnswer ? '✅ Recorded' : '● Ready';
-      if (savedAnswer) statusEl.style.color = 'var(--clr-success, #00c000ff)';
+      statusEl.style.cssText = 'font-weight:700; font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:8px;';
+      statusEl.textContent = savedAnswer ? '● Recorded' : '● Ready';
+      if (savedAnswer) statusEl.style.color = 'var(--clr-success)';
 
       // Spoken Phrase Word-Counter
       const speechTargetPhraseWords = getTargetPhraseWordCount(snap, row);
@@ -2580,11 +2581,11 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       let updateSpeechWordCount = null;
       if (speechTargetPhraseWords >= 2) {
         speechWordCounter = document.createElement('span');
-        speechWordCounter.style.cssText = 'font-size:11px; font-weight:700; padding:1px 6px; border-radius:8px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
+        speechWordCounter.style.cssText = 'font-size:12px; font-weight:700; padding:1px 6px; border-radius:4px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
         updateSpeechWordCount = (val) => {
           const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
           const isDone = words >= speechTargetPhraseWords;
-          speechWordCounter.innerHTML = `🎙️ <span style="color:${isDone ? 'var(--clr-success, #00c000ff)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${speechTargetPhraseWords} words`;
+          speechWordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${speechTargetPhraseWords} words`;
         };
         updateSpeechWordCount(savedAnswer || '');
         statusEl.appendChild(speechWordCounter);
@@ -2595,25 +2596,26 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       const transcriptBox = document.createElement('div');
       transcriptBox.id = `speech-transcript-${row.id}`;
-      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; color:#38bdf8; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:0 2px 10px rgba(56,189,248,0.35); font-family:\'Outfit\',sans-serif;';
+      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:#38bdf8; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:0 2px 10px rgba(56,189,248,0.35); font-family:\'Outfit\',sans-serif;';
       if (savedAnswer) transcriptBox.textContent = savedAnswer;
       else transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.35); font-style:italic;">Listening...</span>';
       area.appendChild(transcriptBox);
 
-      // Quiz Practice Scaffolding: First-Letter Clue (Quizzes only, strictly disabled for Exams)
-      const isQuizPractice = !(String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category));
+      // Task Practice Scaffolding: First-Letter Clue (Tasks only, strictly disabled for Exams)
+      const isTaskPractice = !(String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category));
+      const isQuizPractice = isTaskPractice; // Backward compatibility
       const targetAns = (snap?.correct_answer || snap?.answer || row?.correct_answer_snapshot || '').trim();
       const primaryTarget = targetAns.split(/[;/,|]/)[0].trim();
-      if (isQuizPractice && primaryTarget.length >= 3) {
+      if (isTaskPractice && primaryTarget.length >= 3) {
         const hintBtn = document.createElement('button');
         hintBtn.type = 'button';
-        hintBtn.className = 'quiz-hint-btn';
-        hintBtn.innerHTML = '💡 Hint';
-        hintBtn.title = 'Get first-letter clue (Quiz practice only)';
-        hintBtn.style.cssText = 'font-size:11px; font-weight:700; color:#fbbf24; background:rgba(251,191,36,0.12); border:1px solid rgba(251,191,36,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        hintBtn.className = 'task-hint-btn quiz-hint-btn';
+        hintBtn.innerHTML = 'Hint';
+        hintBtn.title = 'Get first-letter clue (Task practice only)';
+        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:var(--grade-c); background:rgba(var(--grade-c-rgb),0.12); border:1px solid rgba(var(--grade-c-rgb),0.3); border-radius:4px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
 
         const hintDisplay = document.createElement('div');
-        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#fbbf24; margin-top:3px; display:none;';
+        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:var(--grade-c); margin-top:3px; display:none;';
         const mask = primaryTarget.split(' ').map(w => {
           if (w.length <= 2) return w;
           return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
@@ -2632,7 +2634,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
 
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(22, 163, 74, 0.45); background:linear-gradient(135deg, #4ade80 0%, #16a34a 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(22, 163, 74, 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
+      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-a-rgb), 0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(var(--grade-a-rgb), 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
       const micHelp = document.createElement('div');
@@ -2646,9 +2648,9 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const switchTypingBtn = document.createElement('button');
       switchTypingBtn.type = 'button';
       switchTypingBtn.className = 'switch-typing-btn';
-      switchTypingBtn.innerHTML = '⌨️ Type Instead';
+      switchTypingBtn.innerHTML = `${getSvgIcon('keyboard', 14)} Type Instead`;
       switchTypingBtn.title = 'Switch to typing mode if microphone is having issues';
-      switchTypingBtn.style.cssText = 'font-size:11px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s; touch-action:manipulation;';
+      switchTypingBtn.style.cssText = 'font-size:12px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s; touch-action:manipulation;';
       switchTypingBtn.addEventListener('click', () => {
         abortActiveSpeechSession();
         area.innerHTML = '';
@@ -2691,14 +2693,14 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
           onStart() {
             window._isSpeechRecognitionEngaged = true;
             micBtn.classList.add('listening');
-            micBtn.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-            micBtn.style.borderColor = 'var(--grade-e, #ff0000)';
-            micBtn.style.boxShadow = '0 0 24px rgba(239, 68, 68, 0.75), 0 8px 16px rgba(0, 0, 0, 0.5)';
+            micBtn.style.background = 'linear-gradient(135deg, var(--grade-e) 0%, #990000 100%)';
+            micBtn.style.borderColor = 'var(--grade-e)';
+            micBtn.style.boxShadow = '0 0 24px rgba(var(--grade-e-rgb), 0.75), 0 8px 16px rgba(0, 0, 0, 0.5)';
             micBtn.style.color = '#ffffff';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
             if (speechWordCounter) statusEl.appendChild(speechWordCounter);
-            statusEl.style.color = 'var(--grade-e, #FF0000)';
+            statusEl.style.color = 'var(--grade-e)';
             micHelp.textContent = 'Listening... (Tap to stop)';
             transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Listening...</span>';
           },
@@ -2727,8 +2729,8 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             window._isSpeechRecognitionEngaged = false;
             currentActiveSpeechSession = null;
             micBtn.classList.remove('listening');
-            micBtn.style.background = 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)';
-            micBtn.style.borderColor = 'rgba(22, 163, 74, 0.45)';
+            micBtn.style.background = 'linear-gradient(135deg, var(--grade-a) 0%, #009900 100%)';
+            micBtn.style.borderColor = 'rgba(var(--grade-a-rgb), 0.45)';
             micBtn.style.color = '#0F172A';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
@@ -2744,17 +2746,17 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             }
 
             const hasAns = !!answeredMap[row.id];
-            statusEl.innerHTML = hasAns ? '✅ Recorded' : '● Ready';
+            statusEl.innerHTML = hasAns ? '● Recorded' : '● Ready';
             if (speechWordCounter) statusEl.appendChild(speechWordCounter);
-            statusEl.style.color = hasAns ? 'var(--clr-success, #00c000ff)' : '#94a3b8';
+            statusEl.style.color = hasAns ? 'var(--clr-success)' : '#94a3b8';
             micHelp.textContent = 'Tap to Speak';
           },
           onError(msg) {
             window._isSpeechRecognitionEngaged = false;
             currentActiveSpeechSession = null;
             micBtn.classList.remove('listening');
-            micBtn.style.background = 'linear-gradient(135deg, #4ade80 0%, #16a34a 100%)';
-            micBtn.style.borderColor = 'rgba(22, 163, 74, 0.45)';
+            micBtn.style.background = 'linear-gradient(135deg, var(--grade-a) 0%, #009900 100%)';
+            micBtn.style.borderColor = 'rgba(var(--grade-a-rgb), 0.45)';
             micBtn.style.color = '#0F172A';
             micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
@@ -2762,16 +2764,16 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             const isNormalStop = !msg || msg.includes('stopped') || msg.includes('aborted');
             if (isNormalStop) {
               const hasAns = !!answeredMap[row.id];
-              statusEl.innerHTML = hasAns ? '✅ Recorded' : '● Ready';
+              statusEl.innerHTML = hasAns ? '● Recorded' : '● Ready';
               if (speechWordCounter) statusEl.appendChild(speechWordCounter);
-              statusEl.style.color = hasAns ? 'var(--clr-success, #00c000ff)' : '#94a3b8';
+              statusEl.style.color = hasAns ? 'var(--clr-success)' : '#94a3b8';
               micHelp.textContent = 'Tap to Speak';
               return;
             }
 
-            statusEl.innerHTML = `⚠️ ${escapeHtml(msg || 'Retry')}`;
+            statusEl.innerHTML = `● ${escapeHtml(msg || 'Retry')}`;
             if (speechWordCounter) statusEl.appendChild(speechWordCounter);
-            statusEl.style.color = 'var(--grade-e, #FF0000)';
+            statusEl.style.color = 'var(--grade-e)';
             micHelp.textContent = 'Tap to Retry';
             showToast(msg, 'warning');
           }
@@ -2833,10 +2835,10 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       try {
         await saveAnswer(attemptAnswerId, studentAnswer);
         if (statusText) statusText.textContent = 'Saved';
-        if (syncDot) syncDot.style.background = 'var(--clr-success, #00c000ff)';
+        if (syncDot) syncDot.style.background = 'var(--clr-success)';
       } catch(e) {
         if (statusText) statusText.textContent = 'Saved (Offline)';
-        if (syncDot) syncDot.style.background = 'var(--clr-warning, #FFFF00)';
+        if (syncDot) syncDot.style.background = 'var(--clr-warning)';
       }
     }
 
@@ -2851,7 +2853,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
       const statusText = document.getElementById('sync-status-text');
       const syncDot = document.getElementById('sync-dot');
       if (statusText) statusText.textContent = 'Offline (Buffered)';
-      if (syncDot) syncDot.style.background = 'var(--clr-warning, #FFFF00)';
+      if (syncDot) syncDot.style.background = 'var(--clr-warning)';
       if (typeof showToast === 'function') {
         showToast('Connection lost. Answers are buffered locally and safe.', 'warning');
       }
@@ -2877,7 +2879,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
         }
         await Promise.allSettled(promises);
         if (statusText) statusText.textContent = 'Saved';
-        if (syncDot) syncDot.style.background = 'var(--clr-success, #00c000ff)';
+        if (syncDot) syncDot.style.background = 'var(--clr-success)';
       } catch (syncErr) {
         console.warn('[OnlineSync] Reconnect sync error:', syncErr);
       }
@@ -3163,6 +3165,20 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
             await checkAndTriggerLevelUp(session.student_id, testData.level_id);
           } catch (e) {
             console.error('Level up check failed:', e);
+          }
+          // Photo retake gating: Passing an Exam grants 1 photo retake credit (non-accumulative)
+          try {
+            const finalPct = parseFloat(result?.percentage ?? attemptData?.percentage ?? 0);
+            if (finalPct >= 60.0) {
+              localStorage.setItem(`stu_photo_retake_eligible_${session.student_id}`, 'true');
+              if (session) {
+                session.photo_retake_eligible = true;
+                const { setStudentSession } = await import('./session.js?v=20261106_v160');
+                setStudentSession(session);
+              }
+            }
+          } catch (retakeErr) {
+            console.warn('Failed to update photo retake eligibility:', retakeErr);
           }
         }
 

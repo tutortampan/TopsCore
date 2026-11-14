@@ -33,9 +33,11 @@ import {
   updateVaultTopicCascade,
   updateVaultTopicCodeCascade,
   updateVaultTopicLevelCascade
-} from '../api.js?v=20261109_v166';
+} from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { getGradeColorByScore, getInvertedGradeColor } from '../grading.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 // ─── Helpers ───────────────────────────────────────────────
 
@@ -89,10 +91,10 @@ export async function renderVocabularyVault(area) {
     if (activeVaultTab === 'topics' || activeVaultTab === 'themes') activeVaultTab = 'theme_manager';
 
     const buildVaultTabs = (activeId) => [
-      { id: 'theme_manager', icon: '🗺️', val: themesCount, title: 'Theme Manager', label: 'Theme Manager' },
-      { id: 'blueprint', icon: '⚡', val: topicsCount, title: 'Test Blueprint', label: 'Test Blueprint' },
-      { id: 'vocab', icon: '📦', val: wordsCount, label: 'Vocabulary Words' },
-      { id: 'phrases', icon: '💬', val: phrasesCount, label: 'Phrases & Idioms' }
+      { id: 'theme_manager', icon: getSvgIcon('layers', 14), val: themesCount, title: 'Theme Manager', label: 'Theme Manager' },
+      { id: 'blueprint', icon: getSvgIcon('zap', 14), val: topicsCount, title: 'Test Blueprint', label: 'Test Blueprint' },
+      { id: 'vocab', icon: getSvgIcon('book-open', 14), val: wordsCount, label: 'Vocabulary Words' },
+      { id: 'phrases', icon: getSvgIcon('activity', 14), val: phrasesCount, label: 'Phrases & Idioms' }
     ];
 
     // FIX: move tabs to topbar (same pattern as Test, Class Hub, Students)
@@ -147,7 +149,7 @@ export async function renderVocabularyVault(area) {
 // ─── Grid View ─────────────────────────────────────────────
 
 function _renderVaultGrid(area, words, topics, mode = 'single_words') {
-  let title = mode === 'single_words' ? '📦 Words' : '💬 Phrases';
+  let title = mode === 'single_words' ? `${getSvgIcon('book-open', 14)} Words` : `${getSvgIcon('activity', 14)} Phrases`;
   let desc = mode === 'single_words'
     ? 'Standard vocabulary (Noun, Verb, Adjective, Adverb). Feeds Module 1.'
     : 'Expressions, idioms, and proverbs. Feeds Module 2.';
@@ -174,7 +176,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
       <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; margin: 0; background: #0f172a;">
-        <table id="vault-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
+        <table id="vault-table" class="${mode === 'phrases' ? 'mode-phrases' : ''}" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
           <colgroup>
             <col style="width: 85px;">
             <col style="width: 140px;">
@@ -193,7 +195,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
               <!-- Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY) -->
               <th data-sort="indonesian" style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Indonesian">INDONESIAN <span class="sort-indicator" id="sort-ind-indonesian"></span></th>
               <th data-sort="english" style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 280px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by English">ENGLISH <span class="sort-indicator" id="sort-ind-english"></span></th>
-              <th class="edit-mode-only" style="padding: 6px 8px; font-weight: 800; color: #f87171; text-transform: uppercase; font-size: 12px; text-align: center; width: 55px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.1); z-index: 25;" title="Actions">ACT</th>
+              <th class="edit-mode-only" style="padding: 6px 8px; font-weight: 800; color: var(--grade-e); text-transform: uppercase; font-size: 12px; text-align: center; width: 55px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.1); z-index: 25;" title="Actions">ACT</th>
             </tr>
           </thead>
           <tbody id="vault-tbody"></tbody>
@@ -260,14 +262,14 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
     let leftHtml = `
       <div style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto;">
-        <input type="search" id="vault-search" placeholder="🔍 Search..." value="${escapeHtml(searchVal)}" style="width: 160px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 8px; outline: none;">
+        <input type="search" id="vault-search" placeholder="Search..." value="${escapeHtml(searchVal)}" style="width: 160px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 8px; outline: none;">
 
-        <select id="vault-level-filter" style="width: 95px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+        <select id="vault-level-filter" style="width: 95px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
           <option value="">All Levels</option>
           ${uniqueLevels.map(lvl => `<option value="${lvl}"${lvlVal === String(lvl) ? ' selected' : ''}>${typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl)}</option>`).join('')}
         </select>
 
-        <select id="vault-topic-filter" style="width: 135px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+        <select id="vault-topic-filter" style="width: 135px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
           <option value="">All Topics</option>
           ${topics.map(t => {
             const tName = typeof t === 'string' ? t : (t.name || t.topic || '');
@@ -275,7 +277,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           }).join('')}
         </select>
 
-        <select id="vault-program-filter" style="width: 105px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+        <select id="vault-program-filter" style="width: 105px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
           <option value="">All Programs</option>
           ${(window._vaultMeta?.programs || [])
             .filter(p => !p.deleted_at && p.is_active !== false)
@@ -289,7 +291,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             `}
         </select>
 
-        <select id="vault-wordtype-filter" style="width: 110px; height: 32px; font-size: 11px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
+        <select id="vault-wordtype-filter" style="width: 110px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
           <option value="">All Types</option>
           ${mode === 'single_words'
             ? `
@@ -314,9 +316,9 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
     const rightHtml = `
       <div style="display: flex; align-items: center; gap: 6px;">
-        <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:32px; font-size:11px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📥 Import</button>
-        <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:32px; font-size:11px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">📤 Export</button>
-        <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:32px; font-size:11px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">🔍 Dups</button>
+        <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('upload', 14)} Import</button>
+        <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('download', 14)} Export</button>
+        <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('search', 14)} Dups</button>
       </div>
     `;
 
@@ -376,14 +378,14 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       btnExp.addEventListener('click', async () => {
         try {
           const oldText = btnExp.innerHTML;
-          btnExp.innerHTML = '⏳ Exporting...';
+          btnExp.innerHTML = `${getSvgIcon('clock', 14)} Exporting...`;
           btnExp.disabled = true;
           await exportVaultWords(mode);
           btnExp.innerHTML = oldText;
           btnExp.disabled = false;
         } catch (e) {
           showToast('Export failed: ' + e.message, 'error');
-          btnExp.innerHTML = '📤 Export';
+          btnExp.innerHTML = `${getSvgIcon('download', 14)} Export`;
           btnExp.disabled = false;
         }
       });
@@ -468,7 +470,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       return `
         <tr data-word-id="${escapeHtml(w.id)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
           <td class="col-vault-lexicon-code" style="padding: 6px 8px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">
-            <span class="vault-cell-view" style="color:#38bdf8;font-family:monospace;font-size:11px;font-weight:800;">${escapeHtml(lexCode)}</span>
+            <span class="vault-cell-view" style="color:#38bdf8;font-family:monospace;font-size: 12px;font-weight:800;">${escapeHtml(lexCode)}</span>
           </td>
           <td class="editable-cell" style="padding: 6px 10px; color: #94a3b8; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
             <span class="vault-cell-view" title="${escapeHtml(w.theme || '—')}">${escapeHtml(w.theme || '—')}</span>
@@ -482,16 +484,16 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             <span class="vault-cell-view" style="font-size:12px; color: ${typeColor}; font-weight: 700;">${escapeHtml(w.word_type || 'Vocab')}</span>
             <select class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="word_type">${typeOptionsHtml}</select>
           </td>
-          <td class="editable-cell" style="padding: 6px 12px; font-weight: 500; color: #cbd5e1; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+          <td class="editable-cell col-vault-indonesian ${mode === 'phrases' ? 'col-vault-phrase' : ''}" style="padding: 8px 12px; font-weight: 500; color: #cbd5e1; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
             <span class="vault-cell-view" title="${escapeHtml(w.indonesian)}">${escapeHtml(w.indonesian)}</span>
             <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="indonesian" value="${escapeHtml(w.indonesian)}">
           </td>
-          <td class="editable-cell" style="padding: 6px 12px; color: #ffffff; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+          <td class="editable-cell col-vault-english ${mode === 'phrases' ? 'col-vault-phrase' : ''}" style="padding: 8px 12px; color: #ffffff; font-weight: 600; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
             <span class="vault-cell-view" title="${escapeHtml(w.english)}">${escapeHtml(w.english)}</span>
             <input type="text" class="vault-edit-input" data-id="${escapeHtml(w.id)}" data-field="english" value="${escapeHtml(w.english)}">
           </td>
           <td class="edit-mode-only" style="padding: 6px 8px; text-align: center; width: 55px; position: sticky; right: 0; background: #0f172a; border-left: 1px solid rgba(255, 255, 255, 0.08); z-index: 5;">
-            <button type="button" class="btn-del-mini" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:14px;padding:2px 4px;">🗑️</button>
+            <button type="button" class="btn-del-mini" data-del-vault="${escapeHtml(w.id)}" title="Delete word" style="background:transparent;border:none;cursor:pointer;color:var(--grade-e);font-size:12px;padding:2px 4px;">${getSvgIcon('trash', 14)}</button>
           </td>
         </tr>
       `;
@@ -738,14 +740,14 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       <div class="d-flex gap-3 mb-3">
         <div style="flex:1;">
           <label class="form-label text-xs fw-700">Fallback Institution (if blank in Excel)</label>
-          <select id="vault-import-inst" class="form-control" style="width:100%;font-size:0.85rem;">
+          <select id="vault-import-inst" class="form-control" style="width:100%;font-size: 12px;">
             <option value="637fea53-ca64-4e1c-8ff7-6fd4dbdd8260">TOP</option>
             <option value="f51d4c2c-7c24-42ef-8d8f-b0f3e524a447">CEC (Central English Course)</option>
           </select>
         </div>
         <div style="flex:1;">
           <label class="form-label text-xs fw-700">Fallback Program (if blank in Excel)</label>
-          <select id="vault-import-prog" class="form-control" style="width:100%;font-size:0.85rem;">
+          <select id="vault-import-prog" class="form-control" style="width:100%;font-size: 12px;">
             <option value="">Loading programs...</option>
           </select>
         </div>
@@ -951,23 +953,23 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
 
       const distributionBadge = `
         <div class="d-flex gap-2 flex-wrap mt-2">
-          <span style="background:rgba(0,192,0,0.15);color:#00c000ff;border:1px solid rgba(0,192,0,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">📦 Single Words: ${vocabRows.length} (${vocabDupes} dupes)</span>
-          <span style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">💬 Phrases: ${phraseRows.length} (${phraseDupes} dupes)</span>
-          <span style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">🔍 Unique Questions: ${uniqueIndoCount}</span>
-          <span style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:3px 8px;border-radius:4px;font-size:11px;font-weight:600;">📑 Themes: ${uniqueThemes} | Topics: ${uniqueTopics}</span>
+          <span style="background:rgba(var(--grade-a-rgb),0.15);color:var(--grade-a);border:1px solid rgba(var(--grade-a-rgb),0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('book-open', 14)} Single Words: ${vocabRows.length} (${vocabDupes} dupes)</span>
+          <span style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('activity', 14)} Phrases: ${phraseRows.length} (${phraseDupes} dupes)</span>
+          <span style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('search', 14)} Unique Questions: ${uniqueIndoCount}</span>
+          <span style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('layers', 14)} Themes: ${uniqueThemes} | Topics: ${uniqueTopics}</span>
         </div>`;
 
       if (!duplicateConflicts.length) {
         previewArea.innerHTML = `
-          <div class="p-3 rounded mb-3" style="background:rgba(0,192,0,0.1);border:1px solid rgba(0,192,0,0.3);">
+          <div class="p-3 rounded mb-3" style="background:rgba(var(--grade-a-rgb),0.1);border:1px solid rgba(var(--grade-a-rgb),0.3);">
             <p class="text-success fw-600 mb-1">&#10003; ${_parsedRows.length} total rows parsed — no conflicts detected.</p>
             ${distributionBadge}
           </div>
         `;
       } else {
         previewArea.innerHTML = `
-          <div class="p-3 rounded mb-3" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);">
-            <p class="fw-600 mb-1" style="color:#f59e0b;">&#9888; ${duplicateConflicts.length} conflict(s) detected — choose an action for each:</p>
+          <div class="p-3 rounded mb-3" style="background:rgba(var(--grade-c-rgb),0.1);border:1px solid rgba(var(--grade-c-rgb),0.3);">
+            <p class="fw-600 mb-1" style="color:var(--grade-c);">&#9888; ${duplicateConflicts.length} conflict(s) detected — choose an action for each:</p>
             <p class="text-muted text-xs mb-1">${cleanRows.length} rows are clean and will be imported automatically.</p>
             ${distributionBadge}
             <div class="d-flex gap-2 flex-wrap mb-3">
@@ -980,10 +982,10 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
             <table>
               <thead>
                 <tr>
-                  <th>Incoming Word</th>
-                  <th>Existing Vault Word</th>
-                  <th class="text-center">Conflict Type</th>
-                  <th class="text-center">Action</th>
+                  <th>INCOMING WORD</th>
+                  <th>EXISTING VAULT WORD</th>
+                  <th class="text-center">CONFLICT TYPE</th>
+                  <th class="text-center">ACTION</th>
                 </tr>
               </thead>
               <tbody id="conflict-tbody">
@@ -1000,12 +1002,12 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
                       <div class="text-xs" style="color:#a5b4fc;">${escapeHtml(c.existingRecord.topic)}</div>
                     </td>
                     <td class="text-center">
-                      <span class="badge ${c.conflictType === 'EXACT' ? 'badge-danger' : 'badge-warning'}" style="font-size:0.7rem;">
+                      <span class="badge ${c.conflictType === 'EXACT' ? 'badge-danger' : 'badge-warning'}" style="font-size: 12px;">
                         ${escapeHtml(c.conflictType)}
                       </span>
                     </td>
                     <td class="text-center">
-                      <select class="form-control conflict-action-sel" data-conflict-idx="${ci}" data-row-idx="${c.index}" style="font-size:0.8rem;padding:4px 6px;">
+                      <select class="form-control conflict-action-sel" data-conflict-idx="${ci}" data-row-idx="${c.index}" style="font-size: 12px;padding:4px 6px;">
                         <option value="merge">Merge</option>
                         <option value="overwrite">Overwrite</option>
                         <option value="skip" selected>Skip</option>
@@ -1110,9 +1112,9 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       <!-- Step Indicators -->
       <div class="d-flex gap-2 mb-5 flex-wrap" id="step-indicators">
         ${['Scope & Tier', 'Source', 'Order & Quota', 'Schedule'].map((s, i) => `
-          <div class="d-flex align-center gap-1 step-ind" data-step="${i + 1}" style="font-size:0.78rem;color:${i === 0 ? 'var(--clr-primary)' : 'var(--clr-text-3)'};">
+          <div class="d-flex align-center gap-1 step-ind" data-step="${i + 1}" style="font-size: 12px;color:${i === 0 ? 'var(--clr-primary)' : 'var(--clr-text-3)'};">
             <span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;
-              background:${i === 0 ? 'var(--clr-primary)' : 'rgba(255,255,255,0.1)'};color:${i === 0 ? '#fff' : 'var(--clr-text-3)'};font-size:0.72rem;font-weight:700;">${i + 1}</span>
+              background:${i === 0 ? 'var(--clr-primary)' : 'rgba(255,255,255,0.1)'};color:${i === 0 ? '#fff' : 'var(--clr-text-3)'};font-size: 12px;font-weight:700;">${i + 1}</span>
             ${s}${i < 3 ? '<span style="color:var(--clr-border);margin-left:6px;">→</span>' : ''}
           </div>
         `).join('')}
@@ -1160,9 +1162,9 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       const circle = el.querySelector('span');
       const isActive = stepNum === currentStep;
       const isDone = stepNum < currentStep;
-      circle.style.background = isActive ? 'var(--clr-primary)' : isDone ? 'rgba(0,192,0,0.6)' : 'rgba(255,255,255,0.1)';
+      circle.style.background = isActive ? 'var(--clr-primary)' : isDone ? 'rgba(var(--grade-a-rgb), 0.6)' : 'rgba(255,255,255,0.1)';
       circle.style.color = (isActive || isDone) ? '#fff' : 'var(--clr-text-3)';
-      el.style.color = isActive ? 'var(--clr-primary)' : isDone ? '#00c000ff' : 'var(--clr-text-3)';
+      el.style.color = isActive ? 'var(--clr-primary)' : isDone ? 'var(--grade-a)' : 'var(--clr-text-3)';
     });
     document.getElementById('builder-back-btn').style.display = currentStep > 1 ? '' : 'none';
     document.getElementById('builder-next-btn').innerHTML = currentStep === 4 ? (state.isEdit ? '&#10003; Save Changes' : '&#10003; Create Test') : 'Next →';
@@ -1378,7 +1380,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
     else if (step === 2) {
       // Source selection (depends on tier)
-      content.innerHTML = `<h4 class="fw-600 mb-3 text-sm" style="color:var(--clr-text-2);">Step 2 — Select Source</h4><div id="source-area"><div class="spinner"></div></div>`;
+      content.innerHTML = `<h4 class="fw-600 mb-3 text-sm" style="color:var(--clr-text-2);">Step 2 — Select Source</h4><div id="source-area"><div class="topscore-loading-center" style="min-height: 100px !important;"><div class="spinner"></div><p class="loading-text">Loading sources...</p></div></div>`;
       const sourceArea = document.getElementById('source-area');
 
       if (state.tier === 'QUIZ' || state.tier === 'TASK') {
@@ -1495,7 +1497,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         return wita.toISOString().slice(0, 16);
       };
       content.innerHTML = `
-        <h4 class="fw-600 mb-3 text-sm" style="color:var(--clr-text-2);">Step 4 — Schedule <span style="color:#38bdf8;font-size:0.78rem;">(WITA / GMT+8)</span></h4>
+        <h4 class="fw-600 mb-3 text-sm" style="color:var(--clr-text-2);">Step 4 — Schedule <span style="color:#38bdf8;font-size: 12px;">(WITA / GMT+8)</span></h4>
 
         <div class="form-group">
           <label class="form-label">Schedule Mode</label>
@@ -1799,21 +1801,21 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
     const leftHtml = `
       <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; overflow-x: auto;">
-        <input type="search" id="vault-topic-search" placeholder="🔍 Search Theme or Topic..." value="${escapeHtml(window._vaultTopicSearchQuery || '')}" style="width: 200px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
+        <input type="search" id="vault-topic-search" placeholder="Search Theme or Topic..." value="${escapeHtml(window._vaultTopicSearchQuery || '')}" style="width: 200px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
 
         <div style="display: flex; gap: 3px; align-items: center; background: rgba(255,255,255,0.04); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
-          <button type="button" class="btn-theme-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">🎯 ALL (${totalTopicsAll})</button>
+          <button type="button" class="btn-theme-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${getSvgIcon('target', 14)} ALL (${totalTopicsAll})</button>
           ${levels.map(lvl => {
             const isActive = (String(activeLevel) === String(lvl));
             const count = levelStats[lvl]?.topics || 0;
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-            return `<button type="button" class="btn-theme-curriculum-tab" data-lvl="${lvl}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${shortLbl} (${count})</button>`;
+            return `<button type="button" class="btn-theme-curriculum-tab" data-lvl="${lvl}" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${shortLbl} (${count})</button>`;
           }).join('')}
         </div>
 
         <!-- Program Quick Filter Pills (Phase 432) -->
         <div style="display: flex; gap: 3px; align-items: center; background: rgba(255,255,255,0.04); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
-          <button type="button" class="btn-theme-prog-tab" data-prog="ALL" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${(window._vaultActiveProgramFilter || 'ALL') === 'ALL' ? 'background: #00c000ff; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">PROG: ALL</button>
+          <button type="button" class="btn-theme-prog-tab" data-prog="ALL" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${(window._vaultActiveProgramFilter || 'ALL') === 'ALL' ? 'background: var(--grade-a); color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">PROG: ALL</button>
           ${(() => {
             const seen = new Set();
             const progs = [];
@@ -1827,7 +1829,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             return progs.map(p => {
               const code = (p.code || p.name).toUpperCase().slice(0, 4);
               const isPActive = (curP === p.id || curP === p.name || curP === code);
-              return `<button type="button" class="btn-theme-prog-tab" data-prog="${escapeHtml(p.name)}" style="height: 28px; font-size: 11px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${isPActive ? 'background: #00c000ff; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${escapeHtml(code)}</button>`;
+              return `<button type="button" class="btn-theme-prog-tab" data-prog="${escapeHtml(p.name)}" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${isPActive ? 'background: var(--grade-a); color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${escapeHtml(code)}</button>`;
             }).join('');
           })()}
         </div>
@@ -1839,7 +1841,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     `;
     const rightHtml = `
       <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-theme-bottom-merge" style="height: 32px; font-size: 11.5px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">⚒️ Merge Topics</button>
+        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-theme-bottom-merge" style="height: 32px; font-size: 12px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">${getSvgIcon('zap', 14)} Merge Topics</button>
       </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
@@ -1946,10 +1948,10 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           ? `<span class="vault-programs-cell" title="${escapeHtml(progFullNames)}">${
               assignedProgs.map(p => {
                 const code = PROG_SHORT_CODE[p.name] || (p.code || p.name).toUpperCase().slice(0, 4);
-                return `<span class="prog-chip" style="display:inline-flex;align-items:center;gap:3px;color:#4ade80;font-size:11px;font-weight:500;">🟢 ${code}</span>`;
-              }).join('<span style="color:#334155;font-size:10px;padding:0 1px;">·</span>')
+                return `<span class="prog-chip" style="display:inline-flex;align-items:center;gap:3px;color:var(--grade-a);font-size: 12px;font-weight:500;"><span class="status-dot online"></span> ${code}</span>`;
+              }).join('<span style="color:#334155;font-size: 12px;padding:0 1px;">·</span>')
             }</span>`
-          : `<span style="color:#64748b;font-size:11px;">—</span>`;
+          : `<span style="color:#64748b;font-size: 12px;">—</span>`;
 
         topics.forEach(tp => {
           const cleanTopicCode = (tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || (tp.topicCode || '1');
@@ -1964,12 +1966,12 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 <input type="number" min="1" max="6" class="vault-edit-input" data-action="edit-level" data-topic="${escapeHtml(tp.name)}" data-old-lvl="${lvl}" data-th-code="${thCode}" value="${lvl}" style="text-align:center;">
               </td>
               <!-- 2. TH-CD -->
-              <td class="editable-cell" style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td class="editable-cell" style="text-align: center; color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#a5b4fc'}; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(thCode)}</span>
                 <input type="text" maxlength="4" class="vault-edit-input" data-action="edit-theme-code" data-old-th-code="${thCode}" data-lvl="${lvl}" value="${escapeHtml(thCode)}" style="text-align:center; text-transform:uppercase;">
               </td>
               <!-- 3. THEME -->
-              <td class="editable-cell" style="color: #ffffff; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td class="editable-cell" style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(th.name || '—')}</span>
                 <input type="text" class="vault-edit-input" data-action="edit-theme-name" data-old-theme="${escapeHtml(th.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(th.name || '')}">
               </td>
@@ -1983,62 +1985,62 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 <span class="vault-cell-view">${escapeHtml(tp.name)}</span>
                 <input type="text" class="vault-edit-input" data-action="edit-topic-name" data-old-topic="${escapeHtml(tp.name)}" data-lvl="${lvl}" data-th-code="${thCode}" value="${escapeHtml(tp.name)}">
               </td>
-              <!-- 6. CODE -->
-              <td class="col-theme-composite-code" style="text-align: center; font-family: monospace; font-weight: 800; color: #38bdf8; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+              <!-- 6. CODE (Boundary Column 1) -->
+              <td class="col-theme-composite-code super-hdr-divider" style="text-align: center; font-family: monospace; font-weight: 800; color: #38bdf8; font-size: 12px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 ${escapeHtml(compositeCode)}
               </td>
               <!-- 7. VERB -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span style="color: ${tp.verbCount > 0 ? '#93c5fd' : '#334155'}; font-weight: ${tp.verbCount > 0 ? '600' : '400'};">${tp.verbCount}</span>
               </td>
               <!-- 8. NOUN -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span style="color: ${tp.nounCount > 0 ? '#93c5fd' : '#334155'}; font-weight: ${tp.nounCount > 0 ? '600' : '400'};">${tp.nounCount}</span>
               </td>
               <!-- 9. ADJ -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span style="color: ${tp.adjCount > 0 ? '#93c5fd' : '#334155'}; font-weight: ${tp.adjCount > 0 ? '600' : '400'};">${tp.adjCount}</span>
               </td>
-              <!-- 10. OTH (Words) -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <!-- 10. OTH (Words - Boundary Column 2) -->
+              <td class="super-hdr-divider" style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <span style="color: ${tp.wordsOtherCount > 0 ? '#93c5fd' : '#334155'}; font-weight: ${tp.wordsOtherCount > 0 ? '600' : '400'};">${tp.wordsOtherCount}</span>
               </td>
               <!-- 11. EXP -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span style="color: ${tp.expCount > 0 ? '#d8b4fe' : '#334155'}; font-weight: ${tp.expCount > 0 ? '600' : '400'};">${tp.expCount}</span>
               </td>
               <!-- 12. PRV -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span style="color: ${tp.prvCount > 0 ? '#d8b4fe' : '#334155'}; font-weight: ${tp.prvCount > 0 ? '600' : '400'};">${tp.prvCount}</span>
               </td>
               <!-- 13. IDM -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span style="color: ${tp.idmCount > 0 ? '#d8b4fe' : '#334155'}; font-weight: ${tp.idmCount > 0 ? '600' : '400'};">${tp.idmCount}</span>
               </td>
-              <!-- 14. OTH (Phrases) -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.08);">
+              <!-- 14. OTH (Phrases - Boundary Column 3) -->
+              <td class="super-hdr-divider" style="padding: 6px 2px; text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 600; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <span style="color: ${tp.phrasesOtherCount > 0 ? '#d8b4fe' : '#334155'}; font-weight: ${tp.phrasesOtherCount > 0 ? '600' : '400'};">${tp.phrasesOtherCount}</span>
               </td>
               <!-- 15. WORDS -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.08); border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsCount}</td>
               <!-- 16. PHRASES -->
               <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #c084fc; background: rgba(192, 132, 252, 0.08); border-right: 1px solid rgba(255,255,255,0.1);">${tp.phrasesCount}</td>
-              <!-- 17. TOTAL -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-right: 1px solid rgba(255,255,255,0.08);">${tp.totalCount}</td>
-              <!-- 18. PROGRAMS -->
-              <td style="padding: 6px 10px; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
+              <!-- 17. TOTAL (Boundary Column 4) -->
+              <td class="super-hdr-divider" style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-right: 2px solid rgba(255,255,255,0.22) !important;">${tp.totalCount}</td>
+              <!-- 18. PROGRAMS (Boundary Column 5) -->
+              <td class="super-hdr-divider" style="padding: 6px 10px; font-size: 12px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                   <div style="display:flex; align-items:center; gap:4px; flex-wrap:wrap;">
                     ${assignedPillsHtml}
                   </div>
-                  <button type="button" class="btn btn-xs btn-assign-pill edit-mode-only" data-theme-code="${thCode}" data-level="${lvl}" data-theme-name="${escapeHtml(th.name)}" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;cursor:pointer;" title="Assign to Institutions &amp; Programs">
-                    ⚙️ Assign
+                  <button type="button" class="btn btn-xs btn-assign-pill edit-mode-only" data-theme-code="${thCode}" data-level="${lvl}" data-theme-name="${escapeHtml(th.name)}" style="background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);color:#a5b4fc;font-size: 12px;font-weight:700;padding:2px 8px;border-radius:4px;cursor:pointer;" title="Assign to Institutions &amp; Programs">
+                    ${getSvgIcon('settings', 12)} Assign
                   </button>
                 </div>
               </td>
               <!-- 19. ACT (Delete only when Edit ON) -->
               <td class="edit-mode-only" style="padding: 4px 6px; text-align: center; width: 45px; border-left: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap;">
-                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background:transparent;border:none;cursor:pointer;color:#f87171;font-size:14px;padding:2px 4px;">🗑️</button>
+                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background:transparent;border:none;cursor:pointer;color:var(--grade-e);font-size:12px;padding:2px 4px;">${getSvgIcon('trash', 14)}</button>
               </td>
             </tr>
           `;
@@ -2091,58 +2093,52 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
             <!-- Super-Headers Grouping -->
             <tr>
-              <th colspan="6" class="super-th super-hdr" style="background:#0c192e; color:#38bdf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">HIERARCHY &amp; IDENTITY</th>
-              <th colspan="4" class="super-th super-hdr" style="background:#131d36; color:#818cf8; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">WORDS BREAKDOWN</th>
-              <th colspan="4" class="super-th super-hdr" style="background:#1a1936; color:#c084fc; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PHRASES BREAKDOWN</th>
-              <th colspan="3" class="super-th super-hdr" style="background:#0f2922; color:#4ade80; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">METRICS SUMMARY</th>
-              <th class="super-th super-hdr" style="background:#1e293b; color:#fb923c; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:1px solid rgba(255,255,255,0.08);">PROGRAM ACCESS</th>
-              <th class="super-th super-hdr edit-mode-only" style="background:#3b1116; color:#f87171; font-size:11px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1);">ACTION</th>
+              <th colspan="6" class="super-th super-hdr" style="background:#0c192e; color:#38bdf8; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">HIERARCHY &amp; IDENTITY</th>
+              <th colspan="4" class="super-th super-hdr" style="background:#131d36; color:#818cf8; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">WORDS BREAKDOWN</th>
+              <th colspan="4" class="super-th super-hdr" style="background:#1a1936; color:#c084fc; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES BREAKDOWN</th>
+              <th colspan="3" class="super-th super-hdr" style="background:rgba(var(--grade-a-rgb), 0.15); color:var(--grade-a); font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">METRICS SUMMARY</th>
+              <th rowspan="2" class="super-th super-hdr-divider" style="background:#1e293b; color:var(--grade-a); font-size:12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; vertical-align:middle; height:60px;" title="Assigned Programs">PROGRAMS</th>
+              <th rowspan="2" class="edit-mode-only" style="background:rgba(var(--grade-e-rgb), 0.2); color:var(--grade-e); font-size:12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); vertical-align:middle; height:60px;" title="Action">ACT</th>
             </tr>
-            <!-- Sub-Headers (Exact 19 Columns) -->
+            <!-- Sub-Headers (Exact 17 Grouped Sub-Columns; Programs & Act Span RowSpan 2) -->
             <tr>
               <!-- 1. LVL -->
-              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1);" title="Level">LVL</th>
+              <th style="padding: 6px 8px; font-weight: 400; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); height:30px; line-height:30px;" title="Level">LVL</th>
               <!-- 2. TH-CD -->
-              <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
+              <th style="padding: 6px 4px; font-weight: 400; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
               <!-- 3. THEME -->
-              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 140px; border-right: 1px solid rgba(255,255,255,0.1);" title="Theme Name">THEME</th>
+              <th style="padding: 6px 8px; font-weight: 400; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 140px; border-right: 1px solid rgba(255,255,255,0.1); height:30px; line-height:30px;" title="Theme Name">THEME</th>
               <!-- 4. TP-CD -->
-              <th style="padding: 6px 4px; font-weight: 800; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
+              <th style="padding: 6px 4px; font-weight: 400; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
               <!-- 5. TOPIC NAME (Flex Primary) -->
-              <th style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08);" title="Topic Name">TOPIC NAME</th>
-              <!-- 6. CODE -->
-              <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Composite Code (e.g. 1G1)">CODE</th>
+              <th style="padding: 6px 8px; font-weight: 400; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Topic Name">TOPIC NAME</th>
+              <!-- 6. CODE (Boundary Column 1) -->
+              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 400; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" title="Composite Code (e.g. 1G1)">CODE</th>
 
               <!-- 7. VERB -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Verb Count">VERB</th>
+              <th style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Verb Count">VERB</th>
               <!-- 8. NOUN -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Noun Count">NOUN</th>
+              <th style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Noun Count">NOUN</th>
               <!-- 9. ADJ -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Adjective Count">ADJ</th>
-              <!-- 10. OTH -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Words Other (Adverbs, etc.)">OTH</th>
+              <th style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Adjective Count">ADJ</th>
+              <!-- 10. OTH (Boundary Column 2) -->
+              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" title="Words Other (Adverbs, etc.)">OTH</th>
 
               <!-- 11. EXP -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Expression Count">EXP</th>
+              <th style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Expression Count">EXP</th>
               <!-- 12. PRV -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Proverb Count">PRV</th>
+              <th style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Proverb Count">PRV</th>
               <!-- 13. IDM -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Idiom Count">IDM</th>
-              <!-- 14. OTH -->
-              <th style="padding: 6px 2px; font-weight: 800; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
+              <th style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Idiom Count">IDM</th>
+              <!-- 14. OTH (Boundary Column 3) -->
+              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
 
               <!-- 15. WORDS -->
-              <th style="padding: 6px 4px; font-weight: 800; color: #60a5fa; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #1e3a5f;" title="Total Single Words">WORDS</th>
+              <th style="padding: 6px 4px; font-weight: 400; color: #60a5fa; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #1e3a5f; height:30px; line-height:30px;" title="Total Single Words">WORDS</th>
               <!-- 16. PHRASES -->
-              <th style="padding: 6px 4px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: #2e1e5f;" title="Total Phrases &amp; Idioms">PHRASES</th>
-              <!-- 17. TOTAL -->
-              <th style="padding: 6px 4px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0f2922;" title="Grand Total Vocabulary">TOTAL</th>
-
-              <!-- 18. PROGRAMS -->
-              <th style="padding: 6px 6px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 12px; width: 105px; border-right: 1px solid rgba(255,255,255,0.08);" title="Assigned Programs">PROGRAMS</th>
-
-              <!-- 19. ACT -->
-              <th class="edit-mode-only" style="padding: 6px 4px; font-weight: 800; color: #f87171; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center;" title="Action">ACT</th>
+              <th style="padding: 6px 4px; font-weight: 400; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: #2e1e5f; height:30px; line-height:30px;" title="Total Phrases &amp; Idioms">PHRASES</th>
+              <!-- 17. TOTAL (Boundary Column 4) -->
+              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 400; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0f2922; height:30px; line-height:30px;" title="Grand Total Vocabulary">TOTAL</th>
             </tr>
           </thead>
           <tbody id="theme-manager-tbody">
@@ -2425,20 +2421,20 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
     <div class="modal-box" style="max-width: 560px; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 22px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:12px;">
         <div>
-          <h3 style="margin:0; font-size:15px; font-weight:800; color:#f8fafc;">🏛️ Assign Theme to Programs</h3>
+          <h3 style="margin:0; font-size: 16px; font-weight:800; color:#f8fafc;">${getSvgIcon('building', 16)} Assign Theme to Programs</h3>
           <div style="font-size:12px; color:#38bdf8; margin-top:2px;">Theme: <strong>${escapeHtml(themeName)}</strong> (${escapeHtml(themeCode)}) &bull; Level ${targetLevel}</div>
         </div>
         <button class="btn btn-ghost btn-sm close-modal-btn" style="color:#94a3b8; font-size:16px; cursor:pointer;">✕</button>
       </div>
 
-      <p style="font-size:11.5px; color:#94a3b8; margin-bottom:14px;">
+      <p style="font-size: 12px; color:#94a3b8; margin-bottom:14px;">
         Specify which Institution and Program uses this theme. All topics under this theme automatically inherit these assignments.
       </p>
 
       <div style="display:flex; flex-direction:column; gap:12px; max-height:360px; overflow-y:auto; padding-right:4px;">
         ${instProgGroups.map(g => `
           <div style="background:rgba(30,41,59,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 12px;">
-            <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:#a5b4fc; margin-bottom:8px; letter-spacing:0.5px;">
+            <div style="font-size: 12px; font-weight:800; text-transform:uppercase; color:#a5b4fc; margin-bottom:8px; letter-spacing:0.5px;">
               ${escapeHtml(g.inst.name || g.inst.code)}
             </div>
             <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap:8px;">
@@ -2446,8 +2442,8 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
                 const assignKey = `${themeCode}_${targetLevel}_${p.id}`;
                 const checked = assignSet.has(assignKey);
                 return `
-                  <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); padding:8px 10px; border-radius:6px; cursor:pointer; font-size:11.5px; color:#f1f5f9; font-weight:600;">
-                    <input type="checkbox" class="cb-theme-assign-prog" data-prog-id="${p.id}" data-prog-name="${escapeHtml(p.name)}" ${checked ? 'checked' : ''} style="accent-color:#22c55e; width:15px; height:15px; cursor:pointer;">
+                  <label style="display:flex; align-items:center; gap:8px; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.1); padding:8px 10px; border-radius:6px; cursor:pointer; font-size: 12px; color:#f1f5f9; font-weight:600;">
+                    <input type="checkbox" class="cb-theme-assign-prog" data-prog-id="${p.id}" data-prog-name="${escapeHtml(p.name)}" ${checked ? 'checked' : ''} style="accent-color:var(--grade-a); width:15px; height:15px; cursor:pointer;">
                     <span>${escapeHtml(p.name)}</span>
                   </label>
                 `;
@@ -2459,7 +2455,7 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
 
       <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
         <button class="btn btn-secondary btn-sm close-modal-btn">Cancel</button>
-        <button class="btn btn-primary btn-sm" id="btn-save-theme-assignments" style="background:#22c55e; border:none; font-weight:800; padding:0 14px;">Save Assignments</button>
+        <button class="btn btn-primary btn-sm" id="btn-save-theme-assignments" style="background:var(--grade-a); border:none; font-weight:800; padding:0 14px;">Save Assignments</button>
       </div>
     </div>
   `;
@@ -2700,30 +2696,30 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     const leftHtml = `
       <div style="display: flex; align-items: center; gap: 8px;">
         <div style="display: flex; align-items: center; gap: 5px;">
-          <label style="font-size: 10px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">PROGRAM:</label>
-          <select id="bp-program-select" style="height: 28px; font-size: 11px; width: 140px; background: rgba(30,41,59,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; padding: 0 6px; cursor: pointer; outline: none; font-weight: 600;">
+          <label style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">PROGRAM:</label>
+          <select id="bp-program-select" style="height: 28px; font-size: 12px; width: 140px; background: rgba(30,41,59,0.9); color: #fff; border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; padding: 0 6px; cursor: pointer; outline: none; font-weight: 600;">
             ${activeProgs.map(p => `<option value="${p.id}" ${p.id === selectedProgId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('')}
           </select>
         </div>
         <div style="display: flex; gap: 2px; align-items: center; background: rgba(15,23,42,0.8); padding: 2px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
-          <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 24px; font-size: 10.5px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
+          <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
           ${levels.map(lvl => {
             const isActive = (String(activeLevel) === String(lvl));
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-            return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 24px; font-size: 10.5px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'};">${shortLbl}</button>`;
+            return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'};">${shortLbl}</button>`;
           }).join('')}
         </div>
       </div>
     `;
     const centerHtml = `
-      <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val" style="color: #22c55e;">${totalTasksReady}/${totalTasksExpected}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val" style="color: var(--grade-a);">${totalTasksReady}/${totalTasksExpected}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val" style="color: #c084fc;">${totalExamsReady}/${totalExamsExpected}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Readiness:</span><span class="chip-val" style="color: ${pctReady === 100 ? '#22c55e' : '#f59e0b'}; font-weight: 800;">${pctReady}%</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Readiness:</span><span class="chip-val" style="color: ${getGradeColorByScore(pctReady)}; font-weight: 800; font-variant-numeric: tabular-nums;">${pctReady}%</span></div>
     `;
     const rightHtml = `
-      <input type="search" id="bp-search-input" placeholder="🔍 Search Topics..." style="width: 140px; height: 28px; font-size: 11px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
-      <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 28px; font-size: 11px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Test System Settings">⚙️ Test Settings</button>
-      <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 11.5px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 5px;" title="Auto-Generate Curriculum Tests">⚡ Auto-Generate All Tests</button>
+      <input type="search" id="bp-search-input" placeholder="Search Topics..." style="width: 140px; height: 28px; font-size: 12px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
+      <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 28px; font-size: 12px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Test System Settings">${getSvgIcon('settings', 14)} Test Settings</button>
+      <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 12px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 5px;" title="Auto-Generate Curriculum Tests">${getSvgIcon('zap', 14)} Auto-Generate All Tests</button>
     `;
     window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
   }
@@ -2785,63 +2781,63 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
           rowsHtml += `
             <tr class="blueprint-table-row" data-topic-code="${escapeHtml(compositeCode)}" data-raw-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              <td style="text-align: center; font-weight: 800; font-size: 11px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
+              <td style="text-align: center; font-weight: 800; font-size: 12px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
                 ${escapeHtml(lvlLabel)}
               </td>
-              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11px; width: 55px;">
+              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; width: 55px;">
                 ${escapeHtml(compositeCode)}
               </td>
-              <td style="color: #ffffff; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 11.5px; min-width: 130px;">
+              <td style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; min-width: 130px;">
                 ${escapeHtml(th.name || '—')}
               </td>
-              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 11.5px; min-width: 150px;">
+              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 12px; min-width: 150px;">
                 ${escapeHtml(tp.name)}
               </td>
 
               <!-- Vocab Pool Split (Single Responsibility) -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
-                <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
+                <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
               </td>
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
-                <span style="color: #cbd5e1; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
+                <span style="color: #cbd5e1; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
               </td>
               <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px;">
-                <span style="color: #a78bfa; font-weight: 600; font-size: 11px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
+                <span style="color: #a78bfa; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
 
               <!-- Generation Blueprint Split: Duration -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
-                <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
+                <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
-                  <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size:11px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
-                  <span style="font-size:10px; color:#94a3b8;">m</span>
+                  <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
+                  <span style="font-size: 12px; color:#94a3b8;">m</span>
                 </span>
               </td>
 
               <!-- Generation Blueprint Split: Pass Score -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
-                <span class="bp-setting-badge" style="font-size: 11px; font-weight: 700; color: var(--grade-c, #FFFF00); font-variant-numeric: tabular-nums;">${taskScore}%</span>
+                <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: ${getGradeColorByScore(taskScore)}; font-variant-numeric: tabular-nums;">${taskScore}%</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
-                  <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size:11px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
-                  <span style="font-size:10px; color:#94a3b8;">%</span>
+                  <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
+                  <span style="font-size: 12px; color:${getGradeColorByScore(taskScore)}; font-weight:600;">%</span>
                 </span>
               </td>
 
               <!-- Generation Blueprint Split: Format -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
-                <span style="color: #38bdf8; font-weight: 600; font-size: 11px;">7×7</span>
+                <span style="color: #38bdf8; font-weight: 600; font-size: 12px;">7×7</span>
               </td>
 
               <!-- Generation Blueprint Split: Answer Type -->
               <td class="col-bp-sep" style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px;">
                 <span class="badge-answer-type badge-answer-${ansType}">
-                  ${ansType === 'written' ? '✍️ Written' : (ansType === 'hybrid' ? '🔄 Hybrid' : '🗣️ Spoken')}
+                  ${ansType === 'written' ? `${getSvgIcon('edit', 12)} Written` : (ansType === 'hybrid' ? `${getSvgIcon('refresh', 12)} Hybrid` : `${getSvgIcon('mic', 12)} Spoken`)}
                 </span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center;">
-                  <select class="bp-inline-answer-type" data-topic-code="${escapeHtml(tp.topicCode)}" onchange="window._onBpAnswerTypeChange && window._onBpAnswerTypeChange('${escapeHtml(tp.topicCode)}', this.value)" style="height:22px; font-size:10.5px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 2px;">
-                    <option value="spoken" ${ansType === 'spoken' ? 'selected' : ''}>🗣️ Spoken</option>
-                    <option value="written" ${ansType === 'written' ? 'selected' : ''}>✍️ Written</option>
-                    <option value="hybrid" ${ansType === 'hybrid' ? 'selected' : ''}>🔄 Hybrid</option>
+                  <select class="bp-inline-answer-type" data-topic-code="${escapeHtml(tp.topicCode)}" onchange="window._onBpAnswerTypeChange && window._onBpAnswerTypeChange('${escapeHtml(tp.topicCode)}', this.value)" style="height:22px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 2px;">
+                    <option value="spoken" ${ansType === 'spoken' ? 'selected' : ''}>Spoken</option>
+                    <option value="written" ${ansType === 'written' ? 'selected' : ''}>Written</option>
+                    <option value="hybrid" ${ansType === 'hybrid' ? 'selected' : ''}>Hybrid</option>
                   </select>
                 </span>
               </td>
@@ -2849,15 +2845,15 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <!-- Task Status (Single Responsibility: Status Only) -->
               <td style="text-align: center; padding: 8px 8px; border-right: 1px solid rgba(255,255,255,0.08); white-space: nowrap; width: 95px;">
                 ${taskReady
-                  ? `<span style="color: #4ade80; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>`
-                  : `<span style="color: #f87171; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
+                  ? `<span style="color: var(--grade-a); font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>`
+                  : `<span style="color: var(--grade-e); font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
               </td>
 
               <!-- Exam Status (Single Responsibility: Status Only) -->
               <td style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px;">
                 ${examReady
-                  ? `<span style="color: #4ade80; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>`
-                  : `<span style="color: #f87171; font-weight: 700; font-size: 11px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
+                  ? `<span style="color: var(--grade-a); font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">✓ Ready</span>`
+                  : `<span style="color: var(--grade-e); font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;">▲ Missing</span>`}
               </td>
             </tr>
           `;
@@ -2870,9 +2866,9 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
       const lvlText = activeLevel === 'ALL' ? '' : ` for Level ${typeof toShortLevel === 'function' ? toShortLevel(activeLevel) : activeLevel}`;
       rowsHtml = `
         <tr>
-          <td colspan="13" style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 13px;">
-            <div style="font-size: 24px; margin-bottom: 6px;">🗺️</div>
-            <div style="font-weight: 700; color: #f1f5f9; font-size: 13.5px;">No Curriculum Themes Found</div>
+          <td colspan="13" style="text-align: center; padding: 48px 16px; color: #94a3b8; font-size: 12px;">
+            <div style="margin-bottom: 6px;">${getSvgIcon('layers', 28)}</div>
+            <div style="font-weight: 700; color: #f1f5f9; font-size: 12px;">No Curriculum Themes Found</div>
             <div style="font-size: 12px; margin-top: 4px; color: #64748b;">
               No themes are currently assigned to <strong style="color: #38bdf8;">${escapeHtml(progName)}</strong>${escapeHtml(lvlText)}.
               Assign themes in the <a href="#vocab_vault?tab=theme_manager" style="color: #818cf8; text-decoration: underline; font-weight: 600;">Theme Manager</a>.
@@ -2891,7 +2887,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
       <!-- Batch Configuration Grid (ONLY Container With Vertical Scroll) -->
       <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
-        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 11px;">
+        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
           <colgroup>
             <col style="width: 55px;">
             <col style="width: 55px;">
@@ -2909,28 +2905,28 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           </colgroup>
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
             <tr class="bp-super-header-row">
-              <th colspan="4" class="bp-sh-topic">Curriculum Topic</th>
-              <th colspan="3" class="bp-sh-vocab">Vocabulary Pool</th>
-              <th colspan="4" class="bp-sh-blueprint">Generation Blueprint</th>
-              <th colspan="2" class="bp-sh-status">Readiness Status</th>
+              <th colspan="4" class="bp-sh-topic" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; color:#38bdf8;">CURRICULUM TOPIC</th>
+              <th colspan="3" class="bp-sh-vocab" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc;">VOCABULARY POOL</th>
+              <th colspan="4" class="bp-sh-blueprint" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; color:#f8fafc;">GENERATION BLUEPRINT</th>
+              <th colspan="2" class="bp-sh-status" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); color:var(--grade-a);">READINESS STATUS</th>
             </tr>
             <tr>
-              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 11px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">LEVEL</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 11px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 11px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.08);">Theme Name</th>
-              <th class="col-bp-sep" style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 11px; min-width: 240px;">Topic Name</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">LEVEL</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
+              <th style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.08);">THEME NAME</th>
+              <th class="col-bp-sep" style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px;">TOPIC NAME</th>
 
-              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 11px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 11px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
-              <th class="col-bp-sep" style="padding: 7px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 11px; width: 55px; text-align: center;">PHRASES</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
+              <th class="col-bp-sep" style="padding: 7px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center;">PHRASES</th>
 
-              <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 11px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c, #FFFF00); text-transform: uppercase; font-size: 11px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 11px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
-              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: #34d399; text-transform: uppercase; font-size: 11px; width: 95px; text-align: center;">ANSWER TYPE</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
+              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">ANSWER TYPE</th>
 
-              <th style="padding: 7px 10px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 11px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">Task Status</th>
-              <th style="padding: 7px 10px; font-weight: 800; color: #4ade80; text-transform: uppercase; font-size: 11px; min-width: 95px; text-align: center;">Exam Status</th>
+              <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">TASK STATUS</th>
+              <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center;">EXAM STATUS</th>
             </tr>
           </thead>
           <tbody id="bp-matrix-tbody">
@@ -3110,9 +3106,9 @@ function openDuplicateCheckerModal(allWords, onResolved) {
         <tr data-gi="${gi}" data-wi="${wi}" data-id="${escapeHtml(w.id)}">
           <td class="fw-600" style="padding:10px 8px;">${wi === 0 ? escapeHtml(w.indonesian) : ''}</td>
           <td style="padding:10px 8px; color:var(--clr-text-2);" class="cell-eng-${gi}-${wi}">${escapeHtml(w.english)}</td>
-          <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:0.72rem;">${escapeHtml(w.topic)}</span></td>
+          <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size: 12px;">${escapeHtml(w.topic)}</span></td>
           <td style="padding:10px 8px; text-align:right;">
-            <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:#00c000ff;border:1px solid #00c000ff;margin-right:4px;" title="Keep this entry, delete others">&#10003; Keep</button>
+            <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:var(--grade-a);border:1px solid var(--grade-a);margin-right:4px;" title="Keep this entry, delete others">&#10003; Keep</button>
             <button class="btn btn-danger btn-xs btn-del-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" title="Delete this entry">&#128465;</button>
           </td>
         </tr>
@@ -3137,7 +3133,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
             <td colspan="4" style="padding:8px;">
               <div class="d-flex align-center gap-2 flex-wrap">
                 <span class="text-xs text-muted">Merge English into:</span>
-                <input type="text" class="input merge-eng-input" data-gi="${gi}" value="${escapeHtml(mergedEnglish)}" style="flex:1; min-width:200px; padding:4px 8px; font-size:0.8rem;" />
+                <input type="text" class="input merge-eng-input" data-gi="${gi}" value="${escapeHtml(mergedEnglish)}" style="flex:1; min-width:200px; padding:4px 8px; font-size: 12px;" />
                 <button class="btn btn-xs btn-merge-group" data-gi="${gi}" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);">&#9889; Merge</button>
               </div>
             </td>
@@ -3156,7 +3152,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} group(s) with duplicate Indonesian words found.</p>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm" id="dup-modal-keep-all" style="background:#047857; color:white;">&#10004; Keep First (All)</button>
+          <button class="btn btn-secondary btn-sm" id="dup-modal-keep-all" style="background:var(--grade-a); color:white;">&#10004; Keep First (All)</button>
           <button class="btn btn-secondary btn-sm" id="dup-modal-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>
           <button class="btn btn-ghost btn-sm" id="dup-modal-close">&#10005;</button>
         </div>
@@ -3165,10 +3161,10 @@ function openDuplicateCheckerModal(allWords, onResolved) {
         <table class="table w-100" id="dup-table">
           <thead>
             <tr>
-              <th style="width:170px;">Indonesian</th>
-              <th>English</th>
-              <th style="width:140px;">Topic</th>
-              <th style="width:130px; text-align:right;">Action</th>
+              <th style="width:170px;">INDONESIAN</th>
+              <th>ENGLISH</th>
+              <th style="width:140px;">TOPIC</th>
+              <th style="width:130px; text-align:right;">ACTION</th>
             </tr>
           </thead>
           ${buildTable()}
@@ -3425,7 +3421,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     return duplicateGroups.map((group, gi) => {
       const rows = group.map((t, ti) => `
         <tr data-gi="${gi}" data-ti="${ti}">
-          <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size:0.75rem;">${escapeHtml(t)}</span></td>
+          <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size: 12px;">${escapeHtml(t)}</span></td>
         </tr>
       `).join('');
 
@@ -3438,7 +3434,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
             <td style="padding:8px;">
               <div class="d-flex align-center gap-2 flex-wrap">
                 <span class="text-xs text-muted">Merge topics into:</span>
-                <input type="text" class="input merge-topic-input" data-gi="${gi}" value="${escapeHtml(mergedTopic)}" style="flex:1; min-width:200px; padding:4px 8px; font-size:0.8rem;" />
+                <input type="text" class="input merge-topic-input" data-gi="${gi}" value="${escapeHtml(mergedTopic)}" style="flex:1; min-width:200px; padding:4px 8px; font-size: 12px;" />
                 <button class="btn btn-xs btn-merge-topic-group" data-gi="${gi}" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);">&#9889; Merge</button>
               </div>
             </td>
@@ -3455,12 +3451,12 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     <div class="modal-box" style="max-width:640px; max-height:88vh; display:flex; flex-direction:column; padding:20px;">
       <div class="d-flex justify-between align-center mb-3">
         <div>
-          <h3 class="fw-700" style="margin:0; font-size:1.15rem; color:#f8fafc;">&#9874; Topic Merge &amp; Unification Wizard</h3>
+          <h3 class="fw-700" style="margin:0; font-size: 16px; color:#f8fafc;">&#9874; Topic Merge &amp; Unification Wizard</h3>
           <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} automated similar group(s) detected &bull; ${allDistinctTopics.length} total topics active</p>
         </div>
         <div class="d-flex gap-2">
           ${duplicateGroups.length > 0 ? `<button class="btn btn-secondary btn-sm" id="dup-topic-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>` : ''}
-          <button class="btn btn-ghost btn-sm" id="dup-topic-modal-close" style="font-size:1.1rem; line-height:1;">&#10005;</button>
+          <button class="btn btn-ghost btn-sm" id="dup-topic-modal-close" style="font-size: 16px; line-height:1;">&#10005;</button>
         </div>
       </div>
 
@@ -3476,21 +3472,21 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
         <!-- 2. Manual Topic Merge Tool -->
         <div style="background:rgba(15,23,42,0.85); border:1px solid rgba(99,102,241,0.3); border-radius:8px; padding:14px;">
           <div class="d-flex justify-between align-center mb-2">
-            <strong style="color:#a5b4fc; font-size:0.85rem;">⚡ Manual Topic Merge</strong>
+            <strong style="color:#a5b4fc; font-size: 12px;">${getSvgIcon('zap', 14)} Manual Topic Merge</strong>
             <span class="text-xs text-muted">Merge any two custom topics seamlessly</span>
           </div>
           <div class="d-flex gap-2 align-center flex-wrap">
             <div style="flex:1; min-width:180px;">
               <label class="text-xs text-muted d-block mb-1" for="manual-merge-source">Source Topic (Will be replaced)</label>
-              <select id="manual-merge-source" class="form-control" style="font-size:0.8rem; padding:6px 8px; width:100%;">
+              <select id="manual-merge-source" class="form-control" style="font-size: 12px; padding:6px 8px; width:100%;">
                 <option value="">-- Select Source Topic --</option>
                 ${topicOptions}
               </select>
             </div>
-            <div style="font-size:1.2rem; color:#94a3b8; align-self:flex-end; padding-bottom:6px;">➔</div>
+            <div style="font-size: 16px; color:#94a3b8; align-self:flex-end; padding-bottom:6px;">➔</div>
             <div style="flex:1; min-width:180px;">
               <label class="text-xs text-muted d-block mb-1" for="manual-merge-target">Target Topic (Keeper)</label>
-              <select id="manual-merge-target" class="form-control" style="font-size:0.8rem; padding:6px 8px; width:100%;">
+              <select id="manual-merge-target" class="form-control" style="font-size: 12px; padding:6px 8px; width:100%;">
                 <option value="">-- Select Target Topic --</option>
                 ${topicOptions}
               </select>

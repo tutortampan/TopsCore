@@ -1,0 +1,44 @@
+[
+  {
+    "id": "cc7d5ee4-fe8b-4d1a-a578-09ff4e65af94",
+    "name": "Tops",
+    "map_location": null,
+    "is_active": true,
+    "created_at": "2026-10-09T06:14:02.804+00:00",
+    "updated_at": "2026-10-10T13:20:53.905+00:00",
+    "deleted_at": "2026-10-10T13:20:53.855+00:00",
+    "code": null,
+    "logo_url": null,
+    "address": null,
+    "phone": null,
+    "email": null
+  },
+  {
+    "id": "f51d4c2c-7c24-42ef-8d8f-b0f3e524a447",
+    "name": "CEC",
+    "map_location": null,
+    "is_active": true,
+    "created_at": "2026-09-25T18:46:03.692+00:00",
+    "updated_at": "2026-10-28T03:42:43.442721+00:00",
+    "deleted_at": null,
+    "code": "CEC",
+    "logo_url": null,
+    "address": null,
+    "phone": null,
+    "email": null
+  },
+  {
+    "id": "637fea53-ca64-4e1c-8ff7-6fd4dbdd8260",
+    "name": "TOP",
+    "map_location": null,
+    "is_active": true,
+    "created_at": "2026-09-25T18:46:16.435+00:00",
+    "updated_at": "2026-11-04T05:36:04.294448+00:00",
+    "deleted_at": null,
+    "code": "TOP",
+    "logo_url": null,
+    "address": null,
+    "phone": null,
+    "email": null
+  }
+]

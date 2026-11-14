@@ -1,0 +1,141 @@
+[
+  {
+    "id": "5f81da18-4dbe-41c0-9dad-9da34f701705",
+    "name": "Phrase Recognition",
+    "module_type": "PHRASE_RECOGNITION",
+    "description": "Student sees an Indonesian phrase/idiom/expression and selects the correct English equivalent from a calibrated dropdown of 10 options. Auto-graded. Source: Vocabulary Vault (word_type IN Idiom, Proverb, Expression, Phrase).",
+    "config_schema": {
+      "answer_type": "dropdown",
+      "source_types": [
+        "Idiom",
+        "Proverb",
+        "Expression",
+        "Phrase"
+      ],
+      "options_count": 10,
+      "time_limit_seconds": 15
+    },
+    "created_at": "2026-09-30T19:14:49.027+00:00",
+    "updated_at": "2026-09-30T19:14:49.027+00:00"
+  },
+  {
+    "id": "05c135f9-75cb-44ce-a546-b6ff5b1b47b9",
+    "name": "Tell Me What You See (Visual Pronouns)",
+    "module_type": "VISUAL_PRONOUNS",
+    "description": "[DEPRECATED - Gunakan POINT_AND_SPEAK] [DEPRECATED - Gunakan POINT_AND_SPEAK] Student takes a live photo and speaks a description using correct demonstrative pronoun, to-be, article, adjectives, and noun.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "13456a9a-5e90-4d71-a87f-4b7b520b804e",
+    "name": "Let me tell you something (Narrative Tense)",
+    "module_type": "NARRATIVE_TENSE",
+    "description": "[DEPRECATED - Gunakan STORYTELLING] [DEPRECATED - Gunakan STORYTELLING] Student describes an event or tells a story in past/narrative tense.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "90cecb70-3f83-44ca-bf07-b9dc070aaf01",
+    "name": "Point & Speak!",
+    "module_type": "POINT_AND_SPEAK",
+    "description": "Student takes a live photo and speaks a description using correct demonstrative pronoun, to-be, article, adjectives, and noun.",
+    "config_schema": {},
+    "created_at": "2026-09-20T16:33:58.31+00:00",
+    "updated_at": "2026-09-20T16:33:58.31+00:00"
+  },
+  {
+    "id": "25974dcf-062b-4f85-91bd-37a7cf558ab0",
+    "name": "Storytelling",
+    "module_type": "STORYTELLING",
+    "description": "Highly flexible storytelling engine assessing student stories against configured constraints (duration, sentences, tense, pillars).",
+    "config_schema": {},
+    "created_at": "2026-09-20T16:33:58.31+00:00",
+    "updated_at": "2026-09-20T16:33:58.31+00:00"
+  },
+  {
+    "id": "c79af460-0839-46a9-a4c2-0f0917639271",
+    "name": "Conversation-based",
+    "module_type": "CONVERSATIONAL",
+    "description": "Open conversational module.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "28dd8f23-b980-4b92-bc5f-43938768edbe",
+    "name": "Multiple Choice",
+    "module_type": "MULTIPLE_CHOICE",
+    "description": "Standard multiple choice quiz.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "99fb7be8-7623-489b-b26e-70c7ba26b1fa",
+    "name": "Read Aloud / Pronunciation",
+    "module_type": "READ_ALOUD",
+    "description": "Student reads text aloud for pronunciation and fluency scoring.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "c590c69f-44dc-4d26-9c19-263c6e7cbbec",
+    "name": "Turn-based Roleplay (Realtime/WebSockets)",
+    "module_type": "TURN_BASED_ROLEPLAY",
+    "description": "Interactive realtime AI roleplay.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "b8f3c849-5adf-4b50-b89a-27046d2adad6",
+    "name": "Speaking Performance (5 Pillars)",
+    "module_type": "SPEAKING_MONOLOGUE",
+    "description": "Full speaking evaluation on 5 pillars (Fluency, Pronunciation, Vocab, Grammar, Comprehension).",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "4a57ae11-9e60-461f-969a-0c4ba7981681",
+    "name": "Vocabulary Mastery",
+    "module_type": "VOCAB_MASTERY",
+    "description": "Vocabulary and spelling evaluation.",
+    "config_schema": {},
+    "created_at": "2026-09-20T15:21:47.56+00:00",
+    "updated_at": "2026-09-20T15:21:47.56+00:00"
+  },
+  {
+    "id": "00000000-0000-0000-0000-000000000099",
+    "name": "Legacy Exam",
+    "module_type": "LEGACY_EXAM",
+    "description": "Migrated legacy exams that have not been assigned to a specific AI module.",
+    "config_schema": {},
+    "created_at": "2026-10-05T17:08:56.616+00:00",
+    "updated_at": "2026-10-05T17:08:56.616+00:00"
+  },
+  {
+    "id": "c8922c6a-d64b-4dc8-91ea-df272a149bd2",
+    "name": "Pair Storytelling",
+    "module_type": "PAIR_STORYTELLING",
+    "description": "Two students independently record story retelling sessions on their own devices. The system links them via a shared pair_session_id. Topics are auto-aggregated from previous Task IDs. Each student is evaluated individually (tense, duration, topic coverage), and results are shown as a combined pair report.",
+    "config_schema": {
+      "format": "paired_independent",
+      "result_view": "individual_plus_combined",
+      "topic_source": "aggregated_from_tasks",
+      "pair_matching": "manual_or_auto",
+      "min_duration_sec": 3600,
+      "elements_to_assess": [
+        "tense_consistency",
+        "topic_coverage",
+        "fluency",
+        "duration"
+      ]
+    },
+    "created_at": "2026-09-30T19:15:57.047+00:00",
+    "updated_at": "2026-09-30T19:15:57.047+00:00"
+  }
+]

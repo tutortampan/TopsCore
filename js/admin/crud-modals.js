@@ -3,10 +3,11 @@ import {
   mergeDuplicateStudents, detectDuplicateStudents, mergeStudentPair,
   detectDuplicateQuestions, resequenceTestQuestions, resolveDuplicateQuestionGroup, batchResolveTestDuplicateQuestions,
   toLevelLetter
-} from '../api.js?v=20261106_v160';
-import { cleanStudentName } from '../api.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
+import { cleanStudentName } from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 
 function formatLevelOption(l) {
   if (l && l.name) return l.name;
@@ -109,22 +110,22 @@ const formFields = {
   tests: [
     { id: 'title', label: 'Test Title', type: 'text', required: true, placeholder: 'e.g. 3rd Vocabulary A1 Words Task' },
     { id: 'status', label: 'Status', type: 'select', options: [
-      { value: 'PUBLISHED', label: '👁️ PUBLISHED (Aktif / Bisa Dikerjakan)' },
-      { value: 'DRAFT', label: '📝 DRAFT (Konsep / Tersembunyi)' },
-      { value: 'UNPUBLISHED', label: '⏸️ UNPUBLISHED (Ditangguhkan)' },
-      { value: 'ARCHIVED', label: '📦 ARCHIVED (Arsip)' }
+      { value: 'PUBLISHED', label: 'PUBLISHED (Aktif / Bisa Dikerjakan)' },
+      { value: 'DRAFT', label: 'DRAFT (Konsep / Tersembunyi)' },
+      { value: 'UNPUBLISHED', label: 'UNPUBLISHED (Ditangguhkan)' },
+      { value: 'ARCHIVED', label: 'ARCHIVED (Arsip)' }
     ], required: true },
     { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number', required: true, defaultValue: 5 },
     { id: 'answer_type', label: 'Answer Type', type: 'select', options: [
-      { value: 'spoken', label: '🗣️ Spoken (Speech to Text)' },
-      { value: 'written', label: '✍️ Written (Teks Langsung)' },
-      { value: 'selection', label: '🔘 Selection (Pilihan Ganda)' },
-      { value: 'mixed', label: '🔀 Mixed (Campuran)' }
+      { value: 'spoken', label: 'Spoken (Speech to Text)' },
+      { value: 'written', label: 'Written (Teks Langsung)' },
+      { value: 'selection', label: 'Selection (Pilihan Ganda)' },
+      { value: 'mixed', label: 'Mixed (Campuran)' }
     ], required: true },
     { id: 'minimum_required_score', label: 'Passing Score %', type: 'number', defaultValue: 60 },
     { id: 'question_order', label: 'Question Order', type: 'select', options: [
-      { value: 'sequential', label: '➡️ Sequential (Berurutan)' },
-      { value: 'random', label: '🔀 Random (Diacak)' }
+      { value: 'sequential', label: 'Sequential (Berurutan)' },
+      { value: 'random', label: 'Random (Diacak)' }
     ] },
     { id: 'display_order', label: 'Display Order', type: 'number', defaultValue: 1 },
     { id: 'prerequisite_test_id', label: 'Prerequisite (Optional)', type: 'select', source: 'tests', required: false },
@@ -187,10 +188,10 @@ async function openCrudModal(section, record) {
         infoCard.className = 'test-settings-card';
         infoCard.style.cssText = 'background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 10px; padding: 12px 16px; margin-bottom: 18px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);';
         infoCard.innerHTML = `
-          <div style="font-size: 0.95rem; font-weight: 800; color: #38bdf8; line-height: 1.35;">
+          <div style="font-size: 16px; font-weight: 800; color: #38bdf8; line-height: 1.35;">
             ${escapeHtml(record.title || record.display_name || 'Test Settings')}
           </div>
-          <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: #94a3b8; margin-top: 6px;">
             ${record.shell_code ? `<span>Code: <strong style="color:#f1f5f9;">${escapeHtml(record.shell_code)}</strong></span>` : ''}
             ${record.status ? `<span>Status: <strong style="color:${String(record.status).toUpperCase() === 'PUBLISHED' ? 'var(--clr-success)' : 'var(--clr-warning)'};">${escapeHtml(record.status)}</strong></span>` : ''}
             ${record.test_type ? `<span>Type: <strong style="color:#f1f5f9;">${escapeHtml(record.test_type)}</strong></span>` : ''}
@@ -347,16 +348,16 @@ async function openCrudModal(section, record) {
             const presets = document.createElement('div');
             presets.className = 'bulk-edit-preset-row mt-1';
             [
-              { label: '⚡ 5m (Task)', val: 5 },
+              { label: '5m (Task)', val: 5, icon: 'zap' },
               { label: '15m', val: 15 },
               { label: '30m', val: 30 },
               { label: '60m', val: 60 },
-              { label: '📝 120m (Test)', val: 120 }
+              { label: '120m (Test)', val: 120, icon: 'clipboard' }
             ].forEach(p => {
               const btn = document.createElement('button');
               btn.type = 'button';
               btn.className = 'btn btn-secondary btn-sm bulk-preset-btn';
-              btn.textContent = p.label;
+              btn.innerHTML = (p.icon ? getSvgIcon(p.icon, 12) + ' ' : '') + p.label;
               btn.onclick = () => { inp.value = p.val; window.isProfileDirty = true; };
               presets.appendChild(btn);
             });
@@ -543,7 +544,7 @@ async function openCrudModal(section, record) {
             finalInput.value = `${endY}-${endM}-${endD}`;
 
             if (durationHint) {
-              durationHint.innerHTML = `<span style="color: #34d399; font-weight: 600;">⚡ 4 Weeks (Mon – Sat W4)</span>: Auto-calculated finish date (${endD}/${endM}/${endY})`;
+              durationHint.innerHTML = `<span style="color: var(--grade-a); font-weight: 600;">${getSvgIcon('zap', 13)} 4 Weeks (Mon – Sat W4)</span>: Auto-calculated finish date (${endD}/${endM}/${endY})`;
             }
           };
 
@@ -563,7 +564,7 @@ async function openCrudModal(section, record) {
             } else {
               const parts = finalInput.value.split('-');
               if (parts.length === 3) {
-                durationHint.innerHTML = `<span style="color: #34d399; font-weight: 600;">⚡ Scheduled Batch Duration</span>: Ends on ${parts[2]}/${parts[1]}/${parts[0]}`;
+                durationHint.innerHTML = `<span style="color: var(--grade-a); font-weight: 600;">${getSvgIcon('calendar', 13)} Scheduled Batch Duration</span>: Ends on ${parts[2]}/${parts[1]}/${parts[0]}`;
               }
             }
           }
@@ -928,7 +929,7 @@ function _initCrudModals() {
           // If manually adding a student, check if identical student already exists in same class
           if (_currentSection === 'students') {
             const existingList = await adminFetchAll('students');
-            const existingMatch = existingList.find(s => !s.deleted_at && s.program_id === payload.program_id && (formatStudentName(s.name, s.gender) || '').toLowerCase().trim() === (payload.name || '').toLowerCase().trim());
+            const existingMatch = existingList.find(s => !s.deleted_at && s.program_id === payload.program_id && (s.name || '').toLowerCase().trim() === (payload.name || '').toLowerCase().trim());
             if (existingMatch) {
               await adminUpdate('students', existingMatch.id, { ...payload, updated_at: new Date().toISOString() });
               showToast('A student with this name already exists in the class. Data successfully merged/updated!', 'success');
@@ -1144,7 +1145,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
     if (scope === 'cross_class' && crossCountEl) crossCountEl.textContent = totalDups;
 
     if (dupStudentGroups.length === 0) {
-      dupStudContent.innerHTML = '<div class="empty-state p-6 text-center"><p>✅ No duplicate students found.</p></div>';
+      dupStudContent.innerHTML = `<div class="empty-state p-6 text-center"><p>${getSvgIcon('check-circle', 16)} No duplicate students found.</p></div>`;
       return;
     }
 
@@ -1152,19 +1153,19 @@ async function loadDuplicateStudents(scope = 'same_class') {
     dupStudentGroups.forEach((group, gIdx) => {
       html += `
         <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-primary); background:var(--clr-surface, #1e293b); border-radius:8px;">
-          <div class="fw-700 mb-2" style="color:var(--clr-text, #f8fafc); font-size:1rem;">
+          <div class="fw-700 mb-2" style="color:var(--clr-text, #f8fafc); font-size: 16px;">
             Duplicate Group ${gIdx + 1} — Name: "${escapeHtml(group.name)}"
           </div>
           <table class="table-sm w-100 mb-3 text-sm" style="border-collapse:collapse; width:100%;">
             <thead>
               <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
-                <th style="padding:8px 4px;">Student ID</th>
-                <th style="padding:8px 4px;">Program / Class</th>
-                <th style="padding:8px 4px;">Batch / Cohort</th>
-                <th style="padding:8px 4px;">Institution</th>
-                <th style="padding:8px 4px;">Attempts</th>
-                <th style="padding:8px 4px;">Created At</th>
-                <th style="padding:8px 4px; text-align:right;">Action</th>
+                <th style="padding:8px 4px;">STUDENT ID</th>
+                <th style="padding:8px 4px;">PROGRAM / CLASS</th>
+                <th style="padding:8px 4px;">BATCH / COHORT</th>
+                <th style="padding:8px 4px;">INSTITUTION</th>
+                <th style="padding:8px 4px;">ATTEMPTS</th>
+                <th style="padding:8px 4px;">CREATED AT</th>
+                <th style="padding:8px 4px; text-align:right;">ACTION</th>
               </tr>
             </thead>
             <tbody>
@@ -1173,14 +1174,14 @@ async function loadDuplicateStudents(scope = 'same_class') {
         const isPrimary = student.id === group.recommendedPrimaryId || sIdx === 0;
         html += `
               <tr style="${isPrimary ? 'background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.12);' : ''} border-bottom:1px solid rgba(255,255,255,0.05);">
-                <td style="padding:8px 4px; font-family:monospace; font-size:0.8rem;">${student.id.substring(0,8)}...</td>
+                <td style="padding:8px 4px; font-family:monospace; font-size: 12px;">${student.id.substring(0,8)}...</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.programName || student.programs?.name || '—')}</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.batchName || student.batches?.name || 'Unassigned')}</td>
                 <td style="padding:8px 4px;">${escapeHtml(student.institutionName || student.institutions?.name || '—')}</td>
                 <td style="padding:8px 4px;"><span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa;">${student.attemptsCount || 0} attempts</span></td>
-                <td style="padding:8px 4px; font-size:0.8rem; color:#94a3b8;">${new Date(student.created_at).toLocaleDateString()}</td>
+                <td style="padding:8px 4px; font-size: 12px; color:#94a3b8;">${new Date(student.created_at).toLocaleDateString()}</td>
                 <td style="padding:8px 4px; text-align:right;">
-                  ${isPrimary ? '<span class="badge badge-success" style="background:var(--clr-success, #00c000ff); color:#0F172A; font-weight:700; padding:3px 8px; border-radius:4px; font-size:0.75rem;">Primary Target</span>' : `<button class="btn btn-warning btn-sm btn-merge-student" data-primary="${group.recommendedPrimaryId}" data-secondary="${student.id}" style="font-size:0.75rem; padding:3px 8px;">Merge to Primary</button>`}
+                  ${isPrimary ? '<span class="badge badge-success" style="background:var(--clr-success); color:#0F172A; font-weight:700; padding:3px 8px; border-radius:4px; font-size: 12px;">Primary Target</span>' : `<button class="btn btn-warning btn-sm btn-merge-student" data-primary="${group.recommendedPrimaryId}" data-secondary="${student.id}" style="font-size: 12px; padding:3px 8px;">Merge to Primary</button>`}
                 </td>
               </tr>
         `;
@@ -1242,7 +1243,7 @@ async function loadDuplicateQuestions() {
     // View tab 1: SAME Test DUPLICATES
     if (currentDupQTab === 'same_test' || currentDupQTab === 'same_Test') {
       if (!data.sameTestDuplicates || data.sameTestDuplicates.length === 0) {
-        dupQContent.innerHTML = '<div class="empty-state p-6 text-center"><p>✅ No duplicate questions found in this test scope.</p></div>';
+        dupQContent.innerHTML = `<div class="empty-state p-6 text-center"><p>${getSvgIcon('check-circle', 16)} No duplicate questions found in this test scope.</p></div>`;
         return;
       }
 
@@ -1262,10 +1263,10 @@ async function loadDuplicateQuestions() {
         }
 
         html += `
-          <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-warning, #f59e0b); background:var(--clr-surface, #1e293b); border-radius:8px;">
+          <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-warning); background:var(--clr-surface, #1e293b); border-radius:8px;">
             <div class="d-flex justify-between align-center mb-2 flex-wrap gap-2">
               <div class="fw-700" style="color:#f8fafc;">Duplicate Question in: ${escapeHtml(TestTitle)}</div>
-              <button class="btn btn-warning btn-sm btn-resolve-q-group" data-primary="${primaryQ.id}" style="font-size:0.75rem;">Auto-Resolve Group</button>
+              <button class="btn btn-warning btn-sm btn-resolve-q-group" data-primary="${primaryQ.id}" style="font-size: 12px;">Auto-Resolve Group</button>
             </div>
             <div class="text-sm mb-3 px-3 py-2 rounded" style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08);">
               <div class="mb-2"><strong>Text:</strong> ${escapeHtml(primaryQ.question_text)}</div>
@@ -1276,11 +1277,11 @@ async function loadDuplicateQuestions() {
               <thead>
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
                   <th style="padding:6px 4px;">ID</th>
-                  <th style="padding:6px 4px;">Order</th>
-                  <th style="padding:6px 4px;">Answer Type</th>
-                  <th style="padding:6px 4px;">Logged Answers</th>
-                  <th style="padding:6px 4px;">Created At</th>
-                  <th style="padding:6px 4px; text-align:right;">Status</th>
+                  <th style="padding:6px 4px;">ORDER</th>
+                  <th style="padding:6px 4px;">ANSWER TYPE</th>
+                  <th style="padding:6px 4px;">LOGGED ANSWERS</th>
+                  <th style="padding:6px 4px;">CREATED AT</th>
+                  <th style="padding:6px 4px; text-align:right;">STATUS</th>
                 </tr>
               </thead>
               <tbody>
@@ -1293,7 +1294,7 @@ async function loadDuplicateQuestions() {
                   <td style="padding:6px 4px;">${escapeHtml(q.answer_type)}</td>
                   <td style="padding:6px 4px;" class="fw-700 text-primary">${q.answersCount || 0}</td>
                   <td style="padding:6px 4px; color:#94a3b8;">${new Date(q.created_at).toLocaleDateString()}</td>
-                  <td style="padding:6px 4px; text-align:right;">${qIdx === 0 ? '<span class="badge badge-success" style="background:var(--clr-success, #00c000ff); color:#0F172A; font-weight:700; padding:2px 6px; border-radius:3px;">Primary (Keep)</span>' : '<span class="badge badge-error" style="background:var(--clr-danger, #FF0000); color:#fff; padding:2px 6px; border-radius:3px;">Duplicate (Remove)</span>'}</td>
+                  <td style="padding:6px 4px; text-align:right;">${qIdx === 0 ? '<span class="badge badge-success" style="background:var(--clr-success); color:#0F172A; font-weight:700; padding:2px 6px; border-radius:3px;">Primary (Keep)</span>' : '<span class="badge badge-error" style="background:var(--clr-danger); color:#fff; padding:2px 6px; border-radius:3px;">Duplicate (Remove)</span>'}</td>
                 </tr>
           `;
         });
@@ -1338,7 +1339,7 @@ async function loadDuplicateQuestions() {
     // View tab 2: ORDER CONFLICTS
     if (currentDupQTab === 'order_conflicts') {
       if (!data.sameTestOrderConflicts || data.sameTestOrderConflicts.length === 0) {
-        dupQContent.innerHTML = '<div class="empty-state p-6 text-center"><p>✅ No question order conflicts detected.</p></div>';
+        dupQContent.innerHTML = `<div class="empty-state p-6 text-center"><p>${getSvgIcon('check-circle', 16)} No question order conflicts detected.</p></div>`;
         return;
       }
 
@@ -1349,20 +1350,20 @@ async function loadDuplicateQuestions() {
           <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-info, #3b82f6); background:var(--clr-surface, #1e293b); border-radius:8px;">
             <div class="d-flex justify-between align-center mb-2 flex-wrap gap-2">
               <div class="fw-700" style="color:#f8fafc;">Order Conflict (#${group.order}) in: ${escapeHtml(TestTitle)}</div>
-              <button class="btn btn-secondary btn-sm btn-resequence-Test" data-Test="${group.testId}" style="font-size:0.75rem;">Resequence Test (1..N)</button>
+              <button class="btn btn-secondary btn-sm btn-resequence-Test" data-Test="${group.testId}" style="font-size: 12px;">Resequence Test (1..N)</button>
             </div>
             <table class="table-sm w-100 text-xs" style="border-collapse:collapse; width:100%;">
               <thead>
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
-                  <th style="padding:6px 4px;">Order</th>
-                  <th style="padding:6px 4px;">Question Text</th>
-                  <th style="padding:6px 4px;">Answer Type</th>
+                  <th style="padding:6px 4px;">ORDER</th>
+                  <th style="padding:6px 4px;">QUESTION TEXT</th>
+                  <th style="padding:6px 4px;">ANSWER TYPE</th>
                 </tr>
               </thead>
               <tbody>
                 ${group.candidates.map(q => `
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                    <td style="padding:6px 4px; font-weight:700; color:#f59e0b;">#${q.question_order}</td>
+                    <td style="padding:6px 4px; font-weight:700; color:var(--grade-c);">#${q.question_order}</td>
                     <td style="padding:6px 4px;">${escapeHtml(q.question_text || '')}</td>
                     <td style="padding:6px 4px;">${escapeHtml(q.answer_type || '')}</td>
                   </tr>
@@ -1394,7 +1395,7 @@ async function loadDuplicateQuestions() {
     // View tab 3: CROSS Test DUPLICATES
     if (currentDupQTab === 'cross_Test') {
       if (!data.crossTestDuplicates || data.crossTestDuplicates.length === 0) {
-        dupQContent.innerHTML = '<div class="empty-state p-6 text-center"><p>✅ No cross-Test duplicate questions found.</p></div>';
+        dupQContent.innerHTML = `<div class="empty-state p-6 text-center"><p>${getSvgIcon('check-circle', 16)} No cross-Test duplicate questions found.</p></div>`;
         return;
       }
 
@@ -1580,7 +1581,7 @@ function _initBulkEditModal() {
       const chkOrd = document.getElementById('bulk-check-order')?.checked;
 
       if (!chkDur && !chkAns && !chkMin && !chkOrd) {
-        showToast('Select at least one checkbox option (⏱️ Duration, 🗣️ Answer Type, or 🎯 Passing Score) to modify.', 'warning');
+        showToast('Select at least one checkbox option (Duration, Answer Type, or Passing Score) to modify.', 'warning');
         return;
       }
 
@@ -1722,13 +1723,14 @@ async function openBulkEditTestsModal(selectedIds = [], onComplete = null) {
     }
   });
 
-  // If all selected items are quizzes/tasks, pre-select 5 minutes by default as convenience
-  const allAreQuizzes = _bulkEditSelectedIds.every(id => {
+  // If all selected items are tasks, pre-select 5 minutes by default as convenience
+  const allAreTasks = _bulkEditSelectedIds.every(id => {
     const r = window._classHubRecords?.[id];
     return r ? (r.test_type === 'quiz' || r.test_type === 'VOCAB_TASK' || r.test_type === 'PHRASE_TASK' || /\b(QUIZ|TASK)\b/i.test(r.title || '') || r.category === 'quiz') : false;
   });
+  const allAreQuizzes = allAreTasks; // Backward compatibility
 
-  if (allAreQuizzes) {
+  if (allAreTasks) {
     const durChk = document.getElementById('bulk-check-duration');
     const durWrap = document.getElementById('bulk-wrap-duration');
     const durInput = document.getElementById('bulk-input-duration');

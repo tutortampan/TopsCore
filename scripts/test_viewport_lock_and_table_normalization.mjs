@@ -144,7 +144,7 @@ console.log('  ✔ Student action tooltips standardized to English');
 
 // Check Level column render in student table has no capsule
 assert.ok(
-  studentMgmtJs.includes('color:#f8fafc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;'),
+  studentMgmtJs.includes('color:#f8fafc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;') || studentMgmtJs.includes('color:#f8fafc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;') || studentMgmtJs.includes('color:#f8fafc;font-weight:700;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;'),
   'Student table level render must be clean flat text with tabular numbers'
 );
 console.log('  ✔ Student table level render normalized to clean flat text');
@@ -156,13 +156,15 @@ console.log('\n--- 5. Testing Test Blueprint & Vocabulary Vault Normalization --
 const vocabVaultJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'vocab-vault.js'), 'utf-8');
 
 assert.ok(
-  vocabVaultJs.includes('class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;"'),
+  vocabVaultJs.includes('class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 11px; font-variant-numeric: tabular-nums;"') ||
+  vocabVaultJs.includes('class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;"'),
   'Blueprint matrix totalCount must not use capsule background or border'
 );
 console.log('  ✔ Blueprint matrix totalCount renders as clean unboxed tabular text');
 
 assert.ok(
-  vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 11px;">7×7</span>'),
+  vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 11px;">7×7</span>') ||
+  vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 12px;">7×7</span>'),
   'Blueprint matrix delivery format renders as flat text'
 );
 console.log('  ✔ Blueprint matrix delivery format renders as flat text');
@@ -176,8 +178,8 @@ const deskJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'desk.js'), 'u
 const testsAccessJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'tests-access.js'), 'utf-8');
 
 assert.ok(
-  appJs.includes('🗺️ Open Test Blueprint ↗') &&
-  !appJs.includes('🗺️ Buka Test Blueprint ↗'),
+  appJs.includes('Open Test Blueprint ↗') &&
+  !appJs.includes('Buka Test Blueprint ↗'),
   'Class Hub toolbar button must say Open Test Blueprint ↗'
 );
 console.log('  ✔ Open Test Blueprint button label is in English');

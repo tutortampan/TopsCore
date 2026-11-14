@@ -37,13 +37,75 @@ assert.ok(
 );
 console.log('  ✔ #admin-console 60px deduction verified');
 
-// Universal Lower Panel 50px height
+// Universal Sub Panel (Lower Panel) 40px height
 assert.ok(
   adminCss.includes('.workspace-lower-panel') &&
-  adminCss.includes('height: 50px !important;'),
-  '[Rule 20] .workspace-lower-panel must enforce height: 50px !important'
+  adminCss.includes('height: 40px !important;'),
+  '[Rule 1.3] .workspace-lower-panel must enforce height: 40px !important'
 );
-console.log('  ✔ Universal Lower Panel height strictly locked to 50px');
+console.log('  ✔ Universal Sub Panel (Lower Panel) height strictly locked to 40px');
+
+// Sidebar Footer (Sub Corner) 40px height alignment with Sub Panel
+assert.ok(
+  adminCss.includes('.sidebar-footer') &&
+  adminCss.includes('height: 40px !important;'),
+  '[Rule 1.3] .sidebar-footer (Sub Corner) must enforce height: 40px !important to align with Sub Panel'
+);
+console.log('  ✔ Sidebar Footer (Sub Corner) height strictly locked to 40px (aligned with Sub Panel)');
+
+// In-Panel 30px Button Invariant (Sub Panel & Toolbars)
+assert.ok(
+  adminCss.includes('.workspace-lower-panel .btn,') &&
+  adminCss.includes('height: 30px !important;') &&
+  adminCss.includes('min-height: 30px !important;'),
+  '[Rule 1.3] Buttons inside Sub Panel & in-panel toolbars must enforce height: 30px !important'
+);
+console.log('  ✔ In-Panel buttons (Sub Panel & toolbars) strictly locked to 30px height (5px margin clearance)');
+
+// Window, Wizard, Card & Popup 40px Button & Panel Invariant
+assert.ok(
+  adminCss.includes('.modal-footer .btn,') &&
+  adminCss.includes('.wizard-footer .btn,') &&
+  adminCss.includes('height: 40px !important;') &&
+  adminCss.includes('min-height: 40px !important;'),
+  '[Rule 1.5] Buttons inside Window, Wizard, Card & Popup must enforce height: 40px !important'
+);
+assert.ok(
+  adminCss.includes('.modal-subpanel,') &&
+  adminCss.includes('.wizard-subpanel,') &&
+  adminCss.includes('height: 40px !important;'),
+  '[Rule 1.5] Panels/sub-panels inside Window, Wizard, Card & Popup must enforce height: 40px !important'
+);
+assert.ok(
+  adminCss.includes('.modal-footer,') &&
+  adminCss.includes('.wizard-footer,') &&
+  adminCss.includes('height: 60px !important;') &&
+  adminCss.includes('padding: 10px 16px !important;'),
+  '[Rule 1.5] Modal/wizard/popup footers must enforce height: 60px !important with 10px padding'
+);
+console.log('  ✔ Window, Wizard, Card & Popup buttons (40px) and footers (60px) strictly verified');
+
+// Title Area 40px, Centered Title & ALL CAPS Typography Invariant (§1.5.1)
+assert.ok(
+  adminCss.includes('.title-area h3,') &&
+  adminCss.includes('text-transform: uppercase !important;') &&
+  adminCss.includes('text-align: center !important;'),
+  '[Rule 1.5.1] Title Area titles must enforce text-transform: uppercase and centered alignment'
+);
+assert.ok(
+  adminCss.includes('.title-area.dual-line,') &&
+  adminCss.includes('flex-direction: column !important;'),
+  '[Rule 1.5.1] Dual-line Title Areas must enforce vertically stacked subtitles'
+);
+console.log('  ✔ Title Area titles strictly locked to ALL CAPS, Centered alignment & Stacked Subtitles');
+
+// Standard Modal 80vh Height Invariant (§1.5.5)
+assert.ok(
+  adminCss.includes('max-height: 80vh;'),
+  '[Rule 1.5.5] Modal dialogs must enforce standard max-height: 80vh'
+);
+console.log('  ✔ Floating window dialogs strictly bound to standard 80vh height');
+
 
 // Container 10px gap
 assert.ok(
@@ -137,28 +199,37 @@ assert.ok(
 );
 console.log('  ✔ Student table Actions footer free of useless Avg pts metric');
 
-// 4. Audit .antigravityrules
-console.log('\n--- 4. Auditing .antigravityrules Governance ---');
+// 4. Audit Governance and SSOT rules
+console.log('\n--- 4. Auditing Master Governance & SSOT Rules ---');
 const rulesPath = path.join(ROOT_DIR, '.antigravityrules');
 assert.ok(fs.existsSync(rulesPath), '.antigravityrules must exist');
 const rulesText = fs.readFileSync(rulesPath, 'utf-8');
 
 assert.ok(
-  rulesText.includes('20. UNIVERSAL LOWER PANEL ARCHITECTURE & 10PX CONTAINER GAP'),
-  'Rule 20 must be codified in .antigravityrules'
+  rulesText.includes('9. **SPATIAL & UNIVERSAL TABLE INVARIANTS**'),
+  'Principle 9 (Spatial & Universal Table Invariants) must be codified in .antigravityrules'
 );
 assert.ok(
-  rulesText.includes('21. DYNAMIC COLUMN SIZING, SINGLE-LINE TEXT & ZERO DEAD SPACE INVARIANT'),
-  'Rule 21 must be codified in .antigravityrules'
+  rulesText.includes('.agents/rules/ui-invariants.md'),
+  'SSOT pointer to ui-invariants.md must be codified in .antigravityrules'
+);
+
+const uiInvariantsPath = path.join(ROOT_DIR, '.agents', 'rules', 'ui-invariants.md');
+assert.ok(fs.existsSync(uiInvariantsPath), 'ui-invariants.md must exist');
+const uiInvariantsText = fs.readFileSync(uiInvariantsPath, 'utf-8');
+
+assert.ok(
+  uiInvariantsText.includes('Sub Panel') && uiInvariantsText.includes('.workspace-lower-panel'),
+  'Sub Panel architecture must be codified in ui-invariants.md'
 );
 assert.ok(
-  rulesText.includes('22. CENTERED LOADING STATES'),
-  'Rule 22 must be codified in .antigravityrules'
+  uiInvariantsText.includes('Centered Loading States & Canonical Component Invariant'),
+  'Centered loading state invariant must be codified in ui-invariants.md'
 );
 assert.ok(
-  rulesText.includes('25. TUTOR\'S ROOM 8-TIER TYPOGRAPHIC SCALE & ZERO SUB-11PX INVARIANT'),
-  'Rule 25 must be codified in .antigravityrules'
+  uiInvariantsText.includes('Authoritative 3-Level Typographic System'),
+  'Authoritative 3-Level Typographic System must be codified in ui-invariants.md'
 );
-console.log('  ✔ Governance Rules 20, 21, 22, and 25 verified active');
+console.log('  ✔ Governance Master Index and ui-invariants.md SSOT verified active');
 
 console.log('\n🎉 [ui-spatial-checker] ALL SPATIAL & VISUAL INVARIANTS PASSED AUDIT (100%)!\n');

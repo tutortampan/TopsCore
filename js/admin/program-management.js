@@ -1,6 +1,7 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache, toShortLevel } from '../api.js?v=20261106_v160';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache, toShortLevel } from '../api.js?v=20261114_v517';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 window.makeTableResizable = function(table, storageKey) {
   const cols = table.querySelectorAll('th');
@@ -99,8 +100,8 @@ export async function renderClasses(area) {
     </div>
 
     ${window._filterInstitutionId ? `
-      <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
-        <span>🏛️ Filtered by Institution: <strong>${escapeHtml(window._filterInstitutionName || 'Selected Institution')}</strong> (${filteredData.length} programs)</span>
+      <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size: 12px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;">${getSvgIcon('building', 14)} Filtered by Institution: <strong>${escapeHtml(window._filterInstitutionName || 'Selected Institution')}</strong> (${filteredData.length} programs)</span>
         <button class="btn btn-ghost btn-xs" onclick="window._filterInstitutionId=null; window._filterInstitutionName=null; window.loadSection('programs');" style="text-decoration:underline;color:#93c5fd;">Show All Institutions</button>
       </div>
     ` : ''}
@@ -130,7 +131,7 @@ export async function renderClasses(area) {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
-            <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(row.name)}</h4>
+            <h4 style="margin:0; font-size: 16px;">${escapeHtml(row.name)}</h4>
             <div class="text-muted text-sm">Status: <strong class="${row?._raw?.is_active ? 'text-success' : 'text-muted'}">${row.status}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
@@ -154,7 +155,7 @@ export async function renderClasses(area) {
     columns: [
       {
         key: 'institutionName',
-        label: 'Institution',
+        label: 'INSTITUTION',
         sortable: true,
         render: (val, row) => {
           const nameStr = row?._raw?.institutions?.name || row?._raw?.institution_name || 'N/A';
@@ -163,17 +164,17 @@ export async function renderClasses(area) {
       },
       {
         key: 'name',
-        label: 'Program Name',
+        label: 'PROGRAM NAME',
         sortable: true,
         render: (val, row) => {
           const nameStr = row?._raw?.name || row?._raw?.program_name || 'N/A';
           return `<span class="fw-600">${escapeHtml(String(nameStr))}</span>`;
         }
       },
-      { key: 'status', label: 'Status', sortable: true, render: (val, row) => `<span class="badge ${row?._raw?.is_active ? 'badge-success' : 'badge-neutral'}">${val}</span>` },
+      { key: 'status', label: 'STATUS', sortable: true, render: (val, row) => `<span class="badge ${row?._raw?.is_active ? 'badge-success' : 'badge-neutral'}">${val}</span>` },
       {
         key: 'actions',
-        label: 'Actions',
+        label: 'ACTIONS',
         sortable: false,
         render: (val, row) => {
           if (!row) return '';
@@ -226,8 +227,8 @@ export async function renderBatches(area) {
     </div>
 
     ${window._filterProgramId ? `
-      <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
-        <span>🏛️ Filtered by Program: <strong>${escapeHtml(window._filterProgramName || 'Selected Program')}</strong> (${filteredData.length} batches)</span>
+      <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size: 12px;">
+        <span style="display:inline-flex;align-items:center;gap:6px;">${getSvgIcon('building', 14)} Filtered by Program: <strong>${escapeHtml(window._filterProgramName || 'Selected Program')}</strong> (${filteredData.length} batches)</span>
         <button class="btn btn-ghost btn-xs" onclick="window._filterProgramId=null; window._filterProgramName=null; window.loadSection('batches');" style="text-decoration:underline;color:#93c5fd;">Show All Programs</button>
       </div>
     ` : ''}
@@ -262,7 +263,7 @@ export async function renderBatches(area) {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
-            <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(row.name)}</h4>
+            <h4 style="margin:0; font-size: 16px;">${escapeHtml(row.name)}</h4>
             <div class="text-muted text-sm">Status: <strong class="${row?._raw?.is_active ? 'text-success' : 'text-muted'}">${row.status}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
@@ -286,7 +287,7 @@ export async function renderBatches(area) {
     columns: [
       {
         key: 'program',
-        label: 'Program',
+        label: 'PROGRAM',
         sortable: true,
         render: (val, row) => {
           const nameStr = row?._raw?.programs?.name || row?._raw?.program_name || val;
@@ -295,7 +296,7 @@ export async function renderBatches(area) {
       },
       {
         key: 'name',
-        label: 'Batch Name',
+        label: 'BATCH NAME',
         sortable: true,
         render: (val, row) => {
           const nameStr = row?._raw?.name || val;
@@ -304,7 +305,7 @@ export async function renderBatches(area) {
       },
       {
         key: 'studentCount',
-        label: 'Active Students',
+        label: 'ACTIVE STUDENTS',
         sortable: true,
         render: (val, row) => {
           if (!row) return '';
@@ -314,10 +315,10 @@ export async function renderBatches(area) {
           </button>
         `}
       },
-      { key: 'status', label: 'Status', sortable: true, render: (val, row) => `<span class="badge ${row?._raw?.is_active ? 'badge-success' : 'badge-neutral'}">${val}</span>` },
+      { key: 'status', label: 'STATUS', sortable: true, render: (val, row) => `<span class="badge ${row?._raw?.is_active ? 'badge-success' : 'badge-neutral'}">${val}</span>` },
       {
         key: 'actions',
-        label: 'Actions',
+        label: 'ACTIONS',
         sortable: false,
         render: (val, row) => {
           if (!row) return '';
@@ -431,8 +432,8 @@ export async function renderUnifiedInstitutions(area) {
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <span>${escapeHtml(inst.name)}</span>
             <div style="display:flex; gap:4px; opacity:0.7;">
-              <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">✏️</button>
-              <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">🗑️</button>
+              <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">${getSvgIcon('edit', 12)}</button>
+              <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">${getSvgIcon('trash', 12)}</button>
             </div>
           </div>
         </td>
@@ -455,8 +456,8 @@ export async function renderUnifiedInstitutions(area) {
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span>${escapeHtml(inst.name)}</span>
               <div style="display:flex; gap:4px; opacity:0.7;">
-                <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">✏️</button>
-                <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">🗑️</button>
+                <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">${getSvgIcon('edit', 12)}</button>
+                <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">${getSvgIcon('trash', 12)}</button>
               </div>
             </div>
           </td>` : ''}
@@ -464,8 +465,8 @@ export async function renderUnifiedInstitutions(area) {
                 <div class="fw-600" style="display:flex; justify-content:space-between; align-items:center;">
               <span>${escapeHtml(prog.name)}</span>
               <div style="display:flex; gap:4px; opacity:0.7;">
-                <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("programs", "${prog.id}", ${JSON.stringify(JSON.stringify(prog.raw))})' title="Edit">✏️</button>
-                <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("programs", "${prog.id}", "${escapeHtml(prog.name)}")' title="Delete">🗑️</button>
+                <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("programs", "${prog.id}", ${JSON.stringify(JSON.stringify(prog.raw))})' title="Edit">${getSvgIcon('edit', 12)}</button>
+                <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("programs", "${prog.id}", "${escapeHtml(prog.name)}")' title="Delete">${getSvgIcon('trash', 12)}</button>
               </div>
             </div>
               </td>
@@ -482,7 +483,7 @@ export async function renderUnifiedInstitutions(area) {
 
         prog.batches.forEach(batch => {
           const levelData = levelsMap[batch.raw.current_level_id];
-          const levelBadge = levelData ? `<span class="badge badge-primary" style="white-space:nowrap;font-weight:700;">🏷️ ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(levelData.name || levelData.level_number) : levelData.name)}</span>` : `<span class="badge badge-neutral">No Level Set</span>`;
+          const levelBadge = levelData ? `<span class="badge badge-primary" style="white-space:nowrap;font-weight:700;display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('tag', 12)} ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(levelData.name || levelData.level_number) : levelData.name)}</span>` : `<span class="badge badge-neutral">No Level Set</span>`;
 
           html += `
             <tr class="level-row">
@@ -490,8 +491,8 @@ export async function renderUnifiedInstitutions(area) {
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                   <span>${escapeHtml(inst.name)}</span>
                   <div style="display:flex; gap:4px; opacity:0.7;">
-                    <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">✏️</button>
-                    <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">🗑️</button>
+                    <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("institutions", "${inst.id}", ${JSON.stringify(JSON.stringify(inst.raw))})' title="Edit">${getSvgIcon('edit', 12)}</button>
+                    <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("institutions", "${inst.id}", "${escapeHtml(inst.name)}")' title="Delete">${getSvgIcon('trash', 12)}</button>
                   </div>
                 </div>
               </td>` : ''}
@@ -499,8 +500,8 @@ export async function renderUnifiedInstitutions(area) {
                 <div class="fw-600" style="display:flex; justify-content:space-between; align-items:center;">
                   <span>${escapeHtml(prog.name)}</span>
                   <div style="display:flex; gap:4px; opacity:0.7;">
-                    <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("programs", "${prog.id}", ${JSON.stringify(JSON.stringify(prog.raw))})' title="Edit">✏️</button>
-                    <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("programs", "${prog.id}", "${escapeHtml(prog.name)}")' title="Delete">🗑️</button>
+                    <button class="btn btn-ghost btn-xs text-secondary" style="padding:0 4px;" onclick='window._editRecord("programs", "${prog.id}", ${JSON.stringify(JSON.stringify(prog.raw))})' title="Edit">${getSvgIcon('edit', 12)}</button>
+                    <button class="btn btn-ghost btn-xs text-danger" style="padding:0 4px;" onclick='window._deleteRecord("programs", "${prog.id}", "${escapeHtml(prog.name)}")' title="Delete">${getSvgIcon('trash', 12)}</button>
                   </div>
                 </div>
               </td>` : ''}
@@ -519,13 +520,13 @@ export async function renderUnifiedInstitutions(area) {
                 <div class="matrix-actions-row" style="justify-content: space-between; width: 100%;">
                   <div class="matrix-actions-row">
                     STUDENTS: ${batch.students} Enrolled &nbsp;&nbsp;
-                    <a href="#" class="text-primary fw-600" style="text-decoration: underline; font-size: 0.85rem;" onclick='event.preventDefault(); window._filterBatchId="${batch.id}"; window._filterBatchName="${escapeHtml(batch.name)}"; window.loadSection("students");'>[ Manage Roster ↗ ]</a>
+                    <a href="#" class="text-primary fw-600" style="text-decoration: underline; font-size: 12px;" onclick='event.preventDefault(); window._filterBatchId="${batch.id}"; window._filterBatchName="${escapeHtml(batch.name)}"; window.loadSection("students");'>[ Manage Roster ↗ ]</a>
                   </div>
                   <div class="matrix-actions-row">
                      <button class="btn btn-ghost btn-xs text-success" onclick="window.openStudentFullEdit({ batch_id: '${batch.id}' })">+ Add Student</button>
-                     <button class="btn btn-ghost btn-xs text-primary" onclick="window._filterBatchId='${batch.id}'; window.loadSection('import-students')">📥 Import</button>
-                     <button class="btn btn-ghost btn-xs text-secondary" onclick='window._editRecord("batches", "${batch.id}", ${JSON.stringify(JSON.stringify(batch.raw))})' title="Edit Batch">✏️ Edit</button>
-                     <button class="btn btn-ghost btn-xs text-danger" onclick='window._deleteRecord("batches", "${batch.id}", "${escapeHtml(batch.name)}")' title="Delete Batch">🗑️ Delete</button>
+                     <button class="btn btn-ghost btn-xs text-primary" style="display:inline-flex;align-items:center;gap:4px;" onclick="window._filterBatchId='${batch.id}'; window.loadSection('import-students')">${getSvgIcon('upload', 12)} Import</button>
+                     <button class="btn btn-ghost btn-xs text-secondary" style="display:inline-flex;align-items:center;gap:4px;" onclick='window._editRecord("batches", "${batch.id}", ${JSON.stringify(JSON.stringify(batch.raw))})' title="Edit Batch">${getSvgIcon('edit', 12)} Edit</button>
+                     <button class="btn btn-ghost btn-xs text-danger" style="display:inline-flex;align-items:center;gap:4px;" onclick='window._deleteRecord("batches", "${batch.id}", "${escapeHtml(batch.name)}")' title="Delete Batch">${getSvgIcon('trash', 12)} Delete</button>
                   </div>
                 </div>
               </td>
@@ -593,7 +594,7 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
     <div class="modal-content card" style="min-width: 350px; background: var(--fm-bg-card);">
       <div class="modal-header d-flex justify-between align-center mb-3">
         <h3 class="fw-700 m-0 text-md">Change Batch Level</h3>
-        <button class="btn btn-ghost btn-xs text-muted" id="cancel-level-btn-x" style="font-size: 1.25rem;">&times;</button>
+        <button class="btn btn-ghost btn-xs text-muted" id="cancel-level-btn-x" style="font-size: 16px;">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">

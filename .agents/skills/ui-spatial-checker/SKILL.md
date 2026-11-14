@@ -2,16 +2,16 @@
 name: ui-spatial-checker
 description: >-
   Automated spatial and visual layout validator for TopsCore LMS.
-  Use this skill whenever UI layouts, CSS, or tables are modified to verify strict 100vh lock, 10px container gap, 50px lower panel height, dynamic single-line column text, and centered loading states.
+  Use this skill whenever UI layouts, CSS, or tables are modified to verify strict 100vh lock, 10px container gap, 40px Sub Panel (lower panel) height, dynamic single-line column text, and centered loading states.
 ---
 
 # UI Spatial & Visual Invariant Checker
 
 This skill provides an automated audit runner to verify that TopsCore LMS screens strictly comply with spatial layout rules:
-- **Rule 15**: 100vh Viewport Lock & `calc(100vh - 60px)` Banner Deduction.
-- **Rule 20**: Universal Lower Panel Architecture (50px height) & 10px Container Gap.
-- **Rule 21**: Dynamic Column Sizing, Single-Line Non-Wrapped Text (`white-space: nowrap !important`), and Zero Dead Empty Space.
-- **Rule 22**: Centered Loading States & Pure English Messaging.
+- **Rule 1.1**: 100vh Viewport Lock & `calc(100vh - 60px)` Banner Deduction.
+- **Rule 1.2 & 1.3**: Universal Sub Panel (Lower Panel 40px height) & 10px Container Gap.
+- **Rule 4.1 & 4.2**: Dynamic Column Sizing, Single-Line Non-Wrapped Text (`white-space: nowrap !important` with Vocab phrase wrap exception), and Zero Dead Space.
+- **Rule 1.4**: Centered Loading States & Pure English Messaging.
 
 ## When to Use
 
@@ -39,7 +39,9 @@ npm run check:spatial
 The audit verifies:
 - [x] Root `html` and `body` locked to `100vh` without outer page scroll.
 - [x] `#admin-console` set to `calc(100vh - 60px)`.
-- [x] Lower panel and summary footers standardized to 50px height.
+- [x] Floating window Title Area (40px) titles strictly enforce 16px Outfit, ALL CAPS (`text-transform: uppercase !important`), centered alignment, and stacked subtitles (dual-line 60px).
+- [x] Floating window heights standardized to 75vh – 80vh maximum.
+- [x] Sub Panel (lower panel) and summary footers standardized to 40px height.
 - [x] Containers maintain 10px spacing.
 - [x] Table cells enforce tabular numbers and nowrap text.
 - [x] Student summary footer is clean with no useless `Avg: ... pts` under Actions.

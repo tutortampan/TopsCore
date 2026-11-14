@@ -1,0 +1,30 @@
+[
+  {
+    "id": "100120f3-ab12-4589-99da-cf65d11436b1",
+    "level_number": 1,
+    "name": "1st Level",
+    "description": "Basic and Foundational",
+    "created_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "id": "9936683a-5b4a-4796-bb5d-a7fd8ecf0b71",
+    "level_number": 2,
+    "name": "2nd Level",
+    "description": "Intermediate",
+    "created_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "id": "51589e1a-d96e-496e-92a3-d9d350483555",
+    "level_number": 3,
+    "name": "3rd Level",
+    "description": "Advanced",
+    "created_at": "2026-09-25T18:44:51.709+00:00"
+  },
+  {
+    "id": "b70a0ea2-785d-4291-9adf-a4cbd7a2c9a2",
+    "level_number": 0,
+    "name": "Alumni",
+    "description": "Completed",
+    "created_at": "2026-09-25T18:44:51.709+00:00"
+  }
+]

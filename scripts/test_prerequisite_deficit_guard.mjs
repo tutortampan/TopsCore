@@ -23,7 +23,7 @@ async function verifyPrereqDeficitGuard() {
   tests.forEach(t => {
     if (t.test_type !== 'exam' && !t.shell_code?.endsWith('-EXAM')) {
       const tMin = Number(t.minimum_required_score) || 70;
-      ayyaPasses[t.shell_code] = ayyaAttempts.filter(a => a.test_id === t.id && (a.is_forgiven || Number(a.effective_score ?? a.percentage ?? 0) >= tMin)).length;
+      ayyaPasses[t.shell_code] = (ayyaAttempts || []).filter(a => a.test_id === t.id && (a.is_forgiven || Number(a.effective_score ?? a.percentage ?? 0) >= tMin)).length;
     }
   });
 

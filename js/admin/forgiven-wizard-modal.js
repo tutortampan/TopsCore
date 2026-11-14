@@ -7,7 +7,8 @@ import {
   isWeeklyExam,
   escapeHtml,
   showToast
-} from '../api.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function openForgivenWizard(options = {}) {
   const {
@@ -82,29 +83,29 @@ export async function openForgivenWizard(options = {}) {
       <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
         <div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.25rem;">🛡️</span>
-            <h2 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em;">
+            <span style="font-size: 16px; display:inline-flex; align-items:center;">${getSvgIcon('shield', 16)}</span>
+            <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em;">
               Wizard Forgiven &amp; Exam Manual Override
             </h2>
-            <span style="background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
+            <span style="background: rgba(var(--grade-c-rgb), 0.15); color: var(--grade-c); border: 1px solid rgba(var(--grade-c-rgb), 0.3); font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
               Pacing Adjustment
             </span>
           </div>
-          <p style="margin: 3px 0 0 0; font-size: 0.76rem; color: #94a3b8;">
+          <p style="margin: 3px 0 0 0; font-size: 12px; color: #94a3b8;">
             Unlock Week 3 tests for specific students or batches without compromising curriculum integrity.
           </p>
         </div>
-        <button type="button" id="btn-close-forgiven-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
+        <button type="button" id="btn-close-forgiven-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
       </div>
 
       <!-- Step Indicator Bar -->
       <div style="display: flex; border-bottom: 1px solid rgba(255, 255, 255, 0.08); background: #0b1120;">
-        <div id="step-tab-1" style="flex: 1; padding: 10px 16px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid #f59e0b; color: #f59e0b; cursor: pointer;">
-          <span style="width: 20px; height: 20px; border-radius: 50%; background: #f59e0b; color: #0f172a; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900;">1</span>
+        <div id="step-tab-1" style="flex: 1; padding: 10px 16px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid var(--grade-c); color: var(--grade-c); cursor: pointer;">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: var(--grade-c); color: #0f172a; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;">1</span>
           SELECT STUDENTS &amp; BATCH
         </div>
-        <div id="step-tab-2" style="flex: 1; padding: 10px 16px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer;">
-          <span style="width: 20px; height: 20px; border-radius: 50%; background: #334155; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 900;">2</span>
+        <div id="step-tab-2" style="flex: 1; padding: 10px 16px; font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 8px; border-bottom: 2px solid transparent; color: #64748b; cursor: pointer;">
+          <span style="width: 20px; height: 20px; border-radius: 50%; background: #334155; color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 900;">2</span>
           CONFIGURE TASKS &amp; EXAMS
         </div>
       </div>
@@ -115,8 +116,8 @@ export async function openForgivenWizard(options = {}) {
         <div id="step-1-container">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 10px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <label style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Filter Batch:</label>
-              <select id="forgiven-batch-select" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 5px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 600;">
+              <label style="font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Filter Batch:</label>
+              <select id="forgiven-batch-select" style="background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
                 <option value="ALL">All Batches (${students.length} Students)</option>
                 ${availableBatches.map(b => `
                   <option value="${b.id}" ${b.id === currentBatchFilter ? 'selected' : ''}>${escapeHtml(b.name)}</option>
@@ -124,18 +125,18 @@ export async function openForgivenWizard(options = {}) {
               </select>
             </div>
             <div style="display: flex; gap: 8px;">
-              <button type="button" id="btn-select-all-students" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 4px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
+              <button type="button" id="btn-select-all-students" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
                 ✓ Select All
               </button>
-              <button type="button" id="btn-clear-all-students" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 0.74rem; font-weight: 600; cursor: pointer;">
+              <button type="button" id="btn-clear-all-students" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">
                 Clear
               </button>
             </div>
           </div>
 
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <input type="text" id="student-search-input" placeholder="Search student name..." style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; width: 100%; max-width: 320px;">
-            <span id="selected-student-count-chip" style="font-size: 0.76rem; font-weight: 700; color: #f59e0b;">
+            <input type="text" id="student-search-input" placeholder="Search student name..." style="background: #1e293b; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 12px; width: 100%; max-width: 320px;">
+            <span id="selected-student-count-chip" style="font-size: 12px; font-weight: 700; color: var(--grade-c);">
               ${selectedStudentIds.size} students selected
             </span>
           </div>
@@ -148,24 +149,24 @@ export async function openForgivenWizard(options = {}) {
 
         <!-- STEP 2 CONTAINER -->
         <div id="step-2-container" style="display: none;">
-          <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div style="font-size: 0.8rem; color: #f8fafc;">
-              Target: <strong id="summary-student-count" style="color: #f59e0b;">${selectedStudentIds.size} Students</strong> selected
+          <div style="background: rgba(var(--grade-c-rgb), 0.08); border: 1px solid rgba(var(--grade-c-rgb), 0.2); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div style="font-size: 12px; color: #f8fafc;">
+              Target: <strong id="summary-student-count" style="color: var(--grade-c);">${selectedStudentIds.size} Students</strong> selected
             </div>
-            <button type="button" id="btn-quick-pacing-w12" style="background: #d97706; border: none; color: #fff; padding: 5px 12px; border-radius: 6px; font-size: 0.74rem; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-              ⚡ Quick-Set Week 1 &amp; 2 (Forgive A1–B4 &amp; Exam A–B)
+            <button type="button" id="btn-quick-pacing-w12" style="background: var(--grade-c); border: none; color: #0f172a; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              ${getSvgIcon('zap', 12)} Quick-Set Week 1 &amp; 2 (Forgive A1–B4 &amp; Exam A–B)
             </button>
           </div>
 
           <!-- Metadata Settings -->
           <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 12px; margin-bottom: 16px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06);">
             <div>
-              <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Admin / Tutor Name:</label>
-              <input type="text" id="forgiven-admin-name" value="Mr. Top" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem; font-weight: 600;">
+              <label style="display: block; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Admin / Tutor Name:</label>
+              <input type="text" id="forgiven-admin-name" value="Mr. Top" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">
             </div>
             <div>
-              <label style="display: block; font-size: 0.72rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Reason / Audit Note:</label>
-              <input type="text" id="forgiven-reason" value="Week 1-2 Pacing Adjustment" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 0.82rem;">
+              <label style="display: block; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px;">Reason / Audit Note:</label>
+              <input type="text" id="forgiven-reason" value="Week 1-2 Pacing Adjustment" style="width: 100%; box-sizing: border-box; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); color: #fff; padding: 6px 10px; border-radius: 6px; font-size: 12px;">
             </div>
           </div>
 
@@ -181,12 +182,12 @@ export async function openForgivenWizard(options = {}) {
                 <div class="theme-card-block" style="margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; overflow: hidden; background: rgba(30, 41, 59, 0.4);">
                   <div style="padding: 10px 14px; background: rgba(255,255,255,0.04); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; justify-content: space-between; align-items: center;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <span style="font-size: 0.82rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.03em;">
+                      <span style="font-size: 12px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.03em;">
                         WEEK / THEME ${tc}: ${escapeHtml(themeTitle)}
                       </span>
-                      <span style="font-size: 0.7rem; color: #94a3b8;">(${grp.tasks.length} Tasks, ${grp.exams.length} Exams)</span>
+                      <span style="font-size: 12px; color: #94a3b8;">(${grp.tasks.length} Tasks, ${grp.exams.length} Exams)</span>
                     </div>
-                    <button type="button" class="btn-toggle-theme-tasks" data-theme="${tc}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; cursor: pointer;">
+                    <button type="button" class="btn-toggle-theme-tasks" data-theme="${tc}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #f8fafc; padding: 3px 8px; border-radius: 4px; font-size: 12px; cursor: pointer;">
                       Select All Theme ${tc} Tasks
                     </button>
                   </div>
@@ -194,13 +195,13 @@ export async function openForgivenWizard(options = {}) {
                   <div style="padding: 12px 14px;">
                     <!-- Tasks Checklist -->
                     <div style="margin-bottom: 12px;">
-                      <div style="font-size: 0.72rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
-                        📌 Formative Tasks (Prerequisite Gating Only):
+                      <div style="font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
+                        Formative Tasks (Prerequisite Gating Only):
                       </div>
                       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 6px;">
                         ${grp.tasks.map(task => `
-                          <label style="display: flex; align-items: center; gap: 8px; font-size: 0.78rem; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.04);">
-                            <input type="checkbox" class="task-forgive-checkbox" data-test-id="${task.id}" data-theme="${tc}" style="accent-color: #f59e0b; width: 15px; height: 15px; cursor: pointer;">
+                          <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 6px; cursor: pointer; border: 1px solid rgba(255,255,255,0.04);">
+                            <input type="checkbox" class="task-forgive-checkbox" data-test-id="${task.id}" data-theme="${tc}" style="accent-color: var(--grade-c); width: 15px; height: 15px; cursor: pointer;">
                             <span style="font-weight: 600; color: #e2e8f0;">${escapeHtml(task.title || task.shell_code || 'Task')}</span>
                           </label>
                         `).join('')}
@@ -210,26 +211,26 @@ export async function openForgivenWizard(options = {}) {
                     <!-- Exams Configuration -->
                     ${grp.exams.length > 0 ? `
                       <div>
-                        <div style="font-size: 0.72rem; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
-                          📝 Milestone Exam (Official Grade &amp; Points):
+                        <div style="font-size: 12px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px;">
+                          Milestone Exam (Official Grade &amp; Points):
                         </div>
                         ${grp.exams.map(exam => {
                           const totalQ = Number(exam.payload?.total_questions || exam.total_questions || 120);
                           return `
                             <div class="exam-row-box" data-test-id="${exam.id}" data-theme="${tc}" data-total-q="${totalQ}" style="background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; margin-bottom: 6px;">
                               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-                                <span style="font-weight: 700; font-size: 0.82rem; color: #f8fafc;">
+                                <span style="font-weight: 700; font-size: 12px; color: #f8fafc;">
                                   ${escapeHtml(exam.title || exam.shell_code || 'Exam')}
-                                  <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 400;">(${totalQ} Questions)</span>
+                                  <span style="font-size: 12px; color: #94a3b8; font-weight: 400;">(${totalQ} Questions)</span>
                                 </span>
-                                <div style="display: flex; align-items: center; gap: 14px; font-size: 0.78rem;">
+                                <div style="display: flex; align-items: center; gap: 14px; font-size: 12px;">
                                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer;">
                                     <input type="radio" name="exam_action_${exam.id}" value="none" checked style="accent-color: #94a3b8;">
                                     <span>Ignore</span>
                                   </label>
-                                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #f59e0b;">
-                                    <input type="radio" name="exam_action_${exam.id}" value="forgive" style="accent-color: #f59e0b;">
-                                    <span>Forgive (0%ᶠ)</span>
+                                  <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--grade-e);">
+                                    <input type="radio" name="exam_action_${exam.id}" value="forgive" style="accent-color: var(--grade-e);">
+                                    <span>Forgive (Grade F)</span>
                                   </label>
                                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: #38bdf8;">
                                     <input type="radio" name="exam_action_${exam.id}" value="manual" style="accent-color: #38bdf8;">
@@ -239,7 +240,7 @@ export async function openForgivenWizard(options = {}) {
                               </div>
 
                               <!-- Manual Score Inputs (Hidden by default) -->
-                              <div class="exam-manual-inputs-row" id="manual-inputs-${exam.id}" style="display: none; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.08); align-items: center; gap: 12px; font-size: 0.78rem;">
+                              <div class="exam-manual-inputs-row" id="manual-inputs-${exam.id}" style="display: none; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.08); align-items: center; gap: 12px; font-size: 12px;">
                                 <span style="color: #38bdf8; font-weight: 700;">Offline Exam Score:</span>
                                 <div style="display: flex; align-items: center; gap: 6px;">
                                   <input type="number" class="manual-pct-input" data-exam-id="${exam.id}" min="0" max="100" placeholder="0-100" style="width: 70px; background: #1e293b; border: 1px solid rgba(56,189,248,0.4); color: #fff; padding: 4px 6px; border-radius: 4px; text-align: center; font-weight: 700;">
@@ -267,19 +268,19 @@ export async function openForgivenWizard(options = {}) {
       <!-- Modal Footer -->
       <div style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
         <div>
-          <button type="button" id="btn-forgiven-revoke" style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; padding: 6px 14px; border-radius: 6px; font-size: 0.78rem; font-weight: 700; cursor: pointer; display: none;">
+          <button type="button" id="btn-forgiven-revoke" style="background: rgba(var(--grade-e-rgb), 0.12); border: 1px solid rgba(var(--grade-e-rgb), 0.4); color: var(--grade-e); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: none;">
             ↩️ Revoke Forgiven Status
           </button>
         </div>
         <div style="display: flex; gap: 10px;">
-          <button type="button" id="btn-forgiven-prev" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; padding: 7px 16px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer; display: none;">
+          <button type="button" id="btn-forgiven-prev" style="background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; padding: 7px 16px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: none;">
             ← Back
           </button>
-          <button type="button" id="btn-forgiven-next" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #0f172a; padding: 7px 18px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer;">
+          <button type="button" id="btn-forgiven-next" style="background: var(--grade-c); border: none; color: #0f172a; padding: 7px 18px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer;">
             Continue to Test Configuration →
           </button>
-          <button type="button" id="btn-forgiven-submit" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border: none; color: #0f172a; padding: 7px 20px; border-radius: 6px; font-size: 0.82rem; font-weight: 800; cursor: pointer; display: none;">
-            ⚡ Apply Now
+          <button type="button" id="btn-forgiven-submit" style="background: var(--grade-c); border: none; color: #0f172a; padding: 7px 20px; border-radius: 6px; font-size: 12px; font-weight: 800; cursor: pointer; display: none; align-items: center; gap: 5px;">
+            ${getSvgIcon('zap', 14)} Apply Now
           </button>
         </div>
       </div>
@@ -301,18 +302,18 @@ export async function openForgivenWizard(options = {}) {
     });
 
     if (filteredStudents.length === 0) {
-      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 20px; font-size: 0.8rem;">No students matching filter.</div>`;
+      grid.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: #94a3b8; padding: 20px; font-size: 12px;">No students matching filter.</div>`;
       return;
     }
 
     grid.innerHTML = filteredStudents.map(s => {
       const isChecked = selectedStudentIds.has(s.id);
       return `
-        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: ${isChecked ? 'rgba(245, 158, 11, 0.12)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${isChecked ? 'rgba(245, 158, 11, 0.4)' : 'rgba(255,255,255,0.06)'}; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;">
-          <input type="checkbox" class="student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="accent-color: #f59e0b; width: 15px; height: 15px; cursor: pointer;">
+        <label style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: ${isChecked ? 'rgba(var(--grade-c-rgb), 0.12)' : 'rgba(255,255,255,0.02)'}; border: 1px solid ${isChecked ? 'rgba(var(--grade-c-rgb), 0.4)' : 'rgba(255,255,255,0.06)'}; border-radius: 6px; cursor: pointer; transition: all 0.15s ease;">
+          <input type="checkbox" class="student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="accent-color: var(--grade-c); width: 15px; height: 15px; cursor: pointer;">
           <div style="flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            <div style="font-size: 0.78rem; font-weight: 600; color: #f8fafc;">${escapeHtml(s.name)}</div>
-            <div style="font-size: 0.68rem; color: #94a3b8;">${escapeHtml(s.batches?.name || s.batch_name || 'Camp 134')}</div>
+            <div style="font-size: 12px; font-weight: 600; color: #f8fafc;">${escapeHtml(s.name)}</div>
+            <div style="font-size: 12px; color: #94a3b8;">${escapeHtml(s.batches?.name || s.batch_name || 'Camp 134')}</div>
           </div>
         </label>
       `;
@@ -351,8 +352,8 @@ export async function openForgivenWizard(options = {}) {
     if (step === 1) {
       step1.style.display = 'block';
       step2.style.display = 'none';
-      tab1.style.borderColor = '#f59e0b';
-      tab1.style.color = '#f59e0b';
+      tab1.style.borderColor = 'var(--grade-c)';
+      tab1.style.color = 'var(--grade-c)';
       tab2.style.borderColor = 'transparent';
       tab2.style.color = '#64748b';
       btnNext.style.display = 'inline-block';
@@ -366,8 +367,8 @@ export async function openForgivenWizard(options = {}) {
       }
       step1.style.display = 'none';
       step2.style.display = 'block';
-      tab2.style.borderColor = '#f59e0b';
-      tab2.style.color = '#f59e0b';
+      tab2.style.borderColor = 'var(--grade-c)';
+      tab2.style.color = 'var(--grade-c)';
       tab1.style.borderColor = 'transparent';
       tab1.style.color = '#64748b';
       btnNext.style.display = 'none';
@@ -563,7 +564,7 @@ export async function openForgivenWizard(options = {}) {
       console.error('[ForgivenWizard Submit Error]:', err);
       showToast('Failed to apply score exemption: ' + err.message, 'error');
       submitBtn.disabled = false;
-      submitBtn.textContent = '⚡ Apply Now';
+      submitBtn.innerHTML = `${getSvgIcon('zap', 14)} Apply Now`;
     }
   });
 

@@ -3,6 +3,7 @@
 
 import { escapeHtml } from '../app.js';
 import { getGradeColorByScore } from '../grading.js';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 
 export function exportStudentDossier(studentData, educationList = [], skillsList = [], testList = []) {
   const printWindow = window.open('', '_blank');
@@ -19,7 +20,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     : '<div style="color:#94a3b8; font-style:italic;">No formal education history recorded.</div>';
 
   const skillHtml = skillsList && skillsList.length > 0
-    ? skillsList.map(s => `<span style="display:inline-block; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; padding:3px 8px; font-size:0.75rem; font-weight:600; margin:2px 4px 2px 0; color:#334155;">${escapeHtml(s)}</span>`).join('')
+    ? skillsList.map(s => `<span style="display:inline-block; background:#f1f5f9; border:1px solid #cbd5e1; border-radius:4px; padding:3px 8px; font-size: 12px; font-weight:600; margin:2px 4px 2px 0; color:#334155;">${escapeHtml(s)}</span>`).join('')
     : '<div style="color:#94a3b8; font-style:italic;">No skill competencies recorded.</div>';
 
   const testRowsHtml = testList && testList.length > 0
@@ -29,8 +30,8 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
           <tr>
             <td style="text-align:center; color:#64748b; font-weight:600;">${idx + 1}</td>
             <td style="font-weight:700; color:#0f172a;">${escapeHtml(a.title || 'Test')}</td>
-            <td style="text-align:center;"><span style="font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px; background:#f1f5f9; color:#475569;">${escapeHtml(a.type || 'Exam')}</span></td>
-            <td style="text-align:center; color:#64748b; font-size:0.75rem;">${escapeHtml(a.date || '—')}</td>
+            <td style="text-align:center;"><span style="font-size: 12px; font-weight:700; padding:2px 6px; border-radius:4px; background:#f1f5f9; color:#475569;">${escapeHtml(a.type || 'Exam')}</span></td>
+            <td style="text-align:center; color:#64748b; font-size: 12px;">${escapeHtml(a.date || '—')}</td>
             <td style="text-align:center; font-weight:700; color:#0f172a;">${a.points != null ? `${a.points} pts` : '—'}</td>
             <td style="text-align:center; font-weight:800; color:${scoreColor};">${a.score != null ? `${a.score}%` : '—'}</td>
             <td style="text-align:center; font-weight:900; color:${scoreColor};">${escapeHtml(a.grade || '—')}</td>
@@ -72,14 +73,14 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
       margin-bottom: 14px;
     }
     .header-title {
-      font-size: 1.25rem;
+      font-size: 16px;
       font-weight: 900;
       letter-spacing: 0.04em;
       color: #0f172a;
       text-transform: uppercase;
     }
     .header-sub {
-      font-size: 0.8rem;
+      font-size: 12px;
       font-weight: 700;
       color: #334155;
       text-transform: uppercase;
@@ -91,7 +92,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
       justify-content: space-between;
       align-items: center;
       margin-top: 6px;
-      font-size: 0.7rem;
+      font-size: 12px;
       color: #64748b;
       font-weight: 600;
       border-top: 1px solid #e2e8f0;
@@ -106,7 +107,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     }
     .id-table {
       width: 100%;
-      font-size: 0.82rem;
+      font-size: 12px;
       line-height: 1.6;
       border-collapse: collapse;
     }
@@ -148,19 +149,19 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
       text-align: center;
     }
     .summary-item-label {
-      font-size: 0.65rem;
+      font-size: 12px;
       font-weight: 700;
       color: #64748b;
       text-transform: uppercase;
     }
     .summary-item-val {
-      font-size: 1.25rem;
+      font-size: 16px;
       font-weight: 900;
       color: #0f172a;
       line-height: 1.2;
     }
     .section-title {
-      font-size: 0.8rem;
+      font-size: 12px;
       font-weight: 800;
       color: #0f172a;
       text-transform: uppercase;
@@ -172,7 +173,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     .dossier-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 0.78rem;
+      font-size: 12px;
       margin-top: 6px;
       border: 1px solid #cbd5e1;
     }
@@ -181,7 +182,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
       color: #334155;
       font-weight: 700;
       text-transform: uppercase;
-      font-size: 0.68rem;
+      font-size: 12px;
       letter-spacing: 0.04em;
       padding: 6px 8px;
       border: 1px solid #cbd5e1;
@@ -225,7 +226,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     .footer-notice {
       text-align: center;
       margin-top: 12px;
-      font-size: 0.62rem;
+      font-size: 12px;
       color: #94a3b8;
       line-height: 1.3;
       page-break-inside: avoid;
@@ -239,7 +240,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
   <div class="sheet">
     <!-- Official Header -->
     <div class="header">
-      <div class="header-title">🛡️ TOPS CORE ACADEMIC ADMINISTRATION</div>
+      <div class="header-title">${getSvgIcon('shield', 14)} TOPS CORE ACADEMIC ADMINISTRATION</div>
       <div class="header-sub">CENTRAL ENGLISH TEST &amp; CERTIFICATION BOARD</div>
       <div class="header-meta">
         <span>DOCUMENT REF: <strong>${escapeHtml(docRef)}</strong></span>
@@ -254,7 +255,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
         <table class="id-table">
           <tr>
             <td class="label">Student Full Name:</td>
-            <td style="font-weight:800; font-size:1rem; color:#0f172a;">${escapeHtml(studentData.name || '—')}</td>
+            <td style="font-weight:800; font-size: 16px; color:#0f172a;">${escapeHtml(studentData.name || '—')}</td>
           </tr>
           <tr>
             <td class="label">Date of Birth / Age:</td>
@@ -283,9 +284,9 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
       <div class="photo-box">
         ${studentData.photo_url 
           ? `<img src="${studentData.photo_url}" alt="Student Photo">` 
-          : `<div style="font-size:2rem; color:#94a3b8;">👤</div>`
+          : `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;">${getSvgIcon('user', 36)}</div>`
         }
-        <div style="position:absolute; bottom:0; inset-inline:0; background:rgba(15,23,42,0.85); color:#fff; font-size:0.55rem; text-align:center; padding:2px 0; font-weight:700; letter-spacing:0.04em;">
+        <div style="position:absolute; bottom:0; inset-inline:0; background:rgba(15,23,42,0.85); color:#fff; font-size: 12px; text-align:center; padding:2px 0; font-weight:700; letter-spacing:0.04em;">
           CERTIFIED
         </div>
       </div>
@@ -295,7 +296,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     <div class="summary-box">
       <div>
         <div class="summary-item-label">Overall Grade</div>
-        <div class="summary-item-val" style="font-size:1.45rem;">${escapeHtml(studentData.globalGrade || studentData.grade || '—')}</div>
+        <div class="summary-item-val" style="font-size: 20px;">${escapeHtml(studentData.globalGrade || studentData.grade || '—')}</div>
       </div>
       <div>
         <div class="summary-item-label">Mastery Score</div>
@@ -303,11 +304,11 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
       </div>
       <div>
         <div class="summary-item-label">Curriculum Pace</div>
-        <div class="summary-item-val" style="font-size:1.05rem;">${studentData.completedTests || 0} / ${studentData.totalAssigned || 40} <span style="font-size:0.7rem; color:#64748b; font-weight:600;">(${studentData.completionPct || 0}%)</span></div>
+        <div class="summary-item-val" style="font-size: 16px;">${studentData.completedTests || 0} / ${studentData.totalAssigned || 40} <span style="font-size: 12px; color:#64748b; font-weight:600;">(${studentData.completionPct || 0}%)</span></div>
       </div>
       <div>
         <div class="summary-item-label">Total Points</div>
-        <div class="summary-item-val" style="font-size:1.05rem;">${studentData.totalEarnedScore != null ? `${studentData.totalEarnedScore} pts` : '—'}</div>
+        <div class="summary-item-val" style="font-size: 16px;">${studentData.totalEarnedScore != null ? `${studentData.totalEarnedScore} pts` : '—'}</div>
       </div>
     </div>
 
@@ -318,12 +319,12 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
         <thead>
           <tr>
             <th style="width:28px; text-align:center;">#</th>
-            <th>Test Title</th>
-            <th style="width:65px; text-align:center;">Type</th>
-            <th style="width:85px; text-align:center;">Date</th>
-            <th style="width:75px; text-align:center;">Points</th>
-            <th style="width:60px; text-align:center;">Score</th>
-            <th style="width:50px; text-align:center;">Grade</th>
+            <th>TEST TITLE</th>
+            <th style="width:65px; text-align:center;">TYPE</th>
+            <th style="width:85px; text-align:center;">DATE</th>
+            <th style="width:75px; text-align:center;">POINTS</th>
+            <th style="width:60px; text-align:center;">SCORE</th>
+            <th style="width:50px; text-align:center;">GRADE</th>
           </tr>
         </thead>
         <tbody>
@@ -336,31 +337,31 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:10px;">
       <div>
         <div class="section-title">Education Background</div>
-        <div style="font-size:0.75rem; line-height:1.4;">${eduHtml}</div>
+        <div style="font-size: 12px; line-height:1.4;">${eduHtml}</div>
       </div>
       <div>
         <div class="section-title">Competencies &amp; Skills</div>
-        <div style="font-size:0.75rem;">${skillHtml}</div>
+        <div style="font-size: 12px;">${skillHtml}</div>
       </div>
     </div>
 
     <!-- Signatures & Official Stamp Block -->
     <div class="signatures-block">
       <div style="text-align:center;">
-        <div style="font-size:0.68rem; color:#64748b; margin-bottom:32px;">Lead Academic Instructor:</div>
+        <div style="font-size: 12px; color:#64748b; margin-bottom:32px;">Lead Academic Instructor:</div>
         <div style="border-bottom:1px solid #0f172a; width:75%; margin:0 auto 3px;"></div>
-        <div style="font-size:0.72rem; font-weight:700;">Academic Operations Officer</div>
+        <div style="font-size: 12px; font-weight:700;">Academic Operations Officer</div>
       </div>
 
       <div class="seal-circle">
-        <span style="font-size:1rem;">🛡️</span>
-        <span style="font-size:0.48rem; font-weight:800; letter-spacing:0.04em; line-height:1.1;">TOP OFFICE<br>ACADEMIC<br>SEAL</span>
+        <span style="font-size: 16px;">${getSvgIcon('shield', 18)}</span>
+        <span style="font-size: 12px; font-weight:800; letter-spacing:0.04em; line-height:1.1;">TOP OFFICE<br>ACADEMIC<br>SEAL</span>
       </div>
 
       <div style="text-align:center;">
-        <div style="font-size:0.68rem; color:#64748b; margin-bottom:32px;">Director of Academic Board:</div>
+        <div style="font-size: 12px; color:#64748b; margin-bottom:32px;">Director of Academic Board:</div>
         <div style="border-bottom:1px solid #0f172a; width:75%; margin:0 auto 3px;"></div>
-        <div style="font-size:0.72rem; font-weight:700;">Head of Academic Board</div>
+        <div style="font-size: 12px; font-weight:700;">Head of Academic Board</div>
       </div>
     </div>
 

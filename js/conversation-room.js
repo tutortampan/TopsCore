@@ -6,6 +6,7 @@ import { WebRTCCallEngine } from './webrtc-call.js';
 import { ConversationPacingEngine, STAGE_DEFINITIONS } from './conversation-pacing.js';
 import { evaluateAndSaveConversation } from './conversation-eval.js';
 import { getGradeColorByScore, GRADE_PALETTE, TOPSCORE_COLORS } from './grading.js';
+import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
 class ConversationRoomApp {
   constructor() {
@@ -70,11 +71,11 @@ class ConversationRoomApp {
     if (text) {
       const labels = {
         idle: 'IDLE • READY',
-        listening: '🎙️ LISTENING...',
-        thinking: '🧠 THINKING...',
-        speaking: '🔊 SPEAKING...'
+        listening: `${getSvgIcon('mic', 12)} LISTENING...`,
+        thinking: `${getSvgIcon('activity', 12)} THINKING...`,
+        speaking: `${getSvgIcon('volume-2', 12)} SPEAKING...`
       };
-      text.textContent = labels[norm] || norm.toUpperCase();
+      text.innerHTML = labels[norm] || norm.toUpperCase();
     }
     this.avatarState = norm;
   }
@@ -97,13 +98,13 @@ class ConversationRoomApp {
 
       if (state === 'listening') {
         amp = Math.max(8, (this.currentVolume || 0) * 0.4);
-        strokeColor = '#00c000'; // Grade A Green
+        strokeColor = (typeof TOPSCORE_COLORS !== 'undefined' ? TOPSCORE_COLORS.A : 'var(--grade-a)'); // Grade A Green
       } else if (state === 'thinking') {
         amp = 5 + Math.sin(phase * 2) * 3;
         strokeColor = '#818cf8'; // Indigo
       } else if (state === 'speaking') {
         amp = Math.max(12, (this.remoteVolume || 0) * 0.5);
-        strokeColor = '#ff2d87'; // Star Pink
+        strokeColor = '#38bdf8'; // Tactical Blue
       }
 
       ctx.beginPath();
@@ -178,7 +179,7 @@ class ConversationRoomApp {
           const isMuted = this.webrtc.toggleMute();
           const micIcon = document.getElementById('mic-icon');
           const micLabel = document.getElementById('mic-label');
-          if (micIcon) micIcon.textContent = isMuted ? '🔇' : '🎙️';
+          if (micIcon) micIcon.innerHTML = isMuted ? getSvgIcon('lock', 14) : getSvgIcon('mic', 14);
           if (micLabel) micLabel.textContent = isMuted ? 'Unmute' : 'Mute Mic';
           btnMic.classList.toggle('conv-btn-danger', isMuted);
         }
@@ -529,7 +530,7 @@ class ConversationRoomApp {
     this._appendTranscriptBubble({
       isSelf: false,
       speakerName: 'System',
-      text: `🔔 Advanced to Stage ${stageNum}: ${stageDef.name}`,
+      text: `Advanced to Stage ${stageNum}: ${stageDef.name}`,
       timestamp: new Date().toISOString()
     });
   }
@@ -580,7 +581,7 @@ class ConversationRoomApp {
     this._appendTranscriptBubble({
       isSelf: false,
       speakerName: 'System',
-      text: `✋ ${text}`,
+      text: text,
       timestamp: new Date().toISOString()
     });
   }

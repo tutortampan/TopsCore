@@ -93,7 +93,7 @@ export function generateExecutiveCV(profile, workRecords = [], skills = []) {
         <!-- Executive Header Zone -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0f172a; padding-bottom: 0.75rem; margin-bottom: 0.85rem;">
           <div style="flex: 1; padding-right: 1rem;">
-            <h1 style="font-size: 1.7rem; font-weight: 800; margin: 0; color: #0f172a; letter-spacing: -0.02em; text-transform: uppercase;">${fullName}</h1>
+            <h1 style="font-size: 20px; font-weight: 800; margin: 0; color: #0f172a; letter-spacing: -0.02em; text-transform: uppercase;">${fullName}</h1>
             <div style="font-size: 10pt; font-weight: 700; color: #2563eb; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.04em;">${title}</div>
             <div style="margin-top: 0.35rem; font-size: 8pt; color: #64748b; display: flex; gap: 0.85rem; flex-wrap: wrap;">
               <span><strong>Email:</strong> ${profile?.contact_email || profile?.email || 'admin@topscore.edu'}</span>

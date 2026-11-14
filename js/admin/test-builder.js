@@ -18,8 +18,9 @@ import {
   adminFetchAll,
   clearAdminCache,
   reorderTest
-} from '../api.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function openTestBuilder(testId = null, initialClassId = null) {
   const isEdit = !!testId;
@@ -31,12 +32,12 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
     <div class="modal-content" style="max-width: 960px; height: 90vh; display: flex; flex-direction: column;">
       <div class="modal-header d-flex justify-between align-center p-3" style="border-bottom: 1px solid var(--clr-border);">
         <div>
-          <h2 class="modal-title m-0 text-gradient" style="font-size: 1.35rem;">
+          <h2 class="modal-title m-0 text-gradient" style="font-size: 16px;">
             ${isEdit ? 'Edit Test' : 'New Test Wizard (V1)'}
           </h2>
-          <p class="text-muted m-0" style="font-size: 0.8rem;">Create Evaluations or Comprehensive Tests with frozen question snapshots</p>
+          <p class="text-muted m-0" style="font-size: 12px;">Create Evaluations or Comprehensive Tests with frozen question snapshots</p>
         </div>
-        <button class="btn btn-ghost" id="close-test-builder" style="font-size: 1.5rem; line-height: 1;">&times;</button>
+        <button class="btn btn-ghost" id="close-test-builder" style="font-size: 20px; line-height: 1;">&times;</button>
       </div>
 
       <div class="modal-body p-0" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
@@ -158,11 +159,11 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
             <div id="wiz-evaluation-topic-section" class="card p-4 mb-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
               <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
                 <div>
-                  <h3 style="font-size:1.1rem;margin:0;">Select Topics for this Evaluation</h3>
+                  <h3 style="font-size: 16px;margin:0;">Select Topics for this Evaluation</h3>
                   <p class="text-muted text-xs m-0">All active questions from checked topics are automatically included. No question limit.</p>
                 </div>
                 <div>
-                  <span class="badge badge-primary p-2" style="font-size:0.85rem;">
+                  <span class="badge badge-primary p-2" style="font-size: 12px;">
                     Total Questions: <strong id="wiz-eval-q-count">0</strong>
                   </span>
                 </div>
@@ -176,18 +177,18 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
             <div id="wiz-Test-sequence-section" class="card p-4 mb-4 hidden" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
               <div class="d-flex justify-between align-center flex-wrap gap-2 mb-3">
                 <div>
-                  <h3 style="font-size:1.1rem;margin:0;">Derive Coverage from Evaluations</h3>
+                  <h3 style="font-size: 16px;margin:0;">Derive Coverage from Evaluations</h3>
                   <p class="text-muted text-xs m-0">Select the source Evaluations. The system unifies unique topics and includes all active questions.</p>
                 </div>
                 <div>
-                  <span class="badge badge-primary p-2" style="font-size:0.85rem;">
+                  <span class="badge badge-primary p-2" style="font-size: 12px;">
                     Derived Questions: <strong id="wiz-Test-q-count">0</strong>
                   </span>
                 </div>
               </div>
 
               <div class="mb-3">
-                <label class="form-label" style="font-size:0.85rem;">Source Evaluations:</label>
+                <label class="form-label" style="font-size: 12px;">Source Evaluations:</label>
                 <div id="wiz-evaluations-container" class="d-flex flex-column gap-2" style="max-height: 200px; overflow-y: auto;">
                   <!-- Existing evaluations checkboxes injected here -->
                 </div>
@@ -212,11 +213,11 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
           <!-- TAB 4: REVIEW & PUBLISH -->
           <div id="tab-publish" class="b-tab-content hidden">
             <div class="card p-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
-              <h3 style="font-size:1.1rem;margin-bottom:1rem;">Test Summary &amp; Snapshot Freeze</h3>
+              <h3 style="font-size: 16px;margin-bottom:1rem;">Test Summary &amp; Snapshot Freeze</h3>
               
               <div class="p-4 rounded mb-4" style="background:rgba(0,0,0,0.25);border:1px solid var(--clr-border);">
                 <div class="d-flex justify-between align-center mb-3">
-                  <h4 class="m-0" id="rev-title" style="font-size:1.15rem;font-weight:700;">—</h4>
+                  <h4 class="m-0" id="rev-title" style="font-size: 16px;font-weight:700;">—</h4>
                   <span id="rev-type" class="badge badge-info">EVALUATION</span>
                 </div>
                 <div class="d-flex gap-4 flex-wrap text-sm mb-3">
@@ -229,9 +230,9 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
                   <strong>Included Topics:</strong> <span id="rev-topics" class="text-muted">—</span>
                 </div>
                 <div class="d-flex align-center gap-2 p-3 rounded" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);">
-                  <div style="font-size:1.5rem;">🔒</div>
+                  <div style="font-size: 20px; display:inline-flex; align-items:center;">${getSvgIcon('lock', 20)}</div>
                   <div>
-                    <div style="font-size:0.85rem;font-weight:700;">Question Snapshot Immutability</div>
+                    <div style="font-size: 12px;font-weight:700;">Question Snapshot Immutability</div>
                     <div class="text-xs text-muted">
                       Publishing will freeze exactly <strong id="rev-questions" class="text-success">0</strong> active questions into <code>test_questions</code>.
                     </div>
@@ -242,8 +243,8 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
               <div class="d-flex justify-between align-center">
                 <button class="btn btn-secondary btn-sm" id="btn-publish-prev">← Back to Topic Coverage</button>
                 <div class="d-flex gap-2">
-                  <button class="btn btn-secondary btn-sm" id="btn-save-draft">💾 Save as Draft</button>
-                  <button class="btn btn-success btn-sm" id="btn-publish-test">🚀 Publish &amp; Freeze Snapshot</button>
+                  <button class="btn btn-secondary btn-sm" id="btn-save-draft" style="display:inline-flex;align-items:center;gap:5px;">${getSvgIcon('save', 14)} Save as Draft</button>
+                  <button class="btn btn-success btn-sm" id="btn-publish-test" style="display:inline-flex;align-items:center;gap:5px;">${getSvgIcon('check-circle', 14)} Publish &amp; Freeze Snapshot</button>
                 </div>
               </div>
             </div>
@@ -297,7 +298,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       fetchCentralQuestions({ status: 'active' }),
       fetchTestDefinitions(),
       fetchBatches(),
-      adminFetchAll('students'),
+      adminFetchAll('students', 'id, name, is_active, batch_id'),
       fetchClassInstances()
     ]);
 
@@ -501,8 +502,8 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       editTest = existingTests.find(a => a.id === testId);
       if (!editTest) {
         try {
-          const allTests = await adminFetchAll('tests');
-          editTest = (allTests || []).find(e => e.id === testId);
+          const testRes = await adminFetchAll('tests', '*', { id: testId });
+          editTest = testRes?.[0] || null;
         } catch (_) {}
       }
     }

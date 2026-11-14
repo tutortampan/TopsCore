@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v116';
+const CACHE_NAME = 'topscore-cache-option-a-v122';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,21 +6,22 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
-  './css/style.css?v=20261113_v174',
-  './css/dashboard.css?v=20261113_v179',
+  './css/style.css?v=20261115_v521',
+  './css/dashboard.css?v=20261115_v521',
   './css/auth.css?v=20261028',
-  './css/test.css?v=20261113_v448',
-  './css/result.css?v=20261113_v163',
+  './css/test.css?v=20261115_v521',
+  './css/result.css?v=20261115_v521',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
-  './js/api.js?v=20261108_v162',
+  './js/api.js?v=20261115_v521',
   './js/auth.js?v=20261108_v162',
-  './js/dashboard.js?v=20261113_v179',
-  './js/test.js?v=20261113_v448',
-  './js/result.js?v=20261113_v163',
+  './js/dashboard.js?v=20261115_v521',
+  './js/test.js?v=20261115_v521',
+  './js/result.js?v=20261115_v521',
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261028',
-  './js/grading.js?v=20261028',
+  './js/indonesia-regions.js?v=20261114_v1',
+  './js/grading.js?v=20261115_v521',
   './js/vendor/supabase.js',
   './js/vendor/xlsx.full.min.js?v=20261027d',
   './js/wake-lock.js?v=20261027d'
@@ -41,9 +42,10 @@ self.addEventListener('activate', event => {
         keys.filter(key => key !== CACHE_NAME)
           .map(key => caches.delete(key))
       );
+    }).then(() => {
+      return self.clients.claim().catch(() => {});
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', event => {

@@ -1,6 +1,7 @@
-import { adminFetchAll, getTestQuestions } from '../api.js?v=20261106_v160';
+import { adminFetchAll, getTestQuestions } from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 /**
  * Question Excel Export Module
@@ -20,7 +21,7 @@ async function renderExportQuestions(area) {
     <div class="section-header"><div><h2 class="section-title">Export Questions (Excel)</h2></div></div>
     <div class="glass-card p-8" style="max-width:640px;">
       <p class="text-muted mb-4">Export questions from a Test into an Excel workbook formatted with standard columns:</p>
-      <div class="mb-5 p-3 rounded" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);font-size:0.75rem;font-family:monospace;">
+      <div class="mb-5 p-3 rounded" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);font-size: 12px;font-family:monospace;">
         PROGRAM | CLASS | Class | LEVEL | TITLE | WEEK | DAY | TYPE | NO | QUESTION | ANSWER
       </div>
       <div class="form-group"><label class="form-label">Select Test to Export</label>
@@ -33,7 +34,7 @@ async function renderExportQuestions(area) {
           }).map(e => `<option value="${e.id}">${e.test_type ? e.test_type + ' - ' : ''}${e.title}</option>`).join('')}
         </select>
       </div>
-      <button class="btn btn-primary mt-2" id="export-questions-btn">📤 Download Excel (.xlsx)</button>
+      <button class="btn btn-primary mt-2" id="export-questions-btn" style="display:inline-flex;align-items:center;gap:6px;">${getSvgIcon('download', 14)} Download Excel (.xlsx)</button>
     </div>
   `;
 

@@ -70,7 +70,7 @@ Status: ACCEPTED
 User instruction: "from now always allow powershell -command". Continuous manual confirmation interrupts agentic testing, database diagnostics, and automation tasks.
 
 ### Decision
-Agents are authorized and instructed to execute `powershell` commands proactively for diagnostics, verification, health checks, and build tasks across the workspace without requesting confirmation for standard non-destructive operations. Recorded in `.agents/rules/powershell.md`.
+Agents are authorized and instructed to execute `powershell` commands proactively for diagnostics, verification, health checks, and build tasks across the workspace without requesting confirmation for standard non-destructive operations. Recorded in `AGENTS.md` Section 0.1.
 
 ---
 
@@ -1550,3 +1550,96 @@ Users reported that sorting by `LEX-CD` was inoperative in the Vocabulary Vault 
 3. **`<colgroup>` Geometry Overhaul for Truncation Eradication**:
    - Injected `<colgroup>` elements directly before `<thead>` in `#blueprint-matrix-table` (`Topic Name: min-width: 240px; width: auto;`) and `#theme-manager-flat-table` (`TOPIC NAME: min-width: 260px; width: auto;`).
    - Overrode super-header `colspan` distribution under `table-layout: fixed`, expanding Test Blueprint Topic Name to 290.98px and Theme Manager to 377.89px with zero truncated cells.
+
+---
+
+## DECISION-052 — Universal Zero-Truncation and Master Edit Mode White Excel Gridlines Invariant Across All Tables
+
+Date: 2026-11-14  
+Status: ACCEPTED
+
+### Context
+Following user directive regarding awkward table displays, text truncation in domicile and education columns, and inconsistent table gridlines during Edit Mode, a comprehensive system-wide audit was conducted. Two core invariants were mandated for permanent standardization across the entire TopsCore LMS ecosystem:
+1. Universal Zero-Truncation: No table cell, header, or entity label may truncate with ellipsis (`...`) or clipped overflow when sufficient spatial viewport exists.
+2. Master Edit Mode White Gridlines: When Edit Mode is active, all tables without exception must display crisp white Excel gridlines (`rgba(255, 255, 255, 0.45)`) on all cells, with borderless transparent inputs.
+
+### Decision
+1. **Universal Zero-Truncation Invariant Codification (`Rule 2.21`)**:
+   - Codified in `AGENTS.md`, `.agents/rules/ui-invariants.md`, and `.antigravityrules`.
+   - Every column across all data tables (Student Roster, Batches, Programs, Classes, Tests, Attendance, Vocabulary Vault, Theme Manager, Audit Log) MUST be calibrated to worst-case entity lengths (e.g. `PROVINCE` 160px, `CITY / DISTRICT` 150px, `EDUCATION` 140px, `NAME` 200px flex-primary, `TITLE` 240px).
+   - In Theme Manager, added `padding: 6px 2px;` to all 8 count breakdown columns to prevent two-digit counts from exceeding cell client width.
+   - Synchronized header flex justification (`datagrid.js`) with column alignment so left-aligned columns align directly with cell data below.
+2. **Master Edit Mode Universal White Excel Gridlines (`Rule 2.22`)**:
+   - Extended `css/admin/admin-editmode.css` selectors to universally target `table th, table td`, `.table-wrap table`, `.datagrid-table`, `.data-table`, `.matrix-table`, `.admin-standard-table`, `.vocab-vault-table`, `.live-monitor-table`, `#vault-table`, `#theme-manager-flat-table`, and `#blueprint-matrix-table`.
+   - Enforced continuous white perimeter (`border-left` on first child, `border-top` on first header row, `border-right` on last child).
+   - Standardized 100% borderless, transparent, zero-radius inputs and selects inside editable cells during Edit Mode (`border: none !important; background: transparent !important;`).
+3. **Automated Verification**:
+   - Created authoritative test suite verifying compliance across all tables in View Mode and Edit Mode.
+
+---
+
+## DECISION-053 — Standard Student Name (`studentName`) and Dashboard-Only Title (`Mr.` / `Miss`)
+
+Date: 2026-11-14  
+Status: ACCEPTED
+
+### Context
+Historically, `formatStudentName` in `js/api.js`, `updateStudentGender`, student registration, and `result.js` were mistakenly prepending `Mr.` and `Miss` to student names. This created confusion and polluted database records and session states. The user clarified the core architectural principle:
+- By default, student names are standard authentic names (`studentName` / `name` / `students.name`). A student's name is simply their name.
+- The **Student Dashboard** (`dashboard.html` / `js/dashboard.js`) is the **SOLE location in the system** where `Mr.` or `Miss` is attached to `studentName` for greeting display.
+- There is no need for a convoluted "cleanstudentname" rule everywhere; standard `studentName` / `name` is naturally pure by default.
+
+### Decision
+1. **Rule 2.23 in `AGENTS.md` and Rule 2.8 in `.agents/rules/ui-invariants.md`**:
+   - By default, student name is simply standard `studentName` / `name` across the entire system.
+   - The Student Dashboard (`dashboard.html` / `js/dashboard.js`) is the only place where `Mr.` or `Miss` is prepended for display.
+2. **Database & API Layer Discipline**:
+   - `students.name` in PostgreSQL database stores standard student names directly.
+   - `updateStudentGender` only updates `gender: g`, never touching the `name` column.
+   - `verifyStudentLogin` and `fetchStudentsByProgram` return standard student names (`name: student.name`).
+   - `formatStudentName(name)` simply returns `name || ''`.
+3. **Frontend Presentation Screens**:
+   - Result screen (`js/result.js`), Test Room (`js/test.js`), Conversation Room (`js/conversation-room.js`), and Admin Console simply display standard `session.student_name` or `student.name`.
+   - Student Dashboard (`js/dashboard.js`) continues to dynamically add `Mr.` or `Miss` (or `King` / `Queen`) for its local greeting.
+
+---
+
+## DECISION-054 — In-Browser Photo & Avatar Processing Invariant (Zero Supabase Storage Egress)
+
+Date: 2026-11-15  
+Status: ACCEPTED
+
+### Context
+Allowing direct uploads of uncompressed camera or raster image files to Supabase Storage creates substantial bandwidth egress, database bloat, and dependency on external storage buckets. The platform mandates zero-egress, lightweight, web-native representations for all student avatars and photos.
+
+### Decision
+1. **Rule 2.25 in `AGENTS.md` and Do Not Do List in §5.2**:
+   - All student and user photos across the entire platform are processed strictly **in the web browser (client-side)**, NEVER in Supabase backend or via heavy storage egress.
+   - Avatars are generated dynamically using SVG data URIs (`generateAvatarDataUri(name)`) or compressed directly in the browser via HTML5 Canvas before any persistence.
+   - Supabase Storage is NEVER used for uploading uncompressed or raw camera images. The system strictly operates on lightweight, processed web-native representations.
+2. **Permanent Enforcement**:
+   - Future AI agents and developers must never propose or implement backend image resizing pipelines, Edge Functions for image conversion, or direct raw image uploads to storage buckets.
+   - Dummy accounts strictly use ultra-compact SVG vector avatars (~500 bytes) via `generateAvatarDataUri('Top')` (Rule 2.24).
+
+---
+
+## DECISION-055 — Compact UI Before & After Screenshot Standard (Max Height 600–800px)
+
+Date: 2026-11-15  
+Status: ACCEPTED
+
+### Context
+When performing UI redesigns, styling modifications, or visual preflights, capturing Before and After screenshots at full desktop resolutions (1080p, 1440p, or 4K) generates excessively tall, heavy image files. These bloated screenshots dominate conversation context, require immense vertical scrolling, slow down artifact loading, and clutter documents.
+
+### Decision
+1. **Rule 2.27 in `AGENTS.md` (Single Source of Truth Induk)**:
+   - Whenever UI editing involves capturing Before and After design screenshots, baseline layouts, or visual comparisons, all screenshots MUST be captured or resized at a small, compact resolution.
+   - The height of captured screenshots is strictly capped at a maximum of **600–800px** (e.g. capture viewport height set to $600\text{--}800\text{px}$, or resized/cropped so the image height $\le 800\text{px}$).
+   - Massive full-bleed raw desktop captures are strictly prohibited.
+   - Use compressed formats (JPEG quality 50–70, WebP, or compact PNG) to keep artifact files lightweight.
+2. **Visual Pre-Flight Integration**:
+   - The `visual-preflight` skill and checklist template directly reference `AGENTS.md Rule 2.27` as the single authoritative rule.
+
+
+
+

@@ -1,8 +1,9 @@
-import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=20261106_v160';
+import { adminFetchAll, adminInsert, adminUpdate, adminSoftDelete, adminHardDelete, formatStudentName } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { generateExecutiveCV } from './cv-export.js?v=20261106_v160';
 import { getBustedAvatarUrl } from '../utils/avatar-engine.js?v=20261106_v160';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 // escapeHtml / escHtml imported canonically
 
@@ -19,11 +20,11 @@ export async function renderDashboard(container) {
   
   // Fetch metrics for the dashboard (Merged Board & Admin)
   const [students, classes, programs, batches, institutions] = await Promise.all([
-    adminFetchAll('students', 'id, is_active, deleted_at'),
-    adminFetchAll('classes', 'id, is_active, deleted_at'),
-    adminFetchAll('programs'),
-    adminFetchAll('batches'),
-    adminFetchAll('institutions')
+    adminFetchAll('students', 'id, is_active, deleted_at, created_at'),
+    adminFetchAll('classes', 'id, name, is_active, program_id, deleted_at'),
+    adminFetchAll('programs', 'id, name, is_active, institution_id'),
+    adminFetchAll('batches', 'id, name, is_active, program_id'),
+    adminFetchAll('institutions', 'id, name, is_active, logo_url')
   ]);
   
   const activeStudents = students.filter(s => s.is_active && !s.deleted_at).length;
@@ -43,13 +44,13 @@ export async function renderDashboard(container) {
     return `
       <div class="glass-card" style="padding:1rem; margin-bottom:1rem; border-left: 4px solid var(--clr-primary);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-           <h3 style="margin:0; font-size:1.1rem; display:flex; align-items:center; gap:8px;">
-             ${inst.logo_url ? `<img src="${inst.logo_url}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;">` : '🏢'}
+           <h3 style="margin:0; font-size: 16px; display:flex; align-items:center; gap:8px;">
+             ${inst.logo_url ? `<img src="${inst.logo_url}" style="width:24px;height:24px;object-fit:contain;border-radius:4px;">` : getSvgIcon('building', 20)}
              ${escHtml(inst.name)}
            </h3>
            <div style="display:flex; align-items:center; gap:0.5rem;">
              <span class="badge ${inst.is_active !== false ? 'badge-success' : 'badge-neutral'}">${inst.is_active !== false ? 'Active' : 'Inactive'}</span>
-             <span class="badge badge-neutral" style="font-size:0.75rem;">${instProgs.length} Programs</span>
+             <span class="badge badge-neutral" style="font-size: 12px;">${instProgs.length} Programs</span>
            </div>
         </div>
         
@@ -66,17 +67,17 @@ export async function renderDashboard(container) {
                   </div>
                 </div>
                 
-                <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size:0.8rem;">
+                <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size: 12px;">
                   <div style="flex:1; min-width:150px;">
-                    <div style="text-transform:uppercase; font-size:0.7rem; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Classes (${progClasses.length})</div>
+                    <div style="text-transform:uppercase; font-size: 12px; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Classes (${progClasses.length})</div>
                     <div style="color:var(--clr-text-2); display:flex; flex-wrap:wrap; gap:4px;">
-                      ${progClasses.length > 0 ? progClasses.map(c => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escHtml(c.name)}</span>`).join('') : '<span class="text-muted">None</span>'}
+                      ${progClasses.length > 0 ? progClasses.map(c => `<span class="badge badge-neutral" style="font-size: 12px;">${escHtml(c.name)}</span>`).join('') : '<span class="text-muted">None</span>'}
                     </div>
                   </div>
                   <div style="flex:1; min-width:150px;">
-                    <div style="text-transform:uppercase; font-size:0.7rem; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Batches (${progBatches.length})</div>
+                    <div style="text-transform:uppercase; font-size: 12px; color:var(--fm-text-muted); margin-bottom:0.2rem; font-weight:700;">Batches (${progBatches.length})</div>
                     <div style="color:var(--clr-text-2); display:flex; flex-wrap:wrap; gap:4px;">
-                      ${progBatches.length > 0 ? progBatches.map(b => `<span class="badge badge-neutral" style="font-size:0.75rem;">${escHtml(b.name)}</span>`).join('') : '<span class="text-muted">None</span>'}
+                      ${progBatches.length > 0 ? progBatches.map(b => `<span class="badge badge-neutral" style="font-size: 12px;">${escHtml(b.name)}</span>`).join('') : '<span class="text-muted">None</span>'}
                     </div>
                   </div>
                 </div>
@@ -91,7 +92,7 @@ export async function renderDashboard(container) {
   container.innerHTML = `
     <div class="header-actions">
       <h2>Master Dashboard</h2>
-      <button class="btn btn-primary" id="btn-export-cv">📄 Export Executive CV (A4)</button>
+      <button class="btn btn-primary" id="btn-export-cv">${getSvgIcon('download', 14)} Export Executive CV (A4)</button>
     </div>
     
     <div style="display: flex; gap: 2rem; margin-top: 1.5rem; flex-wrap: wrap;">
@@ -102,20 +103,20 @@ export async function renderDashboard(container) {
         <!-- Key Metrics -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem;">
           <div class="glass-card" style="padding: 1.5rem; text-align: center;">
-            <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-primary);">${totalStudents}</div>
+            <div style="font-size: 30px; font-weight: 800; color: var(--clr-primary);">${totalStudents}</div>
             <div class="text-muted text-sm text-uppercase fw-700">Students</div>
             <div class="text-xs text-muted mt-1">${activeStudents} active</div>
           </div>
           <div class="glass-card" style="padding: 1.5rem; text-align: center;">
-            <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-accent-1);">${programs.length}</div>
+            <div style="font-size: 30px; font-weight: 800; color: var(--clr-accent-1);">${programs.length}</div>
             <div class="text-muted text-sm text-uppercase fw-700">Programs</div>
           </div>
           <div class="glass-card" style="padding: 1.5rem; text-align: center;">
-            <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-success);">${batches.length}</div>
+            <div style="font-size: 30px; font-weight: 800; color: var(--clr-success);">${batches.length}</div>
             <div class="text-muted text-sm text-uppercase fw-700">Batches</div>
           </div>
           <div class="glass-card" style="padding: 1.5rem; text-align: center;">
-            <div style="font-size: 2.2rem; font-weight: 800; color: var(--clr-warning);">${institutions.length}</div>
+            <div style="font-size: 30px; font-weight: 800; color: var(--clr-warning);">${institutions.length}</div>
             <div class="text-muted text-sm text-uppercase fw-700">Institutions</div>
           </div>
         </div>
@@ -123,38 +124,38 @@ export async function renderDashboard(container) {
         <!-- Quick Launchpad (Executive Single-Door Hub) -->
         <div class="glass-card" style="padding: 1.25rem;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 0.75rem;">
-            <h3 style="margin:0; font-size:1rem; font-weight:800; display:flex; align-items:center; gap:8px;">
-              <span>🚀</span> Quick Launchpad
+            <h3 style="margin:0; font-size: 16px; font-weight:800; display:flex; align-items:center; gap:8px;">
+              <span>${getSvgIcon('zap', 14)}</span> Quick Launchpad
             </h3>
             <span class="text-xs text-muted">Direct Single-Door Navigation</span>
           </div>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('curriculum')">
-              🏢 <strong>Manage Cohorts</strong><br><span class="text-xs text-muted">Institutions, Programs & Batches</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('curriculum')">
+              ${getSvgIcon('shield', 14)} <strong>Manage Cohorts</strong><br><span class="text-xs text-muted">Institutions, Programs & Batches</span>
             </button>
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('classes-hub')">
-              🎓 <strong>Class Directory</strong><br><span class="text-xs text-muted">Subjects, Levels & Tests</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('classes-hub')">
+              ${getSvgIcon('clipboard', 14)} <strong>Class Directory</strong><br><span class="text-xs text-muted">Subjects, Levels & Tests</span>
             </button>
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('registration')">
-              👥 <strong>Student Intake</strong><br><span class="text-xs text-muted">New Student Registration</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('registration')">
+              ${getSvgIcon('user', 14)} <strong>Student Intake</strong><br><span class="text-xs text-muted">New Student Registration</span>
             </button>
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size:0.85rem;" onclick="window.loadSection('students')">
-              📊 <strong>Student Roster</strong><br><span class="text-xs text-muted">Attendance, Scores & Lifecycle</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('students')">
+              ${getSvgIcon('bar-chart', 14)} <strong>Student Roster</strong><br><span class="text-xs text-muted">Attendance, Scores & Lifecycle</span>
             </button>
           </div>
         </div>
 
         <!-- Attention Radar -->
         <div class="glass-card" style="padding: 1.5rem;">
-          <h3 style="margin-top:0;">&#128225; Attention Radar</h3>
+          <h3 style="margin-top:0;">${getSvgIcon('activity', 16)} Attention Radar</h3>
           <p class="text-muted text-sm mb-3">Students requiring attention or recent alerts</p>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Program</th>
-                  <th>Flag</th>
+                  <th>PROGRAM</th>
+                  <th>STUDENT NAME</th>
+                  <th>FLAG</th>
                 </tr>
               </thead>
               <tbody>
@@ -167,7 +168,7 @@ export async function renderDashboard(container) {
         <!-- Organization Hierarchy -->
         <div id="board-inst-panels" style="display:flex; flex-direction:column;">
           <div style="display:flex; justify-content:space-between; align-items:center; position: sticky; top: 0; z-index: 10; padding-bottom: 0.5rem; background: var(--fm-bg); margin-bottom: 1rem;">
-            <h3 style="margin:0; font-size:1.2rem; font-weight:800;">Organization Hierarchy</h3>
+            <h3 style="margin:0; font-size: 16px; font-weight:800;">Organization Hierarchy</h3>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('curriculum')" style="color:var(--clr-primary); font-weight:700;">Manage in Curriculum Hub →</button>
           </div>
           ${instsHtml || '<p class="text-muted">No institutions available.</p>'}
@@ -181,7 +182,7 @@ export async function renderDashboard(container) {
         <!-- Platform Overview -->
         <div class="glass-card" style="padding: 1.5rem;">
           <h3 style="margin-top:0; display:flex; align-items:center; gap:8px;">
-            <span>🛡️</span> TopsCore LMS
+            <span>${getSvgIcon('shield', 18)}</span> TopsCore LMS
           </h3>
           <p class="text-sm text-muted" style="margin-bottom: 0.75rem;">Authoritative testing and progression system.</p>
           <div style="display:flex; flex-direction:column; gap:0.5rem; font-size:12px;">
@@ -191,7 +192,7 @@ export async function renderDashboard(container) {
             </div>
             <div style="display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
               <span class="text-muted">Grading Scale</span>
-              <span class="fw-700" style="color:var(--grade-a, #00c000);">★ 100% / Official</span>
+              <span class="fw-700" style="color:var(--grade-a);">★ 100% / Official</span>
             </div>
             <div style="display:flex; justify-content:space-between; padding:4px 0;">
               <span class="text-muted">System Status</span>
@@ -222,7 +223,7 @@ export async function renderDashboard(container) {
         <!-- Recently Added Students -->
         <div class="glass-card" style="padding: 1rem;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.75rem;">
-            <h3 style="margin:0;font-size:1rem;font-weight:800;">&#x1F550; Recently Added</h3>
+            <h3 style="margin:0;font-size: 16px;font-weight:800;">&#x1F550; Recently Added</h3>
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('students')">View All</button>
           </div>
           <div style="display:flex;flex-direction:column;gap:.25rem;">
@@ -230,7 +231,7 @@ export async function renderDashboard(container) {
               recentStudents.map(s =>
                 '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--clr-border);">'
                 + '<div>'
-                + '<div class="fw-700 text-sm">' + escHtml(formatStudentName(s.name, s.gender)) + '</div>'
+                + '<div class="fw-700 text-sm">' + escHtml(s.name) + '</div>'
                 + '<div class="text-xs text-muted">' + new Date(s.created_at).toLocaleDateString() + '</div>'
                 + '</div>'
                 + '<span class="badge ' + (s.is_active !== false ? 'badge-success' : 'badge-neutral') + '">' + (s.is_active !== false ? 'Active' : 'Inactive') + '</span>'
@@ -274,14 +275,14 @@ export async function renderAdminProfile(container) {
         <p class="section-subtitle">Manage your executive identity, 3:4 avatar, and professional credentials.</p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" id="btn-profile-export-cv">📄 Export Executive CV (A4)</button>
+        <button class="btn btn-secondary btn-sm" id="btn-profile-export-cv">${getSvgIcon('download', 14)} Export Executive CV (A4)</button>
       </div>
     </div>
 
     <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
       <!-- Avatar 3:4 Box (Left) -->
       <div class="glass-card" style="flex: 1; min-width: 280px; max-width: 340px; padding: 1.5rem; text-align: center;">
-        <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--clr-text-2);">Executive Avatar (3:4)</h4>
+        <h4 style="margin: 0 0 1rem 0; font-size: 16px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--clr-text-2);">Executive Avatar (3:4)</h4>
         <div style="width: 180px; height: 240px; margin: 0 auto; border-radius: 12px; overflow: hidden; border: 2px solid var(--clr-border); position: relative; background: rgba(0,0,0,0.2);">
           <img id="admin-avatar-preview" src="${getBustedAvatarUrl(profile?.photo_url)}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover;" />
           <div id="avatar-loading-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;">
@@ -290,7 +291,7 @@ export async function renderAdminProfile(container) {
         </div>
         <div style="margin-top: 1.25rem;">
           <label for="admin-avatar-input" class="btn btn-secondary btn-sm" style="cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;">
-            📸 Change Photo (3:4 Crop)
+            ${getSvgIcon('user', 14)} Change Photo (3:4 Crop)
           </label>
           <input type="file" id="admin-avatar-input" accept="image/*" style="display: none;" />
           <div class="text-xs text-muted mt-2">Target: 300x400 WebP &bull; Max 80KB &bull; 35% Top Bias</div>
@@ -299,7 +300,7 @@ export async function renderAdminProfile(container) {
 
       <!-- Profile Form (Right) -->
       <div class="glass-card" style="flex: 2.5; min-width: 320px; padding: 1.75rem;">
-        <h4 style="margin: 0 0 1.25rem 0; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--clr-text-2);">Professional Credentials</h4>
+        <h4 style="margin: 0 0 1.25rem 0; font-size: 16px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--clr-text-2);">Professional Credentials</h4>
         
         <form id="admin-profile-form">
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
@@ -344,7 +345,7 @@ export async function renderAdminProfile(container) {
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <label class="form-label mb-0">Executive Biography (~350 characters for A4 CV)</label>
               <div class="d-flex align-center gap-2">
-                <button type="button" class="btn btn-secondary btn-sm py-0" id="btn-auto-bio" style="font-size: 0.75rem; padding: 2px 8px;">✨ Auto-Generate Bio</button>
+                <button type="button" class="btn btn-secondary btn-sm py-0" id="btn-auto-bio" style="font-size: 12px; padding: 2px 8px;">${getSvgIcon('zap', 12)} Auto-Generate Bio</button>
                 <span id="adm-bio-counter" class="text-xs text-muted">0 / 350</span>
               </div>
             </div>
@@ -352,7 +353,7 @@ export async function renderAdminProfile(container) {
           </div>
 
           <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--clr-border); padding-top: 1rem;">
-            <button type="submit" class="btn btn-primary" id="btn-save-admin-profile">💾 Save Profile</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-admin-profile">${getSvgIcon('save', 14)} Save Profile</button>
           </div>
         </form>
       </div>
@@ -365,7 +366,7 @@ export async function renderAdminProfile(container) {
   const updateBioCounter = () => {
     const len = bioInput.value.length;
     bioCounter.textContent = `${len} / 350`;
-    bioCounter.style.color = len > 350 ? 'var(--clr-danger, #FF0000)' : 'var(--clr-text-3)';
+    bioCounter.style.color = len > 350 ? 'var(--clr-danger)' : 'var(--clr-text-3)';
   };
   bioInput.addEventListener('input', updateBioCounter);
   updateBioCounter();
@@ -445,7 +446,7 @@ export async function renderAdminProfile(container) {
       showToast('Failed to save profile: ' + err.message, 'error');
     } finally {
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Save Profile';
+      saveBtn.innerHTML = `${getSvgIcon('save', 14)} Save Profile`;
     }
   });
 
@@ -482,7 +483,7 @@ export async function renderAdminSchedule(container) {
 
     <div class="glass-card" style="padding: 1.5rem;">
       <div id="schedule-agenda-list" style="display: flex; flex-direction: column; gap: 1rem;">
-        <div class="text-center py-4"><div class="spinner"></div><p class="text-muted mt-2">Loading schedule...</p></div>
+        <div class="topscore-loading-center" style="min-height: 120px !important;"><div class="spinner"></div><p class="loading-text">Loading schedule...</p></div>
       </div>
     </div>
   `;
@@ -520,11 +521,11 @@ export async function renderAdminSchedule(container) {
           <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid var(--clr-border); flex-wrap: wrap; gap: 1rem;">
             <div style="display: flex; align-items: center; gap: 1.25rem;">
               <div style="width: 54px; height: 54px; border-radius: 10px; background: ${isPast ? 'rgba(148,163,184,0.1)' : 'rgba(59,130,246,0.15)'}; color: ${isPast ? '#94a3b8' : '#3b82f6'}; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 800;">
-                <span style="font-size: 0.75rem; text-transform: uppercase;">${d.toLocaleString('default', { month: 'short' })}</span>
-                <span style="font-size: 1.25rem; line-height: 1;">${d.getDate()}</span>
+                <span style="font-size: 12px; text-transform: uppercase;">${d.toLocaleString('default', { month: 'short' })}</span>
+                <span style="font-size: 16px; line-height: 1;">${d.getDate()}</span>
               </div>
               <div>
-                <h4 style="margin: 0; font-size: 1.05rem;">${className}</h4>
+                <h4 style="margin: 0; font-size: 16px;">${className}</h4>
                 <div class="text-xs text-muted mt-1">
                   <span>${batchName}</span> &bull; 
                   <span>Meeting #${m.meeting_number || 1}</span> &bull; 
@@ -581,19 +582,19 @@ export async function renderWorkRecords(container) {
     <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
       <!-- Work Experience Table (Left 65%) -->
       <div class="glass-card" style="flex: 2; min-width: 320px; padding: 1.5rem;">
-        <h3 style="margin: 0 0 1rem 0; font-size: 1.05rem;">🏢 Professional History</h3>
+        <h3 style="margin: 0 0 1rem 0; font-size: 16px;">${getSvgIcon('clipboard', 16)} Professional History</h3>
         <div class="table-wrap">
           <table class="table w-100">
             <thead>
               <tr>
-                <th>Period</th>
-                <th>Role</th>
-                <th>Institution</th>
-                <th style="text-align: right;">Action</th>
+                <th>INSTITUTION</th>
+                <th>PERIOD</th>
+                <th>ROLE</th>
+                <th style="text-align: right;">ACTION</th>
               </tr>
             </thead>
             <tbody id="work-records-tbody">
-              <tr><td colspan="4" class="text-center py-4"><div class="spinner"></div></td></tr>
+              <tr><td colspan="4" style="text-align: center; padding: 1.5rem 0;"><div class="topscore-loading-center" style="min-height: 100px !important;"><div class="spinner"></div><p class="loading-text">Loading work records...</p></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -601,13 +602,13 @@ export async function renderWorkRecords(container) {
 
       <!-- Skills Chip Cloud (Right 35%) -->
       <div class="glass-card" style="flex: 1; min-width: 260px; padding: 1.5rem;">
-        <h3 style="margin: 0 0 1rem 0; font-size: 1.05rem;">🎯 Skills &amp; Competencies</h3>
+        <h3 style="margin: 0 0 1rem 0; font-size: 16px;">${getSvgIcon('target', 16)} Skills &amp; Competencies</h3>
         <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
           <input type="text" id="new-skill-input" class="form-control form-control-sm" placeholder="e.g. Pronunciation Testing" />
           <button class="btn btn-primary btn-sm" id="btn-add-skill">Add</button>
         </div>
-        <div id="skills-cloud" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-          <div class="spinner"></div>
+        <div id="skills-cloud" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; align-items: center; min-height: 80px;">
+          <div class="topscore-loading-center" style="min-height: 60px !important;"><div class="spinner"></div><p class="loading-text">Loading skills...</p></div>
         </div>
       </div>
     </div>
@@ -661,8 +662,8 @@ export async function renderCVGenerator(container) {
         <p class="section-subtitle">Real-time preview formatted strictly to 1 physical A4 portrait page with 8mm 10mm margins.</p>
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" onclick="window.loadSection('profile')">✏️ Edit Profile</button>
-        <button class="btn btn-primary btn-sm" id="btn-trigger-a4-print">🖨️ Print / Save as PDF (A4)</button>
+        <button class="btn btn-secondary btn-sm" onclick="window.loadSection('profile')">${getSvgIcon('edit', 14)} Edit Profile</button>
+        <button class="btn btn-primary btn-sm" id="btn-trigger-a4-print">${getSvgIcon('file-text', 14)} Print / Save as PDF (A4)</button>
       </div>
     </div>
 
@@ -671,9 +672,9 @@ export async function renderCVGenerator(container) {
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0f172a; padding-bottom: 0.75rem; margin-bottom: 1rem;">
         <div>
-          <h1 style="font-size: 1.6rem; font-weight: 800; margin: 0; color: #0f172a; letter-spacing: -0.02em;">${profile?.full_name || 'Executive Administrator'}</h1>
+          <h1 style="font-size: 20px; font-weight: 800; margin: 0; color: #0f172a; letter-spacing: -0.02em;">${profile?.full_name || 'Executive Administrator'}</h1>
           <div style="font-size: 9.5pt; font-weight: 700; color: #2563eb; margin-top: 0.2rem; text-transform: uppercase;">${profile?.title || 'Academic Director'}</div>
-          <div style="margin-top: 0.35rem; font-size: 8pt; color: #64748b;">
+          <div style="margin-top: 0.35rem; font-size: 12px; color: #64748b;">
             <span>${profile?.contact_email || profile?.email || 'admin@topscore.edu'}</span> &bull; 
             <span>${profile?.contact_phone || profile?.phone || '+62 812-3456-7890'}</span>
           </div>
@@ -686,7 +687,7 @@ export async function renderCVGenerator(container) {
       <!-- Summary -->
       <div style="margin-bottom: 1rem;">
         <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Executive Summary</h3>
-        <p style="font-size: 8.5pt; line-height: 1.35; color: #334155; margin: 0;">
+        <p style="font-size: 12px; line-height: 1.35; color: #334155; margin: 0;">
           ${(profile?.bio && profile.bio.length > 350) ? profile.bio.substring(0, 347) + '...' : (profile?.bio || 'Experienced educational leader specializing in language pedagogy and test systems.')}
         </p>
       </div>
@@ -695,27 +696,27 @@ export async function renderCVGenerator(container) {
       <div style="margin-bottom: 1rem;">
         <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Professional Experience</h3>
         ${pWork.length > 0 ? pWork.map(w => `
-          <div style="margin-bottom: 0.45rem; font-size: 8.5pt;">
+          <div style="margin-bottom: 0.45rem; font-size: 12px;">
             <div style="display: flex; justify-content: space-between;">
               <strong style="color: #0f172a;">${w.role || w.role_title || 'Role'}</strong>
-              <span style="color: #64748b; font-size: 8pt;">${w.period || w.start_date || ''}</span>
+              <span style="color: #64748b; font-size: 12px;">${w.period || w.start_date || ''}</span>
             </div>
-            <div style="color: #2563eb; font-weight: 600; font-size: 8pt;">${w.institution || w.company_name || 'Organization'}</div>
-            ${w.description ? `<div style="color: #475569; font-size: 8pt; margin-top: 0.15rem;">${w.description}</div>` : ''}
+            <div style="color: #2563eb; font-weight: 600; font-size: 12px;">${w.institution || w.company_name || 'Organization'}</div>
+            ${w.description ? `<div style="color: #475569; font-size: 12px; margin-top: 0.15rem;">${w.description}</div>` : ''}
           </div>
-        `).join('') : '<p style="font-size: 8.5pt; color: #64748b; font-style: italic;">No work records configured.</p>'}
+        `).join('') : '<p style="font-size: 12px; color: #64748b; font-style: italic;">No work records configured.</p>'}
       </div>
 
       <!-- Skills -->
       <div style="margin-bottom: 1.5rem;">
         <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Key Competencies</h3>
-        <p style="font-size: 8.5pt; color: #334155; margin: 0;">
+        <p style="font-size: 12px; color: #334155; margin: 0;">
           ${pSkills.map(s => s.skill_name).join(' &bull; ') || 'Curriculum Design &bull; Communicative Language Teaching &bull; Digital Testing'}
         </p>
       </div>
 
       <!-- Footer Anchor -->
-      <div style="text-align: center; font-size: 7pt; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 0.35rem;">
+      <div style="text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 0.35rem;">
         TopsCore LMS &middot; Official Executive Dossier &middot; Exactly 1 Page Fit Guaranteed
       </div>
     </div>

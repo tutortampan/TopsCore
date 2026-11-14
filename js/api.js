@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261106_v160';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261106_v160';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -34,12 +34,25 @@ export function cleanStudentName(name) {
   }).join(' ');
 }
 
-export function formatStudentName(name, gender) {
-  const clean = cleanStudentName(name);
+export function formatStudentName(name) {
+  // Rule 2.23: Standard student name everywhere across the system (strictly stripped of honorifics)
+  return cleanStudentName(name);
+}
+
+export function formatStudentDashboardName(name, gender, isChampion = false) {
+  // Rule 2.23: Mr. and Miss are strictly exclusive to the Student Dashboard (dashboard.html)
+  if (!name) return '';
   const g = String(gender || '').toLowerCase().trim();
-  if (g === 'female' || g === 'f' || g === 'perempuan' || g === 'p') return `Miss ${clean}`;
-  if (g === 'male' || g === 'm' || g === 'laki-laki' || g === 'l') return `Mr. ${clean}`;
-  return clean;
+  const isMale = g === 'male' || g === 'm' || g === 'laki-laki' || g === 'l';
+  const isFemale = g === 'female' || g === 'f' || g === 'perempuan' || g === 'p';
+  if (isChampion) {
+    if (isMale) return `King ${name}`;
+    if (isFemale) return `Queen ${name}`;
+    return name;
+  }
+  if (isMale) return `Mr. ${name}`;
+  if (isFemale) return `Miss ${name}`;
+  return name;
 }
 
 export function normalizeStudentNameForMatch(name) {
@@ -219,7 +232,7 @@ function isPlaceholderUrl() {
 }
 
 const _apiCache = new Map();
-const DEFAULT_CACHE_TTL = 60 * 1000;
+const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5-minute cache for static master records
 
 export function clearApiCache(prefix = null) {
   if (!prefix) {
@@ -356,12 +369,11 @@ export async function fetchStudentsByProgram(programId, batchId = null, activeOn
   }
   return list.map(s => ({
     ...s,
-    displayName: formatStudentName(s.name, s.gender),
-    name: formatStudentName(s.name, s.gender),
-    cleanName: cleanStudentName(s.name)
+    displayName: s.name,
+    name: s.name
   })).sort((a, b) => {
-    const nameA = cleanStudentName(a.name || a.displayName || '');
-    const nameB = cleanStudentName(b.name || b.displayName || '');
+    const nameA = a.name || a.displayName || '';
+    const nameB = b.name || b.displayName || '';
     return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
   });
 }
@@ -376,7 +388,7 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
       success: true,
       student: {
         id: student.id,
-        name: formatStudentName(student.name, student.gender),
+        name: student.name,
         gender: student.gender,
         batch_id: student.batch_id
       }
@@ -392,7 +404,6 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
         gender: edgeRes.gender || null,
         batch_id: edgeRes.batch_id || null
       };
-      studentObj.name = formatStudentName(studentObj.name, studentObj.gender);
       edgeRes.student = studentObj;
       return edgeRes;
     }
@@ -422,7 +433,7 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
     success: true,
     student: {
       id: student.id,
-      name: formatStudentName(student.name, student.gender),
+      name: student.name,
       gender: student.gender,
       batch_id: student.batch_id
     }
@@ -456,18 +467,12 @@ export async function updateStudentGender(studentId, gender) {
   }
 
   const sb = await getSupabase();
-  const { data: st, error: fetchErr } = await sb.from('students').select('name').eq('id', studentId).single();
-  if (fetchErr) throw fetchErr;
-
-  const rawClean = cleanStudentName(st?.name);
-  const formattedName = formatStudentName(rawClean, g);
-
   const { error } = await sb.from('students')
-    .update({ gender: g, name: formattedName, updated_at: new Date().toISOString() })
+    .update({ gender: g, updated_at: new Date().toISOString() })
     .eq('id', studentId);
 
   if (error) throw error;
-  return { success: true, gender: g, formattedName };
+  return { success: true, gender: g };
 }
 
 export async function updateStudentBirthday(studentId, birthDate) {
@@ -543,14 +548,14 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
 }
 
 export async function fetchLevels(classId) {
-  const sb = await getSupabase();
-  const { data, error } = await sb.from('levels')
-    .select('id, name, level_number')
-
-
-    .order('level_number');
-  if (error) throw error;
-  return data;
+  return withCache('levels', async () => {
+    const sb = await getSupabase();
+    const { data, error } = await sb.from('levels')
+      .select('id, name, level_number')
+      .order('level_number');
+    if (error) throw error;
+    return data;
+  });
 }
 
 export async function fetchStudentProgress(studentId) {
@@ -958,10 +963,46 @@ export async function generateTestQuestions(sb, test) {
       } catch (_) {}
     }
 
-    // Resilient vocabulary query: try with category column first, fallback without category column
+    // High-speed cached vault retrieval (0ms & 0 egress fast-path)
     let vaultData = null;
     try {
-      let query = sb.from('vocabulary_vault')
+      const cachedVault = await fetchVaultWords({ targetLevel: levelNum, programId: testProgramId });
+      if (cachedVault && cachedVault.length > 0) {
+        let filtered = cachedVault;
+        if (topicCode) {
+          if (themeCode) filtered = filtered.filter(w => String(w.theme_code || '').toUpperCase() === String(themeCode).toUpperCase());
+          const candidateCodes = [
+            String(topicCode).toUpperCase(),
+            (/^[0-9]+$/.test(String(topicCode)) && themeCode) ? `${String(themeCode).toUpperCase()}${topicCode}` : null,
+            String(topicCode).replace(/^[A-Za-z]/, ''),
+            (levelNum && themeCode && /^[0-9]+$/.test(String(topicCode))) ? `${levelNum}${String(themeCode).toUpperCase()}${topicCode}` : null,
+            (levelNum && themeCode) ? `${levelNum}${String(themeCode).toUpperCase()}${String(topicCode).replace(/^[A-Za-z]/, '')}` : null
+          ].filter(Boolean);
+          filtered = filtered.filter(w => candidateCodes.includes(String(w.topic_code || '').toUpperCase()));
+        } else if (themes && Array.isArray(themes) && themes.length > 0) {
+          filtered = filtered.filter(w => themes.includes(w.theme_code));
+        } else if (isThemeTest && themeCode) {
+          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+          const idx = allThemes.indexOf(String(themeCode).toUpperCase());
+          if (idx !== -1) {
+            const targetThemes = allThemes.slice(0, idx + 1);
+            filtered = filtered.filter(w => targetThemes.includes(String(w.theme_code || '').toUpperCase()));
+          } else {
+            filtered = filtered.filter(w => String(w.theme_code || '').toUpperCase() === String(themeCode).toUpperCase());
+          }
+        } else if (themeCode) {
+          filtered = filtered.filter(w => String(w.theme_code || '').toUpperCase() === String(themeCode).toUpperCase());
+        }
+        if (filtered.length > 0) {
+          vaultData = filtered;
+        }
+      }
+    } catch (_) {}
+
+    // Resilient vocabulary query fallback: try with category column first, fallback without category column
+    if (!vaultData || vaultData.length === 0) {
+      try {
+        let query = sb.from('vocabulary_vault')
         .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level, category')
         .is('deleted_at', null)
         .eq('target_level', levelNum)
@@ -996,6 +1037,7 @@ export async function generateTestQuestions(sb, test) {
         vaultData = res.data;
       }
     } catch (_) {}
+  }
 
     if (!vaultData || vaultData.length === 0) {
       // Fallback query without category column (resilient across DB schemas)
@@ -1969,13 +2011,57 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       await sb.from('attempts')
         .update({
           effective_score: effPct,
-          grade: getGrade(effPct),
+          grade: 'R',
           updated_at: new Date().toISOString()
         })
         .eq('id', attemptId);
     }
   } catch (remedialErr) {
     console.warn('Post-submit remedial check notice:', remedialErr);
+  }
+
+  // Lean Storage & Best Score Guard Protocol (Option B):
+  // 1. Resolve Best Score strictly per (student_id, test_id)
+  // 2. Automatically purge superseded detailed answers from previous lower-scoring attempts
+  //    guaranteeing at most 1 active answer set exists per student per test.
+  try {
+    const sb = await getSupabase();
+    const { data: curAttempt } = await sb.from('attempts')
+      .select('id, student_id, test_id, effective_score, percentage, status')
+      .eq('id', attemptId)
+      .single();
+
+    if (curAttempt?.student_id && curAttempt?.test_id) {
+      const curScore = Number(curAttempt.effective_score ?? curAttempt.percentage ?? 0);
+      const { data: siblingAttempts } = await sb.from('attempts')
+        .select('id, effective_score, percentage, is_best_score')
+        .eq('student_id', curAttempt.student_id)
+        .eq('test_id', curAttempt.test_id)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+        .neq('id', attemptId);
+
+      const isNewBest = !(siblingAttempts || []).some(s => Number(s.effective_score ?? s.percentage ?? 0) > curScore);
+
+      if (isNewBest) {
+        // Mark current attempt as authoritative best score
+        await sb.from('attempts').update({ is_best_score: true, updated_at: new Date().toISOString() }).eq('id', attemptId);
+
+        if (siblingAttempts && siblingAttempts.length > 0) {
+          const lowerIds = siblingAttempts.map(s => s.id);
+          // Demote siblings
+          await sb.from('attempts').update({ is_best_score: false, updated_at: new Date().toISOString() }).in('id', lowerIds);
+          // Purge detailed attempt_answers of superseded lower attempts to prevent database bloat
+          await sb.from('attempt_answers').delete().in('attempt_id', lowerIds);
+        }
+      } else {
+        // Current attempt is a lower-scoring retake; mark as not best
+        await sb.from('attempts').update({ is_best_score: false, updated_at: new Date().toISOString() }).eq('id', attemptId);
+        // Purge non-best detailed answers since official report card only preserves the best score
+        await sb.from('attempt_answers').delete().eq('attempt_id', attemptId);
+      }
+    }
+  } catch (purgeErr) {
+    console.warn('Lean storage best-score sync notice:', purgeErr);
   }
 
   return result;
@@ -2035,8 +2121,12 @@ export function clearAdminCache(table = null) {
     if (normTable === 'classes' && typeof window !== 'undefined' && typeof window.loadSidebarClasses === 'function') {
       window.loadSidebarClasses();
     }
+    if (normTable === 'vocabulary_vault' || normTable === 'vocab') {
+      clearApiCache('vault');
+    }
   } else {
     _adminCache.clear();
+    clearApiCache('vault');
     if (typeof window !== 'undefined') {
       if (typeof window.loadSidebarPrograms === 'function') window.loadSidebarPrograms();
       if (typeof window.loadSidebarClasses === 'function') window.loadSidebarClasses();
@@ -2044,12 +2134,35 @@ export function clearAdminCache(table = null) {
   }
 }
 
+const MASTER_TABLES_TTL = new Set([
+  'institutions',
+  'programs',
+  'classes',
+  'levels',
+  'batches',
+  'modules',
+  'site_settings',
+  'vocabulary_vault',
+  'tests'
+]);
+const MASTER_CACHE_DURATION_MS = 5 * 60 * 1000; // 5-minute TTL for high-frequency master catalogs
+
 export async function adminFetchAll(table, select = '*', filters = {}, forceRefresh = false) {
   const normTable = (table || '').toLowerCase().replace('-', '_');
   const cacheKey = normTable + '|' + select + '|' + JSON.stringify(filters);
 
   if (!forceRefresh && _adminCache.has(cacheKey)) {
-    return JSON.parse(JSON.stringify(_adminCache.get(cacheKey)));
+    const entry = _adminCache.get(cacheKey);
+    const ttl = MASTER_TABLES_TTL.has(normTable) ? MASTER_CACHE_DURATION_MS : 30 * 1000;
+    if (entry && typeof entry === 'object' && entry.timestamp) {
+      if (Date.now() - entry.timestamp < ttl) {
+        return JSON.parse(JSON.stringify(entry.data));
+      } else {
+        _adminCache.delete(cacheKey);
+      }
+    } else if (entry) {
+      return JSON.parse(JSON.stringify(entry));
+    }
   }
 
   try {
@@ -2077,7 +2190,14 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
 
     for (const [key, val] of Object.entries(filters)) {
       const normKey = (key === 'Test_id') ? 'test_id' : key;
-      query = query.eq(normKey, val);
+      if (Array.isArray(val)) {
+        if (val.length === 0) return [];
+        query = query.in(normKey, val);
+      } else if (val === null) {
+        query = query.is(normKey, null);
+      } else {
+        query = query.eq(normKey, val);
+      }
     }
 
         // Fetch all pages to overcome 1000 row limit
@@ -2102,7 +2222,10 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       from += pageSize;
     }
 
-    _adminCache.set(cacheKey, JSON.parse(JSON.stringify(allData || [])));
+    _adminCache.set(cacheKey, {
+      data: JSON.parse(JSON.stringify(allData || [])),
+      timestamp: Date.now()
+    });
     return allData || [];
   } catch (e) {
     console.warn(`adminFetchAll failed for ${table}:`, e.message);
@@ -2241,20 +2364,22 @@ export async function recalculateBestScore(studentId, testId) {
 }
 
 export async function logCheatingEvent(studentId, testId, action, detail) {
+  // Client-Side Telemetry Lock: Never spam Supabase audit_logs with tab-switch / blur events.
+  // Warning overlays, strikes (1-10), and auto-submit penalty run 100% in-browser via test.js.
   try {
-    const sb = await getSupabase();
-    await sb.from('audit_logs').insert({
-      actor_user_id: studentId,
-      actor_role: 'student',
-      action: action || 'CHEAT_ATTEMPT',
-      entity_type: 'test',
-      entity_id: testId,
-      new_value: detail,
-      created_at: new Date().toISOString()
-    });
-  } catch (err) {
-    console.warn('Failed to insert audit log for cheating:', err);
-  }
+    if (typeof sessionStorage !== 'undefined') {
+      const key = `topscore_cheat_telemetry_${testId}`;
+      const existing = JSON.parse(sessionStorage.getItem(key) || '[]');
+      existing.push({
+        action: action || 'CHEAT_ATTEMPT',
+        strike: detail?.strike,
+        reason: detail?.reason,
+        timestamp: new Date().toISOString()
+      });
+      sessionStorage.setItem(key, JSON.stringify(existing));
+    }
+  } catch (_) {}
+  console.info('[Telemetry] Student focus loss event handled locally:', action, detail?.reason, `Strike ${detail?.strike}`);
 }
 
 export async function fetchTests(filters = {}) {
@@ -2579,46 +2704,82 @@ export async function getServerTimeWita() {
 // ============================================================
 // VOCABULARY VAULT — CRUD & IMPORT
 // ============================================================
-export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, programId = null, institutionId = null, limit = 10000, offset = 0 } = {}) {
-  const sb = await getSupabase();
-  const PAGE_SIZE = 1000;
+const VAULT_CACHE_KEY = 'vault_all_master_words';
+const VAULT_CACHE_TTL_MS = 5 * 60 * 1000; // 5-minute in-memory cache to eliminate repeated multi-MB egress
+
+export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, programId = null, institutionId = null, limit = 10000, offset = 0, forceRefresh = false } = {}) {
   let allData = [];
-  let curOffset = offset;
-  const maxToFetch = limit || 10000;
 
-  while (allData.length < maxToFetch) {
-    const chunkLimit = Math.min(PAGE_SIZE, maxToFetch - allData.length);
-    let query = sb.from('vocabulary_vault')
-      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, institution_id, program_id, institutions(id, name, code), programs(id, name, code)')
-      .is('deleted_at', null)
-      .order('target_level', { ascending: true })
-      .order('theme_code', { ascending: true })
-      .order('topic_code', { ascending: true })
-      .order('word_type', { ascending: true })
-      .order('indonesian', { ascending: true })
-      .range(curOffset, curOffset + chunkLimit - 1);
-
-    if (targetLevel !== null) query = query.eq('target_level', targetLevel);
-    if (programId) query = query.eq('program_id', programId);
-    if (institutionId) query = query.eq('institution_id', institutionId);
-    if (topic) query = query.eq('topic', topic);
-    if (search) {
-      const term = search.trim();
-      query = query.or(`indonesian.ilike.%${term}%,english.ilike.%${term}%,topic.ilike.%${term}%`);
+  // 1. In-memory cache hit (0ms & 0 egress)
+  if (!forceRefresh && _apiCache.has(VAULT_CACHE_KEY)) {
+    const cached = _apiCache.get(VAULT_CACHE_KEY);
+    if (Date.now() - cached.timestamp < VAULT_CACHE_TTL_MS && Array.isArray(cached.data)) {
+      allData = cached.data;
     }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    if (!data || data.length === 0) break;
-    allData.push(...data);
-    if (data.length < chunkLimit) break;
-    curOffset += data.length;
   }
 
-  return allData;
+  // 2. Cache miss or forced refresh: fetch complete vault dataset from Supabase once
+  if (!allData || allData.length === 0) {
+    const sb = await getSupabase();
+    const PAGE_SIZE = 1000;
+    let curOffset = 0;
+    allData = [];
+
+    while (true) {
+      const { data, error } = await sb.from('vocabulary_vault')
+        .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
+        .is('deleted_at', null)
+        .order('target_level', { ascending: true })
+        .order('theme_code', { ascending: true })
+        .order('topic_code', { ascending: true })
+        .order('word_type', { ascending: true })
+        .order('indonesian', { ascending: true })
+        .range(curOffset, curOffset + PAGE_SIZE - 1);
+
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      allData.push(...data);
+      if (data.length < PAGE_SIZE) break;
+      curOffset += data.length;
+    }
+
+    _apiCache.set(VAULT_CACHE_KEY, { data: allData, timestamp: Date.now() });
+  }
+
+  // 3. High-speed in-memory filtering (0ms roundtrip)
+  let filtered = allData;
+  if (targetLevel !== null && targetLevel !== undefined && targetLevel !== '') {
+    filtered = filtered.filter(w => Number(w.target_level) === Number(targetLevel));
+  }
+  if (programId) filtered = filtered.filter(w => w.program_id === programId);
+  if (institutionId) filtered = filtered.filter(w => w.institution_id === institutionId);
+  if (topic) filtered = filtered.filter(w => w.topic === topic);
+  if (search) {
+    const term = search.trim().toLowerCase();
+    filtered = filtered.filter(w =>
+      (w.indonesian && w.indonesian.toLowerCase().includes(term)) ||
+      (w.english && w.english.toLowerCase().includes(term)) ||
+      (w.topic && w.topic.toLowerCase().includes(term))
+    );
+  }
+
+  const start = offset || 0;
+  const end = limit ? start + limit : filtered.length;
+  return filtered.slice(start, end);
 }
 
 export async function fetchVaultTopics(targetLevelNum = null, programId = null) {
+  // Use cached vault words when available for instant 0ms topic resolution
+  let words = [];
+  try {
+    words = await fetchVaultWords({ targetLevel: targetLevelNum, programId });
+  } catch (_) {}
+
+  if (words && words.length > 0) {
+    const topics = [...new Set(words.map(r => r.topic).filter(Boolean))];
+    return topics.sort((a, b) => a.localeCompare(b));
+  }
+
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
     .select('topic')
@@ -3202,7 +3363,7 @@ export async function createVocabMasteryTest(config) {
     vaultWords = data || [];
     sourceTopics = [sourceTopic];
   } else if (tier === 'TEST') {
-    // 🔴 TEST TIER: Aggregates from selected TASK tests (Cumulative theme/grand test)
+    // TEST TIER: Aggregates from selected TASK tests (Cumulative theme/grand test)
     if (!sourceTaskIds || !sourceTaskIds.length) throw new Error('sourceTaskIds required for TEST tier aggregation.');
 
     // 1. Extract unique topics from source tasks payload
@@ -3239,8 +3400,9 @@ export async function createVocabMasteryTest(config) {
   } else if (tier === 'QUIZ') {
     // @deprecated — Legacy tier. Use tier='TEST' for new tests.
     // Kept for backward compatibility with existing student data.
-    if (!sourceQuizIds.length) throw new Error('sourceQuizIds required for EXAM tier.');
-    const { data: sourceTests } = await sb.from('tests').select('payload').in('id', sourceQuizIds);
+    if (!sourceQuizIds.length && !sourceTaskIds.length) throw new Error('sourceTaskIds required for EXAM tier.');
+    const effectiveSourceIds = sourceTaskIds.length ? sourceTaskIds : sourceQuizIds;
+    const { data: sourceTests } = await sb.from('tests').select('payload').in('id', effectiveSourceIds);
     const topicsSet = new Set();
     (sourceTests || []).forEach(t => {
       const top = t.payload?.topic || t.payload?.topics;
@@ -3313,7 +3475,7 @@ export async function createVocabMasteryTest(config) {
     working_duration_minutes: durationMinutes || null,
     prerequisite_test_id:
       ((tier === 'QUIZ' || tier === 'TASK') && sourceTaskIds.length > 0) ? sourceTaskIds[0] :
-      (tier === 'EXAM' && sourceQuizIds.length > 0) ? sourceQuizIds[0] :
+      (tier === 'EXAM' && (sourceTaskIds.length > 0 || sourceQuizIds.length > 0)) ? (sourceTaskIds[0] || sourceQuizIds[0]) :
       (tier === 'TEST' && sourceTaskIds.length > 0) ? sourceTaskIds[sourceTaskIds.length - 1] : null,
     created_by:               'Admin (Vault)',
     created_at:               new Date().toISOString(),
@@ -3567,7 +3729,7 @@ export async function adminUnlockRemedialExam(attemptId) {
   const sb = await getSupabase();
   const { data: currentAtt } = await sb.from('attempts').select('id, student_id, test_id, is_remedial_unlocked').eq('id', attemptId).single();
   const { data, error } = await sb.from('attempts')
-    .update({ is_remedial_unlocked: true, updated_at: new Date().toISOString() })
+    .update({ is_remedial_unlocked: true, grade: 'R', updated_at: new Date().toISOString() })
     .eq('id', attemptId)
     .select().single();
   if (error) throw error;
@@ -3602,7 +3764,7 @@ export async function adminUnlockRemedialExam(attemptId) {
                   .update({
                     is_remedial_unlocked: true,
                     effective_score: effScore,
-                    grade: 'C',
+                    grade: 'R',
                     updated_at: new Date().toISOString()
                   })
                   .eq('id', sAtt.id);
@@ -3648,7 +3810,7 @@ export async function adminOverridePrerequisitesWithRemedial({
     throw new Error('No tests found in this class.');
   }
 
-  // Helper to accurately identify milestone exams vs quizzes
+  // Helper to accurately identify milestone exams vs tasks
   const isWeeklyExam = (asm) => {
     if (!asm) return false;
     const t = String(asm.test_type || asm.type || '').toLowerCase();
@@ -4080,6 +4242,7 @@ export async function adminApplyForgiven({
           const topAtt = submittedAtts[0];
           updates.push({
             id: topAtt.id,
+            grade: 'F',
             is_forgiven: true,
             forgiven_by: validForgivenBy,
             forgiven_at: nowIso,
@@ -4104,7 +4267,7 @@ export async function adminApplyForgiven({
             total_questions: totalQ,
             percentage: 0,
             effective_score: 0,
-            grade: 'E',
+            grade: 'F',
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -4126,7 +4289,7 @@ export async function adminApplyForgiven({
             total_questions: totalQ,
             percentage: 0,
             effective_score: 0,
-            grade: 'E',
+            grade: 'F',
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -5090,6 +5253,14 @@ export async function fetchActiveTestSession(testId, batchId = null) {
   const isExpired = autoClose && autoClose.getTime() <= now.getTime();
   const isUnlocked = session.status === 'UNLOCKED' && !isExpired;
 
+  // Auto-sync: if session is marked UNLOCKED but its auto_close_at has expired,
+  // update database status to LOCKED in background so historical state remains clean.
+  if (session.status === 'UNLOCKED' && isExpired) {
+    session.status = 'LOCKED';
+    session.closed_at = now.toISOString();
+    closeTestSession(testId).catch(() => {});
+  }
+
   const batchMatches = !batchId || !session.batch_id || session.batch_id === batchId;
   const remainingMs = autoClose ? Math.max(0, autoClose.getTime() - now.getTime()) : 0;
   const remainingMinutes = Math.ceil(remainingMs / 60000);
@@ -5756,9 +5927,10 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
   }
 
   let attemptsQuery = sb.from('attempts')
-    .select('id, student_id, test_id, status, score, correct_count, total_questions, percentage, effective_score, grade, started_at, expires_at, submitted_at, updated_at')
+    .select('id, student_id, test_id, status, score, correct_count, total_questions, percentage, effective_score, grade, started_at, expires_at, submitted_at, updated_at, created_at')
     .in('test_id', testIds)
-    .in('student_id', studentIds);
+    .in('student_id', studentIds)
+    .order('created_at', { ascending: false });
 
   // Safe window start: if unlockedAt provided, use it; otherwise default to past 3 hours to prevent leaking ancient historical attempts
   const safeUnlockedAt = unlockedAt || new Date(Date.now() - 3 * 3600 * 1000).toISOString();
@@ -5779,9 +5951,12 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
   const attemptIds = (attempts || []).map(a => a.id);
   let answersData = [];
   if (attemptIds.length > 0) {
+    // Ultra-lean scalar projection: excludes snapshots and empty unattempted rows to protect egress quota
     const { data: answers } = await sb.from('attempt_answers')
-      .select('id, attempt_id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, is_correct, score, updated_at')
-      .in('attempt_id', attemptIds);
+      .select('attempt_id, is_correct, score, updated_at')
+      .in('attempt_id', attemptIds)
+      .not('student_answer', 'is', null)
+      .neq('student_answer', '');
     answersData = answers || [];
   }
 

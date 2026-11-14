@@ -8,7 +8,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel } from './grading.js?v=20261106_v160';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon } from './grading.js?v=20261106_v160';
+    import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261115_v521';
+    import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
+
+    if (typeof window !== 'undefined') {
+      window.INDONESIA_REGIONS = INDONESIA_REGIONS;
+    }
 
     window._isBatchChampion = false;
 
@@ -137,7 +143,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         } else if (g === 'female') {
           formattedName = `Queen ${cleanFullName}`;
         } else {
-          formattedName = `👑 ${cleanFullName}`;
+          formattedName = cleanFullName;
         }
       } else {
         if (g === 'male') {
@@ -151,11 +157,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const crownEl = document.getElementById('banner-avatar-crown');
       if (crownEl) {
         if (isAlumni) {
-          crownEl.textContent = '🎓';
+          crownEl.innerHTML = getSvgIcon('graduation-cap', 16);
           crownEl.title = 'Alumni Graduate';
           crownEl.classList.remove('hidden');
         } else {
-          crownEl.textContent = '👑';
+          crownEl.innerHTML = getSvgIcon('crown', 16);
           crownEl.title = 'Batch Champion';
           crownEl.classList.toggle('hidden', !isLeader);
         }
@@ -163,6 +169,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const hdrNameEl = document.getElementById('header-student-name');
       if (hdrNameEl) hdrNameEl.textContent = formattedName;
+
+      const profTitleEl = document.getElementById('prof-title-text');
+      if (profTitleEl) {
+        profTitleEl.textContent = g === 'female' ? 'Miss' : 'Mr.';
+      }
       const welcNameEl = document.getElementById('welcome-name');
       if (welcNameEl) welcNameEl.textContent = formattedName;
       const profName = document.getElementById('prof-student-name');
@@ -181,16 +192,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const badge = document.getElementById('prof-gender-badge');
       if (badge) {
-        if (g === 'male') {
-          badge.className = 'badge badge-primary';
-          badge.textContent = isLeader ? '👑 King (Male)' : '👨 Male (Mr.)';
-        } else if (g === 'female') {
-          badge.className = 'badge badge-accent';
-          badge.textContent = isLeader ? '👑 Queen (Female)' : '👩 Female (Miss)';
-        } else {
-          badge.className = 'badge badge-neutral';
-          badge.textContent = '⏳ Unassigned';
-        }
+        badge.style.display = 'none';
+        badge.classList.add('hidden');
+      }
+      const genderTextEl = document.getElementById('prof-gender-text');
+      if (genderTextEl) {
+        genderTextEl.textContent = g === 'female' ? 'Female (Miss)' : 'Male (Mr.)';
       }
 
       const btnMale = document.getElementById('btn-prof-male');
@@ -203,33 +210,374 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     }
 
-    async function checkAndPromptGender() {
-      let currentGender = session.gender;
-      if (!currentGender) {
+    // SSOT Educational Levels & Smart Age-Based Eligibility (Shared Across Dashboard Modals)
+    export const ALL_EDUCATION_LEVELS = [
+      { value: 'kindergarten', label: 'Kindergarten (TK)' },
+      { value: 'elementary', label: 'Elementary School (SD)' },
+      { value: 'junior_high', label: 'Junior High School (SMP)' },
+      { value: 'senior_high', label: 'Senior High School (SMA/SMK)' },
+      { value: 'diploma', label: 'Diploma Degree (D1–D3)' },
+      { value: 'bachelor', label: "Bachelor's Degree (S1/D4)" },
+      { value: 'master', label: "Master's Degree (S2)" },
+      { value: 'doctorate', label: 'Doctorate Degree (S3)' }
+    ];
+
+    export function getEducationEligibility(age) {
+      if (age === null || isNaN(age)) {
+        return {
+          recommended: null,
+          allowed: ALL_EDUCATION_LEVELS.map(e => e.value)
+        };
+      }
+      if (age <= 6) {
+        return { recommended: 'kindergarten', allowed: ['kindergarten'] };
+      }
+      if (age >= 7 && age <= 12) {
+        return { recommended: 'elementary', allowed: ['kindergarten', 'elementary'] };
+      }
+      if (age >= 13 && age <= 15) {
+        return { recommended: 'junior_high', allowed: ['elementary', 'junior_high'] };
+      }
+      if (age >= 16 && age <= 18) {
+        return { recommended: 'senior_high', allowed: ['junior_high', 'senior_high'] };
+      }
+      if (age >= 19 && age <= 20) {
+        // Age 19-20: Fresh high school graduate or college student. S1 not yet graduated!
+        return { recommended: 'senior_high', allowed: ['senior_high', 'diploma'] };
+      }
+      if (age === 21) {
+        return { recommended: 'senior_high', allowed: ['senior_high', 'diploma', 'bachelor'] };
+      }
+      if (age >= 22 && age <= 24) {
+        return { recommended: 'bachelor', allowed: ['senior_high', 'diploma', 'bachelor'] };
+      }
+      // Age 25+
+      return { recommended: 'bachelor', allowed: ['senior_high', 'diploma', 'bachelor', 'master', 'doctorate'] };
+    }
+
+    // ── Onboarding Pop-up: ABOUT YOU (All-in-One: Gender + Birthday + Address + Education) ──
+    async function checkAndPromptWelcome() {
+      let currentGender = session.gender || null;
+      let currentBirthDate = session.birth_date || session.dob || null;
+      let currentEducation = session.education || session.education_level || null;
+      let currentProvince = session.province || null;
+      let currentCity = session.city || null;
+      let currentDistrict = session.district || null;
+      let currentVillage = session.village || null;
+
+      if (!currentGender || !currentBirthDate || !currentEducation || !currentProvince || !currentCity) {
         try {
           const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
-          const { data: st } = await sb.from('students').select('gender, name').eq('id', session.student_id).maybeSingle();
-          if (st?.gender) {
-            currentGender = st.gender;
+          const { data: st } = await withTimeout(
+            sb.from('students').select('gender, birth_date, education, province, city, district, village').eq('id', session.student_id).maybeSingle(),
+            1500
+          );
+          if (st) {
+            if (st.gender) { currentGender = st.gender; session.gender = st.gender; }
+            if (st.birth_date) { currentBirthDate = st.birth_date; session.birth_date = st.birth_date; session.dob = st.birth_date; }
+            if (st.education) { currentEducation = st.education; session.education = st.education; session.education_level = st.education; }
+            if (st.province) { currentProvince = st.province; session.province = st.province; }
+            if (st.city) { currentCity = st.city; session.city = st.city; }
+            if (st.district) { currentDistrict = st.district; session.district = st.district; }
+            if (st.village) { currentVillage = st.village; session.village = st.village; }
+            sessionStorage.setItem('topscore_session', JSON.stringify(session));
           }
-        } catch (err) {
-          console.warn('Could not verify gender from DB:', err);
-        }
+        } catch (_) {}
       }
 
-      if (currentGender) {
+      if (currentGender && currentBirthDate && currentEducation && currentProvince && currentCity) {
         applyStudentGenderUI(currentGender);
         return;
       }
 
-      // Gender is unassigned — trigger First-Entry Gender Setup Modal
       hideLoading();
-      const modal = document.getElementById('gender-setup-modal');
+      const modal = document.getElementById('introduce-setup-modal');
+      if (!modal) return;
+
       const optMale = document.getElementById('opt-gender-male');
       const optFemale = document.getElementById('opt-gender-female');
-      const confirmBtn = document.getElementById('btn-confirm-gender');
-      let selectedGender = null;
+      const nameEl = document.getElementById('intro-student-name');
+      if (nameEl) {
+        nameEl.textContent = cleanStudentName(session.student_name || 'Top');
+      }
+      const dayInp = document.getElementById('intro-birth-day');
+      const monthSel = document.getElementById('intro-birth-month');
+      const yearInp = document.getElementById('intro-birth-year');
+      const provSel = document.getElementById('intro-province');
+      const citySel = document.getElementById('intro-city');
+      const distSel = document.getElementById('intro-district');
+      const villSel = document.getElementById('intro-village');
+      const eduSel = document.getElementById('intro-education-level');
+      const confirmBtn = document.getElementById('btn-confirm-introduce');
 
+      let selectedGender = currentGender || null;
+
+      if (currentGender) {
+        const active = currentGender === 'male' ? optMale : optFemale;
+        if (active) {
+          active.classList.add('selected', 'active');
+          active.setAttribute('aria-pressed', 'true');
+        }
+      }
+
+      if (currentBirthDate) {
+        const parts = currentBirthDate.split('-');
+        if (parts.length === 3) {
+          if (yearInp) yearInp.value = parseInt(parts[0], 10);
+          if (monthSel) monthSel.value = parseInt(parts[1], 10);
+          if (dayInp) dayInp.value = parseInt(parts[2], 10);
+        }
+      }
+
+      function updateEducationDropdown() {
+        if (!eduSel) return;
+        const y = parseInt(yearInp?.value, 10);
+        const m = parseInt(monthSel?.value, 10);
+        const d = parseInt(dayInp?.value, 10);
+        let age = null;
+        if (!isNaN(y) && y >= 1940 && y <= new Date().getFullYear()) {
+          const today = new Date();
+          age = today.getFullYear() - y;
+          const mDiff = (m ? m - 1 : 0) - today.getMonth();
+          if (mDiff > 0 || (mDiff === 0 && (d || 1) > today.getDate())) {
+            age--;
+          }
+        }
+
+        const { recommended, allowed } = getEducationEligibility(age);
+        let activeVal = eduSel.value || currentEducation;
+
+        if (activeVal && !allowed.includes(activeVal)) {
+          activeVal = recommended;
+        } else if (!activeVal && recommended) {
+          activeVal = recommended;
+        }
+
+        let html = '<option value="" disabled' + (!activeVal ? ' selected' : '') + '>Select highest education…</option>';
+
+        if (recommended && age !== null) {
+          const recObj = ALL_EDUCATION_LEVELS.find(e => e.value === recommended);
+          if (recObj) {
+            html += `<option value="${recObj.value}" ${activeVal === recObj.value ? 'selected' : ''}>${recObj.label}</option>`;
+            html += `<option disabled class="select-divider">──────────</option>`;
+          }
+          const otherLevels = ALL_EDUCATION_LEVELS.filter(e => e.value !== recommended);
+          html += otherLevels.map(e => `<option value="${e.value}" ${activeVal === e.value ? 'selected' : ''}>${e.label}</option>`).join('');
+        } else {
+          html += ALL_EDUCATION_LEVELS.map(e => `<option value="${e.value}" ${activeVal === e.value ? 'selected' : ''}>${e.label}</option>`).join('');
+        }
+
+        eduSel.innerHTML = html;
+        if (activeVal) {
+          eduSel.value = activeVal;
+        }
+      }
+
+      function populateVillages(cityName, districtName, preselectVill = null) {
+        if (!villSel) return;
+        const villages = (typeof getVillagesForDistrict === 'function') ? getVillagesForDistrict(cityName, districtName) : [];
+        if (villages && villages.length > 0) {
+          villSel.disabled = false;
+          let html = '<option value="" disabled' + (!preselectVill ? ' selected' : '') + '>Select village…</option>';
+          html += villages.map(v => `<option value="${escapeHtml(v)}" ${preselectVill === v ? 'selected' : ''}>${escapeHtml(typeof formatVillageName === 'function' ? formatVillageName(v) : v)}</option>`).join('');
+          villSel.innerHTML = html;
+          if (preselectVill) villSel.value = preselectVill;
+        } else {
+          villSel.disabled = false;
+          villSel.innerHTML = '<option value="Other" selected>Other / Manual</option>';
+        }
+      }
+
+      function populateDistricts(cityName, preselectDist = null) {
+        if (!distSel) return;
+        const districts = (typeof getDistrictsForCity === 'function') ? getDistrictsForCity(cityName) : [];
+        if (districts && districts.length > 0) {
+          distSel.disabled = false;
+          let html = '<option value="" disabled' + (!preselectDist ? ' selected' : '') + '>Select district…</option>';
+          html += districts.map(d => `<option value="${escapeHtml(d)}" ${preselectDist === d ? 'selected' : ''}>${escapeHtml(typeof formatDistrictName === 'function' ? formatDistrictName(d) : d)}</option>`).join('');
+          distSel.innerHTML = html;
+          if (preselectDist) {
+            distSel.value = preselectDist;
+            populateVillages(cityName, preselectDist, currentVillage);
+          } else {
+            if (villSel) {
+              villSel.disabled = true;
+              villSel.innerHTML = '<option value="" disabled selected>Select village…</option>';
+            }
+          }
+        } else {
+          distSel.disabled = false;
+          distSel.innerHTML = '<option value="Other" selected>Other / Manual</option>';
+          if (villSel) {
+            villSel.disabled = false;
+            villSel.innerHTML = '<option value="Other" selected>Other / Manual</option>';
+          }
+        }
+      }
+
+      function populateCityDropdown(selectedProv, preselectCity = null) {
+        if (!citySel) return;
+        const rawCities = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[selectedProv]) ? INDONESIA_REGIONS[selectedProv] : [];
+        if (rawCities.length > 0) {
+          citySel.disabled = false;
+          const sortedCities = [...rawCities].sort((a, b) => a.localeCompare(b, 'id'));
+          let cityHtml = '<option value="" disabled' + (!preselectCity ? ' selected' : '') + '>Select regency…</option>';
+
+          if (selectedProv === 'West Nusa Tenggara' || selectedProv === 'Nusa Tenggara Barat') {
+            const SUGGESTED_CITY = "Kota Mataram";
+            const otherCities = sortedCities.filter(c => c !== SUGGESTED_CITY);
+            cityHtml += `<option value="${SUGGESTED_CITY}" ${preselectCity === SUGGESTED_CITY ? 'selected' : ''}>Mataram City</option>`;
+            cityHtml += `<option disabled class="select-divider">──────────</option>`;
+            cityHtml += otherCities.map(c => `<option value="${escapeHtml(c)}" ${preselectCity === c ? 'selected' : ''}>${escapeHtml(typeof formatCityDistrict === 'function' ? formatCityDistrict(c) : c)}</option>`).join('');
+          } else {
+            cityHtml += sortedCities.map(c => `<option value="${escapeHtml(c)}" ${preselectCity === c ? 'selected' : ''}>${escapeHtml(typeof formatCityDistrict === 'function' ? formatCityDistrict(c) : c)}</option>`).join('');
+          }
+          citySel.innerHTML = cityHtml;
+          if (preselectCity) {
+            citySel.value = preselectCity;
+            populateDistricts(preselectCity, currentDistrict);
+          } else {
+            if (distSel) {
+              distSel.disabled = true;
+              distSel.innerHTML = '<option value="" disabled selected>Select district…</option>';
+            }
+            if (villSel) {
+              villSel.disabled = true;
+              villSel.innerHTML = '<option value="" disabled selected>Select village…</option>';
+            }
+          }
+        } else {
+          citySel.disabled = true;
+          citySel.innerHTML = '<option value="" disabled selected>Select regency…</option>';
+        }
+      }
+
+      // Populate 38 Provinces (Suggested West Nusa Tenggara at top, separated by divider, then A-Z)
+      if (provSel && typeof INDONESIA_REGIONS !== 'undefined') {
+        const SUGGESTED_PROV = "West Nusa Tenggara";
+        const otherProvinces = Object.keys(INDONESIA_REGIONS)
+          .filter(p => p !== 'Nusa Tenggara Barat' && p !== SUGGESTED_PROV)
+          .sort((a, b) => a.localeCompare(b, 'id'));
+
+        let provHtml = '<option value="" disabled' + (!currentProvince ? ' selected' : '') + '>Select province…</option>';
+        provHtml += `<option value="${SUGGESTED_PROV}" ${currentProvince === SUGGESTED_PROV ? 'selected' : ''}>${SUGGESTED_PROV}</option>`;
+        provHtml += `<option disabled class="select-divider">──────────</option>`;
+        provHtml += otherProvinces.map(p => `<option value="${escapeHtml(p)}" ${currentProvince === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('');
+
+        provSel.innerHTML = provHtml;
+
+        if (currentProvince && INDONESIA_REGIONS[currentProvince]) {
+          provSel.value = currentProvince;
+          populateCityDropdown(currentProvince, currentCity);
+        } else {
+          provSel.value = "";
+          if (citySel) {
+            citySel.disabled = true;
+            citySel.innerHTML = '<option value="" disabled selected>Select regency…</option>';
+          }
+          if (distSel) {
+            distSel.disabled = true;
+            distSel.innerHTML = '<option value="" disabled selected>Select district…</option>';
+          }
+          if (villSel) {
+            villSel.disabled = true;
+            villSel.innerHTML = '<option value="" disabled selected>Select village…</option>';
+          }
+        }
+      }
+
+      updateEducationDropdown();
+
+      function validateIntroForm() {
+        const d = parseInt(dayInp?.value, 10);
+        const m = parseInt(monthSel?.value, 10);
+        const y = parseInt(yearInp?.value, 10);
+        const edu = eduSel?.value;
+        const prov = provSel?.value;
+        const city = citySel?.value;
+        const dist = distSel?.value;
+        const vill = villSel?.value;
+
+        const isGenderValid = !!selectedGender;
+        const isDayValid = !isNaN(d) && d >= 1 && d <= 31;
+        const isMonthValid = !isNaN(m) && m >= 1 && m <= 12;
+        const isYearValid = !isNaN(y) && y >= 1940 && y <= new Date().getFullYear();
+        const isEduValid = !!edu && edu.length > 0;
+        const isProvValid = !!prov && prov.length > 0;
+        const isCityValid = !!city && city.length > 0;
+        const isDistValid = !!dist && dist.length > 0;
+        const isVillValid = !!vill && vill.length > 0;
+
+        const allValid = isGenderValid && isDayValid && isMonthValid && isYearValid && isEduValid && isProvValid && isCityValid && isDistValid && isVillValid;
+        if (confirmBtn) {
+          confirmBtn.disabled = !allValid;
+        }
+        return allValid;
+      }
+
+      const selectGender = (gender) => {
+        selectedGender = gender;
+        [optMale, optFemale].forEach(card => {
+          if (card) {
+            card.classList.remove('selected', 'active');
+            card.setAttribute('aria-pressed', 'false');
+          }
+        });
+        const activeCard = gender === 'male' ? optMale : optFemale;
+        if (activeCard) {
+          activeCard.classList.add('selected', 'active');
+          activeCard.setAttribute('aria-pressed', 'true');
+        }
+        validateIntroForm();
+      };
+
+      if (optMale) optMale.onclick = () => selectGender('male');
+      if (optFemale) optFemale.onclick = () => selectGender('female');
+
+      if (dayInp) {
+        dayInp.oninput = () => {
+          updateEducationDropdown();
+          validateIntroForm();
+        };
+      }
+      if (monthSel) {
+        monthSel.onchange = () => {
+          updateEducationDropdown();
+          validateIntroForm();
+        };
+      }
+      if (yearInp) {
+        yearInp.oninput = () => {
+          updateEducationDropdown();
+          validateIntroForm();
+        };
+      }
+      if (provSel) {
+        provSel.onchange = () => {
+          populateCityDropdown(provSel.value);
+          validateIntroForm();
+        };
+      }
+      if (citySel) {
+        citySel.onchange = () => {
+          populateDistricts(citySel.value);
+          validateIntroForm();
+        };
+      }
+      if (distSel) {
+        distSel.onchange = () => {
+          populateVillages(citySel?.value, distSel.value);
+          validateIntroForm();
+        };
+      }
+      if (villSel) {
+        villSel.onchange = validateIntroForm;
+      }
+      if (eduSel) {
+        eduSel.onchange = validateIntroForm;
+      }
+
+      validateIntroForm();
       modal.classList.remove('hidden');
 
       return new Promise((resolve) => {
@@ -242,44 +590,67 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
         };
 
-        // Hard Gate: No skip allowed. Gender/Honorific is mandatory.
-        const selectGender = (gender) => {
-          selectedGender = gender;
-          // Clear both cards first
-          [optMale, optFemale].forEach(card => {
-            card.classList.remove('selected');
-            card.setAttribute('aria-pressed', 'false');
-            card.style.borderColor = '';
-            card.style.background = '';
-            card.style.boxShadow = '';
-          });
-          // Activate selected card via CSS class (no hardcoded hex)
-          const activeCard = gender === 'male' ? optMale : optFemale;
-          activeCard.classList.add('selected');
-          activeCard.setAttribute('aria-pressed', 'true');
-          confirmBtn.disabled = false;
-          confirmBtn.innerHTML = `SAVE &amp; CONTINUE &rarr;`;
-        };
-
-        optMale.onclick = () => selectGender('male');
-        optFemale.onclick = () => selectGender('female');
-
         confirmBtn.onclick = async () => {
-          if (!selectedGender) return;
+          if (!validateIntroForm()) return;
           confirmBtn.disabled = true;
           confirmBtn.textContent = 'Saving…';
+
+          const d = parseInt(dayInp.value, 10);
+          const m = parseInt(monthSel.value, 10);
+          const y = parseInt(yearInp.value, 10);
+          const birthDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const highestEdu = eduSel.value;
+          const timeline = calculateEducationTimeline(y, highestEdu);
+          const selectedProv = provSel?.value || null;
+          const selectedCity = citySel?.value || null;
+          const selectedDist = distSel?.value || null;
+          const selectedVill = villSel?.value || null;
+
           try {
-            await updateStudentGender(session.student_id, selectedGender);
+            const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+            const updatePayload = {
+              gender: selectedGender,
+              birth_date: birthDate,
+              education: highestEdu
+            };
+            if (selectedProv) updatePayload.province = selectedProv;
+            if (selectedCity) updatePayload.city = selectedCity;
+            if (selectedDist) updatePayload.district = selectedDist;
+            if (selectedVill) updatePayload.village = selectedVill;
+
+            await sb.from('students').update(updatePayload).eq('id', session.student_id);
+
+            session.gender = selectedGender;
+            session.title = selectedGender === 'male' ? 'Mr.' : 'Miss';
+            session.birth_date = birthDate;
+            session.education = highestEdu;
+            session.education_level = highestEdu;
+            session.academic_history = timeline;
+            if (selectedProv) session.province = selectedProv;
+            if (selectedCity) session.city = selectedCity;
+            if (selectedDist) session.district = selectedDist;
+            if (selectedVill) session.village = selectedVill;
+            sessionStorage.setItem('topscore_session', JSON.stringify(session));
+
             applyStudentGenderUI(selectedGender);
-            showToast(`Welcome, ${session.student_name}! Your title has been personalized.`, 'success');
           } catch (err) {
-            console.warn('Failed to save gender:', err);
-            showToast('Continuing to dashboard: ' + err.message, 'warning');
+            console.warn('Failed to save student welcome profile in DB:', err);
           } finally {
             doResolve();
           }
         };
       });
+    }
+
+    // ── Onboarding Pop-up 02: WHERE DO YOU LIVE (Merged into Pop-up 01 ABOUT YOU) ──
+    async function checkAndPromptAddress() {
+      // Intentionally consolidated into checkAndPromptWelcome
+      return;
+    }
+
+    // Unified wrapper for backward compatibility
+    async function checkAndPromptIntroduce() {
+      await checkAndPromptWelcome();
     }
 
     // ── First-Entry Photo & Microphone Onboarding (Phase 12) ──
@@ -304,8 +675,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           video.classList.remove('hidden');
           if (overlay) overlay.classList.add('hidden');
           if (confirmBtn) {
-            confirmBtn.disabled = false;
-            confirmBtn.textContent = '✓ Save Photo & Enter Dashboard';
+            updatePhotoGateState();
           }
         } else {
           throw new Error('Webcam not supported.');
@@ -313,11 +683,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       } catch (err) {
         console.warn('Webcam initialization notice:', err.message);
         if (overlay) {
-          overlay.innerHTML = `<span style="text-align:center;padding:10px;">📷 Camera preview unavailable.<br><span class="text-xs text-muted">Please use "Upload Image File" below or click Skip.</span></span>`;
+          overlay.innerHTML = `<span style="text-align:center;padding:10px;">${getSvgIcon('camera', 16)} Camera preview unavailable.<br><span class="text-xs text-muted">Please allow camera permission.</span></span>`;
         }
         if (confirmBtn) {
-          confirmBtn.disabled = false;
-          confirmBtn.textContent = 'Continue to Dashboard ←’';
+          updatePhotoGateState();
         }
       }
     }
@@ -331,193 +700,134 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     }
 
+    let micReady = false;
+
+    function updatePhotoGateState() {
+      const confirmBtn = document.getElementById('btn-confirm-photo-setup');
+      const photoCard = document.getElementById('card-status-photo');
+      const photoBadge = document.getElementById('badge-status-photo');
+      const micCard = document.getElementById('card-status-mic');
+      const micBadge = document.getElementById('badge-status-mic');
+
+      // Update Photo card & badge (Green ✓ or Red ✕)
+      if (photoCard && photoBadge) {
+        const hasPhoto = !!onboardPhotoData;
+        photoCard.classList.toggle('card-success', hasPhoto);
+        photoCard.classList.toggle('card-fail', !hasPhoto);
+        photoBadge.classList.toggle('status-success', hasPhoto);
+        photoBadge.classList.toggle('status-fail', !hasPhoto);
+        photoBadge.innerHTML = hasPhoto ? '<span class="status-symbol">✓</span>' : '<span class="status-symbol">✕</span>';
+      }
+
+      // Update Mic card & badge (Green ✓ or Red ✕)
+      if (micCard && micBadge) {
+        micCard.classList.toggle('card-success', micReady);
+        micCard.classList.toggle('card-fail', !micReady);
+        micBadge.classList.toggle('status-success', micReady);
+        micBadge.classList.toggle('status-fail', !micReady);
+        micBadge.innerHTML = micReady ? '<span class="status-symbol">✓</span>' : '<span class="status-symbol">✕</span>';
+      }
+
+      if (confirmBtn) {
+        const ready = !!(onboardPhotoData && micReady);
+        confirmBtn.disabled = !ready;
+      }
+    }
+
     function updateHeaderMicStatus(res) {
       const headerMic = document.getElementById('header-mic-status') || document.querySelector('.header-mic-badge');
       if (!headerMic) return;
-      headerMic.textContent = res?.ok ? '🎤 Ready' : '🎤 Check';
+      headerMic.innerHTML = res?.ok ? `${getSvgIcon('mic', 12)} Ready` : `${getSvgIcon('mic', 12)} Check`;
       headerMic.className = res?.ok ? 'header-mic-badge active' : 'header-mic-badge warning';
     }
 
     async function checkMicrophoneOnEntry() {
-      const titleEl = document.getElementById('mic-status-title');
-      const descEl = document.getElementById('mic-status-desc');
-      const iconEl = document.getElementById('mic-status-icon');
-      const cardEl = document.getElementById('mic-status-card');
-
       try {
         const res = await testMicrophoneCapability();
         updateHeaderMicStatus(res);
-        if (res.ok) {
-          if (titleEl) titleEl.textContent = 'Microphone Ready (Active)';
-          if (descEl) descEl.textContent = 'Device tested and verified for speaking tests.';
-          if (iconEl) iconEl.textContent = '✅';
-          if (cardEl) {
-            cardEl.style.borderColor = 'rgba(16, 185, 129, 0.4)';
-            cardEl.style.background = 'rgba(16, 185, 129, 0.08)';
-          }
-        } else {
-          if (titleEl) titleEl.textContent = res.state === 'permission_denied' ? 'Microphone Permission Needed' : 'Microphone Check';
-          if (descEl) descEl.textContent = res.message;
-          if (iconEl) iconEl.textContent = '⚠️ ';
-          if (cardEl) {
-            cardEl.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-            cardEl.style.background = 'rgba(245, 158, 11, 0.08)';
-          }
-        }
+        micReady = !!res?.ok;
+        updatePhotoGateState();
         return res;
       } catch (err) {
         console.warn('Microphone entry test error:', err);
+        micReady = false;
+        updatePhotoGateState();
       }
     }
 
+    document.getElementById('card-status-mic')?.addEventListener('click', checkMicrophoneOnEntry);
     document.getElementById('btn-retry-mic')?.addEventListener('click', checkMicrophoneOnEntry);
 
-    // Snapshot button
-    document.getElementById('btn-snap-photo')?.addEventListener('click', () => {
+    // Single Camera Action Button (Toggles Snap / Retake)
+    document.getElementById('btn-camera-action')?.addEventListener('click', async () => {
       const video = document.getElementById('webcam-stream');
       const canvas = document.getElementById('webcam-canvas');
       const img = document.getElementById('webcam-snapshot');
-      if (!video || !canvas || !img) return;
 
-      canvas.width = 240;
-      canvas.height = 320;
-      const ctx = canvas.getContext('2d');
-      // Mirror to match user perspective
-      ctx.translate(240, 0);
-      ctx.scale(-1, 1);
+      if (!onboardPhotoData) {
+        // --- SNAP PHOTO ACTION ---
+        if (!video || !canvas || !img) return;
 
-      // Center-crop webcam video stream to 3:4 aspect ratio
-      const vw = video.videoWidth || 320;
-      const vh = video.videoHeight || 320;
-      const vRatio = vw / vh;
-      const tRatio = 240 / 320;
-      let sx = 0, sy = 0, sw = vw, sh = vh;
-      if (vRatio > tRatio) {
-        sw = vh * tRatio;
-        sx = (vw - sw) / 2;
-      } else {
-        sh = vw / tRatio;
-        sy = (vh - sh) * 0.35;
-      }
-      ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 240, 320);
+        canvas.width = 240;
+        canvas.height = 320;
+        const ctx = canvas.getContext('2d');
+        ctx.translate(240, 0);
+        ctx.scale(-1, 1);
 
-      let dataUrl = canvas.toDataURL('image/webp', 0.75);
-      if (!dataUrl.startsWith('data:image/webp')) {
-        dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-      }
-      onboardPhotoData = dataUrl;
-      img.src = onboardPhotoData;
-      img.classList.remove('hidden');
-      video.classList.add('hidden');
-
-      document.getElementById('btn-snap-photo').classList.add('hidden');
-      document.getElementById('btn-retake-photo').classList.remove('hidden');
-      document.getElementById('btn-confirm-photo-setup').disabled = false;
-      stopOnboardWebcam();
-    });
-
-    // Retake button
-    document.getElementById('btn-retake-photo')?.addEventListener('click', async () => {
-      onboardPhotoData = null;
-      const img = document.getElementById('webcam-snapshot');
-      if (img) {
-        img.src = '';
-        img.removeAttribute('src');
-        img.classList.add('hidden');
-      }
-      document.getElementById('btn-retake-photo').classList.add('hidden');
-      document.getElementById('btn-snap-photo').classList.remove('hidden');
-      document.getElementById('btn-confirm-photo-setup').disabled = true;
-      await startOnboardWebcam();
-    });
-
-    // File upload fallback
-    document.getElementById('onboard-photo-file')?.addEventListener('change', async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (file.size > 10 * 1024 * 1024) {
-        showToast('Image file is too large (max 10MB).', 'warning');
-        return;
-      }
-      // Hapus snapshot lama seketika agar tidak terlihat sekilas
-      const img = document.getElementById('webcam-snapshot');
-      if (img) {
-        img.src = '';
-        img.removeAttribute('src');
-        img.classList.add('hidden');
-      }
-      onboardPhotoData = null;
-      document.getElementById('btn-confirm-photo-setup').disabled = true;
-
-      try {
-        const compressedDataUrl = await processAndCompressAvatar(file, 'student');
-        onboardPhotoData = compressedDataUrl;
-        if (img) {
-          img.src = onboardPhotoData;
-          img.classList.remove('hidden');
+        const vw = video.videoWidth || 320;
+        const vh = video.videoHeight || 320;
+        const vRatio = vw / vh;
+        const tRatio = 240 / 320;
+        let sx = 0, sy = 0, sw = vw, sh = vh;
+        if (vRatio > tRatio) {
+          sw = vh * tRatio;
+          sx = (vw - sw) / 2;
+        } else {
+          sh = vw / tRatio;
+          sy = (vh - sh) * 0.35;
         }
-        document.getElementById('webcam-stream').classList.add('hidden');
-        const overlay = document.getElementById('camera-loading-overlay');
-        if (overlay) overlay.classList.add('hidden');
-        document.getElementById('btn-snap-photo').classList.add('hidden');
-        document.getElementById('btn-retake-photo').classList.remove('hidden');
-        document.getElementById('btn-confirm-photo-setup').disabled = false;
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 240, 320);
+
+        let dataUrl = canvas.toDataURL('image/webp', 0.75);
+        if (!dataUrl.startsWith('data:image/webp')) {
+          dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+        }
+        onboardPhotoData = dataUrl;
+        img.src = onboardPhotoData;
+        img.classList.remove('hidden');
+        video.classList.add('hidden');
         stopOnboardWebcam();
-      } catch (compErr) {
-        console.error('Photo compression error:', compErr);
-        showToast('Failed to process photo. Please choose a valid image file.', 'error');
-      } finally {
-        e.target.value = '';
+      } else {
+        // --- RETAKE PHOTO ACTION ---
+        onboardPhotoData = null;
+        if (img) {
+          img.src = '';
+          img.removeAttribute('src');
+          img.classList.add('hidden');
+        }
+        if (video) {
+          video.classList.remove('hidden');
+        }
+        await startOnboardWebcam();
       }
+      updatePhotoGateState();
     });
 
     // Save and enter dashboard
     document.getElementById('btn-confirm-photo-setup')?.addEventListener('click', async () => {
+      if (!onboardPhotoData || !micReady) {
+        showToast('Please capture your photo and allow microphone access to continue.', 'warning');
+        return;
+      }
+
       const btn = document.getElementById('btn-confirm-photo-setup');
       btn.disabled = true;
-      btn.textContent = 'Entering dashboard…';
+      btn.textContent = 'Saving photo…';
 
       try {
-        // If student did not manually click "Capture Photo", auto-capture from active webcam stream!
-        if (!onboardPhotoData) {
-          const video = document.getElementById('webcam-stream');
-          const canvas = document.getElementById('webcam-canvas');
-          if (video && canvas && webcamStream) {
-            try {
-              canvas.width = 240;
-              canvas.height = 320;
-              const ctx = canvas.getContext('2d');
-              ctx.translate(240, 0);
-              ctx.scale(-1, 1);
-              const vw = video.videoWidth || 320;
-              const vh = video.videoHeight || 320;
-              const vRatio = vw / vh;
-              const tRatio = 240 / 320;
-              let sx = 0, sy = 0, sw = vw, sh = vh;
-              if (vRatio > tRatio) {
-                sw = vh * tRatio;
-                sx = (vw - sw) / 2;
-              } else {
-                sh = vw / tRatio;
-                sy = (vh - sh) * 0.35;
-              }
-              ctx.drawImage(video, sx, sy, sw, sh, 0, 0, 240, 320);
-              let dataUrl = canvas.toDataURL('image/webp', 0.75);
-              if (!dataUrl.startsWith('data:image/webp')) {
-                dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-              }
-              onboardPhotoData = dataUrl;
-            } catch (snapErr) {
-              console.warn('Auto-snapshot capture failed:', snapErr);
-            }
-          }
-        }
-
         if (onboardPhotoData) {
-          btn.textContent = 'Saving photo…';
           let finalPhotoUrl = onboardPhotoData;
           try {
-            // Option 1: Strictly compress to lightweight 3:4 WebP Base64 (<30KB)
             finalPhotoUrl = await processAndCompressAvatar(onboardPhotoData, 'student');
           } catch (compErr) {
             console.warn('Avatar compression notice:', compErr);
@@ -527,11 +837,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try {
             await uploadStudentPhoto(session.student_id, finalPhotoUrl);
             applyPhotoEverywhere(finalPhotoUrl);
-            showToast('Profile photo registered successfully! Welcome to your dashboard.', 'success');
+            localStorage.removeItem(`stu_photo_retake_eligible_${session.student_id}`);
+            session.photo_retake_eligible = false;
+            localStorage.setItem(`stu_last_photo_updated_${session.student_id}`, new Date().toISOString());
+            try {
+              const { setStudentSession } = await import('./session.js?v=20261106_v154');
+              setStudentSession(session);
+            } catch (_) {}
+            showToast('Profile photo registered successfully! Continuing setup…', 'success');
           } catch (uploadErr) {
             console.warn('Photo upload warning:', uploadErr);
             applyPhotoEverywhere(finalPhotoUrl);
-            showToast('Photo captured! Continuing to dashboard.', 'info');
+            showToast('Photo captured! Continuing setup.', 'info');
           }
         }
       } catch (err) {
@@ -551,21 +868,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     });
 
-    // Skip photo setup fallback
-    document.getElementById('btn-skip-photo-setup')?.addEventListener('click', () => {
-      stopOnboardWebcam();
-      onboardPhotoData = null;
-      const fileInp = document.getElementById('onboard-photo-file');
-      if (fileInp) fileInp.value = '';
-      const img = document.getElementById('webcam-snapshot');
-      if (img) {
-        img.src = '';
-        img.removeAttribute('src');
-        img.classList.add('hidden');
-      }
-      document.getElementById('photo-setup-modal').classList.add('hidden');
-    });
-
     async function checkAndPromptPhoto() {
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
@@ -583,10 +885,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       if (photoUrl) {
         applyPhotoEverywhere(photoUrl);
-        // Test mic upfront on entry so browser permission is established before Tests
         checkMicrophoneOnEntry();
 
-        // Background sync: memastikan localStorage selalu sinkron dengan database terbaru
         (async () => {
           try {
             const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
@@ -606,6 +906,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // No photo registered! Clean state and show Photo & Mic Setup Modal
       hideLoading();
       onboardPhotoData = null;
+      micReady = false;
+
+      const nameEl = document.getElementById('photo-student-name');
+      if (nameEl) nameEl.textContent = session.student_name || 'Student';
+
       const fileInp = document.getElementById('onboard-photo-file');
       if (fileInp) fileInp.value = '';
       const snapshotImg = document.getElementById('webcam-snapshot');
@@ -614,14 +919,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         snapshotImg.removeAttribute('src');
         snapshotImg.classList.add('hidden');
       }
-      const snapBtn = document.getElementById('btn-snap-photo');
-      if (snapBtn) snapBtn.classList.remove('hidden');
-      const retakeBtn = document.getElementById('btn-retake-photo');
-      if (retakeBtn) retakeBtn.classList.add('hidden');
       const confirmBtn = document.getElementById('btn-confirm-photo-setup');
       if (confirmBtn) {
         confirmBtn.disabled = true;
-        confirmBtn.textContent = '✓ Save Photo & Enter Dashboard';
+        confirmBtn.innerHTML = 'SAVE &amp; CONTINUE &rarr;';
       }
 
       const modal = document.getElementById('photo-setup-modal');
@@ -706,16 +1007,154 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
     }
 
+
+    // ===== AUTHORITATIVE EDUCATION TIMELINE ENGINE =====
+    export const EDUCATION_TIERS = [
+      { id: 'kindergarten', label: 'Kindergarten (TK)', short: 'TK', offset: 6 },
+      { id: 'elementary', label: 'Elementary School (SD)', short: 'SD', offset: 12 },
+      { id: 'junior_high', label: 'Junior High School (SMP)', short: 'SMP', offset: 15 },
+      { id: 'senior_high', label: 'Senior High School (SMA/SMK)', short: 'SMA/SMK', offset: 18 },
+      { id: 'diploma', label: 'Diploma Degree (D1–D3)', short: 'Diploma', offset: 21 },
+      { id: 'bachelor', label: "Bachelor's Degree (S1/D4)", short: 'S1/D4', offset: 22 },
+      { id: 'master', label: "Master's Degree (S2)", short: 'S2', offset: 24 },
+      { id: 'doctorate', label: 'Doctoral Degree (S3)', short: 'S3', offset: 28 }
+    ];
+
+    export function calculateEducationTimeline(birthYear, highestLevelId) {
+      const by = parseInt(birthYear, 10);
+      if (!by || isNaN(by)) return [];
+
+      const baseTiers = ['kindergarten', 'elementary', 'junior_high', 'senior_high'];
+      let path = [];
+
+      if (baseTiers.includes(highestLevelId)) {
+        const idx = baseTiers.indexOf(highestLevelId);
+        path = baseTiers.slice(0, idx + 1);
+      } else if (highestLevelId === 'diploma') {
+        path = [...baseTiers, 'diploma'];
+      } else if (highestLevelId === 'bachelor') {
+        path = [...baseTiers, 'bachelor'];
+      } else if (highestLevelId === 'master') {
+        path = [...baseTiers, 'bachelor', 'master'];
+      } else if (highestLevelId === 'doctorate') {
+        path = [...baseTiers, 'bachelor', 'master', 'doctorate'];
+      } else {
+        path = [...baseTiers];
+      }
+
+      return path.map(id => {
+        const tier = EDUCATION_TIERS.find(t => t.id === id);
+        const gradYear = by + tier.offset;
+        return {
+          id: tier.id,
+          level: tier.short,
+          name: tier.label,
+          institution: tier.label,
+          year: gradYear
+        };
+      });
+    }
+
+    let _eduModalInitialized = false;
+    let _eduResolve = null;
+
+    export function initEducationModalControls(birthYear = 2002) {
+      const modal = document.getElementById('education-setup-modal');
+      if (!modal) return;
+
+      const byDisplay = document.getElementById('edu-birth-year-display');
+      if (byDisplay) byDisplay.textContent = birthYear;
+
+      let selectedLevel = null;
+      let currentTimeline = [];
+
+      const levelButtons = modal.querySelectorAll('.edu-level-btn');
+      const confirmBtn = document.getElementById('btn-confirm-education-setup');
+      const previewWrap = document.getElementById('edu-timeline-preview-wrap');
+      const previewList = document.getElementById('edu-timeline-preview');
+      const countBadge = document.getElementById('edu-timeline-count');
+
+      levelButtons.forEach(btn => {
+        btn.onclick = () => {
+          levelButtons.forEach(b => {
+            b.classList.remove('selected');
+            b.setAttribute('aria-checked', 'false');
+          });
+          btn.classList.add('selected');
+          btn.setAttribute('aria-checked', 'true');
+          selectedLevel = btn.dataset.level;
+
+          currentTimeline = calculateEducationTimeline(birthYear, selectedLevel);
+
+          if (previewList) {
+            previewList.innerHTML = currentTimeline.map(item => `
+              <div class="edu-timeline-item">
+                <div class="edu-item-info">
+                  <span class="edu-item-dot"></span>
+                  <span class="fw-600">${escapeHtml(item.name)}</span>
+                </div>
+                <span class="edu-item-year">Graduated ${item.year}</span>
+              </div>
+            `).join('');
+          }
+
+          if (countBadge) countBadge.textContent = `${currentTimeline.length} Milestones`;
+          if (previewWrap) previewWrap.classList.remove('hidden');
+          if (confirmBtn) confirmBtn.disabled = false;
+        };
+      });
+
+      if (!_eduModalInitialized) {
+        _eduModalInitialized = true;
+        confirmBtn?.addEventListener('click', async () => {
+          if (!selectedLevel || currentTimeline.length === 0) {
+            showToast('Please select your highest education level.', 'warning');
+            return;
+          }
+
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = 'Saving Academic Timeline…';
+
+          try {
+            await updateStudentEducation(session.student_id, currentTimeline);
+            session.education = currentTimeline;
+            const { setStudentSession } = await import('./session.js?v=20261106_v154');
+            setStudentSession(session);
+            showToast('Academic timeline verified!', 'success');
+            modal.classList.add('hidden');
+            if (typeof _eduResolve === 'function') {
+              _eduResolve();
+              _eduResolve = null;
+            }
+          } catch (err) {
+            console.warn('Error saving education level:', err);
+            showToast('Could not save education: ' + err.message, 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = '✓ Confirm Academic Timeline & Continue';
+          }
+        });
+      }
+    }
+    window.initEducationModalControls = initEducationModalControls;
+
     async function checkAndPromptEducation() {
       let hasEducation = false;
+      let birthYear = 2002;
+
       try {
         const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
-        const { data: st } = await sb.from('students').select('education').eq('id', session.student_id).maybeSingle();
+        const { data: st } = await sb.from('students').select('education, birth_date').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
             hasEducation = true;
           } else if (typeof st.education === 'string' && st.education.trim().length > 0) {
-            hasEducation = true;
+            try {
+              const parsed = JSON.parse(st.education);
+              if (Array.isArray(parsed) && parsed.length > 0) hasEducation = true;
+              else hasEducation = true;
+            } catch (_) {
+              hasEducation = true;
+            }
           }
           if (hasEducation && !session.education) {
              session.education = st.education;
@@ -723,63 +1162,28 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
              setStudentSession(session);
           }
         }
+        if (st?.birth_date) {
+          const d = new Date(st.birth_date);
+          if (!isNaN(d.getFullYear())) birthYear = d.getFullYear();
+        } else if (session.dob || session.birth_date) {
+          const d = new Date(session.dob || session.birth_date);
+          if (!isNaN(d.getFullYear())) birthYear = d.getFullYear();
+        }
       } catch (err) {
         console.warn('Could not check education status from DB:', err);
       }
+
+      initEducationModalControls(birthYear);
 
       if (hasEducation) return;
 
       hideLoading();
       const modal = document.getElementById('education-setup-modal');
+      if (!modal) return;
       modal.classList.remove('hidden');
 
       return new Promise((resolve) => {
-        let isResolved = false;
-        const doResolve = () => {
-          if (!isResolved) {
-            isResolved = true;
-            modal.classList.add('hidden');
-            resolve();
-          }
-        };
-
-        // Hard Gate: Strictly max 2 latest entries: Institution & Year only
-        document.getElementById('btn-confirm-education-setup')?.addEventListener('click', async () => {
-          const inst1 = document.getElementById('onboard-edu-inst-1')?.value.trim();
-          const year1 = document.getElementById('onboard-edu-year-1')?.value.trim();
-          if (!inst1 || !year1) {
-            showToast('Please provide your latest academic institution and year.', 'warning');
-            return;
-          }
-
-          const eduList = [
-            { institution: inst1, year: parseInt(year1, 10) || year1 }
-          ];
-
-          const inst2 = document.getElementById('onboard-edu-inst-2')?.value.trim();
-          const year2 = document.getElementById('onboard-edu-year-2')?.value.trim();
-          if (inst2 && year2) {
-            eduList.push({ institution: inst2, year: parseInt(year2, 10) || year2 });
-          }
-
-          const btn = document.getElementById('btn-confirm-education-setup');
-          btn.disabled = true;
-          btn.textContent = 'Verifying & Saving...';
-
-          try {
-            await updateStudentEducation(session.student_id, eduList);
-            session.education = eduList;
-            const { setStudentSession } = await import('./session.js?v=20261106_v154');
-            setStudentSession(session);
-            showToast('Academic background verified!', 'success');
-            doResolve();
-          } catch (err) {
-            console.warn('Error saving education level:', err);
-            showToast('Could not save education: ' + err.message, 'error');
-            btn.disabled = false;
-            btn.textContent = '✓ Save Academic Background & Continue';
-          }
-        });
+        _eduResolve = resolve;
       });
     }
 
@@ -787,10 +1191,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function loadDashboard() {
       try {
         hideLoading();
-        await checkAndPromptGender();
+        // Onboarding Step 1: Pop-up 01 ABOUT YOU (All-in-One: Gender + Birthday + Address + Education)
+        await checkAndPromptIntroduce();
+        // Onboarding Step 2: Pop-up 03 TAKE YOUR PHOTO (Webcam Snapshot Capture)
         await checkAndPromptPhoto();
-        await checkAndPromptBirthday();
-        await checkAndPromptEducation();
 
         showLoading('Loading your dashboard…');
 
@@ -823,10 +1227,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               span.textContent = part;
               if (index === 0) {
                 span.className = "text-xs font-bold text-slate-200 tracking-wide";
-                span.style.cssText = "font-size: 0.75rem; font-weight: 700; color: #e2e8f0; letter-spacing: 0.025em;";
+                span.style.cssText = "font-size: 12px; font-weight: 700; color: #e2e8f0; letter-spacing: 0.025em;";
               } else {
                 span.className = "text-xs font-semibold text-slate-400 tracking-wide";
-                span.style.cssText = "font-size: 0.75rem; font-weight: 600; color: #94a3b8; letter-spacing: 0.025em;";
+                span.style.cssText = "font-size: 12px; font-weight: 600; color: #94a3b8; letter-spacing: 0.025em;";
               }
               welcomeMetaEl.appendChild(span);
               if (index < parts.length - 1) {
@@ -842,7 +1246,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const welcomeLevelEl = document.getElementById('welcome-level');
           if (welcomeLevelPanelEl && welcomeLevelEl) {
             const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
-            welcomeLevelEl.textContent = isAlumni ? 'Alumni 🎓' : (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level');
+            welcomeLevelEl.innerHTML = isAlumni ? `Alumni ${getSvgIcon('graduation-cap', 14)}` : (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level');
             welcomeLevelPanelEl.classList.remove('hidden');
           }
         }
@@ -854,13 +1258,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           setTimeout(() => {
             if (typeof window.Swal !== 'undefined') {
               Swal.fire({
-                title: '🎉 Level Up!',
+                title: 'Level Up!',
                 text: `Congratulations! You have unlocked ${celebration}.`,
                 icon: 'success',
                 confirmButtonColor: '#6366f1'
               });
             } else {
-              showToast(`🎉 Congratulations! You have unlocked ${celebration}.`, 'success');
+              showToast(`Congratulations! You have unlocked ${celebration}.`, 'success');
             }
           }, 1000);
         }
@@ -887,7 +1291,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         await computeOverallStats(attempts, myTests);
         await loadBatchLeaderboard();
         setupProfileModal(attempts);
-        setupLobbyFlashcards(attempts);
       } catch(e) {
         hideLoading();
         showToast('Failed to load dashboard: ' + e.message, 'error');
@@ -896,7 +1299,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         renderCompletedTestsBottom([], 0);
         await loadBatchLeaderboard().catch(() => {});
         setupProfileModal([]);
-        setupLobbyFlashcards([]);
       }
     }
 
@@ -1108,10 +1510,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!nextTest) {
         container.innerHTML = `
           <div class="next-test-left next-asm-left">
-            <span class="next-test-icon next-asm-icon">🏆</span>
+            <span class="next-test-icon next-asm-icon">${getSvgIcon('award', 16)}</span>
             <span class="next-test-title next-asm-title">All tests in this class completed!</span>
           </div>
-          <span style="font-size:0.75rem; font-weight:800; color:${TOPSCORE_COLORS.STAR}; padding:2px 8px; border-radius:4px; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);">✓ 100%</span>
+          <span style="font-size:12px; font-weight:800; color:${TOPSCORE_COLORS.STAR}; padding:2px 8px; border-radius:4px; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);">✓ 100%</span>
         `;
         return;
       }
@@ -1120,7 +1522,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isTest = isExam(nextTest);
 
       // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play), 4D (White Forward Arrow)
-      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="var(--grade-c, #ffff00)" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="var(--grade-c, #ffff00)" stroke="#cccc00" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="var(--grade-c)" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="var(--grade-c)" stroke="rgba(var(--grade-c-rgb),0.8)" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
       const ICON_2B_RED_RETAKE  = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
       const ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
@@ -1221,17 +1623,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const subjCountEl = document.getElementById('overview-classes-count');
       if (subjCountEl) subjCountEl.textContent = rawClasses.length;
 
-      const grid = document.getElementById('classes-grid');
-      if (grid) grid.innerHTML = '';
-
       if (!rawClasses.length) {
-        if (grid) {
-          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-            <div class="empty-state__icon">📚</div>
-            <h3>No Classes assigned</h3>
-            <p>Your class doesn't have any Classes assigned yet. Please contact your teacher.</p>
-          </div>`;
-        }
         updateClassesBarUI();
         populateClassesSelectorModal([]);
         return;
@@ -1263,17 +1655,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       activeClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
       completedClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
-      const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
-
-      if (activeClasses.length === 0) {
-        if (grid) {
-          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;">
-            <div class="empty-state__icon">📚</div>
-            <h3>No Active Classes</h3>
-            <p>You don't have any active classes for your current level.</p>
-          </div>`;
-        }
-      } else {
+      if (activeClasses.length > 0) {
         activeClasses.forEach((subj, idx) => {
           const subjProgress = (progress || []).filter(p => (p.class_id || p.Class_id) === subj.id);
           const dbCompleted = subjProgress.some(p => p.is_completed || p.level_status === 'Level Completed');
@@ -1321,27 +1703,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           subj._pct = pct;
           subj._isCompleted = isCompleted;
           subj._statusText = statusText;
-
-          if (grid) {
-            const card = document.createElement('div');
-            card.className = 'class-card';
-            card.setAttribute('role', 'button');
-            card.setAttribute('tabindex', '0');
-            card.setAttribute('aria-label', `Class: ${subj.name}`);
-            card.innerHTML = `
-              <div class="class-icon">${classIcons[idx % classIcons.length]}</div>
-              <div class="class-name">${subj.name}</div>
-              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
-                <div class="text-xs text-muted mb-0">${statusText}</div>
-                <div class="score-bar-wrap" style="width: 80px;" title="${pct}%">
-                  <div class="score-bar" style="width:${pct}%; background: ${isCompleted ? 'var(--clr-success, #00c000ff)' : 'var(--clr-primary, #6366f1)'};"></div>
-                </div>
-              </div>
-            `;
-            card.addEventListener('click', () => openClassModal(subj, progress));
-            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') openClassModal(subj, progress); });
-            grid.appendChild(card);
-          }
         });
       }
 
@@ -1368,23 +1729,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         container.style.setProperty('--tier-rgb', window._tierRgb);
       }
 
-      const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
       let html = '';
       (activeClasses || []).forEach((c, idx) => {
         const isSelected = c.id === window._selectedClassId;
-        const icon = classIcons[idx % classIcons.length];
+        const strokeColor = (isSelected && window._tierColor) ? window._tierColor : '#38bdf8';
+        const iconSvg = getClassSvgIcon(c.name, 16, strokeColor);
         const pct = c._pct != null ? c._pct : 0;
         const activeStyle = (isSelected && window._tierColor)
           ? `style="border-color:${window._tierColor} !important; box-shadow:0 0 16px rgba(${window._tierRgb}, 0.45) !important;"`
           : '';
         html += `
           <div class="class-deck-box ${isSelected ? 'active' : ''}" data-cid="${c.id}" role="button" tabindex="0" ${activeStyle}>
-            <div class="class-deck-title">${icon} ${escapeHtml(c.name)}</div>
+            <div class="class-deck-title">${iconSvg} <span class="class-deck-name">${escapeHtml(c.name)}</span></div>
             <div class="class-deck-progress">${pct}%</div>
           </div>
         `;
       });
-      container.innerHTML = html || '<div class="class-deck-box active"><div class="class-deck-title">No Class Assigned</div><div class="class-deck-progress">0%</div></div>';
+      container.innerHTML = html || `<div class="class-deck-box active"><div class="class-deck-title">${getClassSvgIcon('', 16, '#94a3b8')} <span class="class-deck-name">No Class Assigned</span></div><div class="class-deck-progress">0%</div></div>`;
 
       container.querySelectorAll('.class-deck-box').forEach(box => {
         box.addEventListener('click', () => {
@@ -1410,7 +1771,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (pctEl) pctEl.textContent = `${activeClass._pct != null ? activeClass._pct : 0}%`;
       } else {
         if (nameEl) nameEl.textContent = 'No Classes Assigned';
-        if (headerClassNameEl) headerClassNameEl.textContent = 'Select Class';
+        if (headerClassNameEl) headerClassNameEl.textContent = 'TopsCore';
         if (pctEl) pctEl.textContent = '0%';
       }
     }
@@ -1418,31 +1779,39 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     function populateClassesSelectorModal(activeClasses = []) {
       const listEl = document.getElementById('classes-selector-modal-list');
       if (!listEl) return;
-      const classIcons = ['📚', '✍️', '🗣️', '🎧', '📈', '🌍', '📖', '💬'];
+      if (!window._candidateClassId) {
+        window._candidateClassId = window._selectedClassId;
+      }
+
       let html = '';
-      (activeClasses || []).forEach((c, idx) => {
-        const isSelected = c.id === window._selectedClassId;
-        const icon = classIcons[idx % classIcons.length];
+      (activeClasses || []).forEach(c => {
+        const isSelected = c.id === (window._candidateClassId || window._selectedClassId);
+        const iconSvg = getClassSvgIcon(c.name, 18, isSelected ? '#38bdf8' : '#94a3b8');
         const pct = c._pct != null ? c._pct : 0;
-        const status = c._statusText || (pct > 0 ? `${pct}%` : 'In Progress');
+        const status = c._statusText || (pct > 0 ? `${pct}% Progress` : 'In Progress');
+        const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#38bdf8';
+        const scoreText = pct === 100 ? '100% ★' : `${pct}%`;
+
         html += `
           <div class="classes-selector-item ${isSelected ? 'selected' : ''}" data-cid="${c.id}" role="button" tabindex="0">
-            <div style="display:flex; align-items:center; gap:10px;">
-              <span style="font-size:1.3rem;">${icon}</span>
-              <div>
-                <div style="font-weight:800; font-size:0.9rem; color:#fff;">${escapeHtml(c.name)}</div>
-                <div style="font-size:0.75rem; color:#94a3b8;">${escapeHtml(status)}</div>
+            <div class="classes-selector-item-left">
+              <div class="classes-selector-icon-wrap">
+                ${iconSvg}
+              </div>
+              <div class="classes-selector-item-info">
+                <div class="classes-selector-item-name">${escapeHtml(c.name)}</div>
+                <div class="classes-selector-item-status">${escapeHtml(status)}</div>
               </div>
             </div>
-            <div style="font-weight:800; font-size:0.88rem; color:var(--tier-color, #38bdf8);">${pct}%</div>
+            <div class="classes-selector-item-pct" style="color: ${scoreColor};">${scoreText}</div>
           </div>
         `;
       });
       listEl.innerHTML = html || '<div class="text-muted p-4 text-center">No active classes.</div>';
 
-      listEl.querySelectorAll('.classes-selector-item').forEach(item => {
-        item.addEventListener('click', () => {
-          const cid = item.dataset.cid;
+      const commitClassSelection = () => {
+        const cid = window._candidateClassId || window._selectedClassId;
+        if (cid) {
           window._selectedClassId = cid;
           try { localStorage.setItem('topscore_student_last_class_id', cid); } catch (_) {}
           updateClassesBarUI();
@@ -1454,12 +1823,35 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (typeof renderLeaderboard === 'function' && window._loadedStudents) {
             renderLeaderboard(window._loadedStudents, window._allAttempts, window._allTests);
           }
-          closeSelectorModal();
+        }
+        closeSelectorModal();
+      };
+
+      listEl.querySelectorAll('.classes-selector-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const cid = item.dataset.cid;
+          if (window._candidateClassId === cid) {
+            // Second click on same item confirms selection
+            commitClassSelection();
+            return;
+          }
+          window._candidateClassId = cid;
+          listEl.querySelectorAll('.classes-selector-item').forEach(el => {
+            el.classList.toggle('selected', el.dataset.cid === cid);
+          });
+        });
+        item.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            window._candidateClassId = item.dataset.cid;
+            commitClassSelection();
+          }
         });
       });
 
       // Wire modal events once
       const openSelectorModal = () => {
+        window._candidateClassId = window._selectedClassId;
         populateClassesSelectorModal(window._activeClasses);
         document.getElementById('classes-selector-modal')?.classList.remove('hidden');
         try { window.location.hash = '#select-class'; } catch (_) {}
@@ -1471,6 +1863,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
         }
       };
+
+      const confirmBtn = document.getElementById('btn-confirm-class-selection');
+      if (confirmBtn && !confirmBtn._hasClickListener) {
+        confirmBtn._hasClickListener = true;
+        confirmBtn.addEventListener('click', () => {
+          commitClassSelection();
+        });
+      }
 
       const classesBar = document.getElementById('dashboard-classes-bar');
       if (classesBar && !classesBar._hasClickListener) {
@@ -1499,7 +1899,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     }
 
-    // Phase 298: Component Selector Modal Trigger
+    // Phase 298 & Phase 492: Component Selector Modal Trigger (Pop-up 04 Golden Standard)
     window.triggerComponentChoiceModal = function(encodedData) {
       try {
         const data = JSON.parse(decodeURIComponent(encodedData));
@@ -1510,23 +1910,69 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const titleEl = document.getElementById('component-modal-title');
         const subtitleEl = document.getElementById('component-modal-subtitle');
 
-        if (badgeEl) badgeEl.textContent = data.badge || 'TOPIC ASSESSMENT';
+        if (badgeEl) badgeEl.textContent = data.badge || (data.isExam ? 'EXAM ASSESSMENT' : 'TOPIC ASSESSMENT');
         if (titleEl) titleEl.textContent = data.title || 'Topic Assessment';
-        if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Choose the module you would like to take first:';
+        if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Choose which part you want to work on:';
 
         const wordsCard = document.getElementById('component-opt-words');
         const wordsTitle = document.getElementById('component-words-title');
         const wordsBadge = document.getElementById('component-words-badge');
         const wordsStatus = document.getElementById('component-words-status');
         const wordsBestEl = document.getElementById('component-words-best');
+        const wordsIconEl = document.getElementById('component-words-icon');
+
+        const phrasesCard = document.getElementById('component-opt-phrases');
+        const phrasesTitle = document.getElementById('component-phrases-title');
+        const phrasesBadge = document.getElementById('component-phrases-badge');
+        const phrasesStatus = document.getElementById('component-phrases-status');
+        const phrasesBestEl = document.getElementById('component-phrases-best');
+        const phrasesIconEl = document.getElementById('component-phrases-icon');
+
+        const confirmBtn = document.getElementById('btn-confirm-component-selection');
+
+        if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18);
+        if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('message-square', 18);
+
+        let selectedPart = data.wordsTestId ? 'words' : (data.phrasesTestId ? 'phrases' : null);
+
+        const updateSelectionUI = () => {
+          if (wordsCard) {
+            wordsCard.classList.toggle('selected', selectedPart === 'words');
+            wordsCard.setAttribute('aria-pressed', selectedPart === 'words' ? 'true' : 'false');
+          }
+          if (phrasesCard) {
+            phrasesCard.classList.toggle('selected', selectedPart === 'phrases');
+            phrasesCard.setAttribute('aria-pressed', selectedPart === 'phrases' ? 'true' : 'false');
+          }
+          if (confirmBtn) {
+            if (selectedPart === 'words') {
+              confirmBtn.innerHTML = `START ${data.isExam ? 'WORDS EXAM' : 'WORDS DRILL'} &rarr;`;
+              confirmBtn.disabled = false;
+            } else if (selectedPart === 'phrases') {
+              confirmBtn.innerHTML = `START ${data.isExam ? 'PHRASES EXAM' : 'PHRASES DRILL'} &rarr;`;
+              confirmBtn.disabled = false;
+            } else {
+              confirmBtn.textContent = 'SELECT COMPONENT';
+              confirmBtn.disabled = true;
+            }
+          }
+        };
+
+        const executeStart = () => {
+          const targetTestId = selectedPart === 'words' ? data.wordsTestId : (selectedPart === 'phrases' ? data.phrasesTestId : null);
+          if (targetTestId) {
+            modal.classList.add('hidden');
+            location.href = `test.html?test_id=${targetTestId}`;
+          }
+        };
 
         if (data.wordsTestId) {
-          wordsCard.style.display = 'block';
-          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'Words Exam' : 'Words Task';
+          wordsCard.style.display = 'flex';
+          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'Words Exam' : 'Words Component';
           if (wordsBadge) {
             if (data.isExam) {
-              wordsBadge.textContent = data.isRetake || !data.isLiveSession
-                ? '🎙️ Spoken Mode @ 15s'
+              wordsBadge.innerHTML = data.isRetake || !data.isLiveSession
+                ? `${getSvgIcon('mic', 12)} Spoken Mode @ 15s`
                 : '120 Questions (Written Mode)';
             } else {
               wordsBadge.textContent = '40 Questions (Speaking)';
@@ -1538,31 +1984,34 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               : `Progress: ${data.wordsPasses || 0}/7 Passes`;
           }
           if (wordsBestEl) {
-            wordsBestEl.textContent = data.wordsBest
-              ? `Best: ${Number(data.wordsBest.percentage || 0).toFixed(0)}% (${Number(data.wordsBest.points_awarded ?? data.wordsBest.points ?? 0)} PTS)`
-              : 'Best: —';
+            if (data.wordsBest) {
+              const pct = Number(data.wordsBest.percentage || 0);
+              const color = getGradeColorByScore(pct);
+              const pts = Number(data.wordsBest.points_awarded ?? data.wordsBest.points ?? 0);
+              wordsBestEl.innerHTML = `Best: <span style="color: ${color}; font-weight: 800;">${pct.toFixed(0)}% (${pts} PTS)</span>`;
+            } else {
+              wordsBestEl.innerHTML = 'Best: <span style="color: #64748b;">&mdash;</span>';
+            }
           }
           wordsCard.onclick = () => {
-            modal.classList.add('hidden');
-            location.href = `test.html?test_id=${data.wordsTestId}`;
+            if (selectedPart === 'words') {
+              executeStart();
+            } else {
+              selectedPart = 'words';
+              updateSelectionUI();
+            }
           };
         } else {
           wordsCard.style.display = 'none';
         }
 
-        const phrasesCard = document.getElementById('component-opt-phrases');
-        const phrasesTitle = document.getElementById('component-phrases-title');
-        const phrasesBadge = document.getElementById('component-phrases-badge');
-        const phrasesStatus = document.getElementById('component-phrases-status');
-        const phrasesBestEl = document.getElementById('component-phrases-best');
-
         if (data.phrasesTestId) {
-          phrasesCard.style.display = 'block';
-          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'Phrases Exam' : 'Phrases Task';
+          phrasesCard.style.display = 'flex';
+          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'Phrases Exam' : 'Phrases Component';
           if (phrasesBadge) {
             if (data.isExam) {
-              phrasesBadge.textContent = data.isRetake || !data.isLiveSession
-                ? '🎙️ Spoken Mode @ 20s'
+              phrasesBadge.innerHTML = data.isRetake || !data.isLiveSession
+                ? `${getSvgIcon('mic', 12)} Spoken Mode @ 20s`
                 : '30 Questions (Selection Mode)';
             } else {
               phrasesBadge.textContent = '10 Questions (Speaking)';
@@ -1574,16 +2023,33 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               : `Progress: ${data.phrasesPasses || 0}/7 Passes`;
           }
           if (phrasesBestEl) {
-            phrasesBestEl.textContent = data.phrasesBest
-              ? `Best: ${Number(data.phrasesBest.percentage || 0).toFixed(0)}% (${Number(data.phrasesBest.points_awarded ?? data.phrasesBest.points ?? 0)} PTS)`
-              : 'Best: —';
+            if (data.phrasesBest) {
+              const pct = Number(data.phrasesBest.percentage || 0);
+              const color = getGradeColorByScore(pct);
+              const pts = Number(data.phrasesBest.points_awarded ?? data.phrasesBest.points ?? 0);
+              phrasesBestEl.innerHTML = `Best: <span style="color: ${color}; font-weight: 800;">${pct.toFixed(0)}% (${pts} PTS)</span>`;
+            } else {
+              phrasesBestEl.innerHTML = 'Best: <span style="color: #64748b;">&mdash;</span>';
+            }
           }
           phrasesCard.onclick = () => {
-            modal.classList.add('hidden');
-            location.href = `test.html?test_id=${data.phrasesTestId}`;
+            if (selectedPart === 'phrases') {
+              executeStart();
+            } else {
+              selectedPart = 'phrases';
+              updateSelectionUI();
+            }
           };
         } else {
           phrasesCard.style.display = 'none';
+        }
+
+        updateSelectionUI();
+
+        if (confirmBtn) {
+          confirmBtn.onclick = () => {
+            executeStart();
+          };
         }
 
         modal.classList.remove('hidden');
@@ -1604,625 +2070,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     };
 
-    // ── openClassModal: Opens the Level Modal for a Class ──
-    // Called when a student clicks a Class card on the dashboard.
-    async function openClassModal(subj, progress) {
-      const modal       = document.getElementById('level-modal');
-      const titleEl     = document.getElementById('level-modal-title');
-      const classEl   = document.getElementById('level-modal-class');
-      const container   = document.getElementById('levels-container');
-      if (!modal || !container) return;
-
-      // Open modal immediately with a loading state
-      titleEl.textContent  = (subj.name || 'Class') + ' Tests';
-      classEl.textContent = 'Select an available test below.';
-      container.innerHTML  = `<div style="padding:2rem;text-align:center;color:var(--clr-text-3);">
-        <div class="spinner" style="margin:0 auto 1rem;"></div>
-        <p>Loading Tests…</p></div>`;
-      modal.classList.remove('hidden');
-      try { window.location.hash = '#levels-' + subj.id; } catch (_) {}
-
-      try {
-        const Tests = await fetchTestsForStudentClass(
-          session.program_id, subj.id, session.institution_id, session.level_id
-        );
-
-        if (!Tests || Tests.length === 0) {
-          container.innerHTML = `<div style="padding:2.5rem 1.5rem;text-align:center;color:var(--clr-text-3);">
-            <div style="font-size:2.5rem;margin-bottom:0.75rem;">📈</div>
-            <p style="font-size:0.9rem;">No published Tests available in this Class yet.</p></div>`;
-          return;
-        }
-
-        // Group Tests by level (level_id or level name)
-        const levelMap = new Map();
-        for (const Test of Tests) {
-          const lvlId   = Test.level_id || '_default';
-          const lvlNum  = Test.levels?.level_number ?? null;
-          // Use toOrdinalLevel for proper "1st Level", "2nd Level", etc.
-          // Fall back to existing name, then derive from level_number, then 'Unleveled'
-          const lvlName = lvlNum != null
-            ? toOrdinalLevel(lvlNum)
-            : (Test.levels?.name || Test.level_name || (lvlId === '_default' ? 'Unleveled' : `Level ${lvlId}`));
-          const lvlOrder = Test.levels?.level_number ?? Test.level_order ?? 99;
-          if (!levelMap.has(lvlId)) levelMap.set(lvlId, { name: lvlName, order: lvlOrder, Tests: [] });
-          levelMap.get(lvlId).Tests.push(Test);
-        }
-
-        // Sort levels by order
-        const sortedLevels = [...levelMap.values()].sort((a, b) => a.order - b.order);
-
-        // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
-        const testSettings = (typeof fetchClassTestSettings === 'function')
-          ? await fetchClassTestSettings(subj.id).catch(() => ({ taskRepetitions: 7, taskMinScore: 50, examMinScore: 60 }))
-          : { taskRepetitions: 7, taskMinScore: 50, examMinScore: 60 };
-        const targetReps = Math.max(7, Number(testSettings?.taskRepetitions) || 7);
-        const taskMinScore = Number(testSettings?.taskMinScore) || 50;
-
-        // Build attempts quick-lookup for this student
-        const attemptsRaw = await fetchAllStudentAttempts(session.student_id).catch(() => []);
-        const testsMap = Object.fromEntries(Tests.map(t => [t.id, t]));
-        const bestByTest = {};
-        const inProgByTest = {};
-        const passCountByTest = {};
-        for (const att of attemptsRaw) {
-          const eid = att.test_id || att.Test_id;
-          if (!eid) continue;
-          const pct = parseFloat(att.effective_score ?? att.percentage ?? 0);
-          const st  = (att.status || '').toLowerCase();
-          if (st === 'in_progress') { inProgByTest[eid] = att; continue; }
-          if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated') {
-            const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-            if (att.is_forgiven) {
-              passCountByTest[eid] = Math.max(passCountByTest[eid] || 0, targetReps);
-            } else {
-              const tMin = Number(testsMap[eid]?.minimum_required_score) || Number(testsMap[eid]?.payload?.min_score) || taskMinScore;
-              if (pct >= tMin || (isRem && pct >= 60)) {
-                passCountByTest[eid] = (passCountByTest[eid] || 0) + 1;
-              }
-            }
-          }
-          const existingBestPct = bestByTest[eid] ? parseFloat(bestByTest[eid].effective_score ?? bestByTest[eid].percentage ?? 0) : -1;
-          if (!bestByTest[eid] || pct > existingBestPct || (pct === existingBestPct && new Date(att.submitted_at || 0) > new Date(bestByTest[eid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[eid])) {
-            bestByTest[eid] = att;
-          }
-        }
-
-        // Render
-        let html = '';
-        for (const lvl of sortedLevels) {
-          let lvlHtml = '';
-
-          const hasVocabComponents = lvl.Tests.some(t =>
-            t.payload?.category === 'words' || t.payload?.category === 'phrases' ||
-            /WORDS|PHRASE/i.test(t.shell_code || '') ||
-            (t.title || '').toLowerCase().includes('word') ||
-            (t.title || '').toLowerCase().includes('phrase')
-          );
-
-          if (hasVocabComponents) {
-            // Phase 298: Virtual Unified Task & Exam Presentation
-            const groups = [];
-            const groupMap = new Map();
-
-            for (const t of lvl.Tests) {
-              const isEx = isExam(t);
-              // Robust theme/topic extraction with multi-source fallbacks
-              let _tc = t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : null);
-              if (!_tc && t.title) {
-                const _tm = t.title.match(/Theme\s+([A-D0-9]+)/i) || t.title.match(/Vocabulary\s+C([A-D0-9]+)/i);
-                if (_tm) _tc = _tm[1];
-              }
-              const tc = (_tc || 'A').toUpperCase();
-
-              let topCode = t.payload?.topic_code != null ? String(t.payload.topic_code) : null;
-              if (!topCode && t.shell_code) {
-                const _tm2 = t.shell_code.match(/^[0-9]+([A-D][0-9]+)/i);
-                if (_tm2) topCode = _tm2[1].toUpperCase();
-              }
-              if (!topCode && t.title) {
-                const _tm3 = t.title.match(/Vocabulary\s+([A-D][0-9]+)/i);
-                if (_tm3) topCode = _tm3[1].toUpperCase();
-              }
-              const isPhrase = t.payload?.category === 'phrases' || /PHRASE/i.test(t.shell_code || '') || (t.title || '').toLowerCase().includes('phrase');
-
-              const key = isEx ? `exam_${tc}` : `task_${tc}_${topCode || '0'}`;
-
-              if (!groupMap.has(key)) {
-                const grp = {
-                  key,
-                  isExam: isEx,
-                  themeCode: tc,
-                  topicCode: topCode,
-                  themeName: t.payload?.theme_name || t.theme || null,
-                  topicName: t.payload?.topic_name || t.topic || null,
-                  displayOrder: t.display_order || 0,
-                  wordsTest: null,
-                  phrasesTest: null
-                };
-                groupMap.set(key, grp);
-                groups.push(grp);
-              }
-
-              const grp = groupMap.get(key);
-              if (isPhrase) {
-                grp.phrasesTest = t;
-              } else {
-                grp.wordsTest = t;
-              }
-              if (t.display_order && (!grp.displayOrder || t.display_order < grp.displayOrder)) {
-                grp.displayOrder = t.display_order;
-              }
-              if (!grp.topicName && (t.payload?.topic_name || t.topic)) {
-                grp.topicName = t.payload?.topic_name || t.topic;
-              }
-              if (!grp.themeName && (t.payload?.theme_name || t.theme)) {
-                grp.themeName = t.payload?.theme_name || t.theme;
-              }
-            }
-
-            groups.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-
-            for (const grp of groups) {
-              const wordsTest = grp.wordsTest;
-              const phrasesTest = grp.phrasesTest;
-              const hasPhrases = Boolean(phrasesTest);
-              if (!wordsTest && !phrasesTest) continue;
-
-              const primaryTest = wordsTest || phrasesTest;
-
-              const wBest = wordsTest ? bestByTest[wordsTest.id] : null;
-              const pBest = phrasesTest ? bestByTest[phrasesTest.id] : null;
-
-              const wInProg = wordsTest ? inProgByTest[wordsTest.id] : null;
-              const pInProg = phrasesTest ? inProgByTest[phrasesTest.id] : null;
-              const activeInProg = wInProg || pInProg;
-
-              const wPasses = wordsTest ? (passCountByTest[wordsTest.id] || 0) : 0;
-              const pPasses = phrasesTest ? (passCountByTest[phrasesTest.id] || 0) : 0;
-
-              const topicLevel = computeTopicPassLevel(wPasses, pPasses, hasPhrases);
-              const taskVisual = !grp.isExam ? getTaskProgressVisual(topicLevel) : null;
-
-              const wordsMax = grp.isExam ? 120 : (hasPhrases ? 40 : 10);
-              const phrasesMax = grp.isExam ? 30 : 10;
-              const unifiedScore = computeUnifiedScore({
-                wordsBest: wBest,
-                phrasesBest: pBest,
-                wordsMax,
-                phrasesMax,
-                hasPhrases
-              });
-
-              const liveSess = (wordsTest?.payload?.test_session) || (phrasesTest?.payload?.test_session);
-              const isRemedialSession = liveSess?.is_remedial === true ||
-                (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
-              const isStudentRemedialUnlocked = Boolean(
-                (wBest && (wBest.is_remedial_unlocked || wBest.is_remedial)) ||
-                (pBest && (pBest.is_remedial_unlocked || pBest.is_remedial))
-              );
-
-              let grpPrereqMet = true;
-              let grpPrereqTitle = '';
-
-              // 1. Inter-Theme Gating: Theme B, C, D requires all prior theme's exams passed (>= 70%)
-              const themeSeq = ['A', 'B', 'C', 'D'];
-              const curThemeIdx = themeSeq.indexOf(grp.themeCode);
-              if (curThemeIdx > 0 && !isRemedialSession && !isStudentRemedialUnlocked) {
-                const priorTheme = themeSeq[curThemeIdx - 1];
-                const priorExams = lvl.Tests.filter(t => isExam(t) && String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === priorTheme);
-                for (const pe of priorExams) {
-                  const peBest = bestByTest[pe.id];
-                  const peRawPct = peBest ? parseFloat(peBest.effective_score ?? peBest.percentage ?? 0) : null;
-                  const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
-                  const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
-                  const peMin = Number(pe.minimum_required_score) || Number(pe.pass_threshold) || Number(pe.payload?.min_score) || 60;
-                  const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
-                  if (!pePassed) {
-                    grpPrereqMet = false;
-                    grpPrereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
-                    break;
-                  }
-                }
-              }
-
-              // 2. Exam Gating: Theme Exam requires all tasks in this theme to reach target passes
-              if (grpPrereqMet && grp.isExam && !isRemedialSession && !isStudentRemedialUnlocked) {
-                const siblingTasks = lvl.Tests.filter(t => !isExam(t) && String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === grp.themeCode);
-                for (const st of siblingTasks) {
-                  const pCount = passCountByTest[st.id] || 0;
-                  if (pCount < targetReps) {
-                    grpPrereqMet = false;
-                    grpPrereqTitle = `All Theme ${grp.themeCode} Tasks (${targetReps}/${targetReps} Passes Required)`;
-                    break;
-                  }
-                }
-              }
-
-              // 3. Linear Topic Gating: Topic K requires Topic K-1 to reach target passes
-              if (grpPrereqMet && !grp.isExam && !isRemedialSession && !isStudentRemedialUnlocked) {
-                const curTopNum = parseInt(String(grp.topicCode || '').replace(/^[A-Za-z]+/, ''), 10);
-                if (curTopNum > 1) {
-                  const priorTopicNum = curTopNum - 1;
-                  const priorTasks = lvl.Tests.filter(t => {
-                    if (isExam(t)) return false;
-                    const tTheme = String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-                    if (tTheme !== grp.themeCode) return false;
-                    const tTopNum = parseInt(String(t.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
-                    return tTopNum === priorTopicNum;
-                  });
-                  for (const pt of priorTasks) {
-                    const pCount = passCountByTest[pt.id] || 0;
-                    if (pCount < targetReps) {
-                      grpPrereqMet = false;
-                      const remaining = targetReps - pCount;
-                      grpPrereqTitle = `Topic ${grp.themeCode}${priorTopicNum} (${pCount}/${targetReps} passes — ${remaining} more needed)`;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              const cardOpacity = grpPrereqMet ? '1' : '0.5';
-              const cardFilter = grpPrereqMet ? 'none' : 'grayscale(100%)';
-
-              const fallbackTopicName = (primaryTest.title || '')
-                .replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '')
-                .replace(/3rd Vocabulary\s+[A-D][0-9]*\s*(Words|Phrases)?\s*(Task|Exam)?\s*-\s*/i, '')
-                .replace(/2nd Vocabulary\s+[A-D][0-9]*\s*(Words)?\s*(Task|Exam)?\s*-\s*/i, '')
-                .replace(/Vocabulary Mastery /i, '')
-                .trim();
-
-              const resolvedTopicTitle = grp.topicName || fallbackTopicName || `Topic ${grp.topicCode || '1'}`;
-              const resolvedThemeTitle = grp.themeName || fallbackTopicName || `Theme ${grp.themeCode}`;
-
-              const displayTitle = grp.isExam
-                ? `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`
-                : (grp.topicCode
-                    ? `Theme ${grp.themeCode} • Topic ${grp.topicCode}: ${resolvedTopicTitle}`
-                    : `Theme ${grp.themeCode}: ${resolvedTopicTitle}`);
-
-              const metaItems = `${unifiedScore.maxPoints} Items • ${unifiedScore.maxPoints} PTS`;
-
-              let statusBadgeHtml = '';
-              let actionBtnHtml = '';
-
-              if (!grpPrereqMet) {
-                statusBadgeHtml = `<span style="background:rgba(245,158,11,0.12);color:#fbbf24;border:1px solid rgba(245,158,11,0.3);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
-                actionBtnHtml = `<div style="text-align:right;max-width:240px;line-height:1.3;">
-                  <span style="font-size:0.72rem;color:#cbd5e1;">Needs <b>${escapeHtml(grpPrereqTitle)}</b></span>
-                </div>`;
-              } else if (activeInProg) {
-                statusBadgeHtml = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">⏳ In Progress</span>`;
-                actionBtnHtml = `<button onclick="location.href='test.html?attempt_id=${activeInProg.id}&test_id=${activeInProg.test_id || ''}'"
-                                  style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←</button>`;
-              } else {
-                if (grp.isExam) {
-                  if (unifiedScore.isAttempted) {
-                    statusBadgeHtml = `<span style="background:${unifiedScore.gradeColor}18;color:${unifiedScore.gradeColor};border:1px solid ${unifiedScore.gradeColor}44;padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:800;">${unifiedScore.percentage}% (${unifiedScore.totalPoints}/${unifiedScore.maxPoints}p)</span>`;
-                  } else {
-                    statusBadgeHtml = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:3px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
-                  }
-
-                  const isEligibleForSelfPaced = Boolean(
-                    (wBest && (Number(wBest.effective_score ?? wBest.percentage ?? 0) >= 60 || wBest.is_forgiven)) ||
-                    (pBest && (Number(pBest.effective_score ?? pBest.percentage ?? 0) >= 60 || pBest.is_forgiven)) ||
-                    unifiedScore.percentage >= 60
-                  );
-
-                  const isLiveSessActive = liveSess?.status === 'UNLOCKED' &&
-                    (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date()) &&
-                    (!Array.isArray(liveSess.allowed_student_ids) || liveSess.allowed_student_ids.length === 0 || liveSess.allowed_student_ids.includes(session?.student_id || session?.id));
-
-                  const isExamLocked = !isLiveSessActive && !isEligibleForSelfPaced;
-
-                  if (isExamLocked) {
-                    actionBtnHtml = `<div style="text-align:right;"><span style="font-size:0.75rem;color:#94a3b8;font-weight:700;padding:5px 10px;border-radius:6px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);">🔒 Session Locked</span></div>`;
-                  } else if (hasPhrases) {
-                    const modalData = encodeURIComponent(JSON.stringify({
-                      badge: `THEME ${grp.themeCode} ${isEligibleForSelfPaced && !isLiveSessActive ? 'SELF-PACED EXAM DRILL' : 'OFFICIAL EXAM'}`,
-                      title: `Theme ${grp.themeCode} Exam — ${resolvedThemeTitle}`,
-                      subtitle: 'Choose the module you would like to take first:',
-                      wordsTestId: wordsTest?.id,
-                      phrasesTestId: phrasesTest?.id,
-                      wordsBest: wBest,
-                      phrasesBest: pBest,
-                      isExam: true,
-                      isRetake: isEligibleForSelfPaced,
-                      isLiveSession: isLiveSessActive
-                    }));
-                    const btnLabel = (unifiedScore.percentage === 100)
-                      ? '🎯 Retake Drill'
-                      : (wBest?.is_forgiven || pBest?.is_forgiven)
-                        ? '⚡ Retake Exam'
-                        : (unifiedScore.isAttempted ? '🔁 Retake Exam' : 'Start Exam 🚀');
-                    const btnColor = (unifiedScore.percentage === 100 || !unifiedScore.isAttempted)
-                      ? 'linear-gradient(135deg, var(--grade-a, #00c000) 0%, #009900 100%)'
-                      : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
-                    actionBtnHtml = `<button type="button" onclick="window.triggerComponentChoiceModal('${modalData}')"
-                                      style="background:${btnColor};color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);">
-                                      ${btnLabel}
-                                    </button>`;
-                  } else {
-                    const btnLabel = (unifiedScore.percentage === 100)
-                      ? '🎯 Retake Drill'
-                      : (wBest?.is_forgiven)
-                        ? '⚡ Retake Exam'
-                        : (unifiedScore.isAttempted ? '🔁 Retake Exam' : 'Start Exam 🚀');
-                    const btnColor = (unifiedScore.percentage === 100 || !unifiedScore.isAttempted)
-                      ? 'linear-gradient(135deg, var(--grade-a, #00c000) 0%, #009900 100%)'
-                      : 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
-                    actionBtnHtml = `<button onclick="location.href='test.html?test_id=${wordsTest.id}'"
-                                      style="background:${btnColor};color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.35);">
-                                      ${btnLabel}
-                                    </button>`;
-                  }
-                } else {
-                  // Task
-                  const drillLabel = topicLevel >= 7 ? '7×7 Mastery Drill' : (topicLevel > 0 ? 'Continue Drill' : 'Start Task 🚀');
-
-                  if (hasPhrases) {
-                    const modalData = encodeURIComponent(JSON.stringify({
-                      badge: `THEME ${grp.themeCode} • TOPIC ${grp.topicCode} DRILL`,
-                      title: `Topic ${grp.topicCode}: ${resolvedTopicTitle}`,
-                      subtitle: 'Choose the module you would like to take first:',
-                      wordsTestId: wordsTest?.id,
-                      phrasesTestId: phrasesTest?.id,
-                      wordsBest: wBest,
-                      phrasesBest: pBest,
-                      wordsPasses: wPasses,
-                      phrasesPasses: pPasses,
-                      isExam: false
-                    }));
-                    actionBtnHtml = `<button type="button" onclick="window.triggerComponentChoiceModal('${modalData}')"
-                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
-                                      ${drillLabel}
-                                    </button>`;
-                  } else {
-                    actionBtnHtml = `<button onclick="location.href='test.html?test_id=${wordsTest.id}'"
-                                      style="background:linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);color:#fff;border:none;padding:7px 15px;border-radius:7px;font-size:0.78rem;font-weight:800;cursor:pointer;box-shadow:0 2px 8px rgba(37,99,235,0.35);">
-                                      ${drillLabel}
-                                    </button>`;
-                  }
-                }
-              }
-
-              const taskProgressBadge = taskVisual
-                ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
-                : '';
-
-              const gradeChip = (grp.isExam && unifiedScore.isAttempted)
-                ? `<span style="background:${unifiedScore.gradeColor}22;color:${unifiedScore.gradeColor};border:1px solid ${unifiedScore.gradeColor}44;padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(unifiedScore.grade)}</span>`
-                : '';
-
-              lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter}; display:flex; justify-content:space-between; align-items:center; padding:10px 14px; margin-bottom:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
-                <div class="asm-modal-info" style="flex:1;">
-                  <div style="font-size:0.88rem;font-weight:700;color:var(--clr-text-1);margin-bottom:3px;">
-                    ${escapeHtml(displayTitle)}
-                  </div>
-                  <div style="font-size:0.72rem;color:var(--clr-text-3);display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-                    <span>⚡ ${metaItems}</span>
-                    ${hasPhrases ? `
-                      <span>📝 Words: <b>${grp.isExam ? (wBest ? `${Number(wBest.percentage).toFixed(0)}%` : '—') : `${wPasses}/7`}</b></span>
-                      <span>💬 Phrases: <b>${grp.isExam ? (pBest ? `${Number(pBest.percentage).toFixed(0)}%` : '—') : `${pPasses}/7`}</b></span>
-                      ${unifiedScore.isAttempted ? `<span style="color:#f8fafc;">🏆 Total: <b>${unifiedScore.totalPoints}/${unifiedScore.maxPoints} PTS (${unifiedScore.percentage}%)</b></span>` : ''}
-                    ` : ''}
-                  </div>
-                </div>
-                <div class="asm-modal-actions" style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-                  ${!grp.isExam ? taskProgressBadge : gradeChip}
-                  ${statusBadgeHtml}
-                  ${actionBtnHtml}
-                </div>
-              </div>`;
-            }
-          } else {
-            // Sort tests: last-attempted (most recent submitted_at / started_at) floats to top
-            const sortedTests = [...lvl.Tests].sort((a, b) => {
-              const aAtt = bestByTest[a.id] || inProgByTest[a.id];
-              const bAtt = bestByTest[b.id] || inProgByTest[b.id];
-              const aTime = aAtt ? new Date(aAtt.submitted_at || aAtt.started_at || 0).getTime() : 0;
-              const bTime = bAtt ? new Date(bAtt.submitted_at || bAtt.started_at || 0).getTime() : 0;
-              if (aTime !== bTime) return bTime - aTime;
-              return 0;
-            });
-
-            for (const Test of sortedTests) {
-              const best      = bestByTest[Test.id];
-              const inProg    = inProgByTest[Test.id];
-              let hasThemeRemedial = false;
-              if (isExam(Test)) {
-                const rawTheme = Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
-                const tc = (rawTheme || 'A').toUpperCase();
-                const siblingExams = sortedTests.filter(t => isExam(t) && ((t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A')).toUpperCase() === tc));
-                hasThemeRemedial = siblingExams.some(sTest => {
-                  const sBest = bestByTest[sTest.id];
-                  return Boolean(sBest && (sBest.is_remedial_unlocked || sBest.is_remedial));
-                });
-              }
-              const isRem       = hasThemeRemedial || Boolean(best && (best.is_remedial_unlocked || best.is_remedial));
-              const rawBestPct  = best ? parseFloat(best.effective_score ?? best.percentage ?? 0) : null;
-              const bestPct     = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
-              const testMinReq  = Number(Test.minimum_required_score) || Number(Test.pass_threshold) || Number(Test.payload?.min_score) || (isExam(Test) ? 60 : 70);
-              const passed      = bestPct !== null && (bestPct >= testMinReq || (isRem && bestPct >= 60));
-              const grade       = bestPct !== null ? getGrade(bestPct) : null;
-              const gradeColor  = grade ? getGradeColorByScore(bestPct) : null;
-
-              // Prerequisite Gating Logic
-              let prereqMet = true;
-              let prereqTitle = '';
-              const prereqId = Test.prerequisite_test_id || Test.prerequisite_id;
-              if (prereqId) {
-                 const prereqBest = bestByTest[prereqId];
-                 const prereqPct = prereqBest ? parseFloat(prereqBest.effective_score ?? prereqBest.percentage ?? 0) : null;
-                 const pObj = Tests.find(a => a.id === prereqId);
-                 const isPExam = pObj ? isExam(pObj) : false;
-                 const pMinScore = pObj ? (Number(pObj.minimum_required_score) || Number(pObj.pass_threshold) || Number(pObj.payload?.min_score) || (isPExam ? 60 : 70)) : (isPExam ? 60 : 70);
-                 const isPrereqRem = Boolean(prereqBest && (prereqBest.is_remedial_unlocked || prereqBest.is_remedial));
-                 prereqMet = Boolean(prereqBest?.is_forgiven) || (prereqPct !== null && (prereqPct >= pMinScore || (isPrereqRem && prereqPct >= 60)));
-                 prereqTitle = pObj ? (pObj.display_name || pObj.title || pObj.name || 'Prerequisite') : 'Prerequisite Test';
-              }
-
-              const liveSess = (Test.payload?.test_session);
-              const isRemedialSession = liveSess?.is_remedial === true ||
-                (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id));
-              const isStudentRemedialUnlocked = Boolean(bestByTest[Test.id]?.is_remedial_unlocked || bestByTest[Test.id]?.is_remedial);
-
-              if (isExam(Test) && !isRemedialSession && !isStudentRemedialUnlocked) {
-                const currentThemeCode = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-                if (currentThemeCode) {
-                  const siblingTasks = sortedTests.filter(a =>
-                    !isExam(a) &&
-                    String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase() === currentThemeCode
-                  );
-                  for (const st of siblingTasks) {
-                    const pCount = passCountByTest[st.id] || 0;
-                    if (pCount < targetReps) {
-                      prereqMet = false;
-                      prereqTitle = `All Theme ${currentThemeCode} Tasks (${targetReps}/${targetReps} Passes Required)`;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              if (prereqMet && !isExam(Test) && !isRemedialSession && !isStudentRemedialUnlocked) {
-                const currentThemeCode = String(Test.payload?.theme_code || (Test.shell_code ? Test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-                const curTopNum = parseInt(String(Test.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
-                if (curTopNum > 1 && currentThemeCode) {
-                  const priorTopicNum = curTopNum - 1;
-                  const priorTasks = sortedTests.filter(a => {
-                    if (isExam(a)) return false;
-                    const aTheme = String(a.payload?.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-                    if (aTheme !== currentThemeCode) return false;
-                    const aTopNum = parseInt(String(a.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
-                    return aTopNum === priorTopicNum;
-                  });
-                  for (const pt of priorTasks) {
-                    const pCount = passCountByTest[pt.id] || 0;
-                    if (pCount < targetReps) {
-                      prereqMet = false;
-                      const remaining = targetReps - pCount;
-                      prereqTitle = `Topic ${currentThemeCode}${priorTopicNum} (${pCount}/${targetReps} passes — ${remaining} more needed)`;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              if (isRemedialSession || isStudentRemedialUnlocked) {
-                prereqMet = true;
-              }
-
-              let statusBadge = '';
-              let actionBtn   = '';
-              let cardOpacity = '1';
-              let cardFilter = 'none';
-
-              if (!prereqMet) {
-                cardOpacity = '0.5';
-                cardFilter = 'grayscale(100%)';
-                statusBadge = `<span style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">🔒 Locked</span>`;
-                actionBtn = `<div style="text-align:right;">
-                               <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${prereqTitle}</b><br>to unlock this test.</span>
-                             </div>`;
-              } else if (inProg) {
-                statusBadge = `<span style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.35);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">&#9203; In Progress</span>`;
-                actionBtn   = `<button onclick="location.href='test.html?attempt_id=${inProg.id}&test_id=${inProg.test_id || ''}'"
-                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Resume ←</button>`;
-              } else if (best) {
-                const isForgivenBest = Boolean(best.is_forgiven);
-                const isManualBest = Boolean(best.is_manual_override || (best.forgiven_reason && best.forgiven_reason.startsWith('MANUAL_OVERRIDE')));
-                const isRemedialBest = Boolean(best.is_remedial_unlocked || best.is_remedial);
-
-                if (isForgivenBest && Number(bestPct || 0) === 0) {
-                  statusBadge = `<span style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.35);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                                  0%<sup class="asm-forgiven-sup" style="color:#f59e0b;font-weight:900;font-size:0.65em;" title="Dimaafkan oleh Tutor — Tes telah dilewati">ᶠ</sup> FORGIVEN</span>`;
-                  actionBtn = `<div style="display:flex; align-items:center; gap:6px;">
-                                 <button onclick="location.href='test.html?test_id=${Test.id}'"
-                                  class="btn btn-practice"
-                                  style="background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.4);padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">📖 Practice</button>
-                               </div>`;
-                } else {
-                  const badgeBg = passed ? `rgba(${TOPSCORE_COLORS.STAR_RGB},0.15)` : `rgba(${TOPSCORE_COLORS.E_RGB},0.12)`;
-                  const badgeClr= passed ? (gradeColor || TOPSCORE_COLORS.STAR) : TOPSCORE_COLORS.E;
-                  const supHtml = isForgivenBest ? '<sup class="asm-forgiven-sup" style="color:#f59e0b;font-weight:900;font-size:0.65em;" title="Dimaafkan oleh Tutor">ᶠ</sup>'
-                    : (isManualBest ? '<sup class="asm-manual-sup" style="color:#38bdf8;font-weight:900;font-size:0.65em;" title="Manual Score">ᴹ</sup>'
-                    : (isRemedialBest ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''));
-
-                  statusBadge = `<span style="background:${badgeBg};color:${badgeClr};border:1px solid ${badgeClr}44;padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">
-                                  ${passed ? '&#10003; Passed' : '&#10007; Failed'} ${bestPct.toFixed(0)}%${supHtml}</span>`;
-
-                  actionBtn = `<div style="display:flex; align-items:center;">
-                                 <button onclick="location.href='result.html?attempt_id=${best.id}'"
-                                  style="background:rgba(255,255,255,0.06);color:var(--clr-text-2);border:1px solid var(--clr-border);padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">View Result</button>
-                               </div>`;
-                }
-              } else {
-                statusBadge = `<span style="background:rgba(99,102,241,0.12);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);padding:2px 8px;border-radius:4px;font-size:0.68rem;font-weight:700;text-transform:uppercase;">Not Started</span>`;
-                actionBtn   = `<button onclick="location.href='test.html?test_id=${Test.id}'"
-                                style="background:var(--clr-accent-1);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:0.78rem;font-weight:700;cursor:pointer;">Start Test ←</button>`;
-              }
-
-              const isTaskItem = !isExam(Test);
-              const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[Test.id] || 0, targetReps) : null;
-              const taskProgressBadge = taskVisual
-                ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
-                : '';
-
-              const gradeChip = !isTaskItem && grade ? `<span style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;padding:2px 7px;border-radius:4px;font-size:0.72rem;font-weight:800;">${getGradeSymbol(grade)}</span>` : '';
-
-              lvlHtml += `<div class="asm-modal-row" style="opacity:${cardOpacity}; filter:${cardFilter}; display:flex; justify-content:space-between; align-items:center; padding:10px 14px; margin-bottom:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px;">
-                <div class="asm-modal-info">
-                  <div style="font-size:0.85rem;font-weight:600;color:var(--clr-text-1);white-space:normal;line-height:1.3;" title="${Test.Test_title || Test.title || 'Test'}">
-                    ${(Test.Test_title || Test.title || 'Test').replace(/^.*?-\s*\d+[a-z]{2}\s+Level\s*-\s*/i, '').replace(/Vocabulary Mastery /i, '')}
-                  </div>
-                  <div class="asm-modal-meta-group">
-                    ${formatAnswerType(Test.answer_type) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">${formatAnswerType(Test.answer_type)}</div>` : ''}
-                    ${(Test.time_limit_minutes && Number(Test.time_limit_minutes) > 0) ? `<div style="font-size:0.72rem;color:var(--clr-text-3);">⏱ ${Test.time_limit_minutes} min</div>` : ''}
-                  </div>
-                </div>
-                <div class="asm-modal-actions">
-                  ${isTaskItem ? taskProgressBadge : gradeChip}
-                  ${statusBadge}
-                  ${actionBtn}
-                </div>
-              </div>`;
-            }
-          }
-          if (lvlHtml) {
-            html += `<div style="margin-bottom:1.5rem;">
-              <div style="font-size:0.75rem;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;
-                          color:var(--clr-text-3);padding:0.4rem 0;border-bottom:1px solid var(--clr-border);
-                          margin-bottom:0.75rem;">${lvl.name}</div>
-              ${lvlHtml}
-            </div>`;
-          }
-        }
-        if (!html) {
-          html = `<div style="padding:2.5rem 1.5rem;text-align:center;color:var(--clr-text-3);"><p>More tests will unlock as you progress!</p></div>`;
-        }
-        container.innerHTML = html;
-
-      } catch(err) {
-        container.innerHTML = `<div style="padding:2rem;text-align:center;color:var(--clr-text-3);">
-          <div style="font-size:1.5rem;margin-bottom:0.5rem;">⚠️</div>
-          <p style="font-size:0.85rem;">Could not load Tests: ${err.message}</p></div>`;
-      }
-    }
-
-    function formatAnswerType(atype) {
-      if (!atype) return '';  // T-1: hide label when type is unknown — never show "Written Test"
-      if (atype === 'speech_to_text' || atype === 'spoken') return 'Speaking Test';
-      if (atype === 'written') return 'Written Test';
-      if (atype === 'multiple_choice' || atype === 'selection') return 'Selection';
-      if (atype === 'dropdown') return 'Dropdown';
-      return atype.replace('_', ' ');
-    }
-
-
-
-    // --- V1: Render Assigned Tests Section ---
+// --- V1: Render Assigned Tests Section ---
     // (Existing tests logic)
     // --- Render Completed Tests Section (Bottom of Dashboard) ---
     // --- Profile Modal & History ---
@@ -2284,10 +2132,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       for (const asm of tests) {
         const bestAtt = bestByTest[asm.id];
         const inProgAtt = inProgressByTest[asm.id];
-        const bestPct = bestAtt ? parseFloat(bestAtt.percentage || 0) : null;
-        const grade = bestPct !== null ? getGrade(bestPct) : null;
-        const gradeColor = bestPct !== null ? getGradeColorByScore(bestPct) : 'var(--clr-text-1)';
-        const passed = bestPct !== null && bestPct >= (asm.pass_threshold || 60);
+        const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
+        const isForgiven = Boolean(bestAtt?.is_forgiven);
+        const rawBestPct = bestAtt ? parseFloat(bestAtt.percentage || 0) : null;
+        const bestPct = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
+        const grade = bestPct !== null ? (isForgiven ? 'F' : (isRem ? 'R' : getGrade(bestPct))) : null;
+        const gradeColor = bestPct !== null ? (isForgiven ? TOPSCORE_COLORS.E : (isRem ? TOPSCORE_COLORS.C : getGradeColorByScore(bestPct))) : 'var(--clr-text-1)';
+        const passed = bestPct !== null && (bestPct >= (asm.pass_threshold || 60) || isForgiven || (isRem && bestPct >= 60));
 
         const isTaskItem = !isExam(asm);
         const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[asm.id] || 0) : null;
@@ -2478,9 +2329,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const isLocked = !prereqMet;
 
         if (isLocked) {
-          statusBadge = `<span class="badge" style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);">🔒 Locked</span>`;
+          statusBadge = `<span class="badge" style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span>`;
           actionBtn = `<div style="text-align:right;">
-                         <span style="font-size:0.7rem;color:var(--clr-text-3);">Complete <b>${escapeHtml(prereqTitle)}</b><br>to unlock.</span>
+                         <span style="font-size:12px;color:var(--clr-text-3);">Complete <b>${escapeHtml(prereqTitle)}</b><br>to unlock.</span>
                        </div>`;
         } else if (!inWindow) {
           statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);">Not Yet Available</span>`;
@@ -2521,13 +2372,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           if (canRetake) {
             const retakeBtnLabel = (bestAttPct === 100)
-              ? '🎯 Retake Drill'
+              ? 'Retake Drill'
               : (bestAtt?.is_forgiven)
-                ? '⚡ Retake Exam'
-                : '🔁 Retake';
+                ? 'Retake Exam'
+                : 'Retake';
             actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;background:#0284c7;border-color:#0284c7;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
           } else if (isAsmTest && !passed && !isSessionUnlocked) {
-            actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:0.7rem;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);">🔒 Locked</span></div>`;
+            actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:12px;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span></div>`;
           } else {
             actionBtn = `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
           }
@@ -2568,27 +2419,27 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           ">
             <div style="flex:1;min-width:200px;">
               <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.4rem;">
-                <span style="font-weight:700;font-size:0.95rem;color:var(--clr-text-1);">${escapeHtml(asmTitle)}</span>
-                ${className ? `<span class="badge badge-neutral" style="font-size:0.7rem;">${escapeHtml(className)}</span>` : ''}
-                <span class="badge" style="font-size:0.68rem;background:rgba(255,255,255,0.06);color:var(--clr-text-3);border:1px solid var(--clr-border);">${escapeHtml(asmType)}</span>
+                <span style="font-weight:700;font-size:16px;color:var(--clr-text-1);">${escapeHtml(asmTitle)}</span>
+                ${className ? `<span class="badge badge-neutral" style="font-size:12px;">${escapeHtml(className)}</span>` : ''}
+                <span class="badge" style="font-size:12px;background:rgba(255,255,255,0.06);color:var(--clr-text-3);border:1px solid var(--clr-border);">${escapeHtml(asmType)}</span>
               </div>
               <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                 ${isTaskItem && taskProgressBadge ? taskProgressBadge : ''}
-                <span style="font-size:0.78rem;color:var(--clr-text-3);">&#9201; ${duration} min</span>
-                ${qCount !== '—' ? `<span style="font-size:0.78rem;color:var(--clr-text-3);">&#128203; ${qCount} Questions</span>` : ''}
+                <span style="font-size:12px;color:var(--clr-text-3);">&#9201; ${duration} min</span>
+                ${qCount !== '—' ? `<span style="font-size:12px;color:var(--clr-text-3);">&#128203; ${qCount} Questions</span>` : ''}
                 ${statusBadge}
               </div>
-              ${!prereqMet && prereqTitle ? `<div style="margin-top:0.5rem;"><span style="font-size:0.72rem;color:#f87171;">\uD83D\uDD12 Complete prerequisite first: <em>${escapeHtml(prereqTitle)}</em></span></div>` : ''}
+              ${!prereqMet && prereqTitle ? `<div style="margin-top:0.5rem;"><span style="font-size:12px;color:var(--grade-e);">\uD83D\uDD12 Complete prerequisite first: <em>${escapeHtml(prereqTitle)}</em></span></div>` : ''}
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:1.1rem;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}">${bestPct.toFixed(0)}%${Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial) ? '<sup class="test-rem-sup" style="font-size:0.7em;opacity:0.85;margin-left:2px;color:inherit;">R</sup>' : ''}</div>
-                  <div style="font-size:0.7rem;color:var(--clr-text-3);">Best Score</div>
+                  <div style="font-size:16px;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}">${bestPct.toFixed(0)}%</div>
+                  <div style="font-size:12px;color:var(--clr-text-3);">Best Score</div>
                 </div>
-                ${(grade === '★' || grade === 'S' || bestPct >= 100)
-                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.1rem;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
-                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.85rem;border:2px solid ${gradeColor};color:${gradeColor};">${getGradeSymbol(grade)}</div>`
+                ${(grade === '★' || grade === 'S' || (bestPct >= 100 && !isRem && !isForgiven))
+                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
+                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid ${gradeColor};color:${gradeColor};">${getGradeSymbol(grade)}</div>`
                 }
               ` : ''}
               ${actionBtn}
@@ -2599,7 +2450,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       section.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <h3 style="font-size:1rem;font-weight:700;color:var(--clr-text-1);margin:0;">\uD83D\uDCCB Assigned Tests <span style="font-size:0.75rem;color:var(--clr-text-3);font-weight:400;margin-left:8px;">${tests.length} total</span></h3>
+          <h3 style="font-size:16px;font-weight:700;color:var(--clr-text-1);margin:0;">\uD83D\uDCCB Assigned Tests <span style="font-size:12px;color:var(--clr-text-3);font-weight:400;margin-left:8px;">${tests.length} total</span></h3>
         </div>
         ${cards || '<div class="empty-state" style="padding:2rem;text-align:center;"><p class="text-muted">No tests assigned to you yet.</p></div>'}
       `;
@@ -2743,6 +2594,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       const achievementTextEl = document.getElementById('dashboard-achievement-text');
+      const avgScoreDisplay = document.getElementById('bottom-stat-avg-score');
       const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
 
       if (isAlumni) {
@@ -2977,7 +2829,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!completedOnlyTests.length) {
         container.innerHTML = `
           <div class="empty-state p-4 text-center" style="padding: 24px 12px;">
-            <p style="color:var(--clr-text-3); font-size:0.82rem; margin:0;">No completed tests yet.</p>
+            <p style="color:var(--clr-text-3); font-size:12px; margin:0;">No completed tests yet.</p>
           </div>
         `;
         return;
@@ -3027,13 +2879,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           titleColor = '#ffffff';
           titleFontWeight = '800';
 
-          const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:#eab308;font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
+          const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
           scoreHtml = `<span style="color:${scoreColor} !important; font-weight:800;">${best.effPct.toFixed(0)}%${remSup}</span>`;
 
           const dispGrade = typeof getGradeSymbol === 'function' ? getGradeSymbol(best.grade, best.effPct, best.isRem) : best.grade;
           const isStar = dispGrade === '★' || dispGrade === 'S';
           const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-          gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important;">${dispGrade}</span>`;
+          gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important;">${dispGrade}</span>`;
 
           // Row: Smooth gradient from left to right + score-colored top & bottom dividers
           rowClass += ' is-exam-row';
@@ -3071,13 +2923,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             btnRgb = parseHexRgb(scoreColor);
             btnFillColor = scoreColor;
 
-            const remSup = best?.isRem ? '<sup class="asm-rem-sup" style="color:#eab308;font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
-            scoreHtml = `<span style="color:${scoreColor}; font-weight:800;">${taskAvgPct}%${remSup}</span>`;
+            scoreHtml = `<span style="color:${scoreColor}; font-weight:800;">${taskAvgPct}%</span>`;
 
             const dispGrade = typeof getGradeSymbol === 'function' ? getGradeSymbol(taskAvgGrade, taskAvgPct, best?.isRem) : taskAvgGrade;
             const isStar = dispGrade === '★' || dispGrade === 'S';
             const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-            gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:11px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800;">${dispGrade}</span>`;
+            gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800;">${dispGrade}</span>`;
           }
 
           let chipsHtml = '';
@@ -3107,10 +2958,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             <span class="completed-col-score">${scoreHtml}</span>
             <span class="completed-col-grade">${gradeHtml}</span>
             <span class="completed-col-action">
-              <button type="button" 
-                      class="completed-retry-btn" 
-                      style="border: 1.5px solid ${btnBorderColor} !important; background: rgba(${btnRgb}, 0.15) !important; box-shadow: 0 0 10px rgba(${btnRgb}, 0.35) !important;" 
-                      title="Play / Retry ${escapeHtml(testTitle)}" 
+              <button type="button"
+                      class="completed-retry-btn"
+                      style="border: 1.5px solid ${btnBorderColor} !important; background: rgba(${btnRgb}, 0.15) !important; box-shadow: 0 0 10px rgba(${btnRgb}, 0.35) !important;"
+                      title="Play / Retry ${escapeHtml(testTitle)}"
                       onclick="event.stopPropagation(); window.location.href='test.html?id=${t.id}'">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="${btnFillColor}" stroke="none">
                   <polygon points="6 3 20 12 6 21 6 3"></polygon>
@@ -3182,7 +3033,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!batchId) {
         container.innerHTML = `
           <div class="empty-state p-4 text-center">
-            <p style="color:#94a3b8; font-size:0.85rem;">No batch assigned to this account.</p>
+            <p style="color:#94a3b8; font-size:12px;">No batch assigned to this account.</p>
           </div>`;
         if (myRankNumEl) myRankNumEl.textContent = '—';
         if (myRankSummaryEl) myRankSummaryEl.textContent = 'Unassigned';
@@ -3206,7 +3057,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (stuErr || studentList.length === 0) {
           container.innerHTML = `
             <div class="empty-state p-4 text-center">
-              <p style="color:#94a3b8; font-size:0.85rem;">No active students found in this batch.</p>
+              <p style="color:#94a3b8; font-size:12px;">No active students found in this batch.</p>
             </div>`;
           return;
         }
@@ -3427,7 +3278,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (champion) {
             const royalPrefix = champion.gender === 'male' ? 'King' : (champion.gender === 'female' ? 'Queen' : '');
             const titleStr = royalPrefix ? `${royalPrefix} ${champion.cleanName}` : champion.cleanName;
-            champNameEl.textContent = `👑 ${titleStr} (${champion.totalPoints} PTS • ${champion.overallScore}%)`;
+            champNameEl.innerHTML = `${getSvgIcon('crown', 14)} ${escapeHtml(titleStr)} (${champion.totalPoints} PTS • ${champion.overallScore}%)`;
           } else {
             champNameEl.textContent = 'None yet (0 PTS)';
           }
@@ -3484,16 +3335,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   <div class="leaderboard-name-wrap">
                     <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; font-weight:800 !important; text-shadow:0 0 10px rgba(${parseHexRgb(hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : theme.color)},0.45);` : ''}">${escHtml(displayTitleName)}</span>
                   </div>
-                  
+
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
-                <span style="color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#94a3b8')}; font-weight:800; font-size:0.95rem; font-variant-numeric:tabular-nums;">
+                <span style="color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#94a3b8')}; font-weight:800; font-size:16px; font-variant-numeric:tabular-nums;">
                   ${st.totalPoints}
                 </span>
               </div>
               <div class="th-col th-grade" style="display:flex; align-items:center; justify-content:center;">
-                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:0.72rem; font-weight:800; display:flex; align-items:center; justify-content:center; color:${hasExam && (gradeSymbol === '★' || gradeSymbol === 'Star') ? TOPSCORE_COLORS.TEXT_STAR : (hasExam ? TOPSCORE_COLORS.TEXT_DARK : '#ffffff')} !important;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
+                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; color:${hasExam && (gradeSymbol === '★' || gradeSymbol === 'Star') ? TOPSCORE_COLORS.TEXT_STAR : (hasExam ? TOPSCORE_COLORS.TEXT_DARK : '#ffffff')} !important;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
               </div>
             </div>
           `;
@@ -3505,301 +3356,568 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         console.error('Error loading batch leaderboard:', err);
         container.innerHTML = `
           <div class="empty-state p-4 text-center">
-            <p style="color:var(--clr-danger); font-size:0.85rem;">Failed to load batch standings.</p>
+            <p style="color:var(--clr-danger); font-size:12px;">Failed to load batch standings.</p>
           </div>`;
       }
     }
 
-    // --- Profile Modal & History ---
+    // --- Profile Modal (Student Academic CV Architecture) ---
     let profileModalListenersInitialized = false;
+
+    // Helper functions for Profile Modal DOB & Address
+    function toDateInputValue(dobStr) {
+      if (!dobStr) return '';
+      const d = new Date(dobStr);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function calculateAgeFromDob(dobStr) {
+      if (!dobStr) return null;
+      const d = new Date(dobStr);
+      if (isNaN(d.getTime())) return null;
+      const today = new Date();
+      let age = today.getFullYear() - d.getFullYear();
+      const m = today.getMonth() - d.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+      return (age >= 0 && age <= 120) ? age : null;
+    }
+
+    function updateAgeAndEduUI(dobVal) {
+      const ageDisplay = document.getElementById('prof-age-display');
+      const heroDobAgeEl = document.getElementById('prof-hero-dob-age');
+      const eduTitleEl = document.getElementById('prof-edu-title');
+      const age = calculateAgeFromDob(dobVal);
+      if (ageDisplay) {
+        ageDisplay.textContent = age !== null ? `(${age} yrs)` : '(—)';
+      }
+      if (heroDobAgeEl) {
+        if (dobVal) {
+          const parts = dobVal.split('-');
+          if (parts.length === 3) {
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const mIdx = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            const yr = parts[0];
+            const mName = months[mIdx] || '';
+            heroDobAgeEl.textContent = `${day} ${mName} ${yr} (${age} yo)`;
+          } else {
+            heroDobAgeEl.textContent = `${dobVal} (${age} yo)`;
+          }
+        } else {
+          heroDobAgeEl.textContent = '—';
+        }
+      }
+      const { recommended: autoEduTier } = typeof getEducationEligibility === 'function' ? getEducationEligibility(age) : { recommended: 'senior_high' };
+      const tierObj = (typeof ALL_EDUCATION_LEVELS !== 'undefined' ? ALL_EDUCATION_LEVELS : []).find(e => e.value === autoEduTier);
+      const formalEduLabel = tierObj ? tierObj.label : 'Senior High School (SMA/SMK)';
+      if (eduTitleEl) {
+        eduTitleEl.textContent = formalEduLabel;
+      }
+      return { age, autoEduTier, formalEduLabel };
+    }
+
+    function populateProfileCities(selectedProv, preselectCity = null) {
+      const citySel = document.getElementById('prof-sel-city');
+      if (!citySel) return;
+      const rawCities = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[selectedProv]) ? INDONESIA_REGIONS[selectedProv] : [];
+      if (rawCities.length > 0) {
+        citySel.innerHTML = rawCities.map(c => `<option value="${escapeHtml(c)}" ${preselectCity === c ? 'selected' : ''}>${escapeHtml(typeof formatCityDistrict === 'function' ? formatCityDistrict(c) : c)}</option>`).join('');
+        if (preselectCity) citySel.value = preselectCity;
+      }
+    }
+
+    function populateProfileAddress(prov, city, dist, vill) {
+      const provSel = document.getElementById('prof-sel-province');
+      const distInp = document.getElementById('prof-inp-district');
+      const villInp = document.getElementById('prof-inp-village');
+
+      // Update Pure Info Table display (Village -> District -> Regency -> Province)
+      const infoVill = document.getElementById('prof-info-village');
+      if (infoVill) infoVill.textContent = (typeof formatVillageName === 'function' ? formatVillageName(vill) : vill) || '—';
+      const infoDist = document.getElementById('prof-info-district');
+      if (infoDist) infoDist.textContent = (typeof formatDistrictName === 'function' ? formatDistrictName(dist) : dist) || '—';
+      const infoCity = document.getElementById('prof-info-city');
+      if (infoCity) infoCity.textContent = (typeof formatCityDistrict === 'function' ? formatCityDistrict(city) : city) || '—';
+      const infoProv = document.getElementById('prof-info-province');
+      if (infoProv) infoProv.textContent = (typeof formatProvinceName === 'function' ? formatProvinceName(prov) : prov) || '—';
+
+      if (provSel && typeof INDONESIA_REGIONS !== 'undefined') {
+        const SUGGESTED_PROV = "Nusa Tenggara Barat";
+        const allProvinces = Object.keys(INDONESIA_REGIONS).sort((a, b) => a.localeCompare(b, 'id'));
+        let provHtml = '<option value="" disabled' + (!prov ? ' selected' : '') + '>Select province…</option>';
+        provHtml += `<optgroup label="SUGGESTED LOCATION">
+          <option value="${SUGGESTED_PROV}" ${prov === SUGGESTED_PROV ? 'selected' : ''}>★ ${SUGGESTED_PROV} (Suggested)</option>
+        </optgroup>`;
+        provHtml += `<optgroup label="ALL PROVINCES (A–Z)">` +
+          allProvinces.map(p => `<option value="${escapeHtml(p)}" ${prov === p ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('') +
+          `</optgroup>`;
+        provSel.innerHTML = provHtml;
+        if (prov) {
+          provSel.value = prov;
+          populateProfileCities(prov, city);
+        } else {
+          populateProfileCities(SUGGESTED_PROV, null);
+        }
+      }
+
+      if (distInp && dist !== undefined) distInp.value = dist || '';
+      if (villInp && vill !== undefined) villInp.value = vill || '';
+    }
+
     function setupProfileModal(attempts = []) {
       const modal = document.getElementById('profile-modal');
       const openBtn = document.getElementById('view-profile-btn');
       const closeBtn = document.getElementById('close-profile-modal');
 
-      document.getElementById('prof-student-name').textContent = session.student_name || 'Student';
+      const currentGender = session.gender || 'male';
+      const cleanName = cleanStudentName(session.student_name || 'Student');
+      const prefix = currentGender === 'female' ? 'Miss ' : 'Mr. ';
+
+      const nameEl = document.getElementById('prof-student-name');
+      if (nameEl) nameEl.textContent = `${prefix}${cleanName}`;
+
+      // Synchronize Organization Metadata: Institution • Program • Batch
+      const instName = (session.institution_name && session.institution_name !== 'undefined') ? session.institution_name : 'TopsCore Academy';
+      const progName = (session.program_name && session.program_name !== 'undefined') ? session.program_name : 'Program';
+      const batchName = (session.batch_name && session.batch_name !== 'undefined') ? session.batch_name : 'Batch';
+
+      const orgMetaEl = document.getElementById('prof-org-meta');
+      if (orgMetaEl) {
+        orgMetaEl.textContent = `${instName} • ${progName} • ${batchName}`;
+      }
+
       const progEl = document.getElementById('prof-student-prog');
-      if (progEl) {
-        if (session.institution_name && session.institution_name !== 'undefined') {
-          progEl.textContent = session.institution_name;
-          progEl.classList.remove('hidden');
-        } else {
-          progEl.classList.add('hidden');
-        }
-      }
+      if (progEl) progEl.textContent = instName;
       const classEl = document.getElementById('prof-student-class');
-      if (classEl) {
-        classEl.textContent = session.program_name || 'Program';
-      }
+      if (classEl) classEl.textContent = progName;
       const batchEl = document.getElementById('prof-student-batch');
-      if (batchEl) {
-        if (session.batch_name && session.batch_name !== 'undefined') {
-          batchEl.textContent = session.batch_name;
-          batchEl.classList.remove('hidden');
-        } else {
-          batchEl.classList.add('hidden');
-        }
+      if (batchEl) batchEl.textContent = batchName;
+
+      // Synchronize Gender & Title in CV
+      const heroGenderEl = document.getElementById('prof-hero-gender');
+      if (heroGenderEl) {
+        heroGenderEl.textContent = currentGender === 'female' ? 'Female' : 'Male';
+      }
+      const genderTextEl = document.getElementById('prof-gender-text');
+      if (genderTextEl) {
+        genderTextEl.textContent = currentGender === 'female' ? 'Female (Miss)' : 'Male (Mr.)';
+      }
+      const titleTextEl = document.getElementById('prof-title-text');
+      if (titleTextEl) {
+        titleTextEl.textContent = currentGender === 'female' ? 'Miss' : 'Mr.';
       }
 
-      // Render Completed Tests History
-      const tbody = document.getElementById('tbl-profile-history');
-      if (tbody) {
-        tbody.innerHTML = '';
-        const validAttempts = (attempts || []).filter(a => !(a.tests && a.tests.deleted_at));
-        if (!validAttempts || !validAttempts.length) {
-          tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted p-4">No Completed Tests yet.</td></tr>';
-        } else {
-          validAttempts.forEach(a => {
-            const tr = document.createElement('tr');
-            const title = a.Tests ? `${a.Tests.Test_type || ''} — ${a.Tests.Test_title || 'Test'}` : 'Test';
-            const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
-            const rawPct = parseFloat(a.percentage || 0);
-            const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-            const pct = effPct.toFixed(1);
-            const grade = a.grade || getGrade(effPct);
-            const displayGrade = getGradeSymbol(grade, effPct, isRem);
+      // Synchronize Domicile
+      const domicileEl = document.getElementById('prof-domicile-display');
+      if (domicileEl) {
+        const city = session.city;
+        const prov = session.province;
+        if (city && prov) domicileEl.textContent = `${city}, ${prov}`;
+        else if (city) domicileEl.textContent = city;
+        else if (prov) domicileEl.textContent = prov;
+        else domicileEl.textContent = '—';
+      }
 
-            tr.innerHTML = `
-              <td class="fw-600">${title}</td>
-              <td class="fw-700 text-grade-${grade}">${pct}%</td>
-              <td><span class="grade-badge grade-${grade}" style="width:24px;height:24px;font-size:0.75rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${displayGrade}</span></td>
-              <td class="text-muted text-sm">${a.submitted_at ? new Date(a.submitted_at).toLocaleDateString() : '—'}</td>
+      // Synchronize Birth Date & Age
+      const initialDob = session.dob || session.birth_date;
+      const dobInputVal = toDateInputValue(initialDob);
+      const dobInp = document.getElementById('prof-inp-dob');
+      if (dobInp && dobInputVal) {
+        dobInp.value = dobInputVal;
+      }
+      updateAgeAndEduUI(dobInputVal);
+
+      // Populate Initial Address from session
+      populateProfileAddress(session.province, session.city, session.district, session.village);
+
+      // Synchronize Education Timeline immediately from session
+      const timelineEl = document.getElementById('prof-education-timeline');
+      if (timelineEl && session.education) {
+        let eduData = session.education;
+        if (typeof eduData === 'string') {
+          try { eduData = JSON.parse(eduData); } catch (_) {}
+        }
+        if (Array.isArray(eduData) && eduData.length > 0) {
+          timelineEl.innerHTML = eduData.map((item, idx) => {
+            const isHighest = idx === eduData.length - 1;
+            const rawLabel = item.name || item.institution || item.level || 'Education Level';
+            const tier = (typeof EDUCATION_TIERS !== 'undefined' ? EDUCATION_TIERS : []).find(t => t.id === rawLabel);
+            const label = tier ? tier.label : rawLabel;
+            const year = item.year || '—';
+            return `
+              <div class="profile-timeline-node ${isHighest ? 'active-highest' : ''}">
+                <div class="profile-timeline-left">
+                  <span class="profile-timeline-dot"></span>
+                  <span class="fw-600">${escapeHtml(label)}</span>
+                </div>
+                <span class="profile-timeline-badge">${year}</span>
+              </div>
             `;
-            tbody.appendChild(tr);
-          });
+          }).join('');
+        } else if (typeof eduData === 'string' && eduData.trim().length > 0) {
+          const tier = (typeof EDUCATION_TIERS !== 'undefined' ? EDUCATION_TIERS : []).find(t => t.id === eduData.trim());
+          const label = tier ? tier.label : eduData;
+          timelineEl.innerHTML = `
+            <div class="profile-timeline-node active-highest">
+              <div class="profile-timeline-left">
+                <span class="profile-timeline-dot"></span>
+                <span class="fw-600">${escapeHtml(label)}</span>
+              </div>
+              <span class="profile-timeline-badge">Verified</span>
+            </div>
+          `;
         }
       }
 
       if (profileModalListenersInitialized) return;
       profileModalListenersInitialized = true;
 
-      // Profile Tab Navigation (Zero-scroll architecture)
-      const tabBtnProfile = document.getElementById('tab-btn-profile');
-      const tabBtnHistory = document.getElementById('tab-btn-history');
-      const paneProfile = document.getElementById('tab-pane-profile');
-      const paneHistory = document.getElementById('tab-pane-history');
-
-      function switchProfileTab(tab, updateHash = true) {
-        if (tab === 'history') {
-          tabBtnHistory?.classList.add('active');
-          tabBtnHistory?.setAttribute('aria-selected', 'true');
-          tabBtnProfile?.classList.remove('active');
-          tabBtnProfile?.setAttribute('aria-selected', 'false');
-          paneHistory?.classList.remove('hidden');
-          paneProfile?.classList.add('hidden');
-          if (updateHash) {
-            try { window.location.hash = '#profile-history'; } catch (_) {}
-          }
-        } else {
-          tabBtnProfile?.classList.add('active');
-          tabBtnProfile?.setAttribute('aria-selected', 'true');
-          tabBtnHistory?.classList.remove('active');
-          tabBtnHistory?.setAttribute('aria-selected', 'false');
-          paneProfile?.classList.remove('hidden');
-          paneHistory?.classList.add('hidden');
-          if (updateHash) {
-            try { window.location.hash = '#profile'; } catch (_) {}
-          }
-        }
-      }
-      window._switchProfileTab = switchProfileTab;
-
-      tabBtnProfile?.addEventListener('click', () => switchProfileTab('profile'));
-      tabBtnHistory?.addEventListener('click', () => switchProfileTab('history'));
-
-      // Fetch and display existing student photo and personal data
+      // Fetch and display existing student photo and personal metadata
       (async () => {
         try {
           const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
-          const { data: st } = await sb.from('students').select('photo_url, birth_date, education').eq('id', session.student_id).maybeSingle();
+          const { data: st } = await sb.from('students').select('photo_url, birth_date, education, gender, province, city, district, village, updated_at').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
           } else {
             clearPhotoEverywhere();
           }
 
-          if (st?.birth_date) {
-            document.getElementById('prof-dob').value = st.birth_date;
-            calculateAge(st.birth_date);
+          // Read-only Gender / Title in CV
+          const activeGender = st?.gender || session.gender || 'male';
+          const titleTextEl = document.getElementById('prof-title-text');
+          if (titleTextEl) {
+            titleTextEl.textContent = activeGender === 'female' ? 'Miss' : 'Mr.';
           }
-          if (st?.education) {
-            document.getElementById('prof-education').value = st.education;
+          const genderTextEl = document.getElementById('prof-gender-text');
+          if (genderTextEl) {
+            genderTextEl.textContent = activeGender === 'female' ? 'Female (Miss)' : 'Male (Mr.)';
           }
-        } catch {}
+          const nameEl = document.getElementById('prof-student-name');
+          if (nameEl) {
+            const p = activeGender === 'female' ? 'Miss ' : 'Mr. ';
+            nameEl.textContent = `${p}${cleanStudentName(session.student_name || 'Student')}`;
+          }
+
+          // Interactive Birth Date & Age synchronization
+          const dob = st?.birth_date || session.dob || session.birth_date;
+          const dobVal = toDateInputValue(dob);
+          const dobInpEl = document.getElementById('prof-inp-dob');
+          if (dobInpEl && dobVal) {
+            dobInpEl.value = dobVal;
+          }
+          const { formalEduLabel } = updateAgeAndEduUI(dobVal);
+
+          // 4-Tier Residential Address synchronization (Province -> City -> District -> Village)
+          const activeProv = st?.province || session.province || 'Nusa Tenggara Barat';
+          const activeCity = st?.city || session.city || 'Kota Mataram';
+          const activeDistrict = st?.district || session.district || '';
+          const activeVillage = st?.village || session.village || '';
+
+          populateProfileAddress(activeProv, activeCity, activeDistrict, activeVillage);
+
+          const provEl = document.getElementById('prof-addr-province');
+          if (provEl) provEl.textContent = activeProv;
+          const cityEl = document.getElementById('prof-addr-city');
+          if (cityEl) cityEl.textContent = activeCity;
+          const distEl = document.getElementById('prof-addr-district');
+          if (distEl) distEl.textContent = activeDistrict;
+          const villEl = document.getElementById('prof-addr-village');
+          if (villEl) villEl.textContent = activeVillage;
+
+          const domicileEl = document.getElementById('prof-domicile-display');
+          if (domicileEl) domicileEl.textContent = `${activeCity}, ${activeProv}`;
+
+          // Educational History Timeline Fallback for compatibility
+          const timelineEl = document.getElementById('prof-education-timeline');
+          if (timelineEl) {
+            timelineEl.innerHTML = `
+              <div class="profile-timeline-node active-highest">
+                <div class="profile-timeline-left">
+                  <span class="profile-timeline-dot"></span>
+                  <span class="fw-600">${escapeHtml(formalEduLabel)}</span>
+                </div>
+                <span class="profile-timeline-badge">Verified</span>
+              </div>
+            `;
+          }
+
+          // Photo Retake Gating: Exam Completion + 7-Day Cooldown
+          const cameraBadge = document.getElementById('prof-camera-badge');
+          const isEligible = localStorage.getItem(`stu_photo_retake_eligible_${session.student_id}`) === 'true' || Boolean(session.photo_retake_eligible);
+          const lastUpdatedStr = localStorage.getItem(`stu_last_photo_updated_${session.student_id}`) || st?.updated_at;
+          let isOnCooldown = false;
+          let daysRemaining = 0;
+          if (lastUpdatedStr) {
+            const elapsedMs = Date.now() - new Date(lastUpdatedStr).getTime();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if (elapsedMs < sevenDaysMs) {
+              isOnCooldown = true;
+              daysRemaining = Math.ceil((sevenDaysMs - elapsedMs) / (24 * 60 * 60 * 1000));
+            }
+          }
+
+          if (cameraBadge) {
+            if (isEligible && !isOnCooldown) {
+              cameraBadge.classList.remove('locked');
+              cameraBadge.classList.add('eligible');
+              cameraBadge.title = 'Take new photo with camera (Exam Passed)';
+            } else {
+              cameraBadge.classList.add('locked');
+              cameraBadge.classList.remove('eligible');
+              if (!isEligible) {
+                cameraBadge.title = 'Locked: Pass an Exam to earn 1 photo retake credit';
+              } else {
+                cameraBadge.title = `Locked: Weekly cooldown (${daysRemaining}d remaining)`;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Error loading profile drawer metadata:', err);
+        }
       })();
 
-      // Helper function to calculate age
-      function calculateAge(dobString) {
-        const ageSpan = document.getElementById('prof-age');
-        if (!dobString) {
-          ageSpan.textContent = '--';
-          return;
-        }
-        const today = new Date();
-        const birthDate = new Date(dobString);
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const m = today.getMonth() - birthDate.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-          age--;
-        }
-        ageSpan.textContent = age + ' years old';
+      // Photo retake click handler (Camera Only, Gated by Exam Pass & Cooldown)
+      const avatarContainer = document.getElementById('avatar-container');
+      if (avatarContainer) {
+        avatarContainer.onclick = async () => {
+          const isEligible = localStorage.getItem(`stu_photo_retake_eligible_${session.student_id}`) === 'true' || Boolean(session.photo_retake_eligible);
+          const lastUpdatedStr = localStorage.getItem(`stu_last_photo_updated_${session.student_id}`);
+          let isOnCooldown = false;
+          let daysRemaining = 0;
+          if (lastUpdatedStr) {
+            const elapsedMs = Date.now() - new Date(lastUpdatedStr).getTime();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if (elapsedMs < sevenDaysMs) {
+              isOnCooldown = true;
+              daysRemaining = Math.ceil((sevenDaysMs - elapsedMs) / (24 * 60 * 60 * 1000));
+            }
+          }
+
+          if (!isEligible) {
+            showToast('Photo retake locked: Pass an Exam to earn 1 photo retake credit.', 'warning');
+            return;
+          }
+          if (isOnCooldown) {
+            showToast(`Photo retake cooldown active: Available in ${daysRemaining} day(s).`, 'warning');
+            return;
+          }
+
+          const photoModal = document.getElementById('photo-setup-modal');
+          if (photoModal) {
+            photoModal.classList.remove('hidden');
+            await startOnboardWebcam();
+          }
+        };
       }
 
-      // Update age on change
-      document.getElementById('prof-dob')?.addEventListener('change', (e) => {
-        calculateAge(e.target.value);
-        window.isProfileDirty = true;
-      });
+      // Change PIN Modal Controller & Form Handler
+      const changePinModal = document.getElementById('change-pin-modal');
+      const openChangePinBtn = document.getElementById('btn-open-change-pin');
+      const closeChangePinBtn = document.getElementById('close-change-pin-modal');
+      const cancelChangePinBtn = document.getElementById('btn-cancel-change-pin');
+      const submitChangePinFooterBtn = document.getElementById('btn-submit-change-pin-footer');
+      const changePinForm = document.getElementById('change-pin-form');
 
-      document.getElementById('prof-education')?.addEventListener('change', () => {
-        window.isProfileDirty = true;
-      });
+      const openChangePinModal = () => {
+        if (changePinForm) changePinForm.reset();
+        if (changePinModal) changePinModal.classList.remove('hidden');
+      };
 
-      // Personal Data Form Handler
-      const personalDataForm = document.getElementById('personal-data-form');
-      if (personalDataForm) {
-        personalDataForm.addEventListener('submit', async (e) => {
+      const closeChangePinModal = () => {
+        if (changePinForm) changePinForm.reset();
+        if (changePinModal) changePinModal.classList.add('hidden');
+      };
+
+      if (openChangePinBtn) openChangePinBtn.addEventListener('click', openChangePinModal);
+      if (closeChangePinBtn) closeChangePinBtn.addEventListener('click', closeChangePinModal);
+      if (cancelChangePinBtn) cancelChangePinBtn.addEventListener('click', closeChangePinModal);
+
+      if (submitChangePinFooterBtn) {
+        submitChangePinFooterBtn.addEventListener('click', () => {
+          if (changePinForm) {
+            if (typeof changePinForm.requestSubmit === 'function') {
+              changePinForm.requestSubmit();
+            } else {
+              const saveBtn = document.getElementById('save-pin-btn');
+              if (saveBtn) saveBtn.click();
+            }
+          }
+        });
+      }
+
+      if (changePinForm) {
+        changePinForm.addEventListener('submit', async (e) => {
           e.preventDefault();
-          const dob = document.getElementById('prof-dob').value;
-          const edu = document.getElementById('prof-education').value;
+          const oldPin = document.getElementById('pin-old').value.trim();
+          const newPin = document.getElementById('pin-new').value.trim();
+          const confirmPin = document.getElementById('pin-confirm').value.trim();
 
-          showLoading('Saving Personal Data...');
+          if (newPin.length < 4) {
+            showToast('PIN baru minimal 4 digit.', 'warning');
+            return;
+          }
+          if (newPin !== confirmPin) {
+            showToast('Konfirmasi PIN tidak cocok.', 'warning');
+            return;
+          }
+
+          showLoading('Memperbarui PIN…');
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
-            const { error } = await sb.from('students').update({ birth_date: dob, education: edu }).eq('id', session.student_id);
-            if (error) throw error;
-
+            await changePin(session.student_id, oldPin, newPin);
             hideLoading();
-            showToast('Personal Data updated successfully!', 'success');
+            showToast('PIN berhasil diperbarui!', 'success');
+            changePinForm.reset();
+            closeChangePinModal();
             window.isProfileDirty = false;
           } catch(err) {
             hideLoading();
-            showToast('Error saving data: ' + err.message, 'error');
+            showToast(err.message, 'error');
           }
         });
       }
 
-      // Photo upload click handlers
-      const avatarContainer = document.getElementById('avatar-container');
-      const bannerInput = document.getElementById('banner-photo-input');
-      const modalInput = document.getElementById('profile-modal-photo-input');
+      // Wire Profile Form Inputs (DOB & Address) to track changes
+      const profDobInp = document.getElementById('prof-inp-dob');
+      const profProvSel = document.getElementById('prof-sel-province');
+      const profCitySel = document.getElementById('prof-sel-city');
+      const profDistInp = document.getElementById('prof-inp-district');
+      const profVillInp = document.getElementById('prof-inp-village');
 
-      avatarContainer.addEventListener('click', () => modalInput.click());
+      if (profDobInp && !profDobInp._hasChangeListener) {
+        profDobInp._hasChangeListener = true;
+        const handleDobChange = () => {
+          window.isProfileDirty = true;
+          updateAgeAndEduUI(profDobInp.value);
+        };
+        profDobInp.addEventListener('change', handleDobChange);
+        profDobInp.addEventListener('input', handleDobChange);
+      }
 
-      const handlePhotoChange = async (e) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 15 * 1024 * 1024) {
-          showToast('Ukuran file foto maksimal 15MB.', 'warning');
-          return;
-        }
+      if (profProvSel && !profProvSel._hasChangeListener) {
+        profProvSel._hasChangeListener = true;
+        profProvSel.addEventListener('change', () => {
+          window.isProfileDirty = true;
+          populateProfileCities(profProvSel.value);
+        });
+      }
 
-        // 1. LANGSUNG HAPUS FOTO LAMA (0ms delay):
-        // Hapus dari localStorage cache dan bersihkan elemen <img> avatar seketika
-        // agar foto lama tidak terlihat sekilas saat upload foto baru!
-        clearPhotoEverywhere();
-
-        showLoading('Mengompresi foto profil…');
-        try {
-          // Option 1: Strictly compress to lightweight 3:4 WebP Base64 (<30KB)
-          const compressedDataUrl = await processAndCompressAvatar(file, 'student');
-          // Langsung terapkan foto baru yang telah terkompresi ke UI dan localStorage
-          applyPhotoEverywhere(compressedDataUrl);
-          await uploadStudentPhoto(session.student_id, compressedDataUrl);
-          hideLoading();
-          showToast('Profile photo successfully updated and saved!', 'success');
-        } catch(err) {
-          hideLoading();
-          showToast('Failed to process photo: ' + err.message, 'error');
-        } finally {
-          e.target.value = '';
-        }
-      };
-
-      if (bannerInput) bannerInput.addEventListener('change', handlePhotoChange);
-      if (modalInput) modalInput.addEventListener('change', handlePhotoChange);
-
-      // Change PIN Form Handler
-      const changePinForm = document.getElementById('change-pin-form');
-
-      const pinInputs = changePinForm.querySelectorAll('input');
-      pinInputs.forEach(input => {
-        input.addEventListener('input', () => {
+      if (profCitySel && !profCitySel._hasChangeListener) {
+        profCitySel._hasChangeListener = true;
+        profCitySel.addEventListener('change', () => {
           window.isProfileDirty = true;
         });
-      });
+      }
 
-      changePinForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const oldPin = document.getElementById('pin-old').value.trim();
-        const newPin = document.getElementById('pin-new').value.trim();
-        const confirmPin = document.getElementById('pin-confirm').value.trim();
+      if (profDistInp && !profDistInp._hasChangeListener) {
+        profDistInp._hasChangeListener = true;
+        profDistInp.addEventListener('input', () => {
+          window.isProfileDirty = true;
+        });
+      }
 
-        if (newPin !== confirmPin) {
-          showToast('New PIN confirmation does not match.', 'warning');
-          return;
-        }
-        if (newPin.length < 4) {
-          showToast('PIN baru minimal 4 digit angka.', 'warning');
-          return;
-        }
+      if (profVillInp && !profVillInp._hasChangeListener) {
+        profVillInp._hasChangeListener = true;
+        profVillInp.addEventListener('input', () => {
+          window.isProfileDirty = true;
+        });
+      }
 
-        showLoading('Mengubah PIN…');
-        try {
-          await updateStudentPin(session.student_id, oldPin, newPin);
-          hideLoading();
-          showToast('PIN updated successfully!', 'success');
-          changePinForm.reset();
-          window.isProfileDirty = false;
-        } catch(err) {
-          hideLoading();
-          showToast(err.message, 'error');
-        }
-      });
+      // Save Profile Changes Handler (DOB, Address & Recalculated Education)
+      const saveProfileBtn = document.getElementById('btn-save-profile-modal-footer');
+      if (saveProfileBtn && !saveProfileBtn._hasClickListener) {
+        saveProfileBtn._hasClickListener = true;
+        saveProfileBtn.addEventListener('click', async () => {
+          const dobVal = profDobInp?.value || '';
+          const provVal = profProvSel?.value || '';
+          const cityVal = profCitySel?.value || '';
+          const distVal = profDistInp?.value?.trim() || '';
+          const villVal = profVillInp?.value?.trim() || '';
 
-      // Gender & Title Buttons in Profile Modal
-      document.getElementById('btn-prof-male')?.addEventListener('click', async () => {
-        if (session.gender === 'male') return;
-        showLoading('Updating title to Mr.…');
-        try {
-          await updateStudentGender(session.student_id, 'male');
-          applyStudentGenderUI('male');
-          hideLoading();
-          showToast('Title updated to Mr.!', 'success');
-        } catch(err) {
-          hideLoading();
-          showToast('Failed to update gender: ' + err.message, 'error');
-        }
-      });
+          const { autoEduTier } = updateAgeAndEduUI(dobVal);
 
-      document.getElementById('btn-prof-female')?.addEventListener('click', async () => {
-        if (session.gender === 'female') return;
-        showLoading('Updating title to Miss.…');
-        try {
-          await updateStudentGender(session.student_id, 'female');
-          applyStudentGenderUI('female');
-          hideLoading();
-          showToast('Title updated to Miss!', 'success');
-        } catch(err) {
-          hideLoading();
-          showToast('Failed to update gender: ' + err.message, 'error');
-        }
-      });
+          showLoading('Saving profile changes…');
+          try {
+            const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+            const updatePayload = {
+              updated_at: new Date().toISOString()
+            };
+            if (dobVal) updatePayload.birth_date = dobVal;
+            if (autoEduTier) updatePayload.education = autoEduTier;
+            if (provVal) updatePayload.province = provVal;
+            if (cityVal) updatePayload.city = cityVal;
+            updatePayload.district = distVal;
+            updatePayload.village = villVal;
 
-      const openProfile = (tab = 'profile') => {
+            const { error } = await sb.from('students').update(updatePayload).eq('id', session.student_id);
+            if (error) {
+              console.warn('Database profile update note:', error.message);
+            }
+
+            // Synchronize in-memory session and session storage
+            if (dobVal) {
+              session.birth_date = dobVal;
+              session.dob = dobVal;
+            }
+            if (autoEduTier) session.education = autoEduTier;
+            if (provVal) session.province = provVal;
+            if (cityVal) session.city = cityVal;
+            session.district = distVal;
+            session.village = villVal;
+
+            setStudentSession(session);
+
+            // Update domicile display
+            const domicileEl = document.getElementById('prof-domicile-display');
+            if (domicileEl) {
+              if (cityVal && provVal) domicileEl.textContent = `${cityVal}, ${provVal}`;
+              else if (cityVal) domicileEl.textContent = cityVal;
+              else if (provVal) domicileEl.textContent = provVal;
+              else domicileEl.textContent = '—';
+            }
+
+            window.isProfileDirty = false;
+            hideLoading();
+            showToast('Profile updated successfully!', 'success');
+            modal.classList.add('hidden');
+            if (window.location.hash.startsWith('#profile') || window.location.hash === '#history') {
+              try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
+            }
+          } catch (err) {
+            hideLoading();
+            showToast(err.message || 'Failed to save profile changes.', 'error');
+          }
+        });
+      }
+
+      const openProfile = () => {
         applyStudentGenderUI(session.gender);
-        switchProfileTab(tab, true);
         window.isProfileDirty = false;
         if(changePinForm) changePinForm.reset();
+
+        // Refresh latest address and DOB inputs from active session
+        const currentDob = session.dob || session.birth_date;
+        const curDobVal = toDateInputValue(currentDob);
+        if (profDobInp && curDobVal) {
+          profDobInp.value = curDobVal;
+        }
+        updateAgeAndEduUI(curDobVal);
+        populateProfileAddress(session.province, session.city, session.district, session.village);
+
         modal.classList.remove('hidden');
+        try { window.location.hash = '#profile'; } catch (_) {}
       };
 
-      openBtn.addEventListener('click', () => openProfile('profile'));
+      openBtn.addEventListener('click', openProfile);
 
       const closeProfile = () => {
         if (window.isProfileDirty) {
           window.showConfirmDialog({
-            icon: '⚠️',
+            icon: getSvgIcon('alert-triangle', 28),
             title: 'UNSAVED CHANGES',
             message: 'You have unsaved profile changes. Are you sure you want to discard them and close?',
             confirmText: 'Discard & Close',
@@ -3808,6 +3926,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             onConfirm: () => {
               window.isProfileDirty = false;
               if (changePinForm) changePinForm.reset();
+              // Reset fields to current session
+              const resetDob = toDateInputValue(session.dob || session.birth_date);
+              if (profDobInp) profDobInp.value = resetDob;
+              updateAgeAndEduUI(resetDob);
+              populateProfileAddress(session.province, session.city, session.district, session.village);
+
               modal.classList.add('hidden');
               if (window.location.hash.startsWith('#profile') || window.location.hash === '#history') {
                 try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
@@ -3825,6 +3949,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       };
 
       closeBtn.addEventListener('click', closeProfile);
+      const footerCloseBtn = document.getElementById('btn-close-profile-modal-footer');
+      if (footerCloseBtn && !footerCloseBtn._hasClickListener) {
+        footerCloseBtn._hasClickListener = true;
+        footerCloseBtn.addEventListener('click', closeProfile);
+      }
       modal.addEventListener('click', (e) => {
         if (e.target === modal) closeProfile();
       });
@@ -3841,17 +3970,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     }
 
-    // --- Level Modal close ---
-    const closeLevelModal = () => {
-      document.getElementById('level-modal')?.classList.add('hidden');
-      if (window.location.hash.startsWith('#levels')) {
-        try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
-      }
-    };
-    document.getElementById('close-level-modal')?.addEventListener('click', closeLevelModal);
-    document.getElementById('level-modal')?.addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) closeLevelModal();
-    });
 
     // --- Gamification: Show Level Up Popup ---
     window.showLevelUpPopup = function(newLevel) {
@@ -3880,7 +3998,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
     // ── Universal Custom Confirmation Modal (Phase 3) ──
     window.showConfirmDialog = function({
-      icon = '🚪',
+      icon = '',
       title = 'LOG OUT SESSION',
       message = 'Are you sure you want to sign out?',
       confirmText = 'Log Out',
@@ -3900,7 +4018,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const cancelBtn = document.getElementById('custom-confirm-btn-cancel');
       const actionBtn = document.getElementById('custom-confirm-btn-action');
 
-      if (iconEl) iconEl.textContent = icon;
+      if (iconEl) iconEl.innerHTML = icon;
       if (titleEl) titleEl.textContent = title;
       if (msgEl) msgEl.textContent = message;
       if (cancelBtn) cancelBtn.textContent = cancelText;
@@ -3934,7 +4052,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     // Logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {
       window.showConfirmDialog({
-        icon: '🚪',
+        icon: getSvgIcon('arrow-right', 28),
         title: 'LOG OUT SESSION',
         message: 'Are you sure you want to sign out of your learning session?',
         confirmText: 'Log Out',
@@ -3951,235 +4069,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const hash = window.location.hash || '';
       document.getElementById('profile-modal')?.classList.add('hidden');
       document.getElementById('classes-selector-modal')?.classList.add('hidden');
-      document.getElementById('level-modal')?.classList.add('hidden');
       if (!hash) return;
-      if (hash === '#profile') {
+      if (hash === '#profile' || hash === '#profile-history' || hash === '#history') {
         const modal = document.getElementById('profile-modal');
         if (modal) {
           applyStudentGenderUI(session.gender);
-          if (typeof window._switchProfileTab === 'function') window._switchProfileTab('profile', false);
-          modal.classList.remove('hidden');
-        }
-      } else if (hash === '#profile-history' || hash === '#history') {
-        const modal = document.getElementById('profile-modal');
-        if (modal) {
-          applyStudentGenderUI(session.gender);
-          if (typeof window._switchProfileTab === 'function') window._switchProfileTab('history', false);
           modal.classList.remove('hidden');
         }
       } else if (hash === '#select-class') {
         populateClassesSelectorModal(window._activeClasses || []);
         document.getElementById('classes-selector-modal')?.classList.remove('hidden');
-      } else if (hash.startsWith('#levels')) {
-        const parts = hash.split('-');
-        const targetCid = parts.length > 1 ? parts.slice(1).join('-') : window._selectedClassId;
-        const cur = (window._activeClasses || []).find(c => c.id === targetCid) || (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
-        if (cur) {
-          openClassModal(cur, window._classesProgress);
-        }
-      } else if (hash === '#practice' || hash === '#flashcards') {
-        initLobbyFlashcardControls();
-        openLobbyFlashcardModal();
       }
-    }
-
-    // ===== 🎯 STUDENT LOBBY FLASHCARD RECOVERY ENGINE =====
-    let _lobbyActiveFlashcards = [];
-    let _lobbyCurrentFcIndex = 0;
-    let _isLobbyFcControlsBound = false;
-
-    window.openLobbyFlashcardsForAttempt = async function(attemptId) {
-      if (!attemptId) return;
-      showLoading('Loading missed vocabulary flashcards…');
-      try {
-        const answers = await fetchAttemptAnswers(attemptId);
-        hideLoading();
-        startLobbyFlashcardsWithAnswers(answers);
-      } catch (err) {
-        hideLoading();
-        console.warn('Failed to load flashcard answers:', err);
-        showToast('Could not load flashcard vocabulary: ' + err.message, 'warning');
-      }
-    };
-
-    function startLobbyFlashcardsWithAnswers(answers = []) {
-      const missed = (answers || []).filter(a => {
-        const isCorrect = a.is_correct === true || parseFloat(a.score || 0) >= 1.0;
-        return !isCorrect;
-      });
-      if (missed.length === 0) {
-        showToast('🎉 Excellent! No missed words found in this test.', 'info');
-        return;
-      }
-      _lobbyActiveFlashcards = missed;
-      initLobbyFlashcardControls();
-      openLobbyFlashcardModal();
-    }
-
-    async function setupLobbyFlashcards(attempts = []) {
-      const btn = document.getElementById('btn-lobby-flashcards');
-      const badge = document.getElementById('lobby-fc-count-badge');
-      if (!btn) return;
-
-      // Find candidate attempts (submitted/auto_submitted) with score < 100%
-      const candidateAttempts = (attempts || []).filter(a => {
-        const st = (a.status || '').toLowerCase();
-        return (st === 'submitted' || st === 'auto_submitted' || st === 'graded' || st === 'evaluated') && parseFloat(a.percentage || 0) < 100;
-      });
-
-      if (candidateAttempts.length === 0) {
-        btn.classList.add('hidden');
-        return;
-      }
-
-      // Sort newest attempt first
-      candidateAttempts.sort((a, b) => new Date(b.created_at || b.started_at || 0) - new Date(a.created_at || a.started_at || 0));
-      const latestAttempt = candidateAttempts[0];
-
-      try {
-        const answers = await fetchAttemptAnswers(latestAttempt.id);
-        const missed = (answers || []).filter(a => {
-          const isCorrect = a.is_correct === true || parseFloat(a.score || 0) >= 1.0;
-          return !isCorrect;
-        });
-
-        if (missed.length > 0) {
-          _lobbyActiveFlashcards = missed;
-          btn.classList.remove('hidden');
-          if (badge) badge.textContent = missed.length;
-          btn.onclick = () => {
-            initLobbyFlashcardControls();
-            openLobbyFlashcardModal();
-          };
-          initLobbyFlashcardControls();
-        } else {
-          btn.classList.add('hidden');
-        }
-      } catch (err) {
-        console.warn('Silent skip lobby flashcards:', err);
-        btn.classList.add('hidden');
-      }
-    }
-
-    function initLobbyFlashcardControls() {
-      if (_isLobbyFcControlsBound) return;
-      _isLobbyFcControlsBound = true;
-
-      const modal = document.getElementById('flashcard-modal');
-      const closeBtn = document.getElementById('close-flashcard-btn');
-      if (closeBtn) closeBtn.onclick = closeLobbyFlashcardModal;
-      if (modal) {
-        modal.onclick = (e) => {
-          if (e.target.id === 'flashcard-modal') closeLobbyFlashcardModal();
-        };
-      }
-
-      const flipInner = document.getElementById('active-flip-inner');
-      const flipCard = document.getElementById('active-flip-card');
-      const toggleFlip = () => flipInner?.classList.toggle('flipped');
-
-      if (flipCard) flipCard.onclick = toggleFlip;
-      const flipBtn = document.getElementById('fc-btn-flip');
-      if (flipBtn) {
-        flipBtn.onclick = (e) => {
-          e.stopPropagation();
-          toggleFlip();
-        };
-      }
-
-      const prevBtn = document.getElementById('fc-btn-prev');
-      if (prevBtn) {
-        prevBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (_lobbyActiveFlashcards.length === 0) return;
-          _lobbyCurrentFcIndex = (_lobbyCurrentFcIndex - 1 + _lobbyActiveFlashcards.length) % _lobbyActiveFlashcards.length;
-          renderLobbyFlashcardItem();
-        };
-      }
-
-      const nextBtn = document.getElementById('fc-btn-next');
-      if (nextBtn) {
-        nextBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (_lobbyActiveFlashcards.length === 0) return;
-          _lobbyCurrentFcIndex = (_lobbyCurrentFcIndex + 1) % _lobbyActiveFlashcards.length;
-          renderLobbyFlashcardItem();
-        };
-      }
-
-      const speakBtn = document.getElementById('fc-speak-btn');
-      if (speakBtn) {
-        speakBtn.onclick = (e) => {
-          e.stopPropagation();
-          const currentItem = _lobbyActiveFlashcards[_lobbyCurrentFcIndex];
-          if (!currentItem) return;
-          const snap = typeof currentItem.question_snapshot === 'string'
-            ? (() => { try { return JSON.parse(currentItem.question_snapshot); } catch(_) { return {}; } })()
-            : (currentItem.question_snapshot || {});
-          const target = (snap.correct_answer || snap.answer || currentItem.correct_answer_snapshot || currentItem.correct_answer || '').split(/[;/,|]/)[0].trim();
-          if (target && 'speechSynthesis' in window) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(target);
-            u.lang = 'en-US';
-            u.rate = 0.9;
-            window.speechSynthesis.speak(u);
-          }
-        };
-      }
-    }
-
-    function openLobbyFlashcardModal() {
-      const modal = document.getElementById('flashcard-modal');
-      if (!modal || _lobbyActiveFlashcards.length === 0) return;
-      _lobbyCurrentFcIndex = 0;
-      renderLobbyFlashcardItem();
-      modal.classList.remove('hidden');
-      if (!window.location.hash || window.location.hash === '#') {
-        window.history.replaceState(null, '', '#practice');
-      }
-    }
-
-    function closeLobbyFlashcardModal() {
-      const modal = document.getElementById('flashcard-modal');
-      if (modal) modal.classList.add('hidden');
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-      if (window.location.hash === '#practice' || window.location.hash === '#flashcards') {
-        window.history.replaceState(null, '', 'dashboard.html');
-      }
-    }
-
-    function renderLobbyFlashcardItem() {
-      const item = _lobbyActiveFlashcards[_lobbyCurrentFcIndex];
-      if (!item) return;
-
-      const flipInner = document.getElementById('active-flip-inner');
-      if (flipInner) flipInner.classList.remove('flipped');
-
-      const snap = typeof item.question_snapshot === 'string'
-        ? (() => { try { return JSON.parse(item.question_snapshot); } catch(_) { return {}; } })()
-        : (item.question_snapshot || {});
-
-      const prompt = snap.question_text || snap.question || snap.soal || snap.indonesia || '—';
-      const pos = snap.word_type || snap.category || (snap.correct_answer?.includes(' ') ? 'Phrase' : 'Word');
-      const target = (snap.correct_answer || snap.answer || item.correct_answer_snapshot || item.correct_answer || '—').split(/[;/,|]/)[0].trim();
-      const studentAns = (item.student_answer || '').trim() || '(No answer / Blank)';
-
-      const posEl = document.getElementById('fc-front-pos');
-      if (posEl) posEl.textContent = pos;
-
-      const promptEl = document.getElementById('fc-front-prompt');
-      if (promptEl) promptEl.textContent = prompt;
-
-      const studentAnsEl = document.getElementById('fc-front-student-ans');
-      if (studentAnsEl) {
-        studentAnsEl.innerHTML = `Your answer: <span style="color:var(--grade-e, #FF0000);">${escapeHtml(studentAns)}</span>`;
-      }
-
-      const backTargetEl = document.getElementById('fc-back-target');
-      if (backTargetEl) backTargetEl.textContent = target;
-
-      const counterEl = document.getElementById('fc-progress-counter');
-      if (counterEl) counterEl.textContent = `Card ${_lobbyCurrentFcIndex + 1} of ${_lobbyActiveFlashcards.length}`;
     }
 
     window.addEventListener('hashchange', restoreDashboardHashRoute);

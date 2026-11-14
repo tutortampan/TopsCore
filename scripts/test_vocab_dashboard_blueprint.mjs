@@ -86,7 +86,7 @@ assert.ok(css.includes('Active Table Headers: Pure White'), 'Must enforce pure w
 
 // Completed Tests Typography: Bold Outfit 800 and 2-line wrap
 assert.ok(css.includes('-webkit-line-clamp: 2 !important;'), 'completed-col-name must support 2-line wrap');
-assert.ok(css.includes('color: #f8fafc !important;') && css.includes('font-size: 0.85rem !important;'), 'completed-col-num must be bright Outfit 800');
+assert.ok(css.includes('color: #f8fafc !important;') && (css.includes('font-size: 0.85rem !important;') || css.includes('font-size: 12px !important;')), 'completed-col-num must be bright Outfit 800');
 
 // Task 7-Grade Sub-Row & Leaderboard Current User Highlighting
 assert.ok(css.includes('.task-grades-subrow'), 'Must define .task-grades-subrow');

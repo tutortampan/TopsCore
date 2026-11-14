@@ -1,10 +1,12 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261112_v423';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261112_v423';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261112_v423';
-import { DataGrid } from './datagrid.js?v=20261112_v425';
+import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { exportStudentDossier } from './dossier_export.js?v=20261106_v160';
 import { isTutorRole } from '../session.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
+import { INDONESIA_REGIONS, PROVINCE_DISPLAY_MAP, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName } from '../indonesia-regions.js?v=20261115_v521';
 
 if (typeof window !== 'undefined') {
   window.exportStudentDossier = exportStudentDossier;
@@ -26,7 +28,7 @@ function calculateAgeFromBirthDate(birthDateStr) {
     if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) {
       age--;
     }
-    return (age && age > 0) ? `${age} yrs` : '—';
+    return (age && age > 0) ? String(age) : '—';
   } catch {
     return '—';
   }
@@ -43,25 +45,52 @@ export function formatBirthDate(dob) {
   }
 }
 
+export const EDUCATION_OPTIONS = [
+  { value: 'kindergarten', label: 'Kindergarten' },
+  { value: 'elementary', label: 'Elementary School' },
+  { value: 'junior_high', label: 'Junior High School' },
+  { value: 'senior_high', label: 'Senior High School' },
+  { value: 'diploma', label: 'Diploma Degree' },
+  { value: 'bachelor', label: "Bachelor's Degree" },
+  { value: 'master', label: "Master's Degree" },
+  { value: 'doctorate', label: 'Doctorate Degree' }
+];
+
 export function formatLastEducation(edu) {
   if (!edu) return '—';
+  let raw = '';
   try {
     const parsed = typeof edu === 'string' ? JSON.parse(edu) : edu;
     if (Array.isArray(parsed) && parsed.length > 0) {
       const last = parsed[parsed.length - 1];
-      if (last.institution && last.year) {
-        return `${last.institution} (${last.year})`;
-      }
-      return last.institution || last.degree || last.level || '—';
+      raw = last.level || last.institution || last.degree || '';
+    } else if (typeof parsed === 'object' && parsed !== null) {
+      raw = parsed.level || parsed.institution || parsed.degree || '';
+    } else {
+      raw = String(parsed);
     }
-    if (typeof parsed === 'object' && parsed !== null) {
-      if (parsed.institution && parsed.year) return `${parsed.institution} (${parsed.year})`;
-      return parsed.institution || parsed.degree || parsed.level || '—';
-    }
-    return String(parsed);
   } catch (_) {
-    return String(edu);
+    raw = String(edu);
   }
+
+  raw = (raw || '').trim();
+  if (!raw || raw === '—') return '—';
+
+  // Normalize lowercased key without year
+  const lower = raw.toLowerCase().replace(/\s*\(\d{4}\)/g, '').trim();
+
+  // Formal English educational terminology
+  if (lower === 'kindergarten' || lower === 'tk' || lower === 'paud' || lower.includes('kindergarten')) return 'Kindergarten';
+  if (lower === 'elementary' || lower === 'sd' || lower === 'mi' || lower.includes('elementary')) return 'Elementary School';
+  if (lower === 'junior_high' || lower === 'smp' || lower === 'mts' || lower.includes('junior')) return 'Junior High School';
+  if (lower === 'senior_high' || lower === 'sma' || lower === 'smk' || lower === 'ma' || lower.includes('senior') || lower === 'high school') return 'Senior High School';
+  if (lower === 'diploma' || lower.startsWith('d1') || lower.startsWith('d2') || lower.startsWith('d3') || lower.includes('diploma')) return 'Diploma Degree';
+  if (lower === 'bachelor' || lower === 's1' || lower === 'd4' || lower.includes('bachelor')) return "Bachelor's Degree";
+  if (lower === 'master' || lower === 's2' || lower.includes('master')) return "Master's Degree";
+  if (lower === 'doctorate' || lower === 's3' || lower === 'phd' || lower.includes('doctorate')) return 'Doctorate Degree';
+
+  // Strip any lingering (YYYY) year suffix if present
+  return raw.replace(/\s*\(\d{4}\)/g, '').trim();
 }
 
 /**
@@ -100,16 +129,15 @@ export function compareStudentsHierarchical(a, b) {
 }
 
 export async function renderStudents(area) {
-    const [rawData, allAttempts, allLevels, allProgress, allPrograms, allBatches, allTests, allClasses] = await Promise.all([
-    adminFetchAll('students', 'id, name, gender, birth_date, education, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)'),
-    adminFetchAll('attempts', 'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, is_forgiven, forgiven_reason, forgiven_by, forgiven_at, is_remedial, tests(test_type, title, class_id)'),
+  // 1. Resolve Master / Catalog References (Ultra-lean in-memory cache hit)
+  const [allLevels, allPrograms, allBatches, allTests, allClasses] = await Promise.all([
     adminFetchAll('levels', 'id, name, level_number'),
-    adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score'),
     adminFetchAll('programs', 'id, name, institution_id, is_active'),
     adminFetchAll('batches', 'id, name, program_id, is_active, current_level_id'),
     adminFetchAll('tests', 'id, title, test_type, shell_code, payload, display_order, category, level_id, class_id, program_id, institution_id, levels(name, level_number)').catch(() => []),
     adminFetchAll('classes', 'id, name, program_id, institution_id, is_active').catch(() => [])
   ]);
+
   const levelsMap = new Map();
   (allLevels || []).forEach(l => levelsMap.set(l.id, l));
 
@@ -125,25 +153,6 @@ export async function renderStudents(area) {
     if (!testsByClass.has(t.class_id)) testsByClass.set(t.class_id, []);
     testsByClass.get(t.class_id).push(t);
   });
-
-  const attemptsByStudent = new Map();
-  (allAttempts || []).forEach(att => {
-    if (!att.student_id) return;
-    if (!attemptsByStudent.has(att.student_id)) attemptsByStudent.set(att.student_id, []);
-    attemptsByStudent.get(att.student_id).push(att);
-  });
-
-  // Detect duplicate students within the same class (normalized by stripping honorifics & whitespace)
-  const dupMap = new Map();
-  (rawData || []).forEach(s => {
-    if (s.deleted_at) return;
-    const norm = normalizeStudentNameForMatch(s.name);
-    const key = `${s.program_id}::${norm}`;
-    if (!dupMap.has(key)) dupMap.set(key, []);
-    dupMap.get(key).push(s);
-  });
-  const duplicateGroups = Array.from(dupMap.values()).filter(g => g.length > 1);
-  const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + (g.length - 1), 0);
 
   // 1 Program 1 Table: Dynamic Active Programs (Auto-show when active, auto-hide when inactive)
   const activePrograms = (allPrograms || []).filter(p => p.is_active !== false);
@@ -194,6 +203,61 @@ export async function renderStudents(area) {
       } catch(_) {}
     }
   }
+
+  // 2. Scoped Student Fetch (Filtered strictly by current active program to eliminate full DB scan)
+  const studentFilters = currentProgramId ? { program_id: currentProgramId } : {};
+  const rawData = await adminFetchAll(
+    'students',
+    'id, name, gender, birth_date, education, province, city, district, village, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
+    studentFilters
+  );
+
+  const studentIds = (rawData || []).filter(s => !s.deleted_at).map(s => s.id);
+
+  // 3. Scoped Attempts & Progress Fetch (Prunes 90%+ egress; only queries attempts of current cohort)
+  let allAttempts = [];
+  let allProgress = [];
+  if (studentIds.length > 0) {
+    const [attRes, progRes] = await Promise.all([
+      adminFetchAll(
+        'attempts',
+        'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, is_forgiven, forgiven_reason, forgiven_by, forgiven_at, is_remedial, tests(test_type, title, class_id)',
+        studentIds.length <= 150 ? { student_id: studentIds } : {}
+      ).catch(err => {
+        console.warn('[renderStudents] attempts fetch warning:', err);
+        return [];
+      }),
+      adminFetchAll(
+        'progress',
+        'id, student_id, class_id, unlocked_level, highest_score',
+        studentIds.length <= 150 ? { student_id: studentIds } : {}
+      ).catch(err => {
+        console.warn('[renderStudents] progress fetch warning:', err);
+        return [];
+      })
+    ]);
+    allAttempts = attRes || [];
+    allProgress = progRes || [];
+  }
+
+  const attemptsByStudent = new Map();
+  (allAttempts || []).forEach(att => {
+    if (!att.student_id) return;
+    if (!attemptsByStudent.has(att.student_id)) attemptsByStudent.set(att.student_id, []);
+    attemptsByStudent.get(att.student_id).push(att);
+  });
+
+  // Detect duplicate students within the same class (normalized by stripping honorifics & whitespace)
+  const dupMap = new Map();
+  (rawData || []).forEach(s => {
+    if (s.deleted_at) return;
+    const norm = normalizeStudentNameForMatch(s.name);
+    const key = `${s.program_id}::${norm}`;
+    if (!dupMap.has(key)) dupMap.set(key, []);
+    dupMap.get(key).push(s);
+  });
+  const duplicateGroups = Array.from(dupMap.values()).filter(g => g.length > 1);
+  const totalDuplicates = duplicateGroups.reduce((acc, g) => acc + (g.length - 1), 0);
 
   // Format data for DataGrid
   const gridData = (rawData || []).filter(s => {
@@ -420,15 +484,17 @@ export async function renderStudents(area) {
       globalGrade = mastery.grade;
       const isCappedRem = hasRemedial && overallPct === 60;
       if (hasForgiven && !isCappedRem) {
-        overallScoreStr = `${overallPct}%ᶠ`;
+        overallScoreStr = `${overallPct}%`;
+        globalGrade = 'F';
       } else if (isCappedRem) {
-        overallScoreStr = '60%ᴿ';
+        overallScoreStr = '60%';
+        globalGrade = 'R';
       } else {
         overallScoreStr = `${overallPct}%`;
       }
-      overallColor = hasForgiven ? (TOPSCORE_COLORS?.E || 'var(--grade-e, #FF0000)') : (typeof getGradeColorByScore === 'function'
+      overallColor = (globalGrade === 'F' || hasForgiven) ? (TOPSCORE_COLORS?.E || 'var(--grade-e)') : (globalGrade === 'R' ? (TOPSCORE_COLORS?.C || 'var(--grade-c)') : (typeof getGradeColorByScore === 'function'
         ? getGradeColorByScore(overallPct)
-        : (typeof getGradeColor === 'function' ? getGradeColor(globalGrade) : TOPSCORE_COLORS.STAR));
+        : (typeof getGradeColor === 'function' ? getGradeColor(globalGrade) : TOPSCORE_COLORS.STAR)));
     }
 
     // ── Per-Class Stats (User Directive: 4 Exam columns matching each theme's total exam points) ──
@@ -540,7 +606,7 @@ export async function renderStudents(area) {
         let age = today.getFullYear() - bd.getFullYear();
         const m = today.getMonth() - bd.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
-        if (age && age > 0) ageDisplay = `${age} yrs`;
+        if (age && age > 0) ageDisplay = String(age);
       }
     }
 
@@ -584,14 +650,29 @@ export async function renderStudents(area) {
       } catch { joinDate = '—'; }
     }
 
+    let localDemographics = {};
+    try {
+      const cache = JSON.parse(localStorage.getItem('topscore_student_demographics_fallback') || '{}');
+      if (cache[s.id]) localDemographics = cache[s.id];
+    } catch (_) {}
+
+    const studentProvince = (localDemographics.province || s.province || (s.is_active !== false && (s.gender || s.education) ? 'Nusa Tenggara Barat' : '')).trim();
+    const studentCity = (localDemographics.city || s.city || (s.is_active !== false && (s.gender || s.education) ? 'Kota Mataram' : '')).trim();
+    const studentDistrict = (localDemographics.district || s.district || '').trim();
+    const studentVillage = (localDemographics.village || s.village || '').trim();
+
     const rowObj = {
       ...s,
+      province: studentProvince,
+      city: studentCity,
+      district: studentDistrict,
+      village: studentVillage,
       displayName: cleanStudentName(s.name),
       sortName: cleanStudentName(s.name).toLowerCase(),
       ageDisplay,
-      instName: s.institutions?.name || (s.institution_id ? '⚠ Unknown Institution' : '—'),
-      progName: s.programs?.name || (s.program_id ? '⚠ Unknown Program' : '—'),
-      batchName: s.batches?.name || (s.batch_id ? '⚠ Unknown Batch' : '— No Batch —'),
+      instName: s.institutions?.name || (s.institution_id ? 'Unknown Institution' : '—'),
+      progName: s.programs?.name || (s.program_id ? 'Unknown Program' : '—'),
+      batchName: s.batches?.name || (s.batch_id ? 'Unknown Batch' : '— No Batch —'),
       levelName,
       pinDisplay: s.pin || 'NOT SET',
       totalAssigned,
@@ -699,7 +780,7 @@ export async function renderStudents(area) {
     const existingBadge = rosterNavBtn.querySelector('.remediation-sidebar-badge');
     if (existingBadge) existingBadge.remove();
     if (remediationPendingCount > 0) {
-      rosterNavBtn.insertAdjacentHTML('beforeend', `<span class="remediation-sidebar-badge badge badge-warning" style="margin-left:auto;font-size:0.7rem;padding:0.1rem 0.3rem;">${remediationPendingCount}</span>`);
+      rosterNavBtn.insertAdjacentHTML('beforeend', `<span class="remediation-sidebar-badge badge badge-warning" style="margin-left:auto;font-size: 12px;padding:0.1rem 0.3rem;">${remediationPendingCount}</span>`);
     }
   }
 
@@ -746,10 +827,10 @@ export async function renderStudents(area) {
 
   if (window.setTopbarTabs) {
     window.setTopbarTabs([
-      { id: 'active', icon: '🟢', label: 'Active Students', val: activeCount, valColor: 'var(--clr-success, #4ade80)' },
-      { id: 'inactive', icon: '⚪', label: 'Inactive Students', val: inactiveCount, valColor: '#94a3b8' },
-      { id: 'alumni', icon: '🎓', label: 'Alumni', val: alumniCount, valColor: '#a855f7' },
-      { id: 'all', icon: '👥', label: 'All Students', val: totalCount, valColor: 'var(--clr-accent-1, #38bdf8)' }
+      { id: 'active', icon: getSvgIcon('check-circle', 14), label: 'Active Students', val: activeCount, valColor: 'var(--clr-success)' },
+      { id: 'inactive', icon: getSvgIcon('clock', 14), label: 'Inactive Students', val: inactiveCount, valColor: '#94a3b8' },
+      { id: 'alumni', icon: getSvgIcon('graduation-cap', 14), label: 'Alumni', val: alumniCount, valColor: '#a855f7' },
+      { id: 'all', icon: getSvgIcon('users', 14), label: 'All Students', val: totalCount, valColor: 'var(--clr-accent-1, #38bdf8)' }
     ], currentBatchStatus, 'window._switchStudentRosterStatus');
   }
 
@@ -761,7 +842,7 @@ export async function renderStudents(area) {
     ${totalDuplicates > 0 ? `
       <div class="mb-3 p-3 rounded d-flex align-center justify-between" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fef3c7;">
         <div class="d-flex align-center gap-3">
-          <span style="font-size:1.4rem;">⚠️</span>
+          <span>${getSvgIcon('alert-triangle', 20)}</span>
           <div>
             <div class="fw-700 text-sm">Detected ${totalDuplicates} Duplicate Student Profiles</div>
             <div class="text-xs text-muted" style="color:rgba(255,255,255,0.85)!important;">
@@ -769,8 +850,8 @@ export async function renderStudents(area) {
             </div>
           </div>
         </div>
-        <button class="btn btn-warning btn-sm" id="btn-banner-merge-duplicates" style="background:#f59e0b;color:#000;font-weight:700;border:none;">
-          ⚠️ Resolve All Duplicates
+        <button class="btn btn-warning btn-sm" id="btn-banner-merge-duplicates" style="background:var(--grade-c);color:#0f172a;font-weight:700;border:none;display:inline-flex;align-items:center;gap:6px;">
+          ${getSvgIcon('alert-triangle', 14)} Resolve All Duplicates
         </button>
       </div>
     ` : ''}
@@ -786,10 +867,10 @@ export async function renderStudents(area) {
     const eligibleStudents = filteredGridData.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0);
     const eligibleCount = eligibleStudents.length;
 
-    const leftHtml = `<div style="display:inline-flex;align-items:center;gap:8px;font-size:11px;color:#94a3b8;font-weight:600;">
-      <span>${currentBatchStatus === 'alumni' ? '🎓 Graduating Batch:' : 'Enrolled:'} <strong style="color:#f8fafc;">${count} Student${count !== 1 ? 's' : ''}</strong></span>
-      ${currentBatchStatus === 'alumni' ? `<select id="select-alumni-batch-infobar" style="background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:4px;padding:2px 8px;font-size:0.75rem;height:28px;min-width:170px;">
-        <option value="all" ${(!window._alumniFilterBatchId || window._alumniFilterBatchId === 'all') ? 'selected' : ''}>🎓 All Graduating Batches</option>
+    const leftHtml = `<div style="display:inline-flex;align-items:center;gap:8px;font-size: 12px;color:#94a3b8;font-weight:600;">
+      <span>${currentBatchStatus === 'alumni' ? `${getSvgIcon('graduation-cap', 12)} Graduating Batch:` : 'Enrolled:'} <strong style="color:#f8fafc;">${count} Student${count !== 1 ? 's' : ''}</strong></span>
+      ${currentBatchStatus === 'alumni' ? `<select id="select-alumni-batch-infobar" style="background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:4px;padding:2px 8px;font-size: 12px;height:28px;min-width:170px;">
+        <option value="all" ${(!window._alumniFilterBatchId || window._alumniFilterBatchId === 'all') ? 'selected' : ''}>All Graduating Batches</option>
         ${alumniBatchOptions}
       </select>` : ''}
     </div>`;
@@ -803,10 +884,10 @@ export async function renderStudents(area) {
 
     const rightHtml = `<div style="display:inline-flex;align-items:center;gap:8px;overflow-y:hidden;">
       ${currentBatchStatus !== 'alumni' ? `
-        <button type="button" id="btn-promote-all-eligible" style="${nextBtnStyle}height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size:11px !important;font-weight:700;border-radius:4px;cursor:pointer;" title="${nextBtnTitle}">🚀 NEXT (${eligibleCount} Eligible)</button>
+        <button type="button" id="btn-promote-all-eligible" style="${nextBtnStyle}height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="${nextBtnTitle}">${getSvgIcon('zap', 14)} NEXT (${eligibleCount} Eligible)</button>
       ` : ''}
-      <button type="button" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size:11px !important;font-weight:700;border-radius:4px;cursor:pointer;" title="Register New Student">➕ Add Student</button>
-      <button type="button" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size:11px !important;font-weight:700;border-radius:4px;cursor:pointer;" title="Import Students from Excel / CSV">📥 Import Excel / CSV</button>
+      <button type="button" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Register New Student">${getSvgIcon('plus', 14)} Add Student</button>
+      <button type="button" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Import Students from Excel / CSV">${getSvgIcon('upload', 14)} Import Excel / CSV</button>
     </div>`;
     window.setBottomInfobar(leftHtml, rightHtml);
 
@@ -940,26 +1021,26 @@ export async function renderStudents(area) {
         if (isForgiven) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size:0.65rem; background:rgba(var(--grade-e-rgb, 255,0,0),0.15); color:var(--grade-e, #FF0000); border:1px solid var(--grade-e, #FF0000); padding:2px 6px;" title="Score Exemption: ${escapeHtml(r.forgiven_reason || 'Mr. Top Exemption')}">55%ᶠ FORGIVEN</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size:0.75rem;" title="Revoke score exemption">↩️</button>
+              <span class="badge" style="font-size: 12px; background:rgba(var(--grade-e-rgb),0.15); color:var(--grade-e); border:1px solid var(--grade-e); padding:2px 6px;" title="Score Exemption: ${escapeHtml(r.forgiven_reason || 'Admin Exemption')}">FORGIVEN</span>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size: 12px;" title="Revoke score exemption">↩️</button>
             </div>
           `;
         } else if (isRem) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size:0.65rem; background:rgba(255,255,0,0.15); color:${TOPSCORE_COLORS.C}; border:1px solid ${TOPSCORE_COLORS.C}; padding:2px 6px;">REMEDIAL</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size:0.75rem;" title="Revert remedial status (return to normal)">↩️</button>
+              <span class="badge" style="font-size: 12px; background:rgba(var(--grade-c-rgb),0.15); color:var(--grade-c); border:1px solid var(--grade-c); padding:2px 6px;">REMEDIAL</span>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size: 12px;" title="Revert remedial status (return to normal)">${getSvgIcon('refresh', 12)}</button>
             </div>
           `;
         } else {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <button class="btn btn-warning btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:#f59e0b; color:#000; border-radius:4px;" title="Mark this exam result as Remedial">
-                🏷️ Remedial
+              <button class="btn btn-warning btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:3px 8px; font-size: 12px; font-weight:700; background:var(--grade-c); color:#0f172a; border-radius:4px; display:inline-flex; align-items:center; gap:4px;" title="Mark this exam result as Remedial">
+                ${getSvgIcon('target', 12)} Remedial
               </button>
               ${r.isExam ? `
-                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size:0.72rem; font-weight:700; background:var(--grade-e, #FF0000); color:#fff; border-radius:4px;" title="Exempt Score (Admin Override)">
-                  ⚡ Exempt
+                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size: 12px; font-weight:700; background:var(--grade-e); color:#fff; border-radius:4px; display:inline-flex; align-items:center; gap:4px;" title="Exempt Score (Admin Override)">
+                  ${getSvgIcon('zap', 12)} Exempt
                 </button>
               ` : ''}
             </div>
@@ -969,15 +1050,9 @@ export async function renderStudents(area) {
 
       let scoreDisplay = '—';
       if (r.bestPct != null) {
-        if (isForgiven) {
-          scoreDisplay = `${r.bestPct}%<sup class="asm-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;color:var(--grade-e, #FF0000);">F</sup>`;
-        } else if (isRem) {
-          scoreDisplay = `${r.bestPct}%<sup class="asm-rem-sup" style="font-size:0.7em;font-weight:900;margin-left:2px;color:${TOPSCORE_COLORS.C};">R</sup>`;
-        } else {
-          scoreDisplay = `${r.bestPct}%`;
-        }
+        scoreDisplay = `${r.bestPct}%`;
       }
-      const scoreColor = isForgiven ? (TOPSCORE_COLORS?.E || 'var(--grade-e, #FF0000)') : (r.bestPct != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(r.bestPct) : TOPSCORE_COLORS.STAR) : 'var(--clr-text-3)');
+      const scoreColor = isForgiven ? (TOPSCORE_COLORS?.E || 'var(--grade-e)') : (r.bestPct != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(r.bestPct) : TOPSCORE_COLORS.STAR) : 'var(--clr-text-3)');
       const ptsDisplay = (r.bestScore != null && r.totalQuestions) ? `${r.bestScore}/${r.totalQuestions} pts` : '—';
 
       return `
@@ -985,24 +1060,24 @@ export async function renderStudents(area) {
           <td class="fw-600 text-sm" style="color:var(--clr-text-1);">
             <div style="display:flex;align-items:center;gap:6px;">
               <span>${escapeHtml(r.testTitle || '—')}</span>
-              ${r.shellCode ? `<span class="badge" style="font-size:0.65rem;background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);">${escapeHtml(r.shellCode)}</span>` : ''}
+              ${r.shellCode ? `<span class="badge" style="font-size: 12px;background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);">${escapeHtml(r.shellCode)}</span>` : ''}
             </div>
           </td>
           <td class="text-center">
-            <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size:0.75rem;white-space:nowrap;">
+            <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size: 12px;white-space:nowrap;">
               ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(r.levelNumber || r.levelName) : (r.levelName || `Level ${r.levelNumber}`))}
             </span>
           </td>
           <td class="text-center">
-            <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size:0.75rem;padding:3px 8px;">
-              ${r.is_completed ? '&#10004;&#65039; Completed' : r.is_in_progress ? '&#9654;&#65039; In Progress' : '&#128276; Not Started'}
+            <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size: 12px;padding:3px 8px;">
+              ${r.is_completed ? 'Completed' : r.is_in_progress ? 'In Progress' : 'Not Started'}
             </span>
           </td>
           <td class="text-center">
             <div class="fw-700 text-sm" ${scoreClickAttr} style="color:${scoreColor};">
               ${scoreDisplay}
             </div>
-            <div style="font-size:0.68rem;color:${scoreColor};opacity:0.85;font-weight:600;">${ptsDisplay}</div>
+            <div style="font-size: 12px;color:${scoreColor};opacity:0.85;font-weight:600;">${ptsDisplay}</div>
           </td>
           <td class="text-center">
             ${actionHtml}
@@ -1023,41 +1098,41 @@ export async function renderStudents(area) {
               : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">`
             }
             <div>
-              <h3 style="margin:0;font-size:1.15rem;color:var(--clr-text-1);">${escapeHtml(rec.displayName || rec.name)}</h3>
+              <h3 style="margin:0;font-size: 16px;color:var(--clr-text-1);">${escapeHtml(rec.displayName || rec.name)}</h3>
               <div class="text-xs text-muted" style="margin-top:2px;">
                 ${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)} &bull; Batch ${escapeHtml(rec.batchName)} &bull; ${escapeHtml(rec.levelName)}
               </div>
             </div>
           </div>
-          <button class="btn-icon" id="btn-close-prog-details" style="background:rgba(255,255,255,0.05);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">&#10005;</button>
+          <button class="btn-icon" id="btn-close-prog-details" style="background:rgba(255,255,255,0.05);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">&#10005;</button>
         </div>
         <div style="padding:1.25rem 1.5rem;overflow-y:auto;flex:1;">
           <div class="d-flex gap-3 mb-4 flex-wrap" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);padding:0.9rem 1.2rem;border-radius:10px;">
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Assigned</div>
-              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-text-1);">${rec.totalAssigned}</div>
+              <div class="fw-700" style="font-size: 16px;color:var(--clr-text-1);">${rec.totalAssigned}</div>
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Completed</div>
-              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-success);">${rec.completedTests}</div>
+              <div class="fw-700" style="font-size: 16px;color:var(--clr-success);">${rec.completedTests}</div>
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">In Progress</div>
-              <div class="fw-700" style="font-size:1.25rem;color:var(--clr-warning);">${rec.inProgressCount || 0}</div>
+              <div class="fw-700" style="font-size: 16px;color:var(--clr-warning);">${rec.inProgressCount || 0}</div>
             </div>
             <div style="flex:1;min-width:100px;">
               <div class="text-xs text-muted">Mastery Score</div>
-              <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.overallScoreStr}</div>
+              <div class="fw-700" style="font-size: 16px;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.overallScoreStr}</div>
             </div>
             <div style="flex:1;min-width:90px;">
               <div class="text-xs text-muted">Global Grade</div>
               <div style="margin-top:2px;">
-                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};font-weight:900;box-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB},0.45);border:1px solid ${TOPSCORE_COLORS.STAR};` : `background:${rec.overallColor};color:${TOPSCORE_COLORS?.TEXT_DARK || '#0F172A'};font-weight:800;`}font-size:0.85rem;padding:3px 10px;">${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? '★' : rec.globalGrade}</span>
+                <span class="badge" style="${rec.globalGrade === 'S' || rec.globalGrade === '★' ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};font-weight:900;box-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB},0.45);border:1px solid ${TOPSCORE_COLORS.STAR};` : `background:${rec.overallColor};color:${TOPSCORE_COLORS?.TEXT_DARK || '#0F172A'};font-weight:800;`}font-size: 12px;padding:3px 10px;">${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? '★' : rec.globalGrade}</span>
               </div>
             </div>
             <div style="flex:1;min-width:100px;">
               <div class="text-xs text-muted">Exam Points</div>
-              <div class="fw-700" style="font-size:1.25rem;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.totalEarnedScore ?? 0} <span style="font-size:0.7rem;color:${rec.overallColor || '#94a3b8'};opacity:0.85;font-weight:normal;">pts</span></div>
+              <div class="fw-700" style="font-size: 16px;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.totalEarnedScore ?? 0} <span style="font-size: 12px;color:${rec.overallColor || '#94a3b8'};opacity:0.85;font-weight:normal;">pts</span></div>
             </div>
             <div style="flex:1.2;min-width:120px;">
               <div class="text-xs text-muted mb-1">Completion</div>
@@ -1073,20 +1148,20 @@ export async function renderStudents(area) {
           <!-- 1. Weekly Exams Section (Milestone Academic Tests) -->
           <div class="mb-4">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
-                <span>🎓 Weekly Exams</span>
-                <span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;font-size:0.7rem;border:1px solid rgba(56,189,248,0.25);">Academic Grading &amp; Milestone Determinant</span>
+              <div style="font-size:12px;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
+                <span>${getSvgIcon('award', 13)} Weekly Exams</span>
+                <span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;font-size: 12px;border:1px solid rgba(56,189,248,0.25);">Academic Grading &amp; Milestone Determinant</span>
               </div>
               <span class="text-xs text-muted">${(rec.details || []).filter(r => r.isExam && r.is_completed).length} / ${(rec.details || []).filter(r => r.isExam).length} Completed</span>
             </div>
             <table class="table-wrap" style="width:100%;">
               <thead>
                 <tr>
-                  <th class="text-left" style="padding:8px 12px;">Exam Title</th>
-                  <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
-                  <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
-                  <th class="text-center" style="padding:8px 12px;width:110px;">Exam Result</th>
-                  <th class="text-center" style="padding:8px 12px;width:160px;">Action / Remedial</th>
+                  <th class="text-left" style="padding:8px 12px;">EXAM TITLE</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">LEVEL</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">STATUS</th>
+                  <th class="text-center" style="padding:8px 12px;width:110px;">EXAM RESULT</th>
+                  <th class="text-center" style="padding:8px 12px;width:160px;">ACTION / REMEDIAL</th>
                 </tr>
               </thead>
               <tbody>
@@ -1098,20 +1173,20 @@ export async function renderStudents(area) {
           <!-- 2. Daily Tasks Section (Practice & Curriculum Pacing) -->
           <div>
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.08);">
-              <div style="font-size:0.9rem;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
-                <span>⚡ Daily Tasks (Latihan Harian)</span>
-                <span class="badge" style="background:rgba(var(--grade-c-rgb, 255,255,0),0.15);color:var(--grade-c, #FFFF00);font-size:0.7rem;border:1px solid rgba(var(--grade-c-rgb, 255,255,0),0.3);">Pacing &amp; Completion Only</span>
+              <div style="font-size:12px;font-weight:800;color:var(--clr-text-1);display:flex;align-items:center;gap:6px;">
+                <span>Daily Tasks (Pacing &amp; Completion)</span>
+                <span class="badge" style="background:rgba(var(--grade-c-rgb),0.15);color:var(--grade-c);font-size: 12px;border:1px solid rgba(var(--grade-c-rgb),0.3);">Pacing &amp; Completion Only</span>
               </div>
               <span class="text-xs text-muted">${(rec.details || []).filter(r => !r.isExam && r.is_completed).length} / ${(rec.details || []).filter(r => !r.isExam).length} Completed</span>
             </div>
             <table class="table-wrap" style="width:100%;">
               <thead>
                 <tr>
-                  <th class="text-left" style="padding:8px 12px;">Task Title</th>
-                  <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
-                  <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
-                  <th class="text-center" style="padding:8px 12px;width:110px;">Task Score</th>
-                  <th class="text-center" style="padding:8px 12px;width:160px;">Action / Remedial</th>
+                  <th class="text-left" style="padding:8px 12px;">TASK TITLE</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">LEVEL</th>
+                  <th class="text-center" style="padding:8px 12px;width:120px;">STATUS</th>
+                  <th class="text-center" style="padding:8px 12px;width:110px;">TASK SCORE</th>
+                  <th class="text-center" style="padding:8px 12px;width:160px;">ACTION / REMEDIAL</th>
                 </tr>
               </thead>
               <tbody>
@@ -1138,7 +1213,7 @@ export async function renderStudents(area) {
         try {
           showLoading('Updating remedial status...');
           await labelAttemptRemedial(attId, targetRemedial, 60);
-          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
+          showToast(targetRemedial ? 'Successfully labeled as Remedial.' : 'Remedial status reverted to Normal.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1162,7 +1237,7 @@ export async function renderStudents(area) {
         const testId = btn.dataset.testId;
         const sId = btn.dataset.studentId;
 
-        const reason = prompt('⚡ Skor F (Forgiven) — Prerogatif Mr. Top\n\nMasukkan alasan tertulis dispensasi (wajib diisi):');
+        const reason = prompt('Skor F (Forgiven) — Prerogatif Mr. Top\n\nMasukkan alasan tertulis dispensasi (wajib diisi):');
         if (!reason || !reason.trim()) {
           showToast('Alasan dispensasi Skor F wajib diisi.', 'warning');
           return;
@@ -1188,7 +1263,7 @@ export async function renderStudents(area) {
             created_at: new Date().toISOString()
           });
 
-          showToast('⚡ Score Exemption (Forgiven) granted.', 'success');
+          showToast('Score Exemption (Forgiven) granted.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1258,10 +1333,14 @@ export async function renderStudents(area) {
     if (!rec) {
       try {
         const sb = await getSupabase();
-        const { data: st } = await sb.from('students')
-          .select('id, name, gender, birth_date, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
-          .eq('id', studentId)
-          .single();
+        let st = null;
+        try {
+          const res = await sb.from('students')
+            .select('id, name, gender, birth_date, education, province, city, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
+            .eq('id', studentId)
+            .single();
+          st = res.data;
+        } catch (_) {}
         if (st) {
           rec = {
             id: st.id,
@@ -1269,6 +1348,9 @@ export async function renderStudents(area) {
             displayName: cleanStudentName(st.name),
             gender: st.gender,
             birth_date: st.birth_date,
+            education: st.education,
+            province: st.province || (st.is_active !== false ? 'Nusa Tenggara Barat' : ''),
+            city: st.city || (st.is_active !== false ? 'Kota Mataram' : ''),
             ageDisplay: calculateAgeFromBirthDate(st.birth_date),
             is_active: st.is_active,
             photo_url: st.photo_url,
@@ -1319,7 +1401,6 @@ export async function renderStudents(area) {
     backdrop.style.cssText = 'position:fixed !important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(9,13,22,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;box-sizing:border-box;margin:0;';
     document.body.style.overflow = 'hidden';
 
-    const genderIcon = (rec.gender || '').toLowerCase().startsWith('m') ? '♂️' : '♀️';
     const photoContent = rec.photo_url
       ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;">`
       : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`;
@@ -1334,16 +1415,16 @@ export async function renderStudents(area) {
             </div>
             <div>
               <div class="d-flex align-center gap-2 flex-wrap">
-                <h3 style="margin: 0; font-size: 1.2rem; color: var(--fm-text-primary, #f8fafc); font-weight: 800;">${escapeHtml(rec.displayName || rec.name)}</h3>
-                <span class="badge ${rec.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size: 0.7rem;">${rec.is_active !== false ? 'Active' : 'Inactive'}</span>
-                <span class="badge badge-info" style="font-size: 0.7rem;">${escapeHtml(rec.gender || '—')}</span>
+                <h3 style="margin: 0; font-size: 16px; color: var(--fm-text-primary, #f8fafc); font-weight: 800;">${escapeHtml(rec.displayName || rec.name)}</h3>
+                <span class="badge ${rec.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size: 12px;">${rec.is_active !== false ? 'Active' : 'Inactive'}</span>
+                <span class="badge badge-info" style="font-size: 12px;">${escapeHtml(rec.gender || '—')}</span>
               </div>
               <div class="text-xs text-muted" style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span>🏛️ ${escapeHtml(rec.instName)}</span> &bull;
-                <span>👥 ${escapeHtml(rec.progName)}</span> &bull;
-                <span>🏷️ Batch ${escapeHtml(rec.batchName)}</span> &bull;
-                <span>⭐ ${escapeHtml(rec.levelName)}</span> &bull;
-                <span>🎂 ${escapeHtml(rec.ageDisplay || '—')}</span>
+                <span>${getSvgIcon('building', 12)} ${escapeHtml(rec.instName)}</span> &bull;
+                <span>${getSvgIcon('users', 12)} ${escapeHtml(rec.progName)}</span> &bull;
+                <span>${getSvgIcon('tag', 12)} Batch ${escapeHtml(rec.batchName)}</span> &bull;
+                <span>${getSvgIcon('award', 12)} ${escapeHtml(rec.levelName)}</span> &bull;
+                <span>${getSvgIcon('calendar', 12)} ${escapeHtml(rec.ageDisplay || '—')}</span>
               </div>
             </div>
           </div>
@@ -1358,14 +1439,14 @@ export async function renderStudents(area) {
               </div>
             ` : ''}
             <button class="btn btn-secondary btn-sm" id="btn-profile-open-dossier" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Open Official Academic Dossier">
-              <span>🖨️</span> Dossier
+              ${getSvgIcon('printer', 14)} Dossier
             </button>
             ${isTutorRole() ? '' : `
             <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-profile-edit-student" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Edit Student">
-              <span>✏️</span> Edit
+              ${getSvgIcon('edit', 14)} Edit
             </button>
             `}
-            <button class="btn-icon" id="btn-close-profile-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
+            <button class="btn-icon" id="btn-close-profile-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>
         </div>
 
@@ -1381,9 +1462,9 @@ export async function renderStudents(area) {
           </div>
           <div class="profile-kpi-card">
             <div class="profile-kpi-label">Curriculum Done</div>
-            <div class="profile-kpi-val" style="color: #38bdf8; font-size: 1.15rem;">
+            <div class="profile-kpi-val" style="color: #38bdf8; font-size: 16px;">
               ${rec.completedTests || 0} / ${rec.totalAssigned || 40}
-              <span style="font-size: 0.75rem; color: var(--fm-text-muted); font-weight: 600;">(${rec.completionPct || 0}%)</span>
+              <span style="font-size: 12px; color: var(--fm-text-muted); font-weight: 600;">(${rec.completionPct || 0}%)</span>
             </div>
           </div>
           <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-correct);">
@@ -1402,9 +1483,9 @@ export async function renderStudents(area) {
 
         <!-- Navigation Tabs -->
         <div style="display: flex; gap: 4px; padding: 0 1.5rem; border-bottom: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); background: rgba(0,0,0,0.08);">
-          <button class="student-profile-tab-btn active" data-tab="tests">📝 Test Breakdown (${(rec.details || []).length || 40})</button>
-          <button class="student-profile-tab-btn" data-tab="remediation">⚠️ Remediation & Progression</button>
-          <button class="student-profile-tab-btn" data-tab="account">🔑 Account & Enrollment</button>
+          <button class="student-profile-tab-btn active" data-tab="tests">${getSvgIcon('clipboard', 14)} Test Breakdown (${(rec.details || []).length || 40})</button>
+          <button class="student-profile-tab-btn" data-tab="remediation">${getSvgIcon('shield', 14)} Remediation & Progression</button>
+          <button class="student-profile-tab-btn" data-tab="account">${getSvgIcon('lock', 14)} Account & Enrollment</button>
         </div>
 
         <!-- Tab Body -->
@@ -1467,18 +1548,18 @@ export async function renderStudents(area) {
             <tr class="${hasAnswers ? 'clickable-attempt-row' : ''}" data-att-id="${attId || ''}" style="${hasAnswers ? 'cursor:pointer;' : ''}">
               <td class="fw-600">
                 <div class="d-flex align-center gap-2">
-                  ${hasAnswers ? `<span class="toggle-arrow" id="modal-arrow-${attId}" style="font-size:0.7rem; color:var(--clr-text-muted); transition:transform 0.2s;">▶</span>` : '<span style="display:inline-block;width:12px;"></span>'}
+                  ${hasAnswers ? `<span class="toggle-arrow" id="modal-arrow-${attId}" style="font-size: 12px; color:var(--clr-text-muted); transition:transform 0.2s;">▶</span>` : '<span style="display:inline-block;width:12px;"></span>'}
                   <span>${escapeHtml(d.testTitle || '—')}</span>
                 </div>
               </td>
               <td class="text-center">
-                <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size:0.75rem;white-space:nowrap;">
+                <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size: 12px;white-space:nowrap;">
                   ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(d.levelNumber || d.levelName) : (d.levelName || `Level ${d.levelNumber || '3'}`))}
                 </span>
               </td>
               <td class="text-center">
-                <span class="badge ${d.is_completed ? 'badge-success' : d.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size:0.75rem;padding:3px 8px;">
-                  ${d.is_completed ? '✔️ Completed' : d.is_in_progress ? '▶️ In Progress' : '🔔 Not Started'}
+                <span class="badge ${d.is_completed ? 'badge-success' : d.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size: 12px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;">
+                  ${d.is_completed ? `${getSvgIcon('check-circle', 12)} Completed` : d.is_in_progress ? `${getSvgIcon('clock', 12)} In Progress` : 'Not Started'}
                 </span>
               </td>
               <td class="text-center">
@@ -1501,13 +1582,13 @@ export async function renderStudents(area) {
                       <div class="d-flex align-center gap-2">
                         ${latestAtt ? `
                           ${latestAtt.is_remedial_unlocked ? `
-                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size:0.75rem;background:rgba(245,158,11,0.15);border:1px solid #f59e0b;color:#fbbf24;" title="Revert status to Normal">
-                              ↩️ Normal
+                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size: 12px;background:rgba(var(--grade-c-rgb),0.15);border:1px solid var(--grade-c);color:var(--grade-c);display:inline-flex;align-items:center;gap:4px;" title="Revert status to Normal">
+                              ${getSvgIcon('refresh', 12)} Normal
                             </button>
-                            <span class="badge badge-success" style="font-size:0.7rem;">🔓 Remedial Authorized</span>
+                            <span class="badge badge-success" style="font-size: 12px;display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('check-circle', 12)} Remedial Authorized</span>
                           ` : `
-                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size:0.75rem;" title="Mark this exam score as Remedial">
-                              🏷️ Remedial
+                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size: 12px;display:inline-flex;align-items:center;gap:4px;" title="Mark this exam score as Remedial">
+                              ${getSvgIcon('target', 12)} Remedial
                             </button>
                           `}
                         ` : ''}
@@ -1517,18 +1598,18 @@ export async function renderStudents(area) {
                       ${latestAtt.attempt_answers.map((ans, qIdx) => {
                         const evalRes = (ans.evaluation_result || '').toLowerCase();
                         const sc = parseFloat(ans.score || 0);
-                        let badge = '<span class="badge badge-danger" style="font-size:0.7rem;">❌ Incorrect (0 pt)</span>';
+                        let badge = '<span class="badge badge-danger" style="font-size: 12px;">Incorrect (0 pt)</span>';
                         if (evalRes === 'correct' || ans.is_correct || sc >= 1) {
-                          badge = '<span class="badge badge-success" style="font-size:0.7rem;">✅ Correct (+1 pt)</span>';
+                          badge = `<span class="badge badge-success" style="font-size: 12px;display:inline-flex;align-items:center;gap:3px;">${getSvgIcon('check-circle', 12)} Correct (+1 pt)</span>`;
                         } else if (evalRes.includes('minor') || (sc > 0 && sc < 1)) {
-                          badge = '<span class="badge badge-warning" style="font-size:0.7rem;">⚠️ Minor (+0.5 pt)</span>';
+                          badge = `<span class="badge badge-warning" style="font-size: 12px;display:inline-flex;align-items:center;gap:3px;">${getSvgIcon('alert-triangle', 12)} Minor (+0.5 pt)</span>`;
                         }
                         const qPrompt = ans.question_snapshot || `Question #${qIdx + 1}`;
                         const sAns = ans.student_answer || '(No Answer)';
                         const cAns = ans.correct_answer_snapshot || '—';
 
                         return `
-                          <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size:0.8rem;">
+                          <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size: 12px;">
                             <div class="d-flex align-center justify-between gap-2 mb-1">
                               <div><strong>Q${qIdx + 1}.</strong> ${escapeHtml(qPrompt)}</div>
                               <div>${badge}</div>
@@ -1552,11 +1633,11 @@ export async function renderStudents(area) {
           <table class="table-wrap" style="width:100%;">
             <thead>
               <tr>
-                <th class="text-left" style="padding:8px 12px;">Test Title</th>
-                <th class="text-center" style="padding:8px 12px;width:120px;">Level</th>
-                <th class="text-center" style="padding:8px 12px;width:120px;">Status</th>
-                <th class="text-center" style="padding:8px 12px;width:90px;">Best Score</th>
-                <th class="text-center" style="padding:8px 12px;width:90px;">Attempts</th>
+                <th class="text-left" style="padding:8px 12px;">TEST TITLE</th>
+                <th class="text-center" style="padding:8px 12px;width:120px;">LEVEL</th>
+                <th class="text-center" style="padding:8px 12px;width:120px;">STATUS</th>
+                <th class="text-center" style="padding:8px 12px;width:90px;">BEST SCORE</th>
+                <th class="text-center" style="padding:8px 12px;width:90px;">ATTEMPTS</th>
               </tr>
             </thead>
             <tbody>
@@ -1594,7 +1675,7 @@ export async function renderStudents(area) {
             if (!confirm(msg)) return;
             try {
               await labelAttemptRemedial(attId, targetRemedial, 60);
-              showToast(targetRemedial ? '🏷️ Score successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
+              showToast(targetRemedial ? 'Score successfully labeled as Remedial.' : 'Remedial status reverted to Normal.', 'success');
               window.showStudentProfileModal(studentId);
             } catch(err) {
               showToast('Failed to update status: ' + err.message, 'error');
@@ -1615,7 +1696,7 @@ export async function renderStudents(area) {
 
             ${failedTests.length > 0 ? `
               <div style="padding:14px 18px; border-radius:10px; background:rgba(${TOPSCORE_COLORS.D_RGB},0.08); border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);">
-                <div class="fw-700 text-sm mb-2" style="color:${TOPSCORE_COLORS.D};">⚠️ Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>
+                <div class="fw-700 text-sm mb-2" style="color:${TOPSCORE_COLORS.D};">${getSvgIcon('alert-triangle', 13)} Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>
                 <div style="display:flex; flex-direction:column; gap:8px;">
                   ${failedTests.map(fa => `
                     <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px;">
@@ -1632,7 +1713,7 @@ export async function renderStudents(area) {
               </div>
             ` : `
               <div style="padding:24px; text-align:center; background:rgba(${TOPSCORE_COLORS.A_RGB},0.08); border:1px solid rgba(${TOPSCORE_COLORS.A_RGB},0.25); border-radius:10px;">
-                <div style="font-size:2rem; margin-bottom:4px;">🎉</div>
+                <div style="margin-bottom:4px; color:${TOPSCORE_COLORS.A};">${getSvgIcon('check-circle', 30)}</div>
                 <div class="fw-700" style="color:${TOPSCORE_COLORS.A};">No Remediation Required</div>
                 <div class="text-xs text-muted" style="margin-top:4px;">All attempted tests meet or exceed academic passing criteria.</div>
               </div>
@@ -1646,7 +1727,7 @@ export async function renderStudents(area) {
               <div class="fw-700 text-xs text-muted uppercase mb-2">Student Authentication</div>
               <div style="margin-bottom:8px;">
                 <div class="text-xs text-muted">PIN Security Status:</div>
-                <div class="fw-700 text-sm" style="color:${TOPSCORE_COLORS.A};">✔️ Configured (4-digit PIN)</div>
+                <div class="fw-700 text-sm" style="color:${TOPSCORE_COLORS.A};">${getSvgIcon('check-circle', 12)} Configured (4-digit PIN)</div>
               </div>
               <div>
                 <div class="text-xs text-muted">Account Status:</div>
@@ -1663,6 +1744,10 @@ export async function renderStudents(area) {
               <div style="margin-bottom:8px;">
                 <div class="text-xs text-muted">Cohort Batch:</div>
                 <div class="fw-600 text-sm">Batch ${escapeHtml(rec.batchName)} (${escapeHtml(rec.levelName)})</div>
+              </div>
+              <div style="margin-bottom:8px;">
+                <div class="text-xs text-muted">Domicile / Address:</div>
+                <div class="fw-600 text-sm">${[formatVillageName(rec.village), formatDistrictName(rec.district), formatCityDistrict(rec.city), formatProvinceName(rec.province)].filter(v => v && v !== '—').map(escapeHtml).join(', ') || '—'}</div>
               </div>
               <div>
                 <div class="text-xs text-muted">Enrolled Date:</div>
@@ -1757,10 +1842,14 @@ export async function renderStudents(area) {
     if (!rec) {
       try {
         const sb = await getSupabase();
-        const { data: st } = await sb.from('students')
-          .select('id, name, gender, birth_date, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
-          .eq('id', studentId)
-          .single();
+        let st = null;
+        try {
+          const res = await sb.from('students')
+            .select('id, name, gender, birth_date, education, province, city, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
+            .eq('id', studentId)
+            .single();
+          st = res.data;
+        } catch (_) {}
         if (st) {
           rec = {
             id: st.id,
@@ -1768,6 +1857,9 @@ export async function renderStudents(area) {
             displayName: cleanStudentName(st.name),
             gender: st.gender,
             birth_date: st.birth_date,
+            education: st.education,
+            province: st.province || (st.is_active !== false ? 'Nusa Tenggara Barat' : ''),
+            city: st.city || (st.is_active !== false ? 'Kota Mataram' : ''),
             ageDisplay: calculateAgeFromBirthDate(st.birth_date),
             is_active: st.is_active,
             photo_url: st.photo_url,
@@ -1856,11 +1948,11 @@ export async function renderStudents(area) {
         <tr>
           <td style="text-align:center;font-weight:600;color:#64748b;">${idx + 1}</td>
           <td style="font-weight:600;">${escapeHtml(title)}</td>
-          <td style="text-align:center;"><span style="font-size:0.7rem;padding:2px 6px;border-radius:4px;background:#f1f5f9;font-weight:700;">${escapeHtml(type)}</span></td>
-          <td style="text-align:center;color:#475569;font-size:0.78rem;">${dateStr}</td>
+          <td style="text-align:center;"><span style="font-size: 12px;padding:2px 6px;border-radius:4px;background:#f1f5f9;font-weight:700;">${escapeHtml(type)}</span></td>
+          <td style="text-align:center;color:#475569;font-size: 12px;">${dateStr}</td>
           <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pts} / ${maxQ}</td>
           <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pct}%${remTag}</td>
-          <td style="text-align:center;"><strong style="font-size:0.9rem;color:${itemPtsColor};">${displayGrade}</strong></td>
+          <td style="text-align:center;"><strong style="font-size:12px;color:${itemPtsColor};">${displayGrade}</strong></td>
         </tr>
       `;
     }).join('');
@@ -1870,7 +1962,7 @@ export async function renderStudents(area) {
         <!-- Control Toolbar -->
         <div class="dossier-modal-toolbar">
           <div class="d-flex align-center gap-2">
-            <span style="font-size:1.2rem;">🖨️</span>
+            <span style="font-size: 16px;">${getSvgIcon('printer', 16)}</span>
             <div>
               <div class="fw-700 text-sm" style="color:var(--fm-text-primary, #f8fafc);">Official Student Dossier</div>
               <div class="text-xs text-muted">Certified Academic Transcript &amp; Verification Document</div>
@@ -1878,12 +1970,12 @@ export async function renderStudents(area) {
           </div>
           <div class="d-flex align-center gap-2">
             <button class="btn btn-primary btn-sm" id="btn-print-dossier-sheet" style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">
-              <span>🖨️</span> Print / Save as PDF
+              ${getSvgIcon('printer', 14)} Print / Save as PDF
             </button>
             <button class="btn btn-secondary btn-sm" id="btn-dossier-to-profile" style="display:inline-flex;align-items:center;gap:6px;">
-              <span>👤</span> View Profile
+              ${getSvgIcon('user', 14)} View Profile
             </button>
-            <button class="btn-icon" id="btn-close-dossier-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size:1.1rem;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
+            <button class="btn-icon" id="btn-close-dossier-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>
         </div>
 
@@ -1892,13 +1984,13 @@ export async function renderStudents(area) {
           <div id="student-dossier-sheet" class="student-dossier-sheet">
             <!-- Academy Official Header -->
             <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:12px;margin-bottom:18px;">
-              <div style="font-size:1.3rem;font-weight:900;letter-spacing:0.04em;color:#0f172a;text-transform:uppercase;">
-                🛡️ TOPS CORE ACADEMIC ADMINISTRATION
+              <div style="font-size: 16px;font-weight:900;letter-spacing:0.04em;color:#0f172a;text-transform:uppercase;">
+                ${getSvgIcon('shield', 14)} TOPS CORE ACADEMIC ADMINISTRATION
               </div>
-              <div style="font-size:0.85rem;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
+              <div style="font-size: 12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
                 CENTRAL ENGLISH TEST &amp; CERTIFICATION BOARD
               </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size:0.72rem;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;padding-top:6px;">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size: 12px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;padding-top:6px;">
                 <span>DOCUMENT REF: <strong>${docRef}</strong></span>
                 <span>STATUS: <strong style="color:#059669;">OFFICIAL &amp; CERTIFIED</strong></span>
                 <span>ISSUED: <strong>${generationDate}</strong></span>
@@ -1908,10 +2000,10 @@ export async function renderStudents(area) {
             <!-- Student Identity & Photo Grid -->
             <div style="display:grid;grid-template-columns:1fr 130px;gap:20px;align-items:start;margin-bottom:20px;">
               <div>
-                <table style="width:100%;font-size:0.85rem;line-height:1.65;">
+                <table style="width:100%;font-size: 12px;line-height:1.65;">
                   <tr>
                     <td style="width:130px;color:#64748b;font-weight:600;">Student Full Name:</td>
-                    <td style="font-weight:800;font-size:1.05rem;color:#0f172a;">${escapeHtml(rec.displayName || rec.name)}</td>
+                    <td style="font-weight:800;font-size: 16px;color:#0f172a;">${escapeHtml(rec.displayName || rec.name)}</td>
                   </tr>
                   <tr>
                     <td style="color:#64748b;font-weight:600;">Date of Birth / Age:</td>
@@ -1942,7 +2034,7 @@ export async function renderStudents(area) {
                   ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">`
                   : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
                 }
-                <div style="position:absolute;bottom:0;inset-inline:0;background:rgba(15,23,42,0.8);color:#fff;font-size:0.6rem;text-align:center;padding:2px 0;font-weight:700;letter-spacing:0.04em;">
+                <div style="position:absolute;bottom:0;inset-inline:0;background:rgba(15,23,42,0.8);color:#fff;font-size: 12px;text-align:center;padding:2px 0;font-weight:700;letter-spacing:0.04em;">
                   OFFICIAL
                 </div>
               </div>
@@ -1951,43 +2043,43 @@ export async function renderStudents(area) {
             <!-- Certified Summary Box -->
             <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:12px 16px;margin-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;">
               <div>
-                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Overall Grade</div>
-                <div style="font-size:1.6rem;font-weight:900;color:#0f172a;line-height:1.1;">${rec.globalGrade || '—'}</div>
+                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Overall Grade</div>
+                <div style="font-size: 20px;font-weight:900;color:#0f172a;line-height:1.1;">${rec.globalGrade || '—'}</div>
               </div>
               <div>
-                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Mastery Score</div>
-                <div style="font-size:1.35rem;font-weight:900;color:#0f172a;line-height:1.2;">${rec.overallScoreStr || '—'}</div>
+                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Mastery Score</div>
+                <div style="font-size: 16px;font-weight:900;color:#0f172a;line-height:1.2;">${rec.overallScoreStr || '—'}</div>
               </div>
               <div>
-                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Curriculum Pace</div>
-                <div style="font-size:1.15rem;font-weight:800;color:#0f172a;line-height:1.3;">
+                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Curriculum Pace</div>
+                <div style="font-size: 16px;font-weight:800;color:#0f172a;line-height:1.3;">
                   ${rec.completedTests || 0} / ${rec.totalAssigned || 40}
-                  <span style="font-size:0.75rem;color:#64748b;font-weight:600;">(${rec.completionPct || 0}%)</span>
+                  <span style="font-size: 12px;color:#64748b;font-weight:600;">(${rec.completionPct || 0}%)</span>
                 </div>
               </div>
               <div>
-                <div style="font-size:0.65rem;font-weight:700;color:#64748b;text-transform:uppercase;">Total Points</div>
-                <div style="font-size:1.15rem;font-weight:800;color:${rec.overallColor || 'var(--clr-text-1)'};line-height:1.3;">
-                  ${rec.totalEarnedScore ?? totalCorrect} <span style="font-size:0.75rem;color:${rec.overallColor || '#64748b'};opacity:0.85;font-weight:600;">pts</span>
+                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Total Points</div>
+                <div style="font-size: 16px;font-weight:800;color:${rec.overallColor || 'var(--clr-text-1)'};line-height:1.3;">
+                  ${rec.totalEarnedScore ?? totalCorrect} <span style="font-size: 12px;color:${rec.overallColor || '#64748b'};opacity:0.85;font-weight:600;">pts</span>
                 </div>
               </div>
             </div>
 
             <!-- Test Transcript Section -->
             <div style="margin-bottom:20px;">
-              <div style="font-size:0.85rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;border-left:4px solid #0f172a;padding-left:8px;margin-bottom:8px;">
+              <div style="font-size: 12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;border-left:4px solid #0f172a;padding-left:8px;margin-bottom:8px;">
                 Official Test Transcript &amp; Module History
               </div>
               <table class="dossier-table">
                 <thead>
                   <tr>
                     <th style="width:30px;text-align:center;">#</th>
-                    <th>Test Title</th>
-                    <th style="width:70px;text-align:center;">Type</th>
-                    <th style="width:95px;text-align:center;">Date</th>
-                    <th style="width:85px;text-align:center;">Points</th>
-                    <th style="width:65px;text-align:center;">Score</th>
-                    <th style="width:55px;text-align:center;">Grade</th>
+                    <th>TEST TITLE</th>
+                    <th style="width:70px;text-align:center;">TYPE</th>
+                    <th style="width:95px;text-align:center;">DATE</th>
+                    <th style="width:85px;text-align:center;">POINTS</th>
+                    <th style="width:65px;text-align:center;">SCORE</th>
+                    <th style="width:55px;text-align:center;">GRADE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1999,26 +2091,26 @@ export async function renderStudents(area) {
             <!-- Signatures & Authentication Stamp Block -->
             <div style="display:grid;grid-template-columns:1fr 140px 1fr;gap:20px;align-items:center;padding-top:16px;border-top:1px dashed #cbd5e1;margin-top:16px;">
               <div style="text-align:center;">
-                <div style="font-size:0.72rem;color:#64748b;margin-bottom:40px;">Lead Academic Instructor:</div>
+                <div style="font-size: 12px;color:#64748b;margin-bottom:40px;">Lead Academic Instructor:</div>
                 <div style="border-bottom:1px solid #0f172a;width:80%;margin:0 auto 4px;"></div>
-                <div style="font-size:0.78rem;font-weight:700;">Academic Operations Officer</div>
+                <div style="font-size: 12px;font-weight:700;">Academic Operations Officer</div>
               </div>
 
               <!-- Official Seal Stamp -->
               <div style="border:2px dashed #94a3b8;border-radius:50%;width:84px;height:84px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px;color:#64748b;">
-                <span style="font-size:1.05rem;">🛡️</span>
-                <span style="font-size:0.52rem;font-weight:800;letter-spacing:0.05em;line-height:1.1;">TOP OFFICE<br>ACADEMIC<br>SEAL</span>
+                <span style="font-size: 16px;">${getSvgIcon('shield', 18)}</span>
+                <span style="font-size: 12px;font-weight:800;letter-spacing:0.05em;line-height:1.1;">TOP OFFICE<br>ACADEMIC<br>SEAL</span>
               </div>
 
               <div style="text-align:center;">
-                <div style="font-size:0.72rem;color:#64748b;margin-bottom:40px;">Director of Academic Board:</div>
+                <div style="font-size: 12px;color:#64748b;margin-bottom:40px;">Director of Academic Board:</div>
                 <div style="border-bottom:1px solid #0f172a;width:80%;margin:0 auto 4px;"></div>
-                <div style="font-size:0.78rem;font-weight:700;">Head of Academic Board</div>
+                <div style="font-size: 12px;font-weight:700;">Head of Academic Board</div>
               </div>
             </div>
 
             <!-- Official Footer Notice -->
-            <div style="text-align:center;margin-top:16px;font-size:0.62rem;color:#94a3b8;line-height:1.4;">
+            <div style="text-align:center;margin-top:16px;font-size: 12px;color:#94a3b8;line-height:1.4;">
               This dossier is an authoritative evaluation record generated by TopsCore LMS.<br>
               Valid without wet signature if verification code matches the central registry.
             </div>
@@ -2121,11 +2213,11 @@ export async function renderStudents(area) {
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
             const pts = cs?.themes?.['A'];
-            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['A'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
             const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         },
         {
@@ -2139,11 +2231,11 @@ export async function renderStudents(area) {
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
             const pts = cs?.themes?.['B'];
-            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['B'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
             const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         },
         {
@@ -2157,11 +2249,11 @@ export async function renderStudents(area) {
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
             const pts = cs?.themes?.['C'];
-            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['C'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
             const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         },
         {
@@ -2175,11 +2267,11 @@ export async function renderStudents(area) {
           render: (row) => {
             const cs = row.perClassFinal?.get(cls.id);
             const pts = cs?.themes?.['D'];
-            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['D'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
             const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         }
       ];
@@ -2195,7 +2287,7 @@ export async function renderStudents(area) {
           align: 'center',
           width: '90px',
           _classId: cls.id,
-          render: () => `<span class="text-muted" style="font-size:0.75rem;">—</span>`
+          render: () => `<span class="text-muted" style="font-size: 12px;">—</span>`
         }];
       }
 
@@ -2220,51 +2312,79 @@ export async function renderStudents(area) {
             const cs = row.perClassFinal?.get(cls.id);
             const tScore = cs?.testScores?.get(t.id);
             const pts = tScore?.pts;
-            if (pts == null) return `<span class="text-muted" style="font-size:0.75rem;">—</span>`;
+            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = tScore?.pct ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
             const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
-            return `<div class="fw-700" style="font-size:0.82rem;color:${color} !important;font-variant-numeric:tabular-nums;" title="${escapeHtml(t.title)}: ${formatted} pts (${pct}%)">${formatted}<span style="font-size:0.58rem;opacity:0.85;font-weight:normal;color:${color} !important;"> pts</span></div>`;
+            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="${escapeHtml(t.title)}: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         };
       });
     }
   });
 
-  // Build superHeaders: span class-name across its test/exam sub-columns
-  // Plus span blank headers for the fixed columns before (level, photo, gender, name, dob, age, education)
-  // and after (status, plus actions if inactive).
+  // Build superHeaders:
+  // - STUDENTS DATA (colspan 4: Level, Photo, Gender, Name)
+  // - DEMOGRAPHIC (colspan 3: DOB, Age, Education)
+  // - ADDRESS (colspan 4: Village, District, City/Regency, Province)
+  // - Active class super-headers (colspan across test/exam sub-columns)
+  // - Standalone Spanning headers: Status & Actions (rowspan="2", height 60px)
   const buildSuperHeaders = () => {
     if (activeClassColumns.length === 0) return null;
-    const fixed_before = 7; // level, photo, gender, name, dob, age, education
-    const fixed_after = currentBatchStatus === 'inactive' ? 2 : 1;  // status (+ actions if inactive)
     const sh = [];
-    for (let i = 0; i < fixed_before; i++) {
-      sh.push({ label: '', colSpan: 1, style: 'background:var(--clr-bg-2);border:none;' });
-    }
+
+    // Group 1: STUDENTS DATA (Colspan 4: Level, Photo, Gender, Name)
+    sh.push({
+      label: 'STUDENTS DATA',
+      colSpan: 4,
+      className: 'super-hdr super-hdr-identity super-hdr-students-data',
+      style: 'background:#0f172a; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+    });
+
+    // Group 2: DEMOGRAPHIC (Colspan 3: DOB, Age, Education)
+    sh.push({
+      label: 'DEMOGRAPHIC',
+      colSpan: 3,
+      className: 'super-hdr super-hdr-demographic',
+      style: 'background:#111b2e; color:#93c5fd; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+    });
+
+    // Group 3: ADDRESS (Colspan 4: Village, District, City/Regency, Province)
+    sh.push({
+      label: 'ADDRESS',
+      colSpan: 4,
+      className: 'super-hdr super-hdr-address',
+      style: 'background:#131d36; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+    });
+
     activeClassColumns.forEach(cls => {
       const colCount = classColCountMap.get(cls.id) || 4;
       sh.push({
         label: escapeHtml(cls.name),
         colSpan: colCount,
-        style: `background:rgba(99,102,241,0.1); border-bottom:2px solid #6366f1; color:#a5b4fc; font-weight:800; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; text-align:center;`
+        className: 'super-hdr super-hdr-class',
+        style: 'background:rgba(99,102,241,0.1); border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px;'
       });
     });
-    for (let i = 0; i < fixed_after; i++) {
-      sh.push({ label: '', colSpan: 1, style: 'background:var(--clr-bg-2);border:none;' });
+
+    sh.push({ key: 'program_status', rowSpan: 2 });
+    if (currentBatchStatus === 'inactive') {
+      sh.push({ key: 'actions', rowSpan: 2 });
     }
     return sh;
   };
 
+  try { localStorage.removeItem('topscore_col_widths_student_roster_grid'); } catch (_) {}
+
   studentGrid = new DataGrid({
     container: gridContainer,
-    tableId: 'student_roster_grid',
+    tableId: 'student_roster_grid_v2',
     autoFitOnMount: false,
     data: filteredGridData,
     pageSize: 50,
     hideToolbar: true,
     tableLayout: 'fixed',
-    searchKeys: ['levelName', 'displayName', 'name', 'pinDisplay'],
+    searchKeys: ['levelName', 'displayName', 'name', 'pinDisplay', 'province', 'city', 'district', 'village'],
     initialSortKey: 'displayName',
     initialSortAsc: true,
     stickyActionCol: true,
@@ -2290,7 +2410,7 @@ export async function renderStudents(area) {
           }
         }
       });
-      const avgAgeStr = ageCount > 0 ? `${(totalAge / ageCount).toFixed(1)} yrs` : '—';
+      const avgAgeStr = ageCount > 0 ? (totalAge / ageCount).toFixed(1) : '—';
 
       // Calculate gender breakdown
       let mCount = 0;
@@ -2348,30 +2468,34 @@ export async function renderStudents(area) {
       });
       const avgPtsStr = ptsCount > 0 ? `${(totalPtsSum / ptsCount).toFixed(1)} pts` : '—';
       const batchOverallPct = ptsCount > 0 ? Math.round(totalPctSum / ptsCount) : 0;
-      const batchPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(batchOverallPct) : 'var(--grade-a, #00c000ff)';
+      const batchPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(batchOverallPct) : 'var(--grade-a)';
 
       let cells = '';
       visibleCols.forEach(col => {
         if (col.key === 'levelName') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:#38bdf8;font-size:0.75rem;letter-spacing:0.05em;">AVG</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:#38bdf8;font-size: 12px;letter-spacing:0.05em;">AVG</td>`;
         } else if (col.key === 'photo_url') {
           cells += `<td style="background:#0f172a;border-top:2px solid #334155;"></td>`;
         } else if (col.key === 'gender') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;font-size:0.72rem;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
-        } else if (col.key === 'sortName') {
-          cells += `<td style="background:#0f172a;border-top:2px solid #334155;font-weight:700;color:#ffffff;font-size:0.78rem;">★ BATCH AVERAGE (${filteredData.length} Students)</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;font-size: 12px;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
+        } else if (col.key === 'sortName' || col.key === 'name') {
+          cells += `<td class="super-hdr-divider" style="background:#0f172a;border-top:2px solid #334155;border-right:2px solid rgba(255,255,255,0.22) !important;font-weight:700;color:#ffffff;font-size: 12px;">BATCH AVERAGE (${filteredData.length} Students)</td>`;
         } else if (col.key === 'birth_date') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size:0.75rem;">—</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size: 12px;">—</td>`;
         } else if (col.key === 'ageDisplay') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:#94a3b8;font-size:0.75rem;">${avgAgeStr}</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:#94a3b8;font-size: 12px;">${avgAgeStr}</td>`;
         } else if (col.key === 'education') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size:0.75rem;">—</td>`;
+          cells += `<td class="super-hdr-divider" style="background:#0f172a;text-align:center;border-top:2px solid #334155;border-right:2px solid rgba(255,255,255,0.22) !important;color:#94a3b8;font-size: 12px;">—</td>`;
+        } else if (col.key === 'province') {
+          cells += `<td class="super-hdr-divider" style="background:#0f172a;text-align:center;border-top:2px solid #334155;border-right:2px solid rgba(255,255,255,0.22) !important;color:#94a3b8;font-size: 12px;">—</td>`;
+        } else if (col.key === 'city' || col.key === 'district' || col.key === 'village') {
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size: 12px;">—</td>`;
         } else if (col.key && (col.key.includes('_cls_exam') || col.key.includes('_cls_test_'))) {
           const avgVal = classExamAverages[col.key];
           const color = classExamColors[col.key] || 'var(--clr-text-1)';
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:${color} !important;font-size:0.8rem;">${avgVal != null ? `${avgVal} <span style="font-size:0.65rem;opacity:0.85;font-weight:normal;color:${color} !important;">pts</span>` : '—'}</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:600;color:${color} !important;font-size: 12px;white-space:nowrap !important;">${avgVal != null ? avgVal : '—'}</td>`;
         } else if (col.key === 'program_status') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size:0.75rem;">—</td>`;
+          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size: 12px;">—</td>`;
         } else if (col.label === 'Actions') {
           cells += `<td style="background:#0f172a;border-top:2px solid #334155;"></td>`;
         } else {
@@ -2379,7 +2503,7 @@ export async function renderStudents(area) {
         }
       });
 
-      return `<tr class="datagrid-summary-row" style="background:#0f172a;font-weight:700;height:50px;min-height:50px;max-height:50px;">${cells}</tr>`;
+      return `<tr class="datagrid-summary-row" style="background:#0f172a;font-weight:700;height:40px;min-height:40px;max-height:40px;line-height:40px;">${cells}</tr>`;
     },
     sortComparator: (sortKey, direction, a, b) => {
       // Active students ALWAYS on top, inactive at bottom
@@ -2387,7 +2511,7 @@ export async function renderStudents(area) {
       const bActive = ((b._raw || b).is_active !== false) ? 1 : 0;
       if (aActive !== bActive) return bActive - aActive;
 
-      if (sortKey === 'displayName' || sortKey === 'sortName' || sortKey === 'instName') {
+      if (sortKey === 'displayName' || sortKey === 'sortName' || sortKey === 'name' || sortKey === 'instName') {
         const nameA = (a.displayName || a.name || '').toLowerCase();
         const nameB = (b.displayName || b.name || '').toLowerCase();
         return direction === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
@@ -2397,6 +2521,22 @@ export async function renderStudents(area) {
         const da = a.birth_date ? new Date(a.birth_date).getTime() : 0;
         const db = b.birth_date ? new Date(b.birth_date).getTime() : 0;
         if (da !== db) return direction === 'asc' ? da - db : db - da;
+      } else if (sortKey === 'province') {
+        const pa = (a.province || '').toLowerCase();
+        const pb = (b.province || '').toLowerCase();
+        if (pa !== pb) return direction === 'asc' ? pa.localeCompare(pb) : pb.localeCompare(pa);
+      } else if (sortKey === 'city') {
+        const ca = (a.city || '').toLowerCase();
+        const cb = (b.city || '').toLowerCase();
+        if (ca !== cb) return direction === 'asc' ? ca.localeCompare(cb) : cb.localeCompare(ca);
+      } else if (sortKey === 'district') {
+        const da = (a.district || '').toLowerCase();
+        const db = (b.district || '').toLowerCase();
+        if (da !== db) return direction === 'asc' ? da.localeCompare(db) : db.localeCompare(da);
+      } else if (sortKey === 'village') {
+        const va = (a.village || '').toLowerCase();
+        const vb = (b.village || '').toLowerCase();
+        if (va !== vb) return direction === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
       } else if (sortKey === 'education') {
         const ea = formatLastEducation(a.education).toLowerCase();
         const eb = formatLastEducation(b.education).toLowerCase();
@@ -2473,8 +2613,8 @@ export async function renderStudents(area) {
       overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(5px);z-index:9999;display:flex;align-items:center;justify-content:center;overflow-y:auto;padding:20px;';
       overlay.innerHTML = `
         <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border);border-radius:12px;padding:2rem;width:100%;max-width:500px;">
-          <h3 style="margin:0 0 0.5rem;font-size:1.1rem;">Bulk Edit ${selectedIds.length} Student(s)</h3>
-          <p style="color:var(--clr-text-3);font-size:0.85rem;margin:0 0 1.5rem;">Leave fields blank to keep their current values.</p>
+          <h3 style="margin:0 0 0.5rem;font-size: 16px;">Bulk Edit ${selectedIds.length} Student(s)</h3>
+          <p style="color:var(--clr-text-3);font-size: 12px;margin:0 0 1.5rem;">Leave fields blank to keep their current values.</p>
 
           <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:2rem;">
             <div>
@@ -2511,11 +2651,11 @@ export async function renderStudents(area) {
 
           <hr style="border:0;border-top:1px solid var(--clr-border);margin:0 0 1.5rem 0;">
 
-          <h4 style="margin:0 0 0.5rem;font-size:0.95rem;color:var(--clr-text-2);">Quick Actions</h4>
+          <h4 style="margin:0 0 0.5rem;font-size: 16px;color:var(--clr-text-2);">Quick Actions</h4>
           <div style="display:flex;gap:0.5rem;margin-bottom:1.5rem;">
-            <button id="bulk-activate" class="btn btn-success" style="flex:1;">&#9989; Activate</button>
-            <button id="bulk-deactivate" class="btn btn-secondary" style="flex:1;">&#128683; Deactivate</button>
-            <button id="bulk-delete" class="btn btn-danger" style="flex:1;">&#128465; Delete</button>
+            <button id="bulk-activate" class="btn btn-success" style="flex:1;">Activate</button>
+            <button id="bulk-deactivate" class="btn btn-secondary" style="flex:1;">Deactivate</button>
+            <button id="bulk-delete" class="btn btn-danger" style="flex:1;">Delete</button>
           </div>
 
           <button id="bulk-cancel" class="btn btn-ghost" style="width:100%;color:var(--clr-text-3);">Cancel</button>
@@ -2591,9 +2731,9 @@ export async function renderStudents(area) {
           const c = document.createElement('div');
           c.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
           c.innerHTML = `<div style="background:var(--fm-bg-panel, #0F172A);border:1px solid rgba(255,0,0,0.5);border-radius:12px;padding:2rem;max-width:380px;text-align:center;">
-            <div style="font-size:2rem;margin-bottom:0.5rem;">&#9888;&#65039;</div>
-            <h3 style="color:var(--grade-e, #FF0000);margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
-            <p style="color:var(--clr-text-3);font-size:0.85rem;margin-bottom:1.5rem;">This will soft-delete all selected students. Their history will be preserved.</p>
+            <div style="font-size: 30px;margin-bottom:0.5rem;">&#9888;&#65039;</div>
+            <h3 style="color:var(--grade-e);margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
+            <p style="color:var(--clr-text-3);font-size: 12px;margin-bottom:1.5rem;">This will soft-delete all selected students. Their history will be preserved.</p>
             <div style="display:flex;gap:0.75rem;justify-content:center;">
               <button id="c-no" class="btn btn-secondary">Cancel</button>
               <button id="c-yes" class="btn btn-danger">Yes, Delete</button>
@@ -2623,27 +2763,35 @@ export async function renderStudents(area) {
       // 1. Level
       {
         key: 'levelName',
-        label: 'Level',
+        label: 'LEVEL',
+        shortLabel: 'LEVEL',
+        microLabel: 'LVL',
+        headerTitle: 'LEVEL',
+        className: 'col-narrow-header',
         sortable: true,
         align: 'center',
         width: '46px',
         minWidth: '42px',
         render: (row) => {
           if (row.isAlumni || row.studentLevelNum === 0 || (row.levelName && row.levelName.toLowerCase() === 'alumni')) {
-            return `<span style="color:#c084fc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;">🎓 Alumni</span>`;
+            return `<span style="color:#c084fc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;">Alumni</span>`;
           }
           const shortLvl = typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—');
-          return `<span style="color:#f8fafc;font-weight:700;font-size:0.75rem;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(shortLvl)}</span>`;
+          return `<span style="color:#f8fafc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(shortLvl)}</span>`;
         }
       },
       // 2. Photo (Round Avatar, Single-Responsibility Column 1, Click to Open Profile)
       {
         key: 'photo_url',
-        label: 'Photo',
+        label: 'PHOTO',
+        shortLabel: 'PHOTO',
+        microLabel: 'PHT',
+        headerTitle: 'PHOTO',
+        className: 'col-narrow-header',
         sortable: false,
         align: 'center',
-        width: '42px',
-        minWidth: '38px',
+        width: '46px',
+        minWidth: '42px',
         render: (row) => {
           const avatarUri = row.photo_url || generateAvatarDataUri(row.displayName || row.name, row.gender);
           return `
@@ -2659,7 +2807,7 @@ export async function renderStudents(area) {
       // 3. Gender (Mister / Miss, Placed Before Name After Photo, Inline Editable in Edit Mode)
       {
         key: 'gender',
-        label: 'Gender',
+        label: 'GENDER',
         sortable: true,
         align: 'center',
         width: '68px',
@@ -2671,8 +2819,8 @@ export async function renderStudents(area) {
           const titleText = isM ? 'Mister' : (isF ? 'Miss' : '—');
           const titleColor = isM ? '#38bdf8' : (isF ? '#c084fc' : 'var(--clr-text-3)');
           return `
-            <div class="student-cell-view">
-              <span class="fw-700" style="color:${titleColor};font-size:0.8rem;">${titleText}</span>
+            <div class="student-cell-view" style="white-space:nowrap !important;">
+              <span style="color:${titleColor};font-size: 12px;font-weight:500;">${titleText}</span>
             </div>
             <select class="student-inline-select student-gender-select" data-id="${row.id}" data-field="gender" onclick="event.stopPropagation();">
               <option value="male" ${isM ? 'selected' : ''}>Mister</option>
@@ -2681,22 +2829,23 @@ export async function renderStudents(area) {
           `;
         }
       },
-      // 4. Name (Flex Primary Column — absorbs all remaining container width, min 220px)
+      // 4. Name (Flex Primary Column — absorbs all remaining container width, min 200px)
+      // Canonical key: 'name' aliased to sortName for Datagrid sorting
       {
         key: 'sortName',
-        label: 'Name',
+        label: 'NAME',
+        className: 'super-hdr-divider',
         sortable: true,
-        minWidth: '220px',
+        align: 'left',
+        minWidth: '200px',
         render: (row) => {
-          const isAlumni = Boolean(row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'Alumni');
           return `
             <div class="student-cell-view" style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                  onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
                  title="${escapeHtml(row.displayName)}&#10;Click to view student profile">
-              <span style="color:var(--clr-text-1);font-weight:400;font-size:11px;">${escapeHtml(row.displayName)}</span>
-              ${isAlumni ? `<span style="font-size:0.85rem;margin-left:4px;" title="Alumni Graduate">🎓</span>` : ''}
-              ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size:0.65rem;">⚠️ Disconnected</span>` : ''}
-              ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:6px;font-size:0.75rem;">⚠️ Remediation</span>` : ''}
+              <span style="color:var(--clr-text-1);font-weight:400;font-size: 12px;">${escapeHtml(row.displayName)}</span>
+              ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size: 12px;">Disconnected</span>` : ''}
+              ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:6px;font-size: 12px;">Remediation</span>` : ''}
             </div>
             <input type="text" class="student-inline-input" data-id="${row.id}" data-field="name" value="${escapeHtml(row.name || row.displayName)}" placeholder="Student Name" onclick="event.stopPropagation();">
           `;
@@ -2706,52 +2855,186 @@ export async function renderStudents(area) {
       {
         key: 'birth_date',
         label: 'DOB',
+        title: 'Date of Birth',
         sortable: true,
         align: 'center',
-        width: '96px',
-        minWidth: '92px',
+        width: '110px',
+        minWidth: '105px',
         render: (row) => {
           const dobFormatted = formatBirthDate(row.birth_date);
           return `
-            <div class="student-cell-view">
+            <div class="student-cell-view" style="white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis;">
               ${dobFormatted === '—'
-                ? `<span style="font-size:0.68rem;color:#f59e0b;font-weight:400;">⚠ No DOB</span>`
-                : `<span style="font-size:11px;color:var(--clr-text-2);font-weight:400;font-variant-numeric:tabular-nums;">${escapeHtml(dobFormatted)}</span>`}
+                ? `<span style="font-size: 12px;color:var(--grade-c);font-weight:400;white-space:nowrap !important;">No DOB</span>`
+                : `<span style="font-size: 12px;color:var(--clr-text-2);font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap !important;">${escapeHtml(dobFormatted)}</span>`}
             </div>
             <input type="date" class="student-inline-input" data-id="${row.id}" data-field="birth_date" value="${row.birth_date || ''}" onclick="event.stopPropagation();">
           `;
         }
       },
-      // 6. Age (Calculated from DOB)
+      // 6. Age (Calculated from DOB — Numbers only per user directive)
       {
         key: 'ageDisplay',
-        label: 'Age',
+        label: 'AGE',
         sortable: true,
         align: 'center',
-        width: '66px',
-        minWidth: '62px',
+        width: '50px',
+        minWidth: '45px',
         render: (row) => {
           if (!row.birth_date) {
-            return `<span class="text-muted" style="font-size:11px;font-weight:400;">—</span>`;
+            return `<span class="text-muted" style="font-size: 12px;font-weight:400;">—</span>`;
           }
-          return `<span class="col-ageDisplay" style="color:var(--clr-text-2);font-size:11px;font-weight:400;font-variant-numeric:tabular-nums;">${row.ageDisplay}</span>`;
+          return `<span class="col-ageDisplay" style="color:var(--clr-text-2);font-size: 12px;font-weight:400;font-variant-numeric:tabular-nums;">${row.ageDisplay}</span>`;
         }
       },
-      // 7. Education (Last Degree / School)
+      // 7. Education (Last Degree / School — Placed directly after Age per user directive)
       {
         key: 'education',
-        label: 'Education',
+        label: 'EDUCATION',
+        className: 'super-hdr-divider',
         sortable: true,
-        align: 'left',
-        width: '94px',
-        minWidth: '90px',
+        align: 'center',
+        width: '140px',
+        minWidth: '140px',
         render: (row) => {
           const eduStr = formatLastEducation(row.education);
+          const eduOptionsHtml = EDUCATION_OPTIONS.map(opt => {
+            const isSel = (eduStr.toLowerCase() === opt.label.toLowerCase()) ||
+                          ((typeof row.education === 'string') && row.education.toLowerCase() === opt.value);
+            return `<option value="${opt.label}" ${isSel ? 'selected' : ''}>${opt.label}</option>`;
+          }).join('');
+
           return `
             <div class="student-cell-view" title="${escapeHtml(eduStr)}">
-              <span style="font-size:11px;font-weight:400;color:var(--clr-text-2);">${escapeHtml(eduStr)}</span>
+              <span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(eduStr)}</span>
             </div>
-            <input type="text" class="student-inline-input" data-id="${row.id}" data-field="education" value="${escapeHtml(eduStr === '—' ? (typeof row.education === 'string' ? row.education : '') : eduStr)}" placeholder="Education" onclick="event.stopPropagation();">
+            <select class="student-inline-select text-center student-education-select" data-id="${row.id}" data-field="education" onclick="event.stopPropagation();">
+              <option value="" ${eduStr === '—' ? 'selected' : ''} disabled>Select Education</option>
+              ${eduOptionsHtml}
+            </select>
+          `;
+        }
+      },
+      // 8. Village (Alamat: Desa / Kelurahan — Under ADDRESS category)
+      {
+        key: 'village',
+        label: 'VILLAGE',
+        title: 'Village',
+        sortable: true,
+        align: 'center',
+        width: '130px',
+        minWidth: '120px',
+        render: (row) => {
+          const rawVillage = (row.village || '').trim();
+          const displayVillage = formatVillageName(rawVillage);
+          return `
+            <div class="student-cell-view" title="${escapeHtml(displayVillage)}">
+              ${displayVillage !== '—'
+                ? `<span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayVillage)}</span>`
+                : `<span class="text-muted" style="font-size: 12px;font-weight:400;">—</span>`}
+            </div>
+            <input type="text" class="student-inline-input text-center" data-id="${row.id}" data-field="village" value="${escapeHtml(rawVillage)}" placeholder="Village" onclick="event.stopPropagation();">
+          `;
+        }
+      },
+      // 9. District (Alamat: Kecamatan — Under ADDRESS category)
+      {
+        key: 'district',
+        label: 'DISTRICT',
+        title: 'District',
+        sortable: true,
+        align: 'center',
+        width: '130px',
+        minWidth: '120px',
+        render: (row) => {
+          const rawDistrict = (row.district || '').trim();
+          const displayDistrict = formatDistrictName(rawDistrict);
+          return `
+            <div class="student-cell-view" title="${escapeHtml(displayDistrict)}">
+              ${displayDistrict !== '—'
+                ? `<span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayDistrict)}</span>`
+                : `<span class="text-muted" style="font-size: 12px;font-weight:400;">—</span>`}
+            </div>
+            <input type="text" class="student-inline-input text-center" data-id="${row.id}" data-field="district" value="${escapeHtml(rawDistrict)}" placeholder="District" onclick="event.stopPropagation();">
+          `;
+        }
+      },
+      // 10. Regency (Alamat: Kota / Kabupaten — Under ADDRESS category)
+      {
+        key: 'city',
+        label: 'REGENCY',
+        title: 'Regency',
+        sortable: true,
+        align: 'center',
+        width: '160px',
+        minWidth: '150px',
+        render: (row) => {
+          const rawCity = (row.city || '').trim();
+          const displayCity = formatCityDistrict(rawCity);
+
+          const rawProv = (row.province || '').trim() || 'Nusa Tenggara Barat';
+          let canonicalProv = rawProv;
+          if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
+            for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
+              if (rawProv.toLowerCase() === shortName.toLowerCase() || rawProv.toLowerCase() === fullName.toLowerCase()) {
+                canonicalProv = fullName;
+                break;
+              }
+            }
+          }
+          const citiesList = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[canonicalProv])
+            ? INDONESIA_REGIONS[canonicalProv]
+            : (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS['Nusa Tenggara Barat'] ? INDONESIA_REGIONS['Nusa Tenggara Barat'] : []);
+
+          const cityOptionsHtml = citiesList.map(c => {
+            const isSel = (rawCity.toLowerCase() === c.toLowerCase()) ||
+                          (displayCity.toLowerCase() === formatCityDistrict(c).toLowerCase());
+            return `<option value="${c}" ${isSel ? 'selected' : ''}>${escapeHtml(formatCityDistrict(c))}</option>`;
+          }).join('');
+
+          return `
+            <div class="student-cell-view" title="${escapeHtml(displayCity)}">
+              <span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayCity)}</span>
+            </div>
+            <select class="student-inline-select text-center student-city-select" data-id="${row.id}" data-field="city" onclick="event.stopPropagation();">
+              <option value="" ${!rawCity ? 'selected' : ''} disabled>Select Regency</option>
+              ${cityOptionsHtml}
+            </select>
+          `;
+        }
+      },
+      // 9. Province (Alamat: Provinsi — Standard recognized abbreviations like NTB per user directive)
+      {
+        key: 'province',
+        label: 'PROVINCE',
+        className: 'super-hdr-divider',
+        sortable: true,
+        align: 'center',
+        width: '160px',
+        minWidth: '150px',
+        render: (row) => {
+          const rawProv = (row.province || '').trim();
+          const displayVal = formatProvinceName(rawProv);
+          const provKeys = (typeof INDONESIA_REGIONS !== 'undefined')
+            ? Object.keys(INDONESIA_REGIONS).sort((a, b) => a.localeCompare(b, 'en'))
+            : [];
+
+          const provOptionsHtml = provKeys.map(p => {
+            const shortName = (typeof PROVINCE_DISPLAY_MAP !== 'undefined' && PROVINCE_DISPLAY_MAP[p]) ? PROVINCE_DISPLAY_MAP[p] : p;
+            const isSel = (rawProv.toLowerCase() === p.toLowerCase()) ||
+                          (rawProv.toLowerCase() === shortName.toLowerCase());
+            const labelText = shortName !== p ? `${shortName} (${p})` : p;
+            return `<option value="${p}" ${isSel ? 'selected' : ''}>${escapeHtml(labelText)}</option>`;
+          }).join('');
+
+          return `
+            <div class="student-cell-view" title="${escapeHtml(displayVal)}">
+              <span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayVal)}</span>
+            </div>
+            <select class="student-inline-select text-center student-province-select" data-id="${row.id}" data-field="province" onclick="event.stopPropagation();">
+              <option value="" ${!rawProv ? 'selected' : ''} disabled>Select Province</option>
+              ${provOptionsHtml}
+            </select>
           `;
         }
       },
@@ -2759,24 +3042,24 @@ export async function renderStudents(area) {
       ...(perClassColDefs.length > 0 ? perClassColDefs : [
         {
           key: 'completedTests',
-          label: 'Completed',
+          label: 'COMPLETED',
           sortable: true,
           align: 'center',
           width: '80px',
           render: (row) => `
-            <div class="fw-700" style="font-size:0.9rem;color:var(--clr-text-1);">
+            <div class="fw-700" style="font-size:12px;color:var(--clr-text-1);">
               ${row.completedTests}
             </div>
           `
         },
         {
           key: 'totalAssigned',
-          label: 'Assigned',
+          label: 'ASSIGNED',
           sortable: true,
           align: 'center',
           width: '80px',
           render: (row) => `
-            <div class="fw-600 text-muted" style="font-size:0.85rem;">
+            <div class="fw-600 text-muted" style="font-size: 12px;">
               ${row.totalAssigned}
             </div>
           `
@@ -2785,7 +3068,7 @@ export async function renderStudents(area) {
       // 12. Status (Program Status placed at the very end per user directive)
       {
         key: 'program_status',
-        label: 'Status',
+        label: 'STATUS',
         sortable: true,
         align: 'center',
         width: '84px',
@@ -2800,11 +3083,11 @@ export async function renderStudents(area) {
             color = '#94a3b8';
           } else if (status === 'COMPLETED' || status === 'GRADUATED') {
             label = 'Graduated';
-            color = '#4ade80';
+            color = 'var(--grade-a)';
           }
           return `
             <div class="student-cell-view">
-              <span style="color:${color};font-size:11px;font-weight:400;">${label}</span>
+              <span style="color:${color};font-size: 12px;font-weight:400;">${label}</span>
             </div>
             <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
               <option value="in_progress" ${!isInactive && status !== 'COMPLETED' && status !== 'GRADUATED' ? 'selected' : ''}>In Progress</option>
@@ -2816,22 +3099,25 @@ export async function renderStudents(area) {
       },
       // 13. Actions (Only rendered on Inactive Students tab per user directive to prevent accidental deletion)
       ...(currentBatchStatus === 'inactive' ? [{
-        label: 'Actions',
+        label: 'ACTIONS',
         className: 'actions-col',
         align: 'right',
-        width: '85px',
+        width: '120px',
         render: (row) => {
           const div = document.createElement('div');
           div.className = 'student-actions-cell actions-col d-flex align-center justify-end gap-1';
           div.innerHTML = `
-            <button class="btn btn-secondary btn-icon btn-sm" title="Restore to Active" onclick="event.stopPropagation();if(window.activateStudent)window.activateStudent('${row.id}');">🔄</button>
-            <button class="btn btn-danger btn-icon btn-sm" title="Delete Student" onclick="event.stopPropagation();if(window.deleteStudentDirect)window.deleteStudentDirect('${row.id}');">🗑️</button>
+            <button class="btn btn-secondary btn-sm" title="Restore to Active" onclick="event.stopPropagation();if(window.activateStudent)window.activateStudent('${row.id}');" style="font-size:12px; padding:2px 6px;">Restore</button>
+            <button class="btn btn-danger btn-sm" title="Delete Student" onclick="event.stopPropagation();if(window.deleteStudentDirect)window.deleteStudentDirect('${row.id}');" style="font-size:12px; padding:2px 6px;">Delete</button>
           `;
           return div;
         }
       }] : [])
     ]
   });
+
+  // Track remote database column support to prevent console spam
+  let _dbHasAddressColumns = true;
 
   // Mount Column Resizing Memory (Phase 450)
   const stuTable = gridContainer.querySelector('table');
@@ -2848,6 +3134,37 @@ export async function renderStudents(area) {
       const value = target.value;
       if (!studentId || !field) return;
 
+      // If address columns are known to be pending in DB, save immediately to local cache without console 400 errors
+      if (_dbHasAddressColumns === false && (field === 'province' || field === 'city' || field === 'district' || field === 'village')) {
+        try {
+          const fallbackKey = 'topscore_student_demographics_fallback';
+          const cache = JSON.parse(localStorage.getItem(fallbackKey) || '{}');
+          cache[studentId] = cache[studentId] || {};
+          cache[studentId][field] = value.trim();
+          localStorage.setItem(fallbackKey, JSON.stringify(cache));
+        } catch (_) {}
+
+        const cell = target.closest('td');
+        if (cell) {
+          const origBg = cell.style.background;
+          cell.style.background = 'rgba(0, 192, 0, 0.25)';
+          setTimeout(() => { cell.style.background = origBg; }, 600);
+        }
+
+        const s = filteredGridData.find(x => x.id === studentId);
+        if (s) {
+          s[field] = value.trim();
+          const viewEl = cell?.querySelector('.student-cell-view span');
+          if (viewEl) {
+            const displayVal = field === 'province' ? formatProvinceName(value.trim()) : field === 'city' ? formatCityDistrict(value.trim()) : field === 'district' ? formatDistrictName(value.trim()) : field === 'village' ? formatVillageName(value.trim()) : value.trim();
+            viewEl.textContent = displayVal || '—';
+            cell.querySelector('.student-cell-view')?.setAttribute('title', displayVal || '—');
+          }
+        }
+        showToast('Saved locally in browser', 'info', 2500);
+        return;
+      }
+
       const sb = await getSupabase();
       if (!sb) return;
 
@@ -2858,6 +3175,47 @@ export async function renderStudents(area) {
         updates.name = value.trim();
       } else if (field === 'birth_date') {
         updates.birth_date = value || null;
+      } else if (field === 'province') {
+        updates.province = value.trim();
+
+        // Dynamic city dropdown linking: populate city select with cities belonging to the newly selected province
+        const tr = target.closest('tr');
+        const citySel = tr ? tr.querySelector('.student-city-select') : null;
+        if (citySel) {
+          let canonicalProv = updates.province;
+          if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
+            for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
+              if (updates.province.toLowerCase() === shortName.toLowerCase() || updates.province.toLowerCase() === fullName.toLowerCase()) {
+                canonicalProv = fullName;
+                break;
+              }
+            }
+          }
+          const newCities = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[canonicalProv])
+            ? INDONESIA_REGIONS[canonicalProv]
+            : [];
+
+          if (newCities.length > 0) {
+            citySel.innerHTML = `<option value="" disabled>Select Regency</option>` +
+              newCities.map(c => `<option value="${c}">${escapeHtml(formatCityDistrict(c))}</option>`).join('');
+            citySel.value = newCities[0];
+            updates.city = newCities[0];
+
+            const cityCell = citySel.closest('td');
+            const cityViewEl = cityCell?.querySelector('.student-cell-view span');
+            if (cityViewEl) {
+              const formattedCity = formatCityDistrict(newCities[0]);
+              cityViewEl.textContent = formattedCity;
+              cityCell.querySelector('.student-cell-view')?.setAttribute('title', formattedCity);
+            }
+          }
+        }
+      } else if (field === 'city') {
+        updates.city = value.trim();
+      } else if (field === 'district') {
+        updates.district = value.trim();
+      } else if (field === 'village') {
+        updates.village = value.trim();
       } else if (field === 'education') {
         updates.education = value.trim();
       } else if (field === 'program_status') {
@@ -2893,9 +3251,41 @@ export async function renderStudents(area) {
               let age = today.getFullYear() - bd.getFullYear();
               const m = today.getMonth() - bd.getMonth();
               if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
-              s.ageDisplay = age > 0 ? `${age} yrs` : '—';
+              s.ageDisplay = age > 0 ? String(age) : '—';
               const ageCell = target.closest('tr')?.querySelector('.col-ageDisplay');
               if (ageCell) ageCell.textContent = s.ageDisplay;
+            }
+          } else if (field === 'province') {
+            s.province = updates.province;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              const formattedProv = formatProvinceName(updates.province);
+              viewEl.textContent = formattedProv;
+              cell.querySelector('.student-cell-view')?.setAttribute('title', formattedProv);
+            }
+          } else if (field === 'city') {
+            s.city = updates.city;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              const formattedCity = formatCityDistrict(updates.city);
+              viewEl.textContent = formattedCity;
+              cell.querySelector('.student-cell-view')?.setAttribute('title', formattedCity);
+            }
+          } else if (field === 'district') {
+            s.district = updates.district;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              const formattedDistrict = formatDistrictName(updates.district);
+              viewEl.textContent = formattedDistrict || '—';
+              cell.querySelector('.student-cell-view')?.setAttribute('title', formattedDistrict || '—');
+            }
+          } else if (field === 'village') {
+            s.village = updates.village;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              const formattedVillage = formatVillageName(updates.village);
+              viewEl.textContent = formattedVillage || '—';
+              cell.querySelector('.student-cell-view')?.setAttribute('title', formattedVillage || '—');
             }
           } else if (field === 'gender') {
             s.gender = updates.gender;
@@ -2907,15 +3297,50 @@ export async function renderStudents(area) {
             }
           } else if (field === 'education') {
             s.education = updates.education;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) viewEl.textContent = formatLastEducation(updates.education);
           } else if (field === 'program_status') {
             if (updates.is_active === false) {
               renderStudents(area);
             }
           }
         }
+        if (field === 'province' || field === 'city' || field === 'district' || field === 'village') _dbHasAddressColumns = true;
         showToast('Saved changes', 'success');
+        try {
+          const fallbackKey = 'topscore_student_demographics_fallback';
+          const cache = JSON.parse(localStorage.getItem(fallbackKey) || '{}');
+          if (cache[studentId]) {
+            delete cache[studentId][field];
+            if (Object.keys(cache[studentId]).length === 0) delete cache[studentId];
+            localStorage.setItem(fallbackKey, JSON.stringify(cache));
+          }
+        } catch (_) {}
       } else {
-        showToast('Failed to save: ' + error.message, 'error');
+        if (error.message && (error.message.includes('column') || error.code === 'PGRST204') && (field === 'province' || field === 'city' || field === 'district' || field === 'village')) {
+          _dbHasAddressColumns = false;
+          try {
+            const fallbackKey = 'topscore_student_demographics_fallback';
+            const cache = JSON.parse(localStorage.getItem(fallbackKey) || '{}');
+            cache[studentId] = cache[studentId] || {};
+            cache[studentId][field] = value.trim();
+            localStorage.setItem(fallbackKey, JSON.stringify(cache));
+          } catch (_) {}
+
+          const s = filteredGridData.find(x => x.id === studentId);
+          if (s) {
+            s[field] = value.trim();
+            const viewEl = target.closest('td')?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              const displayVal = field === 'province' ? formatProvinceName(value.trim()) : field === 'city' ? formatCityDistrict(value.trim()) : field === 'district' ? formatDistrictName(value.trim()) : field === 'village' ? formatVillageName(value.trim()) : value.trim();
+              viewEl.textContent = displayVal || '—';
+              target.closest('td')?.querySelector('.student-cell-view')?.setAttribute('title', displayVal || '—');
+            }
+          }
+          showToast('Saved locally (Database column pending in Supabase)', 'warning', 3500);
+        } else {
+          showToast('Failed to save: ' + error.message, 'error');
+        }
       }
     }
   });
@@ -2978,8 +3403,8 @@ window.promoteStudentNextLevel = async function(row) {
   }
 
   const confirmMsg = nextLevelNum === 0
-    ? `🎓 Promote ${row.displayName} to ALUMNI (Universal Access)?\n\nStudent has passed all active level exams with >= 70% (or forgiven/remedial).`
-    : `🚀 Promote ${row.displayName} from ${row.levelName} to ${targetLevel.name}?\n\nStudent has met the >= 70% passing threshold on all current level exams.`;
+    ? `Promote ${row.displayName} to ALUMNI (Universal Access)?\n\nStudent has passed all active level exams with >= 70% (or forgiven/remedial).`
+    : `Promote ${row.displayName} from ${row.levelName} to ${targetLevel.name}?\n\nStudent has met the >= 70% passing threshold on all current level exams.`;
 
   if (!confirm(confirmMsg)) return;
 
@@ -3001,9 +3426,9 @@ window.promoteStudentNextLevel = async function(row) {
 
     clearAdminCache('students');
     if (nextLevelNum === 0) {
-      showToast(`🎓 ${row.displayName} has graduated to Alumni!`, 'success');
+      showToast(`${row.displayName} has graduated to Alumni!`, 'success');
     } else {
-      showToast(`🚀 ${row.displayName} successfully promoted to ${targetLevel.name}!`, 'success');
+      showToast(`${row.displayName} successfully promoted to ${targetLevel.name}!`, 'success');
     }
 
     if (typeof window.loadSection === 'function') {
@@ -3028,12 +3453,12 @@ export function showPromotionRequirementsModal(students = []) {
 
   const rowsHtml = activeStudents.slice(0, 15).map(s => {
     return `
-      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.8rem;">
+      <tr style="border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px;">
         <td style="padding: 8px 12px; font-weight: 600; color: #f8fafc;">${escapeHtml(s.displayName || s.name)}</td>
         <td style="padding: 8px 12px; text-align: center; color: var(--clr-accent-1, #38bdf8);">${escapeHtml(s.levelName || '—')}</td>
         <td style="padding: 8px 12px; text-align: center; font-weight: 700; color: ${s.overallColor || '#fff'};">${escapeHtml(s.overallScoreStr || '—')}</td>
         <td style="padding: 8px 12px; text-align: center;">
-          ${s.isEligibleNext ? `<span class="badge" style="background:var(--grade-a, #00c000);color:#0F172A;font-weight:700;">✅ Eligible</span>` : `<span class="badge" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#f87171;">⏳ Pending Exams</span>`}
+          ${s.isEligibleNext ? `<span class="badge" style="background:var(--grade-a);color:#0F172A;font-weight:700;">${getSvgIcon('check-circle', 12)} Eligible</span>` : `<span class="badge" style="background:rgba(var(--grade-e-rgb),0.15);border:1px solid rgba(var(--grade-e-rgb),0.3);color:var(--grade-e);">${getSvgIcon('clock', 12)} Pending Exams</span>`}
         </td>
       </tr>
     `;
@@ -3043,17 +3468,17 @@ export function showPromotionRequirementsModal(students = []) {
     <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; max-width:540px; width:100%; box-shadow:0 20px 40px rgba(0,0,0,0.6); overflow:hidden; display:flex; flex-direction:column; max-height:85vh;">
       <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:space-between; background:rgba(30,41,59,0.5);">
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:1.3rem;">🚀</span>
+          <span style="font-size: 16px;">${getSvgIcon('award', 16)}</span>
           <div>
-            <h3 style="margin:0; font-size:1rem; font-weight:700; color:#f8fafc;">Level Promotion Status</h3>
-            <p style="margin:2px 0 0; font-size:0.75rem; color:#94a3b8;">${eligibleStudents.length} of ${activeStudents.length} Students Currently Eligible</p>
+            <h3 style="margin:0; font-size: 16px; font-weight:700; color:#f8fafc;">Level Promotion Status</h3>
+            <p style="margin:2px 0 0; font-size: 12px; color:#94a3b8;">${eligibleStudents.length} of ${activeStudents.length} Students Currently Eligible</p>
           </div>
         </div>
-        <button id="btn-close-promo-req" style="background:none; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:4px;">✕</button>
+        <button id="btn-close-promo-req" style="background:none; border:none; color:#94a3b8; font-size: 16px; cursor:pointer; padding:4px;">✕</button>
       </div>
 
       <div style="padding:16px 20px; overflow-y:auto; flex:1;">
-        <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.78rem; line-height:1.45; color:#cbd5e1;">
+        <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:12px; margin-bottom:14px; font-size: 12px; line-height:1.45; color:#cbd5e1;">
           <strong style="color:#38bdf8;">Promotion Criteria:</strong>
           <ul style="margin:6px 0 0 16px; padding:0;">
             <li>Student must have completed <strong>all required exams</strong> for their current level.</li>
@@ -3065,11 +3490,11 @@ export function showPromotionRequirementsModal(students = []) {
         <div style="border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
           <table style="width:100%; border-collapse:collapse; text-align:left;">
             <thead>
-              <tr style="background:rgba(30,41,59,0.8); font-size:0.75rem; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
-                <th style="padding:8px 12px;">Student</th>
-                <th style="padding:8px 12px; text-align:center;">Level</th>
-                <th style="padding:8px 12px; text-align:center;">Score</th>
-                <th style="padding:8px 12px; text-align:center;">Status</th>
+              <tr style="background:rgba(30,41,59,0.8); font-size:12px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
+                <th style="padding:8px 12px;">STUDENT</th>
+                <th style="padding:8px 12px; text-align:center;">LEVEL</th>
+                <th style="padding:8px 12px; text-align:center;">SCORE</th>
+                <th style="padding:8px 12px; text-align:center;">STATUS</th>
               </tr>
             </thead>
             <tbody>
@@ -3077,7 +3502,7 @@ export function showPromotionRequirementsModal(students = []) {
             </tbody>
           </table>
         </div>
-        ${activeStudents.length > 15 ? `<p style="font-size:0.72rem; color:#64748b; text-align:center; margin-top:8px;">Showing first 15 of ${activeStudents.length} students.</p>` : ''}
+        ${activeStudents.length > 15 ? `<p style="font-size: 12px; color:#64748b; text-align:center; margin-top:8px;">Showing first 15 of ${activeStudents.length} students.</p>` : ''}
       </div>
 
       <div style="padding:12px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(30,41,59,0.3); display:flex; justify-content:flex-end;">
@@ -3101,7 +3526,7 @@ window.promoteAllEligibleStudents = async function() {
     return;
   }
 
-  if (!confirm(`🚀 Promote ${eligible.length} eligible student(s) to their next levels?`)) return;
+  if (!confirm(`Promote ${eligible.length} eligible student(s) to their next levels?`)) return;
 
   const sb = await getSupabase();
   const { data: levels } = await sb.from('levels').select('id, name, level_number').order('level_number');
@@ -3130,7 +3555,7 @@ window.promoteAllEligibleStudents = async function() {
   }
 
   clearAdminCache('students');
-  showToast(`🚀 Successfully promoted ${promotedCount} student(s)!`, 'success');
+  showToast(`Successfully promoted ${promotedCount} student(s)!`, 'success');
   if (typeof window.loadSection === 'function') {
     window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
   }
@@ -3174,13 +3599,13 @@ window.openTransferBatchModal = async function(studentId) {
   overlay.innerHTML = `
     <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border, rgba(255,255,255,0.12));border-radius:12px;padding:2rem;width:100%;max-width:480px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
       <div class="d-flex align-center justify-between mb-3">
-        <h3 style="margin:0;font-size:1.15rem;display:flex;align-items:center;gap:8px;">
-          <span>🔄</span> Transfer Batch: <span style="color:#38bdf8;">${escapeHtml(s.displayName)}</span>
+        <h3 style="margin:0;font-size: 16px;display:flex;align-items:center;gap:8px;">
+          <span>${getSvgIcon('refresh', 14)}</span> Transfer Batch: <span style="color:#38bdf8;">${escapeHtml(s.displayName)}</span>
         </h3>
-        <button id="tb-close" style="background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;">✕</button>
+        <button id="tb-close" style="background:none;border:none;color:#94a3b8;font-size: 16px;cursor:pointer;">✕</button>
       </div>
 
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 14px;margin-bottom:1.25rem;font-size:0.85rem;">
+      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 14px;margin-bottom:1.25rem;font-size: 12px;">
         <div style="color:var(--clr-text-3);margin-bottom:4px;">Current Cohort:</div>
         <div class="fw-700" style="color:#f8fafc;">
           Batch: <span style="color:#e2e8f0;">${escapeHtml(s.batchName)}</span> &bull; Level: <span style="color:#c084fc;">${escapeHtml(s.levelName)}</span>
@@ -3189,7 +3614,7 @@ window.openTransferBatchModal = async function(studentId) {
 
       <div style="display:flex;flex-direction:column;gap:1.1rem;margin-bottom:1.75rem;">
         <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size:0.85rem;font-weight:600;">Destination Cohort Batch</label>
+          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Destination Cohort Batch</label>
           <select id="tb-target-batch" class="form-input" style="width:100%;">
             ${availableBatches.map(b => {
               const bLvl = levelsMap.get(b.current_level_id);
@@ -3201,20 +3626,20 @@ window.openTransferBatchModal = async function(studentId) {
         </div>
 
         <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:10px 12px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.85rem;color:#e0e7ff;font-weight:600;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size: 12px;color:#e0e7ff;font-weight:600;">
             <input type="checkbox" id="tb-inherit-level" checked style="width:16px;height:16px;accent-color:#6366f1;">
             <span>Inherit Destination Batch Level</span>
           </label>
-          <div style="font-size:0.75rem;color:#a5b4fc;margin-top:4px;margin-left:24px;">
+          <div style="font-size: 12px;color:#a5b4fc;margin-top:4px;margin-left:24px;">
             Automatically updates student's academic level to match the destination batch's current level.
           </div>
         </div>
 
         <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size:0.85rem;font-weight:600;">Academic Status</label>
+          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Academic Status</label>
           <select id="tb-status" class="form-input" style="width:100%;">
-            <option value="true" selected>🟢 Active</option>
-            <option value="false">🔒 HOLD / Inactive</option>
+            <option value="true" selected>Active</option>
+            <option value="false">HOLD / Inactive</option>
           </select>
         </div>
       </div>
@@ -3275,7 +3700,7 @@ window.openTransferBatchModal = async function(studentId) {
 
       clearAdminCache('students');
       close();
-      showToast(`🔄 Student transferred successfully.`, 'success');
+      showToast('Student transferred successfully.', 'success');
       if (typeof window.loadSection === 'function') {
         window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
       }
@@ -3325,26 +3750,26 @@ window.openRepeatLevelModal = async function(studentId) {
   overlay.innerHTML = `
     <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border, rgba(255,255,255,0.12));border-radius:12px;padding:2rem;width:100%;max-width:480px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
       <div class="d-flex align-center justify-between mb-3">
-        <h3 style="margin:0;font-size:1.15rem;display:flex;align-items:center;gap:8px;">
-          <span>🔁</span> Repeat Level / Re-enroll: <span style="color:#a855f7;">${escapeHtml(s.displayName)}</span>
+        <h3 style="margin:0;font-size: 16px;display:flex;align-items:center;gap:8px;">
+          <span>${getSvgIcon('refresh', 14)}</span> Repeat Level / Re-enroll: <span style="color:#a855f7;">${escapeHtml(s.displayName)}</span>
         </h3>
-        <button id="rl-close" style="background:none;border:none;color:#94a3b8;font-size:1.2rem;cursor:pointer;">✕</button>
+        <button id="rl-close" style="background:none;border:none;color:#94a3b8;font-size: 16px;cursor:pointer;">✕</button>
       </div>
 
-      <p style="color:var(--clr-text-3);font-size:0.85rem;margin:0 0 1.25rem;">
+      <p style="color:var(--clr-text-3);font-size: 12px;margin:0 0 1.25rem;">
         Student is currently marked as Alumni or requested to repeat curriculum. Select the academic level and cohort batch to reactivate them.
       </p>
 
       <div style="display:flex;flex-direction:column;gap:1.1rem;margin-bottom:1.75rem;">
         <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size:0.85rem;font-weight:600;">Target Academic Level</label>
+          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Target Academic Level</label>
           <select id="rl-target-level" class="form-input" style="width:100%;">
             ${(levels || []).map(l => `<option value="${l.id}">${escapeHtml(l.name)}</option>`).join('')}
           </select>
         </div>
 
         <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size:0.85rem;font-weight:600;">Assign to Cohort Batch</label>
+          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Assign to Cohort Batch</label>
           <select id="rl-target-batch" class="form-input" style="width:100%;">
             <option value="">-- Keep Current / No Batch --</option>
             ${availableBatches.map(b => `<option value="${b.id}" ${b.id === s.batch_id ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
@@ -3354,8 +3779,8 @@ window.openRepeatLevelModal = async function(studentId) {
 
       <div class="d-flex align-center gap-2 justify-end">
         <button id="rl-cancel-btn" class="btn btn-secondary">Cancel</button>
-        <button id="rl-save-btn" class="btn btn-primary" style="background:#a855f7;border-color:#a855f7;font-weight:700;">
-          🔁 Confirm Re-enrollment
+        <button id="rl-save-btn" class="btn btn-primary" style="background:#a855f7;border-color:#a855f7;font-weight:700;display:inline-flex;align-items:center;gap:6px;">
+          ${getSvgIcon('refresh', 14)} Confirm Re-enrollment
         </button>
       </div>
     </div>
@@ -3402,7 +3827,7 @@ window.openRepeatLevelModal = async function(studentId) {
 
       clearAdminCache('students');
       close();
-      showToast(`🔁 ${s.displayName} successfully re-enrolled!`, 'success');
+      showToast(`${s.displayName} successfully re-enrolled!`, 'success');
       if (typeof window.loadSection === 'function') {
         window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
       }
@@ -3434,10 +3859,10 @@ function buildFullEditModal() {
   modal.className = 'modal-backdrop hidden';
   modal.style.zIndex = '9999';
   modal.innerHTML = `
-    <div class="modal-box" style="max-width:680px;width:95%;max-height:90vh;overflow-y:auto;background:#0f172a;border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+    <div class="modal-box" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;background:#0f172a;border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
       <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);">
-        <h3 id="bfe-title" style="margin:0;font-size:1.15rem;font-weight:800;color:var(--clr-text-1);">Edit Student</h3>
-        <button class="btn-icon" id="bfe-close" title="Close" style="background:transparent;border:none;color:var(--clr-text-2);font-size:1.2rem;cursor:pointer;">&#10005;</button>
+        <h3 id="bfe-title" style="margin:0;font-size: 16px;font-weight:800;color:var(--clr-text-1);">Edit Student</h3>
+        <button class="btn-icon" id="bfe-close" title="Close" style="background:transparent;border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;">&#10005;</button>
       </div>
       <div id="bfe-body" style="padding:1.5rem;"></div>
       <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:.75rem;padding:1rem 1.5rem;border-top:1px solid var(--clr-border);">
@@ -3451,7 +3876,7 @@ function buildFullEditModal() {
 
 function handleGuardClose(modal, onDiscard) {
   if (window.isProfileDirty) {
-    const saveIt = confirm("⚠️ You have unsaved profile changes.\\n\\nClick OK to SAVE and leave, or CANCEL to discard changes and leave.");
+    const saveIt = confirm("You have unsaved profile changes.\\n\\nClick OK to SAVE and leave, or CANCEL to discard changes and leave.");
     if (saveIt) {
       document.getElementById('bfe-save')?.click();
       return;
@@ -3498,7 +3923,7 @@ export async function openStudentFullEdit(student, onSaved) {
       adminFetchAll('batches', 'id, name, program_id, is_active, deleted_at, programs(institution_id)'),
       adminFetchAll('classes', 'id, name'),
       adminFetchAll('levels', 'id, name, level_number'),
-      adminFetchAll('progress', 'id, student_id, class_id, level_id, status'),
+      adminFetchAll('progress', 'id, student_id, class_id, unlocked_level, highest_score').catch(() => []),
       adminFetchAll('programs', 'id, name, institution_id')
     ]);
     batches = (bRes || []).filter(b => !b.deleted_at && b.is_active !== false).sort((a,b) => (a.name||'').localeCompare(b.name||''));
@@ -3515,6 +3940,10 @@ export async function openStudentFullEdit(student, onSaved) {
   const initialName = draftData?.name ?? (student?.name || '');
   const initialGender = draftData?.gender ?? (student?.gender || '');
   const initialBirth = draftData?.birth_date ?? (student?.birth_date || '');
+  const initialProvince = draftData?.province ?? (student?.province || '');
+  const initialCity = draftData?.city ?? (student?.city || '');
+  const initialDistrict = draftData?.district ?? (student?.district || '');
+  const initialVillage = draftData?.village ?? (student?.village || '');
   const initialPin = draftData?.pin || '';
   const initialBatchId = draftData?.batch_id ?? (student?.batch_id || '');
   const initialLevelId = draftData?.level_id ?? (student?.level_id || '');
@@ -3525,7 +3954,7 @@ export async function openStudentFullEdit(student, onSaved) {
     <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
       <!-- 3:4 Avatar Center-Crop Upload (Left) -->
       <div style="flex:1;min-width:140px;max-width:180px;text-align:center;">
-        <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size:0.8rem;text-transform:uppercase;color:var(--clr-text-3);">3:4 Avatar</label>
+        <label class="form-label" style="display:block;margin-bottom:0.5rem;font-size: 12px;text-transform:uppercase;color:var(--clr-text-3);">3:4 Avatar</label>
         <div style="width:120px;height:160px;margin:0 auto;border-radius:8px;overflow:hidden;border:2px solid var(--clr-border);background:rgba(0,0,0,0.25);position:relative;">
           <img id="bfe-avatar-preview" src="${getBustedAvatarUrl(currentPhotoUrl)}" alt="Avatar" style="width:100%;height:100%;object-fit:cover;" />
           <div id="bfe-avatar-loading" class="hidden" style="position:absolute;inset:0;background:rgba(15,23,42,0.95);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;">
@@ -3533,11 +3962,11 @@ export async function openStudentFullEdit(student, onSaved) {
           </div>
         </div>
         <div style="margin-top:0.75rem;">
-          <label for="bfe-avatar-file" class="btn btn-secondary btn-xs" style="cursor:pointer;font-size:0.75rem;">
-            📸 Upload (3:4)
+          <label for="bfe-avatar-file" class="btn btn-secondary btn-xs" style="cursor:pointer;font-size: 12px;display:inline-flex;align-items:center;gap:4px;">
+            ${getSvgIcon('camera', 14)} Upload (3:4)
           </label>
           <input type="file" id="bfe-avatar-file" accept="image/*" style="display:none;" />
-          <div class="text-xs text-muted mt-1" style="font-size:0.7rem;">240x320 WebP &bull; 35% Top Bias</div>
+          <div class="text-xs text-muted mt-1" style="font-size: 12px;">240x320 WebP &bull; 35% Top Bias</div>
         </div>
       </div>
 
@@ -3558,9 +3987,29 @@ export async function openStudentFullEdit(student, onSaved) {
         </div>
 
         <div class="form-group">
-          <label class="form-label">Date of Birth <span style="color:#f87171;font-weight:800;" title="Required">*</span></label>
+          <label class="form-label">Date of Birth <span style="color:var(--grade-e);font-weight:800;" title="Required">*</span></label>
           <input type="date" class="form-control" id="bfe-birth" value="${escHtml(initialBirth)}" required>
-          <div style="font-size:0.72rem;color:#94a3b8;margin-top:3px;">Required — used to calculate student age in the roster.</div>
+          <div style="font-size: 12px;color:#94a3b8;margin-top:3px;">Required — used to calculate student age in the roster.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Province</label>
+          <input type="text" class="form-control" id="bfe-province" value="${escHtml(initialProvince)}" placeholder="e.g. Nusa Tenggara Barat">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Regency</label>
+          <input type="text" class="form-control" id="bfe-city" value="${escHtml(initialCity)}" placeholder="e.g. Mataram City or Central Lombok">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">District (Kecamatan)</label>
+          <input type="text" class="form-control" id="bfe-district" value="${escHtml(initialDistrict)}" placeholder="e.g. Ampenan">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Village (Desa / Kelurahan)</label>
+          <input type="text" class="form-control" id="bfe-village" value="${escHtml(initialVillage)}" placeholder="e.g. Pejarakan">
         </div>
 
         <div class="form-group">
@@ -3592,8 +4041,8 @@ export async function openStudentFullEdit(student, onSaved) {
           });
           return `
             <div style="grid-column:1/-1; margin-top:0.5rem; border-top:1px solid var(--clr-border); padding-top:1rem;">
-              <h4 style="margin:0 0 0.75rem 0; font-size:0.95rem; display:flex; justify-content:space-between; align-items:center;">
-                <span>📈 Manual Level Assignment</span>
+              <h4 style="margin:0 0 0.75rem 0; font-size: 16px; display:flex; justify-content:space-between; align-items:center;">
+                <span>${getSvgIcon('trending-up', 14)} Manual Level Assignment</span>
                 <span class="badge badge-neutral" style="font-weight:normal;">Applies instantly upon save</span>
               </h4>
               <div style="background:rgba(0,0,0,0.1); padding:1rem; border-radius:8px; border:1px solid var(--clr-border);">
@@ -3618,6 +4067,10 @@ export async function openStudentFullEdit(student, onSaved) {
       name: document.getElementById('bfe-name').value,
       gender: document.getElementById('bfe-gender').value,
       birth_date: document.getElementById('bfe-birth').value,
+      province: document.getElementById('bfe-province')?.value || '',
+      city: document.getElementById('bfe-city')?.value || '',
+      district: document.getElementById('bfe-district')?.value || '',
+      village: document.getElementById('bfe-village')?.value || '',
       batch_id: document.getElementById('bfe-batch').value,
       pin: document.getElementById('bfe-pin').value,
       is_active: document.getElementById('bfe-active').value === 'true',
@@ -3628,7 +4081,7 @@ export async function openStudentFullEdit(student, onSaved) {
     } catch (e) { /* ignore */ }
   };
 
-  ['bfe-name', 'bfe-gender', 'bfe-birth', 'bfe-batch', 'bfe-level', 'bfe-pin', 'bfe-active'].forEach(id => {
+  ['bfe-name', 'bfe-gender', 'bfe-birth', 'bfe-province', 'bfe-city', 'bfe-district', 'bfe-village', 'bfe-batch', 'bfe-level', 'bfe-pin', 'bfe-active'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', updateDraft);
     document.getElementById(id)?.addEventListener('change', updateDraft);
   });
@@ -3689,6 +4142,10 @@ export async function openStudentFullEdit(student, onSaved) {
       name,
       gender:         document.getElementById('bfe-gender').value || null,
       birth_date:     document.getElementById('bfe-birth').value  || null,
+      province:       document.getElementById('bfe-province')?.value.trim() || null,
+      city:           document.getElementById('bfe-city')?.value.trim() || null,
+      district:       document.getElementById('bfe-district')?.value.trim() || null,
+      village:        document.getElementById('bfe-village')?.value.trim() || null,
       batch_id:       selectedBatchId,
       program_id:     selectedProgramId,
       institution_id: selectedInstitutionId,

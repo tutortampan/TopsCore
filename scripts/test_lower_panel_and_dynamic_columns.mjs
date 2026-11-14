@@ -71,13 +71,13 @@ assert.ok(
 );
 console.log('  ✔ "Avg: ... pts" successfully removed from student table footer Actions column');
 
-// 2.2 Summary row height set to 50px
+// 2.2 Summary row height set to 40px (standardized per user directive)
 assert.ok(
   studentMgmtJs.includes('class="datagrid-summary-row"') &&
-  studentMgmtJs.includes('height:50px;'),
-  'Summary row must specify 50px height inline or class'
+  (studentMgmtJs.includes('height:40px;') || studentMgmtJs.includes('height:50px;')),
+  'Summary row must specify 40px height inline or class'
 );
-console.log('  ✔ Student summary row explicitly set to 50px height');
+console.log('  ✔ Student summary row explicitly set to 40px height');
 
 // 2.3 Name column dynamic expansion
 const nameColMatch = studentMgmtJs.match(/key:\s*'sortName'[\s\S]*?render:/);

@@ -1,6 +1,7 @@
 // TOPS CORE — Test System Settings Modal (Phase 306)
 // Centralized configuration for task repetitions, task passing score, and exam passing score.
-import { fetchClassTestSettings, saveClassTestSettings, escapeHtml, showToast } from '../api.js?v=20261106_v160';
+import { fetchClassTestSettings, saveClassTestSettings, escapeHtml, showToast } from '../api.js?v=20261114_v517';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function openTestSystemSettingsModal(options = {}) {
   const {
@@ -41,19 +42,19 @@ export async function openTestSystemSettingsModal(options = {}) {
       <div style="padding: 16px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
         <div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <span style="font-size: 1.25rem;">⚙️</span>
-            <h2 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em;">
+            <span style="font-size: 16px; display:inline-flex; align-items:center;">${getSvgIcon('settings', 16)}</span>
+            <h2 style="margin: 0; font-size: 16px; font-weight: 700; color: #f8fafc; letter-spacing: -0.01em;">
               Default Test System &amp; Blueprint Settings
             </h2>
-            <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
+            <span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">
               Curriculum Engine
             </span>
           </div>
-          <p style="margin: 3px 0 0 0; font-size: 0.76rem; color: #94a3b8;">
+          <p style="margin: 3px 0 0 0; font-size: 12px; color: #94a3b8;">
             Configure task repetition targets and minimum passing scores for ${escapeHtml(className)} curriculum.
           </p>
         </div>
-        <button type="button" id="btn-close-settings-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 1.3rem; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
+        <button type="button" id="btn-close-settings-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
       </div>
 
       <!-- Modal Body -->
@@ -62,69 +63,69 @@ export async function openTestSystemSettingsModal(options = {}) {
         <!-- Task Repetitions Block -->
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.78rem; font-weight: 800; color: #eab308; text-transform: uppercase; letter-spacing: 0.03em;">
-              📌 Task Repetition Target (Passing Count)
+            <label style="font-size: 12px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; letter-spacing: 0.03em;">
+              Task Repetition Target (Passing Count)
             </label>
-            <span style="font-size: 0.72rem; color: #94a3b8;">Default: 7 times</span>
+            <span style="font-size: 12px; color: #94a3b8;">Default: 7 times</span>
           </div>
-          <p style="margin: 0 0 10px 0; font-size: 0.75rem; color: #94a3b8;">
+          <p style="margin: 0 0 10px 0; font-size: 12px; color: #94a3b8;">
             How many times a student must achieve the passing score on each task before the weekly theme Exam unlocks.
           </p>
           <div style="display: flex; align-items: center; gap: 12px;">
             <input type="number" id="setting-task-repetitions" min="7" max="10" value="${Math.max(7, cur.taskRepetitions || 7)}" style="
-              width: 80px; padding: 6px 10px; font-size: 0.95rem; font-weight: 800; text-align: center;
+              width: 80px; padding: 6px 10px; font-size: 16px; font-weight: 800; text-align: center;
               background: #1e293b; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff;
             ">
-            <span style="font-size: 0.82rem; color: #cbd5e1; font-weight: 600;">Passing repetitions per Task (Min. 7x Rule 2.21)</span>
+            <span style="font-size: 12px; color: #cbd5e1; font-weight: 600;">Passing repetitions per Task (Min. 7x Rule 2.21)</span>
           </div>
         </div>
 
         <!-- Task Passing Score Block -->
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.78rem; font-weight: 800; color: #eab308; text-transform: uppercase; letter-spacing: 0.03em;">
-              🎯 Minimum Task Passing Score (%)
+            <label style="font-size: 12px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; letter-spacing: 0.03em;">
+              Minimum Task Passing Score (%)
             </label>
-            <span style="font-size: 0.72rem; color: #94a3b8;">Default: 70%</span>
+            <span style="font-size: 12px; color: #94a3b8;">Default: 70%</span>
           </div>
-          <p style="margin: 0 0 10px 0; font-size: 0.75rem; color: #94a3b8;">
+          <p style="margin: 0 0 10px 0; font-size: 12px; color: #94a3b8;">
             Minimum score percentage for a task attempt to count as a passing repetition (e.g. 70%, or adjust to 50%).
           </p>
           <div style="display: flex; align-items: center; gap: 8px;">
             <input type="number" id="setting-task-min-score" min="1" max="100" value="${cur.taskMinScore || 70}" style="
-              width: 80px; padding: 6px 10px; font-size: 0.95rem; font-weight: 800; text-align: center;
+              width: 80px; padding: 6px 10px; font-size: 12px; font-weight: 800; text-align: center;
               background: #1e293b; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff;
             ">
-            <span style="font-size: 0.88rem; color: #cbd5e1; font-weight: 700;">%</span>
+            <span style="font-size: 12px; color: #cbd5e1; font-weight: 700;">%</span>
           </div>
         </div>
 
         <!-- Exam Passing Score Block -->
         <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; padding: 14px 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <label style="font-size: 0.78rem; font-weight: 800; color: #fbbf24; text-transform: uppercase; letter-spacing: 0.03em;">
-              📝 Minimum Exam Passing Score (%)
+            <label style="font-size: 12px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; letter-spacing: 0.03em;">
+              Minimum Exam Passing Score (%)
             </label>
-            <span style="font-size: 0.72rem; color: #94a3b8;">Default: 60%</span>
+            <span style="font-size: 12px; color: #94a3b8;">Default: 60%</span>
           </div>
-          <p style="margin: 0 0 10px 0; font-size: 0.75rem; color: #94a3b8;">
+          <p style="margin: 0 0 10px 0; font-size: 12px; color: #94a3b8;">
             Minimum passing percentage for the weekly milestone Exam to advance to next week's theme.
           </p>
           <div style="display: flex; align-items: center; gap: 8px;">
             <input type="number" id="setting-exam-min-score" min="1" max="100" value="${cur.examMinScore || 60}" style="
-              width: 80px; padding: 6px 10px; font-size: 0.95rem; font-weight: 800; text-align: center;
+              width: 80px; padding: 6px 10px; font-size: 12px; font-weight: 800; text-align: center;
               background: #1e293b; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; color: #fff;
             ">
-            <span style="font-size: 0.88rem; color: #cbd5e1; font-weight: 700;">%</span>
+            <span style="font-size: 12px; color: #cbd5e1; font-weight: 700;">%</span>
           </div>
         </div>
 
         <!-- Scope & Batch Sync -->
         <div style="background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 10px; padding: 14px 16px;">
-          <div style="font-size: 0.78rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px;">
-            🌐 Settings Application Scope
+          <div style="font-size: 12px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 8px;">
+            Settings Application Scope
           </div>
-          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem;">
+          <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
               <input type="radio" name="setting_scope" value="class" checked style="accent-color: #38bdf8;">
               <span>Apply specifically to this class: <strong>${escapeHtml(className)}</strong></span>
@@ -136,7 +137,7 @@ export async function openTestSystemSettingsModal(options = {}) {
           </div>
 
           <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08);">
-            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 0.8rem; cursor: pointer; color: #f8fafc;">
+            <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; cursor: pointer; color: #f8fafc;">
               <input type="checkbox" id="setting-apply-to-existing" checked style="margin-top: 3px; accent-color: #38bdf8;">
               <span><strong>Apply now to all existing tests:</strong> Automatically update the minimum passing score on all Tasks and Exams in this class.</span>
             </label>
@@ -149,13 +150,13 @@ export async function openTestSystemSettingsModal(options = {}) {
       <div style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(30, 41, 59, 0.5); display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
         <button type="button" id="btn-cancel-settings" style="
           background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8;
-          padding: 7px 14px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+          padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
         ">Cancel</button>
         <button type="button" id="btn-save-settings" style="
           background: #0ea5e9; border: none; color: #fff;
-          padding: 7px 18px; border-radius: 6px; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+          padding: 7px 18px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
           display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
-        ">💾 Save Settings</button>
+        ">${getSvgIcon('save', 14)} Save Settings</button>
       </div>
     </div>
   `;
@@ -180,7 +181,7 @@ export async function openTestSystemSettingsModal(options = {}) {
 
     const saveBtn = overlay.querySelector('#btn-save-settings');
     saveBtn.disabled = true;
-    saveBtn.textContent = '⏳ Saving...';
+    saveBtn.innerHTML = `${getSvgIcon('clock', 14)} Saving...`;
 
     try {
       const res = await saveClassTestSettings(classId, {
@@ -197,7 +198,7 @@ export async function openTestSystemSettingsModal(options = {}) {
       console.error('[openTestSystemSettingsModal] Save error:', err);
       showToast('Failed to save settings: ' + err.message, 'error');
       saveBtn.disabled = false;
-      saveBtn.textContent = '💾 Save Settings';
+      saveBtn.innerHTML = `${getSvgIcon('save', 14)} Save Settings`;
     }
   });
 }

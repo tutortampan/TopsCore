@@ -59,9 +59,9 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(255, 255, 0, 0.15);
-      border: 1px solid rgba(255, 255, 0, 0.4);
-      color: #ffff00;
+      background: rgba(var(--grade-c-rgb), 0.15);
+      border: 1px solid rgba(var(--grade-c-rgb), 0.4);
+      color: var(--grade-c);
       font-size: 13px;
       font-weight: 600;
       padding: 6px 14px;
@@ -90,7 +90,7 @@
 </head>
 <body>
   <div class="offline-card">
-    <div class="offline-icon">📡</div>
+    <div class="offline-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg></div>
     <div class="status-badge">
       <span>●</span> Offline Mode Active
     </div>
@@ -99,7 +99,7 @@
       You are currently disconnected. Don't worry — your current test answers and session progress are preserved locally in your browser.
     </p>
     <button class="btn-retry" onclick="window.location.reload()">
-      🔄 Retry Connection
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon" style="vertical-align:-0.15em;margin-right:6px;"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>Retry Connection
     </button>
   </div>
 </body>

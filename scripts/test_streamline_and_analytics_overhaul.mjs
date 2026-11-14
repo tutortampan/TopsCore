@@ -14,21 +14,22 @@ console.log('=== [TEST SUITE] Starting Streamlining & Analytics Overhaul Verific
 console.log('[Test 1] Verifying admin.html Navigation Structure (Edit Mode & Logout)...');
 const adminHtml = fs.readFileSync('admin.html', 'utf8');
 
-assert(adminHtml.includes('<div class="sidebar-logo">'), 'admin.html must contain .sidebar-logo');
+assert(adminHtml.includes('class="sidebar-logo') || adminHtml.includes('class="sidebar-corner-top'), 'admin.html must contain top corner');
 assert(adminHtml.includes('id="global-edit-mode-toggle"'), 'admin.html must contain #global-edit-mode-toggle');
-// Ensure global-edit-mode-toggle is inside sidebar header before admin-nav
-const sidebarHeaderArea = adminHtml.slice(adminHtml.indexOf('class="sidebar-logo"'), adminHtml.indexOf('class="admin-nav"'));
-assert(sidebarHeaderArea && sidebarHeaderArea.includes('id="global-edit-mode-toggle"'), '#global-edit-mode-toggle must be inside .sidebar-logo (top-left corner)');
-console.log('  ✓ #global-edit-mode-toggle verified in top-left sidebar header (.sidebar-logo)');
 
-// Check sidebar-footer contains Tutor's Room and door logout
-const sidebarFooterMatch = adminHtml.match(/<div class="sidebar-footer">([\s\S]*?)<\/div>\s*<\/aside>/);
+// Ensure top corner contains user role (ADMIN/TUTOR) and Exit button
+const sidebarHeaderArea = adminHtml.slice(adminHtml.indexOf('class="sidebar-logo'), adminHtml.indexOf('class="admin-nav"'));
+assert(sidebarHeaderArea && (sidebarHeaderArea.includes('ADMIN/TUTOR') || sidebarHeaderArea.includes('id="sidebar-user-role-label"')), 'Top corner must contain user role label (ADMIN/TUTOR)');
+assert(sidebarHeaderArea && sidebarHeaderArea.includes('id="admin-logout-btn"'), 'Top corner must contain #admin-logout-btn');
+assert(sidebarHeaderArea && (sidebarHeaderArea.includes('EXIT') || sidebarHeaderArea.includes('Exit')), 'admin-logout-btn must contain clean text Exit');
+console.log('  ✓ Top corner verified: "ADMIN/TUTOR", dynamic role label, and SVG logout Exit');
+
+// Ensure bottom corner (.sidebar-footer) contains EDIT MODE toggle
+const sidebarFooterMatch = adminHtml.match(/<div class="sidebar-footer[\s\S]*?<\/aside>/);
 assert(sidebarFooterMatch, 'admin.html must contain .sidebar-footer');
-assert(sidebarFooterMatch[1].includes("Tutor's Room"), 'sidebar-footer must display "Tutor\'s Room"');
-assert(sidebarFooterMatch[1].includes('id="sidebar-user-role-label"'), 'sidebar-footer must contain #sidebar-user-role-label');
-assert(sidebarFooterMatch[1].includes('id="admin-logout-btn"'), 'sidebar-footer must contain #admin-logout-btn');
-assert(sidebarFooterMatch[1].includes('🚪'), 'admin-logout-btn must contain door emoji 🚪');
-console.log('  ✓ sidebar-footer verified: "Tutor\'s Room", dynamic role label, and door logout 🚪');
+assert(sidebarFooterMatch[0].includes('EDIT MODE'), 'sidebar-footer must display "EDIT MODE"');
+assert(sidebarFooterMatch[0].includes('id="global-edit-mode-toggle"'), 'sidebar-footer must contain #global-edit-mode-toggle');
+console.log('  ✓ Bottom corner (.sidebar-footer) verified: "EDIT MODE" and #global-edit-mode-toggle');
 
 // Check admin-topbar-actions is clean of the old toggle
 const topbarActionsMatch = adminHtml.match(/<div class="admin-topbar-actions" id="admin-topbar-actions">([\s\S]*?)<\/div>/);
@@ -60,10 +61,10 @@ console.log('  ✓ app.js verified: 4 curriculum action buttons placed in attend
 
 // 4. Check 4-Tab Navigation in Class Hub
 console.log('\n[Test 4] Verifying 4-Tab Navigation in Class Hub...');
-assert(appJs.includes("{ id: 'attendance', icon: '👥', val: activeBatchStudents.length, label: 'Students Grade and Score' }"), 'Tab 1 must be attendance');
-assert(appJs.includes("{ id: 'test-sessions', icon: '⏱️', val: 4, label: 'Test Sessions' }"), 'Tab 2 must be test-sessions');
-assert(appJs.includes("{ id: 'tests', icon: '📝', val: classTests.length, label: 'Class Tests' }"), 'Tab 3 must be Class Tests');
-assert(appJs.includes("{ id: 'analytics', icon: '📊', val: 'Insights', label: 'Test Analytics' }"), 'Tab 4 must be Test Analytics');
+assert(appJs.includes("id: 'attendance'") && appJs.includes("label: 'Students Grade and Score'"), 'Tab 1 must be attendance');
+assert(appJs.includes("id: 'test-sessions'") && appJs.includes("label: 'Test Sessions'"), 'Tab 2 must be test-sessions');
+assert(appJs.includes("id: 'tests'") && appJs.includes("label: 'Class Tests'"), 'Tab 3 must be Class Tests');
+assert(appJs.includes("id: 'analytics'") && appJs.includes("label: 'Test Analytics'"), 'Tab 4 must be Test Analytics');
 assert(appJs.includes('renderClassVocabularyAnalytics'), 'app.js must import and call renderClassVocabularyAnalytics');
 console.log('  ✓ app.js verified: 4 distinct tabs (Grade & Score, Sessions, Class Tests, Test Analytics)');
 

@@ -1,9 +1,10 @@
-import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=20261106_v160';
+import { adminFetchAll, adminUpdate, adminSoftDelete, clearAdminCache } from '../api.js?v=20261114_v517';
 import { openTestBuilder } from './test-builder.js?v=20261106_v160';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261109_v172';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
-import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers } from '../grading.js?v=20261106_v160';
+import { TOPSCORE_COLORS, getGradeColor, getGradeColorByScore, getInvertedGradeColor, calculateGrade, isWeeklyExam, damerauLevenshtein, isWordFormAnswerMatch, cleanPunctuationAndSymbols, parseCorrectAnswers, getClassSvgIcon } from '../grading.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 if (typeof window !== 'undefined') window.DataGrid = DataGrid;
 
@@ -96,10 +97,10 @@ export async function renderTests(area) {
     allStudents,
     answersRes
   ] = await Promise.all([
-    adminFetchAll('tests'),
-    adminFetchAll('programs', 'id, name').catch(() => []),
-    adminFetchAll('levels').catch(() => []),
-    adminFetchAll('classes').catch(() => []),
+    adminFetchAll('tests', 'id, title, name, test_type, status, program_id, class_id, level_id, module_id, shell_code, display_order, category, total_questions, duration_minutes, prerequisite_test_id, prerequisite_id, passing_score, created_at, deleted_at'),
+    adminFetchAll('programs', 'id, name, is_active').catch(() => []),
+    adminFetchAll('levels', 'id, name, level_number').catch(() => []),
+    adminFetchAll('classes', 'id, name, program_id, level_id, is_active').catch(() => []),
     adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
     adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, started_at, submitted_at, status, score, percentage, grade').catch(() => []),
     adminFetchAll('audit_logs', 'actor_user_id, action, new_value, created_at').catch(() => []),
@@ -346,10 +347,10 @@ export async function renderTests(area) {
       if ((dc.word_form || 0) > maxCnt) { dominantError = 'word_form'; maxCnt = dc.word_form; }
 
       const diagLabels = {
-        spelling: '[🔤 Spelling]',
-        literal: '[🇮🇩 Literal Translation]',
-        word_form: '[🔄 Word Form]',
-        vocab_gap: '[💡 Vocab Gap]'
+        spelling: '[Spelling]',
+        literal: '[Literal Translation]',
+        word_form: '[Word Form]',
+        vocab_gap: '[Vocab Gap]'
       };
 
       return {
@@ -367,7 +368,7 @@ export async function renderTests(area) {
         dominantError,
         dominantErrorLabel: diagLabels[dominantError] || '[Misconception]'
       };
-    }).sort((a, b) => b.fail - a.fail || b.failRate - a.failRate || b.total - a.total);
+    }).sort((a, b) => b.failRate - a.failRate || b.fail - a.fail || b.total - a.total);
 
     themeTop20[t] = ranked.slice(0, 20);
   });
@@ -411,7 +412,7 @@ export async function renderTests(area) {
     const timeoutRate = completedCount > 0 ? Math.round((timeoutCount / completedCount) * 100) : 0;
 
     const isExam = typeof isWeeklyExam === 'function' ? isWeeklyExam(r) : (r.test_type === 'exam' || r.category === 'EXAM' || String(r.shell_code || '').includes('-EXAM'));
-    const testTypeLabel = isExam ? 'Weekly Exam' : 'Daily Quiz';
+    const testTypeLabel = isExam ? 'Weekly Exam' : 'Daily Task';
     const testTypeKey = isExam ? 'exam' : 'quiz';
 
     let pacingStatus = 'Normal';
@@ -419,19 +420,19 @@ export async function renderTests(area) {
 
     if (completedCount === 0) {
       pacingStatus = 'No Data';
-      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);">⚪ No Data</span>';
+      pacingBadgeHtml = `<span class="tac-badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; border:1px solid rgba(255,255,255,0.08);">${getSvgIcon('clock', 12)} No Data</span>`;
     } else if (timeoutRate > 25) {
       pacingStatus = 'High Timeout';
-      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(251,113,133,0.12); color:#fb7185; border:1px solid rgba(251,113,133,0.3);">⚠️ High Timeout</span>';
+      pacingBadgeHtml = `<span class="tac-badge" style="background:rgba(var(--grade-e-rgb),0.12); color:var(--grade-e); border:1px solid rgba(var(--grade-e-rgb),0.3);">${getSvgIcon('alert-triangle', 12)} High Timeout</span>`;
     } else if (timeLimit > 0 && testAvgDurSec && (testAvgDurSec / (timeLimit * 60)) > 0.85) {
       pacingStatus = 'Rushed';
-      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(251,191,36,0.12); color:#fbbf24; border:1px solid rgba(251,191,36,0.3);">🟠 Rushed</span>';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(var(--grade-c-rgb),0.12); color:var(--grade-c); border:1px solid rgba(var(--grade-c-rgb),0.3);"><span class="status-dot dot-warning" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-c);margin-right:4px;"></span> Rushed</span>';
     } else if (timeLimit > 0 && testAvgDurSec && (testAvgDurSec / (timeLimit * 60)) < 0.45) {
       pacingStatus = 'Comfortable';
-      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.3);">🟢 Comfortable</span>';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(var(--grade-a-rgb),0.12); color:var(--grade-a); border:1px solid rgba(var(--grade-a-rgb),0.3);"><span class="status-dot dot-safe" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-a);margin-right:4px;"></span> Comfortable</span>';
     } else {
       pacingStatus = 'Normal';
-      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);">🔵 Normal</span>';
+      pacingBadgeHtml = '<span class="tac-badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3);"><span class="status-dot dot-normal" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#38bdf8;margin-right:4px;"></span> Normal</span>';
     }
 
     // Comprehensive telemetry for Inspect drawer
@@ -554,20 +555,9 @@ export async function renderTests(area) {
 
   window._allTestCardsData = drawerRows;
 
-  // Available Classes for Topbar Navigation (Built purely from DB)
-  const classIconMap = {
-    'vocab': '📚',
-    'story': '📖',
-    'speaking': '🎙️',
-    'public': '🗣️',
-    'basic': '🔤'
-  };
+  // Available Classes for Topbar Navigation (Built purely from DB using Canonical Vector SVG Icons)
   const getIcon = (name) => {
-    const n = (name || '').toLowerCase();
-    for (const [k, ic] of Object.entries(classIconMap)) {
-      if (n.includes(k)) return ic;
-    }
-    return '📚';
+    return getClassSvgIcon(name, 16, '#818cf8');
   };
 
   const availableClasses = [];
@@ -591,13 +581,13 @@ export async function renderTests(area) {
     return [
       ...availableClasses.map(ac => ({
         id: ac.id,
-        icon: ac.icon || '📚',
+        icon: ac.icon || getClassSvgIcon(ac.name, 16, '#818cf8'),
         label: ac.name,
         val: ac.count
       })),
       {
         id: 'all',
-        icon: '🌐',
+        icon: getClassSvgIcon('all', 16, '#818cf8'),
         label: 'All Classes',
         val: liveData.length
       }
@@ -631,16 +621,16 @@ export async function renderTests(area) {
   drawerEl.innerHTML = `
     <div class="tac-drawer-head">
       <div>
-        <div class="tac-drawer-title">⏱️ Test-by-Test Completion &amp; Pacing</div>
+        <div class="tac-drawer-title">${getSvgIcon('clock', 14)} Test-by-Test Completion &amp; Pacing</div>
         <div class="tac-drawer-subtitle">Detailed completion speed vs limits, pass rates, and timeout telemetry for all tests</div>
       </div>
       <button class="tac-drawer-close" onclick="window._closeTestPacingDrawer()" title="Close Drawer">&times;</button>
     </div>
     <div class="tac-drawer-controls">
-      <input type="text" id="tac-drawer-search" class="tac-drawer-search" placeholder="🔍 Search test title or shell code..." oninput="window._onPacingDrawerSearch(this.value)" />
+      <input type="text" id="tac-drawer-search" class="tac-drawer-search" placeholder="Search test title or shell code..." oninput="window._onPacingDrawerSearch(this.value)" />
       <div class="tac-drawer-filter-pills">
         <button class="tac-drawer-filter-btn active" data-filter="all" onclick="window._onPacingDrawerFilter('all')">All (${drawerRows.length})</button>
-        <button class="tac-drawer-filter-btn" data-filter="quiz" onclick="window._onPacingDrawerFilter('quiz')">Quizzes (${drawerRows.filter(r => !r.isExam).length})</button>
+        <button class="tac-drawer-filter-btn" data-filter="quiz" onclick="window._onPacingDrawerFilter('quiz')">Tasks (${drawerRows.filter(r => !r.isExam).length})</button>
         <button class="tac-drawer-filter-btn" data-filter="exam" onclick="window._onPacingDrawerFilter('exam')">Exams (${drawerRows.filter(r => r.isExam).length})</button>
         <button class="tac-drawer-filter-btn" data-filter="timeout" onclick="window._onPacingDrawerFilter('timeout')">High Timeout (${drawerRows.filter(r => r.pacingStatus === 'High Timeout').length})</button>
       </div>
@@ -649,60 +639,60 @@ export async function renderTests(area) {
       <table class="tac-pacing-table" id="tac-pacing-table">
         <thead>
           <tr>
-            <th style="min-width:140px;">Test Title</th>
-            <th style="width:95px; text-align:center;">Shell Code</th>
-            <th style="width:90px; text-align:center;">Type</th>
-            <th style="width:85px; text-align:center;">Submissions</th>
-            <th style="width:90px; text-align:center;">Avg Duration</th>
-            <th style="width:80px; text-align:center;">Time Limit</th>
-            <th style="width:75px; text-align:center;">Pass Rate</th>
-            <th style="width:105px; text-align:center;">Timeout Rate</th>
-            <th style="width:125px; text-align:center;">Pacing Status</th>
-            <th style="width:75px; text-align:center;">Action</th>
+            <th style="min-width:140px;">TEST TITLE</th>
+            <th style="width:95px; text-align:center;">SHELL CODE</th>
+            <th style="width:90px; text-align:center;">TYPE</th>
+            <th style="width:85px; text-align:center;">SUBMISSIONS</th>
+            <th style="width:90px; text-align:center;">AVG DURATION</th>
+            <th style="width:80px; text-align:center;">TIME LIMIT</th>
+            <th style="width:75px; text-align:center;">PASS RATE</th>
+            <th style="width:105px; text-align:center;">TIMEOUT RATE</th>
+            <th style="width:125px; text-align:center;">PACING STATUS</th>
+            <th style="width:75px; text-align:center;">ACTION</th>
           </tr>
         </thead>
         <tbody>
           ${drawerRows.map(r => `
             <tr data-test-type="${r.testTypeKey}" data-pacing-status="${r.pacingStatus.toLowerCase()}" data-search-text="${escapeHtml((r.title + ' ' + r.shellCode).toLowerCase())}">
               <td>
-                <div style="font-weight:700; color:#f8fafc; font-size:0.76rem;">${escapeHtml(r.title)}</div>
+                <div style="font-weight:700; color:#f8fafc; font-size: 12px;">${escapeHtml(r.title)}</div>
               </td>
               <td style="text-align:center;">
-                ${r.shellCode ? `<span class="badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-family:monospace; font-size:0.65rem; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(r.shellCode)}</span>` : '<span class="text-muted">—</span>'}
+                ${r.shellCode ? `<span class="badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-family:monospace; font-size: 12px; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(r.shellCode)}</span>` : '<span class="text-muted">—</span>'}
               </td>
               <td style="text-align:center;">
-                <span class="tac-badge ${r.isExam ? 'badge-purple-soft' : 'badge-blue-soft'}" style="font-size:0.62rem; font-weight:700;">
-                  ${r.isExam ? '🎓 Exam' : '⚡ Quiz'}
+                <span class="tac-badge ${r.isExam ? 'badge-purple-soft' : 'badge-blue-soft'}" style="font-size: 12px; font-weight:700;">
+                  ${r.isExam ? getSvgIcon('award', 12) + ' Exam' : getSvgIcon('zap', 12) + ' Task'}
                 </span>
               </td>
               <td style="text-align:center;">
                 <strong style="color:#f8fafc;">${r.completedCount}</strong>
               </td>
               <td style="text-align:center;">
-                <div style="font-weight:700; color:#f8fafc; font-size:0.75rem;">⏱️ ${r.durDisplay}</div>
+                <div style="font-weight:700; color:#f8fafc; font-size: 12px;">${getSvgIcon('clock', 12)} ${r.durDisplay}</div>
                 ${r.testAvgDurSec ? `
                   <div style="height:3px; width:65px; margin:3px auto 0; background:rgba(255,255,255,0.08); border-radius:2px; overflow:hidden;">
-                    <div style="width:${Math.min(100, Math.round((r.testAvgDurSec / (r.timeLimit * 60)) * 100))}%; height:100%; background:${(r.testAvgDurSec / (r.timeLimit * 60)) > 0.85 ? '#fbbf24' : '#38bdf8'};"></div>
+                    <div style="width:${Math.min(100, Math.round((r.testAvgDurSec / (r.timeLimit * 60)) * 100))}%; height:100%; background:${(r.testAvgDurSec / (r.timeLimit * 60)) > 0.85 ? 'var(--grade-c)' : '#38bdf8'};"></div>
                   </div>
                 ` : ''}
               </td>
               <td style="text-align:center;">
-                <span style="color:#cbd5e1; font-weight:600; font-size:0.75rem;">${r.timeLimit}m</span>
+                <span style="color:#cbd5e1; font-weight:600; font-size: 12px;">${r.timeLimit}m</span>
               </td>
               <td style="text-align:center;">
-                ${r.completedCount > 0 ? `<strong style="color:${getGradeColorByScore(r.passRate)}; font-size:0.78rem;">${r.passRate}%</strong>` : '<span class="text-muted">—</span>'}
+                ${r.completedCount > 0 ? `<strong style="color:${getGradeColorByScore(r.passRate)}; font-size: 12px;">${r.passRate}%</strong>` : '<span class="text-muted">—</span>'}
               </td>
               <td style="text-align:center;">
                 ${r.completedCount > 0 ? `
-                  <span style="color:${r.timeoutRate > 25 ? '#fb7185' : '#cbd5e1'}; font-weight:700;">${r.timeoutRate}%</span>
-                  <div style="font-size:0.58rem; color:#94a3b8;">(${r.timeoutCount} timeouts)</div>
+                  <span style="color:${getInvertedGradeColor(r.timeoutRate)}; font-weight:700;">${r.timeoutRate}%</span>
+                  <div style="font-size: 12px; color:#94a3b8;">(${r.timeoutCount} timeouts)</div>
                 ` : '<span class="text-muted">—</span>'}
               </td>
               <td style="text-align:center;">
                 ${r.pacingBadgeHtml}
               </td>
               <td style="text-align:center;">
-                <button class="btn btn-xs btn-secondary" onclick="window._openTestCardDrawer('${r.id}')" style="font-size:0.65rem; padding:2px 6px;">
+                <button class="btn btn-xs btn-secondary" onclick="window._openTestCardDrawer('${r.id}')" style="font-size: 12px; padding:2px 6px;">
                   Inspect
                 </button>
               </td>
@@ -710,16 +700,16 @@ export async function renderTests(area) {
           `).join('')}
           <tr id="tac-pacing-no-results" style="display:none;">
             <td colspan="10" style="text-align:center; padding:2.5rem 1rem; color:#94a3b8;">
-              <div style="font-size:1.5rem; margin-bottom:6px;">🔍</div>
-              <div style="font-weight:700; color:#f8fafc; font-size:0.85rem;">No Tests Found</div>
-              <div style="font-size:0.75rem; margin-top:2px;">Try adjusting your search query or filter selection.</div>
+              <div style="margin-bottom:6px; color:#94a3b8;">${getSvgIcon('search', 20)}</div>
+              <div style="font-weight:700; color:#f8fafc; font-size: 12px;">No Tests Found</div>
+              <div style="font-size: 12px; margin-top:2px;">Try adjusting your search query or filter selection.</div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
     <div class="tac-drawer-footer">
-      <span style="font-size:0.72rem; color:#94a3b8;">Showing <strong style="color:#f8fafc;" id="tac-drawer-count">${drawerRows.length}</strong> of ${drawerRows.length} tests</span>
+      <span style="font-size: 12px; color:#94a3b8;">Showing <strong style="color:#f8fafc;" id="tac-drawer-count">${drawerRows.length}</strong> of ${drawerRows.length} tests</span>
       <button class="btn btn-secondary btn-sm" onclick="window._closeTestPacingDrawer()">Close</button>
     </div>
   `;
@@ -784,23 +774,23 @@ export async function renderTests(area) {
         background: rgba(255, 255, 255, 0.06);
         border-color: rgba(56, 189, 248, 0.3);
       }
-      .tac-pacing-icon { font-size: 1.25rem; }
+      .tac-pacing-icon { font-size: 16px; }
       .tac-pacing-label {
-        font-size: 0.65rem;
+        font-size: 12px;
         color: #94a3b8;
         text-transform: uppercase;
         font-weight: 700;
         letter-spacing: 0.4px;
       }
       .tac-pacing-val {
-        font-size: 0.85rem;
+        font-size: 12px;
         font-weight: 800;
         color: #f8fafc;
         display: flex;
         align-items: center;
         gap: 6px;
       }
-      .tac-pacing-val small { font-size: 0.68rem; font-weight: 500; color: #94a3b8; }
+      .tac-pacing-val small { font-size: 12px; font-weight: 500; color: #94a3b8; }
       .tac-pacing-dot { color: #475569; }
 
       /* ERROR DIAGNOSIS BREAKDOWN CHIPS */
@@ -813,7 +803,7 @@ export async function renderTests(area) {
         justify-content: center;
       }
       .tac-diag-title {
-        font-size: 0.7rem;
+        font-size: 12px;
         color: #94a3b8;
         font-weight: 700;
         text-transform: uppercase;
@@ -827,7 +817,7 @@ export async function renderTests(area) {
         display: flex;
         align-items: center;
         gap: 5px;
-        font-size: 0.72rem;
+        font-size: 12px;
         padding: 4px 8px;
         border-radius: 6px;
         border: 1px solid transparent;
@@ -865,7 +855,7 @@ export async function renderTests(area) {
         border: 1px solid rgba(56, 189, 248, 0.35);
         padding: 7px 14px;
         border-radius: 8px;
-        font-size: 0.78rem;
+        font-size: 12px;
         font-weight: 700;
         cursor: pointer;
         white-space: nowrap;
@@ -925,10 +915,15 @@ export async function renderTests(area) {
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
         backdrop-filter: blur(12px);
       }
-      .tac-theme-col.theme-col-A { border-top: 3px solid #34d399; }
-      .tac-theme-col.theme-col-B { border-top: 3px solid #38bdf8; }
-      .tac-theme-col.theme-col-C { border-top: 3px solid #a78bfa; }
-      .tac-theme-col.theme-col-D { border-top: 3px solid #fbbf24; }
+      .tac-theme-col.theme-col-A { border-top: 3px solid var(--quad-a, #ff2d87); }
+      .tac-theme-col.theme-col-B { border-top: 3px solid var(--quad-b, #ff8c00); }
+      .tac-theme-col.theme-col-C { border-top: 3px solid var(--quad-c, #95ff00); }
+      .tac-theme-col.theme-col-D { border-top: 3px solid var(--quad-d, #c084fc); }
+
+      .theme-col-A .tac-theme-col-title { color: var(--quad-a, #ff2d87) !important; }
+      .theme-col-B .tac-theme-col-title { color: var(--quad-b, #ff8c00) !important; }
+      .theme-col-C .tac-theme-col-title { color: var(--quad-c, #95ff00) !important; }
+      .theme-col-D .tac-theme-col-title { color: var(--quad-d, #c084fc) !important; }
 
       .tac-theme-col-header {
         padding: 8px 12px;
@@ -941,23 +936,23 @@ export async function renderTests(area) {
       }
       .tac-theme-col-title {
         font-weight: 800;
-        font-size: 0.82rem;
+        font-size: 12px;
         display: flex;
         align-items: center;
         gap: 6px;
         color: #f8fafc;
       }
-      .tac-theme-col-subtitle { font-size: 0.65rem; color: #94a3b8; margin-top: 1px; }
+      .tac-theme-col-subtitle { font-size: 12px; color: #94a3b8; margin-top: 1px; }
       .tac-theme-col-badge {
-        font-size: 0.62rem;
+        font-size: 12px;
         font-weight: 700;
         padding: 2px 6px;
         border-radius: 4px;
       }
-      .badge-theme-A { background: rgba(52, 211, 153, 0.12); color: #34d399; border: 1px solid rgba(52, 211, 153, 0.3); }
-      .badge-theme-B { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-      .badge-theme-C { background: rgba(167, 139, 250, 0.12); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); }
-      .badge-theme-D { background: rgba(251, 191, 36, 0.12); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
+      .badge-theme-A { background: rgba(var(--quad-a-rgb, 255, 45, 135), 0.12); color: var(--quad-a, #ff2d87); border: 1px solid rgba(var(--quad-a-rgb, 255, 45, 135), 0.3); }
+      .badge-theme-B { background: rgba(var(--quad-b-rgb, 255, 140, 0), 0.12); color: var(--quad-b, #ff8c00); border: 1px solid rgba(var(--quad-b-rgb, 255, 140, 0), 0.3); }
+      .badge-theme-C { background: rgba(var(--quad-c-rgb, 149, 255, 0), 0.12); color: var(--quad-c, #95ff00); border: 1px solid rgba(var(--quad-c-rgb, 149, 255, 0), 0.3); }
+      .badge-theme-D { background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.12); color: var(--quad-d, #c084fc); border: 1px solid rgba(var(--quad-d-rgb, 192, 132, 252), 0.3); }
 
       .tac-theme-col-body {
         flex: 1;
@@ -992,7 +987,7 @@ export async function renderTests(area) {
         gap: 6px;
       }
       .tac-qcard-rank {
-        font-size: 0.72rem;
+        font-size: 12px;
         font-weight: 800;
         color: #94a3b8;
         background: rgba(255, 255, 255, 0.05);
@@ -1001,7 +996,7 @@ export async function renderTests(area) {
         flex-shrink: 0;
       }
       .tac-qcard-prompt {
-        font-size: 0.78rem;
+        font-size: 12px;
         font-weight: 700;
         color: #f8fafc;
         line-height: 1.25;
@@ -1015,7 +1010,7 @@ export async function renderTests(area) {
         flex-shrink: 0;
       }
       .tac-badge-wt {
-        font-size: 0.6rem;
+        font-size: 12px;
         font-weight: 700;
         padding: 1px 5px;
         border-radius: 4px;
@@ -1024,7 +1019,7 @@ export async function renderTests(area) {
         border: 1px solid rgba(56, 189, 248, 0.25);
       }
       .tac-badge-time {
-        font-size: 0.6rem;
+        font-size: 12px;
         font-weight: 600;
         padding: 1px 5px;
         border-radius: 4px;
@@ -1038,14 +1033,14 @@ export async function renderTests(area) {
         border: 1px solid rgba(52, 211, 153, 0.2);
         border-radius: 5px;
         padding: 3px 8px;
-        font-size: 0.7rem;
+        font-size: 12px;
         display: flex;
         align-items: center;
         gap: 5px;
         color: #cbd5e1;
       }
-      .tac-qcard-target-label { font-weight: 600; color: #86efac; }
-      .tac-qcard-target-text { font-weight: 700; color: #34d399; }
+      .tac-qcard-target-label { font-weight: 600; color: var(--grade-a); }
+      .tac-qcard-target-text { font-weight: 700; color: var(--grade-a); }
 
       .tac-qcard-errors {
         display: flex;
@@ -1056,7 +1051,7 @@ export async function renderTests(area) {
         padding: 4px 6px;
       }
       .tac-qcard-error-item {
-        font-size: 0.68rem;
+        font-size: 12px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -1071,7 +1066,7 @@ export async function renderTests(area) {
         max-width: 65%;
       }
       .tac-qcard-error-text.is-timeout { color: #fde68a; font-style: italic; }
-      .tac-qcard-error-stat { font-size: 0.62rem; color: #94a3b8; white-space: nowrap; }
+      .tac-qcard-error-stat { font-size: 12px; color: #94a3b8; white-space: nowrap; }
 
       .tac-qcard-footer {
         display: flex;
@@ -1080,18 +1075,18 @@ export async function renderTests(area) {
         margin-top: 1px;
       }
       .tac-diag-pill {
-        font-size: 0.62rem;
+        font-size: 12px;
         font-weight: 700;
         padding: 1px 6px;
         border-radius: 4px;
       }
       .diag-pill-spelling { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
-      .diag-pill-literal { background: rgba(251, 113, 133, 0.12); color: #fb7185; border: 1px solid rgba(251, 113, 133, 0.25); }
+      .diag-pill-literal { background: rgba(var(--grade-e-rgb), 0.12); color: var(--grade-e); border: 1px solid rgba(var(--grade-e-rgb), 0.25); }
       .diag-pill-vocab_gap { background: rgba(251, 146, 60, 0.12); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.25); }
       .diag-pill-word_form { background: rgba(167, 139, 250, 0.12); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.25); }
-      .diag-pill-timeout { background: rgba(251, 191, 36, 0.12); color: #fde68a; border: 1px solid rgba(251, 191, 36, 0.25); }
+      .diag-pill-timeout { background: rgba(var(--grade-c-rgb), 0.12); color: var(--grade-c); border: 1px solid rgba(var(--grade-c-rgb), 0.25); }
 
-      .tac-qcard-failstat { font-size: 0.65rem; font-weight: 700; color: #f87171; }
+      .tac-qcard-failstat { font-size: 12px; font-weight: 700; color: var(--grade-e); }
 
       .tac-theme-col-empty {
         padding: 2rem 1rem;
@@ -1140,19 +1135,19 @@ export async function renderTests(area) {
         flex-shrink: 0;
       }
       .tac-drawer-title {
-        font-size: 1.1rem;
+        font-size: 16px;
         font-weight: 800;
         color: #f8fafc;
         display: flex;
         align-items: center;
         gap: 8px;
       }
-      .tac-drawer-subtitle { font-size: 0.72rem; color: #94a3b8; margin-top: 2px; }
+      .tac-drawer-subtitle { font-size: 12px; color: #94a3b8; margin-top: 2px; }
       .tac-drawer-close {
         background: none;
         border: none;
         color: #94a3b8;
-        font-size: 1.5rem;
+        font-size: 20px;
         line-height: 1;
         cursor: pointer;
         padding: 4px 8px;
@@ -1177,7 +1172,7 @@ export async function renderTests(area) {
         color: #f8fafc;
         padding: 6px 10px;
         border-radius: 6px;
-        font-size: 0.78rem;
+        font-size: 12px;
         outline: none;
       }
       .tac-drawer-search:focus { border-color: #38bdf8; }
@@ -1186,7 +1181,7 @@ export async function renderTests(area) {
         background: rgba(255, 255, 255, 0.04);
         border: 1px solid rgba(255, 255, 255, 0.08);
         color: #cbd5e1;
-        font-size: 0.68rem;
+        font-size: 12px;
         padding: 4px 8px;
         border-radius: 5px;
         cursor: pointer;
@@ -1199,13 +1194,13 @@ export async function renderTests(area) {
       }
 
       .tac-drawer-body { flex: 1; overflow-y: auto; padding: 0; }
-      .tac-pacing-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+      .tac-pacing-table { width: 100%; border-collapse: collapse; font-size: 12px; }
       .tac-pacing-table th {
         background: #0f172a;
         color: #94a3b8;
         font-weight: 700;
         text-transform: uppercase;
-        font-size: 0.65rem;
+        font-size: 12px;
         letter-spacing: 0.4px;
         padding: 8px 12px;
         text-align: left;
@@ -1231,7 +1226,7 @@ export async function renderTests(area) {
         flex-shrink: 0;
       }
 
-      .tac-badge { font-size: 0.6rem; font-weight: 800; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; }
+      .tac-badge { font-size: 12px; font-weight: 800; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; }
       .badge-blue-soft { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
       .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
       .badge-success-soft { background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.15); color: #86efac; border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.3); }
@@ -1241,7 +1236,7 @@ export async function renderTests(area) {
 
     <div class="test-analytics-dashboard">
       <!-- Empty track notification (shown when a track with 0 tests is selected) -->
-      <div id="tac-empty-track-section" style="display:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? 'block' : 'none'}; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.35rem 0.75rem; color:#fde68a; font-size:0.75rem; flex-shrink:0;">
+      <div id="tac-empty-track-section" style="display:${currentClassObj.count === 0 && window._activeTestClassId !== 'all' ? 'block' : 'none'}; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:0.35rem 0.75rem; color:#fde68a; font-size: 12px; flex-shrink:0;">
         ℹ️ Active Track: <strong id="tac-empty-track-name" style="color:#fff;">${escapeHtml(currentClassObj.name)}</strong> has no published tests configured yet. Select <strong>3rd Vocabulary</strong> or <strong>All Classes</strong> in the top bar to inspect curriculum health and analytics.
       </div>
 
@@ -1262,30 +1257,30 @@ export async function renderTests(area) {
 
         <!-- 2. Student Error Diagnosis Breakdown -->
         <div class="tac-diagnosis-group">
-          <div class="tac-diag-title">⚠️ Student Error Diagnosis:</div>
+          <div class="tac-diag-title">${getSvgIcon('alert-triangle', 13)} Student Error Diagnosis:</div>
           <div class="tac-diag-chips">
             <div class="tac-diag-chip chip-spelling" title="Minor typos and near-matches from typing or speaking">
-              <span>🔤</span>
+              <span>${getSvgIcon('edit', 12)}</span>
               <span>Spelling:</span>
               <strong>${globalErrorDiagCounts.spelling} (${diagPcts.spelling}%)</strong>
             </div>
             <div class="tac-diag-chip chip-literal" title="Literal Indonesian translation, semantic mistake, or incorrect selection">
-              <span>🇮🇩</span>
+              <span>${getSvgIcon('globe', 12)}</span>
               <span>Literal:</span>
               <strong>${globalErrorDiagCounts.literal} (${diagPcts.literal}%)</strong>
             </div>
             <div class="tac-diag-chip chip-wordform" title="Root stem correct, wrong grammatical part of speech">
-              <span>🔄</span>
+              <span>${getSvgIcon('refresh', 12)}</span>
               <span>Word Form:</span>
               <strong>${globalErrorDiagCounts.word_form || 0} (${diagPcts.word_form || 0}%)</strong>
             </div>
             <div class="tac-diag-chip chip-vocabgap" title="Unrelated English word, unknown phrase, or vocabulary deficit">
-              <span>💡</span>
+              <span>${getSvgIcon('zap', 12)}</span>
               <span>Vocab Gap:</span>
               <strong>${globalErrorDiagCounts.vocab_gap || 0} (${diagPcts.vocab_gap || 0}%)</strong>
             </div>
             <div class="tac-diag-chip chip-timeout" title="Unanswered or timer deadline expired (Session pacing, not student answer)">
-              <span>⏳</span>
+              <span>${getSvgIcon('clock', 12)}</span>
               <span>Timed Out:</span>
               <strong>${totalGlobalTimeouts} (Pacing)</strong>
             </div>
@@ -1294,7 +1289,7 @@ export async function renderTests(area) {
 
         <!-- 3. Prominent Drawer Action Button -->
         <button class="tac-drawer-action-btn" onclick="window._openTestPacingDrawer()">
-          <span>⏱️ Test Pacing &amp; Duration Drawer</span>
+          <span>${getSvgIcon('clock', 12)} Test Pacing &amp; Duration Drawer</span>
           <span class="tac-drawer-arrow">➔</span>
         </button>
       </div>
@@ -1319,9 +1314,7 @@ export async function renderTests(area) {
                     ${questions.length} Bottlenecks
                   </span>
                   ${questions.length > 0 ? `
-                    <button type="button" class="tac-drill-btn" onclick="window._openThemeBottleneckFlashcards('${t}')" title="Launch Classroom 3D Flashcard Drill for ${meta.name}" style="padding:2px 8px; font-size:0.68rem; font-weight:700; border-radius:6px; background:rgba(168,85,247,0.22); border:1px solid rgba(168,85,247,0.5); color:#e9d5ff; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.15s ease;">
-                      🎴 Drill
-                    </button>
+                    
                   ` : ''}
                 </div>
               </div>
@@ -1335,7 +1328,7 @@ export async function renderTests(area) {
                       <span class="tac-qcard-prompt" title="${escapeHtml(q.text)}">"${escapeHtml(q.text)}"</span>
                       <div class="tac-qcard-badges">
                         <span class="tac-badge-wt">${escapeHtml(q.wordType)}</span>
-                        <span class="tac-badge-time">⏱️ ${q.avgTimeSec}s</span>
+                        <span class="tac-badge-time">${getSvgIcon('clock', 11)} ${q.avgTimeSec}s</span>
                       </div>
                     </div>
 
@@ -1351,7 +1344,7 @@ export async function renderTests(area) {
                         ${q.topErrors.map(e => `
                           <div class="tac-qcard-error-item">
                             <span class="tac-qcard-error-text" title="${escapeHtml(e.answer)}">
-                              ❌ "${escapeHtml(e.answer)}"
+                              <span class="text-fail fw-700">✕</span> "${escapeHtml(e.answer)}"
                             </span>
                             <span class="tac-qcard-error-stat">(${e.count}x &bull; ${e.pct}%)</span>
                           </div>
@@ -1362,14 +1355,14 @@ export async function renderTests(area) {
                     <!-- Footer: Diagnosis Tag & Fail Rate -->
                     <div class="tac-qcard-footer">
                       <span class="tac-diag-pill diag-pill-${q.dominantError}">${q.dominantErrorLabel}</span>
-                      <span class="tac-qcard-failstat">${q.failRate}% Fail (${q.fail}/${q.total})</span>
+                      <span class="tac-qcard-failstat" style="color:${getInvertedGradeColor(q.failRate)};">${q.failRate}% Fail (${q.fail}/${q.total})</span>
                     </div>
                   </div>
                 `).join('') : `
                   <div class="tac-theme-col-empty">
-                    <div style="font-size: 1.5rem; margin-bottom: 6px;">✨</div>
-                    <div style="font-weight: 700; color: #f8fafc; font-size: 0.8rem;">100% Mastery Recorded</div>
-                    <div style="color: #94a3b8; font-size: 0.7rem; margin-top: 2px;">No critical error bottlenecks recorded in ${meta.name}.</div>
+                    <div style="margin-bottom: 6px; color:#38bdf8;">${getSvgIcon('sparkles', 20)}</div>
+                    <div style="font-weight: 700; color: #f8fafc; font-size: 12px;">100% Mastery Recorded</div>
+                    <div style="color: #94a3b8; font-size: 12px; margin-top: 2px;">No critical error bottlenecks recorded in ${meta.name}.</div>
                   </div>
                 `}
               </div>
@@ -1507,170 +1500,16 @@ export async function renderTests(area) {
   window._themeTop20 = themeTop20;
   window._themeMeta = themeMeta;
 
-  let _classFcCards = [];
-  let _classFcCurrentIndex = 0;
-  let _isClassFcBound = false;
-
-  window._openThemeBottleneckFlashcards = function(themeCode) {
-    const questions = (window._themeTop20 && window._themeTop20[themeCode]) || [];
-    if (!questions || questions.length === 0) {
-      if (typeof showToast === 'function') showToast(`No bottleneck vocabulary recorded for Theme ${themeCode}.`, 'info');
-      return;
-    }
-
-    _classFcCards = questions;
-    _classFcCurrentIndex = 0;
-
-    const modal = document.getElementById('class-flashcard-modal');
-    const titleEl = document.getElementById('class-fc-modal-title');
-    const meta = (window._themeMeta && window._themeMeta[themeCode]) || { name: `Theme ${themeCode}` };
-    if (titleEl) titleEl.textContent = `🎴 ${meta.name} — Class Drill`;
-
-    initClassroomFlashcardControls();
-    renderClassroomFlashcardItem();
-    if (modal) modal.classList.remove('hidden');
-  };
-
-  function initClassroomFlashcardControls() {
-    if (_isClassFcBound) return;
-    _isClassFcBound = true;
-
-    const modal = document.getElementById('class-flashcard-modal');
-    const closeBtn = document.getElementById('close-class-flashcard-btn');
-    if (closeBtn) closeBtn.onclick = closeClassroomFlashcardModal;
-    if (modal) {
-      modal.onclick = (e) => {
-        if (e.target.id === 'class-flashcard-modal') closeClassroomFlashcardModal();
-      };
-    }
-
-    const flipInner = document.getElementById('class-active-flip-inner');
-    const flipCard = document.getElementById('class-active-flip-card');
-    const toggleFlip = () => flipInner?.classList.toggle('flipped');
-
-    if (flipCard) flipCard.onclick = toggleFlip;
-    const flipBtn = document.getElementById('class-fc-btn-flip');
-    if (flipBtn) {
-      flipBtn.onclick = (e) => {
-        e.stopPropagation();
-        toggleFlip();
-      };
-    }
-
-    const prevBtn = document.getElementById('class-fc-btn-prev');
-    if (prevBtn) {
-      prevBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (_classFcCards.length === 0) return;
-        _classFcCurrentIndex = (_classFcCurrentIndex - 1 + _classFcCards.length) % _classFcCards.length;
-        renderClassroomFlashcardItem();
-      };
-    }
-
-    const nextBtn = document.getElementById('class-fc-btn-next');
-    if (nextBtn) {
-      nextBtn.onclick = (e) => {
-        e.stopPropagation();
-        if (_classFcCards.length === 0) return;
-        _classFcCurrentIndex = (_classFcCurrentIndex + 1) % _classFcCards.length;
-        renderClassroomFlashcardItem();
-      };
-    }
-
-    const speakBtn = document.getElementById('class-fc-speak-btn');
-    if (speakBtn) {
-      speakBtn.onclick = (e) => {
-        e.stopPropagation();
-        playClassroomFlashcardAudio();
-      };
-    }
-
-    // Keyboard shortcuts for tutor classroom presentation (Space, Arrows, P)
-    window.addEventListener('keydown', (e) => {
-      const modal = document.getElementById('class-flashcard-modal');
-      if (!modal || modal.classList.contains('hidden')) return;
-
-      if (e.key === ' ' || e.code === 'Space') {
-        e.preventDefault();
-        toggleFlip();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        if (_classFcCards.length === 0) return;
-        _classFcCurrentIndex = (_classFcCurrentIndex + 1) % _classFcCards.length;
-        renderClassroomFlashcardItem();
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        if (_classFcCards.length === 0) return;
-        _classFcCurrentIndex = (_classFcCurrentIndex - 1 + _classFcCards.length) % _classFcCards.length;
-        renderClassroomFlashcardItem();
-      } else if (e.key === 'p' || e.key === 'P') {
-        e.preventDefault();
-        playClassroomFlashcardAudio();
-      } else if (e.key === 'Escape') {
-        closeClassroomFlashcardModal();
-      }
-    });
-  }
-
-  function playClassroomFlashcardAudio() {
-    const item = _classFcCards[_classFcCurrentIndex];
-    if (!item) return;
-    const target = (item.correct || '').split(/[;/,|]/)[0].trim();
-    if (target && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(target);
-      u.lang = 'en-US';
-      u.rate = 0.9;
-      window.speechSynthesis.speak(u);
-    }
-  }
-
-  function closeClassroomFlashcardModal() {
-    const modal = document.getElementById('class-flashcard-modal');
-    if (modal) modal.classList.add('hidden');
-    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-  }
-
-  function renderClassroomFlashcardItem() {
-    const q = _classFcCards[_classFcCurrentIndex];
-    if (!q) return;
-
-    const flipInner = document.getElementById('class-active-flip-inner');
-    if (flipInner) flipInner.classList.remove('flipped');
-
-    const promptEl = document.getElementById('class-fc-front-prompt');
-    if (promptEl) promptEl.textContent = q.text || '—';
-
-    const posEl = document.getElementById('class-fc-front-pos');
-    if (posEl) posEl.textContent = q.wordType || 'WORD';
-
-    const errorsEl = document.getElementById('class-fc-front-errors');
-    if (errorsEl) {
-      if (q.topErrors && q.topErrors.length > 0) {
-        const errList = q.topErrors.map(e => `"${escapeHtml(e.answer)}" (${e.count}x)`).join(', ');
-        errorsEl.innerHTML = `Frequent student mistakes: <span style="color:var(--grade-e, #FF0000);">${errList}</span>`;
-      } else {
-        errorsEl.innerHTML = `<span style="color:#94a3b8;">High timeout or blank responses</span>`;
-      }
-    }
-
-    const backTargetEl = document.getElementById('class-fc-back-target');
-    if (backTargetEl) backTargetEl.textContent = q.correct || '—';
-
-    const counterEl = document.getElementById('class-fc-progress-counter');
-    if (counterEl) counterEl.textContent = `Card ${_classFcCurrentIndex + 1} of ${_classFcCards.length}`;
-  }
 }
-
 
 function formatAnswerType(type) {
   switch (type) {
     case 'speech_to_text':
-    case 'spoken': return '🎙️ Spoken';
+    case 'spoken': return `${getSvgIcon('mic', 13)} Spoken`;
 
     case 'multiple_choice':
-    case 'selection': return '✅ Selection';
-    case 'written': return '\u270F\uFE0F Written';
+    case 'selection': return `${getSvgIcon('check-circle', 13)} Selection`;
+    case 'written': return `${getSvgIcon('edit', 13)} Written`;
     default: return String(type);
   }
 }
@@ -1737,10 +1576,10 @@ export async function renderQuestions(area) {
 
 export async function renderResults(area) {
   const [rawData, allPrograms, allClasses, allBatches] = await Promise.all([
-    adminFetchAll('attempts', '*, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), tests!test_id(title, test_type), attempt_answers(id, evaluation_result, score)'),
-    adminFetchAll('institutions'),
-    adminFetchAll('programs'),
-    adminFetchAll('batches')
+    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, percentage, effective_score, is_remedial_unlocked, created_at, submitted_at, students!student_id(name, gender, batch_id, batches!batch_id(name), program_id, programs!program_id(name, institution_id, institutions!institution_id(name))), tests!test_id(title, test_type), attempt_answers(id, evaluation_result, score)'),
+    adminFetchAll('institutions', 'id, name, is_active'),
+    adminFetchAll('programs', 'id, name, is_active, institution_id'),
+    adminFetchAll('batches', 'id, name, is_active, program_id')
   ]);
 
   const submittedOnly = rawData.filter(r => ['submitted', 'auto_submitted'].includes(r.status));
@@ -1822,7 +1661,7 @@ export async function renderResults(area) {
       const body = `
         <div style="display:flex; flex-direction:column; gap:1rem;">
           <div>
-            <h4 style="margin:0; font-size:1.2rem;">${escapeHtml(row.studentName)}</h4>
+            <h4 style="margin:0; font-size: 16px;">${escapeHtml(row.studentName)}</h4>
             <div class="text-muted text-sm">Test: <strong style="color:var(--fm-text-primary);">${escapeHtml(row.TestTitle)}</strong></div>
           </div>
           <hr style="border-color:var(--fm-border-subtle); margin:0;">
@@ -1832,20 +1671,20 @@ export async function renderResults(area) {
           </div>
           <div>
             <div class="text-sm text-muted mb-1">Performance</div>
-            <div class="fw-600" style="font-size:1.5rem;">${row.score}% <span class="badge badge-primary text-sm ml-2" style="background:${getGradeColorByScore(parseFloat(row.score))}22;color:${getGradeColorByScore(parseFloat(row.score))};border:1px solid ${getGradeColorByScore(parseFloat(row.score))};">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>
+            <div class="fw-600" style="font-size: 20px;">${row.score}% <span class="badge badge-primary text-sm ml-2" style="background:${getGradeColorByScore(parseFloat(row.score))}22;color:${getGradeColorByScore(parseFloat(row.score))};border:1px solid ${getGradeColorByScore(parseFloat(row.score))};">${escapeHtml((row.grade === '★' || row.grade === 'S' || parseFloat(row.score) >= 100) ? '★' : row.grade)}</span></div>
           </div>
           <div class="d-flex gap-2">
-             <div class="p-2 rounded text-center" style="background:rgba(74,222,128,0.1);flex:1;">
+             <div class="p-2 rounded text-center" style="background:rgba(var(--grade-a-rgb),0.1);flex:1;">
                <div class="text-xs text-muted">Correct</div>
-               <div class="fw-800" style="color:var(--clr-success,#4ade80);">${row.correct}</div>
+               <div class="fw-800" style="color:var(--clr-success);">${row.correct}</div>
              </div>
-             <div class="p-2 rounded text-center" style="background:rgba(251,191,36,0.1);flex:1;">
+             <div class="p-2 rounded text-center" style="background:rgba(var(--grade-c-rgb),0.1);flex:1;">
                <div class="text-xs text-muted">Half</div>
-               <div class="fw-800" style="color:var(--clr-warning,#fbbf24);">${row.minor}</div>
+               <div class="fw-800" style="color:var(--clr-warning);">${row.minor}</div>
              </div>
-             <div class="p-2 rounded text-center" style="background:rgba(248,113,113,0.1);flex:1;">
+             <div class="p-2 rounded text-center" style="background:rgba(var(--grade-e-rgb),0.1);flex:1;">
                <div class="text-xs text-muted">Wrong</div>
-               <div class="fw-800" style="color:var(--clr-danger,#f87171);">${row.wrong}</div>
+               <div class="fw-800" style="color:var(--clr-danger);">${row.wrong}</div>
              </div>
           </div>
           <div>
@@ -1861,18 +1700,18 @@ export async function renderResults(area) {
       if (window.openRecordDrawer) window.openRecordDrawer('Attempt Details', body, footer);
     },
     columns: [
-      { key: 'studentName', label: 'Student', sortable: true, render: (val) => `<div class="fw-700" style="color:var(--clr-text-1);">${escapeHtml(val)}</div>` },
-      { key: 'program', label: 'Program', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
-      { key: 'className', label: 'Class', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
-      { key: 'batch', label: 'Batch', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
-      { key: 'TestTitle', label: 'Test', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
-      { key: 'score', label: 'Score', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
-      { key: 'grade', label: 'Grade', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="background:${getGradeColorByScore(parseFloat(row?.score))}22;color:${getGradeColorByScore(parseFloat(row?.score))};border:1px solid ${getGradeColorByScore(parseFloat(row?.score))};">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
-      { key: 'correct', label: 'Correct', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
-      { key: 'minor', label: 'Half', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-warning' : 'badge-neutral'}">${val}</span></div>` },
-      { key: 'wrong', label: 'Incorrect', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-danger' : 'badge-neutral'}">${val}</span></div>` },
-      { key: 'submittedAt', label: 'Submitted', sortable: true, render: (val) => `<div class="text-center text-xs text-muted">${val}</div>` },
-      { key: 'actions', label: 'Profile', sortable: false, render: (val, row) => `<div class="text-center"><button class="btn btn-secondary btn-sm" onclick="window.openStudentProfile('${row.studentId}')">View</button></div>` }
+      { key: 'program', label: 'PROGRAM', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
+      { key: 'batch', label: 'BATCH', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
+      { key: 'className', label: 'CLASS', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
+      { key: 'studentName', label: 'STUDENT NAME', sortable: true, render: (val) => `<div class="fw-700" style="color:var(--clr-text-1);">${escapeHtml(val)}</div>` },
+      { key: 'TestTitle', label: 'TEST', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
+      { key: 'score', label: 'SCORE', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
+      { key: 'grade', label: 'GRADE', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="background:${getGradeColorByScore(parseFloat(row?.score))}22;color:${getGradeColorByScore(parseFloat(row?.score))};border:1px solid ${getGradeColorByScore(parseFloat(row?.score))};">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
+      { key: 'correct', label: 'CORRECT', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
+      { key: 'minor', label: 'HALF', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-warning' : 'badge-neutral'}">${val}</span></div>` },
+      { key: 'wrong', label: 'INCORRECT', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-danger' : 'badge-neutral'}">${val}</span></div>` },
+      { key: 'submittedAt', label: 'SUBMITTED', sortable: true, render: (val) => `<div class="text-center text-xs text-muted">${val}</div>` },
+      { key: 'actions', label: 'PROFILE', sortable: false, render: (val, row) => `<div class="text-center"><button class="btn btn-secondary btn-sm" onclick="window.openStudentProfile('${row.studentId}')">View</button></div>` }
     ]
   });
 }
@@ -1896,7 +1735,7 @@ async function openSessionModal() {
   const asmOptions = (tests || []).map(a =>
     '<option value="' + esc(a.id) + '">[' + esc(a.test_type) + '] ' + esc(a.title || a.id) + ' — ' + esc(a.classes?.name || '—') + '</option>'
   ).join('');
-  if (!asmOptions) { window.showToast('No published QUIZ or EXAM tests found.', 'warning'); return; }
+  if (!asmOptions) { window.showToast('No published TASK or EXAM tests found.', 'warning'); return; }
 
   const overlay = document.createElement('div');
   overlay.id = 'open-session-overlay';
@@ -1904,24 +1743,24 @@ async function openSessionModal() {
   overlay.innerHTML = [
     '<div style="background:var(--clr-surface-1,#1a1f2e);border:1px solid var(--clr-border);border-radius:12px;padding:2rem;max-width:480px;width:95%;box-shadow:0 24px 64px rgba(0,0,0,0.5);">',
     '  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">',
-    '    <h3 style="color:var(--clr-text-1);font-size:1.1rem;font-weight:700;margin:0;">&#128275; Open Session &mdash; Tutor Live Control</h3>',
-    '    <button id="close-session-modal" style="background:none;border:none;color:var(--clr-text-2);font-size:1.4rem;cursor:pointer;padding:2px 8px;">&#215;</button>',
+    '    <h3 style="color:var(--clr-text-1);font-size: 16px;font-weight:700;margin:0;">&#128275; Open Session &mdash; Tutor Live Control</h3>',
+    '    <button id="close-session-modal" style="background:none;border:none;color:var(--clr-text-2);font-size: 20px;cursor:pointer;padding:2px 8px;">&#215;</button>',
     '  </div>',
-    '  <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;">',
-    '    <p style="color:#f59e0b;font-size:0.8rem;margin:0;">&#9888;&#65039; This unlocks the selected QUIZ/EXAM immediately. Students cannot begin once the session window closes.</p>',
+    '  <div style="background:rgba(var(--grade-c-rgb),0.07);border:1px solid rgba(var(--grade-c-rgb),0.3);border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.5rem;">',
+    '    <p style="color:var(--grade-c);font-size: 12px;margin:0;">&#9888;&#65039; This unlocks the selected TASK/EXAM immediately. Students cannot begin once the session window closes.</p>',
     '  </div>',
     '  <div style="margin-bottom:1rem;">',
-    '    <label style="font-size:0.85rem;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Test (QUIZ / EXAM)</label>',
+    '    <label style="font-size: 12px;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Test (TASK / EXAM)</label>',
     '    <select id="session-asm-select" class="form-control" style="width:100%;"><option value="">-- Select Test --</option>' + asmOptions + '</select>',
     '  </div>',
     '  <div style="margin-bottom:1.5rem;">',
-    '    <label style="font-size:0.85rem;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Session Duration (minutes)</label>',
+    '    <label style="font-size: 12px;font-weight:600;color:var(--clr-text-2);display:block;margin-bottom:6px;">Session Duration (minutes)</label>',
     '    <input type="number" id="session-duration" class="form-control" value="60" min="5" max="480" style="max-width:150px;" />',
-    '    <p style="font-size:0.75rem;color:var(--clr-text-2);margin-top:4px;">Students cannot begin after this window closes.</p>',
+    '    <p style="font-size: 12px;color:var(--clr-text-2);margin-top:4px;">Students cannot begin after this window closes.</p>',
     '  </div>',
     '  <div style="display:flex;gap:0.75rem;justify-content:flex-end;">',
     '    <button class="btn btn-ghost btn-sm" id="cancel-session-modal">Cancel</button>',
-    '    <button class="btn btn-sm" id="confirm-open-session" style="background:rgba(245,158,11,0.2);color:#f59e0b;border:1px solid rgba(245,158,11,0.5);font-weight:700;">&#128275; Open Session Now</button>',
+    '    <button class="btn btn-sm" id="confirm-open-session" style="background:rgba(var(--grade-c-rgb),0.2);color:var(--grade-c);border:1px solid rgba(var(--grade-c-rgb),0.5);font-weight:700;">&#128275; Open Session Now</button>',
     '  </div>',
     '</div>'
   ].join('\n');
@@ -1968,35 +1807,35 @@ window.openTestGatewayModal = async () => {
   const modal = document.createElement('div');
   modal.className = 'modal-backdrop';
   modal.innerHTML = `
-    <div class="modal-content" style="max-width:540px;">
+    <div class="modal-content" style="max-width:640px;">
       <div class="modal-header d-flex justify-between align-center p-3">
-        <h3 class="fw-700 m-0 text-gradient" style="font-size:1.25rem;">Create New Test</h3>
+        <h3 class="fw-700 m-0 text-gradient" style="font-size: 16px;">Create New Test</h3>
         <button class="btn btn-ghost btn-sm" id="close-gateway-modal">&#10005;</button>
       </div>
       <div class="modal-body p-4">
         <p class="text-muted text-sm mb-4">Select the syllabus hierarchy for this test: <strong>Institution &rarr; Program &rarr; Class &rarr; Level</strong>. The system will launch the corresponding module builder.</p>
         
         <div class="form-group mb-3">
-          <label class="form-label" style="font-weight:700;font-size:0.85rem;">1. Target Institution</label>
+          <label class="form-label" style="font-weight:700;font-size: 12px;">1. Target Institution</label>
           <select id="gateway-inst-select" class="form-control" style="width:100%;">
             ${(allInstitutions || []).map(i => `<option value="${i.id}">${escapeHtml(i.name)}</option>`).join('')}
           </select>
         </div>
 
         <div class="form-group mb-3">
-          <label class="form-label" style="font-weight:700;font-size:0.85rem;">2. Target Program</label>
+          <label class="form-label" style="font-weight:700;font-size: 12px;">2. Target Program</label>
           <select id="gateway-prog-select" class="form-control" style="width:100%;">
           </select>
         </div>
 
         <div class="form-group mb-3">
-          <label class="form-label" style="font-weight:700;font-size:0.85rem;">3. Target Class</label>
+          <label class="form-label" style="font-weight:700;font-size: 12px;">3. Target Class</label>
           <select id="gateway-class-select" class="form-control" style="width:100%;">
           </select>
         </div>
 
         <div class="form-group mb-4">
-          <label class="form-label" style="font-weight:700;font-size:0.85rem;">4. Academic Level</label>
+          <label class="form-label" style="font-weight:700;font-size: 12px;">4. Academic Level</label>
           <div id="gateway-level-badge" class="p-2 rounded fw-700 text-sm" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#38bdf8;">
             —
           </div>
@@ -2041,7 +1880,7 @@ window.openTestGatewayModal = async () => {
     const opt = classSel.options[classSel.selectedIndex];
     if (opt && opt.value) {
       const lvlName = opt.getAttribute('data-level-name') || 'Unknown Level';
-      levelBadge.textContent = `🎯 ${lvlName}`;
+      levelBadge.innerHTML = `${getSvgIcon('award', 13)} ${escapeHtml(lvlName)}`;
     } else {
       levelBadge.textContent = '—';
     }
@@ -2103,7 +1942,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
   const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   if (cardKey === 'integrity') {
-    title = '🚨 Anti-Cheat & Academic Integrity Inspector';
+    title = 'Anti-Cheat & Academic Integrity Inspector';
     badgeText = `${st.cheatLogs.length} Flags · ${st.topCheaters.length} Flagged Students`;
     maxWidth = '880px';
 
@@ -2131,15 +1970,15 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         </div>
 
         <div>
-          <div class="text-xs fw-700 uppercase mb-1 text-danger" style="letter-spacing:0.5px;">📋 Real-Time Integrity Incident Logs (WITA Time)</div>
+          <div class="text-xs fw-700 uppercase mb-1 text-danger" style="letter-spacing:0.5px;">Real-Time Integrity Incident Logs (WITA Time)</div>
           <div style="max-height:240px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-            <table class="table w-100" style="margin:0; font-size:0.75rem;">
+            <table class="table w-100" style="margin:0; font-size:12px;">
               <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
                 <tr>
-                  <th style="padding:6px 10px;">Time (WITA)</th>
-                  <th style="padding:6px 10px;">Student</th>
-                  <th style="padding:6px 10px;">Violation</th>
-                  <th style="padding:6px 10px;">Trigger Reason</th>
+                  <th style="padding:6px 10px;">TIME (WITA)</th>
+                  <th style="padding:6px 10px;">STUDENT</th>
+                  <th style="padding:6px 10px;">VIOLATION</th>
+                  <th style="padding:6px 10px;">TRIGGER REASON</th>
                 </tr>
               </thead>
               <tbody>
@@ -2162,15 +2001,15 @@ window._openTestAnalyticsCardModal = function(cardKey) {
 
         ${speeders.length > 0 ? `
           <div>
-            <div class="text-xs fw-700 uppercase mb-1 text-warning" style="letter-spacing:0.5px;">⚡ Detected Speed-Runners (&lt; 60s Submissions)</div>
+            <div class="text-xs fw-700 uppercase mb-1 text-warning" style="letter-spacing:0.5px;">Detected Speed-Runners (&lt; 60s Submissions)</div>
             <div style="max-height:160px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-              <table class="table w-100" style="margin:0; font-size:0.75rem;">
+              <table class="table w-100" style="margin:0; font-size:12px;">
                 <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
                   <tr>
-                    <th style="padding:6px 10px;">Student</th>
-                    <th style="padding:6px 10px;">Test</th>
-                    <th style="padding:6px 10px;">Duration</th>
-                    <th style="padding:6px 10px;">Score</th>
+                    <th style="padding:6px 10px;">STUDENT</th>
+                    <th style="padding:6px 10px;">TEST</th>
+                    <th style="padding:6px 10px;">DURATION</th>
+                    <th style="padding:6px 10px;">SCORE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2178,7 +2017,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                       <td style="padding:6px 10px; font-weight:700;">${esc(s.studentName)}</td>
                       <td style="padding:6px 10px; color:#cbd5e1;">${esc(s.testTitle)}</td>
-                      <td style="padding:6px 10px; color:#fbbf24; font-weight:700;">⏱️ ${s.durationSec}s</td>
+                      <td style="padding:6px 10px; color:var(--grade-c); font-weight:700;">${s.durationSec}s</td>
                       <td style="padding:6px 10px; color:${TOPSCORE_COLORS.E}; font-weight:700;">${s.score}% (Fail)</td>
                     </tr>
                   `).join('')}
@@ -2190,7 +2029,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       </div>
     `;
   } else if (cardKey === 'fapr') {
-    title = '🎯 First-Attempt Pass Rate & Grade Health';
+    title = 'First-Attempt Pass Rate & Grade Health';
     badgeText = `${st.fapr}% Pure 1st-Pass Rate`;
     maxWidth = '750px';
 
@@ -2227,7 +2066,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
               return `
                 <div style="background:rgba(15,23,42,0.6); padding:0.5rem 0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
                   <div class="d-flex justify-between align-center mb-1 text-xs">
-                    <span style="font-weight:700; color:${g.color}; font-size:0.85rem;">${g.sym} &mdash; ${g.label} (${g.range})</span>
+                    <span style="font-weight:700; color:${g.color}; font-size: 12px;">${g.sym} &mdash; ${g.label} (${g.range})</span>
                     <strong style="color:#f8fafc;">${g.count} attempts (${pct}%)</strong>
                   </div>
                   <div style="height:6px; width:100%; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
@@ -2241,31 +2080,31 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       </div>
     `;
   } else if (cardKey === 'wall') {
-    title = '🧱 Curriculum Bottlenecks — Top 20 Most Missed Questions';
+    title = 'Curriculum Bottlenecks — Top 20 Most Missed Questions';
     badgeText = `${(st.hardestQs20 || []).length} Curriculum Bottlenecks`;
     maxWidth = '880px';
 
     bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:0.8rem;">
-        <p class="text-xs text-muted mb-0">These 20 questions represent the highest failure frequency across student quiz and exam attempts. Use these insights for class review drills.</p>
+        <p class="text-xs text-muted mb-0">These 20 questions represent the highest failure frequency across student task and exam attempts. Use these insights for class review drills.</p>
         <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-          <table class="table w-100" style="margin:0; font-size:0.75rem;">
+          <table class="table w-100" style="margin:0; font-size:12px;">
             <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
               <tr>
-                <th style="padding:6px 10px; width:45px;">Rank</th>
-                <th style="padding:6px 10px;">Indonesian Prompt</th>
-                <th style="padding:6px 10px; width:85px;">Word Type</th>
-                <th style="padding:6px 10px; width:100px;">Fail Rate</th>
-                <th style="padding:6px 10px;">Target English Answer</th>
+                <th style="padding:6px 10px; width:45px;">RANK</th>
+                <th style="padding:6px 10px;">INDONESIAN PROMPT</th>
+                <th style="padding:6px 10px; width:85px;">WORD TYPE</th>
+                <th style="padding:6px 10px; width:100px;">FAIL RATE</th>
+                <th style="padding:6px 10px;">TARGET ENGLISH ANSWER</th>
               </tr>
             </thead>
             <tbody>
               ${(st.hardestQs20 || []).map((q, idx) => `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? 'var(--grade-e, #FF0000)' : 'var(--grade-c, #FFFF00)'}; text-align:center;">#${idx + 1}</td>
+                  <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? 'var(--grade-e)' : 'var(--grade-c)'}; text-align:center;">#${idx + 1}</td>
                   <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">"${esc(q.text)}"</td>
-                  <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size:0.65rem;">${esc(q.wordType)}</span></td>
-                  <td style="padding:8px 10px;"><span class="tac-badge ${q.failRate >= 60 ? 'badge-danger-soft' : 'badge-warning-soft'}">${q.failRate}% (${q.fail}/${q.total})</span></td>
+                  <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size: 12px;">${esc(q.wordType)}</span></td>
+                  <td style="padding:8px 10px;"><span class="tac-badge" style="color:${getInvertedGradeColor(q.failRate)}; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); font-weight:700;">${q.failRate}% (${q.fail}/${q.total})</span></td>
                   <td style="padding:8px 10px; color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.correct)}</td>
                 </tr>
               `).join('')}
@@ -2295,9 +2134,9 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             <div class="text-2xl fw-800 text-warning">${st.panicRatio}%</div>
             <div class="text-xs text-muted">${st.panicCount} auto-submissions on deadline expiry</div>
           </div>
-          <div class="card p-2 flex-1" style="background:rgba(255,140,0,0.1); border:1px solid rgba(255,140,0,0.3); border-radius:8px;">
-            <div class="text-xs fw-700 uppercase" style="color:#ff8c00;">WITA Peak Hour</div>
-            <div class="text-2xl fw-800" style="color:#ff8c00;">${String(peakHour).padStart(2, '0')}:00 WITA</div>
+          <div class="card p-2 flex-1" style="background:rgba(var(--grade-d-rgb, 255,140,0),0.1); border:1px solid rgba(var(--grade-d-rgb, 255,140,0),0.3); border-radius:8px;">
+            <div class="text-xs fw-700 uppercase" style="color:var(--grade-d);">WITA Peak Hour</div>
+            <div class="text-2xl fw-800" style="color:var(--grade-d);">${String(peakHour).padStart(2, '0')}:00 WITA</div>
             <div class="text-xs text-muted">${maxHour} submissions at peak time</div>
           </div>
         </div>
@@ -2306,10 +2145,10 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:1rem;">
           <div class="d-flex justify-between align-center mb-3">
             <div>
-              <strong style="color:#f8fafc; font-size:0.85rem;">📊 24-Hour Exam Traffic Heatmap (UTC+8 / WITA)</strong>
+              <strong style="color:#f8fafc; font-size: 12px;">24-Hour Exam Traffic Heatmap (UTC+8 / WITA)</strong>
               <div class="text-xs text-muted">Hourly distribution of 991 attempts. Peak testing load occurs between 19:00 - 22:00 WITA.</div>
             </div>
-            <span class="tac-badge badge-warning-soft">&#128293; Peak Traffic: 20:00 WITA</span>
+            <span class="tac-badge badge-warning-soft">Peak Traffic: 20:00 WITA</span>
           </div>
 
           <!-- Vertical CSS Histogram -->
@@ -2317,10 +2156,10 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             ${st.witaHourly.map((cnt, h) => {
               const hPct = Math.round((cnt / maxHour) * 100);
               const isPeak = (h >= 19 && h <= 22) || h === 7;
-              const barColor = isPeak ? 'linear-gradient(180deg, #ff8c00 0%, #c2410c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
+              const barColor = isPeak ? 'linear-gradient(180deg, var(--grade-d) 0%, #c2410c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
               return `
                 <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="${h}:00 WITA &mdash; ${cnt} attempts">
-                  <div style="font-size:0.55rem; color:${isPeak ? '#ff8c00' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
+                  <div style="font-size: 12px; color:${isPeak ? 'var(--grade-d)' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
                   <div style="width:100%; height:${Math.max(hPct, 3)}%; background:${barColor}; border-radius:2px 2px 0 0; transition:height 0.3s ease;"></div>
                 </div>
               `;
@@ -2330,14 +2169,14 @@ window._openTestAnalyticsCardModal = function(cardKey) {
           <!-- Hour Labels (00 to 23) -->
           <div style="display:flex; gap:4px; margin-top:4px;">
             ${st.witaHourly.map((_, h) => `
-              <div style="flex:1; text-align:center; font-size:0.55rem; color:#94a3b8; font-family:monospace;">${String(h).padStart(2, '0')}</div>
+              <div style="flex:1; text-align:center; font-size: 12px; color:#94a3b8; font-family:monospace;">${String(h).padStart(2, '0')}</div>
             `).join('')}
           </div>
         </div>
       </div>
     `;
   } else if (cardKey === 'strugglers') {
-    title = '👥 Remedial Watchlist & Struggle Index';
+    title = 'Remedial Watchlist & Struggle Index';
     badgeText = `${(st.strugglersDetailed || []).length} Students Tracked`;
     maxWidth = '850px';
 
@@ -2349,15 +2188,15 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         <p class="text-xs text-muted mb-0">Students with the highest retake volume. In TopsCore, remedial retakes are capped at 60% with Grade C and an &quot;R&quot; indicator beside score.</p>
         
         <div style="max-height:260px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-          <table class="table w-100" style="margin:0; font-size:0.75rem;">
+          <table class="table w-100" style="margin:0; font-size:12px;">
             <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
               <tr>
-                <th style="padding:6px 10px;">Rank</th>
-                <th style="padding:6px 10px;">Student Name</th>
-                <th style="padding:6px 10px;">Total Attempts</th>
-                <th style="padding:6px 10px;">First Attempt</th>
-                <th style="padding:6px 10px;">Highest Score</th>
-                <th style="padding:6px 10px;">Growth Delta</th>
+                <th style="padding:6px 10px;">RANK</th>
+                <th style="padding:6px 10px;">STUDENT NAME</th>
+                <th style="padding:6px 10px;">TOTAL ATTEMPTS</th>
+                <th style="padding:6px 10px;">FIRST ATTEMPT</th>
+                <th style="padding:6px 10px;">HIGHEST SCORE</th>
+                <th style="padding:6px 10px;">GROWTH DELTA</th>
               </tr>
             </thead>
             <tbody>
@@ -2366,8 +2205,8 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                   <td style="padding:6px 10px; font-weight:800; color:#c084fc;">#${idx + 1}</td>
                   <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(s.name)}</td>
                   <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge badge-purple-soft">${s.count} Attempts</span></td>
-                  <td style="padding:6px 10px; color:#cbd5e1;">${s.firstScore}%</td>
-                  <td style="padding:6px 10px; color:${TOPSCORE_COLORS.A}; font-weight:700;">${s.maxScore}%${s.count > 1 ? `<sup class="asm-rem-sup" style="color:${TOPSCORE_COLORS.C};">R</sup>` : ''}</td>
+                  <td style="padding:6px 10px; color:${getGradeColorByScore(s.firstScore)}; font-variant-numeric:tabular-nums;">${s.firstScore}%</td>
+                  <td style="padding:6px 10px; color:${getGradeColorByScore(s.maxScore)}; font-weight:700; font-variant-numeric:tabular-nums;">${s.maxScore}%${s.count > 1 ? `<sup class="asm-rem-sup" style="color:${TOPSCORE_COLORS.C};">R</sup>` : ''}</td>
                   <td style="padding:6px 10px; color:${s.delta >= 0 ? TOPSCORE_COLORS.A : TOPSCORE_COLORS.E}; font-weight:700;">+${s.delta}%</td>
                 </tr>
               `).join('')}
@@ -2376,17 +2215,17 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         </div>
 
         ${ghosts.length > 0 ? `
-          <div style="background:rgba(239,68,68,0.05); border:1px solid rgba(239,68,68,0.2); border-radius:8px; padding:0.75rem;">
-            <div class="text-xs fw-700 text-danger uppercase mb-1">&#128123; Inactive Ghost Students (${st.inactiveStudents.length} active students with 0 attempts)</div>
+          <div style="background:rgba(var(--grade-e-rgb),0.05); border:1px solid rgba(var(--grade-e-rgb),0.2); border-radius:8px; padding:0.75rem;">
+            <div class="text-xs fw-700 text-danger uppercase mb-1">Inactive Ghost Students (${st.inactiveStudents.length} active students with 0 attempts)</div>
             <div class="d-flex gap-1 flex-wrap">
-              ${ghosts.map(g => `<span class="badge" style="background:rgba(239,68,68,0.15); color:#f87171; font-size:0.7rem;">${esc(g.name)}</span>`).join('')}
+              ${ghosts.map(g => `<span class="badge" style="background:rgba(var(--grade-e-rgb),0.15); color:var(--grade-e); font-size: 12px;">${esc(g.name)}</span>`).join('')}
             </div>
           </div>
         ` : ''}
       </div>
     `;
   } else if (cardKey === 'spectrum') {
-    title = '🔥 Test Difficulty League (All 40 Curriculum Tests Ranked)';
+    title = 'Test Difficulty League (All 40 Curriculum Tests Ranked)';
     badgeText = '40 Tests Ranked';
     maxWidth = '920px';
 
@@ -2394,31 +2233,31 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       <div style="display:flex; flex-direction:column; gap:0.8rem;">
         <p class="text-xs text-muted mb-0">Complete difficulty ranking of all 40 curriculum tests sorted from lowest student average score (Toughest) to highest (Easiest).</p>
         <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-          <table class="table w-100" style="margin:0; font-size:0.75rem;">
+          <table class="table w-100" style="margin:0; font-size:12px;">
             <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
               <tr>
-                <th style="padding:6px 10px; width:45px;">Rank</th>
-                <th style="padding:6px 10px;">Test Title</th>
-                <th style="padding:6px 10px; width:100px;">Avg Score</th>
-                <th style="padding:6px 10px; width:110px;">Remedial Rate</th>
-                <th style="padding:6px 10px; width:90px;">Submissions</th>
-                <th style="padding:6px 10px; width:110px;">Classification</th>
+                <th style="padding:6px 10px; width:45px;">RANK</th>
+                <th style="padding:6px 10px;">TEST TITLE</th>
+                <th style="padding:6px 10px; width:100px;">AVG SCORE</th>
+                <th style="padding:6px 10px; width:110px;">REMEDIAL RATE</th>
+                <th style="padding:6px 10px; width:90px;">SUBMISSIONS</th>
+                <th style="padding:6px 10px; width:110px;">CLASSIFICATION</th>
               </tr>
             </thead>
             <tbody>
               ${(st.testAgg || []).map((t, idx) => {
                 let badgeClass = 'badge-success-soft';
-                let tag = '🟢 Accessible';
-                if (t.avgScore < 40) { badgeClass = 'badge-danger-soft'; tag = '🔴 Hardest'; }
-                else if (t.avgScore < 60) { badgeClass = 'badge-warning-soft'; tag = '🟠 Challenging'; }
-                else if (t.avgScore < 80) { badgeClass = 'badge-info-soft'; tag = '🟡 Moderate'; }
+                let tag = 'Accessible';
+                if (t.avgScore < 40) { badgeClass = 'badge-danger-soft'; tag = 'Hardest'; }
+                else if (t.avgScore < 60) { badgeClass = 'badge-warning-soft'; tag = 'Challenging'; }
+                else if (t.avgScore < 80) { badgeClass = 'badge-info-soft'; tag = 'Moderate'; }
 
                 return `
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                    <td style="padding:6px 10px; font-weight:800; color:#fb7185;">#${idx + 1}</td>
+                    <td style="padding:6px 10px; font-weight:800; color:var(--grade-e);">#${idx + 1}</td>
                     <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(t.title)}</td>
                     <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge ${badgeClass}">${t.avgScore}%</span></td>
-                    <td style="padding:6px 10px; color:#cbd5e1;">${t.remRate}% retakes</td>
+                    <td style="padding:6px 10px; color:${getInvertedGradeColor(t.remRate)}; font-variant-numeric:tabular-nums;">${t.remRate}% retakes</td>
                     <td style="padding:6px 10px; color:#94a3b8;">${t.total || 0}</td>
                     <td style="padding:6px 10px; font-weight:700;">${tag}</td>
                   </tr>
@@ -2430,16 +2269,16 @@ window._openTestAnalyticsCardModal = function(cardKey) {
       </div>
     `;
   } else if (cardKey === 'linguistic') {
-    title = '🧬 Linguistic Mastery & Parts of Speech Overview';
+    title = 'Linguistic Mastery & Parts of Speech Overview';
     badgeText = 'Vault 100% Active';
     maxWidth = '780px';
 
     const p = st.posStats || {};
     const categories = [
-      { name: 'Noun', icon: '📦', tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },
-      { name: 'Verb', icon: '⚡', tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: TOPSCORE_COLORS.C || 'var(--grade-c, #FFFF00)' },
-      { name: 'Adjective', icon: '🎨', tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },
-      { name: 'Phrase / Idiom', icon: '💬', tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: '#34d399' },
+      { name: 'Noun', icon: getSvgIcon('book-open', 14), tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },
+      { name: 'Verb', icon: getSvgIcon('zap', 14), tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: 'var(--grade-c)' },
+      { name: 'Adjective', icon: getSvgIcon('tag', 14), tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },
+      { name: 'Phrase / Idiom', icon: getSvgIcon('activity', 14), tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: 'var(--grade-a)' },
     ];
 
     bodyHtml = `
@@ -2450,8 +2289,8 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             return `
               <div class="card p-3" style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.08); border-left:4px solid ${c.color}; border-radius:8px;">
                 <div class="d-flex justify-between align-center mb-1">
-                  <strong style="color:#f8fafc; font-size:0.9rem;">${c.icon} ${c.name}</strong>
-                  <span class="tac-badge" style="background:rgba(255,255,255,0.1); color:${c.color};">${acc}% Mastery</span>
+                  <strong style="color:#f8fafc; font-size:12px;">${c.icon} ${c.name}</strong>
+                  <span class="tac-badge" style="background:rgba(255,255,255,0.1); color:${getGradeColorByScore(acc)}; font-weight:700;">${acc}% Mastery</span>
                 </div>
                 <div class="text-xl fw-800" style="color:${c.color}; margin:4px 0;">${c.cor} / ${c.tot} <span class="tac-unit">correct</span></div>
                 <div style="height:5px; background:rgba(255,255,255,0.08); border-radius:3px; overflow:hidden;">
@@ -2462,13 +2301,13 @@ window._openTestAnalyticsCardModal = function(cardKey) {
           }).join('')}
         </div>
 
-        <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06); font-size:0.75rem; color:#cbd5e1;">
-          <strong style="color:#f8fafc;">💡 Linguistic Insight:</strong> Nouns currently demonstrate the highest retention (84%), while conversational idioms and phrases require reinforcement drills due to colloquial variation.
+        <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06); font-size: 12px; color:#cbd5e1;">
+          <strong style="color:#f8fafc;">${getSvgIcon('alert-triangle', 13)} Linguistic Insight:</strong> Nouns currently demonstrate the highest retention (84%), while conversational idioms and phrases require reinforcement drills due to colloquial variation.
         </div>
       </div>
     `;
   } else if (cardKey === 'speech') {
-    title = '🎙️ AI Speech Evaluation Quality & Audio Review Queue';
+    title = 'AI Speech Evaluation Quality & Audio Review Queue';
     badgeText = `${st.speechAccuracy}% Spoken Accuracy`;
     maxWidth = '920px';
 
@@ -2477,29 +2316,29 @@ window._openTestAnalyticsCardModal = function(cardKey) {
     bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:1rem;">
         <div class="d-flex gap-2 flex-wrap">
-          <div class="card p-2 flex-1" style="background:rgba(59,130,246,0.1); border:1px solid rgba(59,130,246,0.3); border-radius:8px;">
-            <div class="text-xs text-info fw-700 uppercase">AI Speech Accuracy</div>
-            <div class="text-2xl fw-800 text-info">${st.speechAccuracy}%</div>
+          <div class="card p-2 flex-1" style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:8px;">
+            <div class="text-xs fw-700 uppercase" style="color:#38bdf8;">AI Speech Accuracy</div>
+            <div class="text-2xl fw-800" style="color:${getGradeColorByScore(st.speechAccuracy)};">${st.speechAccuracy}%</div>
             <div class="text-xs text-muted">${st.spokenCorrect} of ${st.spokenCount} spoken responses evaluated correct</div>
           </div>
-          <div class="card p-2 flex-1" style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:8px;">
+          <div class="card p-2 flex-1" style="background:rgba(var(--grade-a-rgb),0.1); border:1px solid rgba(var(--grade-a-rgb),0.3); border-radius:8px;">
             <div class="text-xs text-success fw-700 uppercase">Teacher Privilege</div>
-            <div class="text-2xl fw-800 text-success">&#129309; 1-Click</div>
+            <div class="text-2xl fw-800 text-success">1-Click</div>
             <div class="text-xs text-muted">Authoritative teacher manual override privilege (Rule 2.12)</div>
           </div>
         </div>
 
         <div>
-          <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">🎧 Audio Review Queue &amp; Teacher Override Console</div>
+          <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">Audio Review Queue &amp; Teacher Override Console</div>
           <div style="max-height:360px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-            <table class="table w-100" style="margin:0; font-size:0.75rem;">
+            <table class="table w-100" style="margin:0; font-size:12px;">
               <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
                 <tr>
-                  <th style="padding:6px 10px;">Student</th>
-                  <th style="padding:6px 10px;">Prompt (ID)</th>
-                  <th style="padding:6px 10px;">Target English</th>
-                  <th style="padding:6px 10px; width:90px;">AI Result</th>
-                  <th style="padding:6px 10px; width:140px; text-align:center;">Action</th>
+                  <th style="padding:6px 10px;">STUDENT</th>
+                  <th style="padding:6px 10px;">PROMPT (ID)</th>
+                  <th style="padding:6px 10px;">TARGET ENGLISH</th>
+                  <th style="padding:6px 10px; width:90px;">AI RESULT</th>
+                  <th style="padding:6px 10px; width:140px; text-align:center;">ACTION</th>
                 </tr>
               </thead>
               <tbody>
@@ -2513,10 +2352,10 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                     </td>
                     <td style="padding:8px 10px; text-align:center;">
                       ${!q.isCorrect ? `
-                        <button class="btn btn-xs btn-primary" id="btn-override-${q.id}" onclick="window._overrideSpeechAnswer('${q.id}')" style="font-size:0.68rem; padding:3px 8px;">
-                          &#9889; Override 100%
+                        <button class="btn btn-xs btn-primary" id="btn-override-${q.id}" onclick="window._overrideSpeechAnswer('${q.id}')" style="font-size: 12px; padding:3px 8px;">
+                          Override 100%
                         </button>
-                      ` : '<span class="tac-badge badge-success-soft" style="font-size:0.65rem;">✓ Validated</span>'}
+                      ` : '<span class="tac-badge badge-success-soft" style="font-size: 12px;">Validated</span>'}
                     </td>
                   </tr>
                 `).join('') : '<tr><td colspan="5" class="text-center text-muted p-3">No spoken responses in audit queue.</td></tr>'}
@@ -2536,10 +2375,10 @@ window._openTestAnalyticsCardModal = function(cardKey) {
     <div class="modal-box" style="max-width:${maxWidth}; max-height:88vh; display:flex; flex-direction:column; padding:22px; background:#0b1120; border:1px solid rgba(255,255,255,0.12); box-shadow:0 25px 60px rgba(0,0,0,0.6); border-radius:12px;">
       <div class="d-flex justify-between align-center mb-3 pb-2" style="border-bottom:1px solid rgba(255,255,255,0.08);">
         <div>
-          <h3 class="fw-700" style="margin:0; font-size:1.15rem; color:#f8fafc;">${title}</h3>
+          <h3 class="fw-700" style="margin:0; font-size: 16px; color:#f8fafc;">${title}</h3>
           ${badgeText ? `<span class="tac-badge badge-info-soft mt-1 d-inline-block">${badgeText}</span>` : ''}
         </div>
-        <button class="btn btn-ghost btn-sm" id="tac-modal-close-btn" style="font-size:1.2rem; line-height:1; color:#94a3b8;">&#10005;</button>
+        <button class="btn btn-ghost btn-sm" id="tac-modal-close-btn" style="font-size: 16px; line-height:1; color:#94a3b8;">&#10005;</button>
       </div>
       <div style="overflow-y:auto; flex-grow:1; padding-right:4px;">
         ${bodyHtml}
@@ -2591,10 +2430,10 @@ window._overrideSpeechAnswer = async function(ansId) {
       }]).catch(() => {});
     }
 
-    if (window.showToast) window.showToast('✓ Teacher Override Applied: Answer marked 100% Correct!', 'success');
+    if (window.showToast) window.showToast('Teacher Override Applied: Answer marked 100% Correct!', 'success');
 
     if (btn) {
-      btn.outerHTML = '<span class="tac-badge badge-success-soft" style="font-size:0.65rem;">✓ Validated</span>';
+      btn.outerHTML = '<span class="tac-badge badge-success-soft" style="font-size: 12px;">Validated</span>';
     }
     const statusCell = document.getElementById(`status-cell-${ansId}`);
     if (statusCell) {
@@ -2623,22 +2462,22 @@ window._openTestCardDrawer = function(testId) {
 
   // Helper grade badge
   const getGradeBadge = (pct) => {
-    if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
+    if (pct === null || pct === undefined) return '<span class="text-muted" style="font-size: 12px;">—</span>';
     const sym = typeof calculateGrade === 'function' ? calculateGrade(pct) : (pct >= 60 ? 'C' : 'E');
-    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (TOPSCORE_COLORS?.E || 'var(--grade-e, #FF0000)');
-    return '<span style="color:' + color + '; font-weight:800; font-size:0.8rem; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ' + color + '40;">' + pct + '% [' + sym + ']</span>';
+    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (TOPSCORE_COLORS?.E || 'var(--grade-e)');
+    return '<span style="color:' + color + '; font-weight:800; font-size: 12px; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:4px; border:1px solid ' + color + '40;">' + pct + '% [' + sym + ']</span>';
   };
 
   const getRemedialBadge = (remRate, count) => {
-    if (!count) return '<span class="text-muted" style="font-size:0.75rem;">—</span>';
-    if (remRate === 0) return `<span class="fw-700" style="color:${TOPSCORE_COLORS.A}; font-size:0.75rem;">0%</span>`;
+    if (!count) return '<span class="text-muted" style="font-size: 12px;">—</span>';
+    if (remRate === 0) return `<span class="fw-700" style="color:${TOPSCORE_COLORS.A}; font-size: 12px;">0%</span>`;
     const color = remRate > 40 ? TOPSCORE_COLORS.E : TOPSCORE_COLORS.C;
-    return '<span class="fw-700" style="color:' + color + '; font-size:0.78rem;">' + remRate + '%<sup class="asm-rem-sup" style="font-size:0.65em; font-weight:800; margin-left:1px;">R</sup></span>';
+    return '<span class="fw-700" style="color:' + color + '; font-size: 12px;">' + remRate + '%</span>';
   };
 
   const getSecurityBadge = (flags) => {
-    if (!flags || flags === 0) return '<span style="color:' + TOPSCORE_COLORS.CORRECT + '; font-size:0.72rem; font-weight:700;">🛡️ Clean</span>';
-    return '<span style="color:' + TOPSCORE_COLORS.E + '; font-size:0.72rem; font-weight:700;">⚠️ ' + flags + ' Flags</span>';
+    if (!flags || flags === 0) return '<span style="color:' + TOPSCORE_COLORS.CORRECT + '; font-size: 12px; font-weight:700;">' + getSvgIcon('shield', 12) + ' Clean</span>';
+    return '<span style="color:' + TOPSCORE_COLORS.E + '; font-size: 12px; font-weight:700;">' + getSvgIcon('alert-triangle', 12) + ' ' + flags + ' Flags</span>';
   };
 
   const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2701,13 +2540,13 @@ window._openTestCardDrawer = function(testId) {
   const body = `
     <div style="display:flex; flex-direction:column; gap:1rem;">
       <div>
-        <h4 style="margin:0; font-size:1.15rem; color:var(--clr-text-1);">${esc(r?.title || 'Untitled Test')}</h4>
+        <h4 style="margin:0; font-size: 16px; color:var(--clr-text-1);">${esc(r?.title || 'Untitled Test')}</h4>
         <div class="text-muted text-sm mt-1">Status: <strong class="${statusColors[String(r?.status || '').toLowerCase()] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'published'}</strong></div>
       </div>
       <hr style="border-color:var(--fm-border-subtle); margin:0;">
       
       <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-        <div class="text-xs fw-700 text-info uppercase mb-2">📊 Real-Time Test Telemetry</div>
+        <div class="text-xs fw-700 text-info uppercase mb-2">${getSvgIcon('bar-chart', 12)} Real-Time Test Telemetry</div>
         <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
           <span class="text-muted">Total Submissions:</span>
           <strong class="fw-700">${r?.completedCount || 0} attempts</strong>
@@ -2726,7 +2565,7 @@ window._openTestCardDrawer = function(testId) {
         </div>
         <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
           <span class="text-muted">Average Completion Time:</span>
-          <strong>⏱️ ${r?.pacingVal || '—'}</strong>
+          <strong>${getSvgIcon('clock', 12)} ${r?.pacingVal || '—'}</strong>
         </div>
         <div class="d-flex justify-between text-sm py-1">
           <span class="text-muted">Integrity Flags:</span>
@@ -2736,34 +2575,34 @@ window._openTestCardDrawer = function(testId) {
 
       <!-- Top 3 Hardest Questions SPECIFIC to this test -->
       <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
-        <div class="text-xs fw-700 uppercase mb-2" style="color:#fbbf24; letter-spacing:0.5px;">🧱 Top 3 Hardest Questions in this Test</div>
+        <div class="text-xs fw-700 uppercase mb-2" style="color:var(--grade-c); letter-spacing:0.5px;">${getSvgIcon('layers', 12)} Top 3 Hardest Questions in this Test</div>
         ${specificHardest.length > 0 ? `
           <div style="display:flex; flex-direction:column; gap:0.4rem;">
             ${specificHardest.map((q, idx) => `
-              <div style="background:rgba(255,255,255,0.03); padding:0.45rem 0.6rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size:0.75rem;">
+              <div style="background:rgba(255,255,255,0.03); padding:0.45rem 0.6rem; border-radius:6px; border:1px solid rgba(255,255,255,0.05); font-size: 12px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
                   <strong style="color:#f8fafc; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;" title="${esc(q.text)}">#${idx + 1}. "${esc(q.text)}"</strong>
-                  <span class="tac-badge ${q.failRate >= 50 ? 'badge-danger-soft' : 'badge-warning-soft'}" style="font-size:0.62rem;">${q.failRate}% Fail (${q.fail}/${q.total})</span>
+                  <span class="tac-badge" style="font-size: 12px; color:${getInvertedGradeColor(q.failRate)}; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); font-weight:700;">${q.failRate}% Fail (${q.fail}/${q.total})</span>
                 </div>
-                ${q.correct ? `<div style="font-size:0.7rem; color:#94a3b8;">Target: <span style="color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.correct)}</span></div>` : ''}
+                ${q.correct ? `<div style="font-size: 12px; color:#94a3b8;">Target: <span style="color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.correct)}</span></div>` : ''}
               </div>
             `).join('')}
           </div>
-        ` : `<div style="font-size:0.72rem; color:#94a3b8; font-style:italic;">No recorded question failure data for this test yet.</div>`}
+        ` : `<div style="font-size: 12px; color:#94a3b8; font-style:italic;">No recorded question failure data for this test yet.</div>`}
       </div>
 
       <div>
         <div class="text-xs fw-700 text-muted uppercase mb-1">Configuration Specs</div>
         <div class="text-sm">Program: <strong>${esc(r?.programName || 'Unknown')}</strong></div>
         <div class="text-sm">Class Board: <strong>${esc(r?.classBoard || 'Unknown')}</strong></div>
-        <div class="text-sm">Structure: <strong>${esc(r?.TestCategory || 'Quiz')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</strong></div>
+        <div class="text-sm">Structure: <strong>${esc(r?.TestCategory || 'Task')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</strong></div>
         <div class="text-sm">Time Limit: <strong>${r?.timeLimit || 60} min</strong> &bull; Pass Mark: <strong>${r?.minScore || 60}%</strong></div>
         ${prereqText ? `<div class="text-sm text-warning mt-1">Prerequisite: <strong>${esc(prereqText)}</strong></div>` : ''}
       </div>
 
       <div class="d-flex gap-2 mt-2">
         <button class="btn btn-sm btn-primary w-100" onclick="window._filterTestResults='${r?.id}'; window.loadSection('results'); if(window.closeRecordDrawer) closeRecordDrawer();">
-          📊 View Student Submissions
+          ${getSvgIcon('bar-chart', 13)} View Student Submissions
         </button>
       </div>
     </div>

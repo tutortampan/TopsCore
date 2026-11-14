@@ -30,8 +30,14 @@ export function initAuthGate() {
   } else {
     try {
       const sess = JSON.parse(hasSession);
-      if (sess && sess.role === 'tutor') {
+      const isTutor = (sess && sess.role === 'tutor');
+      if (isTutor) {
         document.body.classList.add('role-tutor');
+      }
+      const roleLabel = document.getElementById('sidebar-user-role-label');
+      if (roleLabel) {
+        const span = roleLabel.querySelector('.corner-main-label') || roleLabel;
+        span.textContent = isTutor ? 'TUTOR' : 'ADMIN';
       }
     } catch (_) {}
     loginScreen?.classList.add('hidden');
@@ -58,24 +64,41 @@ export function getSidebarNavItemLabel(el) {
   return (clone.textContent || '').replace(/^[^\w\d]+/gu, '').trim();
 }
 
+let _isSorting = false;
+
 export function sortAllSidebarDomains() {
-  document.querySelectorAll('.nav-domain-group').forEach(group => {
-    const header = group.querySelector('.nav-domain-header');
-    if (header) header.style.order = '0';
+  if (_isSorting) return;
+  _isSorting = true;
+  try {
+    document.querySelectorAll('.nav-domain-group').forEach(group => {
+      const items = Array.from(group.querySelectorAll('.admin-nav-item'));
+      if (items.length <= 1) return;
 
-    const items = Array.from(group.querySelectorAll('.admin-nav-item'));
-    if (items.length <= 1) return;
+      const sorted = [...items].sort((a, b) => {
+        const textA = getSidebarNavItemLabel(a);
+        const textB = getSidebarNavItemLabel(b);
+        return textA.localeCompare(textB, undefined, { numeric: true, sensitivity: 'base' });
+      });
 
-    items.sort((a, b) => {
-      const textA = getSidebarNavItemLabel(a);
-      const textB = getSidebarNavItemLabel(b);
-      return textA.localeCompare(textB, undefined, { numeric: true, sensitivity: 'base' });
+      // Strict check if order actually changed to prevent pointless DOM mutations
+      let needsReorder = false;
+      for (let i = 0; i < items.length; i++) {
+        if (items[i] !== sorted[i]) {
+          needsReorder = true;
+          break;
+        }
+      }
+      if (!needsReorder) return;
+
+      sorted.forEach(item => {
+        if (item.parentNode) {
+          item.parentNode.appendChild(item);
+        }
+      });
     });
-
-    items.forEach((item, idx) => {
-      item.style.order = String(idx + 1);
-    });
-  });
+  } finally {
+    _isSorting = false;
+  }
 }
 if (typeof window !== 'undefined') {
   window.sortAllSidebarDomains = sortAllSidebarDomains;
@@ -89,6 +112,7 @@ export function initSidebarAlphabeticalObserver() {
 
   let debounceTimer = null;
   const observer = new MutationObserver((mutations) => {
+    if (_isSorting) return;
     const hasChildChanges = mutations.some(m => m.type === 'childList');
     if (!hasChildChanges) return;
     if (debounceTimer) cancelAnimationFrame(debounceTimer);
@@ -97,6 +121,132 @@ export function initSidebarAlphabeticalObserver() {
     });
   });
   observer.observe(nav, { childList: true, subtree: true });
+}
+
+export function initSidebarDelegation() {
+  const nav = document.querySelector('.admin-nav');
+  if (!nav || nav._hasSidebarDelegation) return;
+  nav._hasSidebarDelegation = true;
+
+  nav.addEventListener('click', (e) => {
+    // 1. Program / Batch items
+    const progItem = e.target.closest('.sidebar-program-item');
+    if (progItem && nav.contains(progItem)) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const pid = progItem.getAttribute('data-program-id');
+      const pname = progItem.getAttribute('data-program-name');
+      const bid = progItem.getAttribute('data-batch-id') || null;
+      const bname = progItem.getAttribute('data-batch-name') || null;
+      const label = progItem.getAttribute('data-sidebar-label') || pname;
+
+      window._filterProgramId = pid;
+      window._selectedProgramName = pname;
+      window._filterBatchId = bid;
+      window._filterBatchName = bname;
+      window._selectedSidebarLabel = label;
+      window._filterBatchStatus = 'active';
+
+      try {
+        localStorage.setItem('topscore_student_status_tab', 'active');
+        if (pid) localStorage.setItem('topscore_selected_program_id', pid);
+        if (pname) localStorage.setItem('topscore_selected_program_name', pname);
+        if (bid) {
+          localStorage.setItem('topscore_selected_batch_id', bid);
+          localStorage.setItem('topscore_selected_batch_name', bname);
+        } else {
+          localStorage.removeItem('topscore_selected_batch_id');
+          localStorage.removeItem('topscore_selected_batch_name');
+        }
+        if (label) localStorage.setItem('topscore_selected_sidebar_label', label);
+
+        if (window.history && window.history.replaceState) {
+          const bParam = bid ? `?batch_id=${bid}` : (pid ? `?program_id=${pid}` : '');
+          window.history.replaceState(null, '', `#students${bParam}`);
+        }
+      } catch (_) {}
+
+      document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
+      progItem.classList.add('active');
+
+      if (typeof window.loadSection === 'function') {
+        window.loadSection('students');
+      } else {
+        window.location.hash = '#students';
+      }
+      return;
+    }
+
+    // 2. Class items
+    const classItem = e.target.closest('.sidebar-class-item');
+    if (classItem && nav.contains(classItem)) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const cid = classItem.getAttribute('data-class-id');
+      const cname = classItem.getAttribute('data-class-name');
+      window._selectedClassId = cid;
+      window._selectedClassName = cname;
+      try {
+        if (cid) localStorage.setItem('topscore_selected_class_id', cid);
+        if (cname) localStorage.setItem('topscore_selected_class_name', cname);
+      } catch (_) {}
+      window._selectedLevelId = null;
+
+      document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
+      classItem.classList.add('active');
+
+      if (typeof window.loadSection === 'function') {
+        window.loadSection('class-hub');
+      } else {
+        window.location.hash = '#class-hub';
+      }
+      return;
+    }
+
+    // 3. Domain header clicks (Domain A -> dashboard, B -> students, C -> class-hub, D -> modules)
+    const domainHeader = e.target.closest('.nav-domain-header');
+    if (domainHeader && nav.contains(domainHeader)) {
+      const group = domainHeader.closest('.nav-domain-group');
+      const domain = group ? group.getAttribute('data-domain') : null;
+      if (!domain) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (domain === 'board') {
+        if (typeof window.loadSection === 'function') window.loadSection('students');
+        else window.location.hash = '#students';
+      } else if (domain === 'class') {
+        if (typeof window.loadSection === 'function') window.loadSection('class-hub');
+        else window.location.hash = '#class-hub';
+      } else if (domain === 'admin') {
+        if (typeof window.loadSection === 'function') window.loadSection('dashboard');
+        else window.location.hash = '#dashboard';
+      } else if (domain === 'desk') {
+        if (typeof window.loadSection === 'function') window.loadSection('modules');
+        else window.location.hash = '#modules';
+      }
+      return;
+    }
+
+    // 4. Standard admin-nav-item with data-sub
+    const navItem = e.target.closest('.admin-nav-item');
+    if (navItem && nav.contains(navItem) && navItem.dataset.sub) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      document.querySelectorAll('.admin-nav-item').forEach(i => i.classList.remove('active'));
+      navItem.classList.add('active');
+
+      if (typeof window.loadSection === 'function') {
+        window.loadSection(navItem.dataset.sub);
+      } else {
+        window.location.hash = `#${navItem.dataset.sub}`;
+      }
+    }
+  });
 }
 
 export function initSidebarCache() {
@@ -129,7 +279,8 @@ export function initSidebarCache() {
             const bid = item.batch_id || '';
             const pname = item.program_name || item.name || '';
             const bname = item.batch_name || '';
-            h += `<div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${pid}" data-batch-id="${bid}" data-program-name="${pname.replace(/"/g, '&quot;')}" data-batch-name="${bname.replace(/"/g, '&quot;')}" data-sidebar-label="${label.replace(/"/g, '&quot;')}" data-sub="students"><span class="nav-icon">👥</span><span>${label}</span></div>`;
+            const usersIconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
+            h += `<div class="admin-nav-item sidebar-program-item ${isActive}" data-program-id="${pid}" data-batch-id="${bid}" data-program-name="${pname.replace(/"/g, '&quot;')}" data-batch-name="${bname.replace(/"/g, '&quot;')}" data-sidebar-label="${label.replace(/"/g, '&quot;')}" data-sub="students"><span class="nav-icon">${usersIconSvg}</span><span>${label}</span></div>`;
           });
           h += '</div>';
           const el = document.getElementById('sidebar-programs-list');
@@ -149,7 +300,10 @@ export function initSidebarCache() {
         let h = '<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:2px;">';
         list.forEach(cls => {
           const isActive = (selId === cls.id && isClassActive) ? 'active' : '';
-          h += `<div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${(cls.name || '').replace(/"/g, '&quot;')}"><span class="nav-icon">📘</span><span>${cls.name || ''}</span></div>`;
+          const classIconSvg = (typeof getClassSvgIcon === 'function')
+            ? getClassSvgIcon(cls.name, 14, 'currentColor')
+            : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
+          h += `<div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${(cls.name || '').replace(/"/g, '&quot;')}"><span class="nav-icon">${classIconSvg}</span><span>${cls.name || ''}</span></div>`;
         });
         h += '</div>';
         const el = document.getElementById('sidebar-classes-list');
@@ -215,6 +369,7 @@ if (typeof document !== 'undefined') {
       initAuthGate();
       initGlobalEditModeToggle();
       initSidebarCache();
+      initSidebarDelegation();
       initRecordDrawer();
       registerServiceWorker();
     });
@@ -222,6 +377,7 @@ if (typeof document !== 'undefined') {
     initAuthGate();
     initGlobalEditModeToggle();
     initSidebarCache();
+    initSidebarDelegation();
     initRecordDrawer();
     registerServiceWorker();
   }

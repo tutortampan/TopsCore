@@ -1,0 +1,63 @@
+{
+  "exported_at": "2026-11-14T13:22:43.420Z",
+  "source_url": "https://oclajpyumehpojepcczg.supabase.co",
+  "tables": {
+    "institutions": {
+      "count": 3,
+      "size_kb": 1.1
+    },
+    "programs": {
+      "count": 5,
+      "size_kb": 1.7
+    },
+    "levels": {
+      "count": 4,
+      "size_kb": 0.8
+    },
+    "batches": {
+      "count": 10,
+      "size_kb": 4.2
+    },
+    "classes": {
+      "count": 17,
+      "size_kb": 8.5
+    },
+    "class_levels": {
+      "count": 13,
+      "size_kb": 1.5
+    },
+    "students": {
+      "count": 114,
+      "size_kb": 660.1
+    },
+    "tests": {
+      "count": 68,
+      "size_kb": 133.9
+    },
+    "vocabulary_vault": {
+      "count": 2141,
+      "size_kb": 1239.9
+    },
+    "site_settings": {
+      "count": 5,
+      "size_kb": 0.5
+    },
+    "theme_program_assignments": {
+      "count": 10,
+      "size_kb": 2.9
+    },
+    "attempts": {
+      "count": 845,
+      "size_kb": 687
+    },
+    "audit_logs": {
+      "count": 72,
+      "size_kb": 37.9
+    }
+  },
+  "discarded_stats": {
+    "attempt_answers_omitted": 145226,
+    "non_best_attempts_omitted": 1494,
+    "cheat_logs_omitted": 931
+  }
+}

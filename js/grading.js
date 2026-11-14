@@ -607,7 +607,13 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
  * D     : 30% – 59%  - Less (Orange #Ff8c00)
  * E     : 0% – 29%   - Fail (Red #ff0000)
  */
-export function calculateGrade(percentage) {
+export function calculateGrade(percentage, options = {}) {
+  const isRem = typeof options === 'boolean' ? options : Boolean(options?.isRemedial);
+  const isForgiven = Boolean(options?.isForgiven);
+
+  if (isForgiven) return 'F';
+  if (isRem) return 'R';
+
   const num = Number(percentage) || 0;
   if (num >= 100) return '★';
   const pct = Math.round(num);
@@ -641,7 +647,7 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
- * Authoritative Helper to accurately identify milestone exams vs quizzes.
+ * Authoritative Helper to accurately identify milestone exams vs tasks.
  * Canonical nomenclature: isExam (replaces legacy isWeeklyExam).
  * Used for exam-only points, academic score, and grade isolation across Admin Class Hub and Student Dashboard.
  */
@@ -680,7 +686,8 @@ export const TOPSCORE_COLORS = Object.freeze({
   C: '#FFFF00', // 60–79% Grade C (Pure Yellow - 100% distinct from orange)
   D: '#FF8C00', // 30–59% Grade D (Dark Orange)
   E: '#FF0000', // 0–29% Grade E (Pure Red)
-  FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override (Pure Red #FF0000)
+  REMEDIAL: '#FFFF00', // Remedial Exam Grade R (Pure Yellow - identical to Grade C)
+  FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override Grade F (Pure Red #FF0000 - identical to Grade E)
   X: '#8B5CF6', // Special Grade X for Alumni (Purple)
   PURPLE: '#8B5CF6',
   NEUTRAL: '#94a3b8', // Neutral Slate Gray for Cold Start / LET'S GO / Placeholder
@@ -693,6 +700,7 @@ export const TOPSCORE_COLORS = Object.freeze({
   C_RGB: '255, 255, 0',
   D_RGB: '255, 140, 0',
   E_RGB: '255, 0, 0',
+  REMEDIAL_RGB: '255, 255, 0',
   FORGIVEN_RGB: '255, 0, 0',
   X_RGB: '139, 92, 246',
   PURPLE_RGB: '139, 92, 246',
@@ -706,6 +714,24 @@ export const TOPSCORE_COLORS = Object.freeze({
   // 4. Grade Badge Text Contrast
   TEXT_STAR: '#0F172A', // Deep dark slate star symbol on ★ badge (Universal Dark Standard)
   TEXT_DARK: '#0F172A', // Deep dark slate letters for A, B, C, D, E badges
+});
+
+/**
+ * 4-Pillar Progression & ABCD System Colors (SSOT Rule 2.10.1: Pink -> Orange -> Lime -> Purple)
+ * A: Electric Pink (#ff2d87 - Independent SSOT token source, decoupled from Grade Star)
+ * B: Dark Orange (Grade D, #ff8c00)
+ * C: Electric Lime (Grade B, #95ff00)
+ * D: Vibrant Purple / Violet (#c084fc)
+ */
+export const TOPSCORE_QUAD_COLORS = Object.freeze({
+  A: '#ff2d87',
+  B: TOPSCORE_COLORS.D, // #FF8C00 (Dark Orange)
+  C: TOPSCORE_COLORS.B, // #95ff00ff (Electric Lime)
+  D: '#c084fc',
+  A_RGB: '255, 45, 135',
+  B_RGB: TOPSCORE_COLORS.D_RGB,
+  C_RGB: TOPSCORE_COLORS.B_RGB,
+  D_RGB: '192, 132, 252'
 });
 
 /**
@@ -805,6 +831,36 @@ export const GRADE_PALETTE = {
     maxScore: 29,
     sparkle: false,
   },
+  R: {
+    symbol: 'R',
+    label: 'Remedial',
+    predicate: 'Remedial',
+    color: TOPSCORE_COLORS.C, // Kuning seperti Grade C (#FFFF00)
+    dark: '#cccc00',
+    light: '#ffff99',
+    rgb: TOPSCORE_COLORS.C_RGB,
+    glow: 'rgba(255, 255, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
+    name: 'Remedial (60%)',
+    minScore: 0,
+    maxScore: 60,
+    sparkle: false,
+  },
+  F: {
+    symbol: 'F',
+    label: 'Forgiven',
+    predicate: 'Forgiven',
+    color: TOPSCORE_COLORS.E, // Merah seperti Grade E (#FF0000)
+    dark: '#cc0000',
+    light: '#ff9999',
+    rgb: TOPSCORE_COLORS.E_RGB,
+    glow: 'rgba(255, 0, 0, 0.35)',
+    textColor: TOPSCORE_COLORS.TEXT_DARK,
+    name: 'Forgiven',
+    minScore: 0,
+    maxScore: 0,
+    sparkle: false,
+  },
   X: {
     symbol: 'X',
     label: 'Alumni',
@@ -841,7 +897,10 @@ export function getGradeColorByScore(percentage) {
 }
 
 export function getGradeColor(grade, isRemedial = false) {
+  if (isRemedial) return TOPSCORE_COLORS.C; // Grade R Remedial is Yellow (Grade C)
   const g = String(grade || '').trim();
+  if (g.toUpperCase() === 'R' || g.toUpperCase() === 'REMEDIAL') return TOPSCORE_COLORS.C;
+  if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return TOPSCORE_COLORS.E;
   if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
   if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') return TOPSCORE_COLORS.X;
   if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') return TOPSCORE_COLORS.NEUTRAL;
@@ -850,6 +909,28 @@ export function getGradeColor(grade, isRemedial = false) {
 
 export function getScoreColor(percentage, isRemedial = false) {
   return getGradeColorByScore(percentage);
+}
+
+/**
+ * Authoritative Inverted Grade Color Resolver for Negative Metrics (Single Source of Truth)
+ * Used for metrics where lower values represent better outcomes (error rate, mistake rate, fail rate, timeout rate).
+ * Inverted Scale:
+ * - 0% - 10% error -> Pure Green (Grade A, preserving Star exclusivity for 100% exam score)
+ * - 11% - 20% error -> Electric Lime (Grade B)
+ * - 21% - 40% error -> Pure Yellow (Grade C)
+ * - 41% - 70% error -> Dark Orange (Grade D)
+ * - > 70% error -> Pure Red (Grade E)
+ * @param {number|string} percentage - Negative metric percentage (0 - 100)
+ * @returns {string} Hex color string
+ */
+export function getInvertedGradeColor(percentage) {
+  const p = Number(percentage);
+  if (isNaN(p) || p < 0) return '#94a3b8';
+  if (p <= 10) return TOPSCORE_COLORS.A;
+  if (p <= 20) return TOPSCORE_COLORS.B;
+  if (p <= 40) return TOPSCORE_COLORS.C;
+  if (p <= 70) return TOPSCORE_COLORS.D;
+  return TOPSCORE_COLORS.E;
 }
 
 /**
@@ -866,10 +947,13 @@ export function getEvaluationColor(category) {
 }
 
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
+  if (isRemedial) return 'R';
+  const g = String(grade || '').trim();
+  if (g.toUpperCase() === 'R' || g.toUpperCase() === 'REMEDIAL') return 'R';
+  if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return 'F';
   if (percentage !== null && Number(percentage) >= 100) {
     return '★';
   }
-  const g = String(grade || '').trim();
   if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
     return '★';
   }
@@ -877,6 +961,9 @@ export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
 }
 
 export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = '') {
+  if (isRemedial) {
+    return `<span class="grade-circle grade-circle-r" style="background:${TOPSCORE_COLORS.C}; color:${TOPSCORE_COLORS.TEXT_DARK}; ${customStyle}" title="Grade R (Remedial)">R</span>`;
+  }
   const g = String(grade || '').trim();
   const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';
   if (isStar) {
@@ -890,7 +977,8 @@ export function formatGradeBadgeHtml(grade, isRemedial = false, customStyle = ''
 }
 
 export function getGradeTheme(grade, isRemedial = false) {
-  const g = String(grade || '').trim();
+  let g = String(grade || '').trim();
+  if (isRemedial) g = 'R';
   const isStar = g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR';
   const effectiveKey = isStar ? '★' : g.toUpperCase();
   const theme = GRADE_PALETTE[effectiveKey] || {
@@ -904,11 +992,11 @@ export function getGradeTheme(grade, isRemedial = false) {
     name: isStar ? 'Excellent (100%)' : 'Standard',
     sparkle: isStar,
   };
-  if (isRemedial) {
+  if (isRemedial || effectiveKey === 'R') {
     return {
       ...theme,
       isRemedial: true,
-      symbol: theme.symbol,
+      symbol: 'R',
     };
   }
   return theme;
@@ -916,21 +1004,27 @@ export function getGradeTheme(grade, isRemedial = false) {
 
 /**
  * Authoritative Achievement Status (Official Predicate)
- * Strictly 6 official tiers: FAIL (0-29%), LESS (30-59%), ENOUGH (60-79%), GOOD (80-89%), VERY GOOD (90-99%), EXCELLENT (100%).
+ * Strictly 8 official tiers: FAIL (0-29%), LESS (30-59%), ENOUGH (60-79%), GOOD (80-89%), VERY GOOD (90-99%), EXCELLENT (100%), REMEDIAL (Grade R), FORGIVEN (Grade F).
  */
 export function getAchievementStatus(grade, percentage = null) {
-  const g = String(grade || '').trim();
-  if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
+  const g = String(grade || '').trim().toUpperCase();
+  if (g === '★' || g === '⭐' || g === 'S' || g === 'STAR') {
     return 'EXCELLENT';
   }
-  if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') {
+  if (g === 'X' || g === 'ALUMNI') {
     return 'ALUMNI';
   }
-  if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') {
+  if (g === 'R' || g === 'REMEDIAL') {
+    return 'REMEDIAL';
+  }
+  if (g === 'F' || g === 'FORGIVEN') {
+    return 'FORGIVEN';
+  }
+  if (g === "LET'S GO" || g === 'LETS GO' || g === '—' || g === '-') {
     return "LET'S GO";
   }
-  let effGrade = g.toUpperCase();
-  if (!['A', 'B', 'C', 'D', 'E'].includes(effGrade)) {
+  let effGrade = g;
+  if (!['A', 'B', 'C', 'D', 'E', 'R', 'F'].includes(effGrade)) {
     const p = parseFloat(percentage ?? 0);
     if (p >= 100) return 'EXCELLENT';
     if (p >= 90) effGrade = 'A';
@@ -945,6 +1039,8 @@ export function getAchievementStatus(grade, percentage = null) {
     C: 'ENOUGH',
     D: 'LESS',
     E: 'FAIL',
+    R: 'REMEDIAL',
+    F: 'FORGIVEN',
   };
   return map[effGrade] || "LET'S GO";
 }
@@ -1089,13 +1185,16 @@ export function computeUnifiedScore({
   const totalPoints = Math.round((effectiveWordsPts + effectivePhrasesPts) * 10) / 10;
   const maxPoints = hasPhrases ? (wordsMax + phrasesMax) : wordsMax;
   const percentage = (isAttempted && maxPoints > 0) ? Math.round((totalPoints / maxPoints) * 100) : 0;
-  const grade = isAttempted ? calculateGrade(percentage) : '—';
-  const gradeColor = isAttempted ? getGradeColorByScore(percentage) : '#94a3b8';
-
   const isRemedial = Boolean(
     wordsBest?.is_remedial || wordsBest?.is_remedial_unlocked ||
     (hasPhrases && (phrasesBest?.is_remedial || phrasesBest?.is_remedial_unlocked))
   );
+  const isForgiven = Boolean(
+    wordsBest?.is_forgiven || (hasPhrases && phrasesBest?.is_forgiven)
+  );
+
+  const grade = isAttempted ? calculateGrade(percentage, { isRemedial, isForgiven }) : '—';
+  const gradeColor = isAttempted ? getGradeColor(grade, isRemedial) : '#94a3b8';
 
   return {
     totalPoints,
@@ -1108,6 +1207,7 @@ export function computeUnifiedScore({
     wordsPct,
     phrasesPct,
     isRemedial,
+    isForgiven,
     isAttempted
   };
 }
@@ -1139,7 +1239,7 @@ export function normalizeWrittenAnswer(text) {
  * @param {Array<{student_answer, correct_answer, answer_type}>} answers
  * @param {number} passingThreshold
  */
-export function recalculateAttempt(answers, passingThreshold = 60) {
+export function recalculateAttempt(answers, passingThreshold = 60, options = {}) {
   let totalScore = 0;
   const totalQuestions = answers.length;
   const evaluatedAnswers = answers.map((ans) => {
@@ -1152,7 +1252,7 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
     };
   });
   const percentage = calculatePercentage(totalScore, totalQuestions);
-  const grade = calculateGrade(percentage);
+  const grade = calculateGrade(percentage, options);
   const passed = isPassing(percentage, passingThreshold);
   return {
     score: totalScore,
@@ -1168,7 +1268,7 @@ export function recalculateAttempt(answers, passingThreshold = 60) {
  * Authoritative Milestone Progression & Exam Mastery Engine (Phase 159).
  *
  * Rules:
- * 1. Evaluated EXCLUSIVELY from Exams (Quizzes excluded from academic score/points).
+ * 1. Evaluated EXCLUSIVELY from Exams (Tasks excluded from academic score/points).
  * 2. Next Exam 0% Penalty:
  *    - Exams are grouped into Themes (A, B, C, D) in sequential order.
  *    - Once a student passes Milestone Theme N (>= 60%), Milestone Theme N+1 is
@@ -1514,4 +1614,49 @@ export function rankDistractorsForVaultItem(target, candidatePool, count = 4) {
 
   // 4. Return top `count` items as strings
   return scored.slice(0, count).map(s => s.english);
+}
+
+/**
+ * Universal Vector SVG Icon Standard for Classes & Categories (Zero Emojis System)
+ * Centralizes crisp, professional vector icons with smart keyword matching across the system.
+ */
+export function getClassSvgIcon(name = '', size = 18, strokeColor = '#38bdf8') {
+  const n = String(name || '').toLowerCase();
+
+  // 1. Vocabulary / Lexicon / Word Bank / Vault
+  if (n.includes('vocab') || n.includes('lexic') || n.includes('word') || n.includes('vault') || n.includes('lexis')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
+  }
+  // 2. Pronunciation / Accent / Phonetics
+  if (n.includes('pronun') || n.includes('accent') || n.includes('phonet') || n.includes('intonat')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`;
+  }
+  // 3. Listening / Audio / Sound
+  if (n.includes('listen') || n.includes('audio') || n.includes('hear') || n.includes('sound')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>`;
+  }
+  // 4. Grammar / Structure / Writing / Composition / Basic
+  if (n.includes('gramm') || n.includes('struct') || n.includes('writ') || n.includes('compos') || n.includes('basic')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>`;
+  }
+  // 5. Presentation / Public / Business
+  if (n.includes('present') || n.includes('public') || n.includes('busin') || n.includes('pitch')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>`;
+  }
+  // 6. Storytelling / Reading / Literature / Narrative
+  if (n.includes('story') || n.includes('read') || n.includes('litera') || n.includes('narrat')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>`;
+  }
+  // 7. Speaking / Conversation / Roleplay / Oral
+  if (n.includes('speak') || n.includes('convers') || n.includes('talk') || n.includes('oral') || n.includes('roleplay')) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+  }
+  // 8. General / Fallback / Globe
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="class-svg-icon" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>`;
+}
+
+// Global attachment for seamless hybrid / non-module access
+if (typeof window !== 'undefined') {
+  window.getClassSvgIcon = getClassSvgIcon;
+  window.TOPSCORE_QUAD_COLORS = TOPSCORE_QUAD_COLORS;
 }

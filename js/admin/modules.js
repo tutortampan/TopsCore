@@ -1,3 +1,5 @@
+import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
+
 export async function renderModules(area) {
   // Utility to escape HTML to prevent breaking the template string
   const escapeHtml = (unsafe) => {
@@ -10,26 +12,26 @@ export async function renderModules(area) {
   };
 
   const modules = [
-    { id: 'm1', name: 'Point & Speak!', type: 'Visual Pronouns', desc: 'Real-time object and pronoun identification using image context.', status: 'Active', icon: '🎯', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nMedia (photos) must be processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and discarded.' },
-    { id: 'm2', name: 'Storytelling', type: 'Narrative Tense', desc: 'Evaluates past, present, and future tense continuity in a narrative flow.', status: 'Active', icon: '📖', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nEvaluate narrative tense (past/present/future continuity).' },
-    { id: 'm3', name: 'Conversation-based', type: 'Freeform Dialogue', desc: 'Open-ended contextual dialogue with the AI to test conversational agility.', status: 'Active', icon: '💬', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nOpen-ended contextual dialogue.' },
-    { id: 'm4', name: 'Multiple Choice', type: 'Standardized', desc: 'Classic multi-option evaluation for grammar and syntax precision.', status: 'Active', icon: '☑️', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nClassic multi-option evaluation.' },
-    { id: 'm5', name: 'Read Aloud / Pronunciation', type: 'Speech Analysis', desc: 'Deep phonetic analysis comparing spoken input against standard texts.', status: 'Active', icon: '🎙️', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nMedia (audio) must be processed transiently in the browser, sent directly to the AI API for evaluation, and discarded.' },
-    { id: 'm6', name: 'Turn-based Roleplay', type: 'Realtime WebSockets', desc: 'Simulated real-world scenarios requiring immediate contextual responses.', status: 'Active', icon: '🎭', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nReal-world scenario simulation via WebSockets.' },
-    { id: 'm7', name: 'Speaking Performance', type: '5 Pillars', desc: 'Comprehensive grading on Fluency, Pronunciation, Vocabulary, Grammar, and Comprehension.', status: 'Active', icon: '📊', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nEvaluate based on 5 Pillars: Fluency, Pronunciation, Vocabulary, Grammar, Comprehension.' },
-    { id: 'm8', name: 'Vocabulary Mastery', type: 'Written/Oral', desc: 'Rigorous testing of target lexicon including spelling, meaning, and usage.', status: 'Active', icon: '🧠', directive: 'Direct English Only.\\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' }
+    { id: 'm1', name: 'Point & Speak!', type: 'Visual Pronouns', desc: 'Real-time object and pronoun identification using image context.', status: 'Active', icon: 'target', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nMedia (photos) must be processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and discarded.' },
+    { id: 'm2', name: 'Storytelling', type: 'Narrative Tense', desc: 'Evaluates past, present, and future tense continuity in a narrative flow.', status: 'Active', icon: 'book-open', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nEvaluate narrative tense (past/present/future continuity).' },
+    { id: 'm3', name: 'Conversation-based', type: 'Freeform Dialogue', desc: 'Open-ended contextual dialogue with the AI to test conversational agility.', status: 'Active', icon: 'activity', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nOpen-ended contextual dialogue.' },
+    { id: 'm4', name: 'Multiple Choice', type: 'Standardized', desc: 'Classic multi-option evaluation for grammar and syntax precision.', status: 'Active', icon: 'check-circle', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nClassic multi-option evaluation.' },
+    { id: 'm5', name: 'Read Aloud / Pronunciation', type: 'Speech Analysis', desc: 'Deep phonetic analysis comparing spoken input against standard texts.', status: 'Active', icon: 'mic', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nMedia (audio) must be processed transiently in the browser, sent directly to the AI API for evaluation, and discarded.' },
+    { id: 'm6', name: 'Turn-based Roleplay', type: 'Realtime WebSockets', desc: 'Simulated real-world scenarios requiring immediate contextual responses.', status: 'Active', icon: 'users', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nReal-world scenario simulation via WebSockets.' },
+    { id: 'm7', name: 'Speaking Performance', type: '5 Pillars', desc: 'Comprehensive grading on Fluency, Pronunciation, Vocabulary, Grammar, and Comprehension.', status: 'Active', icon: 'award', directive: 'Direct English Only.\\nArchitecture: Stateless & Low-Egress.\\nEvaluate based on 5 Pillars: Fluency, Pronunciation, Vocabulary, Grammar, Comprehension.' },
+    { id: 'm8', name: 'Vocabulary Mastery', type: 'Written/Oral', desc: 'Rigorous testing of target lexicon including spelling, meaning, and usage.', status: 'Active', icon: 'clipboard', directive: 'Direct English Only.\\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' }
   ].sort((a, b) => a.name.localeCompare(b.name));
 
   // Authoritative Lower Panel Sync for Modules (Phase 419 Universal 5-Panel Architecture)
   if (window.setBottomInfobar) {
     const leftHtml = `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
-        <span>🧩 8 Core AI Evaluation Engines (Stateless &amp; Low-Egress)</span>
+        <span>${getSvgIcon('layers', 14)} 8 Core AI Evaluation Engines (Stateless &amp; Low-Egress)</span>
       </div>
     `;
     const rightHtml = `
       <div style="display:inline-flex; align-items:center; gap:8px;">
-        <span class="badge" style="background:rgba(0,192,0,0.15); color:var(--grade-a, #00c000); border:1px solid rgba(0,192,0,0.3); font-size:11px; font-weight:700; padding:4px 8px; border-radius:4px;">● ALL ENGINES ACTIVE</span>
+        <span class="badge" style="background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a); border:1px solid rgba(0,192,0,0.3); font-size: 12px; font-weight:700; padding:4px 8px; border-radius:4px;">● ALL ENGINES ACTIVE</span>
       </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
@@ -39,10 +41,10 @@ export async function renderModules(area) {
     <div style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; padding: 10px 14px; box-sizing: border-box; overflow-y: auto;">
       <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end;">
         <div>
-          <h2 style="font-size: 24px; font-weight: 700; color: #f8fafc; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px;">
-            <span>📦</span> Modules (Core Blocks)
+          <h2 style="font-size: 20px; font-weight: 800; color: #f8fafc; margin: 0 0 8px 0; display: flex; align-items: center; gap: 10px;">
+            <span>${getSvgIcon('layers', 20)}</span> Modules (Core Blocks)
           </h2>
-          <p style="font-size: 14px; color: #94a3b8; margin: 0;">Central warehouse for the 8 core AI evaluation engines.</p>
+          <p style="font-size: 12px; color: #94a3b8; margin: 0;">Central warehouse for the 8 core AI evaluation engines.</p>
         </div>
       </div>
       
@@ -52,8 +54,8 @@ export async function renderModules(area) {
                onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 10px 15px -3px rgba(0, 0, 0, 0.3)'" 
                onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-              <div style="font-size: 32px; line-height: 1;">${mod.icon}</div>
-              <span style="background: rgba(var(--grade-a-rgb), 0.12); color: var(--clr-success); border: 1px solid rgba(var(--grade-a-rgb), 0.35); padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
+              <div style="line-height: 1; color: var(--clr-primary, #38bdf8);">${getSvgIcon(mod.icon, 28)}</div>
+              <span style="background: rgba(var(--grade-a-rgb), 0.12); color: var(--clr-success); border: 1px solid rgba(var(--grade-a-rgb), 0.35); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">
                 ${mod.status}
               </span>
             </div>
@@ -63,7 +65,7 @@ export async function renderModules(area) {
               ${mod.type}
             </div>
             
-            <p style="font-size: 13px; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; flex-grow: 1;">
+            <p style="font-size: 12px; color: #94a3b8; line-height: 1.5; margin: 0 0 20px 0; flex-grow: 1;">
               ${mod.desc}
             </p>
             
@@ -97,11 +99,11 @@ export async function renderModules(area) {
           
           <div class="form-group" style="display:flex; flex-direction:column; gap:6px;">
             <label style="font-weight:600; color:#94a3b8; font-size:12px; margin:0;">SYSTEM PROMPT / INSTRUCTIONS (ENGLISH ONLY)</label>
-            <textarea class="form-control" rows="7" style="background:#0f172a; border: 1px solid #334155; color:#f8fafc; padding: 10px; border-radius: 8px; resize:vertical; font-family: monospace; font-size: 13px;" placeholder="Enter base instructions for the AI...">${modDirective}</textarea>
+            <textarea class="form-control" rows="7" style="background:#0f172a; border: 1px solid #334155; color:#f8fafc; padding: 10px; border-radius: 8px; resize:vertical; font-family: monospace; font-size: 12px;" placeholder="Enter base instructions for the AI...">${modDirective}</textarea>
           </div>
           
           <div class="form-group" style="display:flex; justify-content:space-between; align-items:center; background:#0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155;">
-            <label style="margin:0; font-weight:600; color:#94a3b8; font-size:13px;">ALLOW TEACHER MANUAL OVERRIDE</label>
+            <label style="margin:0; font-weight:600; color:#94a3b8; font-size: 12px;">ALLOW TEACHER MANUAL OVERRIDE</label>
             <input type="checkbox" checked style="accent-color:#3b82f6; width:16px; height:16px; cursor:pointer;">
           </div>
           
@@ -124,7 +126,7 @@ export async function renderModules(area) {
       `;
       
       if (window.openRecordDrawer) {
-        window.openRecordDrawer(`⚙️ Configure: ${modName}`, bodyHTML, footerHTML);
+        window.openRecordDrawer(`${getSvgIcon('settings', 16)} Configure: ${modName}`, bodyHTML, footerHTML);
         
         setTimeout(() => {
           const saveBtn = document.getElementById('drawer-save-btn');

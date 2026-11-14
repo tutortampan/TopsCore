@@ -1,5 +1,7 @@
-import { adminFetchAll, adminUpdate } from '../api.js?v=20261106_v160';
+import { adminFetchAll, adminUpdate } from '../api.js?v=20261114_v517';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
+import { getClassSvgIcon } from '../grading.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function renderClassesHub(area) {
   area.innerHTML = typeof window.getLoadingStateHtml === 'function'
@@ -141,13 +143,13 @@ export async function renderClassesHub(area) {
       const activeInstFilter = window._classesHubActiveInst || 'all';
 
       const instTabs = [
-        { id: 'all', icon: '🌐', label: 'All Institutions', val: activeClasses.length },
+        { id: 'all', icon: getSvgIcon('globe', 14), label: 'All Institutions', val: activeClasses.length },
         ...activeInsts.map(inst => {
           const cnt = activeClasses.filter(c => {
             const prog = progMap.get(c.program_id);
             return (prog && prog.institution_id === inst.id) || (c.institution_id === inst.id);
           }).length;
-          return { id: inst.id, icon: '🏢', label: inst.name, val: cnt };
+          return { id: inst.id, icon: getSvgIcon('building', 14), label: inst.name, val: cnt };
         })
       ];
 
@@ -185,35 +187,35 @@ export async function renderClassesHub(area) {
           ? '<span class="text-xs text-muted" style="font-family:monospace;background:rgba(255,255,255,0.04);padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.08);">' + escapeHtml(effectiveCode) + '</span>'
           : '<span class="text-xs text-muted">-</span>';
         const eligibleCount = getEligibleStudentCountForClass(cls);
-        const studentsHtml  = '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:0.75rem;padding:2px 8px;" title="' + eligibleCount + ' students eligible to take this class">👥 ' + eligibleCount + '</span>';
+        const studentsHtml  = '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size: 12px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
 
         const isVocab = (cls.name || '').toLowerCase().includes('vocab');
         const vocabBtnHtml = isVocab
-          ? '<button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:0.75rem;border-color:rgba(99,102,241,0.3);color:#818cf8;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">📚 Vault</button>'
+          ? '<button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size: 12px;border-color:rgba(99,102,241,0.3);color:#818cf8;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">Vault</button>'
           : '';
 
         return '<div class="classes-hub-grid-row ' + isDimmed + '">' +
           '<div class="d-flex align-center gap-2" style="min-width:0;">' +
-            '<span style="font-size:0.95rem;">📖</span>' +
-            '<span class="text-truncate" style="font-weight:600;font-size:0.88rem;color:var(--fm-text-primary);" title="' + escapeHtml(cls.name) + '">' + escapeHtml(cls.name) + '</span>' +
+            '<span style="display:inline-flex;align-items:center;">' + (typeof getClassSvgIcon === 'function' ? getClassSvgIcon(cls.name, 16, '#818cf8') : '') + '</span>' +
+            '<span class="text-truncate" style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" title="' + escapeHtml(cls.name) + '">' + escapeHtml(cls.name) + '</span>' +
           '</div>' +
           '<div class="d-flex align-center text-truncate"><span class="text-xs" style="color:var(--fm-text-secondary);">' + progName + '</span>' + instLabel + '</div>' +
           '<div style="text-align:center;">' + codeHtml + '</div>' +
           '<div style="text-align:center;">' + studentsHtml + '</div>' +
-          '<div style="text-align:center;"><span class="badge-tag ' + (cls.is_active ? 'badge-tag-ongoing' : 'badge-tag-completed') + '">' + (cls.is_active ? '🟢 Active' : '⚪ Inactive') + '</span></div>' +
+          '<div style="text-align:center;"><span class="badge-tag ' + (cls.is_active ? 'badge-tag-ongoing' : 'badge-tag-completed') + '">' + (cls.is_active ? 'Active' : 'Inactive') + '</span></div>' +
           '<div class="tree-actions-right" style="justify-content:flex-end;">' +
             vocabBtnHtml +
             '<label class="toggle-switch edit-mode-only" title="Toggle Active"><input type="checkbox" onchange="window.toggleClassesHubEntity(\'classes\',\'' + cls.id + '\',this.checked)" ' + (cls.is_active ? 'checked' : '') + '><span class="toggle-slider"></span></label>' +
-            '<button class="btn btn-secondary btn-sm edit-mode-only" style="padding:3px 8px;font-size:0.75rem;" onclick="window.openClassesHubEdit(\'classes\',\'' + cls.id + '\')">✏️ Edit</button>' +
-            '<button class="btn btn-danger btn-sm edit-mode-only"    style="padding:3px 7px;font-size:0.75rem;" onclick="window.deleteClassesHubRecord(\'classes\',\'' + cls.id + '\',\'' + escapeHtml(cls.name) + '\')">🗑️</button>' +
+            '<button class="btn btn-secondary btn-sm edit-mode-only" style="padding:3px 8px;font-size: 12px;" onclick="window.openClassesHubEdit(\'classes\',\'' + cls.id + '\')">Edit</button>' +
+            '<button class="btn btn-danger btn-sm edit-mode-only"    style="padding:3px 7px;font-size: 12px;" onclick="window.deleteClassesHubRecord(\'classes\',\'' + cls.id + '\',\'' + escapeHtml(cls.name) + '\')">Delete</button>' +
           '</div>' +
         '</div>';
       };
 
       const getSortIcon = (key) => {
         const cur = window._classesHubSort || { key: 'name', asc: true };
-        if (cur.key !== key) return '<span style="opacity:0.35;margin-left:4px;font-size:0.8rem;">↕</span>';
-        return cur.asc ? '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:0.8rem;">▲</span>' : '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:0.8rem;">▼</span>';
+        if (cur.key !== key) return '<span style="opacity:0.35;margin-left:4px;font-size: 12px;">↕</span>';
+        return cur.asc ? '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size: 12px;">▲</span>' : '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size: 12px;">▼</span>';
       };
 
       const sortClassList = (list) => {
@@ -281,13 +283,13 @@ export async function renderClassesHub(area) {
             '<div class="d-flex align-center gap-2">' +
               '<span class="classes-hub-collapse-icon">' + (isExpanded ? '▼' : '▶') + '</span>' +
               '<span class="classes-hub-level-badge">L' + (level.level_number !== undefined ? level.level_number : '?') + '</span>' +
-              '<span style="font-weight:700;font-size:1rem;color:var(--fm-text-primary);">' + levelLabel + '</span>' +
-              '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:0.72rem;">' + levelClasses.length + ' ' + (levelClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
+              '<span style="font-weight:700;font-size: 16px;color:var(--fm-text-primary);">' + levelLabel + '</span>' +
+              '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size: 12px;">' + levelClasses.length + ' ' + (levelClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
             '</div>' +
             '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
-              '<button class="btn btn-primary btn-sm edit-mode-only"   style="font-size:0.75rem;padding:4px 9px;" onclick="window.openClassesHubAddClass(\'' + level.id + '\')">+ Add Class</button>' +
-              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:0.75rem;padding:4px 8px;" onclick="window.openClassesHubEdit(\'levels\',\'' + level.id + '\')">✏️ Edit</button>' +
-              '<button class="btn btn-danger btn-sm edit-mode-only"    style="font-size:0.75rem;padding:4px 7px;" onclick="window.deleteClassesHubRecord(\'levels\',\'' + level.id + '\',\'' + levelLabel + '\')">🗑️</button>' +
+              '<button class="btn btn-primary btn-sm edit-mode-only"   style="font-size: 12px;padding:4px 9px;" onclick="window.openClassesHubAddClass(\'' + level.id + '\')">+ Add Class</button>' +
+              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size: 12px;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;" onclick="window.openClassesHubEdit(\'levels\',\'' + level.id + '\')">' + getSvgIcon('edit', 12) + ' Edit</button>' +
+              '<button class="btn btn-danger btn-sm edit-mode-only"    style="font-size: 12px;padding:4px 7px;" onclick="window.deleteClassesHubRecord(\'levels\',\'' + level.id + '\',\'' + levelLabel + '\')">' + getSvgIcon('trash', 12) + '</button>' +
             '</div>' +
           '</div>' +
           (isExpanded ? '<div class="classes-hub-level-body">' + bodyHtml + '</div>' : '') +
@@ -310,16 +312,16 @@ export async function renderClassesHub(area) {
           unassignedBodyHtml = tableHeaderHtml + rowsHtml;
         }
 
-        levelGroupsHtml += '<div class="classes-hub-level-group" style="border-color:rgba(245,158,11,0.25);">' +
-          '<div class="classes-hub-level-header" style="background:rgba(245,158,11,0.06);border-bottom-color:rgba(245,158,11,0.18);" onclick="window.toggleClassesHubLevel(\'unassigned\')">' +
+        levelGroupsHtml += '<div class="classes-hub-level-group" style="border-color:rgba(var(--grade-c-rgb),0.25);">' +
+          '<div class="classes-hub-level-header" style="background:rgba(var(--grade-c-rgb),0.06);border-bottom-color:rgba(var(--grade-c-rgb),0.18);" onclick="window.toggleClassesHubLevel(\'unassigned\')">' +
             '<div class="d-flex align-center gap-2">' +
               '<span class="classes-hub-collapse-icon">' + (isExpandedUnassigned ? '▼' : '▶') + '</span>' +
-              '<span class="classes-hub-level-badge" style="background:rgba(245,158,11,0.2);color:#f59e0b;border-color:rgba(245,158,11,0.4);">L?</span>' +
-              '<span style="font-weight:700;font-size:1rem;color:var(--fm-text-primary);">Unassigned Level</span>' +
-              '<span class="badge-tag" style="background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);font-size:0.72rem;">' + unassignedClasses.length + ' ' + (unassignedClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
+              '<span class="classes-hub-level-badge" style="background:rgba(var(--grade-c-rgb),0.2);color:var(--grade-c);border-color:rgba(var(--grade-c-rgb),0.4);">L?</span>' +
+              '<span style="font-weight:700;font-size: 16px;color:var(--fm-text-primary);">Unassigned Level</span>' +
+              '<span class="badge-tag" style="background:rgba(var(--grade-c-rgb),0.15);color:var(--grade-c);border:1px solid rgba(var(--grade-c-rgb),0.3);font-size: 12px;">' + unassignedClasses.length + ' ' + (unassignedClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
             '</div>' +
             '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
-              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:0.75rem;padding:4px 9px;" onclick="window.openClassesHubAddClass(null)">+ Add Class</button>' +
+              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size: 12px;padding:4px 9px;" onclick="window.openClassesHubAddClass(null)">+ Add Class</button>' +
             '</div>' +
           '</div>' +
           (isExpandedUnassigned ? '<div class="classes-hub-level-body">' + unassignedBodyHtml + '</div>' : '') +
@@ -329,13 +331,13 @@ export async function renderClassesHub(area) {
       area.innerHTML = '<div>' +
         '<div class="hub-toolbar mb-3">' +
           '<div class="hub-toolbar-search">' +
-            '<span style="color:var(--fm-text-muted);font-size:0.9rem;">🔍</span>' +
-            '<input type="text" id="classes-hub-search" class="form-control" placeholder="Search classes, codes, or programs..." value="' + escapeHtml(searchQuery) + '" style="padding:5px 10px;font-size:0.85rem;height:32px;background:rgba(0,0,0,0.2);" />' +
+            '<span style="color:var(--fm-text-muted);font-size:12px;display:inline-flex;align-items:center;">' + getSvgIcon('search', 12) + '</span>' +
+            '<input type="text" id="classes-hub-search" class="form-control" placeholder="Search classes, codes, or programs..." value="' + escapeHtml(searchQuery) + '" style="padding:5px 10px;font-size:12px;height:32px;background:rgba(0,0,0,0.2);" />' +
           '</div>' +
           '<div class="d-flex align-center gap-2">' +
             '<span class="text-xs text-muted">' + filteredClasses.length + ' Classes · ' + activeLevels.length + ' Levels</span>' +
-            '<button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:0.75rem;padding:4px 9px;" title="Open Topic Blueprint & Vocabulary Vault">📚 Open Vault</button>' +
-            '<button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:0.75rem;padding:4px 9px;">+ Add Level</button>' +
+            '<button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size: 12px;padding:4px 9px;" title="Open Topic Blueprint & Vocabulary Vault">Open Vault</button>' +
+            '<button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size: 12px;padding:4px 9px;">+ Add Level</button>' +
           '</div>' +
         '</div>' +
         '<div id="classes-hub-container">' +

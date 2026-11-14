@@ -1,9 +1,10 @@
-import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests, toShortLevel } from '../api.js?v=20261106_v160';
+import { adminFetchAll, adminInsert, adminSoftDelete, autoGenerateWordsTests, autoGeneratePhrasesTests, toShortLevel } from '../api.js?v=20261114_v517';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openTestBuilder } from './test-builder.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261109_v172';
 import { openCrudModal } from './crud-modals.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 // ─────────────────────────────────────────────────────────────
 // SMART CLASS-AWARE QUIZ / EXAM ROUTERS
@@ -24,12 +25,12 @@ function detectClassType(className) {
   return 'GENERIC';
 }
 
-/** 🟡 ADD QUIZ — opens the correct Quiz wizard for the class */
-window.handleAddQuiz = (classId, className) => {
+/** ADD TASK — opens the correct Task wizard for the class */
+window.handleAddTask = (classId, className) => {
   const type = detectClassType(className);
   switch (type) {
     case 'VOCABULARY':
-      // Vocab/Phrase Quiz → use existing Vocab Vault wizard (tier: QUIZ)
+      // Vocab/Phrase Task → use existing Vocab Vault wizard (tier: QUIZ/TASK)
       const asmTypeQuiz = 'VOCAB_MASTERY';
       openVocabWizard(null, { classId, className, testType: asmTypeQuiz, tier: 'QUIZ', category: 'QUIZ' });
       break;
@@ -40,14 +41,14 @@ window.handleAddQuiz = (classId, className) => {
     case 'STORYTELLING_L1':
     case 'GENERIC':
     default:
-      // All other Quiz types → generic Test Builder (with category pre-set to QUIZ)
+      // All other Task types → generic Test Builder (with category pre-set to QUIZ)
       openTestBuilder(null, classId, { category: 'QUIZ' });
       break;
   }
 };
-window.handleAddTask = window.handleAddQuiz; // Backwards compatibility
+window.handleAddQuiz = window.handleAddTask; // Backwards compatibility
 
-/** 🔴 ADD EXAM — opens the correct Exam wizard for the class */
+/** ADD EXAM — opens the correct Exam wizard for the class */
 window.handleAddExam = (classId, className) => {
   const type = detectClassType(className);
   switch (type) {
@@ -108,11 +109,11 @@ export async function renderClasses(area) {
         
         <!-- Tab Bar -->
         <div style="display:flex; border-bottom:1px solid var(--clr-border); flex-shrink:0;">
-          <button id="tab-btn-classes" style="flex:1; padding:0.6rem 0; font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; background:var(--clr-primary); color:#fff; border:none; cursor:pointer; border-radius:0;">
-            🎓 Classes
+          <button id="tab-btn-classes" style="flex:1; padding:0.6rem 0; font-size: 12px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; background:var(--clr-primary); color:#fff; border:none; cursor:pointer; border-radius:0; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            ${getSvgIcon('graduation-cap', 14)} Classes
           </button>
-          <button id="tab-btn-org" style="flex:1; padding:0.6rem 0; font-size:0.78rem; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; background:transparent; color:var(--clr-text-muted); border:none; cursor:pointer;">
-            🏢 Org
+          <button id="tab-btn-org" style="flex:1; padding:0.6rem 0; font-size: 12px; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; background:transparent; color:var(--clr-text-muted); border:none; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            ${getSvgIcon('building', 14)} Org
           </button>
         </div>
 
@@ -120,7 +121,7 @@ export async function renderClasses(area) {
         <div id="panel-classes-tab" style="flex:1; overflow-y:auto; display:flex; flex-direction:column;">
           <!-- Search -->
           <div style="padding:0.5rem 0.75rem; border-bottom:1px solid var(--clr-border); flex-shrink:0;">
-            <input id="class-search-input" type="text" placeholder="Search classes..." style="width:100%; padding:0.35rem 0.6rem; font-size:0.82rem; background:var(--clr-bg-1); border:1px solid var(--clr-border); border-radius:4px; color:var(--clr-text); outline:none; box-sizing:border-box;">
+            <input id="class-search-input" type="text" placeholder="Search classes..." style="width:100%; padding:0.35rem 0.6rem; font-size: 12px; background:var(--clr-bg-1); border:1px solid var(--clr-border); border-radius:4px; color:var(--clr-text); outline:none; box-sizing:border-box;">
           </div>
           <!-- Class List -->
           <div id="classes-flat-list" style="flex:1; overflow-y:auto; padding:0.4rem 0;">
@@ -131,8 +132,8 @@ export async function renderClasses(area) {
         <!-- Org Tree Tab (hidden by default) -->
         <div id="panel-org-tab" style="flex:1; overflow-y:auto; display:none; flex-direction:column;">
           <div style="padding:0.6rem 0.75rem; border-bottom:1px solid var(--clr-border); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;">
-            <span style="font-size:0.78rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--clr-text-muted);">Organization</span>
-            <button class="btn btn-primary btn-sm edit-mode-only" id="btn-add-inst-global" style="padding:0.2rem 0.45rem; font-size:0.75rem;" title="Add Institution">+ Inst</button>
+            <span style="font-size: 12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:var(--clr-text-muted);">Organization</span>
+            <button class="btn btn-primary btn-sm edit-mode-only" id="btn-add-inst-global" style="padding:0.2rem 0.45rem; font-size: 12px;" title="Add Institution">+ Inst</button>
           </div>
           <div id="org-tree-list" style="flex:1; overflow-y:auto; padding:0.75rem; display:flex; flex-direction:column; gap:2px;">
             <!-- Tree injected here -->
@@ -143,7 +144,7 @@ export async function renderClasses(area) {
       <!-- Main Canvas -->
       <div id="class-detail-container" style="flex:1; overflow-y:auto; background:var(--clr-bg-1);">
         <div class="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--clr-text-muted);">
-          <div style="font-size:3rem; margin-bottom:1rem;">🎓</div>
+          <div style="margin-bottom:1rem;">${getSvgIcon('graduation-cap', 40)}</div>
           <p>Select a class from the left panel.</p>
         </div>
       </div>
@@ -177,7 +178,7 @@ export async function renderClasses(area) {
     const filtered = filter ? classes.filter(c => (c.name || '').toLowerCase().includes(lc)) : classes;
 
     if (!filtered.length) {
-      flatList.innerHTML = '<div style="color:var(--clr-text-muted);font-size:0.8rem;text-align:center;padding:2rem 1rem;">No classes found</div>';
+      flatList.innerHTML = '<div style="color:var(--clr-text-muted);font-size: 12px;text-align:center;padding:2rem 1rem;">No classes found</div>';
       return;
     }
 
@@ -206,8 +207,8 @@ export async function renderClasses(area) {
       `;
 
       item.innerHTML = `
-        <div style="font-size:0.85rem; font-weight:600; color:var(--clr-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cls.name.replace(/</g,'&lt;')}</div>
-        ${progName || lvlStr ? `<div style="font-size:0.72rem; color:var(--clr-text-muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${[progName, lvlStr].filter(Boolean).join(' · ')}</div>` : ''}
+        <div style="font-size: 12px; font-weight:600; color:var(--clr-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${cls.name.replace(/</g,'&lt;')}</div>
+        ${progName || lvlStr ? `<div style="font-size: 12px; color:var(--clr-text-muted); margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${[progName, lvlStr].filter(Boolean).join(' · ')}</div>` : ''}
       `;
 
       item.addEventListener('mouseenter', () => {
@@ -264,7 +265,7 @@ export async function renderClasses(area) {
       const instNode = document.createElement('div');
       instNode.innerHTML = `
         <div class="tree-node inst-node" style="padding:0.5rem; font-weight:700; color:var(--clr-text); cursor:pointer; display:flex; align-items:center; border-radius:4px;">
-          <span style="margin-right:8px; font-size:1.2rem;">🏢</span> ${inst.name}
+          <span style="margin-right:8px; font-size: 16px; display:inline-flex; align-items:center;">${getSvgIcon('building', 16)}</span> ${inst.name}
         </div>
       `;
       listContainer.appendChild(instNode);
@@ -280,7 +281,7 @@ export async function renderClasses(area) {
         const progNode = document.createElement('div');
         progNode.innerHTML = `
           <div class="tree-node prog-node" style="padding:0.4rem 0.5rem 0.4rem 2rem; font-weight:600; color:var(--clr-text-1); cursor:pointer; display:flex; align-items:center; border-radius:4px;">
-            <span style="margin-right:6px; font-size:1rem; opacity:0.8;">📋</span> ${prog.name}
+            <span style="margin-right:6px; font-size: 16px; opacity:0.8; display:inline-flex; align-items:center;">${getSvgIcon('clipboard', 16)}</span> ${prog.name}
           </div>
         `;
         listContainer.appendChild(progNode);
@@ -303,9 +304,9 @@ export async function renderClasses(area) {
 
           const clsNode = document.createElement('div');
           clsNode.innerHTML = `
-            <div class="tree-node cls-node" data-class-id="${cls.id}" style="padding:0.4rem 0.5rem 0.4rem 3.5rem; color:var(--clr-text-2); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius:4px; font-size:0.9rem;">
-              <div><span style="margin-right:4px; font-size:0.9rem;">🎓</span> ${cls.name}</div>
-              <div style="font-size:0.7rem; opacity:0.6; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${levelString}">${levelString}</div>
+            <div class="tree-node cls-node" data-class-id="${cls.id}" style="padding:0.4rem 0.5rem 0.4rem 3.5rem; color:var(--clr-text-2); cursor:pointer; display:flex; align-items:center; justify-content:space-between; border-radius:4px; font-size:12px;">
+              <div><span style="margin-right:4px; font-size:12px; display:inline-flex; align-items:center;">${getSvgIcon('graduation-cap', 12)}</span> ${cls.name}</div>
+              <div style="font-size: 12px; opacity:0.6; max-width:80px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${levelString}">${levelString}</div>
             </div>
           `;
           listContainer.appendChild(clsNode);
@@ -361,7 +362,7 @@ function renderInstitutionDetail(inst) {
     <div style="padding:2rem;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
         <div>
-          <h2 style="margin:0; font-size:2rem; font-weight:700;">🏢 ${inst.name}</h2>
+          <h2 style="margin:0; font-size: 30px; font-weight:700; display:flex; align-items:center; gap:8px;">${getSvgIcon('building', 28)} ${inst.name}</h2>
           <p class="text-muted" style="margin-top:0.5rem;">Institution Workspace</p>
         </div>
         <button class="btn btn-primary edit-mode-only" id="btn-add-prog">+ Add Program</button>
@@ -389,7 +390,7 @@ function renderProgramDetail(prog, inst) {
     <div style="padding:2rem;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
         <div>
-          <h2 style="margin:0; font-size:2rem; font-weight:700;">📋 ${prog.name}</h2>
+          <h2 style="margin:0; font-size: 30px; font-weight:700; display:flex; align-items:center; gap:8px;">${getSvgIcon('clipboard', 28)} ${prog.name}</h2>
           <p class="text-muted" style="margin-top:0.5rem;">Program under ${inst.name}</p>
         </div>
         <button class="btn btn-primary edit-mode-only" id="btn-add-class">+ Add Class</button>
@@ -419,7 +420,7 @@ function renderProgramDetail(prog, inst) {
       levelCheckboxes.innerHTML = '';
       allLevels.forEach(l => {
         levelCheckboxes.innerHTML += `
-          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:0.9rem;">
+          <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-size:12px;">
             <input type="checkbox" name="class_levels[]" value="${l.id}"> ${l.name}
           </label>
         `;
@@ -498,8 +499,8 @@ function renderClassDetail(cls) {
     <div style="padding: 2rem 2rem 0 2rem; border-bottom: 1px solid var(--clr-border); background: var(--clr-surface);">
       <div style="display:flex; justify-content:space-between; align-items:flex-start;">
         <div>
-          <h2 style="margin:0 0 0.75rem 0; font-size:1.6rem; color:var(--clr-text-1);">${cls.name.replace(/</g, '&lt;')}</h2>
-          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; font-size:0.8rem;">
+          <h2 style="margin:0 0 0.75rem 0; font-size: 20px; color:var(--clr-text-1);">${cls.name.replace(/</g, '&lt;')}</h2>
+          <div style="display:flex; gap:0.5rem; flex-wrap:wrap; font-size: 12px;">
             <span class="badge badge-neutral" style="background:var(--clr-surface-2);">&#127970; ${instName}</span>
             <span class="badge badge-neutral" style="background:var(--clr-surface-2);">&#128218; ${progName}</span>
             <span class="badge badge-neutral" style="background:var(--clr-surface-2);">&#11088; ${lvlName}</span>
@@ -515,9 +516,9 @@ function renderClassDetail(cls) {
                &#9889; Sync Phrases (Dropdown 10)
              </button>
            ` : ''}
-           <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.handleAddQuiz('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+           <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.handleAddTask('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(245,158,11,0.9); color:#1a1a1a; border:1px solid rgba(245,158,11,0.4); font-weight:700;">
-             &#128221; Add Quiz
+             &#128221; Add Task
            </button>
            <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.handleAddExam('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(239,68,68,0.9); color:#fff; border:1px solid rgba(239,68,68,0.4); font-weight:700;">
@@ -529,9 +530,9 @@ function renderClassDetail(cls) {
       
       <!-- 3-TAB NAVIGATION -->
       <div style="display:flex; gap:2rem; margin-top:2rem; border-bottom:1px solid transparent;">
-        <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size:0.95rem;">&#128203; Learning Path & Tests</div>
-        <div class="workspace-tab" data-tab="students" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size:0.95rem;">&#128101; Students</div>
-        <div class="workspace-tab" data-tab="gradebook" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size:0.95rem;">&#128202; Gradebook</div>
+        <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size: 16px;">&#128203; Learning Path & Tests</div>
+        <div class="workspace-tab" data-tab="students" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size: 16px;">&#128101; Students</div>
+        <div class="workspace-tab" data-tab="gradebook" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size: 16px;">&#128202; Gradebook</div>
       </div>
     </div>
 
@@ -539,7 +540,7 @@ function renderClassDetail(cls) {
     <div style="padding:2rem;">
       <div id="class-learning-path-container" class="tab-content" style="display:block;">
          <div class="empty-state" style="padding:3rem; text-align:center;">
-           <p class="text-muted text-sm">Learning path is empty. This area will display the auto-generated quiz & exam tree.</p>
+           <p class="text-muted text-sm">Learning path is empty. This area will display the auto-generated task & exam tree.</p>
          </div>
       </div>
       <div id="class-students-container" class="tab-content" style="display:none;">
@@ -599,7 +600,7 @@ function renderClassDetail(cls) {
         res = await autoGeneratePhrasesTests(payload);
       }
       
-      showToast(`Success: Created ${res.quizzes || res.tasks || 0} Quizzes, ${res.exams || res.tests || 0} Exams. Updated ${res.updated || 0}.`, 'success');
+      showToast(`Success: Created ${res.tasks || res.quizzes || 0} Tasks, ${res.exams || res.tests || 0} Exams. Updated ${res.updated || 0}.`, 'success');
       loadClassLearningPath(cls.id); // Refresh view
     } catch (e) {
       console.error(e);
@@ -658,13 +659,14 @@ export async function loadClassLearningPath(classId) {
     if (!tests || tests.length === 0) {
       container.innerHTML = `
          <div class="empty-state" style="padding:3rem; text-align:center;">
-           <div style="font-size:2.5rem; margin-bottom:1rem;">&#128203;</div>
+           <div style="font-size: 35px; margin-bottom:1rem;">&#128203;</div>
            <h4 style="color:var(--clr-text-1); margin:0 0 0.5rem 0;">No tests yet</h4>
-           <p class="text-muted text-sm">Use the <strong>Add Quiz</strong> or <strong>Add Exam</strong> buttons above to start building the curriculum for this class.</p>
+           <p class="text-muted text-sm">Use the <strong>Add Task</strong> or <strong>Add Exam</strong> buttons above to start building the curriculum for this class.</p>
          </div>`;
       return;
     }
     
+    let taskCount = 0;
     let quizCount = 0;
     let examCount = 0;
     let tryoutCount = 0;
@@ -683,11 +685,12 @@ export async function loadClassLearningPath(classId) {
       } else if (isExam) {
         examCount++;
       } else {
+        taskCount++;
         quizCount++;
       }
     });
 
-    const totalCount = quizCount + examCount + tryoutCount;
+    const totalCount = taskCount + examCount + tryoutCount;
 
     const summaryHtml = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap;">
@@ -695,7 +698,7 @@ export async function loadClassLearningPath(classId) {
         </div>
         <div style="display:flex; gap:0.5rem;">
           <button class="btn btn-sm" id="filter-all" style="background:var(--clr-primary); color:#fff;">All (${totalCount})</button>
-          <button class="btn btn-sm btn-secondary" id="filter-quizzes">Quizzes (${quizCount})</button>
+          <button class="btn btn-sm btn-secondary" id="filter-tasks">Tasks (${taskCount})</button>
           <button class="btn btn-sm btn-secondary" id="filter-exams">Exams (${examCount})</button>
           <button class="btn btn-sm btn-secondary" id="filter-tryouts">Try-Outs (${tryoutCount})</button>
         </div>
@@ -712,7 +715,8 @@ export async function loadClassLearningPath(classId) {
 
       const isExam = catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam');
       const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
-      const isQuiz = !isExam && !isTryout;
+      const isTask = !isExam && !isTryout;
+      const isQuiz = isTask;
       
       const _isDyn = r?.payload?.is_dynamic_shell;
       const _vaultQ = r?.payload?.snapshot_question_count || r?.payload?.total_questions || 0;
@@ -732,8 +736,8 @@ export async function loadClassLearningPath(classId) {
         qIsVault: _isDyn,
         qCount: _isDyn ? _vaultQ : (r.questions ? r.questions.length : 0),
         status: r.status,
-        isExam, isQuiz, isTryout,
-        isTest: isExam, isTask: isQuiz, // backwards compatibility
+        isExam, isTask, isQuiz, isTryout,
+        isTest: isExam, // backwards compatibility
         display_order: r.display_order,
         _raw: r
       };
@@ -789,7 +793,11 @@ export async function loadClassLearningPath(classId) {
       },
       columns: [
         {
-          key: 'order', label: 'CODE', sortable: true, width: '80px',
+          key: 'level', label: 'LEVEL', sortable: true, align: 'center', width: '70px',
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.level)}</div>`
+        },
+        {
+          key: 'order', label: 'CODE', sortable: true, align: 'center', width: '140px',
           render: (val, row) => {
             if (row.shellCode) {
               return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
@@ -799,64 +807,74 @@ export async function loadClassLearningPath(classId) {
         },
         { 
           // Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY)
-          key: 'title', label: 'TITLE', sortable: true, minWidth: '220px',
+          key: 'title', label: 'TITLE', sortable: true, align: 'left', minWidth: '240px',
           render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
         },
         {
-          key: 'level', label: 'LEVEL', sortable: true, width: '70px',
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.level)}</div>`
-        },
-        {
-          key: 'prereq', label: 'PREREQUISITE', sortable: true, width: '130px',
+          key: 'prereq', label: 'PREREQUISITE', sortable: true, align: 'left', width: '170px',
           render: (val, row) => {
              if(!row.prereq || row.prereq === '-') return `<span style="color:var(--clr-text-3); font-size:12px;">—</span>`;
-             return `<div style="font-size:12px; color:var(--clr-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">⚠️ ${escapeHtml(row.prereq)}</div>`;
+             return `<div style="font-size:12px; color:var(--clr-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">${escapeHtml(row.prereq)}</div>`;
           }
         },
         {
-          key: 'type', label: 'TYPE', sortable: true, width: '110px',
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.type)}</div>`
-        },
-        {
-          key: 'answerType', label: 'ANSWER', sortable: true, width: '90px',
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.answerType}</div>`
-        },
-        {
-          key: 'access', label: 'ACCESS', sortable: true, width: '80px',
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.access)}</div>`
-        },
-        {
-          key: 'timeLimit', label: 'DUR. (M)', sortable: true, width: '75px',
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">⏱ ${row.timeLimit}</div>`
-        },
-        {
-          key: 'minScore', label: 'PASS (%)', sortable: true, width: '75px',
-          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">🎯 ${row.minScore}</div>`
-        },
-        {
-          key: 'qCount', label: 'QS', sortable: true, width: '65px',
+          key: 'type', label: 'TYPE', sortable: true, align: 'center', width: '80px',
           render: (val, row) => {
-            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-accent-1); white-space:nowrap;" title="Dynamic Vault Source">⚡ ${row.qCount}</div>`;
-            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${row.qCount}</div>`;
+            const rawType = String(row.type || 'Task').toLowerCase();
+            const isExam = rawType.includes('exam');
+            const label = isExam ? 'Exam' : 'Task';
+            return `<div style="font-size:12px; color:${isExam ? '#38bdf8' : 'var(--grade-c)'}; white-space:nowrap; font-weight:500;">${label}</div>`;
           }
         },
         {
-          key: 'status', label: 'STATUS', sortable: true, width: '90px',
+          key: 'answerType', label: 'ANSWER', sortable: true, align: 'center', width: '95px',
           render: (val, row) => {
-            const st = String(row.status || 'draft').toUpperCase();
-            return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-2); text-transform:uppercase;">${st}</span>`;
+            const ans = String(row.answerType || 'Multiple Choice').replace(/[^\w\s]/gi, '').trim();
+            const titleCaseAns = ans.charAt(0).toUpperCase() + ans.slice(1);
+            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(titleCaseAns)}</div>`;
+          }
+        },
+        {
+          key: 'access', label: 'ORDER', sortable: true, align: 'center', width: '85px',
+          render: (val, row) => {
+            const isRand = String(row.access || '').toLowerCase().includes('rand');
+            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${isRand ? 'Random' : 'Sequential'}</div>`;
+          }
+        },
+        {
+          key: 'timeLimit', label: 'DURATION', sortable: true, align: 'center', width: '95px',
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.timeLimit} min</div>`
+        },
+        {
+          key: 'minScore', label: 'PASS SCORE', sortable: true, align: 'center', width: '95px',
+          render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.minScore}%</div>`
+        },
+        {
+          key: 'qCount', label: 'QUESTIONS', sortable: true, align: 'center', width: '120px',
+          render: (val, row) => {
+            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-accent-1); white-space:nowrap; font-variant-numeric:tabular-nums;" title="Dynamic Vault Source">${row.qCount} (Vault)</div>`;
+            return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.qCount}</div>`;
+          }
+        },
+        {
+          key: 'status', label: 'STATUS', sortable: true, align: 'center', width: '95px',
+          render: (val, row) => {
+            const st = String(row.status || 'draft').toLowerCase();
+            const displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
+            const isPub = st === 'published';
+            return `<span style="font-size:12px; font-weight:500; color:${isPub ? 'var(--grade-a)' : 'var(--clr-text-2)'};">${escapeHtml(displayStatus)}</span>`;
           }
         },
         {
           key: 'actions', label: '', sortable: false, width: '120px',
           render: (val, row) => `
             <div class="d-flex gap-1 justify-end align-center">
-              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 0.75rem;" title="View Results" onclick="window._filterTestResults='${row.id}'; window.loadSection('results');">&#128202;</button>
-              <button class="btn ${row.status === 'published' ? 'btn-danger' : 'btn-success'} edit-mode-only" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window._toggleClassTestPublish('${row.id}', '${row.status || 'draft'}')">
+              <button class="btn btn-ghost" style="padding: 2px 6px; font-size: 12px; display:inline-flex; align-items:center; justify-content:center;" title="View Results" onclick="window._filterTestResults='${row.id}'; window.loadSection('results');"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg></button>
+              <button class="btn ${row.status === 'published' ? 'btn-danger' : 'btn-success'} edit-mode-only" style="padding: 2px 6px; font-size: 12px;" onclick="window._toggleClassTestPublish('${row.id}', '${row.status || 'draft'}')">
                 ${row.status === 'published' ? 'Unpub' : 'Pub'}
               </button>
-              <button class="btn btn-secondary edit-mode-only" style="padding: 2px 6px; font-size: 0.75rem;" onclick="window.openTestBuilder('${row.id}')">Edit</button>
-              <button class="btn btn-secondary edit-mode-only" style="padding: 2px 6px; font-size: 0.75rem; color: var(--clr-accent-1);" onclick="window._deleteRecord('Tests', '${row.id}', '${escapeHtml(row.title)}')">Del</button>
+              <button class="btn btn-secondary edit-mode-only" style="padding: 2px 6px; font-size: 12px;" onclick="window.openTestBuilder('${row.id}')">Edit</button>
+              <button class="btn btn-secondary edit-mode-only" style="padding: 2px 6px; font-size: 12px; color: var(--clr-accent-1);" onclick="window._deleteRecord('Tests', '${row.id}', '${escapeHtml(row.title)}')">Del</button>
             </div>
           `
         }
@@ -864,12 +882,13 @@ export async function loadClassLearningPath(classId) {
     });
 
     const filterAll = document.getElementById('filter-all');
-    const filterQuizzes = document.getElementById('filter-quizzes') || document.getElementById('filter-tasks');
+    const filterTasks = document.getElementById('filter-tasks') || document.getElementById('filter-quizzes');
+    const filterQuizzes = filterTasks; // Backward compatibility
     const filterExams = document.getElementById('filter-exams') || document.getElementById('filter-tests');
     const filterTryouts = document.getElementById('filter-tryouts');
 
     const updateFilters = (btn, filterFn) => {
-      [filterAll, filterQuizzes, filterExams, filterTryouts].forEach(b => {
+      [filterAll, filterTasks, filterExams, filterTryouts].forEach(b => {
         if (!b) return;
         b.style.background = 'transparent';
         b.style.color = 'var(--clr-text)';
@@ -885,7 +904,7 @@ export async function loadClassLearningPath(classId) {
     };
 
     if (filterAll) filterAll.onclick = () => updateFilters(filterAll, () => true);
-    if (filterQuizzes) filterQuizzes.onclick = () => updateFilters(filterQuizzes, r => r.isQuiz || r.isTask);
+    if (filterTasks) filterTasks.onclick = () => updateFilters(filterTasks, r => r.isTask || r.isQuiz);
     if (filterExams) filterExams.onclick = () => updateFilters(filterExams, r => r.isExam || r.isTest);
     if (filterTryouts) filterTryouts.onclick = () => updateFilters(filterTryouts, r => r.isTryout);
 
@@ -898,10 +917,10 @@ export async function loadClassLearningPath(classId) {
 function formatAnswerType(type) {
   switch(type) {
     case 'speech_to_text':
-    case 'spoken': return '🎙️ Spoken';
+    case 'spoken': return `${getSvgIcon('mic', 12)} Spoken`;
     case 'multiple_choice':
-    case 'selection': return '✅ Selection';
-    case 'written': return '✏️ Written';
+    case 'selection': return `${getSvgIcon('check-circle', 12)} Selection`;
+    case 'written': return `${getSvgIcon('edit', 12)} Written`;
     default: return String(type || '');
   }
 }

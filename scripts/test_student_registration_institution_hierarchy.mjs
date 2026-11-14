@@ -33,7 +33,10 @@ global.document = {
 
 const PORT = 5592;
 const WORKSPACE_DIR = process.cwd();
-const ARTIFACT_DIR = path.resolve('C:/Users/ASUS/.gemini/antigravity/brain/db70e579-3b54-4473-9eed-e7677e0d8525');
+const ARTIFACT_DIR = process.env.ARTIFACT_DIR || path.resolve('C:/Users/Top/.gemini/antigravity/brain/7bc007b3-e82e-4248-9dc8-279c1604f828');
+if (!fs.existsSync(ARTIFACT_DIR)) {
+  fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
+}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -207,7 +210,7 @@ async function runTestSuite() {
 
     // 4a: Test submission without selecting Institution
     console.log('  Submitting form without Institution...');
-    await page.fill('#indiv-name', 'Test Student Validation');
+    await page.fill('#indiv-name', 'Top Validation');
     await page.selectOption('#indiv-inst', '');
     await page.click('#btn-save-indiv-student');
 
@@ -260,6 +263,7 @@ async function runTestSuite() {
   console.log('\n===============================================================');
   console.log('  🎉 ALL INSTITUTION-AWARE REGISTRATION VERIFICATIONS PASSED!');
   console.log('===============================================================\n');
+  process.exit(0);
 }
 
 runTestSuite().catch(err => {

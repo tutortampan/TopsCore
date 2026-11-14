@@ -7,6 +7,7 @@ import {
   GRADE_PALETTE,
   getGradeColor,
   getGradeColorByScore,
+  getInvertedGradeColor,
   getScoreColor,
   getGradeTheme,
   formatGradeBadgeHtml,
@@ -15,6 +16,7 @@ import {
   isWeeklyExam,
   computeMilestoneExamMastery
 } from './grading.js?v=20261106_v160';
+import { getSvgIcon } from './svg-icons.js?v=20261114_01';
 
 export {
   TOPSCORE_COLORS,
@@ -25,6 +27,7 @@ export {
   GRADE_PALETTE,
   getGradeColor,
   getGradeColorByScore,
+  getInvertedGradeColor,
   getScoreColor,
   getGradeTheme,
   formatGradeBadgeHtml,
@@ -38,6 +41,7 @@ if (typeof window !== 'undefined') {
   window.calculateGrade = calculateGrade;
   window.getGrade = calculateGrade;
   window.getGradeColorByScore = getGradeColorByScore;
+  window.getInvertedGradeColor = getInvertedGradeColor;
   window.getGradeColor = getGradeColor;
   window.getGradeSymbol = getGradeSymbol;
   window.GRADE_PALETTE = GRADE_PALETTE;
@@ -69,10 +73,15 @@ function getContainer() {
  * @param {number} duration ms
  */
 export function showToast(message, type = 'info', duration = 3000) {
-  const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+  const icons = {
+    success: getSvgIcon('check-circle', 14),
+    error: getSvgIcon('alert-triangle', 14),
+    info: getSvgIcon('activity', 14),
+    warning: getSvgIcon('alert-triangle', 14)
+  };
   const el = document.createElement('div');
   el.className = `toast toast-${type}`;
-  el.innerHTML = `<span>${icons[type]}</span><span>${message}</span>`;
+  el.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
   getContainer().appendChild(el);
 
   const remove = () => {
@@ -85,6 +94,19 @@ export function showToast(message, type = 'info', duration = 3000) {
 }
 if (typeof window !== 'undefined') {
   window.showToast = showToast;
+}
+
+export function getLoadingStateHtml(message = 'Loading...') {
+  const safeMsg = typeof escapeHtml === 'function' ? escapeHtml(message || 'Loading...') : (message || 'Loading...');
+  return `
+    <div class="topscore-loading-center">
+      <div class="spinner"></div>
+      <p class="loading-text">${safeMsg}</p>
+    </div>
+  `;
+}
+if (typeof window !== 'undefined') {
+  window.getLoadingStateHtml = getLoadingStateHtml;
 }
 
 // TOPS CORE — Loading overlay helpers
@@ -101,7 +123,7 @@ export function showLoading(message = 'Loading…') {
   }
   _overlay.innerHTML = `
     <div class="spinner"></div>
-    <p style="color:var(--clr-text-2);font-size:0.9rem;">${message}</p>
+    <p style="color:var(--clr-text-2);font-size:12px;">${message}</p>
   `;
   _overlay.style.display = 'flex';
 }
@@ -244,11 +266,13 @@ export function scrollTop(el) {
 }
 
 
-window.addEventListener('unhandledrejection', function(event) {
-  console.error('Unhandled Promise Rejection:', event.reason);
-  if (typeof hideLoading === 'function') hideLoading();
-  if (typeof showToast === 'function') {
-    showToast('A background process failed. Your data is safe. Please refresh if the screen is stuck.', 'warning', 5000);
-  }
-});
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', function(event) {
+    console.error('Unhandled Promise Rejection:', event.reason);
+    if (typeof hideLoading === 'function') hideLoading();
+    if (typeof showToast === 'function') {
+      showToast('A background process failed. Your data is safe. Please refresh if the screen is stuck.', 'warning', 5000);
+    }
+  });
+}
 

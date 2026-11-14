@@ -44,6 +44,87 @@ export function calculateColumnAutoWidth(th, cells = [], footerCells = []) {
   return Math.max(50, Math.min(550, Math.ceil(maxWidth)));
 }
 
+/**
+ * SSOT 3-Tier Header Abbreviation Dictionary (ui-invariants.md §4.2.2)
+ * Full Form -> 5-Letter Medium Form -> 3-Letter Micro Form
+ */
+export const HEADER_ABBREVIATIONS = {
+  'LEVEL': { full: 'LEVEL', medium: 'LEVEL', short: 'LVL' },
+  'PHOTO': { full: 'PHOTO', medium: 'PHOTO', short: 'PHT' },
+  'GENDER': { full: 'GENDER', medium: 'GNDER', short: 'GND' },
+  'NAME': { full: 'NAME', medium: 'NAME', short: 'NM' },
+  'STUDENT NAME': { full: 'STUDENT NAME', medium: 'STUDT', short: 'STD' },
+  'DATE OF BIRTH': { full: 'DOB', medium: 'DOB', short: 'DOB' },
+  'DOB': { full: 'DOB', medium: 'DOB', short: 'DOB' },
+  'BIRTH DATE': { full: 'DOB', medium: 'DOB', short: 'DOB' },
+  'BIRTH': { full: 'DOB', medium: 'DOB', short: 'DOB' },
+  'AGE': { full: 'AGE', medium: 'AGE', short: 'AGE' },
+  'EDUCATION': { full: 'EDUCATION', medium: 'EDUCT', short: 'EDU' },
+  'ADDRESS': { full: 'ADDRESS', medium: 'ADDR', short: 'ADR' },
+  'REGENCY': { full: 'REGENCY', medium: 'RGNCY', short: 'REG' },
+  'CITY / REGENCY': { full: 'REGENCY', medium: 'RGNCY', short: 'REG' },
+  'CITY/REGENCY': { full: 'REGENCY', medium: 'RGNCY', short: 'REG' },
+  'CITY': { full: 'REGENCY', medium: 'RGNCY', short: 'REG' },
+  'DISTRICT': { full: 'DISTRICT', medium: 'DISTR', short: 'DST' },
+  'VILLAGE': { full: 'VILLAGE', medium: 'VILLG', short: 'VLG' },
+  'CITY / DISTRICT': { full: 'REGENCY', medium: 'REGEN', short: 'RGC' },
+  'PROVINCE': { full: 'PROVINCE', medium: 'PROVN', short: 'PRV' },
+  'STATUS': { full: 'STATUS', medium: 'STATS', short: 'STS' },
+  'ACTION': { full: 'ACTION', medium: 'ACTON', short: 'ACT' },
+  'ACTIONS': { full: 'ACTIONS', medium: 'ACTON', short: 'ACT' },
+  'PROGRESS': { full: 'PROGRESS', medium: 'PRGRS', short: 'PGS' },
+  'SCORE': { full: 'SCORE', medium: 'SCORE', short: 'SCR' },
+  'POINTS': { full: 'POINTS', medium: 'POINT', short: 'PTS' },
+  'GRADE': { full: 'GRADE', medium: 'GRADE', short: 'GRD' },
+  'BATCH': { full: 'BATCH', medium: 'BATCH', short: 'BTC' },
+  'PROGRAM': { full: 'PROGRAM', medium: 'PROGM', short: 'PRG' },
+  'INSTITUTION': { full: 'INSTITUTION', medium: 'INSTN', short: 'INS' },
+  'AVERAGE': { full: 'AVERAGE', medium: 'AVERG', short: 'AVG' },
+  'ATTENDANCE': { full: 'ATTENDANCE', medium: 'ATTND', short: 'ATT' },
+  'PERCENTAGE': { full: 'PERCENTAGE', medium: 'PERCT', short: 'PCT' },
+  'REMEDIAL': { full: 'REMEDIAL', medium: 'REMED', short: 'RMD' },
+  'QUESTIONS': { full: 'QUESTIONS', medium: 'QUEST', short: 'QST' },
+  'DURATION': { full: 'DURATION', medium: 'DURAT', short: 'DRT' },
+  'TOTAL': { full: 'TOTAL', medium: 'TOTAL', short: 'TTL' },
+  'VOCABULARY': { full: 'VOCABULARY', medium: 'VOCAB', short: 'VCB' },
+  'SPEAKING': { full: 'SPEAKING', medium: 'SPEAK', short: 'SPK' },
+  'BASIC ENGLISH': { full: 'BASIC ENGLISH', medium: 'BASIC', short: 'BSC' },
+  'STORYTELLING': { full: 'STORYTELLING', medium: 'STORY', short: 'STR' },
+  'GRAMMAR': { full: 'GRAMMAR', medium: 'GRAMR', short: 'GRM' }
+};
+
+/**
+ * Dynamically resolves header text based on column width (in pixels)
+ * Width < 55px -> 3-letter micro abbreviation
+ * Width < 85px -> 5-letter medium abbreviation
+ * Width >= 85px -> full title
+ */
+export function resolveHeaderLabel(label, widthPx, shortOverride = null, microOverride = null) {
+  let cleanLabel = String(label || '').trim();
+  if (cleanLabel.includes('<')) {
+    cleanLabel = cleanLabel.replace(/<[^>]*>/g, '').trim();
+  }
+  const key = cleanLabel.toUpperCase();
+  const rule = HEADER_ABBREVIATIONS[key];
+
+  if (widthPx != null && widthPx < 55) {
+    if (microOverride) return microOverride;
+    if (rule && rule.short) return rule.short;
+  }
+  if (widthPx != null && widthPx < 85) {
+    if (shortOverride) return shortOverride;
+    if (rule && rule.medium) return rule.medium;
+  }
+
+  if (rule) return rule.full;
+  return cleanLabel;
+}
+
+if (typeof window !== 'undefined') {
+  window.HEADER_ABBREVIATIONS = HEADER_ABBREVIATIONS;
+  window.resolveHeaderLabel = resolveHeaderLabel;
+}
+
 export class DataGrid {
   constructor({ container, tableId = null, data = [], columns = [], pageSize = 50, searchKeys = [], emptyStateHtml = '<p>No records found.</p>', bulkActions = false, onBulkAction = null, onRowClick = null, stickyActionCol = false, sortComparator = null, initialSortKey = null, initialSortAsc = true, superHeaders = null, summaryRow = null, tableLayout = null, rowClassName = null, hideToolbar = false, autoFitOnMount = false }) {
     this.container = typeof container === 'string' ? document.getElementById(container) : container;
@@ -79,7 +160,7 @@ export class DataGrid {
     this.summaryRow = summaryRow;
     this.tableLayout = tableLayout;
     this.hideToolbar = Boolean(hideToolbar || arguments[0]?.hideToolbar);
-    
+
     if (this.sortKey) this.sortData();
     this.init();
   }
@@ -92,7 +173,7 @@ export class DataGrid {
         <div class="datagrid-search" style="flex:1; min-width:200px; display:flex; gap:10px; align-items:center;">
           <div class="datagrid-search-wrap" style="position:relative; max-width:320px; width:100%;">
             <input type="text" class="form-control datagrid-search-input" placeholder="Search... (Ctrl+K)" style="width:100%; padding-right:2rem;" />
-            <button type="button" class="datagrid-search-clear hidden" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--clr-text-3); cursor:pointer; font-size:0.85rem; padding:2px 4px;" title="Clear search">✕</button>
+            <button type="button" class="datagrid-search-clear hidden" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:transparent; border:none; color:var(--clr-text-3); cursor:pointer; font-size: 12px; padding:2px 4px;" title="Clear search">✕</button>
           </div>
           <div class="datagrid-columns-dropdown" style="position:relative;">
             <button class="btn btn-secondary btn-sm datagrid-cols-btn" style="height:100%;">Columns</button>
@@ -103,7 +184,7 @@ export class DataGrid {
         <div class="datagrid-actions" style="display:flex; gap:10px; align-items:center;">
           <span class="datagrid-count text-muted text-sm" style="margin-right:10px;"></span>
           ${this.bulkActions ? (
-             this.customBulkActions.length > 0 
+             this.customBulkActions.length > 0
               ? this.customBulkActions.map((btn, i) => `<button class="btn ${btn.className || 'btn-secondary'} btn-sm datagrid-custom-bulk-btn hidden" data-idx="${i}">${btn.label} (<span class="datagrid-bulk-count">0</span>)</button>`).join(' ')
               : `<button class="btn btn-secondary btn-sm datagrid-bulk-btn hidden">Bulk Action (<span class="datagrid-bulk-count">0</span>)</button>`
           ) : ''}
@@ -233,7 +314,7 @@ export class DataGrid {
     // Update columns menu if present
     if (this.colsMenu) {
       this.colsMenu.innerHTML = this.columns.map((col, idx) => `
-        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; font-size:0.85rem; cursor:pointer;">
+        <label style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem; font-size: 12px; cursor:pointer;">
           <input type="checkbox" class="datagrid-col-toggle" data-idx="${idx}" ${!col.hidden ? 'checked' : ''} />
           ${col.label}
         </label>
@@ -257,22 +338,74 @@ export class DataGrid {
         colgroupHtml += '<col style="width:40px;">';
       }
       visibleCols.forEach(col => {
-        colgroupHtml += `<col style="${col.width ? `width:${col.width};` : ''}">`;
+        const wStyle = col.width ? `width:${col.width};` : (col.minWidth ? `min-width:${col.minWidth};` : '');
+        colgroupHtml += `<col style="${wStyle}">`;
       });
       this.colgroup.innerHTML = colgroupHtml;
     }
 
     let superHtml = '';
     const hasSuperHdr = (this.superHeaders && this.superHeaders.length > 0);
+    const spannedKeys = new Set();
+    this.dividerColKeys = new Set();
+
     if (hasSuperHdr) {
+      // Calculate boundary column keys across super-headers
+      let colIdxCounter = 0;
+      this.superHeaders.forEach((sh) => {
+        const span = sh.colSpan || 1;
+        colIdxCounter += span;
+        const boundaryIdx = colIdxCounter - 1;
+        if (boundaryIdx >= 0 && boundaryIdx < visibleCols.length - 1) {
+          const boundaryCol = visibleCols[boundaryIdx];
+          if (boundaryCol && boundaryCol.key) {
+            this.dividerColKeys.add(boundaryCol.key);
+          }
+        }
+      });
+
       this.thead.classList.add('has-super-headers');
       superHtml = '<tr class="datagrid-super-header-row">';
       if (this.bulkActions) {
-        superHtml += '<th style="position:sticky; top:0; left:0; z-index:25; background:var(--fm-bg-panel,#0f172a); border-bottom:1px solid rgba(255,255,255,0.12);"></th>';
+        superHtml += '<th rowspan="2" style="width:40px; text-align:center; position:sticky; top:0; left:0; z-index:26; background:var(--fm-bg-panel,#0f172a); border-bottom:1px solid rgba(255,255,255,0.12); height:60px !important; line-height:60px !important; vertical-align:middle !important;"><input type="checkbox" class="datagrid-select-all" /></th>';
       }
-      this.superHeaders.forEach(sh => {
+      this.superHeaders.forEach((sh, shIdx) => {
+        if (sh.rowSpan === 2 && sh.key) {
+          const col = visibleCols.find(c => c.key === sh.key);
+          if (col) {
+            spannedKeys.add(col.key);
+            const visibleIdx = visibleCols.indexOf(col);
+            const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
+            const stickyStyle = isStickyRight ? 'position:sticky; top:0; right:0; z-index:25; background:var(--fm-bg-panel,#0f172a);' : '';
+            const widthVal = col.width || col.minWidth || '';
+            const widthNum = parseInt(widthVal, 10) || null;
+            const displayLabel = resolveHeaderLabel(col.label, widthNum, col.shortLabel, col.microLabel);
+            const widthStyle = col.width ? `width:${col.width};` : (col.minWidth ? `min-width:${col.minWidth};` : '');
+            const isDivider = this.dividerColKeys && this.dividerColKeys.has(col.key);
+            const dividerClass = isDivider ? ' super-hdr-divider' : '';
+            const customClass = (col.className ? ` ${col.className}` : '') + dividerClass;
+            const rawTitle = col.headerTitle || col.title || col.label;
+            const titleAttr = rawTitle ? ` title="${String(rawTitle).replace(/"/g, '&quot;')}"` : '';
+            const align = col.align || 'left';
+            superHtml += `
+              <th rowspan="2"
+                  class="text-center ${col.sortable ? 'datagrid-sortable' : ''}${customClass} datagrid-rowspan-2-header"
+                  data-key="${col.key || ''}"
+                  data-idx="${this.columns.indexOf(col)}"
+                  draggable="true"${titleAttr}
+                  style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} height:60px !important; line-height:60px !important; vertical-align:middle !important; font-size:12px !important; font-weight:700 !important; text-align:center !important; ${sh.style || ''}">
+                <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
+                  <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
+                  ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 10px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
+                </div>
+              </th>
+            `;
+            return;
+          }
+        }
         const colSpanAttr = sh.colSpan ? ` colspan="${sh.colSpan}"` : '';
-        const cls = sh.className ? ` class="${sh.className}"` : '';
+        const baseCls = sh.className ? (sh.className.includes('super-hdr') ? sh.className : `super-hdr ${sh.className}`) : 'super-hdr';
+        const cls = ` class="${baseCls}"`;
         const st = sh.style ? ` style="${sh.style}"` : '';
         superHtml += `<th${colSpanAttr}${cls}${st}>${sh.label}</th>`;
       });
@@ -282,29 +415,35 @@ export class DataGrid {
     }
 
     let html = '<tr>';
-    if (this.bulkActions) {
-      const topOffset = hasSuperHdr ? 'top:26px;' : 'top:0;';
-      const zIdx = hasSuperHdr ? '24' : '15';
-      html += `<th style="width:40px; text-align:center; position:sticky; ${topOffset} left:0; z-index:${zIdx}; background:var(--fm-bg-panel,#0f172a);"><input type="checkbox" class="datagrid-select-all" /></th>`;
+    if (this.bulkActions && !hasSuperHdr) {
+      html += `<th style="width:40px; text-align:center; position:sticky; top:0; left:0; z-index:15; background:var(--fm-bg-panel,#0f172a);"><input type="checkbox" class="datagrid-select-all" /></th>`;
     }
-    
+
     visibleCols.forEach((col, visibleIdx) => {
-      const topOffset = hasSuperHdr ? 'top:26px;' : 'top:0;';
+      if (spannedKeys.has(col.key)) return;
+
+      const topOffset = hasSuperHdr ? 'top:30px;' : 'top:0;';
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
       const stickyStyle = isStickyRight ? `position:sticky; ${topOffset} right:0; z-index:15; background:var(--fm-bg-panel,#0f172a);` : '';
-      const widthStyle = col.width ? `width:${col.width};` : '';
-      const customClass = col.className ? ` ${col.className}` : '';
-      const rawTitle = col.headerTitle || col.title;
+      const widthVal = col.width || col.minWidth || '';
+      const widthNum = parseInt(widthVal, 10) || null;
+      const displayLabel = resolveHeaderLabel(col.label, widthNum, col.shortLabel, col.microLabel);
+      const widthStyle = col.width ? `width:${col.width};` : (col.minWidth ? `min-width:${col.minWidth};` : '');
+      const isDivider = this.dividerColKeys && this.dividerColKeys.has(col.key);
+      const dividerClass = isDivider ? ' super-hdr-divider' : '';
+      const customClass = (col.className ? ` ${col.className}` : '') + dividerClass;
+      const rawTitle = col.headerTitle || col.title || col.label;
       const titleAttr = rawTitle ? ` title="${String(rawTitle).replace(/"/g, '&quot;')}"` : '';
+      const subHdrWeight = hasSuperHdr ? 'font-weight:400 !important;' : '';
       html += `
-        <th class="${col.align ? `text-${col.align}` : 'text-left'} ${col.sortable ? 'datagrid-sortable' : ''}${customClass}" 
-            data-key="${col.key || ''}" 
+        <th class="text-center ${col.sortable ? 'datagrid-sortable' : ''}${customClass}${hasSuperHdr ? ' datagrid-sub-header' : ''}"
+            data-key="${col.key || ''}"
             data-idx="${this.columns.indexOf(col)}"
             draggable="true"${titleAttr}
-            style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle}">
-          <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:4px; width:100%; white-space:nowrap; vertical-align:middle;">
-            <span class="datagrid-header-label" style="display:inline-flex; align-items:center;">${col.label}</span>
-            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size:10px; line-height:1; color:#38bdf8; margin-left:4px;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
+            style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${subHdrWeight} text-align:center !important;">
+          <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
+            <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
+            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 10px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
           </div>
         </th>
       `;
@@ -390,7 +529,14 @@ export class DataGrid {
     if (!tableEl || !colgroup) return;
 
     const cols = colgroup.querySelectorAll('col');
-    const ths = Array.from(this.thead?.querySelectorAll('tr:not(.datagrid-super-header-row) th') || []);
+    const visibleCols = this.columns.filter(c => !c.hidden);
+    const ths = visibleCols.map(col => {
+      if (col.key) {
+        const found = this.thead?.querySelector(`th[data-key="${col.key}"]`);
+        if (found) return found;
+      }
+      return this.thead?.querySelector(`th[data-idx="${this.columns.indexOf(col)}"]`);
+    }).filter(Boolean);
     if (!ths.length) return;
 
     const colOffset = this.bulkActions ? 1 : 0;
@@ -440,19 +586,42 @@ export class DataGrid {
 
     // Apply saved widths to colgroup <col> elements and matching <th>
     const cols = colgroup.querySelectorAll('col');
-    const ths = Array.from(this.thead?.querySelectorAll('tr:not(.datagrid-super-header-row) th') || []);
+    const visibleCols = this.columns.filter(c => !c.hidden);
+    const ths = visibleCols.map(col => {
+      if (col.key) {
+        const found = this.thead?.querySelector(`th[data-key="${col.key}"]`);
+        if (found) return found;
+      }
+      return this.thead?.querySelector(`th[data-idx="${this.columns.indexOf(col)}"]`);
+    }).filter(Boolean);
     if (!ths.length) return;
 
     const colOffset = this.bulkActions ? 1 : 0;
-    const hasCustomSavedWidths = Object.keys(savedWidths).length > 0;
+    let hasCustomSavedWidths = Object.keys(savedWidths).length > 0;
+
+    // Discard saved widths if column count doesn't match current visible columns (e.g. schema updated)
+    if (hasCustomSavedWidths && Object.keys(savedWidths).length !== visibleCols.length) {
+      savedWidths = {};
+      hasCustomSavedWidths = false;
+      try { localStorage.removeItem(storageKey); } catch (e) {}
+    }
 
     if (hasCustomSavedWidths) {
       cols.forEach((col, i) => {
+        const colDef = visibleCols[i - colOffset];
+        // If it's a §TABLE-FLEX-PRIMARY column (has minWidth but no explicit width), let it flex
+        if (colDef && colDef.minWidth && !colDef.width) {
+          return;
+        }
         if (savedWidths[i] != null) {
           col.style.width = savedWidths[i] + 'px';
           const thIdx = i - colOffset;
           if (thIdx >= 0 && ths[thIdx]) {
             ths[thIdx].style.width = savedWidths[i] + 'px';
+            const labelSpan = ths[thIdx].querySelector('.datagrid-header-label');
+            if (labelSpan && colDef) {
+              labelSpan.textContent = resolveHeaderLabel(colDef.label, savedWidths[i], colDef.shortLabel, colDef.microLabel);
+            }
           }
         }
       });
@@ -462,8 +631,8 @@ export class DataGrid {
 
     // Attach resize handles to each header th
     ths.forEach((th, thIdx) => {
-      // Skip super-headers (they span multiple columns)
-      if (th.closest('.datagrid-super-header-row')) return;
+      // Skip super-headers that span multiple columns (allow rowspan=2 standalone headers)
+      if (th.closest('.datagrid-super-header-row') && !th.classList.contains('datagrid-rowspan-2-header')) return;
 
       // Skip existing handles
       if (th.querySelector('.col-resize-handle')) return;
@@ -497,9 +666,14 @@ export class DataGrid {
 
         const onMouseMove = (me) => {
           const delta = me.clientX - startX;
-          const newWidth = Math.max(40, Math.min(600, startWidth + delta));
+          const newWidth = Math.max(30, Math.min(600, startWidth + delta));
           if (colEl) colEl.style.width = newWidth + 'px';
           th.style.width = newWidth + 'px';
+          const labelSpan = th.querySelector('.datagrid-header-label');
+          const colDef = visibleCols[thIdx];
+          if (labelSpan && colDef) {
+            labelSpan.textContent = resolveHeaderLabel(colDef.label, newWidth, colDef.shortLabel, colDef.microLabel);
+          }
         };
 
         const onMouseUp = (me) => {
@@ -531,6 +705,11 @@ export class DataGrid {
         const autoWidth = calculateColumnAutoWidth(th, cells, footerCells);
         colEl.style.width = autoWidth + 'px';
         th.style.width = autoWidth + 'px';
+        const labelSpan = th.querySelector('.datagrid-header-label');
+        const colDef = visibleCols[thIdx];
+        if (labelSpan && colDef) {
+          labelSpan.textContent = resolveHeaderLabel(colDef.label, autoWidth, colDef.shortLabel, colDef.microLabel);
+        }
 
         // Save
         const currentWidths = {};
@@ -583,7 +762,7 @@ export class DataGrid {
       let valB = b[this.sortKey];
       if (typeof valA === 'string') valA = valA.toLowerCase();
       if (typeof valB === 'string') valB = valB.toLowerCase();
-      
+
       if (valA < valB) return this.sortAsc ? -1 : 1;
       if (valA > valB) return this.sortAsc ? 1 : -1;
       return 0;
@@ -626,7 +805,7 @@ export class DataGrid {
 
   updateBulkUI() {
     if (!this.bulkActions) return;
-    
+
     if (this.customBulkActions && this.customBulkActions.length > 0) {
       const btns = this.container.querySelectorAll('.datagrid-custom-bulk-btn');
       const counts = this.container.querySelectorAll('.datagrid-bulk-count');
@@ -657,7 +836,7 @@ export class DataGrid {
     if (!this.tbody) return;
     this.tbody.innerHTML = '';
     const visibleCols = this.columns.filter(c => !c.hidden);
-    
+
     if (this.filteredData.length === 0) {
       const colSpan = visibleCols.length + (this.bulkActions ? 1 : 0);
       this.tbody.innerHTML = `<tr><td colspan="${colSpan}">${this.emptyStateHtml}</td></tr>`;
@@ -667,10 +846,13 @@ export class DataGrid {
 
     const totalPages = Math.ceil(this.filteredData.length / this.pageSize);
     if (this.currentPage > totalPages) this.currentPage = totalPages;
-    
+
     const start = (this.currentPage - 1) * this.pageSize;
     const end = start + this.pageSize;
     const pageData = this.filteredData.slice(start, end);
+
+    // High-performance batched DOM insertion via DocumentFragment
+    const fragment = typeof document !== 'undefined' ? document.createDocumentFragment() : null;
 
     pageData.forEach(row => {
       const tr = document.createElement('tr');
@@ -705,12 +887,26 @@ export class DataGrid {
 
       visibleCols.forEach((col, visibleIdx) => {
         const td = document.createElement('td');
-        if (col.align) td.classList.add(`text-${col.align}`);
+        if (col.align) {
+          td.classList.add(`text-${col.align}`);
+        } else {
+          // Rule 4.2.4: Text cells default to left; numeric/codes/status/duration default to center
+          const keyLower = String(col.key || '').toLowerCase();
+          const labelLower = String(col.label || '').toLowerCase();
+          const isLeft = keyLower.includes('name') || keyLower.includes('title') ||
+                         keyLower.includes('indonesian') || keyLower.includes('english') ||
+                         keyLower.includes('meaning') || keyLower.includes('desc') ||
+                         labelLower.includes('name') || labelLower.includes('title');
+          td.classList.add(isLeft ? 'text-left' : 'text-center');
+        }
         if (col.className) td.className += ' ' + col.className;
+        if (this.dividerColKeys && this.dividerColKeys.has(col.key) && !td.classList.contains('super-hdr-divider')) {
+          td.classList.add('super-hdr-divider');
+        }
         if (col.width) {
           td.style.width = col.width;
         }
-        
+
         const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
         if (isStickyRight) {
           td.style.position = 'sticky';
@@ -759,8 +955,16 @@ export class DataGrid {
         }
         tr.appendChild(td);
       });
-      this.tbody.appendChild(tr);
+      if (fragment) {
+        fragment.appendChild(tr);
+      } else {
+        this.tbody.appendChild(tr);
+      }
     });
+
+    if (fragment) {
+      this.tbody.appendChild(fragment);
+    }
 
     if (this.bulkActions && this.selectAllCb) {
       this.selectAllCb.checked = pageData.length > 0 && pageData.every(r => this.selectedIds.has(String(r.id)));
@@ -771,6 +975,16 @@ export class DataGrid {
         this.tfoot.innerHTML = this.summaryRow(visibleCols, this.filteredData, pageData);
       } else if (typeof this.summaryRow === 'string') {
         this.tfoot.innerHTML = this.summaryRow;
+      }
+      if (this.dividerColKeys && this.dividerColKeys.size > 0) {
+        const footRows = this.tfoot.querySelectorAll('tr');
+        footRows.forEach(tr => {
+          visibleCols.forEach((col, idx) => {
+            if (this.dividerColKeys.has(col.key) && tr.cells[idx] && !tr.cells[idx].classList.contains('super-hdr-divider')) {
+              tr.cells[idx].classList.add('super-hdr-divider');
+            }
+          });
+        });
       }
     } else if (this.tfoot) {
       this.tfoot.innerHTML = '';
@@ -816,7 +1030,7 @@ export class DataGrid {
 
     let startPage = Math.max(1, this.currentPage - 2);
     let endPage = Math.min(totalPages, this.currentPage + 2);
-    
+
     if (this.currentPage <= 2) endPage = Math.min(5, totalPages);
     if (this.currentPage >= totalPages - 1) startPage = Math.max(1, totalPages - 4);
 
@@ -845,15 +1059,22 @@ export class DataGrid {
 }
 
 // Authoritative Universal Column Resizer for Custom Tables (Rule 31 / Pillar 15)
-window.initColumnResize = function(tableElement, storageKey) {
+export function initColumnResize(tableElement, storageKey) {
   if (!tableElement) return;
-  const ths = tableElement.querySelectorAll('thead th:not(.super-hdr):not(.super-th):not([colspan])');
+  const ths = tableElement.querySelectorAll('thead th:not(.super-hdr):not(.super-th):not([colspan]):not([rowspan])');
   if (!ths || !ths.length) return;
   const key = storageKey || `topscore_col_widths_${tableElement.id || 'custom_table'}`;
   let savedWidths = {};
   try { savedWidths = JSON.parse(localStorage.getItem(key) || '{}'); } catch(e) {}
   ths.forEach((th, idx) => {
-    if (savedWidths[idx]) th.style.width = savedWidths[idx] + 'px';
+    if (savedWidths[idx]) {
+      th.style.width = savedWidths[idx] + 'px';
+      const labelSpan = th.querySelector('.datagrid-header-label');
+      if (labelSpan) {
+        const full = th.getAttribute('title') || labelSpan.getAttribute('data-full') || labelSpan.textContent;
+        labelSpan.textContent = resolveHeaderLabel(full, savedWidths[idx]);
+      }
+    }
     if (th.querySelector('.col-resize-handle')) return;
     if (getComputedStyle(th).position === 'static') th.style.position = 'relative';
     const handle = document.createElement('div');
@@ -866,8 +1087,13 @@ window.initColumnResize = function(tableElement, storageKey) {
       const startWidth = th.getBoundingClientRect().width;
       handle.classList.add('dragging');
       const onMove = (me) => {
-        const newW = Math.max(40, Math.min(600, startWidth + (me.clientX - startX)));
+        const newW = Math.max(30, Math.min(600, startWidth + (me.clientX - startX)));
         th.style.width = newW + 'px';
+        const labelSpan = th.querySelector('.datagrid-header-label');
+        if (labelSpan) {
+          const full = th.getAttribute('title') || labelSpan.getAttribute('data-full') || labelSpan.textContent;
+          labelSpan.textContent = resolveHeaderLabel(full, newW);
+        }
       };
       const onUp = () => {
         handle.classList.remove('dragging');
@@ -886,24 +1112,39 @@ window.initColumnResize = function(tableElement, storageKey) {
       const footerCells = Array.from(tableElement.querySelectorAll('tfoot tr, .datagrid-summary-row')).map(r => r.cells[idx]).filter(Boolean);
       const autoW = calculateColumnAutoWidth(th, cells, footerCells);
       th.style.width = autoW + 'px';
+      const labelSpan = th.querySelector('.datagrid-header-label');
+      if (labelSpan) {
+        const full = th.getAttribute('title') || labelSpan.getAttribute('data-full') || labelSpan.textContent;
+        labelSpan.textContent = resolveHeaderLabel(full, autoW);
+      }
       const curWidths = {};
       ths.forEach((t, i) => { const w = parseInt(t.style.width); if (w) curWidths[i] = w; });
       try { localStorage.setItem(key, JSON.stringify(curWidths)); } catch (_) {}
     });
   });
-};
+}
+
+if (typeof window !== 'undefined') {
+  window.initColumnResize = initColumnResize;
+}
 
 // Universal auto-attach observer so all tables across all screens get column resizing (Rule 2.38 / Pillar 15)
-window.initAllTablesColumnResize = function() {
+export function initAllTablesColumnResize() {
   if (typeof document === 'undefined') return;
   const tables = document.querySelectorAll('#admin-console table:not(.no-resize), .table-wrap table');
   tables.forEach(table => {
     if (!table.dataset.colResizeInit) {
       table.dataset.colResizeInit = 'true';
-      window.initColumnResize(table);
+      if (typeof window !== 'undefined' && window.initColumnResize) {
+        window.initColumnResize(table);
+      }
     }
   });
-};
+}
+
+if (typeof window !== 'undefined') {
+  window.initAllTablesColumnResize = initAllTablesColumnResize;
+}
 
 if (typeof document !== 'undefined') {
   // Observe DOM additions in #admin-console to automatically attach resize handles

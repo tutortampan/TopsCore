@@ -31,7 +31,7 @@ import {
   addAdditionalMember,
   toLevelLetter,
   labelAttemptRemedial
-} from '../api.js?v=20261106_v160';
+} from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading, getGrade, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS } from '../app.js?v=20261106_v160';
 import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-parser.js?v=20261106_v160';
 import { openStudentProfile } from './student-management.js?v=20261106_v160';
@@ -64,7 +64,7 @@ export async function renderTopics(area) {
       </div>
 
       ${window._filterClassId ? `
-        <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
+        <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size: 12px;">
           <span>&#128209; Filtered by Class: <strong>${escapeHtml(window._filterClassName || 'Selected Class')}</strong></span>
           <button class="btn btn-ghost btn-xs" id="clear-subj-filter-btn" style="text-decoration:underline;color:#93c5fd;">Show All Classes</button>
         </div>
@@ -72,12 +72,12 @@ export async function renderTopics(area) {
 
       <div class="card p-3 mb-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
         <div class="d-flex align-center gap-3 flex-wrap">
-          <label class="form-label mb-0" style="font-size:0.85rem;">Filter by Class:</label>
+          <label class="form-label mb-0" style="font-size: 12px;">Filter by Class:</label>
           <select class="form-control" id="topic-Class-filter" style="max-width:260px;">
             <option value="">All Classes (${Classes.length})</option>
             ${Classes.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join('')}
           </select>
-          <span class="text-muted" style="font-size:0.85rem;margin-left:auto;">Total Topics: <strong id="topics-count">${topics.length}</strong></span>
+          <span class="text-muted" style="font-size: 12px;margin-left:auto;">Total Topics: <strong id="topics-count">${topics.length}</strong></span>
         </div>
       </div>
 
@@ -85,12 +85,12 @@ export async function renderTopics(area) {
         <table class="data-table" id="topics-table">
           <thead>
             <tr>
-              <th>Topic Name</th>
-              <th>Code</th>
-              <th>Class</th>
-              <th>Status</th>
-              <th>Created</th>
-              <th style="text-align:right;">Actions</th>
+              <th>TOPIC NAME</th>
+              <th>CODE</th>
+              <th>CLASS</th>
+              <th>STATUS</th>
+              <th>CREATED</th>
+              <th style="text-align:right;">ACTIONS</th>
             </tr>
           </thead>
           <tbody id="topics-tbody">
@@ -185,12 +185,12 @@ function renderTopicRows(topicsList) {
           ${escapeHtml(t.status || 'active')}
         </span>
       </td>
-      <td style="font-size:0.8rem;color:var(--clr-text-muted);">${new Date(t.created_at).toLocaleDateString()}</td>
+      <td style="font-size: 12px;color:var(--clr-text-muted);">${new Date(t.created_at).toLocaleDateString()}</td>
       <td style="text-align:right;">
         <div class="d-flex gap-1 justify-end">
           <button class="btn btn-outline btn-xs btn-nav-questions" data-id="${t.id}" data-name="${escapeHtml(t.name)}" title="View Questions in this Topic">Questions &rarr;</button>
-          <button class="btn btn-ghost btn-sm btn-edit-topic edit-mode-only" data-id="${t.id}" title="Edit Topic">&#9999;&#65039;</button>
-          <button class="btn btn-ghost btn-sm text-danger btn-del-topic edit-mode-only" data-id="${t.id}" title="Delete Topic">&#128465;&#65039;</button>
+          <button class="btn btn-secondary btn-xs btn-edit-topic edit-mode-only" data-id="${t.id}" title="Edit Topic">Edit</button>
+          <button class="btn btn-danger btn-xs btn-del-topic edit-mode-only" data-id="${t.id}" title="Delete Topic" style="margin-left:4px;">Del</button>
         </div>
       </td>
     </tr>
@@ -204,8 +204,8 @@ function openTopicModal(topic, Classes, onSaved) {
   modal.innerHTML = `
     <div class="modal-content" style="max-width:480px;">
       <div class="modal-header d-flex justify-between align-center p-3" style="border-bottom:1px solid var(--clr-border);">
-        <h3 class="modal-title" style="margin:0;font-size:1.2rem;">${isEdit ? 'Edit Topic' : 'Add New Topic'}</h3>
-        <button class="btn btn-ghost btn-sm" id="close-topic-modal" style="font-size:1.2rem;">&times;</button>
+        <h3 class="modal-title" style="margin:0;font-size: 16px;">${isEdit ? 'Edit Topic' : 'Add New Topic'}</h3>
+        <button class="btn btn-ghost btn-sm" id="close-topic-modal" style="font-size: 16px;">&times;</button>
       </div>
       <div class="modal-body p-4">
         <div class="form-group mb-3">
@@ -298,14 +298,14 @@ export async function renderWordTypes(area) {
       </div>
 
       <div class="card p-4 mb-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
-        <h4 style="font-size:0.95rem;margin-bottom:0.75rem;">+ Add Custom Word Type</h4>
+        <h4 style="font-size: 16px;margin-bottom:0.75rem;">+ Add Custom Word Type</h4>
         <div class="d-flex gap-2 flex-wrap" style="max-width:500px;">
           <input type="text" class="form-control" id="new-word-type-input" placeholder="e.g. Phrasal Verb, Slang, Collocation" />
           <button class="btn btn-primary btn-sm" id="btn-add-word-type">+ Add</button>
         </div>
 
         <div class="mt-4">
-          <label class="form-label" style="font-size:0.8rem;color:var(--clr-text-muted);">Quick Suggestions (Click to add):</label>
+          <label class="form-label" style="font-size: 12px;color:var(--clr-text-muted);">Quick Suggestions (Click to add):</label>
           <div class="d-flex gap-2 flex-wrap">
             ${systemTypes.map(st => {
       const exists = wordTypes.some(wt => wt.name.toLowerCase() === st.toLowerCase());
@@ -323,23 +323,23 @@ export async function renderWordTypes(area) {
         <table class="data-table">
           <thead>
             <tr>
-              <th>Word Type</th>
-              <th>Category</th>
-              <th>Active Status</th>
-              <th style="text-align:right;">Toggle</th>
+              <th>WORD TYPE</th>
+              <th>CATEGORY</th>
+              <th>ACTIVE STATUS</th>
+              <th style="text-align:right;">TOGGLE</th>
             </tr>
           </thead>
           <tbody>
             ${wordTypes.map(wt => `
               <tr>
-                <td><strong>${escapeHtml(wt.name)}</strong></td>
+                <td style="font-weight:500; color:var(--clr-text-1);">${escapeHtml(wt.name)}</td>
                 <td>
-                  <span class="badge ${wt.is_system ? 'badge-primary' : 'badge-secondary'}">
+                  <span style="font-size:12px; color:var(--clr-text-2); font-weight:500;">
                     ${wt.is_system ? 'System Default' : 'Custom'}
                   </span>
                 </td>
                 <td>
-                  <span class="badge ${wt.is_active ? 'badge-success' : 'badge-danger'}">
+                  <span style="font-size:12px; color:${wt.is_active ? 'var(--grade-a)' : 'var(--grade-e)'}; font-weight:500;">
                     ${wt.is_active ? 'Active' : 'Disabled'}
                   </span>
                 </td>
@@ -421,10 +421,10 @@ export async function renderCentralQuestionImport(area) {
 
 export async function renderResults(area) {
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
-    adminFetchAll('attempts', '*, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)'),
-    adminFetchAll('institutions'),
-    adminFetchAll('programs'),
-    adminFetchAll('batches')
+    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, percentage, effective_score, is_remedial_unlocked, created_at, submitted_at, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)'),
+    adminFetchAll('institutions', 'id, name, is_active'),
+    adminFetchAll('programs', 'id, name, is_active, institution_id'),
+    adminFetchAll('batches', 'id, name, is_active, program_id')
   ]);
 
   // Precalculate student best scores per test for prerequisite checking and highest score logic
@@ -468,7 +468,7 @@ export async function renderResults(area) {
         </div>
 
         ${window._filterTestResults ? `
-          <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size:0.85rem;">
+          <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size: 12px;">
             <span>&#9889; Filtered Results for Selected Test (${allData.length} attempts)</span>
             <button class="btn btn-ghost btn-xs" id="clear-Test-results-btn" style="text-decoration:underline;color:#93c5fd;">Show All Test Results</button>
           </div>
@@ -478,7 +478,7 @@ export async function renderResults(area) {
         <div class="filter-bar mb-4 p-3 rounded d-flex gap-3 align-center flex-wrap" style="background:var(--clr-surface-2);border:1px solid var(--clr-border);">
           <div style="min-width:180px;">
             <label class="text-xs text-muted d-block mb-1">Filter Program</label>
-            <select id="res-filter-prog" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
+            <select id="res-filter-prog" class="form-control" style="padding:6px 10px;font-size: 12px;">
               <option value="">&mdash; All Institutions &mdash;</option>
               ${(allInstitutions || []).filter(p => !p.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')}
             </select>
@@ -486,7 +486,7 @@ export async function renderResults(area) {
 
           <div style="min-width:180px;">
             <label class="text-xs text-muted d-block mb-1">Filter Class</label>
-            <select id="res-filter-class" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
+            <select id="res-filter-class" class="form-control" style="padding:6px 10px;font-size: 12px;">
               <option value="">&mdash; All Programs &mdash;</option>
               ${(allPrograms || []).filter(c => !c.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(c => `<option value="${c.id}" data-inst="${c.institution_id}">${escapeHtml(c.name)}</option>`).join('')}
             </select>
@@ -494,7 +494,7 @@ export async function renderResults(area) {
 
           <div style="min-width:180px;">
             <label class="text-xs text-muted d-block mb-1">Filter Batch (Group)</label>
-            <select id="res-filter-batch" class="form-control" style="padding:6px 10px;font-size:0.85rem;">
+            <select id="res-filter-batch" class="form-control" style="padding:6px 10px;font-size: 12px;">
               <option value="">&mdash; All Batches &mdash;</option>
               ${(allBatches || []).filter(b => !b.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || '')).map(b => `<option value="${b.id}" data-prog="${b.program_id}">${escapeHtml(b.name)}</option>`).join('')}
             </select>
@@ -502,7 +502,7 @@ export async function renderResults(area) {
 
           <div style="flex:1;min-width:220px;">
             <label class="text-xs text-muted d-block mb-1">Search Student / Test</label>
-            <input type="text" id="res-filter-search" class="form-control" placeholder="Type student name or test title&hellip;" style="padding:6px 10px;font-size:0.85rem;">
+            <input type="text" id="res-filter-search" class="form-control" placeholder="Type student name or test title&hellip;" style="padding:6px 10px;font-size: 12px;">
           </div>
 
           <div class="d-flex align-end" style="padding-top:18px;">
@@ -603,73 +603,78 @@ export async function renderResults(area) {
       hideToolbar: true,
       searchKeys: ['students.name', 'tests.title', 'tests.shell_code', 'tests.test_type', 'students.programs.name', 'students.programs.institutions.name'],
       columns: [
-        { key: 'students.name', label: 'Student Name', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1); font-size:12px;">${formatStudentName(r.students?.name, r.students?.gender) || '&mdash;'}</span>` },
-        { key: 'students.programs.institutions.name', label: 'Program', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
-        { key: 'students.programs.name', label: 'Class', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.name || '&mdash;')}</span>` },
-        { key: 'students.batches.name', label: 'Batch', sortable: true, render: (v, r) => `<span class="text-sm fw-600" style="color:var(--clr-text-2); font-size:12px;">${escapeHtml(r.students?.batches?.name || 'Unassigned')}</span>` },
+        { key: 'students.programs.institutions.name', label: 'INSTITUTION', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
+        { key: 'students.programs.name', label: 'PROGRAM', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.name || '&mdash;')}</span>` },
+        { key: 'students.batches.name', label: 'BATCH', sortable: true, render: (v, r) => `<span class="text-sm fw-600" style="color:var(--clr-text-2); font-size:12px;">${escapeHtml(r.students?.batches?.name || 'Unassigned')}</span>` },
+        { key: 'students.name', label: 'STUDENT NAME', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1); font-size:12px;">${escapeHtml(r.students?.name || '&mdash;')}</span>` },
         {
-          key: 'tests.title', label: 'Test Title', sortable: true, render: (v, r) => {
+          key: 'tests.title', label: 'TEST', sortable: true, render: (v, r) => {
             const def = r.tests || {};
-            const codeBadge = def.shell_code ? `<span class="badge" style="font-family:monospace;font-size:11px;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-right:6px;padding:2px 5px;">${escapeHtml(def.shell_code)}</span>` : '';
+            const codeBadge = def.shell_code ? `<span class="badge" style="font-family:monospace;font-size: 12px;background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);margin-right:6px;padding:2px 5px;">${escapeHtml(def.shell_code)}</span>` : '';
             return `<div class="d-flex align-items-center flex-wrap gap-1" style="font-size:12px;">${codeBadge}<span class="text-sm fw-600">${def.test_type ? escapeHtml(def.test_type) + ' &mdash; ' : ''}${escapeHtml(def.title || '&mdash;')}</span></div>`;
           }
         },
         {
-          key: 'percentage', label: 'Score', sortable: true, render: (v, r) => {
+          key: 'percentage', label: 'SCORE', sortable: true, render: (v, r) => {
             const rawPct = parseFloat(r.percentage || 0);
             const isRemedial = Boolean(r.is_remedial_unlocked || r.is_remedial);
             const isForgiven = Boolean(r.is_forgiven);
             const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
-            const effectiveGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : (effectivePct >= 90 ? 'A' : (effectivePct >= 80 ? 'B' : (effectivePct >= 60 ? 'C' : (effectivePct >= 30 ? 'D' : 'E')))));
-            const indicatorHtml = isRemedial
-              ? '<sup class="test-rem-sup" style="font-size:1.0em !important;font-weight:900;margin-left:2px;">R</sup>'
-              : (isForgiven ? '<sup class="test-forgiven-sup" style="font-size:1.0em !important;font-weight:900;margin-left:2px;color:#ef4444;" title="Score Forgiven: ' + escapeHtml(r.forgiven_reason || 'Waiver') + '">F</sup>' : '');
+            const effectiveGrade = isForgiven ? 'F' : (isRemedial ? 'R' : (r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : (effectivePct >= 90 ? 'A' : (effectivePct >= 80 ? 'B' : (effectivePct >= 60 ? 'C' : (effectivePct >= 30 ? 'D' : 'E')))))));
             return `
               <div class="text-center fw-700" style="display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;">
                 <div style="display:flex;align-items:center;gap:4px;" class="text-grade-${effectiveGrade}">
-                  <span>${effectivePct.toFixed(1)}%${indicatorHtml}</span>
+                  <span>${effectivePct.toFixed(1)}%</span>
                 </div>
               </div>
             `;
           }
         },
-        { key: 'grade', label: 'Grade', sortable: true, render: (v, r) => {
+        { key: 'grade', label: 'GRADE', sortable: true, render: (v, r) => {
             const rawPct = parseFloat(r.percentage || 0);
-            const isRemedial = Boolean(r.is_remedial_unlocked);
+            const isRemedial = Boolean(r.is_remedial_unlocked || r.is_remedial);
+            const isForgiven = Boolean(r.is_forgiven);
             const effectivePct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? parseFloat(r.effective_score) : rawPct);
-            const displayGrade = r.grade || (typeof getGrade === 'function' ? getGrade(effectivePct) : 'E');
+            let displayGrade = r.grade;
+            if (isForgiven) {
+              displayGrade = 'F';
+            } else if (isRemedial) {
+              displayGrade = 'R';
+            } else if (!displayGrade) {
+              displayGrade = typeof getGrade === 'function' ? getGrade(effectivePct) : 'E';
+            }
             const gradeSymbol = (displayGrade === 'S' || displayGrade === '★' || effectivePct >= 100) ? '★' : displayGrade;
-            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size:0.85rem;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}</span></div>`;
+            return `<div class="text-center"><span class="grade-badge grade-${displayGrade}" style="width:30px;height:30px;font-size: 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${gradeSymbol}</span></div>`;
           }
         },
         {
-          key: 'prereq', label: 'Prerequisite', sortable: false, render: (v, r) => {
+          key: 'prereq', label: 'PREREQUISITE', sortable: false, render: (v, r) => {
             const def = r.tests || {};
             const prereqId = def.prerequisite_test_id;
             const minScore = Number(def.minimum_required_score) || 60;
             if (!prereqId) return '<div class="text-center"><span class="text-muted text-xs">&mdash;</span></div>';
             const studentPrereqBest = studentBestScoreMap.get(`${r.student_id}_${prereqId}`);
             if (studentPrereqBest != null && studentPrereqBest >= minScore) {
-              return `<div class="text-center"><span class="badge badge-success text-xs" style="font-size:0.75rem;padding:2px 6px;" title="Prerequisite completed (${studentPrereqBest.toFixed(1)}% &ge; ${minScore}%)">Unlocked &#9989;</span></div>`;
+              return `<div class="text-center"><span class="badge badge-success text-xs" style="font-size: 12px;padding:2px 6px;" title="Prerequisite completed (${studentPrereqBest.toFixed(1)}% &ge; ${minScore}%)">Unlocked</span></div>`;
             }
-            return `<div class="text-center"><span class="badge badge-danger" style="font-size:0.75rem;padding:2px 7px;font-weight:600;display:inline-flex;align-items:center;gap:3px;" title="Prerequisite requirement not completed (Required &ge; ${minScore}%)">Locked &#128274;</span></div>`;
+            return `<div class="text-center"><span class="badge badge-danger" style="font-size: 12px;padding:2px 7px;font-weight:600;display:inline-flex;align-items:center;gap:3px;" title="Prerequisite requirement not completed (Required &ge; ${minScore}%)">Locked</span></div>`;
           }
         },
         {
-          key: 'score', label: 'Points (PTS)', sortable: true, render: (v, r) => {
+          key: 'score', label: 'POINTS', sortable: true, render: (v, r) => {
             const sc = r.score != null ? parseFloat(r.score).toFixed(1).replace(/\.0$/, '') : '-';
             const total = r.total_questions != null ? r.total_questions : '-';
-            return `<div class="text-center fw-600"><span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size:0.75rem;padding:2px 8px;">${sc} / ${total}</span></div>`;
+            return `<div class="text-center fw-600"><span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size: 12px;padding:2px 8px;">${sc} / ${total}</span></div>`;
           }
         },
-        { key: 'submitted_at', label: 'Submitted At', sortable: true, render: (v, r) => `<div class="text-center text-muted text-xs">${r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '&mdash;'}</div>` },
-        { key: 'actions', label: 'Actions', sortable: false, render: (v, r) => {
-           let btns = `<a href="result.html?attempt_id=${r.id}&from=admin" target="_blank" class="btn btn-secondary btn-sm" style="font-size:0.75rem; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" title="Inspect Result & Answers Breakdown">&#128203; Result</a>`;
-           btns += `<button class="btn btn-ghost btn-sm results-view-profile-btn" data-sid="${r.student_id}" style="font-size:0.75rem; padding:3px 10px; display:inline-flex; align-items:center; gap:4px;" title="View full student profile">&#128100; Profile</button>`;
+        { key: 'submitted_at', label: 'SUBMITTED', sortable: true, render: (v, r) => `<div class="text-center text-muted text-xs">${r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '&mdash;'}</div>` },
+        { key: 'actions', label: 'ACTIONS', sortable: false, render: (v, r) => {
+           let btns = `<a href="result.html?attempt_id=${r.id}&from=admin" target="_blank" class="btn btn-secondary btn-sm" style="font-size: 12px; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; text-decoration:none;" title="Inspect Result & Answers Breakdown">Result</a>`;
+           btns += `<button class="btn btn-ghost btn-sm results-view-profile-btn" data-sid="${r.student_id}" style="font-size: 12px; padding:3px 10px; display:inline-flex; align-items:center; gap:4px;" title="View full student profile">Profile</button>`;
            if (r.is_remedial_unlocked || r.is_remedial) {
-             btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size:0.75rem; padding:3px 8px; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; color:#fbbf24;" title="Revert remedial status (return to normal)">↩️ Normal</button>`;
+             btns += `<button class="btn btn-secondary btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="false" style="font-size: 12px; padding:3px 8px; background:rgba(var(--grade-c-rgb),0.15); border:1px solid var(--grade-c); color:var(--grade-c);" title="Revert remedial status (return to normal)">Normal</button>`;
            } else {
-             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size:0.75rem; padding:3px 8px;" title="Mark this score as Remedial">🏷️ Remedial</button>`;
+             btns += `<button class="btn btn-warning btn-sm toggle-remedial-btn" data-aid="${r.id}" data-set-remedial="true" style="font-size: 12px; padding:3px 8px;" title="Mark this score as Remedial">Remedial</button>`;
            }
            return `<div class="text-center d-flex gap-2 justify-center flex-wrap" style="min-width:180px;">${btns}</div>`;
         } }
@@ -713,9 +718,10 @@ export async function renderResults(area) {
     const exportData = rowsToExport.map(r => {
       const def = r.tests || {};
       const rawPct = Number(r.percentage || r.effective_score || 0);
-      const isRemedial = Boolean(r.is_remedial_unlocked);
+      const isRemedial = Boolean(r.is_remedial_unlocked || r.is_remedial);
+      const isForgiven = Boolean(r.is_forgiven);
       const exportPct = isRemedial ? Math.min(rawPct, 60.0) : (r.effective_score != null ? Number(r.effective_score) : rawPct);
-      const exportGrade = r.grade || getGrade(exportPct);
+      const exportGrade = isForgiven ? 'F' : (isRemedial ? 'R' : (r.grade || getGrade(exportPct)));
       return {
         'Student Name': r.students?.name || '—',
         'Gender': r.students?.gender ? (r.students.gender === 'female' ? 'Female' : 'Male') : '—',
@@ -726,7 +732,7 @@ export async function renderResults(area) {
         'Test Type': def.test_type || '—',
         'Score': r.score != null ? r.score : '—',
         'Raw Percentage (%)': rawPct != null ? `${rawPct}%` : '—',
-        'Effective Percentage (%)': `${exportPct}%${isRemedial ? 'ᴿ' : ''}`,
+        'Effective Percentage (%)': `${exportPct}%`,
         'Grade': exportGrade,
         'Is Remedial': isRemedial ? 'Yes' : 'No',
         'Submitted At': r.submitted_at ? new Date(r.submitted_at).toLocaleString() : '—',
@@ -763,7 +769,7 @@ export async function renderResults(area) {
             record.grade = getGrade(record.effective_score);
           }
           renderTable();
-          showToast(targetRemedial ? '🏷️ Successfully labeled as Remedial.' : '↩️ Remedial status reverted to Normal.', 'success');
+          showToast(targetRemedial ? 'Successfully labeled as Remedial.' : 'Remedial status reverted to Normal.', 'success');
         } catch (err) {
           console.error('Failed to toggle remedial:', err);
           showToast('Failed to update remedial status: ' + err.message, 'error');

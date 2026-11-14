@@ -31,7 +31,7 @@ assert(
   'Redundant table summaryRowFn removed from DataGrid in class-analytics.js'
 );
 assert(
-  analyticsJs.includes('id="analytics-quick-search"') && analyticsJs.includes('placeholder="🔍 Filter word..."'),
+  analyticsJs.includes('id="analytics-quick-search"') && (analyticsJs.includes('placeholder="Filter word..."') || analyticsJs.includes('placeholder="🔍 Filter word..."')),
   'Mini search input integrated directly inside the Universal Lower Panel (Option A)'
 );
 assert(
@@ -42,16 +42,16 @@ assert(
 // 2. Official Grading Colors for Triage Pills
 console.log('\n--- 2. Testing Official Grading Colors on Triage Pills ---');
 assert(
-  analyticsJs.includes('#ff0000') && (analyticsJs.includes('Critical &gt;50%') || analyticsJs.includes('Critical >50%')),
-  'Critical triage pill uses Pure Red (#ff0000)'
+  (analyticsJs.includes('#ff0000') || analyticsJs.includes('var(--grade-e)')) && (analyticsJs.includes('Critical &gt;50%') || analyticsJs.includes('Critical >50%')),
+  'Critical triage pill uses Pure Red (#ff0000 / var(--grade-e))'
 );
 assert(
-  analyticsJs.includes('#ffff00') && analyticsJs.includes('Needs Attention'),
-  'Needs Attention triage pill uses Pure Yellow (#ffff00)'
+  (analyticsJs.includes('#ffff00') || analyticsJs.includes('var(--grade-c)')) && analyticsJs.includes('Needs Attention'),
+  'Needs Attention triage pill uses Pure Yellow (#ffff00 / var(--grade-c))'
 );
 assert(
-  analyticsJs.includes('#00c000') && analyticsJs.includes('Safe'),
-  'Safe triage pill uses Grade A Pure Green (#00c000)'
+  (analyticsJs.includes('#00c000') || analyticsJs.includes('var(--grade-a)')) && analyticsJs.includes('Safe'),
+  'Safe triage pill uses Grade A Pure Green (#00c000 / var(--grade-a))'
 );
 
 // 3. Spatial Bounds & Flush Docking Invariants
@@ -78,7 +78,7 @@ assert(
 console.log('\n--- 4. Testing Cache Busters ---');
 const adminHtml = fs.readFileSync(path.resolve('admin.html'), 'utf8');
 const swJs = fs.readFileSync(path.resolve('sw.js'), 'utf8');
-const vAdmin = parseInt((adminHtml.match(/css\/admin\.css\?v=202611\d+_v(\d+)/) || [])[1] || '0', 10);
+const vAdmin = parseInt((adminHtml.match(/css\/admin(?:\.min)?\.css\?v=202611\d+_v(\d+)/) || [])[1] || '0', 10);
 const vSw = parseInt((swJs.match(/topscore-cache-option-a-v(\d+)/) || [])[1] || '0', 10);
 assert(
   vAdmin >= 180,
