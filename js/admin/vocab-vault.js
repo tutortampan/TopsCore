@@ -727,9 +727,8 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
   modal.setAttribute('aria-modal', 'true');
   modal.innerHTML = `
     <div class="modal-box" style="max-width:700px;">
-      <div class="d-flex justify-between align-center mb-4">
-        <h3 class="fw-700" style="margin:0;">&#128229; Import Vocabulary &amp; Phrases from Excel (10-Column Standard)</h3>
-        <button class="btn btn-ghost btn-sm" id="close-import-modal">&#10005;</button>
+      <div class="d-flex justify-center align-center mb-4 text-center">
+        <h3 class="fw-700" style="margin:0 auto;text-align:center;">&#128229; Import Vocabulary &amp; Phrases from Excel (10-Column Standard)</h3>
       </div>
       <p class="text-muted text-sm mb-3">
         Upload an <strong>.xlsx</strong> file conforming to the official 10-column standard:<br>
@@ -757,9 +756,9 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
         <input type="file" id="vault-excel-input" accept=".xlsx,.xls" class="form-control" />
       </div>
       <div id="import-preview-area"></div>
-      <div class="d-flex gap-3 justify-end mt-4" id="import-action-row" style="display:none!important;">
-        <button class="btn btn-secondary btn-sm" id="close-import-modal-2">Cancel</button>
-        <button class="btn btn-primary btn-sm" id="confirm-import-btn">&#10003; Import Words</button>
+      <div class="d-flex gap-3 justify-between align-center mt-4 pt-3" id="import-action-row" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-import-modal-2">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" id="confirm-import-btn" style="display:none;">&#10003; Import Words</button>
       </div>
     </div>
   `;
@@ -1051,9 +1050,9 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
         });
       }
 
-      // Show action row
-      const actionRow = document.getElementById('import-action-row');
-      if (actionRow) actionRow.style.display = 'flex';
+      // Show import button in action row
+      const confirmBtn = document.getElementById('confirm-import-btn');
+      if (confirmBtn) confirmBtn.style.display = 'inline-flex';
     } catch (err) {
       hideLoading();
       showToast('Excel parse error: ' + err.message, 'error');
@@ -1104,9 +1103,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
   modal.innerHTML = `
     <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto;">
-      <div class="d-flex justify-between align-center mb-4">
-        <h3 class="fw-700" style="margin:0;">&#10133; ${overrides.editTest ? 'Edit' : 'Create'} Vocabulary Test</h3>
-        <button class="btn btn-ghost btn-sm" id="close-builder-modal">&#10005;</button>
+      <div class="d-flex justify-center align-center mb-4 text-center">
+        <h3 class="fw-700" style="margin:0 auto;text-align:center;">&#10133; ${overrides.editTest ? 'Edit' : 'Create'} Vocabulary Test</h3>
       </div>
 
       <!-- Step Indicators -->
@@ -1122,13 +1120,17 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
       <div id="builder-step-content"></div>
 
-      <div class="d-flex gap-3 justify-between mt-5">
-        <button class="btn btn-secondary btn-sm" id="builder-back-btn" style="display:none;">← Back</button>
-        <button class="btn btn-primary btn-sm" id="builder-next-btn">Next →</button>
+      <div class="d-flex gap-3 justify-between align-center mt-5 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <div class="d-flex gap-2">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="builder-cancel-btn">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="builder-back-btn" style="display:none;">← Back</button>
+        </div>
+        <button type="button" class="btn btn-primary btn-sm" id="builder-next-btn">Next →</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
+  document.getElementById('builder-cancel-btn')?.addEventListener('click', () => modal.remove());
   document.getElementById('close-builder-modal')?.addEventListener('click', () => modal.remove());
 
   // State
@@ -2424,7 +2426,6 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
           <h3 style="margin:0; font-size: 16px; font-weight:800; color:#f8fafc;">${getSvgIcon('building', 16)} Assign Theme to Programs</h3>
           <div style="font-size:12px; color:#38bdf8; margin-top:2px;">Theme: <strong>${escapeHtml(themeName)}</strong> (${escapeHtml(themeCode)}) &bull; Level ${targetLevel}</div>
         </div>
-        <button class="btn btn-ghost btn-sm close-modal-btn" style="color:#94a3b8; font-size:16px; cursor:pointer;">✕</button>
       </div>
 
       <p style="font-size: 12px; color:#94a3b8; margin-bottom:14px;">
@@ -2453,8 +2454,8 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
         `).join('')}
       </div>
 
-      <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
-        <button class="btn btn-secondary btn-sm close-modal-btn">Cancel</button>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
+        <button class="btn btn-secondary btn-sm btn-modal-close-left close-modal-btn">Cancel</button>
         <button class="btn btn-primary btn-sm" id="btn-save-theme-assignments" style="background:var(--grade-a); border:none; font-weight:800; padding:0 14px;">Save Assignments</button>
       </div>
     </div>
@@ -3154,7 +3155,6 @@ function openDuplicateCheckerModal(allWords, onResolved) {
         <div class="d-flex gap-2">
           <button class="btn btn-secondary btn-sm" id="dup-modal-keep-all" style="background:var(--grade-a); color:white;">&#10004; Keep First (All)</button>
           <button class="btn btn-secondary btn-sm" id="dup-modal-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>
-          <button class="btn btn-ghost btn-sm" id="dup-modal-close">&#10005;</button>
         </div>
       </div>
       <div style="overflow-y:auto; flex-grow:1;">
@@ -3170,8 +3170,8 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           ${buildTable()}
         </table>
       </div>
-      <div class="d-flex justify-end mt-3">
-        <button class="btn btn-secondary btn-sm" id="dup-modal-done">Done</button>
+      <div class="d-flex justify-start mt-3">
+        <button class="btn btn-secondary btn-sm btn-modal-close-left" id="dup-modal-done">Done</button>
       </div>
     </div>
   `;
@@ -3182,7 +3182,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
     if (onResolved) onResolved([...allWords]);
   }
 
-  modal.querySelector('#dup-modal-close').addEventListener('click', closeModal);
+  modal.querySelector('#dup-modal-close')?.addEventListener('click', closeModal);
   modal.querySelector('#dup-modal-done').addEventListener('click', closeModal);
 
   // Keep one, delete others in group
@@ -3456,7 +3456,6 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
         </div>
         <div class="d-flex gap-2">
           ${duplicateGroups.length > 0 ? `<button class="btn btn-secondary btn-sm" id="dup-topic-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>` : ''}
-          <button class="btn btn-ghost btn-sm" id="dup-topic-modal-close" style="font-size: 16px; line-height:1;">&#10005;</button>
         </div>
       </div>
 
@@ -3499,8 +3498,8 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
         </div>
       </div>
 
-      <div class="d-flex justify-end mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.08);">
-        <button class="btn btn-secondary btn-sm" id="dup-topic-modal-done">Close</button>
+      <div class="d-flex justify-start mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button class="btn btn-secondary btn-sm btn-modal-close-left" id="dup-topic-modal-done">Close</button>
       </div>
     </div>
   `;
@@ -3511,7 +3510,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     if (onResolved) onResolved();
   }
 
-  modal.querySelector('#dup-topic-modal-close').addEventListener('click', closeModal);
+  modal.querySelector('#dup-topic-modal-close')?.addEventListener('click', closeModal);
   modal.querySelector('#dup-topic-modal-done').addEventListener('click', closeModal);
 
   // Manual Merge Handler

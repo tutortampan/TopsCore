@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261106_v160';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261115_v541';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
@@ -124,6 +124,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
     }
 
+    function formatProfileStudentName(rawName, prefix = '') {
+      const clean = cleanStudentName(rawName || 'Student');
+      const fullWithTitle = `${prefix}${clean}`.trim();
+      // Only abbreviate if really needed (longer than 32 characters in single line)
+      if (fullWithTitle.length <= 32) {
+        return fullWithTitle;
+      }
+      const targetNameLength = Math.max(16, 32 - prefix.length);
+      const shortened = (typeof formatMatrixStudentName === 'function')
+        ? formatMatrixStudentName(clean, targetNameLength)
+        : clean;
+      return `${prefix}${shortened}`.trim();
+    }
+
     function applyStudentGenderUI(g) {
       const nameStr = (session.student_name || session.name || session.full_name || '').trim();
       let parts = nameStr.split(/\s+/).filter(Boolean);
@@ -177,7 +191,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const welcNameEl = document.getElementById('welcome-name');
       if (welcNameEl) welcNameEl.textContent = formattedName;
       const profName = document.getElementById('prof-student-name');
-      if (profName) profName.textContent = formattedName;
+      if (profName) {
+        const titlePrefix = isLeader ? (g === 'female' ? 'Queen ' : 'King ') : (g === 'female' ? 'Miss ' : 'Mr. ');
+        profName.textContent = formatProfileStudentName(cleanFullName, titlePrefix);
+      }
 
       session.gender = g;
       session.student_name = formattedName;
@@ -296,9 +313,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const optMale = document.getElementById('opt-gender-male');
       const optFemale = document.getElementById('opt-gender-female');
+      const titleEl = document.getElementById('intro-setup-title');
       const nameEl = document.getElementById('intro-student-name');
+      const rawStudentName = cleanStudentName(session.student_name || 'Top');
+      const headerBrandEl = document.getElementById('dashboard-header-class-name');
+      if (headerBrandEl) {
+        headerBrandEl.textContent = rawStudentName.toUpperCase();
+      }
+      if (titleEl) {
+        titleEl.textContent = 'GENDER';
+      }
       if (nameEl) {
-        nameEl.textContent = cleanStudentName(session.student_name || 'Top');
+        nameEl.textContent = rawStudentName;
       }
       const dayInp = document.getElementById('intro-birth-day');
       const monthSel = document.getElementById('intro-birth-month');
@@ -586,6 +612,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (!isResolved) {
             isResolved = true;
             modal.classList.add('hidden');
+            if (headerBrandEl) {
+              const currentClass = window._dashboardActiveClasses?.[0];
+              headerBrandEl.textContent = currentClass ? String(currentClass.name || '').toUpperCase() : 'TopsCore';
+            }
             resolve();
           }
         };
@@ -971,6 +1001,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (!isResolved) {
             isResolved = true;
             modal.classList.add('hidden');
+            if (headerBrandEl) {
+              const currentClass = window._dashboardActiveClasses?.[0];
+              headerBrandEl.textContent = currentClass ? String(currentClass.name || '').toUpperCase() : 'TopsCore';
+            }
             resolve();
           }
         };
@@ -1395,12 +1429,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (lastAttempt) {
           const t = (allTests || []).find(x => x.id === (lastAttempt.test_id || lastAttempt.Test_id));
-          const title = t?.title || 'Last Assessment';
+          const title = t?.title || 'Last Test';
           const pct = parseFloat(lastAttempt.percentage || 0).toFixed(0);
           leftEl.innerHTML = `<span class="last-asm-title" title="${escapeHtml(title)}">Last: ${escapeHtml(title)}</span>`;
           rightEl.innerHTML = `<span class="last-asm-score">${pct}%</span>`;
         } else {
-          leftEl.innerHTML = `<span class="last-asm-title text-muted">No assessments taken yet</span>`;
+          leftEl.innerHTML = `<span class="last-asm-title text-muted">No tests taken yet</span>`;
           rightEl.innerHTML = `<span class="last-asm-score text-muted">—</span>`;
         }
       }
@@ -1890,6 +1924,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         closeBtn._hasClickListener = true;
         closeBtn.addEventListener('click', closeSelectorModal);
       }
+      const footerCloseBtn = document.getElementById('btn-close-classes-selector');
+      if (footerCloseBtn && !footerCloseBtn._hasClickListener) {
+        footerCloseBtn._hasClickListener = true;
+        footerCloseBtn.addEventListener('click', closeSelectorModal);
+      }
       const selectorModal = document.getElementById('classes-selector-modal');
       if (selectorModal && !selectorModal._hasBackdropListener) {
         selectorModal._hasBackdropListener = true;
@@ -1910,8 +1949,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const titleEl = document.getElementById('component-modal-title');
         const subtitleEl = document.getElementById('component-modal-subtitle');
 
-        if (badgeEl) badgeEl.textContent = data.badge || (data.isExam ? 'EXAM ASSESSMENT' : 'TOPIC ASSESSMENT');
-        if (titleEl) titleEl.textContent = data.title || 'Topic Assessment';
+        if (badgeEl) badgeEl.textContent = data.badge || (data.isExam ? 'EXAM' : 'TOPIC TASK');
+        if (titleEl) titleEl.textContent = data.title || 'Topic Test';
         if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Choose which part you want to work on:';
 
         const wordsCard = document.getElementById('component-opt-words');
@@ -1930,8 +1969,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         const confirmBtn = document.getElementById('btn-confirm-component-selection');
 
-        if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18);
-        if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('message-square', 18);
+        function renderComponentPips(containerId, count) {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          const pips = container.querySelectorAll('.pip-box');
+          pips.forEach((pip, idx) => {
+            pip.classList.toggle('active', idx < count);
+          });
+        }
+
+        if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
+        if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
 
         let selectedPart = data.wordsTestId ? 'words' : (data.phrasesTestId ? 'phrases' : null);
 
@@ -1945,11 +1993,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             phrasesCard.setAttribute('aria-pressed', selectedPart === 'phrases' ? 'true' : 'false');
           }
           if (confirmBtn) {
+            confirmBtn.classList.remove('btn-words', 'btn-phrases');
             if (selectedPart === 'words') {
-              confirmBtn.innerHTML = `START ${data.isExam ? 'WORDS EXAM' : 'WORDS DRILL'} &rarr;`;
+              confirmBtn.innerHTML = `START ${data.isExam ? 'WORDS EXAM' : 'WORDS'} &rarr;`;
               confirmBtn.disabled = false;
             } else if (selectedPart === 'phrases') {
-              confirmBtn.innerHTML = `START ${data.isExam ? 'PHRASES EXAM' : 'PHRASES DRILL'} &rarr;`;
+              confirmBtn.innerHTML = `START ${data.isExam ? 'PHRASES EXAM' : 'PHRASES'} &rarr;`;
               confirmBtn.disabled = false;
             } else {
               confirmBtn.textContent = 'SELECT COMPONENT';
@@ -1968,30 +2017,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (data.wordsTestId) {
           wordsCard.style.display = 'flex';
-          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'Words Exam' : 'Words Component';
-          if (wordsBadge) {
-            if (data.isExam) {
-              wordsBadge.innerHTML = data.isRetake || !data.isLiveSession
-                ? `${getSvgIcon('mic', 12)} Spoken Mode @ 15s`
-                : '120 Questions (Written Mode)';
-            } else {
-              wordsBadge.textContent = '40 Questions (Speaking)';
-            }
-          }
+          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'WORDS EXAM' : 'WORDS';
+          const wordsPasses = Number(data.wordsPasses || (data.wordsBest && data.wordsBest.percentage >= 70 ? 1 : 0));
+          renderComponentPips('component-words-pips', wordsPasses);
           if (wordsStatus) {
             wordsStatus.textContent = data.isExam
-              ? (data.wordsBest ? `Score: ${Number(data.wordsBest.percentage || 0).toFixed(0)}%` : 'Not Attempted')
-              : `Progress: ${data.wordsPasses || 0}/7 Passes`;
-          }
-          if (wordsBestEl) {
-            if (data.wordsBest) {
-              const pct = Number(data.wordsBest.percentage || 0);
-              const color = getGradeColorByScore(pct);
-              const pts = Number(data.wordsBest.points_awarded ?? data.wordsBest.points ?? 0);
-              wordsBestEl.innerHTML = `Best: <span style="color: ${color}; font-weight: 800;">${pct.toFixed(0)}% (${pts} PTS)</span>`;
-            } else {
-              wordsBestEl.innerHTML = 'Best: <span style="color: #64748b;">&mdash;</span>';
-            }
+              ? (data.wordsBest ? `${Number(data.wordsBest.percentage || 0).toFixed(0)}%` : '0%')
+              : `${wordsPasses}/7`;
           }
           wordsCard.onclick = () => {
             if (selectedPart === 'words') {
@@ -2007,30 +2039,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (data.phrasesTestId) {
           phrasesCard.style.display = 'flex';
-          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'Phrases Exam' : 'Phrases Component';
-          if (phrasesBadge) {
-            if (data.isExam) {
-              phrasesBadge.innerHTML = data.isRetake || !data.isLiveSession
-                ? `${getSvgIcon('mic', 12)} Spoken Mode @ 20s`
-                : '30 Questions (Selection Mode)';
-            } else {
-              phrasesBadge.textContent = '10 Questions (Speaking)';
-            }
-          }
+          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'PHRASES EXAM' : 'PHRASES';
+          const phrasesPasses = Number(data.phrasesPasses || (data.phrasesBest && data.phrasesBest.percentage >= 70 ? 1 : 0));
+          renderComponentPips('component-phrases-pips', phrasesPasses);
           if (phrasesStatus) {
             phrasesStatus.textContent = data.isExam
-              ? (data.phrasesBest ? `Score: ${Number(data.phrasesBest.percentage || 0).toFixed(0)}%` : 'Not Attempted')
-              : `Progress: ${data.phrasesPasses || 0}/7 Passes`;
-          }
-          if (phrasesBestEl) {
-            if (data.phrasesBest) {
-              const pct = Number(data.phrasesBest.percentage || 0);
-              const color = getGradeColorByScore(pct);
-              const pts = Number(data.phrasesBest.points_awarded ?? data.phrasesBest.points ?? 0);
-              phrasesBestEl.innerHTML = `Best: <span style="color: ${color}; font-weight: 800;">${pct.toFixed(0)}% (${pts} PTS)</span>`;
-            } else {
-              phrasesBestEl.innerHTML = 'Best: <span style="color: #64748b;">&mdash;</span>';
-            }
+              ? (data.phrasesBest ? `${Number(data.phrasesBest.percentage || 0).toFixed(0)}%` : '0%')
+              : `${phrasesPasses}/7`;
           }
           phrasesCard.onclick = () => {
             if (selectedPart === 'phrases') {
@@ -2058,6 +2073,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (closeBtn && !closeBtn._hasListener) {
           closeBtn._hasListener = true;
           closeBtn.onclick = () => modal.classList.add('hidden');
+        }
+        const footerCloseBtn = document.getElementById('btn-close-component-selector');
+        if (footerCloseBtn && !footerCloseBtn._hasListener) {
+          footerCloseBtn._hasListener = true;
+          footerCloseBtn.onclick = () => modal.classList.add('hidden');
         }
         if (!modal._hasBackdropListener) {
           modal._hasBackdropListener = true;
@@ -2101,12 +2121,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const bestByTest = {};
       const inProgressByTest = {};
       const passCountByTest = {};
+      const hasForgivenByTest = {};
+      const hasRemedialByTest = {};
       allAttempts.forEach(att => {
         const aid = att.test_id || att.Test_id;
         if (!aid) return;
         const pct = parseFloat(att.effective_score ?? att.percentage ?? 0);
         const st = (att.status || '').toUpperCase();
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+        if (att.is_forgiven) hasForgivenByTest[aid] = true;
+        if (isRem) hasRemedialByTest[aid] = true;
+
         if (st === 'IN_PROGRESS') {
           inProgressByTest[aid] = att;
         } else if (st === 'SUBMITTED' || st === 'AUTO_SUBMITTED' || st === 'EVALUATED') {
@@ -2120,9 +2145,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
         }
         // AGENTS.md §2.7: Report card stores strictly HIGHEST score across attempts
-        const existingBestPct = bestByTest[aid] ? parseFloat(bestByTest[aid].effective_score ?? bestByTest[aid].percentage ?? 0) : -1;
-        if (!bestByTest[aid] || pct > existingBestPct || (pct === existingBestPct && new Date(att.submitted_at || 0) > new Date(bestByTest[aid].submitted_at || 0)) || (att.is_forgiven && !bestByTest[aid])) {
+        // Forgiven waiver qualifies the module; authentic passing attempts (>=60%) can still outrank it.
+        const currentBest = bestByTest[aid];
+        if (!currentBest) {
           bestByTest[aid] = att;
+        } else {
+          const curPct = parseFloat(currentBest.effective_score ?? currentBest.percentage ?? 0);
+          const curQualifies = Boolean(currentBest.is_forgiven) || curPct >= 60;
+          const newQualifies = Boolean(att.is_forgiven) || pct >= 60;
+
+          if (newQualifies && !curQualifies) {
+            bestByTest[aid] = att;
+          } else if (!newQualifies && curQualifies) {
+            // Keep the qualified attempt
+          } else if (pct > curPct) {
+            bestByTest[aid] = att;
+          } else if (pct === curPct && new Date(att.submitted_at || att.created_at || 0) > new Date(currentBest.submitted_at || currentBest.created_at || 0)) {
+            bestByTest[aid] = att;
+          }
         }
       });
 
@@ -2132,12 +2172,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       for (const asm of tests) {
         const bestAtt = bestByTest[asm.id];
         const inProgAtt = inProgressByTest[asm.id];
-        const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial);
-        const isForgiven = Boolean(bestAtt?.is_forgiven);
+        const isRem = Boolean(bestAtt?.is_remedial_unlocked || bestAtt?.is_remedial || hasRemedialByTest[asm.id]);
+        const isForgiven = Boolean(bestAtt?.is_forgiven || hasForgivenByTest[asm.id]);
         const rawBestPct = bestAtt ? parseFloat(bestAtt.percentage || 0) : null;
         const bestPct = isRem && rawBestPct !== null ? Math.min(rawBestPct, 60.0) : rawBestPct;
-        const grade = bestPct !== null ? (isForgiven ? 'F' : (isRem ? 'R' : getGrade(bestPct))) : null;
-        const gradeColor = bestPct !== null ? (isForgiven ? TOPSCORE_COLORS.E : (isRem ? TOPSCORE_COLORS.C : getGradeColorByScore(bestPct))) : 'var(--clr-text-1)';
+        const grade = bestPct !== null ? (typeof calculateGrade === 'function' ? calculateGrade(bestPct) : getGrade(bestPct)) : null;
+        const gradeColor = bestPct !== null ? getGradeColorByScore(bestPct) : 'var(--clr-text-1)';
         const passed = bestPct !== null && (bestPct >= (asm.pass_threshold || 60) || isForgiven || (isRem && bestPct >= 60));
 
         const isTaskItem = !isExam(asm);
@@ -2191,7 +2231,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           const isRemedialSession = liveSess?.is_remedial === true ||
             (Array.isArray(liveSess?.remedial_student_ids) && liveSess.remedial_student_ids.includes(session?.student_id || session?.id));
-          const isStudentRemedialUnlocked = Boolean(bestByTest[asm.id]?.is_remedial_unlocked || bestByTest[asm.id]?.is_remedial);
+          const isStudentRemedialUnlocked = Boolean(isRem || hasRemedialByTest[asm.id]);
 
           // 1. Inter-Theme Gating: Theme B, C, D exams strictly require all prior theme's exams to be passed (>= 60%)
           const currentTheme = String(themeCode || asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
@@ -2210,10 +2250,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               for (const pe of priorExams) {
                 const peBest = bestByTest[pe.id];
                 const peRawPct = peBest ? parseFloat(peBest.effective_score ?? peBest.percentage ?? 0) : null;
-                const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial));
+                const peRem = Boolean(peBest && (peBest.is_remedial_unlocked || peBest.is_remedial || hasRemedialByTest[pe.id]));
                 const pePct = peRem && peRawPct !== null ? Math.min(peRawPct, 60.0) : peRawPct;
                 const peMin = Number(pe.minimum_required_score) || Number(pe.pass_threshold) || Number(pe.payload?.min_score) || 60;
-                const pePassed = Boolean(peBest?.is_forgiven) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
+                const pePassed = Boolean(peBest?.is_forgiven || hasForgivenByTest[pe.id]) || (pePct !== null && (pePct >= peMin || (peRem && pePct >= 60)));
                 if (!pePassed) {
                   prereqMet = false;
                   prereqTitle = `Theme ${priorTheme} Exams (Passed ≥${peMin}% required)`;
@@ -2251,10 +2291,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (siblingWordsExam) {
               const wBest = bestByTest[siblingWordsExam.id];
               const wRawPct = wBest ? parseFloat(wBest.effective_score ?? wBest.percentage ?? 0) : null;
-              const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial));
+              const wRem = Boolean(wBest && (wBest.is_remedial_unlocked || wBest.is_remedial || hasRemedialByTest[siblingWordsExam.id]));
               const wPct = wRem && wRawPct !== null ? Math.min(wRawPct, 60.0) : wRawPct;
               const wMin = Number(siblingWordsExam.minimum_required_score) || Number(siblingWordsExam.pass_threshold) || Number(siblingWordsExam.payload?.min_score) || 60;
-              const wPassed = Boolean(wBest?.is_forgiven) || (wPct !== null && (wPct >= wMin || (wRem && wPct >= 60)));
+              const wPassed = Boolean(wBest?.is_forgiven || hasForgivenByTest[siblingWordsExam.id]) || (wPct !== null && (wPct >= wMin || (wRem && wPct >= 60)));
               if (!wPassed) {
                 prereqMet = false;
                 prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
@@ -2353,10 +2393,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
 
-          const isEligibleForSelfPacedExam = Boolean(passed || bestAtt?.is_forgiven);
+          const isEligibleForSelfPacedExam = Boolean(passed || bestAtt?.is_forgiven || hasForgivenByTest[asm.id] || isStudentRemedialUnlocked || isRemedialSession);
 
           if (isAsmTest) {
-            // For formal Tests: Students who passed (>=60%) or are forgiven can retake 24/7 independently!
+            // For formal Tests: Students who passed (>=60%), are forgiven, OR have remedial unlocked can take 24/7 independently!
             if (isEligibleForSelfPacedExam) {
               retakesAllowed = true;
             } else {
@@ -2371,12 +2411,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const canRetake = isAsmTest ? (isEligibleForSelfPacedExam || (retakesAllowed && !passed)) : retakesAllowed;
 
           if (canRetake) {
+            const isRemedialAction = !passed && (isStudentRemedialUnlocked || isRemedialSession);
             const retakeBtnLabel = (bestAttPct === 100)
               ? 'Retake Drill'
-              : (bestAtt?.is_forgiven)
+              : (bestAtt?.is_forgiven || hasForgivenByTest[asm.id])
                 ? 'Retake Exam'
-                : 'Retake';
-            actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;background:#0284c7;border-color:#0284c7;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
+                : (isRemedialAction)
+                  ? 'Take Remedial'
+                  : 'Retake';
+            const retakeBtnBg = isRemedialAction ? 'var(--grade-c)' : '#0284c7';
+            const retakeBtnBorder = isRemedialAction ? 'var(--grade-c)' : '#0284c7';
+            const retakeTextColor = isRemedialAction ? '#0F172A' : '#ffffff';
+            actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;background:${retakeBtnBg};border-color:${retakeBtnBorder};color:${retakeTextColor};font-weight:700;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
           } else if (isAsmTest && !passed && !isSessionUnlocked) {
             actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:12px;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span></div>`;
           } else {
@@ -2437,9 +2483,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                   <div style="font-size:16px;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}">${bestPct.toFixed(0)}%</div>
                   <div style="font-size:12px;color:var(--clr-text-3);">Best Score</div>
                 </div>
-                ${(grade === '★' || grade === 'S' || (bestPct >= 100 && !isRem && !isForgiven))
+                ${(grade === '★' || grade === 'S' || bestPct >= 100)
                   ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
-                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid ${gradeColor};color:${gradeColor};">${getGradeSymbol(grade)}</div>`
+                  : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid ${gradeColor};color:${gradeColor};">${grade}</div>`
                 }
               ` : ''}
               ${actionBtn}
@@ -2564,6 +2610,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         targetColor = theme.color;
         rgbColor = theme.rgb || TOPSCORE_COLORS.STAR_RGB;
       }
+
+      window._studentGradeColor = targetColor;
+      window._studentGradeRgb = rgbColor;
+      applyProfileGradeTheme(targetColor, rgbColor);
 
 
       const scoreEl = document.getElementById('stat-overall-score');
@@ -2790,7 +2840,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const rawPct = parseFloat(att.effective_score != null ? att.effective_score : (att.percentage || 0));
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
         const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-        const grade = att.grade || (typeof calculateGrade === 'function' ? calculateGrade(effPct) : 'E');
+        const grade = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
         const prev = bestByTest[tid];
         if (!prev || effPct > prev.effPct) {
           bestByTest[tid] = { effPct, grade, isRem, rawPct, is_forgiven: Boolean(att.is_forgiven) };
@@ -2882,7 +2932,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
           scoreHtml = `<span style="color:${scoreColor} !important; font-weight:800;">${best.effPct.toFixed(0)}%${remSup}</span>`;
 
-          const dispGrade = typeof getGradeSymbol === 'function' ? getGradeSymbol(best.grade, best.effPct, best.isRem) : best.grade;
+          const dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
           const isStar = dispGrade === '★' || dispGrade === 'S';
           const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
           gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important;">${dispGrade}</span>`;
@@ -2902,7 +2952,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const rawPct = parseFloat(a.percentage || 0);
             const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
             const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-            const gr = a.grade || (typeof calculateGrade === 'function' ? calculateGrade(effPct) : 'E');
+            const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
             return { effPct, grade: gr, isRem };
           });
           // 1. Get Top 7 highest
@@ -2925,7 +2975,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
             scoreHtml = `<span style="color:${scoreColor}; font-weight:800;">${taskAvgPct}%</span>`;
 
-            const dispGrade = typeof getGradeSymbol === 'function' ? getGradeSymbol(taskAvgGrade, taskAvgPct, best?.isRem) : taskAvgGrade;
+            const dispGrade = taskAvgGrade;
             const isStar = dispGrade === '★' || dispGrade === 'S';
             const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
             gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800;">${dispGrade}</span>`;
@@ -3388,28 +3438,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
     function updateAgeAndEduUI(dobVal) {
       const ageDisplay = document.getElementById('prof-age-display');
+      const heroDobEl = document.getElementById('prof-hero-dob');
+      const heroAgeEl = document.getElementById('prof-hero-age');
       const heroDobAgeEl = document.getElementById('prof-hero-dob-age');
       const eduTitleEl = document.getElementById('prof-edu-title');
       const age = calculateAgeFromDob(dobVal);
       if (ageDisplay) {
         ageDisplay.textContent = age !== null ? `(${age} yrs)` : '(—)';
       }
-      if (heroDobAgeEl) {
-        if (dobVal) {
-          const parts = dobVal.split('-');
-          if (parts.length === 3) {
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const mIdx = parseInt(parts[1], 10) - 1;
-            const day = parseInt(parts[2], 10);
-            const yr = parts[0];
-            const mName = months[mIdx] || '';
-            heroDobAgeEl.textContent = `${day} ${mName} ${yr} (${age} yo)`;
-          } else {
-            heroDobAgeEl.textContent = `${dobVal} (${age} yo)`;
-          }
-        } else {
-          heroDobAgeEl.textContent = '—';
+      if (dobVal) {
+        const parts = dobVal.split('-');
+        let formattedDob = dobVal;
+        if (parts.length === 3) {
+          const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          const mIdx = parseInt(parts[1], 10) - 1;
+          const day = parseInt(parts[2], 10);
+          const yr = parts[0];
+          const mName = months[mIdx] || '';
+          formattedDob = `${day} ${mName} ${yr}`;
         }
+        if (heroDobEl) heroDobEl.textContent = formattedDob;
+        if (heroAgeEl) heroAgeEl.textContent = age !== null ? `${age} Years Old` : '—';
+        if (heroDobAgeEl) heroDobAgeEl.textContent = `${formattedDob} (${age} yo)`;
+      } else {
+        if (heroDobEl) heroDobEl.textContent = '—';
+        if (heroAgeEl) heroAgeEl.textContent = '—';
+        if (heroDobAgeEl) heroDobAgeEl.textContent = '—';
       }
       const { recommended: autoEduTier } = typeof getEducationEligibility === 'function' ? getEducationEligibility(age) : { recommended: 'senior_high' };
       const tierObj = (typeof ALL_EDUCATION_LEVELS !== 'undefined' ? ALL_EDUCATION_LEVELS : []).find(e => e.value === autoEduTier);
@@ -3418,6 +3472,84 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         eduTitleEl.textContent = formalEduLabel;
       }
       return { age, autoEduTier, formalEduLabel };
+    }
+
+    function applyProfileGradeTheme(gradeOrColor, rgbColor = null) {
+      // User requirement: cancel all glow, PIN box/icon must not be pink, clean tactical styling preserved
+      const secCard = document.getElementById('profile-security-card');
+      if (secCard) {
+        secCard.style.removeProperty('--prof-grade-color');
+        secCard.style.removeProperty('--prof-grade-bg');
+        secCard.style.removeProperty('--prof-grade-icon-bg');
+        secCard.style.removeProperty('--prof-grade-border');
+        secCard.style.removeProperty('--prof-grade-glow');
+      }
+    }
+
+    function renderProfileClassesList(classes = [], attempts = []) {
+      const tbody = document.getElementById('prof-classes-list-body');
+      if (!tbody) return;
+
+      const activeClassesList = (Array.isArray(classes) && classes.length > 0)
+        ? classes
+        : (Array.isArray(window._activeClasses) && window._activeClasses.length > 0)
+          ? window._activeClasses
+          : [];
+
+      if (activeClassesList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2" class="text-muted" style="text-align: center; padding: 6px 0; font-size: 11px;">No active classes assigned</td></tr>`;
+        return;
+      }
+
+      const rowsHtml = activeClassesList.map(c => {
+        const className = c.name || c.title || 'Class';
+        const classTests = (window._batchTests || []).filter(t => {
+          const cid = t.class_id || t.Class_id;
+          return cid === c.id;
+        });
+        const classTestIds = new Set(classTests.map(t => t.id));
+
+        const classAttempts = (attempts || []).filter(a => {
+          const tid = a.test_id || a.Test_id;
+          const isMatch = classTestIds.has(tid) || (a.class_id || a.Class_id) === c.id;
+          return isMatch && a.percentage != null && a.percentage !== undefined;
+        });
+
+        let gradeSymbol = '—';
+        let gradeText = '—';
+        let gradeColor = '#94a3b8';
+
+        if (classAttempts.length > 0) {
+          const avgScore = classAttempts.reduce((sum, a) => sum + Number(a.percentage || 0), 0) / classAttempts.length;
+          gradeSymbol = typeof calculateGrade === 'function' ? calculateGrade(avgScore) : 'A';
+          const pal = (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE[gradeSymbol])
+            ? GRADE_PALETTE[gradeSymbol]
+            : { color: '#00c000', predicate: 'Very Good' };
+          gradeColor = pal.color || '#00c000';
+          // User requirement: Display ONLY grade description (predicate/label), symbol omitted
+          gradeText = pal.predicate || pal.label || gradeSymbol;
+        } else if (c.overall_grade) {
+          gradeSymbol = c.overall_grade;
+          const pal = (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE[gradeSymbol])
+            ? GRADE_PALETTE[gradeSymbol]
+            : { color: '#00c000', predicate: 'Very Good' };
+          gradeColor = pal.color || '#00c000';
+          // User requirement: Display ONLY grade description (predicate/label), symbol omitted
+          gradeText = pal.predicate || pal.label || gradeSymbol;
+        } else if (c._statusText && c._statusText !== 'In Progress') {
+          gradeText = c._statusText;
+          gradeColor = '#38bdf8';
+        }
+
+        return `
+          <tr>
+            <td class="class-name-cell" title="${escapeHtml(className)}">${escapeHtml(className)}</td>
+            <td class="class-grade-cell" style="color: ${gradeColor};">${escapeHtml(gradeText)}</td>
+          </tr>
+        `;
+      }).join('');
+
+      tbody.innerHTML = rowsHtml;
     }
 
     function populateProfileCities(selectedProv, preselectCity = null) {
@@ -3435,15 +3567,29 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const distInp = document.getElementById('prof-inp-district');
       const villInp = document.getElementById('prof-inp-village');
 
+      // Format address components from village -> district -> regency -> province separated by commas
+      const fVill = (typeof formatVillageName === 'function' ? formatVillageName(vill) : vill) || '';
+      const fDist = (typeof formatDistrictName === 'function' ? formatDistrictName(dist) : dist) || '';
+      const fCity = (typeof formatCityDistrict === 'function' ? formatCityDistrict(city) : city) || '';
+      const fProv = (typeof formatProvinceName === 'function' ? formatProvinceName(prov) : prov) || '';
+
+      const adrParts = [fVill, fDist, fCity, fProv].map(s => (s || '').trim()).filter(s => s && s !== '—');
+      const fullAdrStr = adrParts.length > 0 ? adrParts.join(', ') : '—';
+      const heroAdrEl = document.getElementById('prof-hero-adr');
+      if (heroAdrEl) {
+        heroAdrEl.textContent = fullAdrStr;
+        heroAdrEl.title = fullAdrStr;
+      }
+
       // Update Pure Info Table display (Village -> District -> Regency -> Province)
       const infoVill = document.getElementById('prof-info-village');
-      if (infoVill) infoVill.textContent = (typeof formatVillageName === 'function' ? formatVillageName(vill) : vill) || '—';
+      if (infoVill) infoVill.textContent = fVill || '—';
       const infoDist = document.getElementById('prof-info-district');
-      if (infoDist) infoDist.textContent = (typeof formatDistrictName === 'function' ? formatDistrictName(dist) : dist) || '—';
+      if (infoDist) infoDist.textContent = fDist || '—';
       const infoCity = document.getElementById('prof-info-city');
-      if (infoCity) infoCity.textContent = (typeof formatCityDistrict === 'function' ? formatCityDistrict(city) : city) || '—';
+      if (infoCity) infoCity.textContent = fCity || '—';
       const infoProv = document.getElementById('prof-info-province');
-      if (infoProv) infoProv.textContent = (typeof formatProvinceName === 'function' ? formatProvinceName(prov) : prov) || '—';
+      if (infoProv) infoProv.textContent = fProv || '—';
 
       if (provSel && typeof INDONESIA_REGIONS !== 'undefined') {
         const SUGGESTED_PROV = "Nusa Tenggara Barat";
@@ -3471,31 +3617,50 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     function setupProfileModal(attempts = []) {
       const modal = document.getElementById('profile-modal');
       const openBtn = document.getElementById('view-profile-btn');
-      const closeBtn = document.getElementById('close-profile-modal');
+      const closeBtn = document.getElementById('close-profile-modal') || document.getElementById('btn-close-profile-modal-footer');
 
       const currentGender = session.gender || 'male';
       const cleanName = cleanStudentName(session.student_name || 'Student');
-      const prefix = currentGender === 'female' ? 'Miss ' : 'Mr. ';
+      const isChampion = Boolean(window._isBatchChampion);
+      let prefix = currentGender === 'female' ? 'Miss ' : 'Mr. ';
+      if (isChampion) {
+        prefix = currentGender === 'female' ? 'Queen ' : 'King ';
+      }
 
       const nameEl = document.getElementById('prof-student-name');
-      if (nameEl) nameEl.textContent = `${prefix}${cleanName}`;
+      if (nameEl) nameEl.textContent = formatProfileStudentName(cleanName, prefix);
 
-      // Synchronize Organization Metadata: Institution • Program • Batch
+      // Synchronize Organization Metadata: Institution • Program • Batch • Level (Single-Line Sentence SSOT)
       const instName = (session.institution_name && session.institution_name !== 'undefined') ? session.institution_name : 'TopsCore Academy';
       const progName = (session.program_name && session.program_name !== 'undefined') ? session.program_name : 'Program';
-      const batchName = (session.batch_name && session.batch_name !== 'undefined') ? session.batch_name : 'Batch';
+      const rawBatch = (session.batch_name && session.batch_name !== 'undefined') ? session.batch_name : 'Batch';
+      const batchLabel = /batch/i.test(rawBatch) ? rawBatch : `Batch ${rawBatch}`;
+      const rawLvl = session.level_name || (session.level_number ? toOrdinalLevel(session.level_number) : null);
+      const levelLabel = rawLvl ? (rawLvl.toLowerCase().includes('level') ? rawLvl : `${rawLvl} Level`) : '1st Level';
+
+      const metaSentence = `${instName} • ${progName} • ${batchLabel} • ${levelLabel}`;
+
+      const sentenceEl = document.getElementById('prof-metadata-sentence');
+      if (sentenceEl) sentenceEl.textContent = metaSentence;
 
       const orgMetaEl = document.getElementById('prof-org-meta');
       if (orgMetaEl) {
-        orgMetaEl.textContent = `${instName} • ${progName} • ${batchName}`;
+        orgMetaEl.textContent = metaSentence;
       }
+
+      const campusEl = document.getElementById('prof-meta-campus');
+      if (campusEl) campusEl.textContent = instName;
+      const metaProgEl = document.getElementById('prof-meta-program');
+      if (metaProgEl) metaProgEl.textContent = progName;
+      const metaBatchEl = document.getElementById('prof-meta-batch');
+      if (metaBatchEl) metaBatchEl.textContent = batchLabel;
 
       const progEl = document.getElementById('prof-student-prog');
       if (progEl) progEl.textContent = instName;
       const classEl = document.getElementById('prof-student-class');
       if (classEl) classEl.textContent = progName;
       const batchEl = document.getElementById('prof-student-batch');
-      if (batchEl) batchEl.textContent = batchName;
+      if (batchEl) batchEl.textContent = batchLabel;
 
       // Synchronize Gender & Title in CV
       const heroGenderEl = document.getElementById('prof-hero-gender');
@@ -3533,6 +3698,28 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       // Populate Initial Address from session
       populateProfileAddress(session.province, session.city, session.district, session.village);
+
+      // Render Classes with overall grade in Section 2
+      renderProfileClassesList(window._activeClasses, attempts);
+
+      // Populate PIN (Tactical clean styling, no glow & no pink)
+      const pinVal = session.login_pin || session.pin || '1234';
+      const pinDisplayEl = document.getElementById('prof-pin-display');
+      if (pinDisplayEl) pinDisplayEl.textContent = pinVal;
+
+      let resolvedGrade = window._studentGrade || session.overall_grade || null;
+      if (!resolvedGrade && Array.isArray(attempts) && attempts.length > 0) {
+        const validAttempts = attempts.filter(a => a.percentage !== null && a.percentage !== undefined);
+        if (validAttempts.length > 0) {
+          const maxPct = Math.max(...validAttempts.map(a => Number(a.percentage) || 0));
+          resolvedGrade = typeof calculateGrade === 'function' ? calculateGrade(maxPct) : 'A';
+        }
+      }
+      if (resolvedGrade) {
+        applyProfileGradeTheme(resolvedGrade);
+      } else {
+        applyProfileGradeTheme(window._studentGradeColor || TOPSCORE_COLORS.A, window._studentGradeRgb || '0, 192, 0');
+      }
 
       // Synchronize Education Timeline immediately from session
       const timelineEl = document.getElementById('prof-education-timeline');
@@ -3600,7 +3787,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const nameEl = document.getElementById('prof-student-name');
           if (nameEl) {
             const p = activeGender === 'female' ? 'Miss ' : 'Mr. ';
-            nameEl.textContent = `${p}${cleanStudentName(session.student_name || 'Student')}`;
+            nameEl.textContent = formatProfileStudentName(session.student_name || 'Student', p);
           }
 
           // Interactive Birth Date & Age synchronization
@@ -3769,6 +3956,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           showLoading('Memperbarui PIN…');
           try {
             await changePin(session.student_id, oldPin, newPin);
+            session.login_pin = newPin;
+            session.pin = newPin;
+            setStudentSession(session);
+            const pinDisplayEl = document.getElementById('prof-pin-display');
+            if (pinDisplayEl) pinDisplayEl.textContent = newPin;
             hideLoading();
             showToast('PIN berhasil diperbarui!', 'success');
             changePinForm.reset();
@@ -3908,11 +4100,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         updateAgeAndEduUI(curDobVal);
         populateProfileAddress(session.province, session.city, session.district, session.village);
 
-        modal.classList.remove('hidden');
+        modal?.classList.remove('hidden');
         try { window.location.hash = '#profile'; } catch (_) {}
       };
 
-      openBtn.addEventListener('click', openProfile);
+      if (openBtn && !openBtn._hasClickListener) {
+        openBtn._hasClickListener = true;
+        openBtn.addEventListener('click', openProfile);
+      }
 
       const closeProfile = () => {
         if (window.isProfileDirty) {
@@ -3932,7 +4127,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               updateAgeAndEduUI(resetDob);
               populateProfileAddress(session.province, session.city, session.district, session.village);
 
-              modal.classList.add('hidden');
+              modal?.classList.add('hidden');
               if (window.location.hash.startsWith('#profile') || window.location.hash === '#history') {
                 try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
               }
@@ -3942,21 +4137,27 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
         window.isProfileDirty = false;
         if(changePinForm) changePinForm.reset();
-        modal.classList.add('hidden');
+        modal?.classList.add('hidden');
         if (window.location.hash.startsWith('#profile') || window.location.hash === '#history') {
           try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
         }
       };
 
-      closeBtn.addEventListener('click', closeProfile);
+      if (closeBtn && !closeBtn._hasClickListener) {
+        closeBtn._hasClickListener = true;
+        closeBtn.addEventListener('click', closeProfile);
+      }
       const footerCloseBtn = document.getElementById('btn-close-profile-modal-footer');
       if (footerCloseBtn && !footerCloseBtn._hasClickListener) {
         footerCloseBtn._hasClickListener = true;
         footerCloseBtn.addEventListener('click', closeProfile);
       }
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) closeProfile();
-      });
+      if (modal && !modal._hasBackdropListener) {
+        modal._hasBackdropListener = true;
+        modal.addEventListener('click', (e) => {
+          if (e.target === modal) closeProfile();
+        });
+      }
 
       // Header avatar also opens profile modal
       document.getElementById('header-avatar')?.addEventListener('click', () => openProfile('profile'));
@@ -4001,8 +4202,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       icon = '',
       title = 'LOG OUT SESSION',
       message = 'Are you sure you want to sign out?',
-      confirmText = 'Log Out',
-      cancelText = 'Cancel',
+      confirmText = 'LOG OUT',
+      cancelText = 'STAY HERE',
       type = 'danger',
       onConfirm = null
     } = {}) {
@@ -4052,11 +4253,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     // Logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {
       window.showConfirmDialog({
-        icon: getSvgIcon('arrow-right', 28),
+        icon: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>',
         title: 'LOG OUT SESSION',
         message: 'Are you sure you want to sign out of your learning session?',
-        confirmText: 'Log Out',
-        cancelText: 'Stay Here',
+        confirmText: 'LOG OUT',
+        cancelText: 'STAY HERE',
         type: 'danger',
         onConfirm: () => {
           clearStudentSession();

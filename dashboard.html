@@ -31,8 +31,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261115_v522" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261115_v522" />
+  <link rel="stylesheet" href="css/style.css?v=20261115_v547" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261115_v546" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
 
 
@@ -55,10 +55,6 @@
     </div>
     <div class="dashboard-header-brand" id="dashboard-header-class-name">TopsCore</div>
     <div class="dashboard-header-right dashboard-header-actions" style="display:flex;align-items:center;gap:8px;">
-      <button class="header-action-btn" id="btn-open-conversation" title="1-Hour Peer Conversation Room" aria-label="Peer Conversation Room" onclick="window.location.href='conversation.html'" style="display:flex;align-items:center;gap:4px;height:32px;padding:0 10px;font-size:11px;font-weight:700;background:rgba(99,102,241,0.2);border:1px solid rgba(99,102,241,0.4);border-radius:6px;color:#818cf8;cursor:pointer;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-        <span>Oral Room</span>
-      </button>
       <button class="header-action-btn header-logout-btn" id="logout-btn" title="Logout" aria-label="Logout">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
@@ -145,8 +141,8 @@
 
 
 
-    <!-- 6. NEXT ASSESSMENT BAR (40px: Single Unified Card, no floating label) -->
-    <section id="up-next-section" class="dashboard-next-test-deck" aria-label="Next Assessment">
+    <!-- 6. NEXT TEST BAR (40px: Single Unified Card, no floating label) -->
+    <section id="up-next-section" class="dashboard-next-test-deck" aria-label="Next Test">
       <div id="up-next-container" class="next-test-card">
         <!-- Populated dynamically by renderNextAssignmentHero -->
       </div>
@@ -208,29 +204,21 @@
         <span id="leaderboard-champion-name"></span>
       </div>
     </div>
-      <div id="leaderboard-my-summary">
-        <span id="leaderboard-my-rank"></span>
-        <span id="leaderboard-champion-name"></span>
-      </div>
-    </div>
 
     <!-- Classes Selector Modal (Triggered by clicking 30px Classes Bar) -->
     <div class="modal-backdrop hidden" id="classes-selector-modal" role="dialog" aria-modal="true" aria-labelledby="classes-selector-modal-title">
       <div class="modal-box classes-selector-modal-box">
+        <div class="modal-header classes-selector-modal-header">
+          <h2 id="classes-selector-modal-title" class="classes-selector-title">CLASS LOBBY</h2>
+        </div>
         <div class="classes-selector-modal-body">
-          <div class="classes-selector-modal-header">
-            <div>
-              <h3 id="classes-selector-modal-title" class="classes-selector-title">LOBBY</h3>
-              <p class="classes-selector-subtitle">SELECT CLASS TO ENTER</p>
-            </div>
-            <button class="btn btn-ghost btn-icon btn-sm classes-selector-close-btn" id="close-classes-selector-modal" aria-label="Close">✕</button>
-          </div>
           <div id="classes-selector-modal-list" class="classes-selector-modal-list">
             <!-- Dynamically populated with active classes -->
           </div>
         </div>
         <!-- Ergonomic 60px Modal Footer Invariant -->
-        <div class="classes-selector-modal-footer">
+        <div class="modal-footer classes-selector-modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-classes-selector">CLOSE</button>
           <button type="button" class="btn btn-primary classes-selector-btn-confirm" id="btn-confirm-class-selection">ENTER CLASS &rarr;</button>
         </div>
       </div>
@@ -239,14 +227,17 @@
     <!-- Reusable Custom Confirmation Modal (Phase 3: Zero Native confirm()) -->
     <div class="modal-backdrop hidden" id="custom-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="custom-confirm-title">
       <div class="modal-box custom-confirm-box">
-        <div class="custom-confirm-icon-wrap" id="custom-confirm-icon-wrap">
-          <span id="custom-confirm-icon"></span>
+        <div class="custom-confirm-body">
+          <div class="custom-confirm-icon-wrap" id="custom-confirm-icon-wrap">
+            <span id="custom-confirm-icon"></span>
+          </div>
+          <h3 id="custom-confirm-title" class="custom-confirm-title">LOG OUT SESSION</h3>
+          <p id="custom-confirm-msg" class="custom-confirm-desc">Are you sure you want to sign out of your learning session?</p>
         </div>
-        <h3 id="custom-confirm-title" class="custom-confirm-title">LOG OUT SESSION</h3>
-        <p id="custom-confirm-msg" class="custom-confirm-desc">Are you sure you want to sign out of your learning session?</p>
-        <div class="custom-confirm-actions">
-          <button type="button" class="btn custom-confirm-btn-cancel" id="custom-confirm-btn-cancel">Cancel</button>
-          <button type="button" class="btn custom-confirm-btn-action" id="custom-confirm-btn-action">Log Out</button>
+        <!-- Standard 60px CTA Area / Modal Footer -->
+        <div class="modal-footer custom-confirm-footer">
+          <button type="button" class="btn custom-confirm-btn-action" id="custom-confirm-btn-action">LOG OUT</button>
+          <button type="button" class="btn custom-confirm-btn-cancel" id="custom-confirm-btn-cancel">STAY HERE</button>
         </div>
       </div>
     </div>
@@ -254,54 +245,52 @@
     <!-- Component Selector Modal (Pop-up 04 Golden Standard) -->
     <div class="modal-backdrop hidden" id="component-selector-modal" role="dialog" aria-modal="true" aria-labelledby="component-modal-title">
       <div class="modal-box component-selector-modal-box">
+        <div class="modal-header component-selector-modal-header">
+          <h2 id="component-modal-title" class="component-selector-title">TOPIC TEST</h2>
+        </div>
         <div class="component-selector-modal-body">
-          <div class="component-selector-modal-header">
-            <div>
-              <div id="component-modal-badge" class="component-selector-badge">TOPIC ASSESSMENT</div>
-              <h3 id="component-modal-title" class="component-selector-title">Topic Title</h3>
-              <p id="component-modal-subtitle" class="component-selector-subtitle">Choose which part you want to work on:</p>
-            </div>
-            <button type="button" class="btn btn-ghost btn-icon btn-sm component-selector-close-btn" id="close-component-modal" aria-label="Close">&#10005;</button>
-          </div>
-
           <div id="component-modal-options" class="component-selector-options-list">
-            <!-- Card Option A: Words -->
-            <div id="component-opt-words" role="button" tabindex="0" class="component-choice-card selected" aria-pressed="true">
-              <div class="component-card-top-row">
-                <span class="component-card-title-wrap">
-                  <span class="component-card-icon" id="component-words-icon"></span>
-                  <span id="component-words-title">Words Component</span>
-                </span>
-                <span id="component-words-badge" class="component-card-badge">40 Questions</span>
+            <!-- Card Option A: Words (Electric Lime: Grade B / Theme C) -->
+            <div id="component-opt-words" role="button" tabindex="0" class="component-choice-card component-card-words selected" aria-pressed="true">
+              <div class="component-card-header">
+                <span class="component-card-icon" id="component-words-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+                <span id="component-words-title" class="component-card-title">WORDS</span>
               </div>
-              <div class="component-card-bottom-row">
-                <span id="component-words-status" class="component-card-status">Progress: 0/7 Passes</span>
-                <span id="component-words-best" class="component-card-best">Best: &mdash;</span>
+              <div class="component-card-divider"></div>
+              <div class="component-card-pips" id="component-words-pips">
+                <div class="pip-box" data-pip="1">1</div>
+                <div class="pip-box" data-pip="2">2</div>
+                <div class="pip-box" data-pip="3">3</div>
+                <div class="pip-box" data-pip="4">4</div>
+                <div class="pip-box" data-pip="5">5</div>
+                <div class="pip-box" data-pip="6">6</div>
+                <div class="pip-box" data-pip="7">7</div>
               </div>
             </div>
 
-            <!-- Card Option B: Phrases -->
+            <!-- Card Option B: Phrases (Dark Orange: Grade D / Theme B) -->
             <div id="component-opt-phrases" role="button" tabindex="0" class="component-choice-card component-card-phrases" aria-pressed="false">
-              <div class="component-card-top-row">
-                <span class="component-card-title-wrap">
-                  <span class="component-card-icon" id="component-phrases-icon"></span>
-                  <span id="component-phrases-title">Phrases Component</span>
-                </span>
-                <span id="component-phrases-badge" class="component-card-badge">10 Questions</span>
+              <div class="component-card-header">
+                <span class="component-card-icon" id="component-phrases-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+                <span id="component-phrases-title" class="component-card-title">PHRASES</span>
               </div>
-              <div class="component-card-bottom-row">
-                <span id="component-phrases-status" class="component-card-status">Progress: 0/7 Passes</span>
-                <span id="component-phrases-best" class="component-card-best">Best: &mdash;</span>
+              <div class="component-card-divider"></div>
+              <div class="component-card-pips" id="component-phrases-pips">
+                <div class="pip-box" data-pip="1">1</div>
+                <div class="pip-box" data-pip="2">2</div>
+                <div class="pip-box" data-pip="3">3</div>
+                <div class="pip-box" data-pip="4">4</div>
+                <div class="pip-box" data-pip="5">5</div>
+                <div class="pip-box" data-pip="6">6</div>
+                <div class="pip-box" data-pip="7">7</div>
               </div>
             </div>
           </div>
-
-          <p class="component-selector-footnote">Both parts must pass &ge;70% to complete 1 round of 7&times;7.</p>
         </div>
 
         <!-- Dedicated 60px Modal Footer Invariant -->
-        <div class="component-selector-modal-footer">
-          <button type="button" class="btn btn-primary component-selector-btn-confirm" id="btn-confirm-component-selection">START WORDS DRILL &rarr;</button>
+        <div class="modal-footer component-selector-modal-footer">
+          <button type="button" class="btn btn-primary component-selector-btn-confirm" id="btn-confirm-component-selection">START WORDS &rarr;</button>
         </div>
       </div>
     </div>
@@ -313,41 +302,59 @@
         <!-- Modal Header (Single Page: PROFILE) -->
         <div class="profile-modal-header">
           <h3 id="profile-modal-title">PROFILE</h3>
-          <button class="btn btn-ghost btn-icon btn-sm profile-close-btn" id="close-profile-modal" aria-label="Close">&#10005;</button>
         </div>
 
         <!-- Student Academic CV Body (Zero-Scroll Single Page) -->
         <div class="profile-cv-body">
-          <!-- CV Hero Card: Student Identity & Stacked Biodata beside Photo -->
+          <!-- Student Top Identity: Name & Course Metadata (Directly below Title Area) -->
+          <div class="profile-cv-top-name-wrap">
+            <h4 class="profile-student-name" id="prof-student-name">—</h4>
+            <div class="profile-metadata-sentence" id="prof-metadata-sentence">—</div>
+            <!-- Preserved for JS state compatibility -->
+            <span class="hidden" id="prof-meta-campus" style="display:none !important;">—</span>
+            <span class="hidden" id="prof-meta-program" style="display:none !important;">—</span>
+            <span class="hidden" id="prof-meta-batch" style="display:none !important;">—</span>
+            <span class="prof-meta-org-text hidden" id="prof-org-meta" style="display:none !important;">—</span>
+          </div>
+
+          <!-- CV Hero Card: 10px Spacing & 3x4 Portrait Photo Flush with Biodata -->
           <div class="profile-cv-card profile-cv-hero">
-            <div class="profile-avatar-wrap" id="avatar-container" title="Click to upload profile photo">
-              <div id="avatar-img-wrapper" class="profile-avatar-circle">
-                <span id="avatar-icon" class="avatar-icon-svg"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
+            <div class="profile-avatar-wrap profile-avatar-wrap-3x4" id="avatar-container" title="Click to upload profile photo">
+              <div id="avatar-img-wrapper" class="profile-avatar-3x4">
+                <span id="avatar-icon" class="avatar-icon-svg"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></span>
                 <img id="prof-photo-img" class="hidden" alt="Profile Photo" />
               </div>
               <div class="profile-avatar-camera" id="prof-camera-badge" title="Retake photo via camera (Exam Passed)">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
               </div>
             </div>
 
-            <!-- Stacked Biodata beside Photo: Name -> Gender -> DOB/AGE -> Org Metadata (Pure Info View) -->
+            <!-- Stacked Biodata beside Photo: DoB -> Age -> Sex -> Adr with Aligned Colons -->
             <div class="profile-cv-hero-details">
-              <h4 class="profile-student-name" id="prof-student-name">—</h4>
-              <div class="profile-hero-meta-list">
+              <div class="profile-hero-meta-table">
                 <div class="profile-hero-meta-row">
-                  <span class="meta-label">GENDER:</span>
-                  <span class="meta-val" id="prof-hero-gender">Male</span>
+                  <span class="profile-meta-lbl">DoB</span>
+                  <span class="profile-meta-colon">:</span>
+                  <span class="profile-meta-val" id="prof-hero-dob">—</span>
                 </div>
-                <div class="profile-hero-meta-row prof-dob-age-row">
-                  <span class="meta-label">DOB / AGE:</span>
-                  <span class="meta-val" id="prof-hero-dob-age">—</span>
-                  <input type="hidden" id="prof-inp-dob" />
-                  <span class="hidden" id="prof-age-display"></span>
+                <div class="profile-hero-meta-row">
+                  <span class="profile-meta-lbl">Age</span>
+                  <span class="profile-meta-colon">:</span>
+                  <span class="profile-meta-val" id="prof-hero-age">—</span>
                 </div>
-                <!-- Institutional Metadata: Institution + Program + Batch (ex CEC Camp 123) -->
-                <div class="profile-hero-meta-row prof-meta-org-row">
-                  <span class="prof-meta-org-text" id="prof-org-meta">—</span>
+                <div class="profile-hero-meta-row">
+                  <span class="profile-meta-lbl">Sex</span>
+                  <span class="profile-meta-colon">:</span>
+                  <span class="profile-meta-val profile-hero-gender-val" id="prof-hero-gender">Male</span>
                 </div>
+                <div class="profile-hero-meta-row prof-adr-row">
+                  <span class="profile-meta-lbl">Adr</span>
+                  <span class="profile-meta-colon">:</span>
+                  <span class="profile-meta-val prof-meta-adr-val" id="prof-hero-adr" title="Residential Address">—</span>
+                </div>
+                <input type="hidden" id="prof-inp-dob" />
+                <span class="hidden" id="prof-hero-dob-age" style="display:none !important;"></span>
+                <span class="hidden" id="prof-age-display" style="display:none !important;"></span>
               </div>
               <!-- Preserved for JS state compatibility -->
               <span id="prof-gender-text" class="hidden" style="display:none !important;"></span>
@@ -361,33 +368,33 @@
             </div>
           </div>
 
-          <!-- Section 1: ADDRESS (Pure Info Table: Village -> District -> Regency -> Province) -->
-          <div class="profile-cv-card">
-            <div class="profile-cv-section-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-              <span>ADDRESS</span>
+          <!-- Section 1: EDUCATION (With Section Divider, Centered Info & Zero Lock Icon) -->
+          <div class="profile-section-divider-wrap">
+            <div class="profile-section-divider-title">EDUCATION</div>
+          </div>
+          <div class="profile-cv-card profile-education-card-outer">
+            <div class="profile-edu-centered-row">
+              <span class="profile-edu-title" id="prof-edu-title">Senior High School (SMA/SMK)</span>
             </div>
-            <table class="profile-address-table">
-              <tbody>
-                <tr>
-                  <td class="addr-label">VILLAGE</td>
-                  <td class="addr-val" id="prof-info-village">—</td>
-                </tr>
-                <tr>
-                  <td class="addr-label">DISTRICT</td>
-                  <td class="addr-val" id="prof-info-district">—</td>
-                </tr>
-                <tr>
-                  <td class="addr-label">REGENCY</td>
-                  <td class="addr-val" id="prof-info-city">—</td>
-                </tr>
-                <tr>
-                  <td class="addr-label">PROVINCE</td>
-                  <td class="addr-val" id="prof-info-province">—</td>
-                </tr>
+            <!-- Preserved for JS state compatibility -->
+            <div id="prof-education-timeline" class="hidden" style="display:none !important;"></div>
+          </div>
+
+          <!-- Section 2: CLASSES (Replacing Address Section) -->
+          <div class="profile-section-divider-wrap">
+            <div class="profile-section-divider-title">CLASSES</div>
+          </div>
+          <div class="profile-cv-card profile-classes-card-outer">
+            <table class="profile-classes-table">
+              <tbody id="prof-classes-list-body">
+                <!-- Dynamically populated via renderProfileClassesList -->
               </tbody>
             </table>
             <!-- Preserved compatibility elements -->
+            <span id="prof-info-village" class="hidden" style="display:none !important;"></span>
+            <span id="prof-info-district" class="hidden" style="display:none !important;"></span>
+            <span id="prof-info-city" class="hidden" style="display:none !important;"></span>
+            <span id="prof-info-province" class="hidden" style="display:none !important;"></span>
             <span id="prof-addr-province" class="hidden" style="display:none !important;"></span>
             <span id="prof-addr-city" class="hidden" style="display:none !important;"></span>
             <span id="prof-addr-district" class="hidden" style="display:none !important;"></span>
@@ -399,35 +406,18 @@
             <input type="hidden" id="prof-inp-village" />
           </div>
 
-          <!-- Section 2: EDUCATIONAL BACKGROUND (Locked / Auto-Calculated by Age) -->
-          <div class="profile-cv-card">
-            <div class="profile-cv-section-title">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg>
-              <span>EDUCATIONAL BACKGROUND</span>
-            </div>
-            <div class="profile-education-card locked">
-              <div class="profile-edu-main-row">
-                <div class="profile-edu-left">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon text-muted" title="Locked: Automatically calculated by age"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                  <span class="profile-edu-title" id="prof-edu-title">Senior High School (SMA/SMK)</span>
-                </div>
-                <span class="badge-verified" id="prof-edu-badge">Verified</span>
-              </div>
-            </div>
-            <!-- Preserved for JS state compatibility -->
-            <div id="prof-education-timeline" class="hidden" style="display:none !important;"></div>
+          <!-- Section 3: SECURITY (With Section Divider & Outside Title) -->
+          <div class="profile-section-divider-wrap">
+            <div class="profile-section-divider-title">SECURITY</div>
           </div>
-
-          <!-- Section 3: Security Credentials (Clean Action Row with Modal Opener) -->
-          <div class="profile-cv-card profile-security-card">
+          <div class="profile-cv-card profile-security-card" id="profile-security-card">
             <div class="profile-security-row">
               <div class="profile-security-left">
-                <div class="profile-security-icon">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                <div class="profile-security-icon" id="prof-security-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                 </div>
-                <div class="profile-security-info">
-                  <div class="profile-security-title">Personal PIN</div>
-                  <div class="profile-security-status">•••• &bull; <span class="text-success" style="color:var(--grade-a);font-weight:700;">Active</span></div>
+                <div class="profile-pin-box" id="prof-pin-box" title="Your Personal Security PIN">
+                  <span id="prof-pin-display">1234</span>
                 </div>
               </div>
               <button type="button" class="btn btn-primary btn-sm btn-open-pin-modal" id="btn-open-change-pin">CHANGE PIN</button>
@@ -435,9 +425,9 @@
           </div>
         </div>
 
-        <!-- Dedicated 60px Modal Footer (Clean Single Action: CLOSE) -->
+        <!-- Dedicated 60px Modal Footer (Clean Single Action: CLOSE in Bottom-Left) -->
         <div class="profile-modal-footer">
-          <button type="button" class="btn btn-secondary btn-block btn-sm" id="btn-close-profile-modal-footer">CLOSE</button>
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-profile-modal-footer">CLOSE</button>
         </div>
         </div>
       </div>
@@ -448,7 +438,6 @@
       <div class="modal-box change-pin-modal-box">
         <div class="change-pin-modal-header">
           <h3 id="change-pin-modal-title">CHANGE PIN</h3>
-          <button class="btn btn-ghost btn-icon btn-sm" id="close-change-pin-modal" aria-label="Close">&#10005;</button>
         </div>
 
         <div class="change-pin-modal-body">
@@ -479,14 +468,12 @@
     </div>
 
 
-    <!-- Onboarding Pop-up: WELCOME (All-in-One: Name + Gender + DOB + Address + Education) -->
+    <!-- Onboarding Pop-up: Setup Profile (Gender Choices + DOB + Address + Education) -->
     <div class="modal-backdrop hidden" id="introduce-setup-modal" role="dialog" aria-modal="true" aria-labelledby="intro-setup-title">
       <div class="modal-box introduce-setup-box">
         <div class="setup-modal-body">
-          <h2 id="intro-setup-title" class="intro-modal-title">WELCOME</h2>
-
-          <!-- Student Name (Directly Below Title, Bottom Border Only, 10px Spacing) -->
-          <div class="intro-student-name" id="intro-student-name">Top</div>
+          <h2 id="intro-setup-title" class="sr-only">Profile Setup</h2>
+          <span class="intro-student-name hidden" id="intro-student-name"></span>
 
           <!-- Gender Choice Cards (110x110px Square: Mars ♂ Electric Lime & Venus ♀ Pink) -->
           <div class="intro-gender-row">
@@ -660,12 +647,12 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261115_v522"></script>
+  <script type="module" src="./js/dashboard.js?v=20261115_v542"></script>
   <!-- Service Worker Registration for PWA -->
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261115_v121')
+        navigator.serviceWorker.register('sw.js?v=20261115_v130')
           .then(registration => {
             registration.update();
             console.log('ServiceWorker registered and updated with scope:', registration.scope);

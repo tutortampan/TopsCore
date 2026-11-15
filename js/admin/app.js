@@ -411,7 +411,7 @@ import { renderVocabularyVault } from './vocab-vault.js?v=20261115_v522';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261114_v474';
 import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
-import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261106_v160';
+import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261115_v528';
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
 import { renderClassesHub } from './classes-hub.js?v=20261106_v160';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261114_v474';
@@ -434,7 +434,7 @@ if (typeof window !== 'undefined') {
       'classes-hub': 'Curriculum & Level Master',
       'class-hub': 'Class Hub',
       import_ai_tests: 'Import AI Tests',
-      institutions: 'Batches', students: 'Students', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
+      institutions: 'Batches', students: 'Students', alumni: 'Alumni', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
       tests: 'Test Analytics', 'test-access': 'Test Access', assignments: 'Assignments & Rosters', results: 'Test Results', recalibrator: 'Test Engine Recalibration', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
@@ -445,7 +445,7 @@ if (typeof window !== 'undefined') {
     const sectionDomainMap = {
       dashboard: 'ADMIN', profile: 'ADMIN', schedule: 'ADMIN', work_records: 'ADMIN', cv_generator: 'ADMIN', organization: 'ADMIN',
       'classes-hub': 'ADMIN', curriculum: 'ADMIN',
-      institutions: 'BOARD', students: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
+      institutions: 'BOARD', students: 'BOARD', alumni: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       tests: 'CLASS', 'test-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_tests: 'CLASS',
       'class-panel': 'CLASS', 'class-hub': 'CLASS',
@@ -907,6 +907,7 @@ if (typeof window !== 'undefined') {
               window._filterBatchId = bid;
               window._filterBatchName = bname;
               window._selectedSidebarLabel = label;
+              window._isAlumniMainPanel = false;
               // User requirement: Always default to Active Students tab when entering student roster
               window._filterBatchStatus = 'active';
 
@@ -1392,7 +1393,7 @@ if (typeof window !== 'undefined') {
           return t.charAt(0).toUpperCase() + t.slice(1);
         };
 
-        const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
+        const statusColors = { published: 'badge-success', draft: 'badge-neutral' };
 
         // Calculate DataGrid format for Tests (Rich/Detailed)
         window._classHubRecords = {};
@@ -1895,11 +1896,45 @@ if (typeof window !== 'undefined') {
                 <span id="class-roster-count-badge">${activeBatchStudents.length} Enrolled</span>
               </div>
             `;
+            const isManualOn = Boolean(window._classManualScoreEditMode);
+            const isRemedialOn = Boolean(window._classRemedialEditMode);
+            const isForgivenOn = Boolean(window._classForgivenEditMode);
+
+            // 1. Manual Button (Cyan #38bdf8 / Grade M)
+            // Fixed width: 175px (strictly based on wider "Done Editing (Manual)" to prevent layout shifts)
+            const manualBtnStyle = isManualOn
+              ? 'width: 175px; min-width: 175px; max-width: 175px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
+              : 'width: 175px; min-width: 175px; max-width: 175px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid #38bdf8; color: #38bdf8; padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
+            const manualBtnLabel = isManualOn
+              ? `${getSvgIcon('check-circle', 14)} Done Editing (Manual)`
+              : `${getSvgIcon('edit', 14)} Manual (M)`;
+            const manualBtnHtml = `<button type="button" class="btn btn-sm" id="btn-subpanel-manual" style="${manualBtnStyle}" title="Toggle Direct Table Editing for Progress, Score & Points">${manualBtnLabel}</button>`;
+
+            // 2. Remedial Button (Pure Yellow #FFFF00 / Grade R)
+            // Fixed width: 155px (stable anti-shift width based on wider "Done Remedi (R)")
+            const remedialBtnStyle = isRemedialOn
+              ? 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--grade-c); border: 1px solid var(--grade-c); color: #0f172a; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(255,255,0,0.45); transition: all 0.15s ease;'
+              : 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid var(--grade-c); color: var(--grade-c); padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
+            const remedialBtnLabel = isRemedialOn
+              ? `${getSvgIcon('check-circle', 14)} Done Remedi (R)`
+              : `${getSvgIcon('refresh', 14)} Remedi (R)`;
+            const remedialBtnHtml = `<button type="button" class="btn btn-sm" id="btn-subpanel-remedial" style="${remedialBtnStyle}" title="Toggle Remedial Table Mode (Grade R - Yellow, Cap 60%)">${remedialBtnLabel}</button>`;
+
+            // 3. Forgiven Button (Pure Red #FF0000 / Grade F)
+            // Fixed width: 155px (stable anti-shift width based on wider "Done Forgive (F)")
+            const forgivenBtnStyle = isForgivenOn
+              ? 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--grade-e); border: 1px solid var(--grade-e); color: #ffffff; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(255,0,0,0.45); transition: all 0.15s ease;'
+              : 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid var(--grade-e); color: var(--grade-e); padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
+            const forgivenBtnLabel = isForgivenOn
+              ? `${getSvgIcon('check-circle', 14)} Done Forgive (F)`
+              : `${getSvgIcon('shield', 14)} Forgive (F)`;
+            const forgivenBtnHtml = `<button type="button" class="btn btn-sm" id="btn-subpanel-forgiven" style="${forgivenBtnStyle}" title="Toggle Forgiven Waiver Mode (Grade F - Red)">${forgivenBtnLabel}</button>`;
+
             const rightHtml = `
               <div class="attendance-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
-                <button type="button" class="btn btn-warning btn-sm" id="btn-open-forgiven-wizard" style="font-size:12px; font-weight:700; background:var(--grade-c); border-color:var(--grade-c); color:#0f172a; padding:4px 10px; cursor:pointer;" title="Open Forgiven &amp; Manual Exam Override Wizard">
-                  ${getSvgIcon('shield', 14)} Forgiven &amp; Override
-                </button>
+                ${manualBtnHtml}
+                ${remedialBtnHtml}
+                ${forgivenBtnHtml}
               </div>
             `;
             setBottomInfobar(leftHtml, rightHtml);
@@ -2041,18 +2076,6 @@ if (typeof window !== 'undefined') {
                 sortable: true,
                 minWidth: '240px',
                 render: (val, row) => {
-                  const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
-                  if (isEditMode) {
-                    return `
-                      <input type="text"
-                             class="input-test-title edit-mode-flat-input"
-                             data-test-id="${row.id}"
-                             data-original-val="${escapeHtml(row.title)}"
-                             value="${escapeHtml(row.title)}"
-                             title="Click to rename test (Enter / Blur to save)"
-                             style="width:100%; min-width:240px; height:24px; padding:0 4px; font-size:12px; font-weight:600; background:transparent !important; border:none !important; border-radius:0 !important; color:var(--clr-text-1); outline:none;" />
-                    `;
-                  }
                   let displayTitle = escapeHtml(row.title);
                   displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--grade-c);">$1</span>');
                   displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #38bdf8;">$1</span>');
@@ -2120,28 +2143,9 @@ if (typeof window !== 'undefined') {
                 sortable: true,
                 width: '95px',
                 render: (val, row) => {
-                  const testId = row.id;
                   const currentMin = row.minScore || 60;
-                  const isExamTest = isWeeklyExam(row._raw);
-                  const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
-                  if (!isEditMode) {
-                    const passColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(currentMin) : 'var(--grade-c)';
-                    return `<span style="font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; color:${passColor};">${currentMin}%</span>`;
-                  }
-                  return `
-                    <div class="pass-pct-cell-wrap" style="display:inline-flex; align-items:center; justify-content:center; gap:2px;">
-                      <input type="number"
-                             class="input-test-pass-score edit-mode-flat-input"
-                             data-test-id="${testId}"
-                             data-shell-code="${escapeHtml(row.shellCode || row.title)}"
-                             data-original-val="${currentMin}"
-                             value="${currentMin}"
-                             min="1" max="100"
-                             title="Type manual passing percentage (Enter / Blur to save)"
-                             style="width:36px; height:24px; padding:0; font-size:12px; font-weight:600; text-align:center; background:transparent !important; border:none !important; border-radius:0 !important; color:#f8fafc; outline:none;" />
-                      <span style="font-size: 12px; color:${typeof getGradeColorByScore === 'function' ? getGradeColorByScore(currentMin) : '#94a3b8'}; font-weight:600;">%</span>
-                    </div>
-                  `;
+                  const passColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(currentMin) : 'var(--grade-c)';
+                  return `<span style="font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; color:${passColor};">${currentMin}%</span>`;
                 }
               },
               {
@@ -2159,28 +2163,15 @@ if (typeof window !== 'undefined') {
               {
                 key: 'status',
                 label: 'STATUS',
+                shortLabel: 'STATUS',
+                microLabel: 'STATUS',
                 sortable: true,
                 width: '95px',
                 render: (val, row) => {
                   const st = String(row.status || 'draft').toLowerCase();
-                  const isEditMode = typeof window.getGlobalEditMode === 'function' && window.getGlobalEditMode();
                   const isPub = st === 'published';
                   const displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
-                  if (!isEditMode) {
-                    return `<span style="font-size:12px; font-weight:500; color:${isPub ? 'var(--grade-a)' : '#94a3b8'};">${escapeHtml(displayStatus)}</span>`;
-                  }
-                  return `
-                    <select class="input-test-status-select edit-mode-flat-select"
-                            data-test-id="${row.id}"
-                            data-test-title="${escapeHtml(row.title)}"
-                            data-original-status="${st}"
-                            title="Change status or delete test"
-                            style="background:transparent !important; border:none !important; border-radius:0 !important; color:${isPub ? 'var(--grade-a)' : '#94a3b8'}; font-size:12px !important; font-weight:500; cursor:pointer; padding:2px 4px; outline:none;">
-                      <option value="published" ${st === 'published' ? 'selected' : ''} style="background:#0f172a; color:var(--grade-a);">Published</option>
-                      <option value="draft" ${st === 'draft' ? 'selected' : ''} style="background:#0f172a; color:#94a3b8;">Draft</option>
-                      <option value="delete" style="background:#0f172a; color:var(--grade-e);">✕ Delete test</option>
-                    </select>
-                  `;
+                  return `<span style="font-size:12px; font-weight:500; color:${isPub ? 'var(--grade-a)' : '#94a3b8'};">${escapeHtml(displayStatus)}</span>`;
                 }
               }
             ]
@@ -2592,11 +2583,13 @@ if (typeof window !== 'undefined') {
                   const d = studentDraft[tId];
                   const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
                   const pts = d?.pts != null ? Number(d.pts) : Math.round((d?.totalQ || totalQ || 120) * (pct / 100) * 10) / 10;
+                  const g = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'E');
                   return {
                     testId: tId,
                     action: 'manual',
                     percentage: pct,
-                    score: pts
+                    score: pts,
+                    grade: g
                   };
                 });
 
@@ -2628,9 +2621,6 @@ if (typeof window !== 'undefined') {
           };
 
           window.toggleRowManualInput = async (studentId, testId, totalQ) => {
-            if (typeof window.getGlobalEditMode === 'function' && !window.getGlobalEditMode()) {
-              return;
-            }
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
               return;
@@ -2658,9 +2648,6 @@ if (typeof window !== 'undefined') {
           };
 
           window.toggleAllManualInputMode = async () => {
-            if (typeof window.getGlobalEditMode === 'function' && !window.getGlobalEditMode()) {
-              return;
-            }
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
               return;
@@ -2742,6 +2729,375 @@ if (typeof window !== 'undefined') {
                 renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
               }
               if (typeof showToast === 'function') showToast('Manual input mode ACTIVE for all students.', 'info');
+            }
+          };
+
+          window.hasDirtyManualDrafts = () => {
+            const drafts = window._manualInputState?.drafts || {};
+            for (const sId of Object.keys(drafts)) {
+              const sDraft = drafts[sId] || {};
+              for (const k of Object.keys(sDraft)) {
+                if (sDraft[k]?.isDirty) return true;
+              }
+            }
+            return false;
+          };
+
+          window.saveAllManualDrafts = async () => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify exam grades.', 'warning');
+              return;
+            }
+
+            // Sweep DOM inputs to ensure all current values are captured in drafts
+            document.querySelectorAll('.input-matrix-exam-score').forEach(input => {
+              const sId = input.dataset.studentId;
+              const tId = input.dataset.testId;
+              const totalQ = Number(input.dataset.totalQ || 120);
+              if (sId && tId && input.value !== '') {
+                const curDraft = window._manualInputState?.drafts?.[sId]?.[tId];
+                if (!curDraft || String(curDraft.score) !== String(input.value)) {
+                  window.onMatrixExamScoreChange(sId, tId, totalQ, input.value);
+                }
+              }
+            });
+
+            document.querySelectorAll('.input-matrix-exam-pts').forEach(input => {
+              const sId = input.dataset.studentId;
+              const tId = input.dataset.testId;
+              const totalQ = Number(input.dataset.totalQ || 120);
+              if (sId && tId && input.value !== '') {
+                const curDraft = window._manualInputState?.drafts?.[sId]?.[tId];
+                if (!curDraft || String(curDraft.pts) !== String(input.value)) {
+                  window.onMatrixExamPtsChange(sId, tId, totalQ, input.value);
+                }
+              }
+            });
+
+            document.querySelectorAll('.input-matrix-task-progress').forEach(input => {
+              const sId = input.dataset.studentId;
+              const tc = input.dataset.themeCode;
+              const maxT = Number(input.dataset.maxTasks || 21);
+              if (sId && tc && input.value !== '') {
+                const taskKey = `task_${tc}`;
+                const curDraft = window._manualInputState?.drafts?.[sId]?.[taskKey];
+                if (!curDraft || String(curDraft.earned) !== String(input.value)) {
+                  window.onMatrixTaskChange(sId, tc, maxT, input.value);
+                }
+              }
+            });
+
+            const drafts = window._manualInputState?.drafts || {};
+            const studentIds = Object.keys(drafts);
+            const updatesByStudent = [];
+
+            studentIds.forEach(sId => {
+              const studentDraft = drafts[sId] || {};
+              const dirtyKeys = Object.keys(studentDraft).filter(k => studentDraft[k]?.isDirty);
+              const testActions = [];
+
+              dirtyKeys.forEach(k => {
+                if (k.startsWith('task_')) {
+                  const tc = k.replace('task_', '');
+                  const d = studentDraft[k];
+                  const taskAsms = window._themeTaskAsmsMap?.[tc] || [];
+                  const earnedVal = Number(d?.earned || 0);
+                  const maxTasks = Number(d?.maxTasks || 21);
+                  const isComplete = earnedVal >= maxTasks;
+                  const pct = isComplete ? 100 : Math.round((earnedVal / maxTasks) * 100);
+                  taskAsms.forEach(t => {
+                    const maxQ = getAsmExpectedMax(t) || 40;
+                    const score = isComplete ? maxQ : Math.round(maxQ * (pct / 100) * 10) / 10;
+                    testActions.push({
+                      testId: t.id,
+                      action: isComplete ? 'forgive' : 'manual',
+                      percentage: pct,
+                      score
+                    });
+                  });
+                } else {
+                  const d = studentDraft[k];
+                  const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
+                  const pts = d?.pts != null ? Number(d.pts) : Math.round((d?.totalQ || 120) * (pct / 100) * 10) / 10;
+                  const g = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'E');
+                  testActions.push({ testId: k, action: 'manual', percentage: pct, score: pts, grade: g });
+                }
+              });
+
+              if (testActions.length > 0) {
+                updatesByStudent.push({ studentId: sId, testActions });
+              }
+            });
+
+            if (updatesByStudent.length > 0) {
+              if (typeof showLoading === 'function') showLoading(`Saving manual scores for ${updatesByStudent.length} student(s)...`);
+              try {
+                for (const item of updatesByStudent) {
+                  await adminApplyForgiven({
+                    classId: window._selectedClassId || window._currentClassHubContext?.classId,
+                    studentIds: [item.studentId],
+                    testActions: item.testActions,
+                    forgivenBy: 'Mr. Top',
+                    reason: 'Manual Grade Input'
+                  });
+                }
+                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof showToast === 'function') showToast(`✓ Manual scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
+              } catch (err) {
+                console.error('Batch save manual score error:', err);
+                if (typeof showToast === 'function') showToast('Failed to save manual score: ' + (err.message || err), 'error');
+                throw err;
+              } finally {
+                if (typeof hideLoading === 'function') hideLoading();
+              }
+            }
+
+            window._manualInputState.drafts = {};
+            window._manualInputState.activeStudentIds.clear();
+          };
+
+          window.openManualSavePrompt = (onConfirmSave, onConfirmCancel) => {
+            document.getElementById('manual-score-save-prompt-overlay')?.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'manual-score-save-prompt-overlay';
+            overlay.className = 'topscore-modal-overlay';
+            overlay.style.cssText = `
+              position: fixed; inset: 0; background: rgba(9, 13, 22, 0.88); backdrop-filter: blur(6px);
+              z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
+            `;
+
+            overlay.innerHTML = `
+              <div style="
+                background: #0f172a; border: 1px solid #38bdf8; border-radius: 8px;
+                width: 100%; max-width: 440px; box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(56,189,248,0.25);
+                overflow: hidden; display: flex; flex-direction: column;
+              ">
+                <!-- Header -->
+                <div style="padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; gap: 10px; background: rgba(30,41,59,0.6);">
+                  <div style="width: 28px; height: 28px; border-radius: 6px; background: rgba(56,189,248,0.15); border: 1px solid #38bdf8; display: flex; align-items: center; justify-content: center; color: #38bdf8;">
+                    ${getSvgIcon('edit', 16)}
+                  </div>
+                  <div>
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 700; color: #f8fafc; letter-spacing: 0.5px;">SAVE MANUAL CHANGES?</h3>
+                    <p style="margin: 2px 0 0 0; font-size: 12px; color: #94a3b8;">You have uncommitted score edits in the table.</p>
+                  </div>
+                </div>
+
+                <!-- Body -->
+                <div style="padding: 20px; font-size: 13px; color: #e2e8f0; line-height: 1.5;">
+                  Do you want to save all modified manual scores and points to the database, or discard the changes?
+                </div>
+
+                <!-- Footer Actions -->
+                <div style="padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(30,41,59,0.4); display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                  <button type="button" id="btn-manual-prompt-cancel" class="btn btn-secondary btn-sm" style="font-size: 12px; font-weight: 600; padding: 6px 16px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: #94a3b8; cursor: pointer; border-radius: 4px;">
+                    Cancel (Discard)
+                  </button>
+                  <button type="button" id="btn-manual-prompt-save" class="btn btn-sm" style="background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.4); cursor: pointer; border-radius: 4px;">
+                    ${getSvgIcon('check-circle', 14)} Save Changes
+                  </button>
+                </div>
+              </div>
+            `;
+
+            document.body.appendChild(overlay);
+
+            overlay.querySelector('#btn-manual-prompt-save').onclick = async () => {
+              overlay.remove();
+              if (typeof onConfirmSave === 'function') await onConfirmSave();
+            };
+
+            overlay.querySelector('#btn-manual-prompt-cancel').onclick = () => {
+              overlay.remove();
+              if (typeof onConfirmCancel === 'function') onConfirmCancel();
+            };
+          };
+
+          window.toggleCellRemedial = async (studentId, testIdsInput, isChecked) => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot modify grades.', 'warning');
+              return;
+            }
+            const testIds = Array.isArray(testIdsInput) ? testIdsInput : [testIdsInput];
+            if (!studentId || !testIds.length) return;
+
+            try {
+              if (typeof showLoading === 'function') showLoading(isChecked ? 'Applying Remedial (Grade R)...' : 'Removing Remedial...');
+              const sb = await getSupabase();
+              const nowIso = new Date().toISOString();
+
+              for (const testId of testIds) {
+                const { data: atts, error: fetchErr } = await sb
+                  .from('attempts')
+                  .select('id, percentage, score, total_questions, status, is_remedial, is_forgiven, grade, effective_score')
+                  .eq('student_id', studentId)
+                  .eq('test_id', testId)
+                  .order('created_at', { ascending: false });
+
+                if (fetchErr) throw fetchErr;
+
+                if (isChecked) {
+                  if (atts && atts.length > 0) {
+                    const sorted = [...atts].sort((a, b) => Number(b.percentage || b.score || 0) - Number(a.percentage || a.score || 0));
+                    const topAtt = sorted[0];
+                    const rawPct = parseFloat(topAtt.percentage || topAtt.score || 0);
+                    const cappedScore = Math.min(rawPct, 60.0);
+                    const cappedGrade = typeof calculateGrade === 'function' ? calculateGrade(cappedScore) : 'C';
+
+                    const { error: updErr } = await sb
+                      .from('attempts')
+                      .update({
+                        is_remedial: true,
+                        is_remedial_unlocked: true,
+                        is_forgiven: false,
+                        effective_score: cappedScore,
+                        grade: cappedGrade,
+                        is_best_score: true,
+                        updated_at: nowIso
+                      })
+                      .eq('id', topAtt.id);
+
+                    if (updErr) throw updErr;
+
+                    for (const other of atts) {
+                      if (other.id !== topAtt.id && other.is_best_score) {
+                        await sb.from('attempts').update({ is_best_score: false, updated_at: nowIso }).eq('id', other.id);
+                      }
+                    }
+                  } else {
+                    const totalQ = 120;
+                    const pts = Math.round(totalQ * 0.6);
+                    const { error: insErr } = await sb
+                      .from('attempts')
+                      .insert({
+                        student_id: studentId,
+                        test_id: testId,
+                        attempt_number: 1,
+                        started_at: nowIso,
+                        expires_at: nowIso,
+                        submitted_at: nowIso,
+                        status: 'submitted',
+                        score: pts,
+                        correct_count: pts,
+                        total_questions: totalQ,
+                        percentage: 60.0,
+                        effective_score: 60.0,
+                        grade: 'C',
+                        is_best_score: true,
+                        is_remedial: true,
+                        is_remedial_unlocked: true,
+                        is_forgiven: false,
+                        created_at: nowIso,
+                        updated_at: nowIso
+                      });
+                    if (insErr) throw insErr;
+                  }
+                } else {
+                  // Uncheck: revert remedial
+                  if (atts && atts.length > 0) {
+                    for (const att of atts) {
+                      if (att.is_remedial || att.grade === 'R') {
+                        const rawPct = parseFloat(att.percentage || att.score || 0);
+                        const normalGrade = typeof calculateGrade === 'function' ? calculateGrade(rawPct) : (typeof getGrade === 'function' ? getGrade(rawPct) : '—');
+                        await sb
+                          .from('attempts')
+                          .update({
+                            is_remedial: false,
+                            is_remedial_unlocked: false,
+                            effective_score: rawPct,
+                            grade: normalGrade,
+                            updated_at: nowIso
+                          })
+                          .eq('id', att.id);
+                      }
+                    }
+                  }
+                }
+              }
+
+              if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+              if (typeof showToast === 'function') showToast(isChecked ? '✓ Remedial (Grade R, cap 60%) applied' : '✓ Remedial removed', 'success');
+
+              if (window.renderClassHub) {
+                await window.renderClassHub(document.getElementById('admin-content-area'));
+              }
+            } catch (err) {
+              console.error('Error in toggleCellRemedial:', err);
+              if (typeof showToast === 'function') showToast('Failed to update remedial: ' + (err.message || err), 'error');
+            } finally {
+              if (typeof hideLoading === 'function') hideLoading();
+            }
+          };
+
+          window.toggleCellForgiven = async (studentId, testIdsInput, isChecked) => {
+            if (isTutorRole()) {
+              if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot modify grades.', 'warning');
+              return;
+            }
+            const testIds = Array.isArray(testIdsInput) ? testIdsInput : [testIdsInput];
+            if (!studentId || !testIds.length) return;
+
+            try {
+              if (typeof showLoading === 'function') showLoading(isChecked ? 'Granting Forgiven Waiver (Grade F)...' : 'Removing Forgiven Waiver...');
+              const sb = await getSupabase();
+              const nowIso = new Date().toISOString();
+
+              if (isChecked) {
+                // User directive: "saat diberikan nilai F maka berarpun nilainya dianggap selesai tapi tidak dinaikkan , hanya dianggap paSSED saja."
+                const testActions = testIds.map(tId => ({ testId: tId, action: 'forgive' }));
+                await adminApplyForgiven({
+                  classId: window._selectedClassId || window._currentClassHubContext?.classId,
+                  studentIds: [studentId],
+                  testActions,
+                  forgivenBy: 'Mr. Top',
+                  reason: 'Tutor Result Waiver'
+                });
+                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof showToast === 'function') showToast('✓ Forgiven waiver (Grade F - Passed) granted', 'success');
+              } else {
+                // Uncheck: revoke waiver
+                for (const testId of testIds) {
+                  const { data: atts, error: fetchErr } = await sb
+                    .from('attempts')
+                    .select('id, percentage, score, total_questions, is_forgiven, grade')
+                    .eq('student_id', studentId)
+                    .eq('test_id', testId);
+
+                  if (fetchErr) throw fetchErr;
+
+                  if (atts && atts.length > 0) {
+                    for (const att of atts) {
+                      if (att.is_forgiven || att.grade === 'F') {
+                        const rawPct = parseFloat(att.percentage || att.score || 0);
+                        const normalGrade = typeof calculateGrade === 'function' ? calculateGrade(rawPct) : (typeof getGrade === 'function' ? getGrade(rawPct) : '—');
+                        await sb
+                          .from('attempts')
+                          .update({
+                            is_forgiven: false,
+                            forgiven_reason: null,
+                            forgiven_at: null,
+                            forgiven_by: null,
+                            grade: normalGrade,
+                            updated_at: nowIso
+                          })
+                          .eq('id', att.id);
+                      }
+                    }
+                  }
+                }
+                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof showToast === 'function') showToast('✓ Forgiven waiver removed', 'info');
+              }
+
+              if (window.renderClassHub) {
+                await window.renderClassHub(document.getElementById('admin-content-area'));
+              }
+            } catch (err) {
+              console.error('Error in toggleCellForgiven:', err);
+              if (typeof showToast === 'function') showToast('Failed to update waiver: ' + (err.message || err), 'error');
+            } finally {
+              if (typeof hideLoading === 'function') hideLoading();
             }
           };
 
@@ -2885,7 +3241,7 @@ if (typeof window !== 'undefined') {
               const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
               dynamicSuperHeaders.push({
                 label: `THEME ${tc}${tName}`,
-                colSpan: 4,
+                colSpan: 5,
                 className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
               });
             });
@@ -2916,7 +3272,7 @@ if (typeof window !== 'undefined') {
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
-                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const isManualMode = Boolean(window._classManualScoreEditMode);
                   const earned = row[`theme_${tc}_task_progress`] || 0;
                   const maxT = row[`theme_${tc}_task_max`] || 0;
                   const isComplete = Boolean(row[`theme_${tc}_task_completed`]);
@@ -2924,12 +3280,12 @@ if (typeof window !== 'undefined') {
                     return '<span class="asm-dot" style="font-size:12px; font-weight:700;" title="No tasks required">&middot;</span>';
                   }
 
-                  // Master Edit Mode ON: render inline interactive capsule input
-                  if (isGlobalEdit) {
-                    const taskDraft = window._manualInputState?.drafts?.[row.id]?.[`task_${tc}`];
+                  if (isManualMode) {
+                    const taskKey = `task_${tc}`;
+                    const taskDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
                     const displayEarned = taskDraft?.earned != null ? taskDraft.earned : earned;
                     return `
-                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; gap:2px;">
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; gap:2px; width:100%; height:100%;">
                         <input type="number" min="0" max="${maxT}" step="1"
                                class="input-matrix-task-progress input-matrix-task-progress-${row.id}-${tc.toLowerCase()}"
                                data-student-id="${row.id}"
@@ -2938,11 +3294,10 @@ if (typeof window !== 'undefined') {
                                value="${displayEarned}"
                                placeholder="0"
                                oninput="window.onMatrixTaskChange('${row.id}', '${tc}', ${maxT}, this.value)"
-                               onblur="window.saveRowManualTaskInput('${row.id}', '${tc}', ${maxT})"
                                onkeydown="if(event.key==='Enter'){this.blur();}"
                                onclick="event.stopPropagation();"
-                               style="width:32px; height:24px; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
-                        <span style="font-size: 12px; color:#94a3b8; font-weight:600; font-variant-numeric:tabular-nums;">/${maxT}</span>
+                               style="width:28px; height:24px; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:right; border-radius:0; padding:0 1px;">
+                        <span style="font-size: 12px; color:#ffffff; font-weight:600; font-variant-numeric:tabular-nums;">/${maxT}</span>
                       </div>
                     `;
                   }
@@ -2958,33 +3313,33 @@ if (typeof window !== 'undefined') {
                 }
               });
 
-              // 2. Theme Exam SCORE Column
+              // 2. Theme Exam RATE Column
               dynamicAsmCols.push({
                 key: `theme_${tc}_score`,
                 className: `col-asm col-exam col-exam-score col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
                 width: '65px',
                 minWidth: '55px',
-                headerTitle: `Theme ${tc} Exam Score %`,
-                title: `Theme ${tc} Exam Score %`,
-                label: 'SCORE',
-                shortLabel: 'SCORE',
-                microLabel: 'SCR',
+                headerTitle: `Theme ${tc} Exam Rate %`,
+                title: `Theme ${tc} Exam Rate %`,
+                label: 'RATE',
+                shortLabel: 'RATE',
+                microLabel: 'RATE',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
-                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const isManualMode = Boolean(window._classManualScoreEditMode);
                   const scoreVal = row[`theme_${tc}_score`];
                   const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
                   const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
                   const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
                   const maxTasks = row[`theme_${tc}_task_max`] || 0;
 
-                  // Master Edit Mode ON: render inline capsule input
-                  if (isGlobalEdit && examAsm) {
+                  // Manual Mode ON: render inline Excel-style input
+                  if (isManualMode && examAsm) {
                     const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
                     const displayScore = currentDraft?.score != null ? currentDraft.score : (scoreVal != null && scoreVal >= 0 ? scoreVal : '');
                     return `
-                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
                         <input type="number" min="0" max="100" class="input-matrix-exam-score input-matrix-exam-score-${row.id}-${examAsm.id}"
                                data-student-id="${row.id}"
                                data-test-id="${examAsm.id}"
@@ -2992,34 +3347,38 @@ if (typeof window !== 'undefined') {
                                value="${displayScore}"
                                placeholder="%"
                                oninput="window.onMatrixExamScoreChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
-                               onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
                                onkeydown="if(event.key==='Enter'){this.blur();}"
                                onclick="event.stopPropagation();"
-                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
                       </div>
                     `;
                   }
 
                   // 3-State Gated Display:
-                  // State 1: Exam taken -> Render Score % with grade color
                   if (hasExamAttempt && scoreVal !== undefined && scoreVal !== null && scoreVal >= 0) {
-                    const color = typeof getGradeColorByScore === 'function'
-                      ? getGradeColorByScore(scoreVal)
-                      : '#94a3b8';
                     const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
+                    const isManual = examAtt?.grade === 'M' || (examAtt?.forgiven_reason && String(examAtt.forgiven_reason).startsWith('MANUAL_OVERRIDE'));
                     const isForgiven = Boolean(examAtt?.is_forgiven);
                     const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
-                    const cellColor = (isForgiven && scoreVal === 0) ? 'var(--grade-e)' : color;
+
+                    let cellColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(scoreVal) : '#94a3b8';
+                    if (isManual) {
+                      cellColor = '#38bdf8'; // Grade M (Manual Score) Cyan
+                    } else if (isForgiven && scoreVal === 0) {
+                      cellColor = 'var(--grade-e)';
+                    } else if (isRem) {
+                      cellColor = 'var(--grade-c)';
+                    }
+
                     return `
                       <span class="asm-score asm-score-test test-score-theme-pct"
                             style="color:${cellColor}; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
-                            title="Theme ${tc} Exam Score: ${scoreVal}%">
+                            title="Theme ${tc} Exam Score: ${scoreVal}%${isManual ? ' (Manual Score M)' : ''}">
                         ${scoreVal}%
                       </span>
                     `;
                   }
 
-                  // State 2: Exam not taken & Incomplete tasks -> Red Lock / Incomplete Icon
                   if (!isTaskCompleted) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
@@ -3028,7 +3387,6 @@ if (typeof window !== 'undefined') {
                     `;
                   }
 
-                  // State 3: Exam not taken & Tasks completed -> Yellow Lock Icon
                   return `
                     <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
                       <span style="color:var(--grade-c); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
@@ -3051,20 +3409,20 @@ if (typeof window !== 'undefined') {
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
-                  const isGlobalEdit = document.body.classList.contains('global-edit-mode-on') || window.isStudentManualInputActive?.(row.id);
+                  const isManualMode = Boolean(window._classManualScoreEditMode);
                   const ptsVal = row[`theme_${tc}_total_pts`];
                   const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
                   const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
                   const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
                   const maxTasks = row[`theme_${tc}_task_max`] || 0;
 
-                  // Master Edit Mode ON: render inline capsule input
-                  if (isGlobalEdit && examAsm) {
+                  // Manual Mode ON: render inline Excel-style input
+                  if (isManualMode && examAsm) {
                     const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
                     const cleanTotal = ptsVal != null && ptsVal >= 0 ? Math.round(ptsVal * 2) / 2 : '';
                     const displayPts = currentDraft?.pts != null ? currentDraft.pts : cleanTotal;
                     return `
-                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0;">
+                      <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
                         <input type="number" min="0" max="${totalQ}" step="any" class="input-matrix-exam-pts input-matrix-exam-pts-${row.id}-${examAsm.id}"
                                data-student-id="${row.id}"
                                data-test-id="${examAsm.id}"
@@ -3072,53 +3430,56 @@ if (typeof window !== 'undefined') {
                                value="${displayPts}"
                                placeholder="pts"
                                oninput="window.onMatrixExamPtsChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
-                               onblur="window.saveRowManualInput('${row.id}', '${examAsm.id}', ${totalQ})"
                                onkeydown="if(event.key==='Enter'){this.blur();}"
                                onclick="event.stopPropagation();"
-                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#fff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                               style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
                       </div>
                     `;
                   }
 
                   // 3-State Gated Display:
-                  // State 1: Exam taken -> Render Points with grade color
                   if (hasExamAttempt && ptsVal !== undefined && ptsVal !== null && ptsVal >= 0) {
+                    const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
+                    const isManual = examAtt?.grade === 'M' || (examAtt?.forgiven_reason && String(examAtt.forgiven_reason).startsWith('MANUAL_OVERRIDE'));
                     const cleanTotal = Math.round(ptsVal * 2) / 2;
                     const displayVal = (cleanTotal % 1 !== 0) ? cleanTotal.toFixed(1) : cleanTotal.toString();
                     const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0
                       ? row[`theme_${tc}_score`]
                       : 0;
-                    const color = typeof getGradeColorByScore === 'function'
+
+                    let color = typeof getGradeColorByScore === 'function'
                       ? getGradeColorByScore(themePct)
                       : (themePct >= 60 ? 'var(--grade-c)' : 'var(--grade-e)');
+
+                    if (isManual) {
+                      color = '#38bdf8';
+                    }
+
                     return `
                       <span class="asm-score asm-score-test test-score-theme-total"
                             style="color:${color} !important; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
-                            title="Theme ${tc} Total Exam Points: ${displayVal}">
+                            title="Theme ${tc} Total Exam Points: ${displayVal}${isManual ? ' (Manual M)' : ''}">
                         ${displayVal}
                       </span>
                     `;
                   }
 
-                  // State 2: Exam not taken & Incomplete tasks -> Red Lock / Incomplete Icon
                   if (!isTaskCompleted) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
-                        <span style="display:inline-flex;color:var(--grade-e);">${getSvgIcon('lock', 12)}</span>
+                        <span style="color:var(--grade-e); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
                       </div>
                     `;
                   }
 
-                  // State 3: Exam not taken & Tasks completed -> Yellow Lock Icon
                   return `
                     <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
-                      <span style="display:inline-flex;color:var(--grade-c);filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">${getSvgIcon('lock', 13)}</span>
+                      <span style="color:var(--grade-c); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
                     </div>
                   `;
-                }
-              });
+                }});
 
-              // 4. Theme Exam GRADE Column
+              // 4. Theme Exam GRADE Column (Authentic Canonical Grade strictly)
               dynamicAsmCols.push({
                 key: `theme_${tc}_grade`,
                 className: `col-asm col-exam col-exam-grade col-test-theme-grade col-test-theme-grade-${tc.toLowerCase()}`,
@@ -3138,27 +3499,11 @@ if (typeof window !== 'undefined') {
                   const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
                   const maxTasks = row[`theme_${tc}_task_max`] || 0;
 
-                  // State 1: Exam taken -> Render Grade Symbol (★, A, B, C, D, E, R, F)
+                  // State 1: Exam taken -> Render Authentic Canonical Grade (★, A, B, C, D, E)
                   if (hasExamAttempt && scoreVal !== undefined && scoreVal !== null && scoreVal >= 0) {
-                    const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
-                    const isForgiven = Boolean(examAtt?.is_forgiven);
-                    const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
-
-                    let cleanGrade = '—';
-                    let gradeColor = '#94a3b8';
-
-                    if (isForgiven) {
-                      cleanGrade = 'F';
-                      gradeColor = 'var(--grade-e)'; // Grade F berwarna merah seperti Grade E
-                    } else if (isRem) {
-                      cleanGrade = 'R';
-                      gradeColor = 'var(--grade-c)'; // Grade R berwarna kuning seperti Grade C
-                    } else {
-                      const themeGrade = typeof calculateGrade === 'function' ? calculateGrade(scoreVal) : (typeof getGrade === 'function' ? getGrade(scoreVal) : '—');
-                      cleanGrade = String(themeGrade || '').trim().toUpperCase();
-                      gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(scoreVal) : '#94a3b8';
-                    }
-
+                    const themeGrade = typeof calculateGrade === 'function' ? calculateGrade(scoreVal) : (typeof getGrade === 'function' ? getGrade(scoreVal) : '—');
+                    const cleanGrade = String(themeGrade || '').trim().toUpperCase();
+                    const gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(scoreVal) : '#94a3b8';
                     const isGradeS = cleanGrade === '★' || cleanGrade === 'S';
 
                     if (isGradeS) {
@@ -3179,7 +3524,7 @@ if (typeof window !== 'undefined') {
                   if (!isTaskCompleted) {
                     return `
                       <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
-                        <span style="color:var(--grade-e); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
+                        <span style="display:inline-flex;color:var(--grade-e);">${getSvgIcon('lock', 12)}</span>
                       </div>
                     `;
                   }
@@ -3187,11 +3532,119 @@ if (typeof window !== 'undefined') {
                   // State 3: Exam not taken & Tasks completed -> Yellow Lock Icon
                   return `
                     <div style="display:flex; align-items:center; justify-content:center;" title="Exam Ready & Unlocked (${earnedTasks}/${maxTasks} Tasks Done). Waiting for student attempt.">
-                      <span style="color:var(--grade-c); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
+                      <span style="display:inline-flex;color:var(--grade-c);filter:drop-shadow(0 0 2px rgba(255,255,0,0.4));">${getSvgIcon('lock', 13)}</span>
                     </div>
                   `;
-                }
-              });
+                }});
+
+              // 5. Theme Exam STATUS Column (Administrative Status: Passed, R, F, M & Checkboxes)
+              dynamicAsmCols.push({
+                key: `theme_${tc}_status`,
+                className: `col-asm col-exam col-exam-status col-test-theme-status col-test-theme-status-${tc.toLowerCase()} super-hdr-divider`,
+                width: '55px',
+                minWidth: '50px',
+                headerTitle: `Theme ${tc} Exam Status`,
+                title: `Theme ${tc} Exam Status`,
+                label: 'STATUS',
+                shortLabel: 'STATUS',
+                microLabel: 'STATUS',
+                sortable: true,
+                align: 'center',
+                render: (val, row) => {
+                  const scoreVal = row[`theme_${tc}_score`];
+                  const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                  const themeAtts = examAsms.map(e => row.asmScores?.[e.id]).filter(Boolean);
+                  const isForgiven = themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_forgiven || att?.grade === 'F'));
+                  const isRem = themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_remedial_unlocked || att?.is_remedial || att?.grade === 'R'));
+                  const isManual = themeAtts.length > 0 && themeAtts.some(att => att?.grade === 'M' || (att?.forgiven_reason && String(att.forgiven_reason).startsWith('MANUAL_OVERRIDE')));
+                  const isPassed = (scoreVal !== undefined && scoreVal !== null && scoreVal >= 60) || isForgiven;
+
+                  const isRemMode = Boolean(window._classRemedialEditMode);
+                  const isForgiveMode = Boolean(window._classForgivenEditMode);
+
+                  // Interactive Sub Panel Checkbox Modes
+                  if ((isRemMode || isForgiveMode) && examAsms.length > 0) {
+                    const examTestIds = examAsms.map(e => e.id);
+                    const examTestIdsJson = JSON.stringify(examTestIds).replace(/"/g, '&quot;');
+
+                    if (isRemMode) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%; height:100%;">
+                          <input type="checkbox"
+                                 class="table-remedial-check"
+                                 data-student-id="${row.id}"
+                                 ${isRem ? 'checked' : ''}
+                                 title="Click to toggle Remedial (Grade R, cap 60%)"
+                                 onclick="event.stopPropagation(); window.toggleCellRemedial('${row.id}', ${examTestIdsJson}, this.checked);"
+                                 style="cursor:pointer; width:14px; height:14px; accent-color:var(--grade-c); margin:0;">
+                          ${isRem ? '<span style="font-weight:700; font-size:12px; color:var(--grade-c);">R</span>' : ''}
+                        </div>
+                      `;
+                    }
+
+                    if (isForgiveMode) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%; height:100%;">
+                          <input type="checkbox"
+                                 class="table-forgiven-check"
+                                 data-student-id="${row.id}"
+                                 ${isForgiven ? 'checked' : ''}
+                                 title="Click to toggle Forgiven Waiver (Grade F - Passed)"
+                                 onclick="event.stopPropagation(); window.toggleCellForgiven('${row.id}', ${examTestIdsJson}, this.checked);"
+                                 style="cursor:pointer; width:14px; height:14px; accent-color:var(--grade-e); margin:0;">
+                          ${isForgiven ? '<span style="font-weight:700; font-size:12px; color:var(--grade-e);">F</span>' : ''}
+                        </div>
+                      `;
+                    }
+                  }
+
+                  // Normal Display State:
+                  if (isRem) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Remedial (Grade R, score capped at 60%)">
+                        <span class="status-badge-rem" style="color:var(--grade-c); font-weight:700; font-size:12px;">R</span>
+                      </div>
+                    `;
+                  }
+
+                  if (isForgiven) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Forgiven Waiver Granted (Grade F - Passed)">
+                        <span class="status-badge-forgive" style="color:var(--grade-e); font-weight:700; font-size:12px;">F</span>
+                      </div>
+                    `;
+                  }
+
+                  if (isManual) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Manual Score Override (M)">
+                        <span class="status-badge-manual" style="color:#38bdf8; font-weight:700; font-size:12px;">M</span>
+                      </div>
+                    `;
+                  }
+
+                  if (hasExamAttempt && isPassed) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Passed (${scoreVal}%)">
+                        <span style="color:var(--grade-a); display:inline-flex; align-items:center;">${getSvgIcon('check-circle', 14)}</span>
+                      </div>
+                    `;
+                  }
+
+                  if (hasExamAttempt && !isPassed) {
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Failed (${scoreVal}%)">
+                        <span style="color:var(--grade-e); font-weight:700; font-size:12px;">—</span>
+                      </div>
+                    `;
+                  }
+
+                  return `
+                    <div style="display:flex; align-items:center; justify-content:center;" title="Exam Not Attempted">
+                      <span style="color:#64748b; font-size:12px;">—</span>
+                    </div>
+                  `;
+                }});
             });
 
             // Clean destruction of previous instance if any
@@ -3696,7 +4149,7 @@ if (typeof window !== 'undefined') {
             const banner = document.getElementById('bottom-ad-banner');
             const bannerHeight = banner ? banner.offsetHeight : 60;
             const lowerPanel = document.querySelector('.attendance-matrix-toolbar.workspace-lower-panel');
-            const isEditOn = document.body.classList.contains('global-edit-mode-on');
+            const isEditOn = Boolean(window._classManualScoreEditMode);
             const lowerPanelHeight = (isEditOn && lowerPanel && lowerPanel.offsetHeight > 0) ? (lowerPanel.offsetHeight + 10) : 0;
             // When Edit Mode is OFF, table footer sits flush as the sole 50px lower panel perfectly aligned with .sidebar-footer
             const availHeight = Math.max(260, window.innerHeight - rect.top - bannerHeight - lowerPanelHeight);
@@ -3781,24 +4234,186 @@ if (typeof window !== 'undefined') {
 
         }
 
-        // Centralized binding for Class Action Buttons (Forgiven, Settings, Blueprint, Generator)
-        document.getElementById('btn-open-forgiven-wizard')?.addEventListener('click', async () => {
-          try {
-            const { openForgivenWizard } = await import('./forgiven-wizard-modal.js?v=20261106_v140');
-            await openForgivenWizard({
-              classId: classId || cid,
-              classTests,
-              batches: allBatches,
-              students: studentsGridData,
-              onComplete: () => {
-                window.renderClassHub(document.getElementById('admin-content-area'));
+        window._currentClassHubContext = {
+          classId: classId || cid,
+          classTests,
+          studentsGridData,
+          allAttempts
+        };
+        window.syncClassHubLowerPanel = syncClassHubLowerPanel;
+        window.renderAttendanceGridMatrix = renderAttendanceGridMatrix;
+
+        // Delegated listener for the 3 Sub Panel Action Buttons: Manual (Cyan), Remedi (Yellow), Forgive (Red)
+        if (!window._classHubSubpanelDelegationBound) {
+          window._classHubSubpanelDelegationBound = true;
+          document.addEventListener('click', async (e) => {
+            const manualBtn = e.target.closest('#btn-subpanel-manual');
+            if (manualBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+
+              if (window._classManualScoreEditMode) {
+                // User pressed Done Editing (Manual)
+                if (window.hasDirtyManualDrafts && window.hasDirtyManualDrafts()) {
+                  window.openManualSavePrompt(
+                    // Save action
+                    async () => {
+                      try {
+                        await window.saveAllManualDrafts();
+                        window._classManualScoreEditMode = false;
+                        document.body.classList.remove('class-manual-edit-on');
+                        if (typeof window.syncClassHubLowerPanel === 'function') {
+                          window.syncClassHubLowerPanel('attendance');
+                        }
+                        if (window.renderClassHub) {
+                          await window.renderClassHub(document.getElementById('admin-content-area'));
+                        }
+                      } catch (err) {
+                        console.error('Failed to save manual edits:', err);
+                      }
+                    },
+                    // Cancel / Discard action
+                    () => {
+                      window._manualInputState.drafts = {};
+                      window._classManualScoreEditMode = false;
+                      document.body.classList.remove('class-manual-edit-on');
+                      if (typeof showToast === 'function') showToast('Manual changes discarded.', 'info');
+                      if (typeof window.syncClassHubLowerPanel === 'function') {
+                        window.syncClassHubLowerPanel('attendance');
+                      }
+                      if (typeof window.renderAttendanceGridMatrix === 'function') {
+                        window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                      }
+                    }
+                  );
+                } else {
+                  window._classManualScoreEditMode = false;
+                  document.body.classList.remove('class-manual-edit-on');
+                  if (typeof showToast === 'function') showToast('Manual Table Edit completed and locked.', 'info');
+                  if (typeof window.renderAttendanceGridMatrix === 'function') {
+                    window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                  }
+                  if (typeof window.syncClassHubLowerPanel === 'function') {
+                    window.syncClassHubLowerPanel('attendance');
+                  }
+                }
+              } else {
+                window._classManualScoreEditMode = true;
+                window._classRemedialEditMode = false;
+                window._classForgivenEditMode = false;
+                document.body.classList.add('class-manual-edit-on');
+                if (typeof showToast === 'function') showToast('Manual Table Edit ACTIVE: Enter scores/points directly. Press "Done Editing" when finished to save.', 'info');
+                if (typeof window.renderAttendanceGridMatrix === 'function') {
+                  window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                }
+                if (typeof window.syncClassHubLowerPanel === 'function') {
+                  window.syncClassHubLowerPanel('attendance');
+                }
               }
-            });
-          } catch (err) {
-            console.error(err);
-            showToast('Failed to open wizard: ' + err.message, 'error');
-          }
-        });
+              return;
+            }
+
+            const remBtn = e.target.closest('#btn-subpanel-remedial');
+            if (remBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+              window._classRemedialEditMode = !window._classRemedialEditMode;
+              if (window._classRemedialEditMode) {
+                window._classManualScoreEditMode = false;
+                window._classForgivenEditMode = false;
+                document.body.classList.remove('class-manual-edit-on');
+                if (typeof showToast === 'function') showToast('Remedial Table Mode ACTIVE: Check the box beside any Grade to apply Remedial (Grade R, cap 60%).', 'info');
+              } else {
+                if (typeof showToast === 'function') showToast('Remedial Table Mode closed.', 'info');
+              }
+              if (typeof window.renderAttendanceGridMatrix === 'function') {
+                window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+              }
+              if (typeof window.syncClassHubLowerPanel === 'function') {
+                window.syncClassHubLowerPanel('attendance');
+              }
+              return;
+            }
+
+            const forgiveBtn = e.target.closest('#btn-subpanel-forgiven');
+            if (forgiveBtn) {
+              e.preventDefault();
+              e.stopPropagation();
+              window._classForgivenEditMode = !window._classForgivenEditMode;
+              if (window._classForgivenEditMode) {
+                window._classManualScoreEditMode = false;
+                window._classRemedialEditMode = false;
+                document.body.classList.remove('class-manual-edit-on');
+                if (typeof showToast === 'function') showToast('Forgiven Table Mode ACTIVE: Check the box beside any Grade to grant Forgiven Waiver (Grade F).', 'info');
+              } else {
+                if (typeof showToast === 'function') showToast('Forgiven Table Mode closed.', 'info');
+              }
+              if (typeof window.renderAttendanceGridMatrix === 'function') {
+                window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+              }
+              if (typeof window.syncClassHubLowerPanel === 'function') {
+                window.syncClassHubLowerPanel('attendance');
+              }
+              return;
+            }
+          });
+
+          window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+              if (window._classManualScoreEditMode) {
+                if (window.hasDirtyManualDrafts && window.hasDirtyManualDrafts()) {
+                  window.openManualSavePrompt(
+                    async () => {
+                      try {
+                        await window.saveAllManualDrafts();
+                        window._classManualScoreEditMode = false;
+                        document.body.classList.remove('class-manual-edit-on');
+                        if (typeof window.syncClassHubLowerPanel === 'function') {
+                          window.syncClassHubLowerPanel('attendance');
+                        }
+                        if (window.renderClassHub) {
+                          await window.renderClassHub(document.getElementById('admin-content-area'));
+                        }
+                      } catch (err) {
+                        console.error('Failed to save manual edits:', err);
+                      }
+                    },
+                    () => {
+                      window._manualInputState.drafts = {};
+                      window._classManualScoreEditMode = false;
+                      document.body.classList.remove('class-manual-edit-on');
+                      if (typeof showToast === 'function') showToast('Manual changes discarded.', 'info');
+                      if (typeof window.syncClassHubLowerPanel === 'function') {
+                        window.syncClassHubLowerPanel('attendance');
+                      }
+                      if (typeof window.renderAttendanceGridMatrix === 'function') {
+                        window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                      }
+                    }
+                  );
+                } else {
+                  window._classManualScoreEditMode = false;
+                  document.body.classList.remove('class-manual-edit-on');
+                  if (typeof window.renderAttendanceGridMatrix === 'function') {
+                    window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                  }
+                  if (typeof window.syncClassHubLowerPanel === 'function') {
+                    window.syncClassHubLowerPanel('attendance');
+                  }
+                }
+              } else if (window._classRemedialEditMode || window._classForgivenEditMode) {
+                window._classRemedialEditMode = false;
+                window._classForgivenEditMode = false;
+                if (typeof window.renderAttendanceGridMatrix === 'function') {
+                  window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                }
+                if (typeof window.syncClassHubLowerPanel === 'function') {
+                  window.syncClassHubLowerPanel('attendance');
+                }
+              }
+            }
+          });
+        }
 
         document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
           try {
@@ -4113,13 +4728,20 @@ if (typeof window !== 'undefined') {
           i.classList.toggle('active', !selProgId || i.getAttribute('data-program-id') === selProgId);
         });
       }
+      const alumniNav = document.querySelector('.admin-nav-item[data-sub="alumni"]');
+      if (alumniNav) {
+        alumniNav.classList.toggle('active', rawSection === 'alumni' || section === 'alumni');
+      }
 
       // Reset topbar container with default section title (or views will elevate their KPI tabs)
       const topbarTabsEl = document.getElementById('topbar-tabs-container');
       if (topbarTabsEl) {
-        const secTitle = (rawSection === 'students' && (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name')))
-          ? (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name'))
-          : (sectionTitles[section] || section);
+        let secTitle = sectionTitles[section] || section;
+        if (rawSection === 'alumni' || section === 'alumni') {
+          secTitle = 'Alumni';
+        } else if (rawSection === 'students' && (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name'))) {
+          secTitle = (window._selectedProgramName || localStorage.getItem('topscore_selected_program_name'));
+        }
         topbarTabsEl.innerHTML = `<div class="topbar-default-title" id="topbar-title">${secTitle}</div>`;
       }
       // Reset bottom infobar by default on section change
@@ -4153,7 +4775,14 @@ if (typeof window !== 'undefined') {
           case 'question_types':          await renderWordTypes(area); break;
           case 'vocab_vault':             await renderVocabularyVault(area); break;
           case 'modules':                 await renderModules(area); break;
+          case 'alumni':
+            window._switchStudentTab = () => window.loadSection('alumni');
+            window._isAlumniMainPanel = true;
+            window._filterBatchStatus = 'alumni';
+            await _renderStudentsModule(area, { isAlumniPanel: true });
+            break;
           case 'students':
+            window._isAlumniMainPanel = false;
             window._switchStudentTab = () => window.loadSection('students');
             await _renderStudentsModule(area);
             break;
@@ -4872,7 +5501,7 @@ if (typeof window !== 'undefined') {
         <div class="section-header">
           <div>
             <h2 class="section-title">Classes & Blueprint <span class="count-chip">${data.length} in Tab</span></h2>
-            <p class="section-subtitle">Manage class board grouped by level in alphabetical order</p>
+            <p class="section-subtitle">Manage classes grouped by level in alphabetical order</p>
           </div>
           <div class="d-flex gap-2 flex-wrap mt-3" style="width: 100%;">
              ${tabsHtml}
@@ -4962,7 +5591,7 @@ if (typeof window !== 'undefined') {
         btn.addEventListener('click', () => {
           const sid = btn.getAttribute('data-del-subj');
           const rec = window._subjRecords[sid];
-          if (rec) window._deleteRecord('classes', sid, rec.name || 'Class Board');
+          if (rec) window._deleteRecord('classes', sid, rec.name || 'Class');
         });
       });
     }
@@ -4991,16 +5620,16 @@ if (typeof window !== 'undefined') {
         <div class="section-header">
           <div>
             <h2 class="section-title">Levels <span class="count-chip">${data.length} Total</span></h2>
-            <p class="section-subtitle">Curriculum progression tiers ordered by program, class, Class, and level rank</p>
+            <p class="section-subtitle">Curriculum progression tiers ordered by institution, program, class, and level rank</p>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th class="text-left">INSTITUTION</th>
                 <th class="text-left">PROGRAM</th>
                 <th class="text-left">CLASS</th>
-                <th class="text-left">CLASS BOARD</th>
                 <th class="text-center">LEVEL #</th>
                 <th class="text-left">LEVEL NAME</th>
                 <th class="text-center">STATUS</th>
@@ -5350,25 +5979,3 @@ window.openDuplicateStudentsModal = openDuplicateStudentsModal;
 window.openDuplicateQuestionsModal = openDuplicateQuestionsModal;
 window.loadSection = loadSection;
 window.openStudentProfile = openStudentProfile;
-
-
-// Wire Master Edit Mode Safety HUD exit & ESC key listener (Phase 449)
-document.addEventListener('DOMContentLoaded', () => {
-  const exitBtn = document.getElementById('btn-safety-hud-exit');
-  if (exitBtn) {
-    exitBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (typeof window.setGlobalEditMode === 'function') {
-        window.setGlobalEditMode(false);
-      }
-    });
-  }
-
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && document.body.classList.contains('global-edit-mode-on')) {
-      if (typeof window.setGlobalEditMode === 'function') {
-        window.setGlobalEditMode(false);
-      }
-    }
-  });
-});

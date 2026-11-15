@@ -185,15 +185,6 @@ export function setGlobalEditMode(active) {
       document.body.classList.remove('global-edit-mode-on');
       document.body.classList.add('global-edit-mode-off');
     }
-
-    const btn = document.getElementById('global-edit-mode-toggle');
-    if (btn) {
-      btn.className = `btn btn-sm btn-edit-mode-global ${bool ? 'mode-on' : 'mode-off'}`;
-      const icon = btn.querySelector('.edit-mode-icon');
-      const label = btn.querySelector('.edit-mode-label');
-      if (icon) icon.textContent = '';
-      if (label) label.textContent = bool ? 'ON' : 'OFF';
-    }
   }
 
   if (typeof window !== 'undefined') {

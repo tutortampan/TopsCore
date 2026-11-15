@@ -8,10 +8,39 @@
 import assert from 'node:assert';
 import fs from 'node:fs';
 import path from 'node:path';
+import http from 'node:http';
 import { chromium } from '@playwright/test';
 
 const ROOT_DIR = process.cwd();
 console.log('📐 [Phase 438] Running Admin Headers, Sub-Headers & Footers Verification Suite...\n');
+
+const mimeTypes = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css',
+  '.json': 'application/json',
+  '.png': 'image/png',
+  '.svg': 'image/svg+xml'
+};
+
+const server = http.createServer((req, res) => {
+  let reqPath = req.url.split('?')[0];
+  if (reqPath === '/' || reqPath === '') reqPath = '/admin.html';
+  const filePath = path.join(ROOT_DIR, reqPath);
+
+  if (!fs.existsSync(filePath)) {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found: ' + reqPath);
+    return;
+  }
+  const ext = path.extname(filePath);
+  res.writeHead(200, {
+    'Content-Type': mimeTypes[ext] || 'application/octet-stream',
+    'Access-Control-Allow-Origin': '*'
+  });
+  fs.createReadStream(filePath).pipe(res);
+});
 
 // 1. Static AST/CSS Rule Assertions
 console.log('--- 1. Auditing css/admin.css Static Rules ---');
@@ -107,63 +136,71 @@ console.log('  ✔ Class attendance sub-header 24px/30px and 12px lock verified'
 // 2. Live Browser / DOM Verification via Playwright
 console.log('\n--- 2. Live DOM Verification on admin.html via Edge Chromium ---');
 async function runLiveAudit() {
+  await new Promise(resolve => server.listen(0, resolve));
+  const port = server.address().port;
+  const targetUrl = `http://localhost:${port}/admin.html`;
+
   const browser = await chromium.launch({ channel: 'msedge', headless: true });
 
-  // Desktop Viewport (1440x900)
-  const desktopPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  await desktopPage.goto('http://localhost:5500/admin.html', { waitUntil: 'domcontentloaded' });
-  await desktopPage.waitForTimeout(500);
+  try {
+    // Desktop Viewport (1440x900)
+    const desktopPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+    await desktopPage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+    await desktopPage.waitForTimeout(500);
 
-  const desktopChecks = await desktopPage.evaluate(() => {
-    const topbar = document.querySelector('.admin-topbar');
-    const topbarStyle = topbar ? window.getComputedStyle(topbar) : null;
+    const desktopChecks = await desktopPage.evaluate(() => {
+      const topbar = document.querySelector('.admin-topbar');
+      const topbarStyle = topbar ? window.getComputedStyle(topbar) : null;
 
-    const modalHeader = document.querySelector('.modal-header');
-    const modalHeaderStyle = modalHeader ? window.getComputedStyle(modalHeader) : null;
+      const modalHeader = document.querySelector('.modal-header');
+      const modalHeaderStyle = modalHeader ? window.getComputedStyle(modalHeader) : null;
 
-    const modalFooter = document.querySelector('.modal-footer');
-    const modalFooterStyle = modalFooter ? window.getComputedStyle(modalFooter) : null;
+      const modalFooter = document.querySelector('.modal-footer');
+      const modalFooterStyle = modalFooter ? window.getComputedStyle(modalFooter) : null;
 
-    const lowerPanel = document.querySelector('.workspace-lower-panel, #admin-lower-panel');
-    const lowerPanelStyle = lowerPanel ? window.getComputedStyle(lowerPanel) : null;
+      const lowerPanel = document.querySelector('.workspace-lower-panel, #admin-lower-panel');
+      const lowerPanelStyle = lowerPanel ? window.getComputedStyle(lowerPanel) : null;
 
-    return {
-      topbarHeight: topbarStyle ? topbarStyle.height : null,
-      topbarMaxHeight: topbarStyle ? topbarStyle.maxHeight : null,
-      modalHeaderHeight: modalHeaderStyle ? modalHeaderStyle.height : null,
-      modalFooterHeight: modalFooterStyle ? modalFooterStyle.height : null,
-      lowerPanelHeight: lowerPanelStyle ? lowerPanelStyle.height : null
-    };
-  });
+      return {
+        topbarHeight: topbarStyle ? topbarStyle.height : null,
+        topbarMaxHeight: topbarStyle ? topbarStyle.maxHeight : null,
+        modalHeaderHeight: modalHeaderStyle ? modalHeaderStyle.height : null,
+        modalFooterHeight: modalFooterStyle ? modalFooterStyle.height : null,
+        lowerPanelHeight: lowerPanelStyle ? lowerPanelStyle.height : null
+      };
+    });
 
-  console.log('  Desktop computed styles:', desktopChecks);
-  assert.ok(desktopChecks.topbarHeight === '40px' || desktopChecks.topbarHeight === '50px', 'Desktop topbar must compute to 40px/50px');
-  assert.ok(desktopChecks.modalHeaderHeight === '40px' || desktopChecks.modalHeaderHeight === '50px', 'Modal header must compute to 40px/50px');
-  assert.ok(desktopChecks.modalFooterHeight === '40px' || desktopChecks.modalFooterHeight === '50px' || desktopChecks.modalFooterHeight === '56px' || desktopChecks.modalFooterHeight === '60px', 'Modal footer must compute to 40px/50px/56px/60px');
-  if (desktopChecks.lowerPanelHeight) {
-    assert.ok(desktopChecks.lowerPanelHeight === '40px' || desktopChecks.lowerPanelHeight === '50px', 'Lower panel must compute to 40px/50px');
+    console.log('  Desktop computed styles:', desktopChecks);
+    assert.ok(desktopChecks.topbarHeight === '40px' || desktopChecks.topbarHeight === '50px', 'Desktop topbar must compute to 40px/50px');
+    assert.ok(desktopChecks.modalHeaderHeight === '40px' || desktopChecks.modalHeaderHeight === '50px', 'Modal header must compute to 40px/50px');
+    assert.ok(desktopChecks.modalFooterHeight === '40px' || desktopChecks.modalFooterHeight === '50px' || desktopChecks.modalFooterHeight === '56px' || desktopChecks.modalFooterHeight === '60px', 'Modal footer must compute to 40px/50px/56px/60px');
+    if (desktopChecks.lowerPanelHeight) {
+      assert.ok(desktopChecks.lowerPanelHeight === '40px' || desktopChecks.lowerPanelHeight === '50px', 'Lower panel must compute to 40px/50px');
+    }
+
+    // Tablet/Mobile Viewport (768x900 < 900px)
+    const mobilePage = await browser.newPage({ viewport: { width: 768, height: 900 } });
+    await mobilePage.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+    await mobilePage.waitForTimeout(500);
+
+    const mobileChecks = await mobilePage.evaluate(() => {
+      const topbar = document.querySelector('.admin-topbar');
+      const topbarStyle = topbar ? window.getComputedStyle(topbar) : null;
+      return {
+        topbarHeight: topbarStyle ? topbarStyle.height : null,
+        topbarMaxHeight: topbarStyle ? topbarStyle.maxHeight : null
+      };
+    });
+
+    console.log('  Mobile (<900px) computed styles:', mobileChecks);
+    assert.ok(mobileChecks.topbarHeight === '40px' || mobileChecks.topbarHeight === '50px', 'Mobile topbar must compute to strictly 40px/50px (no 56px)');
+
+    await desktopPage.close();
+    await mobilePage.close();
+  } finally {
+    await browser.close();
+    server.close();
   }
-
-  // Tablet/Mobile Viewport (768x900 < 900px)
-  const mobilePage = await browser.newPage({ viewport: { width: 768, height: 900 } });
-  await mobilePage.goto('http://localhost:5500/admin.html', { waitUntil: 'domcontentloaded' });
-  await mobilePage.waitForTimeout(500);
-
-  const mobileChecks = await mobilePage.evaluate(() => {
-    const topbar = document.querySelector('.admin-topbar');
-    const topbarStyle = topbar ? window.getComputedStyle(topbar) : null;
-    return {
-      topbarHeight: topbarStyle ? topbarStyle.height : null,
-      topbarMaxHeight: topbarStyle ? topbarStyle.maxHeight : null
-    };
-  });
-
-  console.log('  Mobile (<900px) computed styles:', mobileChecks);
-  assert.ok(mobileChecks.topbarHeight === '40px' || mobileChecks.topbarHeight === '50px', 'Mobile topbar must compute to strictly 40px/50px (no 56px)');
-
-  await desktopPage.close();
-  await mobilePage.close();
-  await browser.close();
   console.log('\n🎉 ALL 5 PILLARS OF PHASE 438 PASSED 100%!');
 }
 

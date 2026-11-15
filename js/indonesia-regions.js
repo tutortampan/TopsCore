@@ -371,28 +371,172 @@ export const NTB_DISTRICTS_AND_VILLAGES = {
     "Gangga": ["Bentek", "Genggelang", "Rempek", "Sambik Bangkol", "Selelos"],
     "Kayangan": ["Dangiang", "Gumantar", "Kayangan", "Pendua", "Santong", "Sesait"],
     "Bayan": ["Akar-Akar", "Bayan", "Karang Bajo", "Loloan", "Mpan Senaru", "Sambik Elen", "Senaru", "Sukadana"]
+  },
+  "Kab. Sumbawa": {
+    "Sumbawa": ["Brang Biji", "Lempeh", "Uma Sima", "Seketeng", "Samapuin", "Bugis", "Brang Bara", "Pekat"],
+    "Labuhan Badas": ["Labuhan Sumbawa", "Labuhan Badas", "Bajak", "Badas", "Sebotok"],
+    "Alas": ["Baru", "Jompa", "Kalimango", "Labaian", "Marente"],
+    "Utan": ["Bale Brang", "Motong", "Pukat", "Sabedo", "Teratak"],
+    "Moyo Hilir": ["Berare", "Kukin", "Moyo", "Olat Rawa", "Poto"]
+  },
+  "Kab. Sumbawa Barat": {
+    "Taliwang": ["Kuang", "Menala", "Bugis", "Telaga Bertong", "Sampir", "Arab Kenangan", "Dalam", "Seloto"],
+    "Brang Ene": ["Kalifir", "Manemeng", "Lampok", "Mujahidin", "Mura"],
+    "Brang Rea": ["Bangkat Monteh", "Desa Beru", "Moteng", "Rarak Ronges", "Seminar Salit", "Tepas", "Tepas Sepakat"],
+    "Jereweh": ["Belo", "Beru", "Dasan Anyar", "Goa"],
+    "Maluk": ["Benete", "Bukit Damai", "Maluk", "Mantun"],
+    "Seteluk": ["Air Suning", "Desa Loka", "Kelanir", "Lamusung", "Meraran", "Rempe", "Seteluk Barat", "Seteluk Tengah", "Tapir"]
+  },
+  "Kab. Dompu": {
+    "Dompu": ["Bada", "Dorotangga", "Karijawa", "Potu", "Bali Satu", "Kareke", "Katada", "Mangge Nae", "O'o"],
+    "Woja": ["Bakajaya", "Bara", "Kandai Dua", "Madaprama", "Monta Baru", "Nowa", "Raba Baka", "Riada Baru", "Simpasai", "Wawonduru"],
+    "Hu'u": ["Adu", "Dada", "Hu'u", "Jala", "Marada", "Rasa Bou", "Sawe"],
+    "Kempo": ["Doro Kobo", "Kempo", "Konca", "Soro", "Soro Barat", "Ta'a", "Tolo Kalo"]
+  },
+  "Kab. Bima": {
+    "Woha": ["Tente", "Rabakodo", "Penapali", "Nisa", "Donggobolo", "Keli", "Kalampa", "Raba", "Samili", "Tenga", "Talabiu", "Pandai"],
+    "Bolo": ["Bontokape", "Darussalam", "Kananga", "Leu", "Nggembe", "Rada", "Rasabou", "Sanolo", "Sondosia", "Tambe"],
+    "Sape": ["Bajo Pulau", "Bungi", "Galu", "Jia", "Kowo", "Lamere", "Na'e", "Naru Barat", "Naru Timur", "Oi Maci", "Poja", "Rai Oi", "Rasabou", "Sangia"],
+    "Palibelo": ["Belo", "Bre", "Dore", "Nata", "Ntonggu", "Panda", "Ragi", "Teke", "Tonggorisa"]
+  },
+  "Kota Bima": {
+    "Rasanae Barat": ["Paruga", "Tanjung", "Nae", "Sarae", "Pane", "Dara"],
+    "Mpunda": ["Lewirato", "Mande", "Manggemaci", "Matakando", "Panggi", "Sadia", "Sambinae", "Santi"],
+    "Raba": ["Kendo", "Nitu", "Penanae", "Penaraga", "Rabangodu Barat", "Rabangodu Selatan", "Rabangodu Timur", "Rontu"],
+    "Asakota": ["Jatibaru", "Jatibaru Barat", "Jatiwangi", "Kolo", "Melayu", "Ule"],
+    "Rasanae Timur": ["Dodu", "Kodo", "Kumbe", "Lampe", "Lelamase", "Nungga", "Oi Fo'o"]
   }
 };
 
-export function getDistrictsForCity(cityName) {
-  if (!cityName) return [];
-  if (NTB_DISTRICTS_AND_VILLAGES[cityName]) {
-    return Object.keys(NTB_DISTRICTS_AND_VILLAGES[cityName]);
+/**
+ * SSOT Administrative Center & District Office Location per Regency / City:
+ * - district: Pusat Pemerintahan / Ibukota Kabupaten/Kota
+ * - village: Lokasi Kantor Distrik/Kecamatan terkait
+ */
+export const REGENCY_ADMIN_CENTERS = {
+  "Kota Mataram": { district: "Mataram", village: "Pejanggik" },
+  "Kab. Lombok Tengah": { district: "Praya", village: "Praya" },
+  "Kab. Lombok Barat": { district: "Gerung", village: "Gerung Utara" },
+  "Kab. Lombok Timur": { district: "Selong", village: "Selong" },
+  "Kab. Lombok Utara": { district: "Tanjung", village: "Tanjung" },
+  "Kab. Sumbawa": { district: "Sumbawa", village: "Brang Biji" },
+  "Kab. Sumbawa Barat": { district: "Taliwang", village: "Kuang" },
+  "Kab. Dompu": { district: "Dompu", village: "Bada" },
+  "Kab. Bima": { district: "Woha", village: "Tente" },
+  "Kota Bima": { district: "Rasanae Barat", village: "Paruga" }
+};
+
+/**
+ * Canonicalize regency name from either English/display format or Indonesian raw format.
+ * E.g. "Central Lombok" -> "Kab. Lombok Tengah", "Mataram City" -> "Kota Mataram",
+ * "Sumbawa" -> "Kab. Sumbawa", "West Sumbawa" -> "Kab. Sumbawa Barat".
+ */
+export function canonicalizeRegencyName(name) {
+  if (!name) return 'Kota Mataram';
+  let s = String(name).trim();
+  if (!s || s === '—') return 'Kota Mataram';
+
+  // Direct match in NTB keys
+  if (NTB_DISTRICTS_AND_VILLAGES[s]) return s;
+
+  // Normalized lower string
+  const norm = s.toLowerCase()
+    .replace(/^(kabupaten|kab\.?|kota)\s+/i, '')
+    .replace(/\s*\b(regency|city)\b/gi, '')
+    .trim();
+
+  // NTB alias table
+  const aliasMap = {
+    'mataram': 'Kota Mataram',
+    'lombok tengah': 'Kab. Lombok Tengah',
+    'central lombok': 'Kab. Lombok Tengah',
+    'lombok barat': 'Kab. Lombok Barat',
+    'west lombok': 'Kab. Lombok Barat',
+    'lombok timur': 'Kab. Lombok Timur',
+    'east lombok': 'Kab. Lombok Timur',
+    'lombok utara': 'Kab. Lombok Utara',
+    'north lombok': 'Kab. Lombok Utara',
+    'sumbawa': 'Kab. Sumbawa',
+    'sumbawa barat': 'Kab. Sumbawa Barat',
+    'west sumbawa': 'Kab. Sumbawa Barat',
+    'dompu': 'Kab. Dompu',
+    'bima': 'Kab. Bima',
+    'bima city': 'Kota Bima',
+    'kota bima': 'Kota Bima'
+  };
+
+  if (aliasMap[norm]) return aliasMap[norm];
+
+  // Try matching with formatCityDistrict output across all NTB keys
+  for (const k of Object.keys(NTB_DISTRICTS_AND_VILLAGES)) {
+    if (formatCityDistrict(k).toLowerCase() === s.toLowerCase() ||
+        k.toLowerCase() === s.toLowerCase() ||
+        k.toLowerCase().includes(norm)) {
+      return k;
+    }
   }
-  return [];
+
+  return s;
+}
+
+/**
+ * Get Default District and Village for a Regency / City.
+ * Rule: District is the administrative center of the regency, and Village is the location of the district office.
+ */
+export function getDefaultDistrictAndVillage(cityName, provinceName) {
+  const canonical = canonicalizeRegencyName(cityName);
+  if (REGENCY_ADMIN_CENTERS[canonical]) {
+    return REGENCY_ADMIN_CENTERS[canonical];
+  }
+
+  // Fallback if city exists in NTB_DISTRICTS_AND_VILLAGES
+  if (NTB_DISTRICTS_AND_VILLAGES[canonical]) {
+    const districts = Object.keys(NTB_DISTRICTS_AND_VILLAGES[canonical]);
+    const d = districts[0] || 'Mataram';
+    const villages = NTB_DISTRICTS_AND_VILLAGES[canonical][d] || ['Pejanggik'];
+    return { district: d, village: villages[0] || 'Pejanggik' };
+  }
+
+  // Graceful general fallback
+  const d = formatDistrictName(cityName) || 'Mataram';
+  return { district: d, village: 'Pejanggik' };
+}
+
+export function getDistrictsForCity(cityName) {
+  if (!cityName) return Object.keys(NTB_DISTRICTS_AND_VILLAGES['Kota Mataram']);
+  const canonical = canonicalizeRegencyName(cityName);
+  if (NTB_DISTRICTS_AND_VILLAGES[canonical]) {
+    return Object.keys(NTB_DISTRICTS_AND_VILLAGES[canonical]);
+  }
+  // If not explicitly mapped in NTB, return default center district as single choice
+  const def = getDefaultDistrictAndVillage(cityName);
+  return [def.district];
 }
 
 export function getVillagesForDistrict(cityName, districtName) {
-  if (!cityName || !districtName) return [];
-  if (NTB_DISTRICTS_AND_VILLAGES[cityName] && NTB_DISTRICTS_AND_VILLAGES[cityName][districtName]) {
-    return NTB_DISTRICTS_AND_VILLAGES[cityName][districtName];
+  if (!cityName) return NTB_DISTRICTS_AND_VILLAGES['Kota Mataram']['Mataram'] || [];
+  const canonical = canonicalizeRegencyName(cityName);
+  const cleanDist = formatDistrictName(districtName);
+
+  if (NTB_DISTRICTS_AND_VILLAGES[canonical]) {
+    // Exact or case-insensitive match on district name
+    for (const [dKey, villages] of Object.entries(NTB_DISTRICTS_AND_VILLAGES[canonical])) {
+      if (dKey.toLowerCase() === cleanDist.toLowerCase() || dKey.toLowerCase() === (districtName || '').toLowerCase()) {
+        return villages;
+      }
+    }
   }
-  return [];
+
+  const def = getDefaultDistrictAndVillage(cityName);
+  return [def.village];
 }
 
 if (typeof window !== 'undefined') {
   window.INDONESIA_REGIONS = INDONESIA_REGIONS;
   window.NTB_DISTRICTS_AND_VILLAGES = NTB_DISTRICTS_AND_VILLAGES;
+  window.REGENCY_ADMIN_CENTERS = REGENCY_ADMIN_CENTERS;
+  window.canonicalizeRegencyName = canonicalizeRegencyName;
+  window.getDefaultDistrictAndVillage = getDefaultDistrictAndVillage;
   window.getDistrictsForCity = getDistrictsForCity;
   window.getVillagesForDistrict = getVillagesForDistrict;
   window.PROVINCE_DISPLAY_MAP = PROVINCE_DISPLAY_MAP;

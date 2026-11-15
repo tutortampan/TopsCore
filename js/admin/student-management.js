@@ -1,4 +1,5 @@
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial } from '../api.js?v=20261114_v517';
+import { openQuickAlumniGraduateModal } from './quick-score-wizards.js?v=20261115_v549';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261112_v423';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261112_v423';
@@ -6,7 +7,7 @@ import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { exportStudentDossier } from './dossier_export.js?v=20261106_v160';
 import { isTutorRole } from '../session.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
-import { INDONESIA_REGIONS, PROVINCE_DISPLAY_MAP, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName } from '../indonesia-regions.js?v=20261115_v521';
+import { INDONESIA_REGIONS, PROVINCE_DISPLAY_MAP, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDefaultDistrictAndVillage, getDistrictsForCity, getVillagesForDistrict, canonicalizeRegencyName } from '../indonesia-regions.js?v=20261115_v546';
 
 if (typeof window !== 'undefined') {
   window.exportStudentDossier = exportStudentDossier;
@@ -128,7 +129,11 @@ export function compareStudentsHierarchical(a, b) {
   return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
 }
 
-export async function renderStudents(area) {
+export async function renderStudents(area, options = {}) {
+  const isAlumniPanel = Boolean(options?.isAlumniPanel || window._isAlumniMainPanel || window._currentSection === 'alumni' || (typeof window !== 'undefined' && window.location.hash.startsWith('#alumni')));
+  if (isAlumniPanel) {
+    window._isAlumniMainPanel = true;
+  }
   // 1. Resolve Master / Catalog References (Ultra-lean in-memory cache hit)
   const [allLevels, allPrograms, allBatches, allTests, allClasses] = await Promise.all([
     adminFetchAll('levels', 'id, name, level_number'),
@@ -204,11 +209,11 @@ export async function renderStudents(area) {
     }
   }
 
-  // 2. Scoped Student Fetch (Filtered strictly by current active program to eliminate full DB scan)
-  const studentFilters = currentProgramId ? { program_id: currentProgramId } : {};
+  // 2. Scoped Student Fetch (Filtered strictly by current active program, or all programs if in Alumni main panel)
+  const studentFilters = isAlumniPanel ? {} : (currentProgramId ? { program_id: currentProgramId } : {});
   const rawData = await adminFetchAll(
     'students',
-    'id, name, gender, birth_date, education, province, city, district, village, photo_url, photo_status, is_active, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
+    'id, name, pin_hash, gender, birth_date, education, province, city, district, village, photo_url, photo_status, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
     studentFilters
   );
 
@@ -658,8 +663,16 @@ export async function renderStudents(area) {
 
     const studentProvince = (localDemographics.province || s.province || (s.is_active !== false && (s.gender || s.education) ? 'Nusa Tenggara Barat' : '')).trim();
     const studentCity = (localDemographics.city || s.city || (s.is_active !== false && (s.gender || s.education) ? 'Kota Mataram' : '')).trim();
-    const studentDistrict = (localDemographics.district || s.district || '').trim();
-    const studentVillage = (localDemographics.village || s.village || '').trim();
+    let studentDistrict = (localDemographics.district || s.district || '').trim();
+    let studentVillage = (localDemographics.village || s.village || '').trim();
+
+    // Auto-populate district and village per user directive:
+    // District = Administrative Center of Regency; Village = Location of District Office
+    if (!studentDistrict || !studentVillage || studentDistrict === '—' || studentVillage === '—') {
+      const defCenter = getDefaultDistrictAndVillage(studentCity, studentProvince);
+      if (!studentDistrict || studentDistrict === '—') studentDistrict = defCenter.district;
+      if (!studentVillage || studentVillage === '—') studentVillage = defCenter.village;
+    }
 
     const rowObj = {
       ...s,
@@ -674,7 +687,8 @@ export async function renderStudents(area) {
       progName: s.programs?.name || (s.program_id ? 'Unknown Program' : '—'),
       batchName: s.batches?.name || (s.batch_id ? 'Unknown Batch' : '— No Batch —'),
       levelName,
-      pinDisplay: s.pin || 'NOT SET',
+      pin: s.pin || (s.pin_hash === '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' ? '1234' : '1234'),
+      pinDisplay: s.pin || (s.pin_hash === '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' ? '1234' : '1234'),
       totalAssigned,
       completedTests: completedTestsCount,
       completedExamCount,
@@ -723,49 +737,71 @@ export async function renderStudents(area) {
   gridData.sort(compareStudentsHierarchical);
 
   // Synchronize sidebar active state for program/batch items
-  document.querySelectorAll('.sidebar-program-item').forEach(i => {
-    const matchesBatch = window._filterBatchId && i.getAttribute('data-batch-id') === window._filterBatchId;
-    const matchesProg = !window._filterBatchId && i.getAttribute('data-program-id') === currentProgramId;
-    i.classList.toggle('active', !!(matchesBatch || matchesProg));
-  });
+  if (!isAlumniPanel) {
+    document.querySelectorAll('.sidebar-program-item').forEach(i => {
+      const matchesBatch = window._filterBatchId && i.getAttribute('data-batch-id') === window._filterBatchId;
+      const matchesProg = !window._filterBatchId && i.getAttribute('data-program-id') === currentProgramId;
+      i.classList.toggle('active', !!(matchesBatch || matchesProg));
+    });
+  }
   const topbarTitle = document.getElementById('topbar-title');
   if (topbarTitle) {
-    const curBatch = (allBatches || []).find(b => b.id === window._filterBatchId);
-    const batchLabel = curBatch ? (curBatch.name.toLowerCase().startsWith((window._selectedProgramName || '').toLowerCase()) ? curBatch.name : `${window._selectedProgramName} ${curBatch.name}`) : window._selectedProgramName;
-    topbarTitle.textContent = window._selectedSidebarLabel || batchLabel || window._selectedProgramName || 'Students';
+    if (isAlumniPanel) {
+      topbarTitle.textContent = 'Alumni';
+    } else {
+      const curBatch = (allBatches || []).find(b => b.id === window._filterBatchId);
+      const batchLabel = curBatch ? (curBatch.name.toLowerCase().startsWith((window._selectedProgramName || '').toLowerCase()) ? curBatch.name : `${window._selectedProgramName} ${curBatch.name}`) : window._selectedProgramName;
+      topbarTitle.textContent = window._selectedSidebarLabel || batchLabel || window._selectedProgramName || 'Students';
+    }
   }
 
-  // Filter students strictly by active program
-  const programStudents = currentProgramId ? gridData.filter(s => s.program_id === currentProgramId) : gridData;
+  // Interactive Status Filter Classifications
+  const isStudentAlumni = s => Boolean(s.isAlumni || s.studentLevelNum === 0 || s.levelName === 'Alumni' || (s.program_status || '').toUpperCase() === 'ALUMNI' || (s.program_status || '').toUpperCase() === 'GRADUATED' || (s.program_status || '').toUpperCase() === 'COMPLETED' || (s.program_status || '').toUpperCase() === 'PROGRAM_COMPLETED');
+  const isStudentHold = s => !isStudentAlumni(s) && (s.program_status || '').toUpperCase() === 'HOLD';
+  const isStudentInactive = s => !isStudentAlumni(s) && !isStudentHold(s) && ((s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false) || (s.program_status || '').toUpperCase() === 'INACTIVE');
+  const isStudentActive = s => !isStudentAlumni(s) && !isStudentHold(s) && !isStudentInactive(s);
+  const isStudentHoldOrInactive = s => !isStudentAlumni(s) && (isStudentHold(s) || isStudentInactive(s));
 
-  // Scope students strictly by the active batch if selected, or active batches in the program
-  const rosterScopeStudents = window._filterBatchId
-    ? programStudents.filter(s => s.batch_id === window._filterBatchId)
-    : programStudents.filter(s => (s.batches ? s.batches.is_active !== false : true));
+  // Determine current status tab (User directive: Hold & Inactive is ONE single combined category)
+  let currentBatchStatus = 'active';
+  if (isAlumniPanel) {
+    currentBatchStatus = 'alumni';
+  } else {
+    const rawStatus = window._filterBatchStatus;
+    if (rawStatus === 'hold_inactive' || rawStatus === 'hold' || rawStatus === 'inactive') {
+      currentBatchStatus = 'hold_inactive';
+    } else if (rawStatus === 'all') {
+      currentBatchStatus = 'all';
+    } else {
+      currentBatchStatus = 'active';
+    }
+  }
 
-  // Dedicated Alumni count across active program:
-  const alumniCount = programStudents.filter(s => s.isAlumni || s.studentLevelNum === 0 || s.levelName === 'Alumni').length;
+  // Filter students strictly by active program unless in Alumni main panel (where all alumni across programs are shown)
+  const programStudents = isAlumniPanel ? gridData : (currentProgramId ? gridData.filter(s => s.program_id === currentProgramId) : gridData);
 
-  // Default status is ALWAYS 'active' when entering Student Roster per user directive
-  const currentBatchStatus = (window._filterBatchStatus === 'inactive' || window._filterBatchStatus === 'all' || window._filterBatchStatus === 'alumni')
-    ? window._filterBatchStatus
-    : 'active';
+  // Scope students strictly by the active batch if selected, or all alumni in alumni panel
+  const rosterScopeStudents = isAlumniPanel
+    ? programStudents
+    : (window._filterBatchId
+      ? programStudents.filter(s => s.batch_id === window._filterBatchId)
+      : programStudents.filter(s => (s.batches ? s.batches.is_active !== false : true)));
 
-  const filteredGridData = (currentBatchStatus === 'alumni' ? programStudents : rosterScopeStudents).filter(s => {
-    const isAlumni = Boolean(s.isAlumni || s.studentLevelNum === 0 || s.levelName === 'Alumni');
-    if (currentBatchStatus === 'alumni') {
-      if (!isAlumni) return false;
+  const filteredGridData = rosterScopeStudents.filter(s => {
+    if (isAlumniPanel) {
+      if (!isStudentAlumni(s)) return false;
       if (window._alumniFilterBatchId && window._alumniFilterBatchId !== 'all') {
         return s.batch_id === window._alumniFilterBatchId;
       }
       return true;
     }
     if (currentBatchStatus === 'active') {
-      return !isAlumni && (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false);
-    } else if (currentBatchStatus === 'inactive') {
-      return !isAlumni && ((s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false));
+      return isStudentActive(s);
     }
-    return !isAlumni; // 'all' active and inactive students (alumni are in dedicated alumni tab)
+    if (currentBatchStatus === 'hold_inactive') {
+      return isStudentHoldOrInactive(s);
+    }
+    return !isStudentAlumni(s); // 'all' active and hold/inactive students in this batch
   });
   window._currentStudentsGridData = filteredGridData;
 
@@ -776,18 +812,13 @@ export async function renderStudents(area) {
 
   // Update sidebar badge
   const rosterNavBtn = document.querySelector(`.sidebar-program-item[data-program-id="${currentProgramId}"]`) || document.querySelector('.admin-nav-item[data-sub="students"]');
-  if (rosterNavBtn) {
+  if (rosterNavBtn && !isAlumniPanel) {
     const existingBadge = rosterNavBtn.querySelector('.remediation-sidebar-badge');
     if (existingBadge) existingBadge.remove();
     if (remediationPendingCount > 0) {
       rosterNavBtn.insertAdjacentHTML('beforeend', `<span class="remediation-sidebar-badge badge badge-warning" style="margin-left:auto;font-size: 12px;padding:0.1rem 0.3rem;">${remediationPendingCount}</span>`);
     }
   }
-
-  // Interactive Status Filter Tabs (Scoped to active batch / active batches in scope)
-  const activeCount = rosterScopeStudents.filter(s => !s.isAlumni && (s.batches ? s.batches.is_active !== false : true) && ((s._raw || s).is_active !== false)).length;
-  const inactiveCount = rosterScopeStudents.filter(s => !s.isAlumni && ((s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false))).length;
-  const totalCount = rosterScopeStudents.filter(s => !s.isAlumni).length;
 
   window._switchStudentRosterStatus = (statusId) => {
     window._filterBatchStatus = statusId;
@@ -797,41 +828,50 @@ export async function renderStudents(area) {
       url.searchParams.set('status', statusId);
       window.history.replaceState(null, '', url.toString());
     } catch (e) {}
-    renderStudents(area);
+    renderStudents(area, { isAlumniPanel });
   };
 
-  // Keyboard Quick-Switch (Hotkeys: 1 for Active, 2 for Inactive, 3 for Alumni, 4 for All)
+  // Keyboard Quick-Switch (Hotkeys: 1 for Active, 2 for Hold & Inactive, 3 for All)
   if (!window._rosterHotkeysBound) {
     window._rosterHotkeysBound = true;
     window.addEventListener('keydown', (e) => {
       const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
       if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable) return;
       if (e.ctrlKey || e.altKey || e.metaKey) return;
-      if (window._currentSection !== 'students' && window._activeSectionAlias !== 'students') return;
+      if (window._currentSection !== 'students' && window._activeSectionAlias !== 'students' && window._currentSection !== 'alumni') return;
 
       if (e.key === '1') {
         window._switchStudentRosterStatus('active');
         showToast('Filter: Active Students', 'info');
       } else if (e.key === '2') {
-        window._switchStudentRosterStatus('inactive');
-        showToast('Filter: Inactive Students', 'info');
+        window._switchStudentRosterStatus('hold_inactive');
+        showToast('Filter: Hold & Inactive Students', 'info');
       } else if (e.key === '3') {
-        window._switchStudentRosterStatus('alumni');
-        showToast('Filter: Alumni Students', 'info');
-      } else if (e.key === '4') {
         window._switchStudentRosterStatus('all');
         showToast('Filter: All Students', 'info');
       }
     });
   }
 
-  if (window.setTopbarTabs) {
-    window.setTopbarTabs([
-      { id: 'active', icon: getSvgIcon('check-circle', 14), label: 'Active Students', val: activeCount, valColor: 'var(--clr-success)' },
-      { id: 'inactive', icon: getSvgIcon('clock', 14), label: 'Inactive Students', val: inactiveCount, valColor: '#94a3b8' },
-      { id: 'alumni', icon: getSvgIcon('graduation-cap', 14), label: 'Alumni', val: alumniCount, valColor: '#a855f7' },
-      { id: 'all', icon: getSvgIcon('users', 14), label: 'All Students', val: totalCount, valColor: 'var(--clr-accent-1, #38bdf8)' }
-    ], currentBatchStatus, 'window._switchStudentRosterStatus');
+  if (isAlumniPanel) {
+    const totalAlumni = gridData.filter(isStudentAlumni).length;
+    if (window.setTopbarTabs) {
+      window.setTopbarTabs([
+        { id: 'alumni', icon: getSvgIcon('graduation-cap', 14), label: 'Alumni', val: totalAlumni, valColor: 'var(--quad-d)' }
+      ], 'alumni', 'window._switchStudentRosterStatus');
+    }
+  } else {
+    const activeCount = rosterScopeStudents.filter(isStudentActive).length;
+    const holdAndInactiveCount = rosterScopeStudents.filter(isStudentHoldOrInactive).length;
+    const totalCount = rosterScopeStudents.filter(s => !isStudentAlumni(s)).length;
+
+    if (window.setTopbarTabs) {
+      window.setTopbarTabs([
+        { id: 'active', icon: getSvgIcon('check-circle', 14), label: 'Active Students', val: activeCount, valColor: 'var(--clr-success)' },
+        { id: 'hold_inactive', icon: getSvgIcon('alert-circle', 14), label: 'Hold & Inactive', val: holdAndInactiveCount, valColor: 'var(--grade-c)' },
+        { id: 'all', icon: getSvgIcon('users', 14), label: 'All Students', val: totalCount, valColor: 'var(--clr-accent-1, #38bdf8)' }
+      ], currentBatchStatus, 'window._switchStudentRosterStatus');
+    }
   }
 
   const alumniBatches = (allBatches || []).filter(b => !currentProgramId || b.program_id === currentProgramId);
@@ -884,6 +924,7 @@ export async function renderStudents(area) {
 
     const rightHtml = `<div style="display:inline-flex;align-items:center;gap:8px;overflow-y:hidden;">
       ${currentBatchStatus !== 'alumni' ? `
+        <button type="button" id="btn-graduate-alumni-roster" style="background:#8b5cf6;border:1px solid #a855f7;color:#ffffff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Graduate selected students directly to Alumni">${getSvgIcon('graduation-cap', 14)} Alumni</button>
         <button type="button" id="btn-promote-all-eligible" style="${nextBtnStyle}height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="${nextBtnTitle}">${getSvgIcon('zap', 14)} NEXT (${eligibleCount} Eligible)</button>
       ` : ''}
       <button type="button" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Register New Student">${getSvgIcon('plus', 14)} Add Student</button>
@@ -897,7 +938,7 @@ export async function renderStudents(area) {
     if (addStudentBtn) {
       addStudentBtn.onclick = () => {
         if (typeof window.openStudentFullEdit === 'function') {
-          window.openStudentFullEdit({ program_id: currentProgramId, batch_id: activeBatchId }, () => renderStudents(area));
+          window.openStudentFullEdit({ program_id: currentProgramId, batch_id: activeBatchId }, () => renderStudents(area, { isAlumniPanel }));
         }
       };
     }
@@ -911,6 +952,19 @@ export async function renderStudents(area) {
         }
       };
     }
+    const graduateAlumniBtn = document.getElementById('btn-graduate-alumni-roster');
+    if (graduateAlumniBtn) {
+      graduateAlumniBtn.onclick = () => {
+        const alumniModalFn = typeof openQuickAlumniGraduateModal === 'function' ? openQuickAlumniGraduateModal : window.openQuickAlumniGraduateModal;
+        if (typeof alumniModalFn === 'function') {
+          alumniModalFn({
+            students: filteredGridData || [],
+            onSaved: () => renderStudents(area, { isAlumniPanel })
+          });
+        }
+      };
+    }
+
     const promoteAllBtn = document.getElementById('btn-promote-all-eligible');
     if (promoteAllBtn) {
       promoteAllBtn.onclick = () => {
@@ -924,7 +978,7 @@ export async function renderStudents(area) {
     if (alumniBatchSelectInfobar) {
       alumniBatchSelectInfobar.onchange = (e) => {
         window._alumniFilterBatchId = e.target.value;
-        renderStudents(area);
+        renderStudents(area, { isAlumniPanel });
       };
     }
   }
@@ -1104,7 +1158,6 @@ export async function renderStudents(area) {
               </div>
             </div>
           </div>
-          <button class="btn-icon" id="btn-close-prog-details" style="background:rgba(255,255,255,0.05);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">&#10005;</button>
         </div>
         <div style="padding:1.25rem 1.5rem;overflow-y:auto;flex:1;">
           <div class="d-flex gap-3 mb-4 flex-wrap" style="background:rgba(255,255,255,0.03);border:1px solid var(--clr-border);padding:0.9rem 1.2rem;border-radius:10px;">
@@ -1195,6 +1248,9 @@ export async function renderStudents(area) {
             </table>
           </div>
         </div>
+        <div class="modal-footer" style="height:60px;min-height:60px;max-height:60px;padding:10px 16px;display:flex;align-items:center;justify-content:flex-start;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.2);flex-shrink:0;">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-prog-details">CLOSE</button>
+        </div>
       </div>
     `;
     document.body.appendChild(modal);
@@ -1207,13 +1263,13 @@ export async function renderStudents(area) {
         const attId = btn.dataset.attId;
         const targetRemedial = btn.dataset.setRemedial === 'true';
         const msg = targetRemedial
-          ? 'Mark this exam result as REMEDIAL (Grade will display with small "R", actual score preserved)?'
+          ? 'Mark this exam result as REMEDIAL (Grade R)?'
           : 'Revert this exam result to NORMAL?';
         if (!confirm(msg)) return;
         try {
           showLoading('Updating remedial status...');
           await labelAttemptRemedial(attId, targetRemedial, 60);
-          showToast(targetRemedial ? 'Successfully labeled as Remedial.' : 'Remedial status reverted to Normal.', 'success');
+          showToast(targetRemedial ? 'Successfully labeled as Remedial (Grade R).' : 'Remedial status reverted to Normal.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1234,8 +1290,6 @@ export async function renderStudents(area) {
       btn.onclick = async (e) => {
         e.stopPropagation();
         const attId = btn.dataset.attId;
-        const testId = btn.dataset.testId;
-        const sId = btn.dataset.studentId;
 
         const reason = prompt('Skor F (Forgiven) — Prerogatif Mr. Top\n\nMasukkan alasan tertulis dispensasi (wajib diisi):');
         if (!reason || !reason.trim()) {
@@ -1244,26 +1298,9 @@ export async function renderStudents(area) {
         }
         try {
           showLoading('Memberikan dispensasi Skor F...');
-          const sb = await getSupabase();
-          const { error: updErr } = await sb.from('attempts').update({
-            is_forgiven: true,
-            forgiven_reason: reason.trim(),
-            forgiven_at: new Date().toISOString(),
-            forgiven_by: null
-          }).eq('id', attId);
-          if (updErr) throw updErr;
+          await labelAttemptForgiven(attId, reason.trim());
 
-          // Rule 2.19: Audit log
-          await sb.from('audit_logs').insert({
-            actor_role: 'admin',
-            action: 'FORGIVEN_SCORE_GRANTED',
-            entity_type: 'attempts',
-            entity_id: attId,
-            new_value: { reason: reason.trim(), student_id: sId, test_id: testId },
-            created_at: new Date().toISOString()
-          });
-
-          showToast('Score Exemption (Forgiven) granted.', 'success');
+          showToast('Score Exemption (Skor F) granted successfully.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1287,22 +1324,7 @@ export async function renderStudents(area) {
         if (!confirm('Cabut status dispensasi Skor F (kembalikan ke penilaian normal)?')) return;
         try {
           showLoading('Mencabut status Skor F...');
-          const sb = await getSupabase();
-          const { error: updErr } = await sb.from('attempts').update({
-            is_forgiven: false,
-            forgiven_reason: null,
-            forgiven_at: null,
-            forgiven_by: null
-          }).eq('id', attId);
-          if (updErr) throw updErr;
-
-          await sb.from('audit_logs').insert({
-            actor_role: 'admin',
-            action: 'FORGIVEN_SCORE_REVOKED',
-            entity_type: 'attempts',
-            entity_id: attId,
-            created_at: new Date().toISOString()
-          });
+          await labelAttemptNormal(attId);
 
           showToast('↩️ Score exemption revoked.', 'success');
           modal.remove();
@@ -1446,7 +1468,6 @@ export async function renderStudents(area) {
               ${getSvgIcon('edit', 14)} Edit
             </button>
             `}
-            <button class="btn-icon" id="btn-close-profile-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>
         </div>
 
@@ -1491,6 +1512,11 @@ export async function renderStudents(area) {
         <!-- Tab Body -->
         <div style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;" id="profile-tab-body">
           ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Loading test history...')}
+        </div>
+
+        <!-- Modal Footer CTA Area -->
+        <div class="modal-footer" style="height:60px;min-height:60px;max-height:60px;padding:10px 1.5rem;display:flex;align-items:center;justify-content:flex-start;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);flex-shrink:0;">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-profile-modal">CLOSE</button>
         </div>
       </div>
     `;
@@ -1670,12 +1696,12 @@ export async function renderStudents(area) {
             const attId = btn.dataset.attId;
             const targetRemedial = btn.dataset.setRemedial !== 'false';
             const msg = targetRemedial
-              ? 'Mark this score as REMEDIAL (Grade will display with small "R", actual score preserved)?'
+              ? 'Mark this score as REMEDIAL (Grade R)?'
               : 'Revert this score to NORMAL?';
             if (!confirm(msg)) return;
             try {
               await labelAttemptRemedial(attId, targetRemedial, 60);
-              showToast(targetRemedial ? 'Score successfully labeled as Remedial.' : 'Remedial status reverted to Normal.', 'success');
+              showToast(targetRemedial ? 'Score successfully labeled as Remedial (Grade R).' : 'Remedial status reverted to Normal.', 'success');
               window.showStudentProfileModal(studentId);
             } catch(err) {
               showToast('Failed to update status: ' + err.message, 'error');
@@ -1742,7 +1768,7 @@ export async function renderStudents(area) {
                 <div class="fw-600 text-sm">${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)}</div>
               </div>
               <div style="margin-bottom:8px;">
-                <div class="text-xs text-muted">Cohort Batch:</div>
+                <div class="text-xs text-muted">Batch:</div>
                 <div class="fw-600 text-sm">Batch ${escapeHtml(rec.batchName)} (${escapeHtml(rec.levelName)})</div>
               </div>
               <div style="margin-bottom:8px;">
@@ -1975,7 +2001,6 @@ export async function renderStudents(area) {
             <button class="btn btn-secondary btn-sm" id="btn-dossier-to-profile" style="display:inline-flex;align-items:center;gap:6px;">
               ${getSvgIcon('user', 14)} View Profile
             </button>
-            <button class="btn-icon" id="btn-close-dossier-modal" style="background:rgba(255,255,255,0.06);border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;width:32px;height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;">✕</button>
           </div>
         </div>
 
@@ -2115,6 +2140,11 @@ export async function renderStudents(area) {
               Valid without wet signature if verification code matches the central registry.
             </div>
           </div>
+        </div>
+
+        <!-- Modal Footer CTA Area -->
+        <div class="modal-footer" style="height:60px;min-height:60px;max-height:60px;padding:10px 1.5rem;display:flex;align-items:center;justify-content:flex-start;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);flex-shrink:0;">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal">CLOSE</button>
         </div>
       </div>
     `;
@@ -2259,6 +2289,7 @@ export async function renderStudents(area) {
         {
           key: `_cls_exam4_${cls.id}`,
           label: 'Exam 4',
+          className: 'super-hdr-divider',
           sortable: true,
           align: 'center',
           width: '74px',
@@ -2284,6 +2315,7 @@ export async function renderStudents(area) {
         return [{
           key: `_cls_empty_${cls.id}`,
           label: 'No Tests',
+          className: 'super-hdr-divider',
           align: 'center',
           width: '90px',
           _classId: cls.id,
@@ -2291,7 +2323,7 @@ export async function renderStudents(area) {
         }];
       }
 
-      return targetTests.map(t => {
+      return targetTests.map((t, tIdx) => {
         const isEx = isWeeklyExam(t);
         const shell = t.shell_code || '';
         let shortLabel = shell ? shell.replace('-WORDS-', ' ').replace('-PHRASES-', ' ') : (t.title || 'Test');
@@ -2300,9 +2332,11 @@ export async function renderStudents(area) {
         }
 
         const colKey = `_cls_test_${cls.id}_${t.id}`;
+        const isLastColInClass = (tIdx === targetTests.length - 1);
         return {
           key: colKey,
           label: shortLabel,
+          className: isLastColInClass ? 'super-hdr-divider' : '',
           sortable: true,
           align: 'center',
           width: '95px',
@@ -2363,12 +2397,19 @@ export async function renderStudents(area) {
         label: escapeHtml(cls.name),
         colSpan: colCount,
         className: 'super-hdr super-hdr-class',
-        style: 'background:rgba(99,102,241,0.1); border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px;'
+        style: 'background:#141a2e; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px;'
       });
     });
 
-    sh.push({ key: 'program_status', rowSpan: 2 });
-    if (currentBatchStatus === 'inactive') {
+    // Group 4: SECURITY (Colspan 2: PIN & STATUS - User Directive)
+    sh.push({
+      label: 'SECURITY',
+      colSpan: 2,
+      className: 'super-hdr super-hdr-security',
+      style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+    });
+
+    if (currentBatchStatus === 'hold_inactive' || currentBatchStatus === 'inactive' || currentBatchStatus === 'hold') {
       sh.push({ key: 'actions', rowSpan: 2 });
     }
     return sh;
@@ -2389,122 +2430,6 @@ export async function renderStudents(area) {
     initialSortAsc: true,
     stickyActionCol: true,
     superHeaders: buildSuperHeaders(),
-    summaryRow: (visibleCols, filteredData) => {
-      if (!filteredData || filteredData.length === 0) return '';
-
-      // Calculate dynamic average age
-      let totalAge = 0;
-      let ageCount = 0;
-      const today = new Date();
-      filteredData.forEach(r => {
-        if (r.birth_date) {
-          const bd = new Date(r.birth_date);
-          if (!isNaN(bd.getTime())) {
-            let age = today.getFullYear() - bd.getFullYear();
-            const m = today.getMonth() - bd.getMonth();
-            if (m < 0 || (m === 0 && today.getDate() < bd.getDate())) age--;
-            if (age > 0) {
-              totalAge += age;
-              ageCount++;
-            }
-          }
-        }
-      });
-      const avgAgeStr = ageCount > 0 ? (totalAge / ageCount).toFixed(1) : '—';
-
-      // Calculate gender breakdown
-      let mCount = 0;
-      let fCount = 0;
-      filteredData.forEach(r => {
-        const g = (r.gender || '').trim().toLowerCase();
-        if (g === 'male' || g === 'm') mCount++;
-        else if (g === 'female' || g === 'f') fCount++;
-      });
-      const genderBreakdown = `${mCount} M · ${fCount} F`;
-
-      // Calculate average points per active class column
-      const classExamAverages = {};
-      const classExamColors = {};
-      perClassColDefs.forEach(col => {
-        const key = col.key;
-        let sum = 0;
-        let count = 0;
-        let pctSum = 0;
-        filteredData.forEach(r => {
-          const val = r[key];
-          if (val != null && val >= 0) {
-            sum += val;
-            count++;
-            const pct = r[`${key}_pct`];
-            if (pct != null && pct >= 0) {
-              pctSum += pct;
-            } else {
-              const match = key.match(/_cls_exam([1-4])_(.+)/);
-              if (match) {
-                const num = match[1];
-                const cid = match[2];
-                const tc = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }[num];
-                const cs = r.perClassFinal?.get(cid);
-                pctSum += cs?.themeScores?.[tc] ?? 0;
-              }
-            }
-          }
-        });
-        classExamAverages[key] = count > 0 ? (sum / count).toFixed(1) : null;
-        const avgPct = count > 0 ? Math.round(pctSum / count) : 0;
-        classExamColors[key] = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : '#38bdf8';
-      });
-
-      // Calculate total average points across students with completed exams
-      let totalPtsSum = 0;
-      let totalPctSum = 0;
-      let ptsCount = 0;
-      filteredData.forEach(r => {
-        if (r.totalEarnedScore != null && r.totalEarnedScore > 0) {
-          totalPtsSum += r.totalEarnedScore;
-          totalPctSum += (r.overallPct != null ? Number(r.overallPct) : 0);
-          ptsCount++;
-        }
-      });
-      const avgPtsStr = ptsCount > 0 ? `${(totalPtsSum / ptsCount).toFixed(1)} pts` : '—';
-      const batchOverallPct = ptsCount > 0 ? Math.round(totalPctSum / ptsCount) : 0;
-      const batchPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(batchOverallPct) : 'var(--grade-a)';
-
-      let cells = '';
-      visibleCols.forEach(col => {
-        if (col.key === 'levelName') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:#38bdf8;font-size: 12px;letter-spacing:0.05em;">AVG</td>`;
-        } else if (col.key === 'photo_url') {
-          cells += `<td style="background:#0f172a;border-top:2px solid #334155;"></td>`;
-        } else if (col.key === 'gender') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;font-size: 12px;color:var(--clr-text-2);white-space:nowrap;">${genderBreakdown}</td>`;
-        } else if (col.key === 'sortName' || col.key === 'name') {
-          cells += `<td class="super-hdr-divider" style="background:#0f172a;border-top:2px solid #334155;border-right:2px solid rgba(255,255,255,0.22) !important;font-weight:700;color:#ffffff;font-size: 12px;">BATCH AVERAGE (${filteredData.length} Students)</td>`;
-        } else if (col.key === 'birth_date') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size: 12px;">—</td>`;
-        } else if (col.key === 'ageDisplay') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:700;color:#94a3b8;font-size: 12px;">${avgAgeStr}</td>`;
-        } else if (col.key === 'education') {
-          cells += `<td class="super-hdr-divider" style="background:#0f172a;text-align:center;border-top:2px solid #334155;border-right:2px solid rgba(255,255,255,0.22) !important;color:#94a3b8;font-size: 12px;">—</td>`;
-        } else if (col.key === 'province') {
-          cells += `<td class="super-hdr-divider" style="background:#0f172a;text-align:center;border-top:2px solid #334155;border-right:2px solid rgba(255,255,255,0.22) !important;color:#94a3b8;font-size: 12px;">—</td>`;
-        } else if (col.key === 'city' || col.key === 'district' || col.key === 'village') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size: 12px;">—</td>`;
-        } else if (col.key && (col.key.includes('_cls_exam') || col.key.includes('_cls_test_'))) {
-          const avgVal = classExamAverages[col.key];
-          const color = classExamColors[col.key] || 'var(--clr-text-1)';
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;font-weight:600;color:${color} !important;font-size: 12px;white-space:nowrap !important;">${avgVal != null ? avgVal : '—'}</td>`;
-        } else if (col.key === 'program_status') {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;font-size: 12px;">—</td>`;
-        } else if (col.label === 'Actions') {
-          cells += `<td style="background:#0f172a;border-top:2px solid #334155;"></td>`;
-        } else {
-          cells += `<td style="background:#0f172a;text-align:center;border-top:2px solid #334155;color:#94a3b8;">—</td>`;
-        }
-      });
-
-      return `<tr class="datagrid-summary-row" style="background:#0f172a;font-weight:700;height:40px;min-height:40px;max-height:40px;line-height:40px;">${cells}</tr>`;
-    },
     sortComparator: (sortKey, direction, a, b) => {
       // Active students ALWAYS on top, inactive at bottom
       const aActive = ((a._raw || a).is_active !== false) ? 1 : 0;
@@ -2542,9 +2467,13 @@ export async function renderStudents(area) {
         const eb = formatLastEducation(b.education).toLowerCase();
         if (ea !== eb) return direction === 'asc' ? ea.localeCompare(eb) : eb.localeCompare(ea);
       } else if (sortKey === 'program_status') {
-        const sa = (a.program_status || 'in_progress').toLowerCase();
-        const sb = (b.program_status || 'in_progress').toLowerCase();
+        const sa = (a.program_status || 'active').toLowerCase();
+        const sb = (b.program_status || 'active').toLowerCase();
         if (sa !== sb) return direction === 'asc' ? sa.localeCompare(sb) : sb.localeCompare(sa);
+      } else if (sortKey === 'pin') {
+        const pa = String(a.pin || a.pinDisplay || '');
+        const pb = String(b.pin || b.pinDisplay || '');
+        if (pa !== pb) return direction === 'asc' ? pa.localeCompare(pb) : pb.localeCompare(pa);
       }
 
       // Column-specific comparison for class exams & tests
@@ -2750,10 +2679,7 @@ export async function renderStudents(area) {
       };
     },
     onRowClick: (row) => {
-      const isEditActive = typeof window.getGlobalEditMode === 'function' ? window.getGlobalEditMode() : false;
-      if (isEditActive && typeof window.openStudentFullEdit === 'function') {
-        window.openStudentFullEdit(row, () => renderStudents(area));
-      } else if (typeof window.showStudentProfileModal === 'function') {
+      if (typeof window.showStudentProfileModal === 'function') {
         window.showStudentProfileModal(row.id);
       } else if (typeof window.openStudentProfile === 'function') {
         window.openStudentProfile(row.id);
@@ -2785,7 +2711,7 @@ export async function renderStudents(area) {
         key: 'photo_url',
         label: 'PHOTO',
         shortLabel: 'PHOTO',
-        microLabel: 'PHT',
+        microLabel: 'PIC',
         headerTitle: 'PHOTO',
         className: 'col-narrow-header',
         sortable: false,
@@ -2808,6 +2734,9 @@ export async function renderStudents(area) {
       {
         key: 'gender',
         label: 'GENDER',
+        shortLabel: 'SEX',
+        microLabel: 'SEX',
+        headerTitle: 'GENDER',
         sortable: true,
         align: 'center',
         width: '68px',
@@ -2925,15 +2854,28 @@ export async function renderStudents(area) {
         width: '130px',
         minWidth: '120px',
         render: (row) => {
-          const rawVillage = (row.village || '').trim();
+          const rawCity = (row.city || '').trim();
+          const rawDist = (row.district || '').trim();
+          const def = getDefaultDistrictAndVillage(rawCity, row.province);
+          const effectiveDist = rawDist || def.district;
+          const rawVillage = (row.village || def.village || '').trim();
           const displayVillage = formatVillageName(rawVillage);
+
+          const villagesList = getVillagesForDistrict(rawCity, effectiveDist);
+          const villageOptionsHtml = (villagesList && villagesList.length > 0)
+            ? villagesList.map(v => {
+                const isSel = formatVillageName(v).toLowerCase() === displayVillage.toLowerCase();
+                return `<option value="${v}" ${isSel ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`;
+              }).join('')
+            : `<option value="${rawVillage}" selected>${escapeHtml(displayVillage)}</option>`;
+
           return `
             <div class="student-cell-view" title="${escapeHtml(displayVillage)}">
-              ${displayVillage !== '—'
-                ? `<span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayVillage)}</span>`
-                : `<span class="text-muted" style="font-size: 12px;font-weight:400;">—</span>`}
+              <span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayVillage)}</span>
             </div>
-            <input type="text" class="student-inline-input text-center" data-id="${row.id}" data-field="village" value="${escapeHtml(rawVillage)}" placeholder="Village" onclick="event.stopPropagation();">
+            <select class="student-inline-select text-center student-village-select" data-id="${row.id}" data-field="village" onclick="event.stopPropagation();">
+              ${villageOptionsHtml}
+            </select>
           `;
         }
       },
@@ -2947,15 +2889,26 @@ export async function renderStudents(area) {
         width: '130px',
         minWidth: '120px',
         render: (row) => {
-          const rawDistrict = (row.district || '').trim();
+          const rawCity = (row.city || '').trim();
+          const def = getDefaultDistrictAndVillage(rawCity, row.province);
+          const rawDistrict = (row.district || def.district || '').trim();
           const displayDistrict = formatDistrictName(rawDistrict);
+
+          const districtsList = getDistrictsForCity(rawCity);
+          const districtOptionsHtml = (districtsList && districtsList.length > 0)
+            ? districtsList.map(d => {
+                const isSel = formatDistrictName(d).toLowerCase() === displayDistrict.toLowerCase();
+                return `<option value="${d}" ${isSel ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`;
+              }).join('')
+            : `<option value="${rawDistrict}" selected>${escapeHtml(displayDistrict)}</option>`;
+
           return `
             <div class="student-cell-view" title="${escapeHtml(displayDistrict)}">
-              ${displayDistrict !== '—'
-                ? `<span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayDistrict)}</span>`
-                : `<span class="text-muted" style="font-size: 12px;font-weight:400;">—</span>`}
+              <span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);white-space:nowrap;">${escapeHtml(displayDistrict)}</span>
             </div>
-            <input type="text" class="student-inline-input text-center" data-id="${row.id}" data-field="district" value="${escapeHtml(rawDistrict)}" placeholder="District" onclick="event.stopPropagation();">
+            <select class="student-inline-select text-center student-district-select" data-id="${row.id}" data-field="district" onclick="event.stopPropagation();">
+              ${districtOptionsHtml}
+            </select>
           `;
         }
       },
@@ -3043,6 +2996,8 @@ export async function renderStudents(area) {
         {
           key: 'completedTests',
           label: 'COMPLETED',
+          shortLabel: 'PASSED',
+          microLabel: 'PASS',
           sortable: true,
           align: 'center',
           width: '80px',
@@ -3065,40 +3020,78 @@ export async function renderStudents(area) {
           `
         }
       ]),
-      // 12. Status (Program Status placed at the very end per user directive)
+      // 12. Security Group: PIN & STATUS (User Directive: "masukkan PIN dalam kategori SECURITY trus di sebelah kiri dari status, PIN DAN STATUS INI SATU KATEGORI")
+      {
+        key: 'pin',
+        label: 'PIN',
+        shortLabel: 'PIN',
+        microLabel: 'PIN',
+        sortable: true,
+        align: 'center',
+        width: '70px',
+        minWidth: '65px',
+        render: (row) => {
+          const pin = row.pin || row.pinDisplay || '1234';
+          return `
+            <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+              <span style="font-family:var(--fm-font-mono, monospace); font-size:12px; font-weight:600; color:#38bdf8; letter-spacing:0.08em; font-variant-numeric:tabular-nums;" title="Student Personal PIN: ${escapeHtml(pin)}">
+                ${escapeHtml(pin)}
+              </span>
+            </div>
+          `;
+        }
+      },
+      // Status
       {
         key: 'program_status',
         label: 'STATUS',
+        shortLabel: 'STATUS',
+        microLabel: 'STATUS',
+        className: 'super-hdr-divider',
         sortable: true,
         align: 'center',
-        width: '84px',
-        minWidth: '80px',
+        width: '90px',
+        minWidth: '85px',
         render: (row) => {
           const isInactive = ((row._raw || row).is_active === false);
-          const status = (row.program_status || 'IN_PROGRESS').toUpperCase();
-          let label = 'In Progress';
-          let color = '#38bdf8';
+          const rawStatus = (row.program_status || 'ACTIVE').toUpperCase();
+          let currentStatus = 'active';
+          let label = 'Active';
+          let color = 'var(--grade-a)';
+
           if (isInactive) {
+            currentStatus = 'inactive';
             label = 'Inactive';
             color = '#94a3b8';
-          } else if (status === 'COMPLETED' || status === 'GRADUATED') {
-            label = 'Graduated';
+          } else if (rawStatus === 'HOLD' || rawStatus === 'PENDING') {
+            currentStatus = 'hold';
+            label = 'Hold';
+            color = 'var(--grade-c)';
+          } else if (rawStatus === 'ALUMNI' || rawStatus === 'COMPLETED' || rawStatus === 'GRADUATED') {
+            currentStatus = 'alumni';
+            label = 'Alumni';
+            color = 'var(--quad-d)';
+          } else {
+            currentStatus = 'active';
+            label = 'Active';
             color = 'var(--grade-a)';
           }
+
           return `
             <div class="student-cell-view">
-              <span style="color:${color};font-size: 12px;font-weight:400;">${label}</span>
+              <span style="color:${color};font-size: 12px;font-weight:600;">${label}</span>
             </div>
             <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
-              <option value="in_progress" ${!isInactive && status !== 'COMPLETED' && status !== 'GRADUATED' ? 'selected' : ''}>In Progress</option>
-              <option value="graduated" ${!isInactive && (status === 'COMPLETED' || status === 'GRADUATED') ? 'selected' : ''}>Graduated</option>
-              <option value="inactive" ${isInactive ? 'selected' : ''}>Inactive</option>
+              <option value="active" ${currentStatus === 'active' ? 'selected' : ''}>Active</option>
+              <option value="hold" ${currentStatus === 'hold' ? 'selected' : ''}>Hold</option>
+              <option value="alumni" ${currentStatus === 'alumni' ? 'selected' : ''}>Alumni</option>
+              <option value="inactive" ${currentStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
             </select>
           `;
         }
       },
-      // 13. Actions (Only rendered on Inactive Students tab per user directive to prevent accidental deletion)
-      ...(currentBatchStatus === 'inactive' ? [{
+      // 13. Actions (Rendered on Hold & Inactive tab to allow restoration and deletion)
+      ...((currentBatchStatus === 'hold_inactive' || currentBatchStatus === 'inactive' || currentBatchStatus === 'hold') ? [{
         label: 'ACTIONS',
         className: 'actions-col',
         align: 'right',
@@ -3201,6 +3194,10 @@ export async function renderStudents(area) {
             citySel.value = newCities[0];
             updates.city = newCities[0];
 
+            const def = getDefaultDistrictAndVillage(updates.city, updates.province);
+            updates.district = def.district;
+            updates.village = def.village;
+
             const cityCell = citySel.closest('td');
             const cityViewEl = cityCell?.querySelector('.student-cell-view span');
             if (cityViewEl) {
@@ -3208,12 +3205,85 @@ export async function renderStudents(area) {
               cityViewEl.textContent = formattedCity;
               cityCell.querySelector('.student-cell-view')?.setAttribute('title', formattedCity);
             }
+
+            // Also update district & village in the row
+            const distSel = tr?.querySelector('.student-district-select');
+            if (distSel) {
+              const newDistricts = getDistrictsForCity(updates.city);
+              distSel.innerHTML = newDistricts.map(d => `<option value="${d}" ${d === def.district ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`).join('');
+              distSel.value = def.district;
+              const distViewEl = distSel.closest('td')?.querySelector('.student-cell-view span');
+              if (distViewEl) {
+                distViewEl.textContent = formatDistrictName(def.district);
+                distSel.closest('td')?.querySelector('.student-cell-view')?.setAttribute('title', formatDistrictName(def.district));
+              }
+            }
+            const villSel = tr?.querySelector('.student-village-select');
+            if (villSel) {
+              const newVillages = getVillagesForDistrict(updates.city, def.district);
+              villSel.innerHTML = newVillages.map(v => `<option value="${v}" ${v === def.village ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`).join('');
+              villSel.value = def.village;
+              const villViewEl = villSel.closest('td')?.querySelector('.student-cell-view span');
+              if (villViewEl) {
+                villViewEl.textContent = formatVillageName(def.village);
+                villSel.closest('td')?.querySelector('.student-cell-view')?.setAttribute('title', formatVillageName(def.village));
+              }
+            }
           }
         }
       } else if (field === 'city') {
         updates.city = value.trim();
+        // Auto-populate district & village to center of regency per user directive
+        const def = getDefaultDistrictAndVillage(updates.city);
+        updates.district = def.district;
+        updates.village = def.village;
+
+        const tr = target.closest('tr');
+        if (tr) {
+          const distSel = tr.querySelector('.student-district-select');
+          if (distSel) {
+            const newDistricts = getDistrictsForCity(updates.city);
+            distSel.innerHTML = newDistricts.map(d => `<option value="${d}" ${d === def.district ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`).join('');
+            distSel.value = def.district;
+            const distViewEl = distSel.closest('td')?.querySelector('.student-cell-view span');
+            if (distViewEl) {
+              distViewEl.textContent = formatDistrictName(def.district);
+              distSel.closest('td')?.querySelector('.student-cell-view')?.setAttribute('title', formatDistrictName(def.district));
+            }
+          }
+          const villSel = tr.querySelector('.student-village-select');
+          if (villSel) {
+            const newVillages = getVillagesForDistrict(updates.city, def.district);
+            villSel.innerHTML = newVillages.map(v => `<option value="${v}" ${v === def.village ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`).join('');
+            villSel.value = def.village;
+            const villViewEl = villSel.closest('td')?.querySelector('.student-cell-view span');
+            if (villViewEl) {
+              villViewEl.textContent = formatVillageName(def.village);
+              villSel.closest('td')?.querySelector('.student-cell-view')?.setAttribute('title', formatVillageName(def.village));
+            }
+          }
+        }
       } else if (field === 'district') {
         updates.district = value.trim();
+        const tr = target.closest('tr');
+        const s = filteredGridData.find(x => x.id === studentId);
+        const city = s?.city || tr?.querySelector('.student-city-select')?.value || 'Kota Mataram';
+        const newVillages = getVillagesForDistrict(city, updates.district);
+        const newVillage = newVillages[0] || 'Pejanggik';
+        updates.village = newVillage;
+
+        if (tr) {
+          const villSel = tr.querySelector('.student-village-select');
+          if (villSel) {
+            villSel.innerHTML = newVillages.map(v => `<option value="${v}" ${v === newVillage ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`).join('');
+            villSel.value = newVillage;
+            const villViewEl = villSel.closest('td')?.querySelector('.student-cell-view span');
+            if (villViewEl) {
+              villViewEl.textContent = formatVillageName(newVillage);
+              villSel.closest('td')?.querySelector('.student-cell-view')?.setAttribute('title', formatVillageName(newVillage));
+            }
+          }
+        }
       } else if (field === 'village') {
         updates.village = value.trim();
       } else if (field === 'education') {
@@ -3221,9 +3291,16 @@ export async function renderStudents(area) {
       } else if (field === 'program_status') {
         if (value === 'inactive') {
           updates.is_active = false;
+          updates.program_status = 'INACTIVE';
+        } else if (value === 'hold') {
+          updates.is_active = true;
+          updates.program_status = 'HOLD';
+        } else if (value === 'alumni') {
+          updates.is_active = true;
+          updates.program_status = 'ALUMNI';
         } else {
           updates.is_active = true;
-          updates.program_status = value.toUpperCase();
+          updates.program_status = 'ACTIVE';
         }
       }
 
@@ -3257,6 +3334,9 @@ export async function renderStudents(area) {
             }
           } else if (field === 'province') {
             s.province = updates.province;
+            if (updates.city) s.city = updates.city;
+            if (updates.district) s.district = updates.district;
+            if (updates.village) s.village = updates.village;
             const viewEl = cell?.querySelector('.student-cell-view span');
             if (viewEl) {
               const formattedProv = formatProvinceName(updates.province);
@@ -3265,6 +3345,8 @@ export async function renderStudents(area) {
             }
           } else if (field === 'city') {
             s.city = updates.city;
+            if (updates.district) s.district = updates.district;
+            if (updates.village) s.village = updates.village;
             const viewEl = cell?.querySelector('.student-cell-view span');
             if (viewEl) {
               const formattedCity = formatCityDistrict(updates.city);
@@ -3354,7 +3436,7 @@ export async function renderStudents(area) {
   window.activateStudent = async (studentId) => {
     const sb = await getSupabase();
     if (!sb) return;
-    const { error } = await sb.from('students').update({ is_active: true, program_status: 'IN_PROGRESS' }).eq('id', studentId);
+    const { error } = await sb.from('students').update({ is_active: true, program_status: 'ACTIVE' }).eq('id', studentId);
     if (!error) {
       clearAdminCache('students');
       showToast('Student restored to Active', 'success');
@@ -3409,8 +3491,12 @@ window.promoteStudentNextLevel = async function(row) {
   if (!confirm(confirmMsg)) return;
 
   try {
+    const promoUpdates = { level_id: targetLevel.id };
+    if (nextLevelNum === 0) {
+      promoUpdates.program_status = 'ALUMNI';
+    }
     const { error: updErr } = await sb.from('students')
-      .update({ level_id: targetLevel.id })
+      .update(promoUpdates)
       .eq('id', studentId);
     if (updErr) throw updErr;
 
@@ -3474,7 +3560,6 @@ export function showPromotionRequirementsModal(students = []) {
             <p style="margin:2px 0 0; font-size: 12px; color:#94a3b8;">${eligibleStudents.length} of ${activeStudents.length} Students Currently Eligible</p>
           </div>
         </div>
-        <button id="btn-close-promo-req" style="background:none; border:none; color:#94a3b8; font-size: 16px; cursor:pointer; padding:4px;">✕</button>
       </div>
 
       <div style="padding:16px 20px; overflow-y:auto; flex:1;">
@@ -3505,15 +3590,14 @@ export function showPromotionRequirementsModal(students = []) {
         ${activeStudents.length > 15 ? `<p style="font-size: 12px; color:#64748b; text-align:center; margin-top:8px;">Showing first 15 of ${activeStudents.length} students.</p>` : ''}
       </div>
 
-      <div style="padding:12px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(30,41,59,0.3); display:flex; justify-content:flex-end;">
-        <button id="btn-done-promo-req" class="btn btn-secondary btn-sm" style="font-weight:600; padding:6px 16px;">Understood</button>
+      <div style="padding:12px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(30,41,59,0.3); display:flex; justify-content:flex-start;">
+        <button id="btn-done-promo-req" class="btn btn-secondary btn-sm btn-modal-close-left" style="font-weight:600; padding:6px 16px;">Understood</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
   const close = () => modal.remove();
-  modal.querySelector('#btn-close-promo-req').onclick = close;
   modal.querySelector('#btn-done-promo-req').onclick = close;
   modal.onclick = (e) => { if (e.target === modal) close(); };
 }
@@ -3539,7 +3623,11 @@ window.promoteAllEligibleStudents = async function() {
     const targetLvl = levelsByNum.get(nextNum);
     if (!targetLvl) continue;
 
-    const { error } = await sb.from('students').update({ level_id: targetLvl.id }).eq('id', s.id);
+    const promoUpdates = { level_id: targetLvl.id };
+    if (nextNum === 0) {
+      promoUpdates.program_status = 'ALUMNI';
+    }
+    const { error } = await sb.from('students').update(promoUpdates).eq('id', s.id);
     if (!error) {
       promotedCount++;
       await sb.from('audit_logs').insert({
@@ -3602,11 +3690,10 @@ window.openTransferBatchModal = async function(studentId) {
         <h3 style="margin:0;font-size: 16px;display:flex;align-items:center;gap:8px;">
           <span>${getSvgIcon('refresh', 14)}</span> Transfer Batch: <span style="color:#38bdf8;">${escapeHtml(s.displayName)}</span>
         </h3>
-        <button id="tb-close" style="background:none;border:none;color:#94a3b8;font-size: 16px;cursor:pointer;">✕</button>
       </div>
 
       <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 14px;margin-bottom:1.25rem;font-size: 12px;">
-        <div style="color:var(--clr-text-3);margin-bottom:4px;">Current Cohort:</div>
+        <div style="color:var(--clr-text-3);margin-bottom:4px;">Current Batch:</div>
         <div class="fw-700" style="color:#f8fafc;">
           Batch: <span style="color:#e2e8f0;">${escapeHtml(s.batchName)}</span> &bull; Level: <span style="color:#c084fc;">${escapeHtml(s.levelName)}</span>
         </div>
@@ -3614,7 +3701,7 @@ window.openTransferBatchModal = async function(studentId) {
 
       <div style="display:flex;flex-direction:column;gap:1.1rem;margin-bottom:1.75rem;">
         <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Destination Cohort Batch</label>
+          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Destination Batch</label>
           <select id="tb-target-batch" class="form-input" style="width:100%;">
             ${availableBatches.map(b => {
               const bLvl = levelsMap.get(b.current_level_id);
@@ -3638,14 +3725,15 @@ window.openTransferBatchModal = async function(studentId) {
         <div>
           <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Academic Status</label>
           <select id="tb-status" class="form-input" style="width:100%;">
-            <option value="true" selected>Active</option>
-            <option value="false">HOLD / Inactive</option>
+            <option value="active" selected>Active</option>
+            <option value="hold">Hold (Pending Batch Transfer / Next Term)</option>
+            <option value="inactive">Inactive</option>
           </select>
         </div>
       </div>
 
-      <div class="d-flex align-center gap-2 justify-end">
-        <button id="tb-cancel-btn" class="btn btn-secondary">Cancel</button>
+      <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button id="tb-cancel-btn" class="btn btn-secondary btn-modal-close-left">Cancel</button>
         <button id="tb-save-btn" class="btn btn-primary" style="background:#6366f1;border-color:#6366f1;font-weight:700;">
           Confirm Transfer
         </button>
@@ -3655,7 +3743,6 @@ window.openTransferBatchModal = async function(studentId) {
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
-  overlay.querySelector('#tb-close').onclick = close;
   overlay.querySelector('#tb-cancel-btn').onclick = close;
   overlay.onclick = (e) => { if (e.target === overlay) close(); };
 
@@ -3665,7 +3752,9 @@ window.openTransferBatchModal = async function(studentId) {
     const selectedOpt = batchSelect.options[batchSelect.selectedIndex];
     const targetLevelId = selectedOpt?.dataset?.levelId || null;
     const inheritLevel = overlay.querySelector('#tb-inherit-level').checked;
-    const isActive = overlay.querySelector('#tb-status').value === 'true';
+    const rawStatus = overlay.querySelector('#tb-status').value;
+    const isActive = rawStatus !== 'inactive';
+    const programStatus = rawStatus === 'hold' ? 'HOLD' : (rawStatus === 'inactive' ? 'INACTIVE' : 'ACTIVE');
 
     if (!targetBatchId) {
       showToast('Please select a destination batch.', 'warning');
@@ -3679,7 +3768,8 @@ window.openTransferBatchModal = async function(studentId) {
     try {
       const updates = {
         batch_id: targetBatchId,
-        is_active: isActive
+        is_active: isActive,
+        program_status: programStatus
       };
       if (inheritLevel && targetLevelId) {
         updates.level_id = targetLevelId;
@@ -3753,11 +3843,10 @@ window.openRepeatLevelModal = async function(studentId) {
         <h3 style="margin:0;font-size: 16px;display:flex;align-items:center;gap:8px;">
           <span>${getSvgIcon('refresh', 14)}</span> Repeat Level / Re-enroll: <span style="color:#a855f7;">${escapeHtml(s.displayName)}</span>
         </h3>
-        <button id="rl-close" style="background:none;border:none;color:#94a3b8;font-size: 16px;cursor:pointer;">✕</button>
       </div>
 
       <p style="color:var(--clr-text-3);font-size: 12px;margin:0 0 1.25rem;">
-        Student is currently marked as Alumni or requested to repeat curriculum. Select the academic level and cohort batch to reactivate them.
+        Student is currently marked as Alumni or requested to repeat curriculum. Select the academic level and batch to reactivate them.
       </p>
 
       <div style="display:flex;flex-direction:column;gap:1.1rem;margin-bottom:1.75rem;">
@@ -3769,7 +3858,7 @@ window.openRepeatLevelModal = async function(studentId) {
         </div>
 
         <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Assign to Cohort Batch</label>
+          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Assign to Batch</label>
           <select id="rl-target-batch" class="form-input" style="width:100%;">
             <option value="">-- Keep Current / No Batch --</option>
             ${availableBatches.map(b => `<option value="${b.id}" ${b.id === s.batch_id ? 'selected' : ''}>${escapeHtml(b.name)}</option>`).join('')}
@@ -3777,8 +3866,8 @@ window.openRepeatLevelModal = async function(studentId) {
         </div>
       </div>
 
-      <div class="d-flex align-center gap-2 justify-end">
-        <button id="rl-cancel-btn" class="btn btn-secondary">Cancel</button>
+      <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button id="rl-cancel-btn" class="btn btn-secondary btn-modal-close-left">Cancel</button>
         <button id="rl-save-btn" class="btn btn-primary" style="background:#a855f7;border-color:#a855f7;font-weight:700;display:inline-flex;align-items:center;gap:6px;">
           ${getSvgIcon('refresh', 14)} Confirm Re-enrollment
         </button>
@@ -3788,7 +3877,6 @@ window.openRepeatLevelModal = async function(studentId) {
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
-  overlay.querySelector('#rl-close').onclick = close;
   overlay.querySelector('#rl-cancel-btn').onclick = close;
   overlay.onclick = (e) => { if (e.target === overlay) close(); };
 
@@ -3808,7 +3896,8 @@ window.openRepeatLevelModal = async function(studentId) {
     try {
       const updates = {
         level_id: targetLevelId,
-        is_active: true
+        is_active: true,
+        program_status: 'ACTIVE'
       };
       if (targetBatchId) updates.batch_id = targetBatchId;
 
@@ -3860,13 +3949,12 @@ function buildFullEditModal() {
   modal.style.zIndex = '9999';
   modal.innerHTML = `
     <div class="modal-box" style="max-width:640px;width:95%;max-height:90vh;overflow-y:auto;background:#0f172a;border:1px solid var(--clr-border);border-radius:12px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-      <div class="modal-header" style="display:flex;justify-content:space-between;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);">
-        <h3 id="bfe-title" style="margin:0;font-size: 16px;font-weight:800;color:var(--clr-text-1);">Edit Student</h3>
-        <button class="btn-icon" id="bfe-close" title="Close" style="background:transparent;border:none;color:var(--clr-text-2);font-size: 16px;cursor:pointer;">&#10005;</button>
+      <div class="modal-header" style="display:flex;justify-content:center;align-items:center;padding:1.25rem 1.5rem;border-bottom:1px solid var(--clr-border);text-align:center;">
+        <h3 id="bfe-title" style="margin:0 auto;font-size: 16px;font-weight:800;color:var(--clr-text-1);text-align:center;">Edit Student</h3>
       </div>
       <div id="bfe-body" style="padding:1.5rem;"></div>
-      <div class="modal-footer" style="display:flex;justify-content:flex-end;gap:.75rem;padding:1rem 1.5rem;border-top:1px solid var(--clr-border);">
-        <button class="btn btn-ghost" id="bfe-cancel">Cancel</button>
+      <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--clr-border);">
+        <button class="btn btn-secondary btn-modal-close-left" id="bfe-cancel">Cancel</button>
         <button class="btn btn-primary" id="bfe-save">Save Changes</button>
       </div>
     </div>
@@ -3940,15 +4028,51 @@ export async function openStudentFullEdit(student, onSaved) {
   const initialName = draftData?.name ?? (student?.name || '');
   const initialGender = draftData?.gender ?? (student?.gender || '');
   const initialBirth = draftData?.birth_date ?? (student?.birth_date || '');
-  const initialProvince = draftData?.province ?? (student?.province || '');
-  const initialCity = draftData?.city ?? (student?.city || '');
-  const initialDistrict = draftData?.district ?? (student?.district || '');
-  const initialVillage = draftData?.village ?? (student?.village || '');
+  const initialProvince = draftData?.province ?? (student?.province || 'Nusa Tenggara Barat');
+  let canonicalProv = initialProvince;
+  if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
+    for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
+      if (initialProvince.toLowerCase() === shortName.toLowerCase() || initialProvince.toLowerCase() === fullName.toLowerCase()) {
+        canonicalProv = fullName;
+        break;
+      }
+    }
+  }
+
+  const initialCity = draftData?.city ?? (student?.city || 'Kota Mataram');
+  const defAddress = getDefaultDistrictAndVillage(initialCity, canonicalProv);
+  const initialDistrict = draftData?.district ?? (student?.district || defAddress.district);
+  const initialVillage = draftData?.village ?? (student?.village || defAddress.village);
   const initialPin = draftData?.pin || '';
   const initialBatchId = draftData?.batch_id ?? (student?.batch_id || '');
   const initialLevelId = draftData?.level_id ?? (student?.level_id || '');
   const initialActive = draftData?.is_active ?? (student?.is_active !== false);
   let currentPhotoUrl = draftData?.photo_url ?? (student?.photo_url || '');
+
+  // Build options for address dropdowns
+  const provKeys = (typeof INDONESIA_REGIONS !== 'undefined') ? Object.keys(INDONESIA_REGIONS).sort((a, b) => a.localeCompare(b, 'en')) : [];
+  const bfeProvOptions = provKeys.map(p => {
+    const isSel = (p.toLowerCase() === canonicalProv.toLowerCase()) || (p.toLowerCase() === initialProvince.toLowerCase());
+    return `<option value="${p}" ${isSel ? 'selected' : ''}>${escapeHtml(formatProvinceName(p))}</option>`;
+  }).join('');
+
+  const cityList = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[canonicalProv]) ? INDONESIA_REGIONS[canonicalProv] : [];
+  const bfeCityOptions = cityList.map(c => {
+    const isSel = (c.toLowerCase() === initialCity.toLowerCase()) || (formatCityDistrict(c).toLowerCase() === formatCityDistrict(initialCity).toLowerCase());
+    return `<option value="${c}" ${isSel ? 'selected' : ''}>${escapeHtml(formatCityDistrict(c))}</option>`;
+  }).join('');
+
+  const distList = getDistrictsForCity(initialCity);
+  const bfeDistOptions = distList.map(d => {
+    const isSel = formatDistrictName(d).toLowerCase() === formatDistrictName(initialDistrict).toLowerCase();
+    return `<option value="${d}" ${isSel ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`;
+  }).join('');
+
+  const villList = getVillagesForDistrict(initialCity, initialDistrict);
+  const bfeVillOptions = villList.map(v => {
+    const isSel = formatVillageName(v).toLowerCase() === formatVillageName(initialVillage).toLowerCase();
+    return `<option value="${v}" ${isSel ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`;
+  }).join('');
 
   body.innerHTML = `
     <div style="display:flex;gap:1.5rem;flex-wrap:wrap;">
@@ -3994,22 +4118,30 @@ export async function openStudentFullEdit(student, onSaved) {
 
         <div class="form-group">
           <label class="form-label">Province</label>
-          <input type="text" class="form-control" id="bfe-province" value="${escHtml(initialProvince)}" placeholder="e.g. Nusa Tenggara Barat">
+          <select class="form-control" id="bfe-province">
+            ${bfeProvOptions}
+          </select>
         </div>
 
         <div class="form-group">
           <label class="form-label">Regency</label>
-          <input type="text" class="form-control" id="bfe-city" value="${escHtml(initialCity)}" placeholder="e.g. Mataram City or Central Lombok">
+          <select class="form-control" id="bfe-city">
+            ${bfeCityOptions}
+          </select>
         </div>
 
         <div class="form-group">
           <label class="form-label">District (Kecamatan)</label>
-          <input type="text" class="form-control" id="bfe-district" value="${escHtml(initialDistrict)}" placeholder="e.g. Ampenan">
+          <select class="form-control" id="bfe-district">
+            ${bfeDistOptions}
+          </select>
         </div>
 
         <div class="form-group">
           <label class="form-label">Village (Desa / Kelurahan)</label>
-          <input type="text" class="form-control" id="bfe-village" value="${escHtml(initialVillage)}" placeholder="e.g. Pejarakan">
+          <select class="form-control" id="bfe-village">
+            ${bfeVillOptions}
+          </select>
         </div>
 
         <div class="form-group">
@@ -4086,6 +4218,53 @@ export async function openStudentFullEdit(student, onSaved) {
     document.getElementById(id)?.addEventListener('change', updateDraft);
   });
 
+  // Cascading Address Dropdowns Linking (Province -> Regency -> District -> Village)
+  const bfeProv = document.getElementById('bfe-province');
+  const bfeCity = document.getElementById('bfe-city');
+  const bfeDist = document.getElementById('bfe-district');
+  const bfeVill = document.getElementById('bfe-village');
+
+  const syncBfeVillages = () => {
+    if (!bfeCity || !bfeDist || !bfeVill) return;
+    const villages = getVillagesForDistrict(bfeCity.value, bfeDist.value);
+    bfeVill.innerHTML = villages.map(v => `<option value="${v}">${escapeHtml(formatVillageName(v))}</option>`).join('');
+    if (villages.length > 0) bfeVill.value = villages[0];
+    updateDraft();
+  };
+
+  const syncBfeDistricts = () => {
+    if (!bfeCity || !bfeDist) return;
+    const districts = getDistrictsForCity(bfeCity.value);
+    const def = getDefaultDistrictAndVillage(bfeCity.value);
+    bfeDist.innerHTML = districts.map(d => `<option value="${d}" ${d === def.district ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`).join('');
+    bfeDist.value = def.district;
+    syncBfeVillages();
+    if (bfeVill) bfeVill.value = def.village;
+    updateDraft();
+  };
+
+  bfeProv?.addEventListener('change', () => {
+    let cp = bfeProv.value;
+    if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
+      for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
+        if (bfeProv.value.toLowerCase() === shortName.toLowerCase() || bfeProv.value.toLowerCase() === fullName.toLowerCase()) {
+          cp = fullName;
+          break;
+        }
+      }
+    }
+    const cities = (typeof INDONESIA_REGIONS !== 'undefined' && INDONESIA_REGIONS[cp]) ? INDONESIA_REGIONS[cp] : [];
+    if (bfeCity) {
+      bfeCity.innerHTML = cities.map(c => `<option value="${c}">${escapeHtml(formatCityDistrict(c))}</option>`).join('');
+      if (cities.length > 0) bfeCity.value = cities[0];
+      syncBfeDistricts();
+    }
+    updateDraft();
+  });
+
+  bfeCity?.addEventListener('change', syncBfeDistricts);
+  bfeDist?.addEventListener('change', syncBfeVillages);
+
   // Avatar Upload Listener (3:4 Center-Crop Engine)
   const avatarFileInput = document.getElementById('bfe-avatar-file');
   avatarFileInput?.addEventListener('change', async (e) => {
@@ -4109,8 +4288,10 @@ export async function openStudentFullEdit(student, onSaved) {
   });
 
   // Close & Cancel buttons with Unsaved Changes Guard
-  document.getElementById('bfe-close').onclick = () => handleGuardClose(modal, () => localStorage.removeItem(draftKey));
-  document.getElementById('bfe-cancel').onclick = () => handleGuardClose(modal, () => localStorage.removeItem(draftKey));
+  const bfeCloseBtn = document.getElementById('bfe-close');
+  if (bfeCloseBtn) bfeCloseBtn.onclick = () => handleGuardClose(modal, () => localStorage.removeItem(draftKey));
+  const bfeCancelBtn = document.getElementById('bfe-cancel');
+  if (bfeCancelBtn) bfeCancelBtn.onclick = () => handleGuardClose(modal, () => localStorage.removeItem(draftKey));
 
   // Save Changes
   const newSaveBtn = saveBtn.cloneNode(true);

@@ -517,11 +517,13 @@ Deno.serve(async (req) => {
     const roundedPct = Math.round(rawPercentage * 100) / 100;
 
     let effectiveScore = roundedPct;
-    if (attempt.is_remedial_unlocked || attempt.is_remedial) {
+    const isRem = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
+    const isForgiven = Boolean(attempt.is_forgiven);
+    if (isRem) {
       effectiveScore = Math.min(roundedPct, 60.0);
     }
 
-    const grade = calculateGrade(effectiveScore);
+    const grade = isForgiven ? 'F' : (isRem ? 'R' : calculateGrade(effectiveScore));
 
     // 6. Update Attempt Record with 60s network transmission grace period
     const now = new Date();
@@ -552,18 +554,22 @@ Deno.serve(async (req) => {
     // 7. Resolve Best Score across attempts
     const { data: allAttempts } = await supabase
       .from("attempts")
-      .select("id, effective_score, percentage, created_at")
+      .select("id, effective_score, percentage, is_forgiven, created_at")
       .eq("student_id", attempt.student_id)
       .eq("test_id", targetTestId)
-      .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"])
-      .order("effective_score", { ascending: false })
-      .order("percentage", { ascending: false })
-      .order("created_at", { ascending: false });
+      .in("status", ["submitted", "auto_submitted", "evaluated", "SUBMITTED", "AUTO_SUBMITTED", "EVALUATED"]);
 
     if (allAttempts && allAttempts.length > 0) {
       allAttempts.sort((a: any, b: any) => {
         const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
         const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+        // An authentic passing score (>=60%) beats a 0% forgiven waiver
+        if (scoreA >= 60 && Boolean(b.is_forgiven) && scoreB < 60) return -1;
+        if (scoreB >= 60 && Boolean(a.is_forgiven) && scoreA < 60) return 1;
+        // Otherwise, an administrative forgiven waiver beats a failed score (<60%)
+        if (Boolean(a.is_forgiven) && !Boolean(b.is_forgiven) && scoreB < 60) return -1;
+        if (Boolean(b.is_forgiven) && !Boolean(a.is_forgiven) && scoreA < 60) return 1;
+
         if (scoreB !== scoreA) return scoreB - scoreA;
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });

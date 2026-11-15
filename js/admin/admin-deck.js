@@ -131,10 +131,10 @@ export async function renderDashboard(container) {
           </div>
           <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
             <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('curriculum')">
-              ${getSvgIcon('shield', 14)} <strong>Manage Cohorts</strong><br><span class="text-xs text-muted">Institutions, Programs & Batches</span>
+              ${getSvgIcon('shield', 14)} <strong>Manage Batches</strong><br><span class="text-xs text-muted">Institutions, Programs & Batches</span>
             </button>
             <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('classes-hub')">
-              ${getSvgIcon('clipboard', 14)} <strong>Class Directory</strong><br><span class="text-xs text-muted">Subjects, Levels & Tests</span>
+              ${getSvgIcon('clipboard', 14)} <strong>Class Directory</strong><br><span class="text-xs text-muted">Classes, Levels & Tests</span>
             </button>
             <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('registration')">
               ${getSvgIcon('user', 14)} <strong>Student Intake</strong><br><span class="text-xs text-muted">New Student Registration</span>

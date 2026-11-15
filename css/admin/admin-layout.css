@@ -1325,46 +1325,70 @@ textarea.form-control {
 }
 
 /* ============================================================
-   18. TOAST NOTIFICATIONS (FM TACTICAL STYLE)
+   18. TOAST NOTIFICATIONS (CENTERED IN BOTTOM BANNER)
    ============================================================ */
 
 #toast-container {
-  position: fixed;
-  top: 1rem;
-  right: 1rem;
-  z-index: 9999;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  pointer-events: none;
-  max-width: 360px;
+  position: fixed !important;
+  bottom: 11px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  pointer-events: none !important;
+  max-width: min(760px, calc(100vw - 420px)) !important;
+  width: auto !important;
 }
 
 .toast {
-  background: var(--fm-bg-panel-elevated) !important;
-  border: 1px solid var(--fm-border-medium) !important;
-  border-radius: var(--fm-radius-sm) !important;
-  padding: 0.75rem 1rem !important;
-  color: var(--fm-text-primary) !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-radius: 8px !important;
+  padding: 0 16px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
+  color: var(--fm-text-primary, #f8fafc) !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
   font-weight: 600 !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.15) !important;
   pointer-events: all;
-  display: flex !important;
-  align-items: flex-start !important;
-  gap: 0.6rem !important;
-  animation: toast-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  border-left: 3px solid var(--fm-border-medium) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  animation: toast-banner-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  border-left: 3px solid rgba(255, 255, 255, 0.2) !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
 }
 
-.toast.success { border-left-color: var(--fm-accent-pitch) !important; }
-.toast.error   { border-left-color: var(--fm-accent-crimson) !important; }
-.toast.warning { border-left-color: var(--fm-accent-amber) !important; }
-.toast.info    { border-left-color: var(--fm-accent-tactical) !important; }
+.toast.hiding {
+  animation: toast-banner-out 0.2s ease-in forwards !important;
+}
 
-@keyframes toast-in {
-  from { opacity: 0; transform: translateX(24px); }
-  to   { opacity: 1; transform: translateX(0); }
+.toast.success, .toast-success { border-left-color: var(--grade-a, #00c000) !important; }
+.toast.error, .toast-error     { border-left-color: var(--grade-e, #ff0000) !important; }
+.toast.warning, .toast-warning { border-left-color: var(--grade-c, #ffff00) !important; }
+.toast.info, .toast-info       { border-left-color: var(--primary-tactical, #38bdf8) !important; }
+
+@keyframes toast-banner-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-banner-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(12px) scale(0.96); }
 }
 
 /* ============================================================

@@ -12,23 +12,23 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261115_v522" />
+  <link rel="stylesheet" href="css/style.css?v=20261115_v547" />
   <!-- TopsCore Consolidated Master Workstation Stylesheet (Minified) -->
-  <link rel="stylesheet" href="css/admin.min.css?v=20261115_v523" />
+  <link rel="stylesheet" href="css/admin.min.css?v=20261115_v547" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
 
   <!-- High-Performance Parallel ES Module Preload Graph -->
-  <link rel="modulepreload" href="./js/api.js?v=20261115_v522" />
+  <link rel="modulepreload" href="./js/api.js?v=20261115_v539" />
   <link rel="modulepreload" href="./js/supabase.js?v=20261106_v160" />
   <link rel="modulepreload" href="./js/session.js?v=20261106_v160" />
-  <link rel="modulepreload" href="./js/grading.js?v=20261115_v522" />
+  <link rel="modulepreload" href="./js/grading.js?v=20261115_v539" />
   <link rel="modulepreload" href="./js/svg-icons.js?v=20261114_v493" />
-  <link rel="modulepreload" href="./js/admin/datagrid.js?v=20261115_v523" />
-  <link rel="modulepreload" href="./js/admin/admin-init.js?v=20261114_v517" />
-  <link rel="modulepreload" href="./js/admin/app.js?v=20261115_v523" />
-  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261115_v523" />
+  <link rel="modulepreload" href="./js/admin/datagrid.js?v=20261115_v525" />
+  <link rel="modulepreload" href="./js/admin/admin-init.js?v=20261115_v546" />
+  <link rel="modulepreload" href="./js/admin/app.js?v=20261115_v557" />
+  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261115_v546" />
   <link rel="modulepreload" href="./js/admin/classes-hub.js?v=20261114_v510" />
-  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261114_v516" />
+  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261115_v545" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261107_v161';"></script>
@@ -117,6 +117,10 @@
         <div class="nav-domain-group" data-domain="board">
           <div class="nav-domain-header"><span class="domain-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg></span><span>B &mdash; Board</span></div>
           <div id="sidebar-programs-list"></div>
+          <div class="admin-nav-item" data-sub="alumni" id="sidebar-alumni-item" style="margin-top:4px;cursor:pointer;" onclick="if(typeof window.loadSection==='function'){window.loadSection('alumni');}else{window.location.hash='#alumni';}">
+            <span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg></span>
+            <span>Alumni</span>
+          </div>
         </div>
 
         <div class="nav-domain-divider"></div>
@@ -139,11 +143,8 @@
       </nav>
 
       <div class="sidebar-footer sidebar-corner-bottom">
-        <button type="button" id="global-edit-mode-toggle" class="btn btn-sm btn-edit-mode-global mode-off" aria-label="Toggle Global Edit Mode" title="Toggle Global Edit Mode">
-          <span class="edit-mode-label">OFF</span>
-        </button>
         <div class="sidebar-corner-text">
-          <span class="corner-main-label">EDIT MODE</span>
+          <span class="corner-main-label" style="font-size:11px; color:#64748b; font-weight:600; letter-spacing:0.05em;">TOPSCORE LMS</span>
         </div>
       </div>
     </aside>
@@ -182,11 +183,10 @@
     <div class="modal-box">
       <div class="modal-header">
         <h3 id="crud-modal-title">Add Record</h3>
-        <button class="btn btn-ghost btn-icon" id="close-crud-modal" aria-label="Close">✕</button>
       </div>
       <form id="crud-form" novalidate></form>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" id="crud-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-secondary btn-modal-close-left" id="crud-cancel-btn">Cancel</button>
         <button type="submit" form="crud-form" class="btn btn-primary" id="crud-save-btn">Save</button>
       </div>
     </div>
@@ -227,7 +227,6 @@
           <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify
             their TEST attempts and progress.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-dup-students-modal" aria-label="Close">✕</button>
       </div>
 
       <!-- Scope Switcher Tabs & Bulk Action -->
@@ -254,6 +253,9 @@
           <p>Scanning for duplicate students...</p>
         </div>
       </div>
+      <div class="modal-footer" style="padding: 10px 16px; display: flex; align-items: center; justify-content: flex-start; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25);">
+        <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-dup-students-modal">Close</button>
+      </div>
     </div>
   </div>
 
@@ -268,7 +270,6 @@
           <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within Tests and auto-resequence
             question orders seamlessly.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-dup-questions-modal" aria-label="Close">✕</button>
       </div>
 
       <!-- Scope / Filter Bar -->
@@ -307,6 +308,9 @@
           <p>Scanning for duplicate questions...</p>
         </div>
       </div>
+      <div class="modal-footer" style="padding: 10px 16px; display: flex; align-items: center; justify-content: flex-start; border-top: 1px solid rgba(255,255,255,0.08); background: rgba(0,0,0,0.25);">
+        <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-dup-questions-modal">Close</button>
+      </div>
     </div>
   </div>
 
@@ -319,7 +323,6 @@
           <h3 id="bulk-edit-tests-title" class="modal-title-lg">Bulk Edit Tests</h3>
           <p class="text-xs text-muted modal-subtitle" id="bulk-edit-tests-subtitle">Modify duration, answer type, and passing score across multiple tests simultaneously.</p>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-bulk-edit-tests-modal" aria-label="Close">✕</button>
       </div>
 
       <div class="modal-body-scroll bulk-edit-body">
@@ -427,7 +430,7 @@
       </div>
 
       <div class="modal-footer modal-footer-bordered bulk-edit-footer">
-        <button type="button" class="btn btn-secondary" id="bulk-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-secondary btn-modal-close-left" id="bulk-cancel-btn">Cancel</button>
         <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
           <span>Apply Changes</span> (<span id="bulk-save-count">0</span> Tests)
         </button>
@@ -438,14 +441,13 @@
   <!-- RECORD DRAWER -->
   <div id="datagrid-drawer-overlay" class="datagrid-drawer-overlay hidden" onclick="closeRecordDrawer()"></div>
   <div id="datagrid-drawer" class="datagrid-drawer">
-    <div class="datagrid-drawer-header">
-      <h3 id="drawer-title">Record Details</h3>
-      <button class="btn btn-ghost btn-sm datagrid-drawer-close-btn" onclick="closeRecordDrawer()">&times;</button>
+    <div class="datagrid-drawer-header" style="justify-content:center;text-align:center;">
+      <h3 id="drawer-title" style="margin:0 auto;text-align:center;">Record Details</h3>
     </div>
     <div class="datagrid-drawer-body" id="drawer-body">
       <!-- Content dynamically inserted -->
     </div>
-    <div class="datagrid-drawer-footer" id="drawer-footer">
+    <div class="datagrid-drawer-footer" id="drawer-footer" style="display:flex;justify-content:space-between;align-items:center;">
       <!-- Actions dynamically inserted -->
     </div>
   </div>
@@ -462,8 +464,6 @@
           <p class="text-xs text-muted modal-subtitle" id="roster-modal-subtitle">Auto-enrolled vs Manually Added
             Students</p>
         </div>
-        <button class="btn btn-ghost btn-icon"
-          onclick="document.getElementById('roster-modal').classList.add('hidden')">✕</button>
       </div>
       <div class="roster-add-bar">
         <select id="roster-add-student-select" class="form-control flex-1" title="Select student to add to roster"
@@ -486,7 +486,7 @@
         </table>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" onclick="document.getElementById('roster-modal').classList.add('hidden')">Close</button>
+        <button type="button" class="btn btn-secondary btn-modal-close-left" onclick="document.getElementById('roster-modal').classList.add('hidden')">Close</button>
       </div>
     </div>
   </div>
@@ -499,8 +499,6 @@
           <h3 class="modal-title-lg">Add Class</h3>
           <p class="text-xs text-muted modal-subtitle" id="add-class-level-label">Inheriting Level</p>
         </div>
-        <button class="btn btn-ghost btn-icon"
-          onclick="document.getElementById('add-class-modal').classList.add('hidden')">✕</button>
       </div>
       <div class="form-group mb-4">
         <label class="form-label">Class Name</label>
@@ -520,16 +518,16 @@
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary"
+        <button class="btn btn-secondary btn-modal-close-left"
           onclick="document.getElementById('add-class-modal').classList.add('hidden')">Cancel</button>
         <button class="btn btn-primary" id="add-class-save-btn">Save Class</button>
       </div>
     </div>
   </div>
 
-  <script type="module" src="./js/svg-icons.js?v=20261114_v493"></script>
-  <script type="module" src="./js/admin/admin-init.js?v=20261114_v517"></script>
-  <script type="module" src="js/admin/app.js?v=20261115_v523"></script>
+  <script type="module" src="./js/svg-icons.js?v=20261115_v571"></script>
+  <script type="module" src="./js/admin/admin-init.js?v=20261115_v571"></script>
+  <script type="module" src="js/admin/app.js?v=20261115_v571"></script>
 
 
 
@@ -537,16 +535,6 @@
     <div class="banner-brand-content">
       <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
     </div>
-    <!-- Master Edit Mode Active Bottom Banner (60px) -->
-    <aside id="master-edit-safety-hud" class="master-edit-safety-hud" role="alert" aria-live="assertive">
-      <div class="safety-hud-content">
-        <span class="safety-hud-badge">MASTER EDIT MODE ACTIVE</span>
-        <span class="safety-hud-text">Cells are directly editable. Changes save live. Press <kbd>ESC</kbd> or click to exit.</span>
-      </div>
-      <button type="button" class="btn btn-sm safety-hud-exit-btn" id="btn-safety-hud-exit" title="Exit Master Edit Mode">
-        <span>EXIT EDIT MODE</span>
-      </button>
-    </aside>
   </div>
 </body>
 

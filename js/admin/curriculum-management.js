@@ -1,5 +1,5 @@
 import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261114_v517';
-import { openCrudModal } from './crud-modals.js?v=20261106_v160';
+import { openCrudModal } from './crud-modals.js?v=20261115_v528';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 

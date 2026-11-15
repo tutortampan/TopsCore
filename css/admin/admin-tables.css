@@ -107,7 +107,7 @@
 }
 
 .datagrid-header-content .sort-icon {
-  font-size: 10px !important;
+  font-size: 12px !important;
   line-height: 1 !important;
   color: #38bdf8 !important;
   margin-left: 2px !important;
@@ -122,9 +122,10 @@
 }
 
 /* Super-headers in DataGrid & Multi-Tier Matrix Tables (e.g. Class Hub, Blueprint) - Rule 4.1 */
-.datagrid-thead tr.datagrid-super-header-row th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-2),
-#class-attendance-grid thead tr:nth-child(1) th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-2),
-#blueprint-matrix-table thead tr.bp-super-header-row th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-2) {
+.datagrid-thead tr.datagrid-super-header-row th:not([rowspan="2"]),
+.datagrid-thead tr.datagrid-super-header-row th.super-hdr:not([rowspan="2"]),
+#class-attendance-grid thead tr:nth-child(1) th:not([rowspan="2"]),
+#blueprint-matrix-table thead tr.bp-super-header-row th:not([rowspan="2"]) {
   position: sticky !important;
   top: 0 !important;
   z-index: 20 !important;
@@ -142,10 +143,13 @@
 
 /* Secondary header row directly beneath super-header (Two-Tier Sticky Locking at top: 30px) - Rule 4.1
    USER DIRECTIVE: font dalam sub header tidak bold, tapi ukurannya sama dengan font header hanya bertipe regular (400) */
-.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#class-attendance-grid thead tr:nth-child(2) th:not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#blueprint-matrix-table thead tr:nth-child(2) th:not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
+.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th,
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th,
+.table-wrap table thead.has-super-headers tr:not(.datagrid-super-header-row) th,
+th.datagrid-sub-header,
+th.sub-hdr,
+#class-attendance-grid thead tr:nth-child(2) th,
+#blueprint-matrix-table thead tr:nth-child(2) th {
   position: sticky !important;
   top: 30px !important;
   z-index: 19 !important;
@@ -155,9 +159,19 @@
   font-size: 12px !important;
   font-weight: 400 !important;
   padding: 0 6px !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-sizing: border-box !important;
   border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
   white-space: nowrap !important;
+}
+
+.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+.table-wrap table thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+th.datagrid-sub-header:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+th.sub-hdr:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+#class-attendance-grid thead tr:nth-child(2) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+#blueprint-matrix-table thead tr:nth-child(2) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last) {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 /* Standalone Spanning Headers in Two-Tier Tables (RowSpan 2 = 60px Full Height) - Rule 4.1 */
@@ -174,6 +188,7 @@
   font-weight: 700 !important;
   vertical-align: middle !important;
   z-index: 26 !important;
+  background: #0f172a !important;
   box-sizing: border-box !important;
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
@@ -343,7 +358,7 @@
 }
 .badge-level-2 {
   background: rgba(99, 102, 241, 0.12);
-  color: #a5b4fc;
+  color: var(--brand-sky, #38bdf8);
   border-color: rgba(99, 102, 241, 0.3);
 }
 .badge-level-3 {
@@ -582,7 +597,7 @@
 }
 
 .empty-state__icon {
-  font-size: 35px;
+  font-size: 30px;
   margin-bottom: 0.5rem;
   opacity: 0.8;
 }
@@ -1078,6 +1093,13 @@ th.super-hdr-demographic,
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
 }
 
+th.super-hdr-security,
+.super-hdr-security {
+  background: #151f38 !important;
+  color: #38bdf8 !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
+}
+
 #class-attendance-grid th.super-hdr-overall {
   position: sticky !important;
   top: 0 !important;
@@ -1085,7 +1107,7 @@ th.super-hdr-demographic,
   background: #0e172a !important;
   color: #ffffff !important;
   font-weight: 800 !important;
-  border-top: 2px solid #38bdf8;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
 }
@@ -1105,43 +1127,43 @@ th.super-hdr-demographic,
   background: rgba(var(--quad-a-rgb, 255, 45, 135), 0.12) !important;
   color: var(--quad-a, #ff2d87) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  border-top: 2px solid var(--quad-a, #ff2d87);
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 #class-attendance-grid th.super-hdr-theme-b {
   background: rgba(255, 140, 0, 0.12) !important;
   color: var(--quad-b, #ff8c00) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  border-top: 2px solid #ff8c00;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 #class-attendance-grid th.super-hdr-theme-c {
   background: rgba(149, 255, 0, 0.12) !important;
   color: var(--quad-c, #95ff00) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  border-top: 2px solid #95ff00;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 #class-attendance-grid th.super-hdr-theme-d {
   background: rgba(192, 132, 252, 0.12) !important;
   color: var(--quad-d, #c084fc) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  border-top: 2px solid #c084fc;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 #class-attendance-grid th.super-hdr-exam {
   background: #241a0e !important;
   color: var(--grade-c) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  border-top: 2px solid var(--grade-c);
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
 #class-attendance-grid th.super-hdr-action,
 #class-attendance-grid th.super-hdr-manual-input {
   background: #0b1120 !important;
   color: #38bdf8 !important;
-  border-top: 2px solid rgba(56, 189, 248, 0.5) !important;
-  border-left: 1px solid rgba(56, 189, 248, 0.25) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   letter-spacing: 0.04em !important;
@@ -1933,7 +1955,7 @@ tfoot.datagrid-tfoot,
 
 .datagrid-tfoot tr.datagrid-summary-row td {
   background: #0f172a !important;
-  border-top: 2px solid rgba(56, 189, 248, 0.6) !important;
+  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   padding: 0 8px !important;
   font-size: 12px;
@@ -2092,7 +2114,7 @@ tfoot.datagrid-tfoot,
 }
 
 .smart-empty-icon {
-  font-size: 35px;
+  font-size: 30px;
   opacity: 0.85;
   margin-bottom: 4px;
 }
@@ -2200,8 +2222,10 @@ table.datagrid-table thead,
 .table-wrap thead {
   display: table-header-group !important;
 }
-.table-wrap thead th,
-table.datagrid-table thead th {
+.table-wrap thead:not(.has-super-headers) th,
+table.datagrid-table thead:not(.has-super-headers) th,
+.table-wrap thead tr:first-child th:not([rowspan="2"]),
+table.datagrid-table thead tr:first-child th:not([rowspan="2"]) {
   position: sticky !important;
   top: 0 !important;
   z-index: 15 !important;
@@ -2282,9 +2306,9 @@ td.col-select {
 }
 
 /* ---- Excel-like Table Column Gridlines & Section Dividers (SSOT) ---- */
-.table-wrap table td,
-.datagrid-table td,
-#admin-console table td {
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .table-wrap table td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .datagrid-table td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
@@ -2300,18 +2324,28 @@ td.col-select {
 }
 
 /* Eliminate right border on the very last column */
-.table-wrap table thead th:last-child,
-.datagrid-table thead th:last-child,
-#admin-console table thead th:last-child,
-#class-attendance-grid thead th:last-child,
-#blueprint-matrix-table thead th:last-child,
-.datagrid-thead th:last-child,
-.table-wrap table tbody td:last-child,
-.datagrid-table tbody td:last-child,
-#admin-console table tbody td:last-child,
-.table-wrap table tfoot td:last-child,
-.datagrid-table tfoot td:last-child {
+.table-wrap table thead th:last-child:not(.super-hdr-divider),
+.datagrid-table thead th:last-child:not(.super-hdr-divider),
+#admin-console table thead th:last-child:not(.super-hdr-divider),
+#class-attendance-grid thead th:last-child:not(.super-hdr-divider),
+#blueprint-matrix-table thead th:last-child:not(.super-hdr-divider),
+.datagrid-thead th:last-child:not(.super-hdr-divider),
+.table-wrap table tbody td:last-child:not(.super-hdr-divider),
+.datagrid-table tbody td:last-child:not(.super-hdr-divider),
+#admin-console table tbody td:last-child:not(.super-hdr-divider),
+.table-wrap table tfoot td:last-child:not(.super-hdr-divider),
+.datagrid-table tfoot td:last-child:not(.super-hdr-divider) {
   border-right: none !important;
+}
+
+/* Universal Spanning Header & Sticky Column Left Border Guarantee */
+.datagrid-thead tr.datagrid-super-header-row th.datagrid-rowspan-2-header:last-child,
+.datagrid-thead tr.datagrid-super-header-row th[rowspan="2"]:last-child,
+.datagrid-table th.col-sticky-right,
+.datagrid-table td.col-sticky-right,
+#student-grid-container table th.datagrid-rowspan-2-header,
+#student-grid-container table th[rowspan="2"] {
+  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
 }
 
 /* ==========================================================================
@@ -2406,7 +2440,7 @@ th.sub-hdr,
   border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
 }
 
-/* 4. Thick horizontal divider between Table Body and Footer / Summary Row */
+/* 4. Thick horizontal divider between Table Body and Footer / Summary Row (SSOT) */
 .table-wrap table tfoot td,
 .table-wrap table tfoot th,
 .datagrid-table tfoot td,
@@ -2419,7 +2453,98 @@ th.sub-hdr,
 tfoot td,
 tfoot th {
   border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+.table-wrap table tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.table-wrap table tfoot th:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-table tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-table tfoot th:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#blueprint-matrix-table tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-tfoot tr.datagrid-summary-row td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-summary-row td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#class-attendance-grid tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#class-attendance-grid tr.datagrid-summary-row td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+tfoot th:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* ==========================================================================
+   AUTHORITATIVE UNIVERSAL SUPER-HEADER CONTINUOUS NEUTRAL DIVIDER INVARIANT (SSOT)
+   "Semua garis tabel yang bersambung dari header sampai footer harus tebal"
+   Unbroken 2px solid neutral line (rgba(255, 255, 255, 0.22)) from the very top of Row 1 down to the footer!
+   ========================================================================== */
+.table-wrap table th.super-hdr,
+.table-wrap table th.super-hdr-divider,
+.table-wrap table td.super-hdr-divider,
+.datagrid-table thead tr.datagrid-super-header-row th.super-hdr,
+.datagrid-table thead tr.datagrid-super-header-row th.super-hdr-divider,
+.datagrid-table thead th.super-hdr-divider,
+.datagrid-table tbody td.super-hdr-divider,
+.datagrid-table tfoot td.super-hdr-divider,
+.datagrid-table tfoot th.super-hdr-divider,
+.datagrid-table tr.datagrid-summary-row td.super-hdr-divider,
+#admin-console table th.super-hdr-divider,
+#admin-console table td.super-hdr-divider,
+#admin-console table tfoot td.super-hdr-divider,
+#student-grid-container table th.super-hdr-divider,
+#student-grid-container table td.super-hdr-divider,
+#student-grid-container table tfoot td.super-hdr-divider,
+#student-grid-container table th.super-hdr-security,
+.super-hdr-security,
+#class-attendance-grid thead tr:nth-child(1) th.super-hdr,
+#class-attendance-grid thead tr:nth-child(1) th.super-hdr-identity,
+#class-attendance-grid thead tr:nth-child(1) th.super-hdr-students-data,
+#class-attendance-grid thead tr:nth-child(1) th.super-hdr-overall,
+#class-attendance-grid thead tr:nth-child(1) th.super-hdr-theme,
+#class-attendance-grid thead tr:nth-child(1) th[class*="super-hdr-theme-"],
+#class-attendance-grid thead tr:nth-child(1) th.super-hdr-exam,
+#class-attendance-grid thead th.super-hdr-divider,
+#class-attendance-grid thead tr:nth-child(2) th.super-hdr-divider,
+#class-attendance-grid thead th.col-sticky-2,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-2,
+#class-attendance-grid thead th.col-sticky-last,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-last,
+#class-attendance-grid thead th.col-test-theme-grade,
+#class-attendance-grid thead tr:nth-child(2) th.col-test-theme-grade,
+#class-attendance-grid thead th[class*="col-test-theme-grade-"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="col-test-theme-grade-"],
+#blueprint-matrix-table thead tr:nth-child(2) th.super-hdr-divider,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-bp-sep,
+.datagrid-thead tr:nth-child(2) th.super-hdr-divider,
+.datagrid-thead tr:not(.datagrid-super-header-row) th.super-hdr-divider,
+.table-wrap table thead tr:nth-child(2) th.super-hdr-divider,
+.table-wrap table thead tr:not(.datagrid-super-header-row) th.super-hdr-divider,
+#class-attendance-grid tbody td.super-hdr-divider,
+#class-attendance-grid tbody td.col-sticky-2,
+#class-attendance-grid tbody td.col-sticky-last,
+#class-attendance-grid tbody td.col-test-theme-grade,
+#class-attendance-grid tbody td[class*="col-test-theme-grade-"],
+#class-attendance-grid tfoot td.super-hdr-divider,
+#class-attendance-grid tfoot td.col-sticky-2,
+#class-attendance-grid tfoot td.col-sticky-last,
+#class-attendance-grid tfoot td.col-test-theme-grade,
+#class-attendance-grid tfoot td[class*="col-test-theme-grade-"],
+#class-attendance-grid tr.datagrid-summary-row td.super-hdr-divider,
+#class-attendance-grid tr.datagrid-summary-row td.col-sticky-2,
+#class-attendance-grid tr.datagrid-summary-row td.col-sticky-last,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-grade,
+#class-attendance-grid tr.datagrid-summary-row td[class*="col-test-theme-grade-"],
+#blueprint-matrix-table th.bp-sh-topic,
+#blueprint-matrix-table th.bp-sh-vocab,
+#blueprint-matrix-table th.bp-sh-blueprint,
+#blueprint-matrix-table th.col-bp-sep,
+#blueprint-matrix-table td.col-bp-sep,
+.col-bp-sep,
+#vault-table th.super-hdr,
+#vault-table th.super-hdr-divider,
+#vault-table td.super-hdr-divider,
+th.super-hdr,
+th.super-th,
+th.super-hdr-divider,
+td.super-hdr-divider,
+.super-hdr-divider {
+  border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
 }
 
 

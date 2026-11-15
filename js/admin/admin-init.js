@@ -1,22 +1,12 @@
 // TOPSCORE LMS — Admin Initialization & Fast-Boot Controller
 // Centralizes sidebar hydration, record drawer controls, auth gate, and service worker registration
 import { DataGrid } from './datagrid.js?v=20261106_v160';
-import { initGlobalEditMode, toggleGlobalEditMode } from '../session.js?v=20261106_v160';
 if (typeof window !== 'undefined') {
   window.DataGrid = DataGrid;
 }
 
 export function initGlobalEditModeToggle() {
-  initGlobalEditMode();
-  const btn = document.getElementById('global-edit-mode-toggle');
-  if (btn && !btn.dataset.bound) {
-    btn.dataset.bound = 'true';
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleGlobalEditMode();
-    });
-  }
+  // Deprecated: Bottom-left master edit mode toggle purged per Phase 556
 }
 
 export function initAuthGate() {
@@ -71,30 +61,37 @@ export function sortAllSidebarDomains() {
   _isSorting = true;
   try {
     document.querySelectorAll('.nav-domain-group').forEach(group => {
-      const items = Array.from(group.querySelectorAll('.admin-nav-item'));
-      if (items.length <= 1) return;
+      // Exclude special pinned items like Alumni so it always docks at the bottom of Domain B
+      const items = Array.from(group.querySelectorAll('.admin-nav-item:not([data-sub="alumni"])'));
+      if (items.length > 1) {
+        const sorted = [...items].sort((a, b) => {
+          const textA = getSidebarNavItemLabel(a);
+          const textB = getSidebarNavItemLabel(b);
+          return textA.localeCompare(textB, undefined, { numeric: true, sensitivity: 'base' });
+        });
 
-      const sorted = [...items].sort((a, b) => {
-        const textA = getSidebarNavItemLabel(a);
-        const textB = getSidebarNavItemLabel(b);
-        return textA.localeCompare(textB, undefined, { numeric: true, sensitivity: 'base' });
-      });
-
-      // Strict check if order actually changed to prevent pointless DOM mutations
-      let needsReorder = false;
-      for (let i = 0; i < items.length; i++) {
-        if (items[i] !== sorted[i]) {
-          needsReorder = true;
-          break;
+        // Strict check if order actually changed to prevent pointless DOM mutations
+        let needsReorder = false;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i] !== sorted[i]) {
+            needsReorder = true;
+            break;
+          }
+        }
+        if (needsReorder) {
+          sorted.forEach(item => {
+            if (item.parentNode) {
+              item.parentNode.appendChild(item);
+            }
+          });
         }
       }
-      if (!needsReorder) return;
 
-      sorted.forEach(item => {
-        if (item.parentNode) {
-          item.parentNode.appendChild(item);
-        }
-      });
+      // Ensure Alumni item stays docked at the bottom of Board domain
+      const alumniItem = group.querySelector('.admin-nav-item[data-sub="alumni"]');
+      if (alumniItem && alumniItem.parentNode) {
+        alumniItem.parentNode.appendChild(alumniItem);
+      }
     });
   } finally {
     _isSorting = false;
@@ -243,7 +240,12 @@ export function initSidebarDelegation() {
       if (typeof window.loadSection === 'function') {
         window.loadSection(navItem.dataset.sub);
       } else {
-        window.location.hash = `#${navItem.dataset.sub}`;
+        const targetHash = `#${navItem.dataset.sub}`;
+        if (window.location.hash === targetHash) {
+          window.dispatchEvent(new HashChangeEvent('hashchange'));
+        } else {
+          window.location.hash = targetHash;
+        }
       }
     }
   });
@@ -328,7 +330,7 @@ export function initRecordDrawer() {
 
     if (titleEl) titleEl.textContent = title || 'Details';
     if (bodyEl) bodyEl.innerHTML = bodyHTML || '';
-    if (footerEl) footerEl.innerHTML = footerHTML || '<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>';
+    if (footerEl) footerEl.innerHTML = footerHTML || '<button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" onclick="closeRecordDrawer()">Close</button>';
 
     overlay?.classList.remove('hidden');
     setTimeout(() => {

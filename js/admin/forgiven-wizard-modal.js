@@ -95,7 +95,6 @@ export async function openForgivenWizard(options = {}) {
             Unlock Week 3 tests for specific students or batches without compromising curriculum integrity.
           </p>
         </div>
-        <button type="button" id="btn-close-forgiven-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
       </div>
 
       <!-- Step Indicator Bar -->
@@ -267,7 +266,8 @@ export async function openForgivenWizard(options = {}) {
 
       <!-- Modal Footer -->
       <div style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(30, 41, 59, 0.7);">
-        <div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-forgiven-modal" style="height:36px; padding:0 16px; font-size:12px; font-weight:700;">Cancel</button>
           <button type="button" id="btn-forgiven-revoke" style="background: rgba(var(--grade-e-rgb), 0.12); border: 1px solid rgba(var(--grade-e-rgb), 0.4); color: var(--grade-e); padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: none;">
             ↩️ Revoke Forgiven Status
           </button>

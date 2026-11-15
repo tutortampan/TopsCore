@@ -594,15 +594,14 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
     <div class="modal-content card" style="min-width: 350px; background: var(--fm-bg-card);">
       <div class="modal-header d-flex justify-between align-center mb-3">
         <h3 class="fw-700 m-0 text-md">Change Batch Level</h3>
-        <button class="btn btn-ghost btn-xs text-muted" id="cancel-level-btn-x" style="font-size: 16px;">&times;</button>
       </div>
       <div class="modal-body">
         <div class="form-group">
           <label class="form-label text-xs fw-600">Select Level</label>
           ${selectHtml}
         </div>
-        <div class="d-flex justify-end gap-2 mt-4">
-          <button class="btn btn-secondary" id="cancel-level-btn">Cancel</button>
+        <div class="d-flex justify-between align-center gap-2 mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+          <button class="btn btn-secondary btn-modal-close-left" id="cancel-level-btn">Cancel</button>
           <button class="btn btn-primary" id="save-level-btn">Save Changes</button>
         </div>
       </div>
@@ -613,7 +612,6 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
 
   const closeOverlay = () => overlay.remove();
   document.getElementById('cancel-level-btn').onclick = closeOverlay;
-  document.getElementById('cancel-level-btn-x').onclick = closeOverlay;
 
   document.getElementById('save-level-btn').onclick = async () => {
     const newLevelId = document.getElementById('level-select').value;

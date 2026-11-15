@@ -62,11 +62,11 @@ const formFields = {
   ],
   class_instances: [
     { id: 'batch_id', label: 'Batch', type: 'select', source: 'batches', required: true },
-    { id: 'class_id', label: 'Class Board', type: 'select', source: 'classes', required: true },
+    { id: 'class_id', label: 'Class', type: 'select', source: 'classes', required: true },
     { id: 'start_date', label: 'Start Date', type: 'date', required: false },
     { id: 'estimated_finish', label: 'Estimated Finish Date', type: 'date', required: false },
     { id: 'recurring_schedule', label: 'Recurring Schedule (JSON)', type: 'textarea', placeholder: 'e.g. [{"day": "Monday", "start_time": "15:00", "end_time": "16:30", "zoom_link": "https://zoom.us/j/123"}]', required: false },
-    { id: 'status', label: 'Status', type: 'select', options: [{val:'active',text:'Active'},{val:'finished',text:'Finished'},{val:'inactive',text:'Inactive'}], required: true }
+    { id: 'status', label: 'Status', type: 'select', options: [{val:'active',text:'Active'},{val:'inactive',text:'Inactive'}], required: true }
   ],
   levels: [
     { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true, uiOnly: true },
@@ -111,9 +111,7 @@ const formFields = {
     { id: 'title', label: 'Test Title', type: 'text', required: true, placeholder: 'e.g. 3rd Vocabulary A1 Words Task' },
     { id: 'status', label: 'Status', type: 'select', options: [
       { value: 'PUBLISHED', label: 'PUBLISHED (Aktif / Bisa Dikerjakan)' },
-      { value: 'DRAFT', label: 'DRAFT (Konsep / Tersembunyi)' },
-      { value: 'UNPUBLISHED', label: 'UNPUBLISHED (Ditangguhkan)' },
-      { value: 'ARCHIVED', label: 'ARCHIVED (Arsip)' }
+      { value: 'DRAFT', label: 'DRAFT (Konsep / Tersembunyi)' }
     ], required: true },
     { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number', required: true, defaultValue: 5 },
     { id: 'answer_type', label: 'Answer Type', type: 'select', options: [
@@ -173,13 +171,14 @@ async function openCrudModal(section, record) {
           questions: 'Question'
       };
       const titleName = sectionTitles[section] || section.charAt(0).toUpperCase() + section.slice(1);
-      document.getElementById('crud-modal-title').textContent = record ? `Edit ${titleName}` : `Add ${titleName}`;
+      const titleEl = document.getElementById('crud-modal-title');
+      if (titleEl) titleEl.textContent = record ? `Edit ${titleName}` : `Add ${titleName}`;
 
       crudForm.innerHTML = '';
       const fields = formFields[section];
       if (!fields) {
         crudForm.innerHTML = `<p class="text-muted">Form for "${section}" not yet configured.</p>`;
-        crudModal.classList.remove('hidden');
+        crudModal?.classList.remove('hidden');
         return;
       }
 
@@ -247,8 +246,7 @@ async function openCrudModal(section, record) {
             // Phase 5: Filter out inactive items in dropdowns
             opts = opts.filter(o => {
               if (o.is_active !== undefined) return o.is_active === true;
-              if (o.status !== undefined) return o.status !== 'cancelled' && o.status !== 'archived';
-              if (o.status !== undefined) return o.status === 'published';
+              if (o.status !== undefined) return o.status.toLowerCase() === 'published' || o.status.toLowerCase() === 'active';
               return true;
             });
 
@@ -1000,20 +998,26 @@ function _initCrudModals() {
 
 
     // Modal close handlers
-    ['close-crud-modal','crud-cancel-btn'].forEach(id => document.getElementById(id).addEventListener('click', () => {
-      if (window.isProfileDirty) {
-        if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
-      }
-      window.isProfileDirty = false;
-      _editRecord = null;
-      _editId = null;
-      crudModal.classList.add('hidden');
-      if (crudForm) {
-        crudForm.reset();
-        crudForm.innerHTML = '';
-      }
-    }));
-    ['delete-cancel-btn'].forEach(id => document.getElementById(id).addEventListener('click', () => document.getElementById('delete-modal').classList.add('hidden')));
+    ['close-crud-modal','crud-cancel-btn'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        if (window.isProfileDirty) {
+          if (!confirm('You have unsaved changes. Are you sure you want to close?')) return;
+        }
+        window.isProfileDirty = false;
+        _editRecord = null;
+        _editId = null;
+        crudModal?.classList.add('hidden');
+        if (crudForm) {
+          crudForm.reset();
+          crudForm.innerHTML = '';
+        }
+      });
+    });
+    ['delete-cancel-btn'].forEach(id => {
+      document.getElementById(id)?.addEventListener('click', () => {
+        document.getElementById('delete-modal')?.classList.add('hidden');
+      });
+    });
 
 } // end _initCrudModals
 
@@ -1161,7 +1165,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
               <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
                 <th style="padding:8px 4px;">STUDENT ID</th>
                 <th style="padding:8px 4px;">PROGRAM / CLASS</th>
-                <th style="padding:8px 4px;">BATCH / COHORT</th>
+                <th style="padding:8px 4px;">BATCH</th>
                 <th style="padding:8px 4px;">INSTITUTION</th>
                 <th style="padding:8px 4px;">ATTEMPTS</th>
                 <th style="padding:8px 4px;">CREATED AT</th>

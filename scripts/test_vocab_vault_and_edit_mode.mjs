@@ -12,13 +12,12 @@ assert(invariantsMd.includes('Table-Only Vertical Scroll'), 'Rule 2.23 must mand
 assert(invariantsMd.includes('Absolute Hiding when OFF'), 'Rule 2.24 must mandate Absolute Hiding when OFF');
 console.log('  ✓ UI Invariants Section 2.23 and 2.24 verified.');
 
-// 2. Verify admin.html Structure
-console.log('[Test 2] Verifying admin.html Global Edit Mode Toggle...');
+// 2. Verify admin.html Structure (Master Edit Mode Purged per Phase 556)
+console.log('[Test 2] Verifying admin.html Clean of Master Edit Mode Toggle...');
 const adminHtml = fs.readFileSync('admin.html', 'utf8');
-assert(adminHtml.includes('id="global-edit-mode-toggle"'), 'admin.html must contain global edit mode toggle');
-assert(adminHtml.includes('class="admin-topbar-actions"') || adminHtml.includes('sidebar-footer-sub-corner'), 'admin.html must place toggle in admin-topbar-actions or sub corner');
-assert(adminHtml.includes('EDIT: OFF') || (adminHtml.includes('EDIT MODE') && adminHtml.includes('OFF')), 'Initial label should default to EDIT: OFF');
-console.log('  ✓ admin.html topbar actions & toggle verified.');
+assert(!adminHtml.includes('id="global-edit-mode-toggle"'), 'admin.html must be clean of master global-edit-mode-toggle');
+assert(!adminHtml.includes('id="master-edit-safety-hud"'), 'admin.html must be clean of #master-edit-safety-hud');
+console.log('  ✓ admin.html clean of legacy master edit mode toggle.');
 
 // 3. Verify js/session.js Methods
 console.log('[Test 3] Verifying js/session.js Global Edit Mode State Management...');

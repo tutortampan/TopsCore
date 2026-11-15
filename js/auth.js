@@ -3,7 +3,7 @@
  * Extracted from index.html
  */
 
-import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './api.js?v=20261106_v160';
+import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './api.js?v=20261115_v541';
     import { setStudentSession, getStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 
@@ -407,6 +407,8 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           level_id: result.student?.level_id || null,
           level_number: result.student?.level_number || null,
           level_name: result.student?.level_name || null,
+          login_pin: pin,
+          pin: pin
         });
 
         saveLogin();

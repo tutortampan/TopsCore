@@ -15,7 +15,7 @@ console.log('[Test 1] Verifying admin.html Navigation Structure (Edit Mode & Log
 const adminHtml = fs.readFileSync('admin.html', 'utf8');
 
 assert(adminHtml.includes('class="sidebar-logo') || adminHtml.includes('class="sidebar-corner-top'), 'admin.html must contain top corner');
-assert(adminHtml.includes('id="global-edit-mode-toggle"'), 'admin.html must contain #global-edit-mode-toggle');
+assert(!adminHtml.includes('id="global-edit-mode-toggle"'), 'admin.html must be clean of #global-edit-mode-toggle (purged per Phase 556)');
 
 // Ensure top corner contains user role (ADMIN/TUTOR) and Exit button
 const sidebarHeaderArea = adminHtml.slice(adminHtml.indexOf('class="sidebar-logo'), adminHtml.indexOf('class="admin-nav"'));
@@ -24,12 +24,11 @@ assert(sidebarHeaderArea && sidebarHeaderArea.includes('id="admin-logout-btn"'),
 assert(sidebarHeaderArea && (sidebarHeaderArea.includes('EXIT') || sidebarHeaderArea.includes('Exit')), 'admin-logout-btn must contain clean text Exit');
 console.log('  ✓ Top corner verified: "ADMIN/TUTOR", dynamic role label, and SVG logout Exit');
 
-// Ensure bottom corner (.sidebar-footer) contains EDIT MODE toggle
+// Ensure bottom corner (.sidebar-footer) is clean of edit mode toggle
 const sidebarFooterMatch = adminHtml.match(/<div class="sidebar-footer[\s\S]*?<\/aside>/);
 assert(sidebarFooterMatch, 'admin.html must contain .sidebar-footer');
-assert(sidebarFooterMatch[0].includes('EDIT MODE'), 'sidebar-footer must display "EDIT MODE"');
-assert(sidebarFooterMatch[0].includes('id="global-edit-mode-toggle"'), 'sidebar-footer must contain #global-edit-mode-toggle');
-console.log('  ✓ Bottom corner (.sidebar-footer) verified: "EDIT MODE" and #global-edit-mode-toggle');
+assert(!sidebarFooterMatch[0].includes('id="global-edit-mode-toggle"'), 'sidebar-footer must not contain #global-edit-mode-toggle');
+console.log('  ✓ Bottom corner (.sidebar-footer) verified clean of master edit mode toggle');
 
 // Check admin-topbar-actions is clean of the old toggle
 const topbarActionsMatch = adminHtml.match(/<div class="admin-topbar-actions" id="admin-topbar-actions">([\s\S]*?)<\/div>/);
@@ -52,12 +51,9 @@ console.log('  ✓ css/admin.css verified: Zero outer scrollbar, sticky thead to
 console.log('\n[Test 3] Verifying Action Buttons in Students Grade and Score toolbar...');
 const appJs = fs.readFileSync('js/admin/app.js', 'utf8');
 
-assert(appJs.includes('attendance-actions-cluster'), 'app.js must place 4 action buttons in attendance-actions-cluster');
-assert(appJs.includes('id="btn-open-forgiven-wizard"'), 'app.js must contain #btn-open-forgiven-wizard');
-assert(appJs.includes('id="btn-open-blueprint-settings"'), 'app.js must contain #btn-open-blueprint-settings');
-assert(appJs.includes('id="btn-open-blueprint-from-class"'), 'app.js must contain #btn-open-blueprint-from-class');
-assert(appJs.includes('id="btn-open-generator-from-class"'), 'app.js must contain #btn-open-generator-from-class');
-console.log('  ✓ app.js verified: 4 curriculum action buttons placed in attendance toolbar under edit-mode-only');
+assert(appJs.includes('attendance-actions-cluster'), 'app.js must place action buttons in attendance-actions-cluster');
+assert(appJs.includes('id="btn-subpanel-forgiven"') || appJs.includes('id="btn-open-forgiven-wizard"'), 'app.js must contain forgiven action button');
+console.log('  ✓ app.js verified: Authoritative Grade and Score action buttons placed in attendance toolbar');
 
 // 4. Check 4-Tab Navigation in Class Hub
 console.log('\n[Test 4] Verifying 4-Tab Navigation in Class Hub...');

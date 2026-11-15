@@ -4,7 +4,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160'
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261106_v160';
+import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261115_v541';
     import { requireStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
@@ -507,7 +507,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
       if (dismissBtn) {
         dismissBtn.style.display = 'flex';
-        dismissBtn.innerHTML = isFinalWarning 
+        dismissBtn.innerHTML = isFinalWarning
           ? '<span>RETURN TO TEST (FINAL)</span>'
           : '<span>RETURN TO TEST</span>';
       }
@@ -2293,11 +2293,11 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       document.getElementById('pre-exam-focus-modal')?.classList.add('hidden');
       document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
 
-      testData = scenario.testData || { title: 'Assessment', status: 'PUBLISHED' };
-      testDisplayName = testData.title || 'Assessment';
+      testData = scenario.testData || { title: 'Test', status: 'PUBLISHED' };
+      testDisplayName = testData.title || 'Test';
       allAnswerRows = scenario.rows || [scenario.row];
       answerRows = scenario.rows || [scenario.row];
-      testsections = scenario.sections || [{ id: 'default', title: 'Part 1: Assessment' }];
+      testsections = scenario.sections || [{ id: 'default', title: 'Part 1: Test' }];
       currentSectionIndex = 0;
       isTestActive = true;
 
@@ -2609,7 +2609,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       if (isTaskPractice && primaryTarget.length >= 3) {
         const hintBtn = document.createElement('button');
         hintBtn.type = 'button';
-        hintBtn.className = 'task-hint-btn quiz-hint-btn';
+        hintBtn.className = 'task-hint-btn';
         hintBtn.innerHTML = 'Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
         hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:var(--grade-c); background:rgba(var(--grade-c-rgb),0.12); border:1px solid rgba(var(--grade-c-rgb),0.3); border-radius:4px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';

@@ -37,7 +37,6 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
           </h2>
           <p class="text-muted m-0" style="font-size: 12px;">Create Evaluations or Comprehensive Tests with frozen question snapshots</p>
         </div>
-        <button class="btn btn-ghost" id="close-test-builder" style="font-size: 20px; line-height: 1;">&times;</button>
       </div>
 
       <div class="modal-body p-0" style="flex: 1; overflow: hidden; display: flex; flex-direction: column;">
@@ -65,12 +64,12 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
                   <label class="form-label">Test Type *</label>
                   <div class="d-flex gap-4">
                     <label style="cursor:pointer;display:flex;align-items:center;gap:8px;">
-                      <input type="radio" name="wiz-type" value="EVALUATION" checked />
-                      <strong>Evaluation</strong> <span class="text-muted text-xs">(Routine / modular topic check)</span>
+                      <input type="radio" name="wiz-type" value="TASK" checked />
+                      <strong>Task</strong> <span class="text-muted text-xs">(Routine / modular topic learning check)</span>
                     </label>
                     <label style="cursor:pointer;display:flex;align-items:center;gap:8px;">
-                      <input type="radio" name="wiz-type" value="Test" />
-                      <strong>Comprehensive Test</strong> <span class="text-muted text-xs">(Derived from Evaluation sequences)</span>
+                      <input type="radio" name="wiz-type" value="EXAM" />
+                      <strong>Exam</strong> <span class="text-muted text-xs">(Comprehensive formal examination)</span>
                     </label>
                   </div>
                 </div>
@@ -221,7 +220,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
                   <span id="rev-type" class="badge badge-info">EVALUATION</span>
                 </div>
                 <div class="d-flex gap-4 flex-wrap text-sm mb-3">
-                  <div><strong>Class Board:</strong> <span id="rev-class">—</span></div>
+                  <div><strong>Class:</strong> <span id="rev-class">—</span></div>
                   <div><strong>Duration:</strong> <span id="rev-duration">60 min</span></div>
                   <div><strong>Order:</strong> <span id="rev-order">Random</span></div>
                   <div><strong>Assignment:</strong> <span id="rev-assignment" class="badge badge-neutral">Batch</span></div>
@@ -251,6 +250,9 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
           </div>
 
         </div>
+      </div>
+      <div class="modal-footer" style="height:60px;min-height:60px;max-height:60px;padding:10px 20px;border-top:1px solid rgba(255,255,255,0.08);background:rgba(15,23,42,0.6);display:flex;justify-content:flex-start;align-items:center;box-sizing:border-box;">
+        <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-test-builder">Close</button>
       </div>
     </div>
   `;
@@ -675,8 +677,8 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
         let asmId = createdTestId;
         
         const isExamType = String(typeVal).toLowerCase() === 'test' || String(typeVal).toLowerCase() === 'exam';
-        const resolvedType = isExamType ? 'exam' : 'quiz';
-        const resolvedCategory = isExamType ? 'TEST' : 'TASK';
+        const resolvedType = isExamType ? 'exam' : 'task';
+        const resolvedCategory = isExamType ? 'EXAM' : 'TASK';
 
         // If edit mode and published, we should not change type, class, answer_type or topics.
         const structuralData = (editTest && editTest.status === 'PUBLISHED') ? {} : {

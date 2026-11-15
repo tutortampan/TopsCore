@@ -119,9 +119,9 @@ export async function renderModules(area) {
       `;
       
       const footerHTML = `
-        <div style="display:flex; gap:10px; justify-content:flex-end;">
-          <button class="btn btn-ghost" onclick="closeRecordDrawer()">Cancel</button>
-          <button class="btn btn-primary" id="drawer-save-btn">Save Configuration</button>
+        <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; width:100%;">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" onclick="closeRecordDrawer()">Cancel</button>
+          <button type="button" class="btn btn-primary btn-sm" id="drawer-save-btn">Save Configuration</button>
         </div>
       `;
       

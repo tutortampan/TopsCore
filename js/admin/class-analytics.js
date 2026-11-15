@@ -531,7 +531,6 @@ function openVocabErrorDetailModal(item) {
             ${escapeHtml(item.translation)} • ${item.incorrectCount} of ${item.totalAttempts} Students Incorrect (${item.errorRate}%)
           </div>
         </div>
-        <button class="btn btn-ghost btn-icon" id="close-vocab-error-modal" style="font-size: 16px; cursor:pointer;" aria-label="Close">✕</button>
       </div>
 
       <div class="modal-body" style="flex:1 1 0; min-height:0; overflow-y:auto; padding:1rem 1.25rem;">
@@ -565,8 +564,8 @@ function openVocabErrorDetailModal(item) {
         `}
       </div>
 
-      <div class="modal-footer" style="padding:0.75rem 1.25rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-end; flex-shrink:0;">
-        <button class="btn btn-secondary btn-sm" id="btn-close-vocab-error-footer">Close</button>
+      <div class="modal-footer" style="padding:0.75rem 1.25rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-start; flex-shrink:0;">
+        <button class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-vocab-error-footer">Close</button>
       </div>
     </div>
   `;

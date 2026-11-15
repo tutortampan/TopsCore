@@ -43,7 +43,10 @@ body.global-edit-mode-on .student-inline-input,
 body.global-edit-mode-on .student-inline-select,
 body.global-edit-mode-on .input-matrix-exam-pts,
 body.global-edit-mode-on .input-matrix-exam-score,
-body.global-edit-mode-on .input-matrix-task-progress {
+body.global-edit-mode-on .input-matrix-task-progress,
+body.class-manual-edit-on .input-matrix-exam-pts,
+body.class-manual-edit-on .input-matrix-exam-score,
+body.class-manual-edit-on .input-matrix-task-progress {
   background: transparent !important;
   border: none !important;
   outline: none !important;
@@ -143,7 +146,6 @@ body.global-edit-mode-on .student-cell-view {
 body:not(.global-edit-mode-on) .edit-mode-only,
 body:not(.global-edit-mode-on) .col-manual-input,
 body:not(.global-edit-mode-on) .btn-manual-input-toggle,
-body:not(.global-edit-mode-on) .manual-score-input,
 body:not(.global-edit-mode-on) .btn-edit,
 body:not(.global-edit-mode-on) .btn-delete,
 body:not(.global-edit-mode-on) .btn-edit-student,
@@ -245,7 +247,17 @@ body.global-edit-mode-on #theme-manager-flat-table td,
 body.global-edit-mode-on #blueprint-matrix-table th,
 body.global-edit-mode-on #blueprint-matrix-table td,
 body.global-edit-mode-on #class-attendance-grid th,
-body.global-edit-mode-on #class-attendance-grid td {
+body.global-edit-mode-on #class-attendance-grid td,
+body.global-edit-mode-on #class-attendance-grid table th,
+body.global-edit-mode-on #class-attendance-grid table td,
+body.global-edit-mode-on #class-attendance-grid tbody td,
+body.global-edit-mode-on #class-attendance-grid thead th,
+body.class-manual-edit-on #class-attendance-grid th,
+body.class-manual-edit-on #class-attendance-grid td,
+body.class-manual-edit-on #class-attendance-grid table th,
+body.class-manual-edit-on #class-attendance-grid table td,
+body.class-manual-edit-on #class-attendance-grid tbody td,
+body.class-manual-edit-on #class-attendance-grid thead th {
   border-right: 1px solid rgba(255, 255, 255, 0.45) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
 }
@@ -299,109 +311,6 @@ body.global-edit-mode-on #admin-console table td:focus-within {
 body:not(.global-edit-mode-on) .banner-brand-content,
 body.global-edit-mode-off .banner-brand-content {
   display: flex !important;
-}
-
-body:not(.global-edit-mode-on) #master-edit-safety-hud,
-body.global-edit-mode-off #master-edit-safety-hud {
-  display: none !important;
-}
-
-/* Master Edit Mode Active: Dynamic Warning / Gold 60px Bottom Banner */
-body.global-edit-mode-on #bottom-ad-banner {
-  background: linear-gradient(90deg, rgba(255, 215, 0, 0.16) 0%, rgba(20, 26, 40, 0.98) 35%, rgba(15, 23, 42, 0.98) 100%) !important;
-  border-top: 2px solid var(--grade-c, #FFFF00) !important;
-  box-shadow: 0 -4px 20px rgba(255, 215, 0, 0.15) !important;
-}
-
-body.global-edit-mode-on .banner-brand-content {
-  display: none !important;
-}
-
-body.global-edit-mode-on #master-edit-safety-hud {
-  display: flex !important;
-  width: 100% !important;
-  height: 100% !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  box-sizing: border-box !important;
-}
-
-#master-edit-safety-hud {
-  display: none;
-  width: 100%;
-  height: 100%;
-  align-items: center;
-  justify-content: space-between;
-  box-sizing: border-box;
-  font-family: var(--fm-font-sans, 'Inter', sans-serif);
-  font-size: 12px;
-  color: var(--grade-c);
-  background: transparent;
-  border: none;
-  box-shadow: none;
-  padding: 0;
-}
-
-.safety-hud-content {
-  display: flex !important;
-  align-items: center !important;
-  gap: 12px !important;
-}
-
-.safety-hud-badge {
-  font-weight: 850 !important;
-  letter-spacing: 0.05em !important;
-  color: #0F172A !important;
-  background: var(--grade-c) !important;
-  padding: 4px 10px !important;
-  border-radius: 4px !important;
-  font-size: 12px !important;
-  text-transform: uppercase !important;
-  box-shadow: 0 0 10px rgba(255, 255, 0, 0.35) !important;
-  flex-shrink: 0 !important;
-}
-
-.safety-hud-text {
-  color: #E2E8F0 !important;
-  font-weight: 500 !important;
-  font-size: 12px !important;
-  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-}
-
-.safety-hud-text kbd {
-  background: #1E293B !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  border-radius: 3px !important;
-  padding: 1px 6px !important;
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 11px !important;
-  color: #38BDF8 !important;
-}
-
-.safety-hud-exit-btn {
-  height: 32px !important;
-  min-height: 32px !important;
-  max-height: 32px !important;
-  padding: 0 14px !important;
-  font-size: 12px !important;
-  font-weight: 800 !important;
-  background: #1E293B !important;
-  border: 1.5px solid var(--grade-c) !important;
-  color: var(--grade-c) !important;
-  border-radius: 4px !important;
-  cursor: pointer !important;
-  transition: all 0.15s ease !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
-  box-sizing: border-box !important;
-}
-
-.safety-hud-exit-btn:hover {
-  background: var(--grade-c) !important;
-  color: #0F172A !important;
-  box-shadow: 0 0 12px rgba(255, 255, 0, 0.4) !important;
 }
 
 /* Standardized 32px Search & Filter Toolbars across Workstation */

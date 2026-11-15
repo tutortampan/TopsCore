@@ -413,7 +413,7 @@ export async function renderTests(area) {
 
     const isExam = typeof isWeeklyExam === 'function' ? isWeeklyExam(r) : (r.test_type === 'exam' || r.category === 'EXAM' || String(r.shell_code || '').includes('-EXAM'));
     const testTypeLabel = isExam ? 'Weekly Exam' : 'Daily Task';
-    const testTypeKey = isExam ? 'exam' : 'quiz';
+    const testTypeKey = isExam ? 'exam' : 'task';
 
     let pacingStatus = 'Normal';
     let pacingBadgeHtml = '';
@@ -447,7 +447,7 @@ export async function renderTests(area) {
     const securityFlags = testCheatLogs.length;
 
     const progName = (classMap[r.program_id] || {}).name || (allClasses.find(c => c.id === r.program_id) || {}).name || 'Curriculum';
-    const classBoardName = (boardClassMap[r.class_id] || {}).name || 'Class Board';
+    const classBoardName = (boardClassMap[r.class_id] || {}).name || 'Class';
     const qCount = r.total_questions || r.payload?.total_questions || (r.test_type === 'exam' ? 120 : 40);
     const prereqId = r.prerequisite_test_id || r.prerequisite_id;
     const prereqItem = prereqId ? TestMap[prereqId] : null;
@@ -619,18 +619,17 @@ export async function renderTests(area) {
   drawerEl.id = 'tac-pacing-drawer';
   drawerEl.className = 'tac-slide-drawer';
   drawerEl.innerHTML = `
-    <div class="tac-drawer-head">
-      <div>
-        <div class="tac-drawer-title">${getSvgIcon('clock', 14)} Test-by-Test Completion &amp; Pacing</div>
+    <div class="tac-drawer-head" style="text-align:center;">
+      <div style="margin:0 auto; text-align:center;">
+        <div class="tac-drawer-title" style="justify-content:center;">${getSvgIcon('clock', 14)} Test-by-Test Completion &amp; Pacing</div>
         <div class="tac-drawer-subtitle">Detailed completion speed vs limits, pass rates, and timeout telemetry for all tests</div>
       </div>
-      <button class="tac-drawer-close" onclick="window._closeTestPacingDrawer()" title="Close Drawer">&times;</button>
     </div>
     <div class="tac-drawer-controls">
       <input type="text" id="tac-drawer-search" class="tac-drawer-search" placeholder="Search test title or shell code..." oninput="window._onPacingDrawerSearch(this.value)" />
       <div class="tac-drawer-filter-pills">
         <button class="tac-drawer-filter-btn active" data-filter="all" onclick="window._onPacingDrawerFilter('all')">All (${drawerRows.length})</button>
-        <button class="tac-drawer-filter-btn" data-filter="quiz" onclick="window._onPacingDrawerFilter('quiz')">Tasks (${drawerRows.filter(r => !r.isExam).length})</button>
+        <button class="tac-drawer-filter-btn" data-filter="task" onclick="window._onPacingDrawerFilter('task')">Tasks (${drawerRows.filter(r => !r.isExam).length})</button>
         <button class="tac-drawer-filter-btn" data-filter="exam" onclick="window._onPacingDrawerFilter('exam')">Exams (${drawerRows.filter(r => r.isExam).length})</button>
         <button class="tac-drawer-filter-btn" data-filter="timeout" onclick="window._onPacingDrawerFilter('timeout')">High Timeout (${drawerRows.filter(r => r.pacingStatus === 'High Timeout').length})</button>
       </div>
@@ -708,9 +707,9 @@ export async function renderTests(area) {
         </tbody>
       </table>
     </div>
-    <div class="tac-drawer-footer">
+    <div class="tac-drawer-footer" style="display:flex; justify-content:space-between; align-items:center;">
+      <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" onclick="window._closeTestPacingDrawer()">Close</button>
       <span style="font-size: 12px; color:#94a3b8;">Showing <strong style="color:#f8fafc;" id="tac-drawer-count">${drawerRows.length}</strong> of ${drawerRows.length} tests</span>
-      <button class="btn btn-secondary btn-sm" onclick="window._closeTestPacingDrawer()">Close</button>
     </div>
   `;
 
@@ -1428,7 +1427,7 @@ export async function renderTests(area) {
       const text = row.dataset.searchText || '';
 
       let matchFilter = true;
-      if (f === 'quiz') matchFilter = (type === 'quiz');
+      if (f === 'task' || f === 'quiz') matchFilter = (type === 'task' || type === 'quiz');
       else if (f === 'exam') matchFilter = (type === 'exam');
       else if (f === 'timeout') matchFilter = (status === 'high timeout');
 
@@ -1694,7 +1693,7 @@ export async function renderResults(area) {
         </div>
       `;
       const footer = `
-        <button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>
+        <button class="btn btn-secondary btn-modal-close-left" onclick="closeRecordDrawer()">Close</button>
         <button class="btn btn-primary" onclick="window.openStudentProfile('${row.studentId}'); closeRecordDrawer();">View Profile</button>
       `;
       if (window.openRecordDrawer) window.openRecordDrawer('Attempt Details', body, footer);
@@ -1705,7 +1704,7 @@ export async function renderResults(area) {
       { key: 'className', label: 'CLASS', sortable: true, render: (val) => `<div class="text-xs text-muted">${escapeHtml(val)}</div>` },
       { key: 'studentName', label: 'STUDENT NAME', sortable: true, render: (val) => `<div class="fw-700" style="color:var(--clr-text-1);">${escapeHtml(val)}</div>` },
       { key: 'TestTitle', label: 'TEST', sortable: true, render: (val) => `<div class="fw-600">${escapeHtml(val)}</div>` },
-      { key: 'score', label: 'SCORE', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
+      { key: 'score', label: 'RATE', shortLabel: 'RATE', microLabel: 'RATE', sortable: true, render: (val) => `<div class="text-center fw-800">${val}%</div>` },
       { key: 'grade', label: 'GRADE', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge badge-primary fw-800" style="background:${getGradeColorByScore(parseFloat(row?.score))}22;color:${getGradeColorByScore(parseFloat(row?.score))};border:1px solid ${getGradeColorByScore(parseFloat(row?.score))};">${escapeHtml((val === '★' || val === 'S' || parseFloat(row?.score) >= 100) ? '★' : val)}</span></div>` },
       { key: 'correct', label: 'CORRECT', sortable: true, render: (val, row) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-success' : 'badge-neutral'}">${val}</span></div>` },
       { key: 'minor', label: 'HALF', sortable: true, render: (val) => `<div class="text-center"><span class="badge ${val > 0 ? 'badge-warning' : 'badge-neutral'}">${val}</span></div>` },
@@ -1718,7 +1717,7 @@ export async function renderResults(area) {
 
 /**
  * Open Session Modal - Tutor Live Control (AGENTS.md §2 - Test Timing)
- * Unlocks a published QUIZ or EXAM test for students with a timed window.
+ * Unlocks a published TASK or EXAM test for students with a timed window.
  * Sets session_unlocked_at and session_expires_at on the Tests record.
  */
 async function openSessionModal() {
@@ -1727,7 +1726,7 @@ async function openSessionModal() {
   const { data: tests, error } = await sb
     .from('tests')
     .select('id, title, test_type, classes(name)')
-    .in('test_type', ['QUIZ', 'EXAM'])
+    .in('test_type', ['TASK', 'EXAM', 'task', 'exam', 'quiz', 'QUIZ'])
     .eq('status', 'published')
     .order('title', { ascending: true });
   if (error) { window.showToast('Failed to load tests: ' + error.message, 'error'); return; }
@@ -1808,9 +1807,8 @@ window.openTestGatewayModal = async () => {
   modal.className = 'modal-backdrop';
   modal.innerHTML = `
     <div class="modal-content" style="max-width:640px;">
-      <div class="modal-header d-flex justify-between align-center p-3">
-        <h3 class="fw-700 m-0 text-gradient" style="font-size: 16px;">Create New Test</h3>
-        <button class="btn btn-ghost btn-sm" id="close-gateway-modal">&#10005;</button>
+      <div class="modal-header d-flex justify-center align-center p-3 text-center">
+        <h3 class="fw-700 m-0 text-gradient" style="font-size: 16px; margin:0 auto; text-align:center;">Create New Test</h3>
       </div>
       <div class="modal-body p-4">
         <p class="text-muted text-sm mb-4">Select the syllabus hierarchy for this test: <strong>Institution &rarr; Program &rarr; Class &rarr; Level</strong>. The system will launch the corresponding module builder.</p>
@@ -1841,8 +1839,8 @@ window.openTestGatewayModal = async () => {
           </div>
         </div>
 
-        <div class="d-flex justify-end gap-2 mt-4">
-          <button class="btn btn-secondary" id="cancel-gateway-modal">Cancel</button>
+        <div class="d-flex justify-between align-center gap-2 mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+          <button class="btn btn-secondary btn-modal-close-left" id="cancel-gateway-modal">Cancel</button>
           <button class="btn btn-primary" id="btn-gateway-next">Next &rarr;</button>
         </div>
       </div>
@@ -2378,20 +2376,18 @@ window._openTestAnalyticsCardModal = function(cardKey) {
           <h3 class="fw-700" style="margin:0; font-size: 16px; color:#f8fafc;">${title}</h3>
           ${badgeText ? `<span class="tac-badge badge-info-soft mt-1 d-inline-block">${badgeText}</span>` : ''}
         </div>
-        <button class="btn btn-ghost btn-sm" id="tac-modal-close-btn" style="font-size: 16px; line-height:1; color:#94a3b8;">&#10005;</button>
       </div>
       <div style="overflow-y:auto; flex-grow:1; padding-right:4px;">
         ${bodyHtml}
       </div>
-      <div class="d-flex justify-end mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.08);">
-        <button class="btn btn-secondary btn-sm" id="tac-modal-done-btn">Close</button>
+      <div class="d-flex justify-start mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.08);">
+        <button class="btn btn-secondary btn-sm btn-modal-close-left" id="tac-modal-done-btn">Close</button>
       </div>
     </div>
   `;
   document.body.appendChild(modal);
 
   const closeModal = () => modal.remove();
-  modal.querySelector('#tac-modal-close-btn').addEventListener('click', closeModal);
   modal.querySelector('#tac-modal-done-btn').addEventListener('click', closeModal);
   modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 };
@@ -2458,7 +2454,7 @@ window._openTestCardDrawer = function(testId) {
   if (!r) return;
 
   const prereqText = r?.prereq || '';
-  const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
+  const statusColors = { published: 'badge-success', draft: 'badge-neutral' };
 
   // Helper grade badge
   const getGradeBadge = (pct) => {
@@ -2541,7 +2537,7 @@ window._openTestCardDrawer = function(testId) {
     <div style="display:flex; flex-direction:column; gap:1rem;">
       <div>
         <h4 style="margin:0; font-size: 16px; color:var(--clr-text-1);">${esc(r?.title || 'Untitled Test')}</h4>
-        <div class="text-muted text-sm mt-1">Status: <strong class="${statusColors[String(r?.status || '').toLowerCase()] || 'text-muted'}" style="text-transform:uppercase;">${r?.status || 'published'}</strong></div>
+        <div class="text-muted text-sm mt-1">Status: <strong class="${String(r?.status || '').toLowerCase() === 'published' ? 'badge-success' : 'badge-neutral'}" style="text-transform:uppercase;">${String(r?.status || '').toLowerCase() === 'published' ? 'PUBLISHED' : 'DRAFT'}</strong></div>
       </div>
       <hr style="border-color:var(--fm-border-subtle); margin:0;">
       
@@ -2594,7 +2590,7 @@ window._openTestCardDrawer = function(testId) {
       <div>
         <div class="text-xs fw-700 text-muted uppercase mb-1">Configuration Specs</div>
         <div class="text-sm">Program: <strong>${esc(r?.programName || 'Unknown')}</strong></div>
-        <div class="text-sm">Class Board: <strong>${esc(r?.classBoard || 'Unknown')}</strong></div>
+        <div class="text-sm">Class: <strong>${esc(r?.classBoard || 'Unknown')}</strong></div>
         <div class="text-sm">Structure: <strong>${esc(r?.TestCategory || 'Task')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</strong></div>
         <div class="text-sm">Time Limit: <strong>${r?.timeLimit || 60} min</strong> &bull; Pass Mark: <strong>${r?.minScore || 60}%</strong></div>
         ${prereqText ? `<div class="text-sm text-warning mt-1">Prerequisite: <strong>${esc(prereqText)}</strong></div>` : ''}
@@ -2607,6 +2603,6 @@ window._openTestCardDrawer = function(testId) {
       </div>
     </div>
   `;
-  const footer = `<button class="btn btn-secondary" onclick="closeRecordDrawer()">Close</button>`;
+  const footer = `<button class="btn btn-secondary btn-modal-close-left" onclick="closeRecordDrawer()">Close</button>`;
   if (window.openRecordDrawer) window.openRecordDrawer('Test Blueprint & Telemetry', body, footer);
 };

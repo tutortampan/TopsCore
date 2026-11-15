@@ -295,59 +295,117 @@ a:hover {
 }
 
 /* ============================================================
-   BUTTONS
+   BUTTONS (UNIVERSAL GLOW & GOLDEN RULES INTERACTION SSOT)
    ============================================================ */
-.btn {
+button,
+.btn,
+[role="button"] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  padding: 0.6rem 1.25rem;
+  padding: 0.5rem 1rem;
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-weight: 600;
   font-size: 12px;
   border: none;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
   line-height: 1.2;
   white-space: nowrap;
   text-decoration: none;
   position: relative;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
-.btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+/* Universal Button Glow & Active Interaction */
+button:hover:not([disabled]):not(:disabled),
+.btn:hover:not([disabled]):not(:disabled),
+[role="button"]:hover:not([disabled]):not(:disabled) {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-1px) !important;
 }
 
-.btn:active {
-  transform: translateY(0px);
+button:active:not([disabled]):not(:disabled),
+.btn:active:not([disabled]):not(:disabled),
+[role="button"]:active:not([disabled]):not(:disabled) {
+  filter: brightness(1.2) !important;
+  transform: scale(0.985) translateY(0px) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.45) !important;
 }
 
-/* Primary button */
-.btn-primary {
+/* Primary button (Tactical Blue / Cyan) */
+.btn-primary,
+.btn-tactical {
   background: var(--grad-primary);
   color: white;
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
-.btn-primary:hover {
-  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.55);
-  transform: translateY(-1px);
+.btn-primary:hover:not([disabled]):not(:disabled),
+.btn-tactical:hover:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.55), 0 0 24px rgba(99, 102, 241, 0.45) !important;
 }
 
-/* Secondary button */
+.btn-primary:active:not([disabled]):not(:disabled),
+.btn-tactical:active:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 18px rgba(56, 189, 248, 0.75), 0 0 30px rgba(99, 102, 241, 0.6) !important;
+}
+
+/* Words button (Electric Lime: Grade B / Theme C) */
+.btn-words,
+.btn-lime {
+  background: #3f6212 !important;
+  border: 1px solid var(--grade-b, #95ff00) !important;
+  color: #ffffff !important;
+}
+
+.btn-words:hover:not([disabled]):not(:disabled),
+.btn-lime:hover:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 14px rgba(149, 255, 0, 0.55) !important;
+}
+
+.btn-words:active:not([disabled]):not(:disabled),
+.btn-lime:active:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 18px rgba(149, 255, 0, 0.8) !important;
+}
+
+/* Phrases button (Dark Orange: Grade D / Theme B) */
+.btn-phrases,
+.btn-orange {
+  background: #7c2d12 !important;
+  border: 1px solid var(--grade-d, #ff8c00) !important;
+  color: #ffffff !important;
+}
+
+.btn-phrases:hover:not([disabled]):not(:disabled),
+.btn-orange:hover:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 14px rgba(255, 140, 0, 0.55) !important;
+}
+
+.btn-phrases:active:not([disabled]):not(:disabled),
+.btn-orange:active:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 18px rgba(255, 140, 0, 0.8) !important;
+}
+
+/* Secondary button (Neutral Slate / Subtle Outline) */
 .btn-secondary {
   background: var(--clr-surface);
   color: var(--clr-text-1);
   border: 1px solid var(--clr-border-strong);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not([disabled]):not(:disabled) {
   background: var(--clr-surface-hover);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 0 12px rgba(148, 163, 184, 0.4) !important;
+}
+
+.btn-secondary:active:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 16px rgba(148, 163, 184, 0.6) !important;
 }
 
 /* Danger button */
@@ -357,9 +415,13 @@ a:hover {
   border: 1px solid rgba(var(--grade-e-rgb), 0.3);
 }
 
-.btn-danger:hover {
+.btn-danger:hover:not([disabled]):not(:disabled) {
   background: rgba(var(--grade-e-rgb), 0.25);
-  box-shadow: 0 4px 20px rgba(var(--grade-e-rgb), 0.25);
+  box-shadow: 0 0 14px rgba(var(--grade-e-rgb), 0.5) !important;
+}
+
+.btn-danger:active:not([disabled]):not(:disabled) {
+  box-shadow: 0 0 18px rgba(var(--grade-e-rgb), 0.75) !important;
 }
 
 /* Success button */
@@ -418,6 +480,115 @@ a:hover {
   opacity: 0.4;
   cursor: not-allowed;
   pointer-events: none;
+}
+
+/* ============================================================
+   UNIVERSAL FLOATING WINDOW CLOSE POLICY & BUTTON GOLDEN RULES (SSOT)
+   ============================================================ */
+
+/* 1. Universal Eradication of Top-Right 'X' Close Buttons */
+.modal-header .btn-close,
+.modal-header .close-btn,
+.modal-header button[aria-label="Close"],
+.title-area .btn-close,
+.title-area button[aria-label="Close"],
+.classes-selector-close-btn,
+.component-selector-close-btn,
+.profile-close-btn,
+.matrix-close-btn,
+.answers-modal-close-btn,
+#close-classes-selector-modal,
+#close-component-modal,
+#close-profile-modal,
+#close-matrix-btn,
+#close-answers-modal-btn,
+#btn-close-prog-details,
+#btn-close-profile-modal,
+#btn-close-dossier-modal,
+#btn-close-promo-req,
+#dup-modal-close,
+#dup-topic-modal-close,
+#bfe-close,
+#close-gateway-modal,
+#close-import-modal,
+#close-builder-modal,
+#tb-close,
+#rl-close,
+.datagrid-drawer-close-btn,
+.tac-drawer-close {
+  display: none !important;
+}
+
+/* 2. Modal & Drawer CTA Area Height & Golden Rules */
+.modal-footer,
+.modal-actions,
+.cta-area,
+.profile-modal-footer,
+.classes-selector-modal-footer,
+.component-selector-modal-footer,
+.change-pin-modal-footer,
+.answers-modal-footer,
+.matrix-footer,
+.datagrid-drawer-footer,
+.tac-drawer-footer {
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
+  box-sizing: border-box !important;
+  padding: 10px 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  flex-shrink: 0 !important;
+}
+
+/* 3. Button Golden Rules: CTA (Max 40px) & In-Panel (Max 30px) */
+.modal-footer .btn,
+.modal-actions .btn,
+.cta-area .btn,
+.btn-cta,
+.classes-selector-btn-confirm,
+.component-selector-btn-confirm,
+.profile-modal-footer .btn,
+.change-pin-modal-footer .btn {
+  height: 36px !important;
+  max-height: 40px !important;
+  line-height: 34px !important;
+  padding: 0 16px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  border-radius: 6px !important;
+  text-transform: uppercase !important;
+}
+
+.workspace-lower-panel .btn,
+.sub-panel .btn,
+.toolbar .btn,
+.btn-in-panel,
+.btn-sm {
+  height: 30px !important;
+  max-height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 12px !important;
+  border-radius: 4px !important;
+}
+
+/* 4. Bottom-Left Modal Close Button Invariant */
+.btn-modal-close-left,
+.modal-footer .btn-secondary:first-child,
+.profile-modal-footer .btn-secondary:first-child,
+.classes-selector-modal-footer .btn-secondary:first-child,
+.component-selector-modal-footer .btn-secondary:first-child,
+.change-pin-modal-footer .btn-secondary:first-child,
+.answers-modal-footer .btn-secondary:first-child,
+.matrix-footer .btn-secondary:first-child {
+  margin-right: auto !important;
+  flex: none !important;
+  width: auto !important;
 }
 
 /* ============================================================
@@ -615,62 +786,73 @@ select.form-control {
 }
 
 /* ============================================================
-   TOAST NOTIFICATIONS
+   TOAST NOTIFICATIONS (CENTERED IN BOTTOM BANNER)
    ============================================================ */
 #toast-container {
-  position: fixed;
-  top: var(--space-6);
-  right: var(--space-6);
-  z-index: 99999 !important;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  pointer-events: none;
-  max-width: 420px;
+  position: fixed !important;
+  bottom: 11px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  top: auto !important;
+  right: auto !important;
+  z-index: 100000 !important;
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  pointer-events: none !important;
+  max-width: min(760px, calc(100vw - 420px)) !important;
+  width: auto !important;
 }
 
 .toast {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
-  border-radius: var(--radius-md);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--space-3, 8px) !important;
+  padding: 0 16px !important;
+  border-radius: 8px !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  max-height: 38px !important;
   background: #0f172a !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7) !important;
-  min-width: 280px;
-  max-width: 420px;
-  pointer-events: auto;
-  animation: toast-in 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  font-size: 12px;
-  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.15) !important;
+  pointer-events: auto !important;
+  animation: toast-banner-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  border-left: 3px solid rgba(255, 255, 255, 0.2) !important;
 }
 
 .toast.hiding {
-  animation: toast-out 0.25s ease-in forwards;
+  animation: toast-banner-out 0.2s ease-in forwards !important;
 }
 
-@keyframes toast-in {
+@keyframes toast-banner-in {
   from {
-    transform: translateX(120%);
     opacity: 0;
+    transform: translateY(12px) scale(0.96);
   }
-
   to {
-    transform: translateX(0);
     opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-@keyframes toast-out {
+@keyframes toast-banner-out {
   from {
-    transform: translateX(0);
     opacity: 1;
+    transform: translateY(0) scale(1);
   }
-
   to {
-    transform: translateX(120%);
     opacity: 0;
+    transform: translateY(12px) scale(0.96);
   }
 }
 
@@ -1564,13 +1746,21 @@ tbody tr:last-child td {
   }
 
   #toast-container {
-    right: var(--space-4);
-    left: var(--space-4);
+    bottom: 11px !important;
+    left: 16px !important;
+    right: 16px !important;
+    transform: none !important;
+    max-width: calc(100vw - 32px) !important;
+    width: auto !important;
   }
 
   .toast {
-    min-width: unset;
-    max-width: 100%;
+    min-width: unset !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    height: auto !important;
+    min-height: 38px !important;
+    padding: 6px 12px !important;
   }
 }
 

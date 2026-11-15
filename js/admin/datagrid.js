@@ -50,8 +50,11 @@ export function calculateColumnAutoWidth(th, cells = [], footerCells = []) {
  */
 export const HEADER_ABBREVIATIONS = {
   'LEVEL': { full: 'LEVEL', medium: 'LEVEL', short: 'LVL' },
-  'PHOTO': { full: 'PHOTO', medium: 'PHOTO', short: 'PHT' },
-  'GENDER': { full: 'GENDER', medium: 'GNDER', short: 'GND' },
+  'PHOTO': { full: 'PHOTO', medium: 'PHOTO', short: 'PIC' },
+  'PICTURE': { full: 'PICTURE', medium: 'PHOTO', short: 'PIC' },
+  'PIC': { full: 'PHOTO', medium: 'PHOTO', short: 'PIC' },
+  'GENDER': { full: 'GENDER', medium: 'SEX', short: 'SEX' },
+  'SEX': { full: 'GENDER', medium: 'SEX', short: 'SEX' },
   'NAME': { full: 'NAME', medium: 'NAME', short: 'NM' },
   'STUDENT NAME': { full: 'STUDENT NAME', medium: 'STUDT', short: 'STD' },
   'DATE OF BIRTH': { full: 'DOB', medium: 'DOB', short: 'DOB' },
@@ -69,11 +72,14 @@ export const HEADER_ABBREVIATIONS = {
   'VILLAGE': { full: 'VILLAGE', medium: 'VILLG', short: 'VLG' },
   'CITY / DISTRICT': { full: 'REGENCY', medium: 'REGEN', short: 'RGC' },
   'PROVINCE': { full: 'PROVINCE', medium: 'PROVN', short: 'PRV' },
-  'STATUS': { full: 'STATUS', medium: 'STATS', short: 'STS' },
+  'STATUS': { full: 'STATUS', medium: 'STATUS', short: 'STATUS' },
+  'PASSED': { full: 'PASSED', medium: 'PASSD', short: 'PAS' },
+  'PASS': { full: 'PASSED', medium: 'PASSD', short: 'PAS' },
   'ACTION': { full: 'ACTION', medium: 'ACTON', short: 'ACT' },
   'ACTIONS': { full: 'ACTIONS', medium: 'ACTON', short: 'ACT' },
   'PROGRESS': { full: 'PROGRESS', medium: 'PRGRS', short: 'PGS' },
-  'SCORE': { full: 'SCORE', medium: 'SCORE', short: 'SCR' },
+  'RATE': { full: 'RATE', medium: 'RATE', short: 'RATE' },
+  'SCORE': { full: 'RATE', medium: 'RATE', short: 'RATE' },
   'POINTS': { full: 'POINTS', medium: 'POINT', short: 'PTS' },
   'GRADE': { full: 'GRADE', medium: 'GRADE', short: 'GRD' },
   'BATCH': { full: 'BATCH', medium: 'BATCH', short: 'BTC' },
@@ -105,6 +111,10 @@ export function resolveHeaderLabel(label, widthPx, shortOverride = null, microOv
     cleanLabel = cleanLabel.replace(/<[^>]*>/g, '').trim();
   }
   const key = cleanLabel.toUpperCase();
+  // USER DIRECTIVE: Header dengan judul STATUS jangan pernah disingkat jadi 5 (STATS) atau 3 (STT/STS) untuk mencegah kerancuan
+  if (key === 'STATUS') {
+    return 'STATUS';
+  }
   const rule = HEADER_ABBREVIATIONS[key];
 
   if (widthPx != null && widthPx < 55) {
@@ -364,6 +374,13 @@ export class DataGrid {
         }
       });
 
+      // Also register any columns explicitly configured with super-hdr-divider
+      visibleCols.forEach(col => {
+        if (col.className && col.className.includes('super-hdr-divider') && col.key) {
+          this.dividerColKeys.add(col.key);
+        }
+      });
+
       this.thead.classList.add('has-super-headers');
       superHtml = '<tr class="datagrid-super-header-row">';
       if (this.bulkActions) {
@@ -376,7 +393,8 @@ export class DataGrid {
             spannedKeys.add(col.key);
             const visibleIdx = visibleCols.indexOf(col);
             const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
-            const stickyStyle = isStickyRight ? 'position:sticky; top:0; right:0; z-index:25; background:var(--fm-bg-panel,#0f172a);' : '';
+            const borderLeftStyle = (isStickyRight || visibleIdx > 0) ? 'border-left:2px solid rgba(255,255,255,0.22) !important;' : '';
+            const stickyStyle = isStickyRight ? 'position:sticky; top:0; right:0; z-index:26; background:var(--fm-bg-panel,#0f172a);' : 'position:sticky; top:0; z-index:25; background:var(--fm-bg-panel,#0f172a);';
             const widthVal = col.width || col.minWidth || '';
             const widthNum = parseInt(widthVal, 10) || null;
             const displayLabel = resolveHeaderLabel(col.label, widthNum, col.shortLabel, col.microLabel);
@@ -393,7 +411,7 @@ export class DataGrid {
                   data-key="${col.key || ''}"
                   data-idx="${this.columns.indexOf(col)}"
                   draggable="true"${titleAttr}
-                  style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} height:60px !important; line-height:60px !important; vertical-align:middle !important; font-size:12px !important; font-weight:700 !important; text-align:center !important; ${sh.style || ''}">
+                  style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${borderLeftStyle} height:60px !important; line-height:60px !important; vertical-align:middle !important; font-size:12px !important; font-weight:700 !important; text-align:center !important; border-bottom:2px solid rgba(255,255,255,0.28) !important; ${sh.style || ''}">
                 <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
                   <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
                   ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 10px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
@@ -406,7 +424,7 @@ export class DataGrid {
         const colSpanAttr = sh.colSpan ? ` colspan="${sh.colSpan}"` : '';
         const baseCls = sh.className ? (sh.className.includes('super-hdr') ? sh.className : `super-hdr ${sh.className}`) : 'super-hdr';
         const cls = ` class="${baseCls}"`;
-        const st = sh.style ? ` style="${sh.style}"` : '';
+        const st = sh.style ? ` style="position:sticky; top:0; z-index:20; background:var(--fm-bg-panel,#0f172a); ${sh.style}"` : ' style="position:sticky; top:0; z-index:20; background:var(--fm-bg-panel,#0f172a);"';
         superHtml += `<th${colSpanAttr}${cls}${st}>${sh.label}</th>`;
       });
       superHtml += '</tr>';
@@ -424,7 +442,11 @@ export class DataGrid {
 
       const topOffset = hasSuperHdr ? 'top:30px;' : 'top:0;';
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
-      const stickyStyle = isStickyRight ? `position:sticky; ${topOffset} right:0; z-index:15; background:var(--fm-bg-panel,#0f172a);` : '';
+      const stickyStyle = isStickyRight
+        ? `position:sticky; ${topOffset} right:0; z-index:21; background:var(--fm-bg-panel,#0f172a); border-bottom:2px solid rgba(255,255,255,0.28) !important;`
+        : (hasSuperHdr
+          ? `position:sticky; top:30px; z-index:19; background:var(--fm-bg-panel,#0f172a); border-bottom:2px solid rgba(255,255,255,0.28) !important;`
+          : `position:sticky; top:0; z-index:19; background:var(--fm-bg-panel,#0f172a); border-bottom:2px solid rgba(255,255,255,0.28) !important;`);
       const widthVal = col.width || col.minWidth || '';
       const widthNum = parseInt(widthVal, 10) || null;
       const displayLabel = resolveHeaderLabel(col.label, widthNum, col.shortLabel, col.microLabel);
@@ -913,6 +935,7 @@ export class DataGrid {
           td.style.right = '0';
           td.style.background = 'var(--clr-bg-1)';
           td.style.zIndex = '5';
+          td.style.borderLeft = '2px solid rgba(255, 255, 255, 0.22)';
         }
 
         const getNestedVal = (obj, key) => {
@@ -971,6 +994,7 @@ export class DataGrid {
     }
 
     if (this.summaryRow && this.tfoot) {
+      this.tfoot.style.display = '';
       if (typeof this.summaryRow === 'function') {
         this.tfoot.innerHTML = this.summaryRow(visibleCols, this.filteredData, pageData);
       } else if (typeof this.summaryRow === 'string') {
@@ -986,8 +1010,22 @@ export class DataGrid {
           });
         });
       }
+      if (this.stickyActionCol) {
+        const footRows = this.tfoot.querySelectorAll('tr');
+        footRows.forEach(tr => {
+          const lastCell = tr.cells[visibleCols.length - 1];
+          if (lastCell) {
+            lastCell.style.position = 'sticky';
+            lastCell.style.right = '0';
+            lastCell.style.background = '#0f172a';
+            lastCell.style.zIndex = '5';
+            lastCell.style.borderLeft = '2px solid rgba(255, 255, 255, 0.22)';
+          }
+        });
+      }
     } else if (this.tfoot) {
       this.tfoot.innerHTML = '';
+      this.tfoot.style.display = 'none';
     }
 
     this.renderPagination(totalPages);

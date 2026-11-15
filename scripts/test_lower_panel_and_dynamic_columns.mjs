@@ -62,22 +62,20 @@ console.log('  ✔ .justify-center utility class defined');
 console.log('\n--- 2. Testing Student Management Datagrid & Footer (student-management.js) ---');
 const studentMgmtJs = fs.readFileSync('js/admin/student-management.js', 'utf8');
 
-// 2.1 Verify "Avg: ... pts" removed from Actions column in summary row
-const actionsSummaryCellMatch = studentMgmtJs.match(/col\.label === 'Actions'\) \{([\s\S]*?)\}/);
-assert.ok(actionsSummaryCellMatch, 'student-management.js must contain col.label === "Actions" block in summary row');
+// 2.1 Verify Student Roster has NO footer/summary row (User directive: "di student rooster, ini tidak perlu ada footer")
 assert.ok(
-  !actionsSummaryCellMatch[1].includes('Avg:') && !actionsSummaryCellMatch[1].includes('pts'),
-  'Actions column in summary row must not contain "Avg: ... pts"'
+  !studentMgmtJs.includes('summaryRow:'),
+  'student-management.js must not contain summaryRow (footer row purged per user directive)'
 );
-console.log('  ✔ "Avg: ... pts" successfully removed from student table footer Actions column');
+console.log('  ✔ Student Roster table footer explicitly removed per user directive');
 
-// 2.2 Summary row height set to 40px (standardized per user directive)
+// 2.2 Verify Student Grade (app.js class matrix) preserves summary row
+const appCode = fs.readFileSync('js/admin/app.js', 'utf8');
 assert.ok(
-  studentMgmtJs.includes('class="datagrid-summary-row"') &&
-  (studentMgmtJs.includes('height:40px;') || studentMgmtJs.includes('height:50px;')),
-  'Summary row must specify 40px height inline or class'
+  appCode.includes('class="datagrid-summary-row"'),
+  'app.js must preserve summaryRow for Student Grade / attendance matrix'
 );
-console.log('  ✔ Student summary row explicitly set to 40px height');
+console.log('  ✔ Student Grade table footer preserved exclusively');
 
 // 2.3 Name column dynamic expansion
 const nameColMatch = studentMgmtJs.match(/key:\s*'sortName'[\s\S]*?render:/);

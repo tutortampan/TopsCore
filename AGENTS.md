@@ -29,11 +29,11 @@ When sources conflict:
 **Never infer a new business rule merely because it is technically convenient.**
 
 ## 0.1 Command & Execution Constraints
-- **PowerShell Authority**: The user grants standing, unconditional permission to execute `powershell` commands proactively for diagnostics, verification, health checks, database queries, and test scripts across the workspace without requesting confirmation each time.
-- **Git Commit & Push Gate (STRICT)**: NEVER execute `git commit` or `git push` autonomously. All commits and pushes are strictly gated until the user explicitly commands it ("no commit until I say so!"). All changes must remain uncommitted in the working tree for user review.
-- **Strict UTF-8 & No PowerShell File Manipulation**: All file operations MUST use native tools (`edit_file`, `write_file`, `read_file`) or Node.js (`fs.*FileSync(..., 'utf8')`). PowerShell cmdlets (`Set-Content`, `Get-Content`, `Add-Content`, `-replace`) are permanently forbidden for file modifications.
-- **Windows CLI Standard**: Always invoke `npm.cmd run <script>` or direct `node scripts/<script>` (never bare `npm` due to `npm.ps1`). Set `WaitMsBeforeAsync: 8000–10000` to guarantee immediate synchronous completion without polling.
-- **Minimal Supabase Footprint**: Always propose and implement solutions that consume the LEAST Supabase data (minimal egress, zero uncompressed storage, select scalar columns only, in-memory reference caching). Full operational protocols in [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md).
+- **PowerShell Authority**: Standing permission to execute `powershell` for diagnostics, queries, and tests without confirmation.
+- **Git Commit & Push Gate (STRICT)**: NEVER execute `git commit` or `git push` autonomously ("no commit until I say so!"). All changes remain uncommitted for user review.
+- **Strict UTF-8 & No PowerShell File Manipulation**: All file operations MUST use native tools (`edit_file`, `write_file`) or Node.js (`fs.*FileSync`). PowerShell cmdlets (`Set-Content`, `Get-Content`, `-replace`) are forbidden.
+- **Windows CLI Standard**: Always invoke `npm.cmd run <script>` or direct `node scripts/<script>` with `WaitMsBeforeAsync: 8000–10000`.
+- **Minimal Supabase Footprint**: Zero uncompressed storage, select scalar columns, in-memory reference caching.
 
 ---
 
@@ -122,10 +122,10 @@ Centralized authoritative grading (Official Grading Scale):
 | E | Fail | 0% – 29% | Pure Red | `#FF0000` |
 
 ### Unified Color Rules:
-- **SSOT One-Touch Global Propagation ("Rubah Satu Maka Rubah Semua")**:
-  - **Merah Ikut Grade E**: Seluruh elemen merah (error, delete, aksi bahaya, `*` wajib, alert kritis) WAJIB merujuk ke Grade E (`--grade-e`, `var(--grade-e)`, `TOPSCORE_COLORS.E`, `.text-fail`).
-  - **Kuning Ikut Grade C**: Seluruh elemen kuning (warning, latency alert, draft/pending) WAJIB merujuk ke Grade C (`--grade-c`, `var(--grade-c)`, `TOPSCORE_COLORS.C`, `.text-warning`).
-  - **Hijau Ikut Grade A**: Seluruh elemen hijau (sukses, kelulusan, online, published) WAJIB merujuk ke Grade A (`--grade-a`, `var(--grade-a)`, `TOPSCORE_COLORS.A`, `.text-success`).
+- **SSOT One-Touch Global Propagation Protocol ("Rubah Satu Maka Rubah Semua")**:
+  - **Semua Merah Ikut Grade E**: Seluruh elemen merah (error, delete, aksi bahaya, `*` wajib, alert kritis) WAJIB merujuk ke Grade E (`--grade-e`, `var(--grade-e)`, `TOPSCORE_COLORS.E`, `.text-fail`).
+  - **Semua Kuning Ikut Grade C**: Seluruh elemen kuning (warning, latency alert, draft/pending) WAJIB merujuk ke Grade C (`--grade-c`, `var(--grade-c)`, `TOPSCORE_COLORS.C`, `.text-warning`).
+  - **Semua Hijau Ikut Grade A**: Seluruh elemen hijau (sukses, kelulusan, online, published) WAJIB merujuk ke Grade A (`--grade-a`, `var(--grade-a)`, `TOPSCORE_COLORS.A`, `.text-success`).
   - **Strict No-Hardcoding**: DILARANG mengetik hex mentah (`#ff0000`, `#ffff00`, `#00c000`) lepas. Semua styling wajib memanggil variabel CSS atau `TOPSCORE_COLORS`.
   - **System Chrome Canvas**: Elemen non-semantik (kanvas `#090D16`, sidebar `#0F172A`, border `rgba(255,255,255,0.08)`, metadata slate `#94A3B8`, tactical blue `#38BDF8`, indigo `#6366F1`) menggunakan token palet sistem.
 - **Star (★) Independence & Exclusivity**: Nilai 100% (★ / Excellent) menggunakan token mandiri `--grade-star: #ff2d87` / `TOPSCORE_COLORS.STAR: '#ff2d87'`.
@@ -135,7 +135,15 @@ Centralized authoritative grading (Official Grading Scale):
 - **Universal Percentage Metrics**:
   - **Positive Metrics (Score, Progress, Pass, Readiness, Accuracy, Attendance, Pacing %)**: Dinamis mengikuti `getGradeColorByScore(percentage)`.
   - **Negative Metrics (Error, Mistake, Fail, Timeout, Retake Rate %)**: Warnanya WAJIB DIBALIK (*Inverted Scale*) via `getInvertedGradeColor(percentage)`.
-- **Remedial Rules**: Capped at 60%. Letter "R" appears ONLY beside Score percentage on result and grade pages.
+- **Special Grades & Action Tokens**:
+  - **Grade R (Remedial)**: Pure Yellow / Kuning (`#FFFF00` / `var(--grade-c)`), skor hasil perbaikan capped maksimal 60%.
+  - **Grade F (Forgiven / Waiver)**: Pure Red / Merah (`#FF0000` / `var(--grade-e)`), dispensasi kelulusan untuk membuka progression.
+  - **Grade M (Manual Score)**: Tactical Cyan (`#38bdf8`), skor hasil input atau override manual oleh Admin.
+  - **Grade X (Alumni Graduation)**: Vibrant Purple / Ungu (`#8b5cf6` / `#C084FC`), penanda kelulusan batch/siswa ke status alumni.
+- **Proteksi Kolom Nilai (Score Column Lockdown Invariant)**:
+  - Kolom nilai (PROGRESS, RATE, POINT, GRADE) terkunci dari Master Edit Mode inline text inputs.
+  - Kolom nilai HANYA dapat diakses dan dimutasi melalui 3 tombol aksi resmi di Sub Panel Student Test and Grade: **Manual (Cyan)**, **Remedi (Kuning)**, dan **Forgive (Merah)**.
+- **Remedial Rules**: Capped at 60%. Letter "R" appears beside Score percentage on result and grade pages.
 
 ### 2.10.1 Standar Warna 4-Pillar (ABCD System & ABCD Tema)
 Struktur 4 tahap, 4 tema kelas, atau 4 domain navigasi menetapkan palet resmi **Pink – Orange – Lime – Ungu**:
@@ -144,6 +152,17 @@ Struktur 4 tahap, 4 tema kelas, atau 4 domain navigasi menetapkan palet resmi **
 - **C (Tahap 3 / Domain C / Theme C / Exam 3)**: **Electric Lime (`#95ff00`)** ➔ Token: `--quad-c`, `var(--grade-b)`, `TOPSCORE_COLORS.B`, `TOPSCORE_QUAD_COLORS.C`.
 - **D (Tahap 4 / Domain D / Theme D / Exam 4)**: **Vibrant Purple / Violet (`#C084FC`)** ➔ Token: `--quad-d`, `TOPSCORE_QUAD_COLORS.D`.
 - **Zero Raw Hex & Aksen Lembut**: Wajib token `var(--quad-*)` / `TOPSCORE_QUAD_COLORS`. Aksen teks, border, pill latar lembut (`rgba(..., 0.15)`), bukan blok solid pekat.
+
+### 2.10.2 Standar Warna Komponen Pembelajaran (Words & Phrases SSOT)
+- **Frame Kartu, Judul, Ikon & CTA**: Menggunakan standar terpadu **Tactical Blue / Cyan (`#38bdf8` / `var(--primary-tactical)`)** untuk frame kartu, teks judul, ikon SVG, garis pembatas, dan tombol aksi footer (elegan, modern, dan bebas dari kesan tacky).
+- **Universal 7-Step Rainbow Progress Pips (Merah s/d Ungu SSOT)**: Ketujuh kotak indikator progres (pips 1–7) pada WORDS dan PHRASES mengadopsi spektrum pelangi resmi dari token sistem TopsCore yang menyala secara sekuensial:
+  1. **Pip 1 (Merah)**: `var(--grade-e)` (`#FF0000` / Grade E Fail)
+  2. **Pip 2 (Jingga)**: `var(--grade-d)` (`#FF8C00` / Grade D Less / Quad B)
+  3. **Pip 3 (Kuning)**: `var(--grade-c)` (`#FFFF00` / Grade C Enough)
+  4. **Pip 4 (Hijau)**: `var(--grade-a)` (`#00c000` / Grade A Very Good)
+  5. **Pip 5 (Biru)**: `var(--primary-tactical)` (`#38bdf8` / Tactical Blue)
+  6. **Pip 6 (Nila)**: `var(--clr-accent-1)` (`#6366f1` / Royal Indigo)
+  7. **Pip 7 (Ungu)**: `var(--quad-d)` (`#C084FC` / Quad D Violet Mastery)
 
 ## 2.11 The 8 Test Evaluation Modules
 1. Point & Speak! (Visual Pronouns), 2. Storytelling (Narrative Tense), 3. Conversation-based, 4. Multiple Choice, 5. Read Aloud / Pronunciation, 6. Turn-based Roleplay (Realtime/WebSockets), 7. Speaking Performance (5 Pillars), 8. Vocabulary Mastery.
@@ -161,7 +180,8 @@ Authoritative evaluation matrix implemented in `js/grading.js`:
 - Pronoun substitution or semantic mismatch: 0.0 pt (`incorrect`).
 
 ## 2.14 Test lifecycle
-Statuses: `DRAFT`, `PUBLISHED`, `UNPUBLISHED`, `ARCHIVED`. Only `PUBLISHED` tests can be taken.
+Statuses: Strictly `PUBLISHED` and `DRAFT`. Legacy statuses `UNPUBLISHED` and `ARCHIVED` normalize to `DRAFT`. Only `PUBLISHED` tests can be taken by students.
+Test types: Strictly `TASK` (modular learning check) and `EXAM` (formal examination). Legacy `QUIZ` is eradicated.
 
 ## 2.15 Attempts
 Statuses: `NOT_STARTED`, `IN_PROGRESS`, `SUBMITTED`, `AUTO_SUBMITTED`, `EXPIRED`, `CANCELLED`.
@@ -205,6 +225,13 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 ## 2.26 Minimal Supabase Footprint & Ultra-Lean Architecture (SSOT)
 - Minimize bandwidth/egress. Audit every call. Max 2–5 KB per polling cycle (no blobs in intervals). Client-side compute first; Supabase strictly for structured relational persistence.
 
+## 2.27 Authoritative Entity Status & Type Standards (SSOT)
+- **Student Status (`students.program_status` / `is_active`)**: Strictly **`ACTIVE`**, **`HOLD`**, **`ALUMNI`**, and **`INACTIVE`**. Legacy `graduated` and `completed` terms are eradicated and consolidated into `ALUMNI`. `HOLD` represents students paused or not advancing with their batch, serving as a dedicated roster target for batch transfers.
+- **Class Status (`classes.is_active` / `status`)**: Strictly **`ACTIVE`** and **`INACTIVE`**.
+- **Batch Status (`batches.is_active`)**: Strictly **`ACTIVE`** and **`INACTIVE`** (`completed` does not exist for batches).
+- **Test Status (`tests.status`)**: Strictly **`PUBLISHED`** and **`DRAFT`** (`unpublished` and `archived` are normalized to `DRAFT`).
+- **Test Type (`tests.test_type` / `tests.category`)**: Strictly **`TASK`** and **`EXAM`** (`quiz` is legacy and eradicated).
+
 ---
 
 # 3. TARGET ARCHITECTURE
@@ -229,7 +256,7 @@ To prevent truncation under Antigravity's 24 KB per-file limit, detailed specifi
 | **Edge Functions & Lifecycle** | [`docs/EDGE_FUNCTIONS.md`](file:///docs/EDGE_FUNCTIONS.md) | Edge Functions, attempt lifecycle, server scoring. |
 | **Excel Ingestion Schemas** | [`docs/EXCEL_FORMATS.md`](file:///docs/EXCEL_FORMATS.md) | Roster, question bank, vocabulary Excel formats. |
 | **AI Continuation System** | [`docs/CONTINUATION_SYSTEM.md`](file:///docs/CONTINUATION_SYSTEM.md) | AI handoff, continuation triggers, prompt templates. |
-| **UI, Spatial & Tables** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | 100vh lock, 10px gap, 40px Sub Panel/Title Area, zero-truncation, Excel gridlines. |
+| **UI, Spatial & Tables** | [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) | Single-screen 100vh lock, 10px gap, 40px Sub Panel, 3-level typographic scale, display: table, white Excel gridlines, and Centered loading states via canonical `getLoadingStateHtml(message)`. |
 | **Agent Workflow & CLI** | [`.agents/rules/agent-workflow.md`](file:///.agents/rules/agent-workflow.md) | Lean agile workflow, no git commit/push gate, Windows CLI standards. |
 | **Master Governance Rules** | [`.antigravityrules`](file:///.antigravityrules) | Master index and domain governance rules. |
 
@@ -249,10 +276,10 @@ Every change must be executed atomically:
 - DO NOT invent business Student IDs.
 - DO NOT create Test Version entities.
 - DO NOT hardcode colors outside `TOPSCORE_COLORS` / CSS variables.
-- DO NOT prepend "Mr." or "Miss" titles outside Student Dashboard greeting (Rule 2.23).
+- DO NOT prepend "Mr." or "Miss" titles to student names outside the Student Dashboard (strictly exclusive to Student Dashboard greeting per Rule 2.23).
 - DO NOT use "Test", "Test Student", or "test_anon" for dummy accounts; strictly use "Top" (Rule 2.24).
 - DO NOT upload large binary files or uncompressed avatars to Supabase; strictly client-side processing (Rule 2.25).
-- DO NOT upload oversized screenshots; max height ~600–800px (< 30 KB).
+- DO NOT keep or upload oversized screenshots; max height ~600–800px (< 30 KB). WAJIB terapkan protokol Rolling Single Screenshot & Auto-Purge: saat screenshot baru dibuat, screenshot lama wajib langsung dihapus dari sistem untuk mencegah penumpukan file.
 - DO NOT allow table cells, headers, or entity labels to truncate with ellipsis (`...`) when viewport space exists.
 - DO NOT render non-white or missing gridlines when Master Edit Mode is active (Universal White Excel Gridlines).
 - DO NOT use unicode emojis in data tables/headers/cards; strictly use SVG vector icons via `getClassSvgIcon()`.

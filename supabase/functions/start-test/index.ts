@@ -439,15 +439,17 @@ Deno.serve(async (req) => {
 
     const attemptCount = pastAttemptsData?.length || 0;
 
-    // Self-paced retake eligibility: student has previously passed (>= 60%) OR was forgiven by tutor (is_forgiven: true)
+    // Self-paced retake eligibility: student has previously passed (>= 60%), was forgiven by tutor (is_forgiven: true), or has remedial unlocked
+    const hasPastRemedialUnlocked = (pastAttemptsData || []).some((a: any) => Boolean(a.is_remedial_unlocked || a.is_remedial));
     const isEligibleForSelfPaced = (pastAttemptsData || []).some((a: any) => {
       const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
-      return pct >= 60 || Boolean(a.is_forgiven);
+      return pct >= 60 || Boolean(a.is_forgiven) || Boolean(a.is_remedial_unlocked || a.is_remedial);
     });
 
     // Exam retake cap: max 2 retakes = max 3 attempts total (unless authorized for remedial by tutor OR eligible for 24/7 self-paced retake)
     const isRemedialSession = test.payload?.test_session?.is_remedial === true ||
-                              (Array.isArray(test.payload?.test_session?.remedial_student_ids) && test.payload.test_session.remedial_student_ids.includes(student_id));
+                              (Array.isArray(test.payload?.test_session?.remedial_student_ids) && test.payload.test_session.remedial_student_ids.includes(student_id)) ||
+                              hasPastRemedialUnlocked;
     if (test.test_type === 'exam' && attemptCount >= 3 && !isRemedialSession && !isEligibleForSelfPaced) {
       return new Response(JSON.stringify({ error: "Maximum retake limit reached (2 retakes allowed)." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -518,7 +520,8 @@ Deno.serve(async (req) => {
         // 2. Strict Prerequisite Tasks check: Must pass ALL theme tasks 7 times >= 70% (7×7 Mastery)
         // Exempt authorized remedial attempts and students eligible for self-paced retakes
         const isStudentRemedialAuthorized = isRemedialSession ||
-          (Array.isArray(liveSession?.remedial_student_ids) && liveSession.remedial_student_ids.includes(student_id));
+          (Array.isArray(liveSession?.remedial_student_ids) && liveSession.remedial_student_ids.includes(student_id)) ||
+          hasPastRemedialUnlocked;
         const themeCode = test.payload?.theme_code;
         const isExamTest = (test.test_type || '').toLowerCase() === 'exam' ||
                            test.category === 'EXAM' ||
@@ -890,6 +893,8 @@ Deno.serve(async (req) => {
       ? new Date(effectiveEnd)
       : new Date(now.getTime() + durationMinutes * 60 * 1000);
 
+    const isRemedialAttempt = Boolean(isStudentRemedialAuthorized || hasPastRemedialUnlocked);
+
     const attemptPayload: any = {
       student_id,
       test_id,
@@ -898,7 +903,9 @@ Deno.serve(async (req) => {
       status: "in_progress",
       score: 0,
       percentage: 0,
-      total_questions: snapQuestions.length
+      total_questions: snapQuestions.length,
+      is_remedial_unlocked: isRemedialAttempt,
+      is_remedial: isRemedialAttempt
     };
 
     const { data: newAttempt, error: attemptErr } = await supabase

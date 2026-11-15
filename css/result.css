@@ -1310,7 +1310,7 @@
       min-height: 40px !important;
       max-height: 40px !important;
       border-radius: 8px !important;
-      background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
       color: #ffffff !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-weight: 700 !important;
@@ -1330,8 +1330,8 @@
       flex-shrink: 0 !important;
     }
     .btn-dashboard-primary:hover {
-      background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
-      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+      background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%) !important;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
       transform: translateY(-1px) !important;
     }
 
@@ -1580,9 +1580,9 @@
       background: rgba(255, 255, 255, 0.06) !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       color: #cbd5e1 !important;
-      width: 34px !important;
-      height: 34px !important;
-      border-radius: 50% !important;
+      width: 30px !important;
+      height: 30px !important;
+      border-radius: 6px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -2155,7 +2155,7 @@ body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-bt
   min-height: 40px !important;
   max-height: 40px !important;
   border-radius: 8px !important;
-  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%) !important;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
   color: #ffffff !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
   font-weight: 800 !important;
@@ -2167,7 +2167,7 @@ body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-bt
   justify-content: center !important;
   text-decoration: none !important;
   border: 1px solid rgba(255, 255, 255, 0.25) !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
   cursor: pointer !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -2175,8 +2175,8 @@ body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-bt
   flex-shrink: 0 !important;
 }
 .btn-dashboard-primary:hover {
-  background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%) !important;
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  background: linear-gradient(135deg, #818cf8 0%, #6366f1 100%) !important;
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
   transform: translateY(-1px) !important;
 }
 
@@ -2386,7 +2386,7 @@ body.result-page.tier-glow-active #bottom-ad-banner {
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.08em;
-    color: #2563eb !important;
+    color: var(--brand-primary, #6366f1) !important;
     margin-bottom: 4px;
   }
 

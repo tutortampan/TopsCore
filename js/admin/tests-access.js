@@ -484,9 +484,11 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <!-- Modal Footer: Status summary on left, Cancel & Unlock on right -->
         <div style="padding:14px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25); flex-shrink:0;">
-          <div id="open-modal-footer-summary" style="font-size:12px; color:#94a3b8; font-weight:600;"></div>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <button type="button" class="btn btn-ghost btn-modal-close-left" id="btn-cancel-open-modal" style="color:#94a3b8; font-size:12px; padding:8px 16px;">Cancel</button>
+            <div id="open-modal-footer-summary" style="font-size:12px; color:#94a3b8; font-weight:600;"></div>
+          </div>
           <div style="display:flex; align-items:center; gap:10px;">
-            <button type="button" class="btn btn-ghost" id="btn-cancel-open-modal" style="color:#94a3b8; font-size:12px; padding:8px 16px;">Cancel</button>
             <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:6px; font-size:12px;">
               Unlock Test Now
             </button>
@@ -504,7 +506,6 @@ export async function renderClassTestSessions(container, context = {}) {
             <h3 id="late-modal-theme-title" style="margin:2px 0 0; font-size: 16px; font-weight:800; color:#ffffff;">Theme Test Name</h3>
             <div id="late-modal-batch-name" style="font-size: 12px; color:#94a3b8; margin-top:2px;">Batch Name</div>
           </div>
-          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-late-modal" style="color:#94a3b8; font-size: 16px; padding:4px 8px;">✕</button>
         </div>
 
         <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
@@ -554,7 +555,7 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
 
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-late-modal" style="color:#94a3b8;">Cancel</button>
+          <button type="button" class="btn btn-ghost btn-modal-close-left" id="btn-cancel-late-modal" style="color:#94a3b8;">Cancel</button>
           <button type="button" class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
             Add Students to Test
           </button>
@@ -576,8 +577,6 @@ export async function renderClassTestSessions(container, context = {}) {
               Real-time Progress, Alarm &amp; Scoring
             </span>
           </div>
-
-          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-live-modal" style="position:absolute; right:16px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:16px; padding:0; width:30px; height:30px; display:flex; align-items:center; justify-content:center; border-radius:4px; flex-shrink:0;" title="Close">✕</button>
         </div>
 
         <!-- Standardized In-Window Sub-Panel & Toolbar (§1.5.3 Strict 40px Height, 30px Controls & 5px Margin) -->
@@ -634,9 +633,12 @@ export async function renderClassTestSessions(container, context = {}) {
           <div id="live-modal-students-container" style="display:none;"></div>
         </div>
 
-        <!-- Standardized 60px CTA Panel (§1.5.2 Strict 60px Height, Left Operational Panel & Right 40px Close Button) -->
+        <!-- Standardized 60px CTA Panel (§1.5.2 Strict 60px Height, Left Close CTA & Right Operational Panel) -->
         <div style="height:60px; min-height:60px; max-height:60px; padding:10px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); box-sizing:border-box; flex-shrink:0;">
-          <!-- Left Operational Controls: NORMAL/REMEDIAL -> EDIT TIME -> TIME (Neutral Idle with Glowing Hover/Active) -->
+          <!-- Left: Bottom-Left Close CTA Invariant -->
+          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-close-live-modal-footer" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:12px; font-weight:600; border-radius:4px; box-sizing:border-box; color:#cbd5e1;">Close Monitor</button>
+
+          <!-- Right Operational Controls: NORMAL/REMEDIAL -> EDIT TIME -> TIME (Neutral Idle with Glowing Hover/Active) -->
           <div style="display:flex; align-items:center; gap:8px;">
             <!-- 1. Keterangan Normal/Remedial (Button with green/yellow font, neutral idle, color glow on hover) -->
             <button type="button" class="btn btn-session-mode mode-normal" id="live-modal-mode-badge" style="cursor:default;" title="Session Mode">
@@ -649,7 +651,7 @@ export async function renderClassTestSessions(container, context = {}) {
                 <span>EDIT TIME</span>
                 <span style="font-size:10px;">▲</span>
               </button>
-              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; left:0; bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
+              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
                 <!-- Yellow Header Banner -->
                 <div style="background:rgba(var(--grade-c-rgb), 0.12); border:1px solid rgba(var(--grade-c-rgb), 0.4); color:var(--grade-c); font-weight:800; font-size:12px; padding:5px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between;">
                   <span>ADJUST SESSION TIME</span>
@@ -711,10 +713,6 @@ export async function renderClassTestSessions(container, context = {}) {
               <span id="live-modal-remaining" style="font-weight:800; font-variant-numeric:tabular-nums; color:#ffffff;">--m</span>
             </button>
           </div>
-
-          <div style="display:flex; align-items:center; gap:10px;">
-            <button type="button" class="btn btn-secondary" id="btn-close-live-modal-footer" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:12px; font-weight:600; border-radius:4px; box-sizing:border-box; color:#cbd5e1;">Close</button>
-          </div>
         </div>
       </div>
     </div>
@@ -764,16 +762,15 @@ export async function renderClassTestSessions(container, context = {}) {
               <div id="alarm-detail-meta" style="font-size: 12px; color:#fca5a5; margin-top:2px;">Exam integrity warning history</div>
             </div>
           </div>
-          <button type="button" class="btn btn-ghost btn-icon" id="btn-close-alarm-detail" style="color:#94a3b8; font-size: 16px;">✕</button>
         </div>
         <div id="alarm-detail-logs-list" style="padding:16px 20px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
           <!-- Items injected dynamically -->
         </div>
         <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(15,23,42,0.6); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; box-sizing:border-box;">
+          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; font-size: 12px; font-weight:600; padding:0 16px; border-radius:4px; box-sizing:border-box;">Close</button>
           <button type="button" class="btn" id="btn-clear-student-alarms" style="height:40px; min-height:40px; line-height:38px; background:rgba(var(--grade-c-rgb),0.12); border:1px solid var(--grade-c); color:var(--grade-c); font-size: 12px; font-weight:700; padding:0 14px; border-radius:4px; cursor:pointer; box-sizing:border-box;">
             Reset / Forgive Student Alarms
           </button>
-          <button type="button" class="btn btn-secondary" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; font-size: 12px; font-weight:600; padding:0 16px; border-radius:4px; box-sizing:border-box;">Close</button>
         </div>
       </div>
     </div>
@@ -1989,7 +1986,6 @@ function openThemeLateModal(container, theme, context) {
   };
 
   const closeModal = () => modal.classList.add('hidden');
-  modal.querySelector('#btn-close-late-modal').onclick = closeModal;
   modal.querySelector('#btn-cancel-late-modal').onclick = closeModal;
 
   confirmBtn.onclick = async () => {
@@ -2931,7 +2927,6 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     modal.classList.add('hidden');
   };
 
-  modal.querySelector('#btn-close-live-modal').onclick = closeModal;
   modal.querySelector('#btn-close-live-modal-footer').onclick = closeModal;
 
   // Smart Visibility Guard: pause polling when browser tab is inactive to protect egress quota
@@ -3016,7 +3011,6 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   }
 
   const closeAlarmModal = () => alarmModal.classList.add('hidden');
-  alarmModal.querySelector('#btn-close-alarm-detail').onclick = closeAlarmModal;
   alarmModal.querySelector('#btn-dismiss-alarm-detail').onclick = closeAlarmModal;
 
   const resetBtn = alarmModal.querySelector('#btn-clear-student-alarms');

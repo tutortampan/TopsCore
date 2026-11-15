@@ -608,9 +608,11 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
  * E     : 0% – 29%   - Fail (Red #ff0000)
  */
 export function calculateGrade(percentage, options = {}) {
-  const isRem = typeof options === 'boolean' ? options : Boolean(options?.isRemedial);
+  const isManual = Boolean(options?.isManual);
   const isForgiven = Boolean(options?.isForgiven);
+  const isRem = typeof options === 'boolean' ? options : Boolean(options?.isRemedial);
 
+  if (isManual) return 'M';
   if (isForgiven) return 'F';
   if (isRem) return 'R';
 
@@ -861,6 +863,21 @@ export const GRADE_PALETTE = {
     maxScore: 0,
     sparkle: false,
   },
+  M: {
+    symbol: 'M',
+    label: 'Manual',
+    predicate: 'Manual Score',
+    color: '#38bdf8', // Cyan (#38bdf8 / Tactical Blue)
+    dark: '#0284c7',
+    light: '#bae6fd',
+    rgb: '56, 189, 248',
+    glow: 'rgba(56, 189, 248, 0.35)',
+    textColor: '#0F172A',
+    name: 'Manual Score',
+    minScore: 0,
+    maxScore: 100,
+    sparkle: false,
+  },
   X: {
     symbol: 'X',
     label: 'Alumni',
@@ -901,6 +918,7 @@ export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
   if (g.toUpperCase() === 'R' || g.toUpperCase() === 'REMEDIAL') return TOPSCORE_COLORS.C;
   if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return TOPSCORE_COLORS.E;
+  if (g.toUpperCase() === 'M' || g.toUpperCase() === 'MANUAL') return '#38bdf8'; // Grade M is Cyan (#38bdf8)
   if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
   if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') return TOPSCORE_COLORS.X;
   if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') return TOPSCORE_COLORS.NEUTRAL;
@@ -947,13 +965,21 @@ export function getEvaluationColor(category) {
 }
 
 export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
+  if (percentage !== null && !isNaN(Number(percentage))) {
+    const num = Number(percentage);
+    if (num >= 100) return '★';
+    const pct = Math.round(num);
+    if (pct >= 90) return 'A';
+    if (pct >= 80) return 'B';
+    if (pct >= 60) return 'C';
+    if (pct >= 30) return 'D';
+    return 'E';
+  }
   if (isRemedial) return 'R';
   const g = String(grade || '').trim();
   if (g.toUpperCase() === 'R' || g.toUpperCase() === 'REMEDIAL') return 'R';
   if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return 'F';
-  if (percentage !== null && Number(percentage) >= 100) {
-    return '★';
-  }
+  if (g.toUpperCase() === 'M' || g.toUpperCase() === 'MANUAL') return 'M';
   if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
     return '★';
   }

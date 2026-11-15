@@ -20,7 +20,7 @@ import {
 } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
-import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261106_v160';
+import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261115_v528';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
@@ -562,7 +562,7 @@ export async function renderDataHealth(container) {
             <div style="font-size: 30px;background:rgba(59,130,246,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128100;</div>
             <div>
               <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Student Profile Duplicates</h3>
-              <div class="text-xs text-muted">Identical names within the same cohort</div>
+              <div class="text-xs text-muted">Identical names within the same batch</div>
             </div>
           </div>
           <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">

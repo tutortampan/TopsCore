@@ -5,8 +5,8 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName } from './api.js?v=20261106_v160';
-import { isExam, getGradeColorByScore } from './grading.js?v=20261106_v160';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName } from './api.js?v=20261115_v541';
+import { isExam, getGradeColorByScore, calculateGrade } from './grading.js?v=20261106_v160';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
@@ -337,11 +337,11 @@ if (!session) {
 
           btnRemidi.onclick = async () => {
             if (isRemedial) return;
-            if (!confirm('Apply REMEDIAL status to this test (maximum score capped at 60% / Grade C)?')) return;
+            if (!confirm('Apply REMEDIAL status to this test (maximum score capped at 60% / Grade R)?')) return;
             try {
               showLoading();
               await labelAttemptRemedial(attempt.id, true, 60);
-              showToast('Status successfully changed: REMEDIAL (Max 60%)', 'warning');
+              showToast('Status successfully changed: REMEDIAL (Grade R, Max 60%)', 'warning');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
@@ -357,7 +357,7 @@ if (!session) {
             try {
               showLoading();
               await labelAttemptForgiven(attempt.id, 'Test Score Exemption by Tutor');
-              showToast('Status successfully changed: FORGIVEN (Exemption)', 'success');
+              showToast('Status successfully changed: FORGIVEN (Grade F)', 'success');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
               console.error(err);
@@ -466,7 +466,7 @@ if (!session) {
         const currentAttemptPassed = Boolean(attempt.is_forgiven) || (parseFloat(attempt.percentage || 0) >= minScore) || (parseFloat(attempt.effective_score || 0) >= minScore);
 
         let nextTest = null;
-        let actionTag = 'GO TO NEXT ASSESSMENT:';
+        let actionTag = 'GO TO NEXT TEST:';
 
         // Find the true earliest uncompleted test in curriculum linear order
         const earliestUncompleted = published.find(t => !isPassedByTest[t.id]);
@@ -796,10 +796,18 @@ if (!session) {
             effPct = parsedEff;
           }
         }
+        const isAdminSession = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
         const pct = isRemedial ? Math.min(effPct, 60.0) : Math.min(effPct, 100.0);
-        const grade = isForgiven ? 'F' : (isRemedial ? 'R' : getGrade(pct));
-        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
-        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || (pct >= 100 && !isRemedial && !isForgiven));
+        // Student always sees the official canonical grade based on their score percentage!
+        const canonicalGrade = typeof calculateGrade === 'function' ? calculateGrade(pct) : getGrade(pct);
+        const grade = (!isAdminSession)
+          ? canonicalGrade
+          : (isForgiven ? 'F' : (isRemedial ? 'R' : (attempt.grade === 'M' ? 'M' : canonicalGrade)));
+        let gradeColor = (!isAdminSession)
+          ? getGradeColorByScore(pct)
+          : (attempt.grade === 'M' ? '#38bdf8' : (isForgiven ? TOPSCORE_COLORS.E : (isRemedial ? TOPSCORE_COLORS.C : getGradeColorByScore(pct))));
+        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, !isAdminSession ? false : isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
+        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || (pct >= 100 && (!isAdminSession || (!isRemedial && !isForgiven))));
 
         // FEATURE 1: Launch grade-specific background particles
         launchBgParticles(grade);
@@ -811,7 +819,6 @@ if (!session) {
         }
 
         // Wire up Top Header matching Student Dashboard / Lobby
-        const isAdminSession = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
         const headerBrand = document.getElementById('result-header-brand');
         if (headerBrand) headerBrand.textContent = 'RESULT PAGE';
         const profileBtn = document.getElementById('view-profile-btn');
@@ -952,9 +959,9 @@ if (!session) {
 
         const isGradeSOr100 = (pct >= 100 || grade === '★' || grade === 'S' || grade === 'STAR');
         const currentTier = isGradeSOr100 ? '★' : grade;
-        let gradeColor = isGradeSOr100
-          ? TOPSCORE_COLORS.STAR
-          : (typeof getGradeColor === 'function' ? getGradeColor(grade) : TOPSCORE_COLORS.B);
+        if (isGradeSOr100) {
+          gradeColor = TOPSCORE_COLORS.STAR;
+        }
         const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
 
         // Immediate application of dynamic tier colors and variables across page
@@ -1144,7 +1151,7 @@ if (!session) {
           titleTopic = parts.slice(1).join(' - ').trim();
         } else {
           titleType = cleanTitle(asmRawTitle).trim();
-          titleTopic = asmData?.topic || asmData?.theme || asmData?.payload?.theme_name || asmData?.category || asmData?.test_type || 'TOPIC ASSESSMENT';
+          titleTopic = asmData?.topic || asmData?.theme || asmData?.payload?.theme_name || asmData?.category || asmData?.test_type || 'TOPIC TEST';
         }
 
         const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
@@ -1225,7 +1232,7 @@ if (!session) {
         if (crumbEl) {
           const className = asmData?.classes?.name || 'VOCABULARY';
           const levelName = asmData?.levels?.name || 'LEVEL 3';
-          const asmCategory = (asmData?.category || asmData?.test_type || 'QUIZ').toUpperCase();
+          const asmCategory = (asmData?.category || asmData?.test_type || 'TASK').toUpperCase();
           crumbEl.textContent = `${className.toUpperCase()} • ${levelName.toUpperCase()} • ${humanizeType(asmCategory).toUpperCase()}`;
         }
 

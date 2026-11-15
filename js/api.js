@@ -562,7 +562,7 @@ export async function fetchStudentProgress(studentId) {
   const sb = await getSupabase();
   const { data, error } = await sb
     .from('progress')
-    .select('id, student_id, class_id, unlocked_level, highest_score, level_status, level_completed_at, updated_at')
+    .select('id, student_id, class_id, unlocked_level, highest_score, updated_at')
     .eq('student_id', studentId);
   if (error) {
     console.error('Progress fetch error:', error);
@@ -1662,7 +1662,8 @@ export async function startTest(studentId, testId) {
                        !(asmData.shell_code || '').toUpperCase().includes('-TASK') &&
                        !(asmData.test_subtype || '').toUpperCase().includes('TASK') &&
                        !(asmData.title || '').toLowerCase().includes('task') &&
-                       (asmData.test_type || '').toLowerCase() !== 'quiz';
+                       !(asmData.test_type || '').toLowerCase().includes('task') &&
+    !(asmData.test_type || '').toLowerCase().includes('quiz');
 
   let activeSession = null;
   const isFlexible = (asmData.schedule_mode || asmData.payload?.schedule_mode) === 'flexible';
@@ -1717,9 +1718,17 @@ export async function startTest(studentId, testId) {
     const attemptNumber = (priorCount || 0) + 1;
 
     // Check if session or student is designated as remedial
+    const { data: pastRemedialAtt } = await sb.from('attempts')
+      .select('id, is_remedial_unlocked, is_remedial')
+      .eq('student_id', studentId)
+      .eq('test_id', testId)
+      .or('is_remedial_unlocked.eq.true,is_remedial.eq.true')
+      .limit(1);
+
     const isRemedialSession = Boolean(
       activeSession?.is_remedial ||
-      (Array.isArray(activeSession?.remedial_student_ids) && activeSession.remedial_student_ids.includes(studentId))
+      (Array.isArray(activeSession?.remedial_student_ids) && activeSession.remedial_student_ids.includes(studentId)) ||
+      (pastRemedialAtt && pastRemedialAtt.length > 0)
     );
 
     // Bersihkan: simpan test_id satu kali saja
@@ -1735,7 +1744,8 @@ export async function startTest(studentId, testId) {
         percentage: 0,
         grade: 'E',
         is_best_score: false,
-        is_remedial_unlocked: isRemedialSession
+        is_remedial_unlocked: isRemedialSession,
+        is_remedial: isRemedialSession
       })
       .select()
       .single();
@@ -2008,10 +2018,11 @@ export async function submitTest(attemptId, answersMap, options = {}) {
     if (att && att.is_remedial_unlocked) {
       const rawPct = parseFloat(att.percentage || 0);
       const effPct = Math.min(rawPct, 60.0);
+      const remGrade = effPct >= 60 ? 'C' : (effPct >= 30 ? 'D' : 'E');
       await sb.from('attempts')
         .update({
           effective_score: effPct,
-          grade: 'R',
+          grade: remGrade,
           updated_at: new Date().toISOString()
         })
         .eq('id', attemptId);
@@ -2034,13 +2045,20 @@ export async function submitTest(attemptId, answersMap, options = {}) {
     if (curAttempt?.student_id && curAttempt?.test_id) {
       const curScore = Number(curAttempt.effective_score ?? curAttempt.percentage ?? 0);
       const { data: siblingAttempts } = await sb.from('attempts')
-        .select('id, effective_score, percentage, is_best_score')
+        .select('id, effective_score, percentage, is_best_score, is_forgiven')
         .eq('student_id', curAttempt.student_id)
         .eq('test_id', curAttempt.test_id)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
         .neq('id', attemptId);
 
-      const isNewBest = !(siblingAttempts || []).some(s => Number(s.effective_score ?? s.percentage ?? 0) > curScore);
+      const isNewBest = !(siblingAttempts || []).some(s => {
+        const sibScore = Number(s.effective_score ?? s.percentage ?? 0);
+        // If current attempt is an authentic passing score (>=60%), it supersedes a 0% forgiven waiver
+        if (curScore >= 60 && Boolean(s.is_forgiven) && sibScore < 60) return false;
+        // If sibling is a forgiven waiver and current attempt failed (<60%), sibling remains best
+        if (Boolean(s.is_forgiven) && curScore < 60) return true;
+        return sibScore > curScore;
+      });
 
       if (isNewBest) {
         // Mark current attempt as authoritative best score
@@ -2064,6 +2082,7 @@ export async function submitTest(attemptId, answersMap, options = {}) {
     console.warn('Lean storage best-score sync notice:', purgeErr);
   }
 
+  clearAdminCache('attempts');
   return result;
 }
 
@@ -3445,9 +3464,9 @@ export async function createVocabMasteryTest(config) {
     selectedWords = stratifiedSample(topicMap, customQuota);
   }
 
-  // Resolve the final test_type (PostgreSQL enum: 'quiz' | 'exam') and category ('TASK' | 'EXAM'):
-  const isQuizTier = tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || test_type === 'TASK';
-  const resolvedType = isQuizTier ? 'quiz' : 'exam';
+  // Resolve the final test_type (PostgreSQL enum / string: 'task' | 'exam') and category ('TASK' | 'EXAM'):
+  const isQuizTier = tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || String(test_type).toLowerCase() === 'task';
+  const resolvedType = isQuizTier ? 'task' : 'exam';
   const resolvedCategory = isQuizTier ? 'TASK' : 'EXAM';
 
   let defaultAnswerType = answerType;
@@ -3616,8 +3635,8 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
 
   const currentLevelNum = levelData.level_number || 1;
   if (currentLevelNum >= 3) {
-    await sb.from('students').update({ program_status: 'PROGRAM_COMPLETED' }).eq('id', studentId);
-    return { levelUp: true, newLevel: null, status: 'PROGRAM_COMPLETED' };
+    await sb.from('students').update({ program_status: 'ALUMNI' }).eq('id', studentId);
+    return { levelUp: true, newLevel: null, status: 'ALUMNI' };
   }
 
   const nextLevelNum = currentLevelNum + 1;
@@ -3729,7 +3748,7 @@ export async function adminUnlockRemedialExam(attemptId) {
   const sb = await getSupabase();
   const { data: currentAtt } = await sb.from('attempts').select('id, student_id, test_id, is_remedial_unlocked').eq('id', attemptId).single();
   const { data, error } = await sb.from('attempts')
-    .update({ is_remedial_unlocked: true, grade: 'R', updated_at: new Date().toISOString() })
+    .update({ is_remedial_unlocked: true, updated_at: new Date().toISOString() })
     .eq('id', attemptId)
     .select().single();
   if (error) throw error;
@@ -3760,11 +3779,12 @@ export async function adminUnlockRemedialExam(attemptId) {
                 const totalQ = Number(sAtt.total_questions || 70);
                 const maxRemPts = totalQ * 0.6;
                 const effScore = Math.min(Number(sAtt.score ?? 0), maxRemPts);
+                const effGrade = effScore >= (totalQ * 0.6) ? 'C' : (effScore >= (totalQ * 0.3) ? 'D' : 'E');
                 await sb.from('attempts')
                   .update({
                     is_remedial_unlocked: true,
                     effective_score: effScore,
-                    grade: 'R',
+                    grade: effGrade,
                     updated_at: new Date().toISOString()
                   })
                   .eq('id', sAtt.id);
@@ -4240,9 +4260,10 @@ export async function adminApplyForgiven({
         if (submittedAtts.length > 0) {
           submittedAtts.sort((x, y) => Number(y.percentage || y.score || 0) - Number(x.percentage || x.score || 0));
           const topAtt = submittedAtts[0];
+          const currPct = Number(topAtt.percentage || topAtt.score || 0);
           updates.push({
             id: topAtt.id,
-            grade: 'F',
+            grade: _gradeForScore(currPct),
             is_forgiven: true,
             forgiven_by: validForgivenBy,
             forgiven_at: nowIso,
@@ -4267,7 +4288,7 @@ export async function adminApplyForgiven({
             total_questions: totalQ,
             percentage: 0,
             effective_score: 0,
-            grade: 'F',
+            grade: 'E',
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -4289,7 +4310,7 @@ export async function adminApplyForgiven({
             total_questions: totalQ,
             percentage: 0,
             effective_score: 0,
-            grade: 'F',
+            grade: 'E',
             is_best_score: true,
             is_forgiven: true,
             forgiven_by: validForgivenBy,
@@ -4447,13 +4468,53 @@ export async function adminRevokeForgiven({ classId, studentIds = [], testIds = 
   }
 
   for (const a of toReset) {
+    const effPct = parseFloat(a.percentage ?? a.score ?? 0);
+    const restoredGrade = a.is_remedial ? 'R' : getGrade(effPct);
     await sb.from('attempts').update({
       is_forgiven: false,
       forgiven_by: null,
       forgiven_at: null,
       forgiven_reason: null,
+      effective_score: effPct,
+      grade: restoredGrade,
       updated_at: nowIso
     }).eq('id', a.id);
+  }
+
+  // Re-resolve is_best_score for all affected (student_id, test_id) combinations
+  const comboKeys = new Set();
+  const affectedCombos = [];
+  studentIds.forEach(sid => {
+    testIds.forEach(tid => {
+      const key = `${sid}_${tid}`;
+      if (!comboKeys.has(key)) {
+        comboKeys.add(key);
+        affectedCombos.push({ studentId: sid, testId: tid });
+      }
+    });
+  });
+
+  for (const combo of affectedCombos) {
+    const { data: remAtts } = await sb.from('attempts')
+      .select('id, effective_score, percentage, is_forgiven, is_remedial, created_at')
+      .eq('student_id', combo.studentId)
+      .eq('test_id', combo.testId)
+      .in('status', ['submitted', 'auto_submitted', 'evaluated']);
+    if (remAtts && remAtts.length > 0) {
+      remAtts.sort((a, b) => {
+        const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
+        const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+        const aQual = a.is_forgiven || scoreA >= 60;
+        const bQual = b.is_forgiven || scoreB >= 60;
+        if (aQual !== bQual) return bQual ? 1 : -1;
+        if (scoreB !== scoreA) return scoreB - scoreA;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      });
+      const bestId = remAtts[0].id;
+      for (const a of remAtts) {
+        await sb.from('attempts').update({ is_best_score: a.id === bestId }).eq('id', a.id);
+      }
+    }
   }
 
   try {
@@ -4683,7 +4744,7 @@ export async function upsertDynamicTestShell(config) {
     level_id:                   levelId,
     module_id:                  moduleId,
     test_subtype:               isTest ? (isPhrase ? 'PHRASE_EXAM' : 'VOCAB_EXAM') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK'),
-    test_type:                  isTest ? 'exam' : 'quiz',
+    test_type:                  isTest ? 'exam' : 'task',
     category:                   isTest ? 'EXAM' : 'TASK',
     shell_code:                 code,
     title:                      generatedTitle,
@@ -5362,7 +5423,7 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true, cap = 6
 
   const rawPct = parseFloat(att.percentage || 0);
   const effectiveScore = isRemedial ? Math.min(rawPct, cap) : rawPct; // Remedial capped at max 60%
-  const grade = getGrade(effectiveScore);
+  const grade = isRemedial ? 'R' : getGrade(effectiveScore);
 
   const { data: updated, error: updErr } = await sb.from('attempts')
     .update({
@@ -5397,7 +5458,7 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true, cap = 6
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')
-    .select('id, effective_score, percentage, created_at')
+    .select('id, effective_score, percentage, is_forgiven, is_remedial, created_at')
     .eq('student_id', att.student_id)
     .eq('test_id', att.test_id)
     .in('status', ['submitted', 'auto_submitted', 'evaluated']);
@@ -5406,6 +5467,9 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true, cap = 6
     allAttempts.sort((a, b) => {
       const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
       const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+      const aQual = a.is_forgiven || scoreA >= 60;
+      const bQual = b.is_forgiven || scoreB >= 60;
+      if (aQual !== bQual) return bQual ? 1 : -1;
       if (scoreB !== scoreA) return scoreB - scoreA;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
@@ -5417,6 +5481,7 @@ export async function labelAttemptRemedial(attemptId, isRemedial = true, cap = 6
     }
   }
 
+  clearAdminCache('attempts');
   return { success: true, attempt: updated };
 }
 
@@ -5465,7 +5530,7 @@ export async function labelAttemptNormal(attemptId) {
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')
-    .select('id, effective_score, percentage, created_at')
+    .select('id, effective_score, percentage, is_forgiven, is_remedial, created_at')
     .eq('student_id', att.student_id)
     .eq('test_id', att.test_id)
     .in('status', ['submitted', 'auto_submitted', 'evaluated']);
@@ -5474,6 +5539,9 @@ export async function labelAttemptNormal(attemptId) {
     allAttempts.sort((a, b) => {
       const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
       const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+      const aQual = a.is_forgiven || scoreA >= 60;
+      const bQual = b.is_forgiven || scoreB >= 60;
+      if (aQual !== bQual) return bQual ? 1 : -1;
       if (scoreB !== scoreA) return scoreB - scoreA;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
@@ -5485,6 +5553,7 @@ export async function labelAttemptNormal(attemptId) {
     }
   }
 
+  clearAdminCache('attempts');
   return { success: true, attempt: updated };
 }
 
@@ -5498,7 +5567,7 @@ export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Wai
 
   const rawPct = parseFloat(att.percentage || 0);
   const effectiveScore = rawPct;
-  const grade = getGrade(effectiveScore);
+  const grade = 'F';
 
   const { data: updated, error: updErr } = await sb.from('attempts')
     .update({
@@ -5533,7 +5602,7 @@ export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Wai
 
   // Resolve best score across attempts for this student & test
   const { data: allAttempts } = await sb.from('attempts')
-    .select('id, effective_score, percentage, created_at')
+    .select('id, effective_score, percentage, is_forgiven, is_remedial, created_at')
     .eq('student_id', att.student_id)
     .eq('test_id', att.test_id)
     .in('status', ['submitted', 'auto_submitted', 'evaluated']);
@@ -5542,6 +5611,9 @@ export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Wai
     allAttempts.sort((a, b) => {
       const scoreA = Number(a.effective_score ?? a.percentage ?? 0);
       const scoreB = Number(b.effective_score ?? b.percentage ?? 0);
+      const aQual = a.is_forgiven || scoreA >= 60;
+      const bQual = b.is_forgiven || scoreB >= 60;
+      if (aQual !== bQual) return bQual ? 1 : -1;
       if (scoreB !== scoreA) return scoreB - scoreA;
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
@@ -5553,6 +5625,7 @@ export async function labelAttemptForgiven(attemptId, reason = 'Tutor Result Wai
     }
   }
 
+  clearAdminCache('attempts');
   return { success: true, attempt: updated };
 }
 
@@ -5609,7 +5682,8 @@ export async function checkStudentTestAccess(studentId, testId) {
                        !(asm.shell_code || '').toUpperCase().includes('-TASK') &&
                        !(asm.test_subtype || '').toUpperCase().includes('TASK') &&
                        !(asm.title || '').toLowerCase().includes('task') &&
-                       (asm.test_type || '').toLowerCase() !== 'quiz';
+                       !(asm.test_type || '').toLowerCase().includes('task') &&
+    !(asm.test_type || '').toLowerCase().includes('quiz');
 
   if (!isFormalExam) {
     return { allowed: true, is_test: false };

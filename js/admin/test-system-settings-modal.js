@@ -54,7 +54,6 @@ export async function openTestSystemSettingsModal(options = {}) {
             Configure task repetition targets and minimum passing scores for ${escapeHtml(className)} curriculum.
           </p>
         </div>
-        <button type="button" id="btn-close-settings-modal" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 6px;">✕</button>
       </div>
 
       <!-- Modal Body -->
@@ -147,8 +146,8 @@ export async function openTestSystemSettingsModal(options = {}) {
       </div>
 
       <!-- Modal Footer -->
-      <div style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(30, 41, 59, 0.5); display: flex; justify-content: flex-end; align-items: center; gap: 10px;">
-        <button type="button" id="btn-cancel-settings" style="
+      <div style="padding: 14px 20px; border-top: 1px solid rgba(255, 255, 255, 0.1); background: rgba(30, 41, 59, 0.5); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-cancel-settings" style="
           background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #94a3b8;
           padding: 7px 14px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;
         ">Cancel</button>
@@ -165,7 +164,7 @@ export async function openTestSystemSettingsModal(options = {}) {
 
   // Close handlers
   const closeModal = () => overlay.remove();
-  overlay.querySelector('#btn-close-settings-modal').addEventListener('click', closeModal);
+  overlay.querySelector('#btn-close-settings-modal')?.addEventListener('click', closeModal);
   overlay.querySelector('#btn-cancel-settings').addEventListener('click', closeModal);
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) closeModal();

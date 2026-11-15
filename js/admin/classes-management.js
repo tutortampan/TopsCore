@@ -3,7 +3,7 @@ import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openTestBuilder } from './test-builder.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { openTestBuilderModal as openVocabWizard } from './vocab-vault.js?v=20261109_v172';
-import { openCrudModal } from './crud-modals.js?v=20261106_v160';
+import { openCrudModal } from './crud-modals.js?v=20261115_v528';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 // ─────────────────────────────────────────────────────────────
@@ -30,9 +30,9 @@ window.handleAddTask = (classId, className) => {
   const type = detectClassType(className);
   switch (type) {
     case 'VOCABULARY':
-      // Vocab/Phrase Task → use existing Vocab Vault wizard (tier: QUIZ/TASK)
-      const asmTypeQuiz = 'VOCAB_MASTERY';
-      openVocabWizard(null, { classId, className, testType: asmTypeQuiz, tier: 'QUIZ', category: 'QUIZ' });
+      // Vocab/Phrase Task → use existing Vocab Vault wizard (tier: TASK)
+      const asmTypeTask = 'VOCAB_MASTERY';
+      openVocabWizard(null, { classId, className, testType: asmTypeTask, tier: 'TASK', category: 'TASK' });
       break;
     case 'BASIC_ENGLISH':
     case 'TELLING_STORY':
@@ -41,8 +41,8 @@ window.handleAddTask = (classId, className) => {
     case 'STORYTELLING_L1':
     case 'GENERIC':
     default:
-      // All other Task types → generic Test Builder (with category pre-set to QUIZ)
-      openTestBuilder(null, classId, { category: 'QUIZ' });
+      // All other Task types → generic Test Builder (with category pre-set to TASK)
+      openTestBuilder(null, classId, { category: 'TASK' });
       break;
   }
 };
@@ -558,7 +558,7 @@ function renderClassDetail(cls) {
 
   // Hook up Delete active class
   document.getElementById('btn-del-active-class')?.addEventListener('click', async () => {
-    if (!confirm('Are you sure you want to delete this class? This may hide it from existing cohorts.')) return;
+    if (!confirm('Are you sure you want to delete this class? This may hide it from existing batches.')) return;
     try {
       await adminSoftDelete('classes', cls.id);
       showToast('Class deleted', 'success');
@@ -600,7 +600,7 @@ function renderClassDetail(cls) {
         res = await autoGeneratePhrasesTests(payload);
       }
       
-      showToast(`Success: Created ${res.tasks || res.quizzes || 0} Tasks, ${res.exams || res.tests || 0} Exams. Updated ${res.updated || 0}.`, 'success');
+      showToast(`Success: Created ${res.tasks || 0} Tasks, ${res.exams || 0} Exams. Updated ${res.updated || 0}.`, 'success');
       loadClassLearningPath(cls.id); // Refresh view
     } catch (e) {
       console.error(e);
@@ -743,7 +743,7 @@ export async function loadClassLearningPath(classId) {
       };
     });
 
-    const statusColors = { published: 'badge-success', draft: 'badge-neutral', unpublished: 'badge-warning', archived: 'badge-danger' };
+    const statusColors = { published: 'badge-success', draft: 'badge-neutral' };
 
     const ClassGrid = new DataGrid({
       container: 'class-datagrid-container',
@@ -857,12 +857,12 @@ export async function loadClassLearningPath(classId) {
           }
         },
         {
-          key: 'status', label: 'STATUS', sortable: true, align: 'center', width: '95px',
+          key: 'status', label: 'STATUS', shortLabel: 'STATUS', microLabel: 'STATUS', sortable: true, align: 'center', width: '95px',
           render: (val, row) => {
-            const st = String(row.status || 'draft').toLowerCase();
-            const displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
-            const isPub = st === 'published';
-            return `<span style="font-size:12px; font-weight:500; color:${isPub ? 'var(--grade-a)' : 'var(--clr-text-2)'};">${escapeHtml(displayStatus)}</span>`;
+            const rawSt = String(row.status || 'draft').toLowerCase();
+            const isPub = rawSt === 'published';
+            const displayStatus = isPub ? 'Published' : 'Draft';
+            return `<span style="font-size:12px; font-weight:600; color:${isPub ? 'var(--grade-a)' : 'var(--clr-text-2)'};">${escapeHtml(displayStatus)}</span>`;
           }
         },
         {
@@ -882,9 +882,8 @@ export async function loadClassLearningPath(classId) {
     });
 
     const filterAll = document.getElementById('filter-all');
-    const filterTasks = document.getElementById('filter-tasks') || document.getElementById('filter-quizzes');
-    const filterQuizzes = filterTasks; // Backward compatibility
-    const filterExams = document.getElementById('filter-exams') || document.getElementById('filter-tests');
+    const filterTasks = document.getElementById('filter-tasks');
+    const filterExams = document.getElementById('filter-exams');
     const filterTryouts = document.getElementById('filter-tryouts');
 
     const updateFilters = (btn, filterFn) => {

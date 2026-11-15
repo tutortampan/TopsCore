@@ -205,7 +205,6 @@ function openTopicModal(topic, Classes, onSaved) {
     <div class="modal-content" style="max-width:480px;">
       <div class="modal-header d-flex justify-between align-center p-3" style="border-bottom:1px solid var(--clr-border);">
         <h3 class="modal-title" style="margin:0;font-size: 16px;">${isEdit ? 'Edit Topic' : 'Add New Topic'}</h3>
-        <button class="btn btn-ghost btn-sm" id="close-topic-modal" style="font-size: 16px;">&times;</button>
       </div>
       <div class="modal-body p-4">
         <div class="form-group mb-3">
@@ -231,8 +230,8 @@ function openTopicModal(topic, Classes, onSaved) {
             <option value="inactive" ${topic?.status === 'inactive' ? 'selected' : ''}>Inactive</option>
           </select>
         </div>
-        <div class="d-flex justify-end gap-2">
-          <button class="btn btn-secondary btn-sm" id="cancel-topic-btn">Cancel</button>
+        <div class="d-flex justify-between align-center gap-2 mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
+          <button class="btn btn-secondary btn-sm btn-modal-close-left" id="cancel-topic-btn">Cancel</button>
           <button class="btn btn-primary btn-sm" id="save-topic-btn">${isEdit ? 'Save Changes' : 'Create Topic'}</button>
         </div>
       </div>
@@ -242,7 +241,7 @@ function openTopicModal(topic, Classes, onSaved) {
   document.body.appendChild(modal);
 
   const close = () => modal.remove();
-  modal.querySelector('#close-topic-modal').onclick = close;
+  modal.querySelector('#close-topic-modal')?.addEventListener('click', close);
   modal.querySelector('#cancel-topic-btn').onclick = close;
 
   modal.querySelector('#save-topic-btn').onclick = async () => {
@@ -615,7 +614,7 @@ export async function renderResults(area) {
           }
         },
         {
-          key: 'percentage', label: 'SCORE', sortable: true, render: (v, r) => {
+          key: 'percentage', label: 'RATE', shortLabel: 'RATE', microLabel: 'RATE', sortable: true, render: (v, r) => {
             const rawPct = parseFloat(r.percentage || 0);
             const isRemedial = Boolean(r.is_remedial_unlocked || r.is_remedial);
             const isForgiven = Boolean(r.is_forgiven);

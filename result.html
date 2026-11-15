@@ -70,7 +70,7 @@
           <span class="print-student-name" id="print-student-name">—</span>
         </div>
         <div class="print-info-col">
-          <span class="print-field-label">TEST ASSESSMENT</span>
+          <span class="print-field-label">TEST TITLE</span>
           <span class="print-test-title" id="print-test-title">—</span>
         </div>
         <div class="print-info-col print-info-col-right">
@@ -79,7 +79,7 @@
         </div>
       </div>
 
-      <!-- Assessment Summary Grid -->
+      <!-- Test Summary Grid -->
       <div class="print-summary-grid">
         <div class="print-metric-box">
           <span class="print-metric-lbl">CORRECT</span>
@@ -138,7 +138,7 @@
           <div class="print-auth-stamp">
             <span class="stamp-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
             <span class="stamp-title">TOPSCORE VERIFIED</span>
-            <span class="stamp-desc">Official Computerized Assessment</span>
+            <span class="stamp-desc">Official Computerized Test Report</span>
           </div>
         </div>
         <div class="print-sig-col">
@@ -252,25 +252,22 @@
             <span class="answers-modal-subtitle" id="modal-answers-count-label">Review your detailed question
               responses</span>
           </div>
-          <button class="answers-modal-close-btn" id="close-answers-modal-btn" type="button"
-            aria-label="Close">&#10005;</button>
         </div>
         <div class="answers-modal-scroll-body">
           <div id="answers-list-container"></div>
         </div>
         <div class="answers-modal-footer">
-          <button class="btn btn-secondary answers-modal-done-btn" id="done-answers-modal-btn" type="button">Close
-            Breakdown</button>
+          <button class="btn btn-secondary btn-sm btn-modal-close-left answers-modal-done-btn" id="done-answers-modal-btn" type="button">CLOSE</button>
         </div>
       </div>
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261115_v522"></script>
+  <script type="module" src="./js/result.js?v=20261115_v539"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261115_v121').then(r => r.update()).catch(e => console.warn('SW:', e));
+        navigator.serviceWorker.register('sw.js?v=20261115_v125').then(r => r.update()).catch(e => console.warn('SW:', e));
       });
     }
   </script>

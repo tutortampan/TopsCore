@@ -59,7 +59,7 @@ Stores assessment submission attempts, authoritative evaluation scores, calculat
 - `attempt_number` (int, default 1)
 - `started_at`, `expires_at`, `submitted_at` (timestamptz)
 - `status` (text: 'in_progress', 'submitted', 'auto_submitted', 'expired', 'cancelled')
-- `score` (numeric(5,2)), `correct_count` (int), `total_questions` (int), `percentage` (numeric(5,2)), `grade` (text)
+- `score` (numeric(5,2)), `correct_count` (int), `total_questions` (int), `percentage` (numeric(5,2)), `grade` (text, check: '★', 'A', 'B', 'C', 'D', 'E', 'R', 'F', 'M')
 - `effective_score` (numeric(5,2)), `is_best_score` (boolean)
 - `is_remedial_unlocked` (boolean), `is_remedial` (boolean)
 - `is_forgiven` (boolean), `forgiven_reason` (text), `forgiven_by` (text), `forgiven_at` (timestamptz)
