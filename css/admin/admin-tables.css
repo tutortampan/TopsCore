@@ -13,7 +13,7 @@
   width: 100%;
   max-width: 100%;
   background: var(--fm-bg-panel, #0f172a);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.28) !important;
   border-radius: var(--fm-radius-md, 8px);
   overflow-x: hidden !important;
   overflow-y: auto;
@@ -22,6 +22,7 @@
   position: relative;
   margin-bottom: 0 !important;
   -webkit-overflow-scrolling: touch;
+  box-sizing: border-box !important;
 }
 
 /* Constrain table-wrap height inside dialogs and modals */
@@ -960,7 +961,7 @@ body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content)
   flex: 1 !important;
   height: 100% !important;
   max-height: 100% !important;
-  overflow-x: hidden !important; /* Zero horizontal scroll - fits 100% within workspace */
+  overflow-x: hidden !important; /* STRICT NO HORIZONTAL SCROLL across entire system */
   overflow-y: auto !important; /* Smooth vertical scroll when student count exceeds viewport */
   width: 100% !important;
   display: block !important;
@@ -1047,21 +1048,25 @@ body.sidebar-collapsed .admin-main {
 }
 
 #class-attendance-grid th.super-hdr {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  padding: 2px 2px !important;
+  padding: 0 4px !important;
   text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  line-height: 1.1;
-  height: 19px;
+  line-height: 30px !important;
+  height: 30px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
   color: #ffffff !important;
   position: sticky !important;
   top: 0 !important;
   z-index: 22 !important;
   background: #0b1120 !important;
+  white-space: nowrap !important;
 }
 
 /* Universal Neutral Continuous Vertical Divider Invariant for Tables with Super-Headers */
@@ -1082,8 +1087,13 @@ th.super-th {
   background: #0b1120 !important;
   color: #ffffff !important;
   font-weight: 700 !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.28) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-  border-top: 2px solid rgba(255, 255, 255, 0.2);
+  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
 }
 
 th.super-hdr-demographic,
@@ -1107,8 +1117,12 @@ th.super-hdr-security,
   background: #0e172a !important;
   color: #ffffff !important;
   font-weight: 800 !important;
-  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.28) !important;
+  height: 30px !important;
+  line-height: 30px !important;
+  vertical-align: middle !important;
+  box-sizing: border-box !important;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
 }
 
@@ -1268,12 +1282,37 @@ th.super-hdr-security,
   z-index: 25 !important;
 }
 
-/* Individual Column Widths (5 Columns: BATCH, STUDENT NAME, PROGRESS, POINTS, GRADE) - Streamlined for 100% Zero-Scroll Viewport Fit */
+/* Individual Column Widths (BATCH, STUDENT NAME, and OVERALL PERFORMANCE) - Streamlined for 100% Zero-Scroll Viewport Fit */
 #class-attendance-grid .col-sticky-1 { width: 65px !important; min-width: 60px !important; text-align: center !important; }
 #class-attendance-grid .col-sticky-2 { width: 220px !important; min-width: 180px !important; max-width: 260px !important; border-right: 2px solid rgba(255, 255, 255, 0.22) !important; }
-#class-attendance-grid .col-sticky-3 { min-width: 75px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-4 { min-width: 70px !important; text-align: center !important; }
-#class-attendance-grid .col-sticky-5 { min-width: 65px !important; text-align: center !important; }
+
+/* Overall Performance Columns (Located on the Far Right of Class Attendance Grid) */
+#class-attendance-grid .col-overall-prog,
+#class-attendance-grid .col-overall-pts,
+#class-attendance-grid .col-overall-grade {
+  text-align: center !important;
+}
+
+#class-attendance-grid th.col-overall-prog,
+#class-attendance-grid td.col-overall-prog {
+  width: 65px !important;
+  min-width: 55px !important;
+  text-align: center !important;
+}
+
+#class-attendance-grid th.col-overall-pts,
+#class-attendance-grid td.col-overall-pts {
+  width: 65px !important;
+  min-width: 55px !important;
+  text-align: center !important;
+}
+
+#class-attendance-grid th.col-overall-grade,
+#class-attendance-grid td.col-overall-grade {
+  width: 55px !important;
+  min-width: 45px !important;
+  text-align: center !important;
+}
 
 /* Subheader Typography & Alignment Protection */
 #class-attendance-grid thead th:not(.super-hdr) {
@@ -1350,7 +1389,7 @@ th.super-hdr-security,
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Theme Sub-Columns (Progress, Score, Points, Grade) Proportional Dynamic Widths */
+/* Theme Sub-Columns (Progress, Score, Points, Grade, Status) Proportional Dynamic Widths */
 #class-attendance-grid th.col-theme-task,
 #class-attendance-grid td.col-theme-task,
 #class-attendance-grid th.col-exam-score,
@@ -1361,6 +1400,17 @@ th.super-hdr-security,
 #class-attendance-grid td.col-exam-grade {
   min-width: 55px !important;
   text-align: center !important;
+}
+
+#class-attendance-grid th.col-exam-status,
+#class-attendance-grid td.col-exam-status,
+#class-attendance-grid th.col-test-theme-status,
+#class-attendance-grid td.col-test-theme-status {
+  min-width: 58px !important;
+  width: 58px !important;
+  text-align: center !important;
+  padding: 1px 2px !important;
+  box-sizing: border-box !important;
 }
 
 /* Test Columns Widths & Layout */
@@ -1490,7 +1540,13 @@ th.super-hdr-security,
 #class-attendance-grid td.col-test-theme-grade-d,
 #class-attendance-grid tfoot td.col-test-theme-grade-d,
 #class-attendance-grid tr.datagrid-summary-row td.col-test-theme-grade-d,
-#class-attendance-grid tr:hover td.col-test-theme-grade-d {
+#class-attendance-grid tr:hover td.col-test-theme-grade-d,
+#class-attendance-grid thead th.col-test-theme-status,
+#class-attendance-grid tbody td.col-test-theme-status,
+#class-attendance-grid td.col-test-theme-status,
+#class-attendance-grid tfoot td.col-test-theme-status,
+#class-attendance-grid tr.datagrid-summary-row td.col-test-theme-status,
+#class-attendance-grid tr:hover td.col-test-theme-status {
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
 }
 
@@ -1590,28 +1646,32 @@ th.super-hdr-security,
 #class-attendance-grid th[class*="col-theme-task-a"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-score-a"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-total-a"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-a"] .datagrid-header-label {
+#class-attendance-grid th[class*="col-test-theme-grade-a"] .datagrid-header-label,
+#class-attendance-grid th[class*="col-test-theme-status-a"] .datagrid-header-label {
   color: var(--quad-a, #ff2d87) !important;
 }
 
 #class-attendance-grid th[class*="col-theme-task-b"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-score-b"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-total-b"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-b"] .datagrid-header-label {
+#class-attendance-grid th[class*="col-test-theme-grade-b"] .datagrid-header-label,
+#class-attendance-grid th[class*="col-test-theme-status-b"] .datagrid-header-label {
   color: var(--quad-b, #ff8c00) !important;
 }
 
 #class-attendance-grid th[class*="col-theme-task-c"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-score-c"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-total-c"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-c"] .datagrid-header-label {
+#class-attendance-grid th[class*="col-test-theme-grade-c"] .datagrid-header-label,
+#class-attendance-grid th[class*="col-test-theme-status-c"] .datagrid-header-label {
   color: var(--quad-c, #95ff00) !important;
 }
 
 #class-attendance-grid th[class*="col-theme-task-d"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-score-d"] .datagrid-header-label,
 #class-attendance-grid th[class*="col-test-theme-total-d"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-d"] .datagrid-header-label {
+#class-attendance-grid th[class*="col-test-theme-grade-d"] .datagrid-header-label,
+#class-attendance-grid th[class*="col-test-theme-status-d"] .datagrid-header-label {
   color: var(--quad-d, #c084fc) !important;
 }
 
@@ -2149,7 +2209,8 @@ tfoot.datagrid-tfoot,
 .smart-empty-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
+  transform: none;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
 }
 
 
@@ -2208,6 +2269,7 @@ tfoot.datagrid-tfoot,
   max-height: 100% !important;
   box-sizing: border-box !important;
   position: relative !important;
+  border: 2px solid rgba(255, 255, 255, 0.28) !important;
 }
 table.datagrid-table,
 .table-wrap table {
@@ -2323,19 +2385,61 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table t
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Eliminate right border on the very last column */
-.table-wrap table thead th:last-child:not(.super-hdr-divider),
-.datagrid-table thead th:last-child:not(.super-hdr-divider),
-#admin-console table thead th:last-child:not(.super-hdr-divider),
-#class-attendance-grid thead th:last-child:not(.super-hdr-divider),
-#blueprint-matrix-table thead th:last-child:not(.super-hdr-divider),
-.datagrid-thead th:last-child:not(.super-hdr-divider),
-.table-wrap table tbody td:last-child:not(.super-hdr-divider),
-.datagrid-table tbody td:last-child:not(.super-hdr-divider),
-#admin-console table tbody td:last-child:not(.super-hdr-divider),
-.table-wrap table tfoot td:last-child:not(.super-hdr-divider),
-.datagrid-table tfoot td:last-child:not(.super-hdr-divider) {
-  border-right: none !important;
+/* Universal Thick Right Perimeter Border on the very last column (Perimeter Invariant) */
+.table-wrap table thead th:last-child,
+.datagrid-table thead th:last-child,
+#admin-console table thead th:last-child,
+#class-attendance-grid thead th:last-child,
+#blueprint-matrix-table thead th:last-child,
+.datagrid-thead th:last-child,
+.table-wrap table tbody td:last-child,
+.datagrid-table tbody td:last-child,
+#admin-console table tbody td:last-child,
+.table-wrap table tfoot td:last-child,
+.datagrid-table tfoot td:last-child,
+#class-attendance-grid th.col-overall-grade,
+#class-attendance-grid td.col-overall-grade,
+#class-attendance-grid th.super-hdr-overall {
+  border-right: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Universal Thick Left Perimeter Border on the first column (Perimeter Invariant) */
+.table-wrap table thead th:first-child,
+.datagrid-table thead th:first-child,
+#admin-console table thead th:first-child,
+#class-attendance-grid thead th:first-child,
+#blueprint-matrix-table thead th:first-child,
+.datagrid-thead th:first-child,
+.table-wrap table tbody td:first-child,
+.datagrid-table tbody td:first-child,
+#admin-console table tbody td:first-child,
+.table-wrap table tfoot td:first-child,
+.datagrid-table tfoot td:first-child,
+#class-attendance-grid thead th.col-sticky-1,
+#class-attendance-grid tbody td.col-sticky-1,
+#class-attendance-grid tfoot td.col-sticky-1 {
+  border-left: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Universal Thick Top Perimeter Border (Row 1 Header Invariant) */
+.table-wrap table thead tr:first-child th,
+.datagrid-table thead tr:first-child th,
+#class-attendance-grid thead tr:first-child th,
+#class-attendance-grid thead th.super-hdr,
+#class-attendance-grid thead th[rowspan="2"] {
+  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Universal Thick Bottom Perimeter Border (Footer & Summary Row Invariant) */
+.table-wrap table tfoot tr:last-child td,
+.table-wrap table tfoot tr:last-child th,
+.table-wrap table tbody tr:last-child td,
+.datagrid-table tfoot tr:last-child td,
+.datagrid-table tfoot tr:last-child th,
+.datagrid-table tbody tr:last-child td,
+#class-attendance-grid tr.datagrid-summary-row td,
+#class-attendance-grid tfoot tr:last-child td {
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
 }
 
 /* Universal Spanning Header & Sticky Column Left Border Guarantee */

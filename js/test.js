@@ -1072,8 +1072,8 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
         window.attemptData = attemptData;
         window.allAnswerRows = allAnswerRows;
 
-        // Module Redirect: If this is a Peer-to-Peer 1-Hour Conversation test, redirect to conversation room
-        if (testData?.module_type === 'CONVERSATIONAL' || testData?.test_type === 'conversation' || testData?.payload?.is_conversation) {
+        // Module Redirect: If this is a Dialogue test, redirect to live dialogue room
+        if (testData?.answer_type === 'dialogue' || testData?.module === 'dialogue' || testData?.module_type === 'CONVERSATIONAL' || testData?.test_type === 'conversation' || testData?.payload?.is_conversation) {
           window.location.replace(`conversation.html?test_id=${encodeURIComponent(testId)}&attempt_id=${encodeURIComponent(attemptData?.id || '')}`);
           return;
         }
@@ -1657,6 +1657,16 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       if (matrixPill) {
         matrixPill.textContent = `0 / ${allAnswerRows.length}`;
       }
+      const titleAnsweredEl = document.getElementById('matrix-title-answered');
+      if (titleAnsweredEl) titleAnsweredEl.textContent = '0';
+      const titleUnansweredEl = document.getElementById('matrix-title-unanswered');
+      if (titleUnansweredEl) titleUnansweredEl.textContent = String(allAnswerRows.length);
+      const barAnswered = document.getElementById('matrix-bar-answered');
+      const barUnanswered = document.getElementById('matrix-bar-unanswered');
+      if (barAnswered && barUnanswered) {
+        barAnswered.style.width = '0%';
+        barUnanswered.style.width = '100%';
+      }
 
       const isMultiSection = testsections && testsections.length > 1;
 
@@ -1834,9 +1844,25 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
         });
       }
 
-      // Update Question Matrix header pill and inline legend
+      // Update Question Matrix header counts and progress bar
       const totalAnswered = Object.values(activeMap).filter(v => v && typeof v === 'string' && v.trim()).length;
       const totalQuestions = allAnswerRows.length;
+      const totalUnanswered = Math.max(0, totalQuestions - totalAnswered);
+
+      const titleAnsweredEl = document.getElementById('matrix-title-answered');
+      if (titleAnsweredEl) titleAnsweredEl.textContent = totalAnswered;
+      const titleUnansweredEl = document.getElementById('matrix-title-unanswered');
+      if (titleUnansweredEl) titleUnansweredEl.textContent = totalUnanswered;
+
+      const barAnswered = document.getElementById('matrix-bar-answered');
+      const barUnanswered = document.getElementById('matrix-bar-unanswered');
+      if (barAnswered && barUnanswered) {
+        const answeredPct = totalQuestions > 0 ? (totalAnswered / totalQuestions) * 100 : 0;
+        const unansweredPct = totalQuestions > 0 ? (totalUnanswered / totalQuestions) * 100 : 100;
+        barAnswered.style.width = `${answeredPct}%`;
+        barUnanswered.style.width = `${unansweredPct}%`;
+      }
+
       const matrixPill = document.getElementById('matrix-progress-pill');
       if (matrixPill) {
         matrixPill.textContent = `${totalAnswered} / ${totalQuestions}`;
@@ -1844,7 +1870,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       const legendAnswered = document.getElementById('matrix-legend-answered');
       if (legendAnswered) legendAnswered.textContent = totalAnswered;
       const legendBlank = document.getElementById('matrix-legend-blank');
-      if (legendBlank) legendBlank.textContent = Math.max(0, totalQuestions - totalAnswered);
+      if (legendBlank) legendBlank.textContent = totalUnanswered;
 
       updateProgressMetrics();
     }
@@ -2888,10 +2914,11 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
     window.toggleMatrixPopup = function(show) {
       const popup = document.getElementById('matrix-popup');
       if (!popup) return;
-      const isCurrentlyShown = popup.style.display !== 'none';
+      const isCurrentlyShown = popup.style.display === 'flex' || (!popup.classList.contains('hidden') && popup.style.display !== 'none');
       const shouldShow = typeof show !== 'undefined' ? show : !isCurrentlyShown;
 
       popup.style.display = shouldShow ? 'flex' : 'none';
+      popup.classList.toggle('hidden', !shouldShow);
       if (shouldShow && typeof updateNavGrid === 'function') {
         updateNavGrid();
       }

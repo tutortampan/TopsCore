@@ -43,9 +43,9 @@ const vaultJs = fs.readFileSync('js/admin/vocab-vault.js', 'utf8');
 assert(vaultJs.includes(`title: 'Test Blueprint', label: 'Test Blueprint'`), 'Tab must be named Test Blueprint');
 assert(vaultJs.includes('theme-manager-flat-table'), 'Theme Manager must use flat table layout');
 assert(vaultJs.includes('openThemeProgramAssignModal'), 'Theme Manager must implement theme-level assignment modal');
-// Phase 398: Checkbox column pruned per user directive; ANSWER TYPE column added
+// Rule 2.11: Unification of Module & Answer Type into Method (m1-m8)
 assert(!vaultJs.includes('bp-select-all-cb'), 'Test Blueprint must have redundant checkboxes removed');
-assert(vaultJs.includes('>ANSWER TYPE</th>'), 'Test Blueprint must include discrete ANSWER TYPE column');
+assert(vaultJs.includes('>METHOD</th>') || vaultJs.includes('>ANSWER TYPE</th>'), 'Test Blueprint must include discrete METHOD / ANSWER TYPE column');
 assert(vaultJs.includes('bp-setting-badge') && vaultJs.includes('bp-setting-input'), 'Test Blueprint must include settings badges/inputs');
 
 // Check Single Responsibility Column Invariants in Theme Manager:

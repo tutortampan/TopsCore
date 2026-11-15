@@ -556,7 +556,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
           <button type="button" class="btn btn-ghost btn-modal-close-left" id="btn-cancel-late-modal" style="color:#94a3b8;">Cancel</button>
-          <button type="button" class="btn btn-primary" id="btn-confirm-add-late" style="background:#6366f1; border-color:#4f46e5; font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
+          <button type="button" class="btn btn-tactical" id="btn-confirm-add-late" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
             Add Students to Test
           </button>
         </div>

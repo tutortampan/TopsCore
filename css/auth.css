@@ -26,12 +26,13 @@
 
     .login-wrapper {
       width: 100%;
-      max-width: 480px;
-      margin: auto 0;
+      max-width: 430px;
+      margin: auto;
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
       position: relative;
+      box-sizing: border-box;
     }
 
     /* Brand Header */
@@ -425,8 +426,8 @@
     }
 
     .btn-signin:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(124,58,237,0.5);
+      transform: none;
+      box-shadow: 0 0 20px rgba(124,58,237,0.5);
     }
 
     .btn-signin:disabled {

@@ -607,7 +607,7 @@ export async function renderDataHealth(container) {
             Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
-        <button class="btn btn-primary" id="btn-health-scan-orphans" style="width:100%;font-weight:700;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.25);">
+        <button class="btn btn-tactical" id="btn-health-scan-orphans" style="width:100%;font-weight:700;">
           &#128269; Scan Integrity
         </button>
       </div>
@@ -638,7 +638,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-2 align-end" style="padding-top: 18px;">
           <button class="btn btn-primary" id="btn-preview-recal" disabled style="height: 38px;">${getSvgIcon('search', 14)} Preview Recalibration</button>
-          <button class="btn btn-primary" id="btn-apply-recal" disabled style="height: 38px; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">${getSvgIcon('zap', 14)} Apply Recalibration</button>
+          <button class="btn btn-tactical" id="btn-apply-recal" disabled style="height: 38px; font-weight: 700;">${getSvgIcon('zap', 14)} Apply Recalibration</button>
         </div>
       </div>
 
@@ -721,7 +721,7 @@ export async function renderDataHealth(container) {
         </div>
         <div class="d-flex gap-3 justify-between">
           <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
-          <button class="btn btn-primary" id="btn-recal-confirm-run" style="flex:1; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-weight: 700; box-shadow: 0 0 10px rgba(56,189,248,0.25);">${getSvgIcon('check-circle', 14)} Yes, Apply Changes</button>
+          <button class="btn btn-tactical" id="btn-recal-confirm-run" style="flex:1; font-weight: 700;">${getSvgIcon('check-circle', 14)} Yes, Apply Changes</button>
         </div>
       </div>
     </div>

@@ -76,7 +76,7 @@ export function generateExecutiveCV(profile, workRecords = [], skills = []) {
           width: 190mm !important;
           max-height: 278mm !important;
           overflow: hidden !important;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
           font-size: ${bodyFontSize} !important;
           line-height: ${bodyLineHeight} !important;
           color: #0f172a !important;

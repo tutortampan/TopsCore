@@ -88,9 +88,9 @@ assert(
   'DataGrid automatically computes boundary divider columns and enforces continuous super-hdr-divider across headers, data rows, and footers'
 );
 assert(
-  datagridJs.includes("'PROGRESS': { full: 'PROGRESS', medium: 'PRGRS', short: 'PGS' }") &&
-  appJs.includes("shortLabel: 'PRGRS'") && appJs.includes("microLabel: 'PGS'"),
-  'PROGRESS header correctly configured with 3-tier abbreviations: PRGRS (medium) - PGS (micro)'
+  datagridJs.includes("'DONE': { full: 'DONE', medium: 'DONE', short: 'DONE' }") &&
+  appJs.includes("shortLabel: 'DONE'") && appJs.includes("microLabel: 'DONE'"),
+  'DONE header correctly configured for Overall Completion Rate %'
 );
 
 // 4. Subheader Protection & Cache Busting

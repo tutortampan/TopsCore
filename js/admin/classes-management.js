@@ -827,9 +827,9 @@ export async function loadClassLearningPath(classId) {
           }
         },
         {
-          key: 'answerType', label: 'ANSWER', sortable: true, align: 'center', width: '95px',
+          key: 'answerType', label: 'MODULE', sortable: true, align: 'center', width: '95px',
           render: (val, row) => {
-            const ans = String(row.answerType || 'Multiple Choice').replace(/[^\w\s]/gi, '').trim();
+            const ans = String(row.answerType || 'Selection').replace(/[^\w\s]/gi, '').trim();
             const titleCaseAns = ans.charAt(0).toUpperCase() + ans.slice(1);
             return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(titleCaseAns)}</div>`;
           }
@@ -914,13 +914,19 @@ export async function loadClassLearningPath(classId) {
 
 
 function formatAnswerType(type) {
-  switch(type) {
-    case 'speech_to_text':
-    case 'spoken': return `${getSvgIcon('mic', 12)} Spoken`;
-    case 'multiple_choice':
-    case 'selection': return `${getSvgIcon('check-circle', 12)} Selection`;
+  const norm = String(type || '').toLowerCase().trim();
+  switch(norm) {
+    case 'description': return `${getSvgIcon('target', 12)} Description`;
+    case 'monologue': return `${getSvgIcon('book-open', 12)} Monologue`;
+    case 'interview': return `${getSvgIcon('activity', 12)} Interview`;
+    case 'selection':
+    case 'multiple_choice': return `${getSvgIcon('check-circle', 12)} Selection`;
+    case 'spoken':
+    case 'speech_to_text': return `${getSvgIcon('mic', 12)} Spoken`;
+    case 'dialogue': return `${getSvgIcon('users', 12)} Dialogue`;
+    case 'speech': return `${getSvgIcon('award', 12)} Speech`;
     case 'written': return `${getSvgIcon('edit', 12)} Written`;
-    default: return String(type || '');
+    default: return String(type || '—');
   }
 }
 

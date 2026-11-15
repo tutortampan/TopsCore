@@ -84,12 +84,12 @@
   background: rgba(255, 255, 255, 0.1);
   color: var(--clr-text-1);
   border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
+  transform: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .header-action-btn:active {
-  transform: translateY(0);
+  transform: none;
 }
 
 .header-action-btn svg {
@@ -1574,8 +1574,8 @@
 }
 
 .profile-pin-submit:hover {
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5) !important;
-  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.5) !important;
+  transform: none;
 }
 
 /* Dedicated 60px Modal Footer Invariant (Bottom-Left Close Invariant) */
@@ -1656,13 +1656,20 @@
 }
 
 
-#stat-overall-grade-value {
-  filter: drop-shadow(0 0 12px rgba(255,255,255,0.4));
-  text-shadow: 0 0 20px rgba(255,255,255,0.2);
-}
+#stat-overall-grade-value,
 #bottom-stat-avg-score {
-  filter: drop-shadow(0 0 12px rgba(255,255,255,0.4));
-  text-shadow: 0 0 20px rgba(255,255,255,0.2);
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  letter-spacing: -0.02em !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  font-variant-numeric: tabular-nums !important;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.4));
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
 
@@ -2625,7 +2632,7 @@ body.dashboard-page .completed-table-wrap {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   overscroll-behavior: contain !important;
-  padding: 4px 6px 20px 6px !important;
+  padding: 4px 6px 60px 6px !important;
   scrollbar-width: thin !important;
   scrollbar-color: rgba(var(--tier-rgb), 0.6) rgba(15, 23, 42, 0.4) !important;
 }
@@ -2920,7 +2927,8 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 .classes-selector-item:hover {
   background: rgba(56, 189, 248, 0.12) !important;
   border-color: rgba(56, 189, 248, 0.5) !important;
-  transform: translateY(-1px);
+  transform: none;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
 }
 
 .classes-selector-item.selected,
@@ -3159,7 +3167,8 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 .component-choice-card:hover {
   background: rgba(56, 189, 248, 0.05) !important;
   border-color: rgba(56, 189, 248, 0.5) !important;
-  transform: translateY(-1px);
+  transform: none;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2) !important;
 }
 
 .component-choice-card.selected {
@@ -3334,13 +3343,13 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   background: linear-gradient(135deg, #0369a1, #0284c7) !important;
   border-color: #38bdf8 !important;
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.65) !important;
-  transform: translateY(-1px);
+  transform: none;
   filter: brightness(1.1) !important;
 }
 
 .component-selector-modal-footer .component-selector-btn-confirm:active {
   box-shadow: 0 0 25px rgba(56, 189, 248, 0.85) !important;
-  transform: scale(0.985);
+  transform: none;
 }
 
 /* Custom Confirmation Modal (Phase 3: Universal Dark Glass Dialog & Standard 60px CTA Area) */
@@ -5222,10 +5231,27 @@ body.dashboard-page .completed-table-header {
   grid-template-columns: 28px 1fr 48px 40px 38px !important;
   align-items: center !important;
   padding: 4px 12px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  letter-spacing: 0.06em !important;
+  background: rgba(15, 23, 42, 0.96) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  flex-shrink: 0 !important;
 }
 
+body.dashboard-page .completed-table-header .th-rank {
+  text-align: center !important;
+}
+body.dashboard-page .completed-table-header .th-name {
+  text-align: left !important;
+}
 body.dashboard-page .completed-table-header .th-score {
   text-align: right !important;
+}
+body.dashboard-page .completed-table-header .th-grade {
+  text-align: center !important;
 }
 body.dashboard-page .completed-table-header .th-action {
   text-align: center !important;
@@ -5431,6 +5457,9 @@ body.dashboard-page .dashboard-header {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
+  width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
   padding: 0 14px !important;
   display: flex !important;
   align-items: center !important;
@@ -5837,7 +5866,7 @@ body.dashboard-page #completed-Tests-container {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   overscroll-behavior: contain !important;
-  padding: 4px 6px 20px 6px !important;
+  padding: 4px 6px 60px 6px !important;
   scrollbar-width: thin !important;
   scrollbar-color: rgba(var(--tier-rgb), 0.6) rgba(15, 23, 42, 0.4) !important;
 }
@@ -5883,6 +5912,8 @@ body.dashboard-page .topscore-locked-banner {
   min-height: 60px !important;
   max-height: 60px !important;
   width: 100% !important;
+  max-width: 440px !important;
+  margin: 0 auto !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;

@@ -442,7 +442,16 @@ export async function renderStudents(area, options = {}) {
     // Determine Student Level Number and Alumni status
     const studentLvlObj = levelsMap.get(studentLevelId);
     const studentLevelNum = studentLvlObj?.level_number != null ? studentLvlObj.level_number : 1;
-    const isAlumni = studentLevelNum === 0 || (studentLvlObj?.name || '').toLowerCase() === 'alumni';
+    const isLevelX = studentLevelNum === 0
+      || (studentLvlObj?.name || '').toUpperCase() === 'X'
+      || (studentLvlObj?.name || '').toLowerCase() === 'alumni'
+      || (s.levelName && (s.levelName.toUpperCase() === 'X' || s.levelName.toLowerCase() === 'alumni'));
+
+    const isAlumni = isLevelX
+      || (s.program_status || '').toUpperCase() === 'ALUMNI'
+      || (s.program_status || '').toUpperCase() === 'GRADUATED'
+      || (s.program_status || '').toUpperCase() === 'COMPLETED'
+      || (s.program_status || '').toUpperCase() === 'PROGRAM_COMPLETED';
 
     // Find all exams required for student's current active level
     const currentLevelExams = (allTests || []).filter(t => {
@@ -484,7 +493,13 @@ export async function renderStudents(area, options = {}) {
     let overallPct = -1;
     let totalEarnedScore = (mastery.cumulativePoints != null ? mastery.cumulativePoints : mastery.totalPoints) || 0;
 
-    if (completedExamCount > 0) {
+    if (isAlumni) {
+      globalGrade = 'X';
+      overallColor = TOPSCORE_COLORS?.X || '#8B5CF6';
+      if (completedExamCount > 0) {
+        overallScoreStr = `${mastery.overallScore}%`;
+      }
+    } else if (completedExamCount > 0) {
       overallPct = mastery.overallScore;
       globalGrade = mastery.grade;
       const isCappedRem = hasRemedial && overallPct === 60;
@@ -574,7 +589,8 @@ export async function renderStudents(area, options = {}) {
           hasAnyTestAtt = true;
           const maxQ = Number(best.totalQuestions || t.payload?.total_questions || t.total_questions || 40);
           testScoresMap.set(t.id, {
-            pts: Math.round(Number(best.score) * 10) / 10,
+            // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+            pts: Math.round(Number(best.score)),
             pct: Number(best.percentage != null ? best.percentage : (maxQ > 0 ? (best.score / maxQ) * 100 : 0)),
             maxQ
           });
@@ -596,7 +612,8 @@ export async function renderStudents(area, options = {}) {
       perClassFinal.set(cId, {
         themes: themePoints,
         themeScores: themeScores,
-        totalPts: (hasAnyExamAtt || hasAnyTestAtt) ? Math.round(totalExamPts * 10) / 10 : null,
+        // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+        totalPts: (hasAnyExamAtt || hasAnyTestAtt) ? Math.round(totalExamPts) : null,
         testScores: testScoresMap
       });
     });
@@ -630,7 +647,9 @@ export async function renderStudents(area, options = {}) {
 
     const studentProgs = (allProgress || []).filter(p => p.student_id === s.id);
     let levelName = '—';
-    if (s.level_id) {
+    if (isAlumni) {
+      levelName = 'X';
+    } else if (s.level_id) {
       const lvlObj = levelsMap.get(s.level_id);
       levelName = lvlObj ? lvlObj.name : '—';
     } else {
@@ -640,11 +659,14 @@ export async function renderStudents(area, options = {}) {
     }
 
     // Detect orphaned students (batch/program/institution inactive or missing)
-    const isOrphaned = !s.program_id
+    // Note: Alumni students are graduated, not orphaned/disconnected
+    const isOrphaned = !isAlumni && (
+      !s.program_id
       || (s.institutions && s.institutions.is_active === false)
       || (s.programs && s.programs.is_active === false)
       || (s.batches && s.batches.is_active === false)
-      || (s.batch_id && !s.batches);
+      || (s.batch_id && !s.batches)
+    );
 
     // Join date
     let joinDate = '—';
@@ -676,6 +698,7 @@ export async function renderStudents(area, options = {}) {
 
     const rowObj = {
       ...s,
+      program_status: (isLevelX || isAlumni) ? 'ALUMNI' : (s.program_status || 'ACTIVE'),
       province: studentProvince,
       city: studentCity,
       district: studentDistrict,
@@ -756,7 +779,16 @@ export async function renderStudents(area, options = {}) {
   }
 
   // Interactive Status Filter Classifications
-  const isStudentAlumni = s => Boolean(s.isAlumni || s.studentLevelNum === 0 || s.levelName === 'Alumni' || (s.program_status || '').toUpperCase() === 'ALUMNI' || (s.program_status || '').toUpperCase() === 'GRADUATED' || (s.program_status || '').toUpperCase() === 'COMPLETED' || (s.program_status || '').toUpperCase() === 'PROGRAM_COMPLETED');
+  const isStudentAlumni = s => Boolean(
+    s.isAlumni
+    || s.studentLevelNum === 0
+    || s.levelName === 'X'
+    || (s.levelName && s.levelName.toLowerCase() === 'alumni')
+    || (s.program_status || '').toUpperCase() === 'ALUMNI'
+    || (s.program_status || '').toUpperCase() === 'GRADUATED'
+    || (s.program_status || '').toUpperCase() === 'COMPLETED'
+    || (s.program_status || '').toUpperCase() === 'PROGRAM_COMPLETED'
+  );
   const isStudentHold = s => !isStudentAlumni(s) && (s.program_status || '').toUpperCase() === 'HOLD';
   const isStudentInactive = s => !isStudentAlumni(s) && !isStudentHold(s) && ((s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false) || (s.program_status || '').toUpperCase() === 'INACTIVE');
   const isStudentActive = s => !isStudentAlumni(s) && !isStudentHold(s) && !isStudentInactive(s);
@@ -790,6 +822,9 @@ export async function renderStudents(area, options = {}) {
   const filteredGridData = rosterScopeStudents.filter(s => {
     if (isAlumniPanel) {
       if (!isStudentAlumni(s)) return false;
+      if (window._alumniFilterProgramId && window._alumniFilterProgramId !== 'all') {
+        if (s.program_id !== window._alumniFilterProgramId) return false;
+      }
       if (window._alumniFilterBatchId && window._alumniFilterBatchId !== 'all') {
         return s.batch_id === window._alumniFilterBatchId;
       }
@@ -854,11 +889,57 @@ export async function renderStudents(area, options = {}) {
   }
 
   if (isAlumniPanel) {
-    const totalAlumni = gridData.filter(isStudentAlumni).length;
+    const allAlumni = gridData.filter(isStudentAlumni);
+    const totalAlumni = allAlumni.length;
+
+    // Detect alumni distribution per program
+    const alumniProgramCounts = new Map();
+    allAlumni.forEach(s => {
+      const pId = s.program_id || 'unknown';
+      alumniProgramCounts.set(pId, (alumniProgramCounts.get(pId) || 0) + 1);
+    });
+
+    const activeAlumniProgId = window._alumniFilterProgramId || 'all';
+
+    // Sort programs alphabetically by name (User directive: "urutkan panel dengan cra nama program dengan alpabet")
+    const relevantPrograms = (allPrograms || []).filter(p => {
+      return alumniProgramCounts.has(p.id) || p.is_active !== false;
+    }).sort((a, b) => {
+      return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
+    });
+
+    window._switchAlumniProgram = (progId) => {
+      window._alumniFilterProgramId = progId;
+      window._alumniFilterBatchId = 'all';
+      try {
+        localStorage.setItem('topscore_alumni_program_id', progId);
+      } catch (_) {}
+      renderStudents(area, { isAlumniPanel });
+    };
+
+    // User directive: "urutkan panel dengan cra nama program dengan alpabet, tapi all alumni taruh paling akhir"
+    const alumniTopTabs = [
+      ...relevantPrograms.map(p => {
+        const count = alumniProgramCounts.get(p.id) || 0;
+        return {
+          id: p.id,
+          icon: getSvgIcon('book-open', 14),
+          label: p.name,
+          val: count,
+          valColor: count > 0 ? 'var(--clr-accent-1, #38bdf8)' : '#94a3b8'
+        };
+      }),
+      {
+        id: 'all',
+        icon: getSvgIcon('graduation-cap', 14),
+        label: 'All Alumni',
+        val: totalAlumni,
+        valColor: 'var(--quad-d)'
+      }
+    ];
+
     if (window.setTopbarTabs) {
-      window.setTopbarTabs([
-        { id: 'alumni', icon: getSvgIcon('graduation-cap', 14), label: 'Alumni', val: totalAlumni, valColor: 'var(--quad-d)' }
-      ], 'alumni', 'window._switchStudentRosterStatus');
+      window.setTopbarTabs(alumniTopTabs, activeAlumniProgId, 'window._switchAlumniProgram');
     }
   } else {
     const activeCount = rosterScopeStudents.filter(isStudentActive).length;
@@ -874,7 +955,12 @@ export async function renderStudents(area, options = {}) {
     }
   }
 
-  const alumniBatches = (allBatches || []).filter(b => !currentProgramId || b.program_id === currentProgramId);
+  const alumniBatches = (allBatches || []).filter(b => {
+    if (window._alumniFilterProgramId && window._alumniFilterProgramId !== 'all') {
+      return b.program_id === window._alumniFilterProgramId;
+    }
+    return !currentProgramId || b.program_id === currentProgramId;
+  });
   const alumniBatchOptions = alumniBatches.map(b => `<option value="${b.id}" ${window._alumniFilterBatchId === b.id ? 'selected' : ''}>${b.name}</option>`).join('');
 
   // Raised Table Layout (User Directive: Strip bulky header & middle filter bar; table header sits directly beneath top panel)
@@ -924,11 +1010,11 @@ export async function renderStudents(area, options = {}) {
 
     const rightHtml = `<div style="display:inline-flex;align-items:center;gap:8px;overflow-y:hidden;">
       ${currentBatchStatus !== 'alumni' ? `
-        <button type="button" id="btn-graduate-alumni-roster" style="background:#8b5cf6;border:1px solid #a855f7;color:#ffffff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Graduate selected students directly to Alumni">${getSvgIcon('graduation-cap', 14)} Alumni</button>
-        <button type="button" id="btn-promote-all-eligible" style="${nextBtnStyle}height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="${nextBtnTitle}">${getSvgIcon('zap', 14)} NEXT (${eligibleCount} Eligible)</button>
+        <button type="button" class="btn btn-purple btn-sm" id="btn-graduate-alumni-roster" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Graduate selected students directly to Alumni">${getSvgIcon('graduation-cap', 14)} Alumni</button>
+        <button type="button" class="btn btn-success btn-sm" id="btn-promote-all-eligible" style="${nextBtnStyle}height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="${nextBtnTitle}">${getSvgIcon('zap', 14)} NEXT (${eligibleCount} Eligible)</button>
       ` : ''}
-      <button type="button" id="btn-add-student-direct" style="background:#3b82f6;border:1px solid #3b82f6;color:#fff;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Register New Student">${getSvgIcon('plus', 14)} Add Student</button>
-      <button type="button" id="btn-import-students-direct" style="background:#1e293b;border:1px solid #334155;color:#f8fafc;height:28px !important;min-height:28px !important;max-height:28px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Import Students from Excel / CSV">${getSvgIcon('upload', 14)} Import Excel / CSV</button>
+      <button type="button" class="btn btn-tactical btn-sm" id="btn-add-student-direct" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Register New Student">${getSvgIcon('plus', 14)} Add Student</button>
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-import-students-direct" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Import Students from Excel / CSV">${getSvgIcon('upload', 14)} Import Excel / CSV</button>
     </div>`;
     window.setBottomInfobar(leftHtml, rightHtml);
 
@@ -1438,7 +1524,14 @@ export async function renderStudents(area, options = {}) {
             <div>
               <div class="d-flex align-center gap-2 flex-wrap">
                 <h3 style="margin: 0; font-size: 16px; color: var(--fm-text-primary, #f8fafc); font-weight: 800;">${escapeHtml(rec.displayName || rec.name)}</h3>
-                <span class="badge ${rec.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size: 12px;">${rec.is_active !== false ? 'Active' : 'Inactive'}</span>
+                ${(rec.isAlumni || rec.levelName === 'X' || (rec.program_status || '').toUpperCase() === 'ALUMNI')
+                  ? `<span class="badge" style="background:rgba(192,132,252,0.15);color:var(--quad-d);border:1px solid rgba(192,132,252,0.3);font-size: 12px;">Alumni</span>`
+                  : (rec.is_active === false || (rec.program_status || '').toUpperCase() === 'INACTIVE')
+                    ? `<span class="badge badge-danger" style="background:rgba(255,0,0,0.15);color:var(--grade-e);border:1px solid rgba(255,0,0,0.3);font-size: 12px;">Inactive</span>`
+                    : (rec.program_status || '').toUpperCase() === 'HOLD'
+                      ? `<span class="badge badge-warning" style="font-size: 12px;">Hold</span>`
+                      : `<span class="badge badge-success" style="font-size: 12px;">Active</span>`
+                }
                 <span class="badge badge-info" style="font-size: 12px;">${escapeHtml(rec.gender || '—')}</span>
               </div>
               <div class="text-xs text-muted" style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
@@ -2246,7 +2339,7 @@ export async function renderStudents(area, options = {}) {
             if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['A'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            const formatted = Math.round(Number(pts));
             return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         },
@@ -2264,7 +2357,7 @@ export async function renderStudents(area, options = {}) {
             if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['B'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            const formatted = Math.round(Number(pts));
             return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         },
@@ -2282,7 +2375,7 @@ export async function renderStudents(area, options = {}) {
             if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['C'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            const formatted = Math.round(Number(pts));
             return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         },
@@ -2301,7 +2394,7 @@ export async function renderStudents(area, options = {}) {
             if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = cs?.themeScores?.['D'] ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            const formatted = Math.round(Number(pts));
             return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         }
@@ -2349,7 +2442,7 @@ export async function renderStudents(area, options = {}) {
             if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = tScore?.pct ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = (pts % 1 !== 0) ? pts.toFixed(1) : pts;
+            const formatted = Math.round(Number(pts));
             return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="${escapeHtml(t.title)}: ${formatted} pts (${pct}%)">${formatted}</div>`;
           }
         };
@@ -2699,8 +2792,8 @@ export async function renderStudents(area, options = {}) {
         width: '46px',
         minWidth: '42px',
         render: (row) => {
-          if (row.isAlumni || row.studentLevelNum === 0 || (row.levelName && row.levelName.toLowerCase() === 'alumni')) {
-            return `<span style="color:#c084fc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;">Alumni</span>`;
+          if (row.isAlumni || isAlumniPanel || row.studentLevelNum === 0 || (row.levelName && (row.levelName.toLowerCase() === 'alumni' || row.levelName.toUpperCase() === 'X'))) {
+            return `<span style="color:#c084fc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;" title="Alumni (Level X)">X</span>`;
           }
           const shortLvl = typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—');
           return `<span style="color:#f8fafc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;">${escapeHtml(shortLvl)}</span>`;
@@ -2773,7 +2866,7 @@ export async function renderStudents(area, options = {}) {
                  onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
                  title="${escapeHtml(row.displayName)}&#10;Click to view student profile">
               <span style="color:var(--clr-text-1);font-weight:400;font-size: 12px;">${escapeHtml(row.displayName)}</span>
-              ${row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size: 12px;">Disconnected</span>` : ''}
+              ${!isAlumniPanel && row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size: 12px;">Disconnected</span>` : ''}
               ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:6px;font-size: 12px;">Remediation</span>` : ''}
             </div>
             <input type="text" class="student-inline-input" data-id="${row.id}" data-field="name" value="${escapeHtml(row.name || row.displayName)}" placeholder="Student Name" onclick="event.stopPropagation();">
@@ -3053,24 +3146,25 @@ export async function renderStudents(area, options = {}) {
         width: '90px',
         minWidth: '85px',
         render: (row) => {
-          const isInactive = ((row._raw || row).is_active === false);
+          const isInactive = ((row._raw || row).is_active === false) || ((row.program_status || '').toUpperCase() === 'INACTIVE');
           const rawStatus = (row.program_status || 'ACTIVE').toUpperCase();
+          const isLvlX = row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'X' || (row.levelName && row.levelName.toLowerCase() === 'alumni') || isAlumniPanel;
           let currentStatus = 'active';
           let label = 'Active';
           let color = 'var(--grade-a)';
 
-          if (isInactive) {
+          if (isLvlX || rawStatus === 'ALUMNI' || rawStatus === 'COMPLETED' || rawStatus === 'GRADUATED') {
+            currentStatus = 'alumni';
+            label = 'Alumni';
+            color = 'var(--quad-d)';
+          } else if (isInactive) {
             currentStatus = 'inactive';
             label = 'Inactive';
-            color = '#94a3b8';
+            color = 'var(--grade-e)'; // Strictly RED (Grade E SSOT), never white or slate!
           } else if (rawStatus === 'HOLD' || rawStatus === 'PENDING') {
             currentStatus = 'hold';
             label = 'Hold';
             color = 'var(--grade-c)';
-          } else if (rawStatus === 'ALUMNI' || rawStatus === 'COMPLETED' || rawStatus === 'GRADUATED') {
-            currentStatus = 'alumni';
-            label = 'Alumni';
-            color = 'var(--quad-d)';
           } else {
             currentStatus = 'active';
             label = 'Active';
@@ -3082,10 +3176,10 @@ export async function renderStudents(area, options = {}) {
               <span style="color:${color};font-size: 12px;font-weight:600;">${label}</span>
             </div>
             <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
-              <option value="active" ${currentStatus === 'active' ? 'selected' : ''}>Active</option>
-              <option value="hold" ${currentStatus === 'hold' ? 'selected' : ''}>Hold</option>
-              <option value="alumni" ${currentStatus === 'alumni' ? 'selected' : ''}>Alumni</option>
-              <option value="inactive" ${currentStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
+              <option value="active" style="color:var(--grade-a);" ${currentStatus === 'active' ? 'selected' : ''}>Active</option>
+              <option value="hold" style="color:var(--grade-c);" ${currentStatus === 'hold' ? 'selected' : ''}>Hold</option>
+              <option value="alumni" style="color:var(--quad-d);" ${currentStatus === 'alumni' ? 'selected' : ''}>Alumni</option>
+              <option value="inactive" style="color:var(--grade-e);" ${currentStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
             </select>
           `;
         }
@@ -3734,7 +3828,7 @@ window.openTransferBatchModal = async function(studentId) {
 
       <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
         <button id="tb-cancel-btn" class="btn btn-secondary btn-modal-close-left">Cancel</button>
-        <button id="tb-save-btn" class="btn btn-primary" style="background:#6366f1;border-color:#6366f1;font-weight:700;">
+        <button id="tb-save-btn" class="btn btn-tactical" style="font-weight:700;">
           Confirm Transfer
         </button>
       </div>
@@ -3868,7 +3962,7 @@ window.openRepeatLevelModal = async function(studentId) {
 
       <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
         <button id="rl-cancel-btn" class="btn btn-secondary btn-modal-close-left">Cancel</button>
-        <button id="rl-save-btn" class="btn btn-primary" style="background:#a855f7;border-color:#a855f7;font-weight:700;display:inline-flex;align-items:center;gap:6px;">
+        <button id="rl-save-btn" class="btn btn-purple" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;">
           ${getSvgIcon('refresh', 14)} Confirm Re-enrollment
         </button>
       </div>

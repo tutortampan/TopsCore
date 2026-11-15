@@ -8,6 +8,7 @@ import { cleanStudentName } from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
+import { getAllowedModulesForClass, OFFICIAL_MODULES } from './modules.js';
 
 function formatLevelOption(l) {
   if (l && l.name) return l.name;
@@ -114,11 +115,15 @@ const formFields = {
       { value: 'DRAFT', label: 'DRAFT (Konsep / Tersembunyi)' }
     ], required: true },
     { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number', required: true, defaultValue: 5 },
-    { id: 'answer_type', label: 'Answer Type', type: 'select', options: [
-      { value: 'spoken', label: 'Spoken (Speech to Text)' },
-      { value: 'written', label: 'Written (Teks Langsung)' },
-      { value: 'selection', label: 'Selection (Pilihan Ganda)' },
-      { value: 'mixed', label: 'Mixed (Campuran)' }
+    { id: 'answer_type', label: 'Module', type: 'select', options: [
+      { value: 'description', label: 'Description (m1)' },
+      { value: 'selection', label: 'Selection (m2)' },
+      { value: 'written', label: 'Written (m3)' },
+      { value: 'spoken', label: 'Spoken (m4)' },
+      { value: 'speech', label: 'Speech (m5)' },
+      { value: 'monologue', label: 'Monologue (m6)' },
+      { value: 'dialogue', label: 'Dialogue (m7)' },
+      { value: 'interview', label: 'Interview (m8)' }
     ], required: true },
     { id: 'minimum_required_score', label: 'Passing Score %', type: 'number', defaultValue: 60 },
     { id: 'question_order', label: 'Question Order', type: 'select', options: [
@@ -133,10 +138,15 @@ const formFields = {
     { id: 'question_text', label: 'Question Text', type: 'textarea', required: true },
     { id: 'question_order', label: 'Order', type: 'number', required: true },
     { id: 'test_id', label: 'Test', type: 'select', source: 'Tests', required: true },
-    { id: 'answer_type', label: 'Answer Type', type: 'select', options: [
-      {value:'selection',label:'Selection'},
-      {value:'spoken',label:'Speaking Test'},
-      {value:'written',label:'Written Test'}
+    { id: 'answer_type', label: 'Module', type: 'select', options: [
+      { value: 'description', label: 'Description (m1)' },
+      { value: 'selection', label: 'Selection (m2)' },
+      { value: 'written', label: 'Written (m3)' },
+      { value: 'spoken', label: 'Spoken (m4)' },
+      { value: 'speech', label: 'Speech (m5)' },
+      { value: 'monologue', label: 'Monologue (m6)' },
+      { value: 'dialogue', label: 'Dialogue (m7)' },
+      { value: 'interview', label: 'Interview (m8)' }
     ], required: true },
     { id: 'correct_answer', label: 'Correct Answer', type: 'text', required: true, placeholder: 'e.g. run / jog / sprint  (use / ; or | to separate multiple accepted answers)' },
     { id: 'options_json', label: 'Options (separated by / ; or JSON array)', type: 'textarea', placeholder: 'e.g. Option A / Option B / Option C  (use / or ; to separate choices)' },
@@ -278,20 +288,60 @@ async function openCrudModal(section, record) {
           sel.name = f.id;
           if (f.required) sel.required = true;
           if (f.readonly) sel.disabled = true;
-          sel.innerHTML = `<option value="">— Select —</option>` + f.options.map(o => {
-            const val = typeof o === 'object' ? o.value : o;
-            const labelStr = typeof o === 'object' ? o.label : o;
-            let isSelected = String(record?.[f.id] || '').toUpperCase() === String(val).toUpperCase() || (!record && (val === 'sequential' || val === 'PUBLISHED'));
-            if (f.id === 'answer_type' && record?.answer_type) {
-              const norm = String(record.answer_type).toLowerCase();
-              if ((norm === 'spoken' || norm === 'speech_to_text') && val === 'spoken') isSelected = true;
-              else if ((norm === 'written' || norm === 'text') && val === 'written') isSelected = true;
-              else if ((norm === 'selection' || norm === 'dropdown' || norm === 'multiple_choice') && val === 'selection') isSelected = true;
-              else if (norm === 'mixed' && val === 'mixed') isSelected = true;
+
+          // Smart Module Guardrail for Test creation / edit
+          if (f.id === 'answer_type' && (_currentSection === 'tests' || _currentSection === 'Tests')) {
+            const clsName = record?.class_name || (record?.title ? record.title : '') || (window._activeClassName || window._activeClass?.name || '');
+            const compat = getAllowedModulesForClass(clsName);
+            const allowedSet = new Set(compat.allowedKeys);
+            const curVal = String(record?.answer_type || '').toLowerCase().trim();
+            const normVal = curVal === 'multiple_choice' ? 'selection' : (curVal === 'speech_to_text' ? 'spoken' : curVal);
+
+            let optHtml = `<option value="">— Select Module —</option>`;
+            if (compat.discipline !== 'general') {
+              optHtml += `<optgroup label="✅ Compatible with ${compat.disciplineLabel}">`;
+              OFFICIAL_MODULES.filter(m => allowedSet.has(m.key)).forEach(m => {
+                const isSel = (normVal === m.key) || (!record && m.key === compat.primaryKey);
+                optHtml += `<option value="${m.key}" ${isSel ? 'selected' : ''}>${m.name} — ${m.desc}</option>`;
+              });
+              optHtml += `</optgroup>`;
+
+              optHtml += `<optgroup label="🔒 Incompatible with ${compat.disciplineLabel} (Disabled)">`;
+              OFFICIAL_MODULES.filter(m => !allowedSet.has(m.key)).forEach(m => {
+                optHtml += `<option value="${m.key}" disabled>${m.name} — (Incompatible with ${compat.disciplineLabel})</option>`;
+              });
+              optHtml += `</optgroup>`;
+            } else {
+              OFFICIAL_MODULES.forEach(m => {
+                const isSel = normVal === m.key;
+                optHtml += `<option value="${m.key}" ${isSel ? 'selected' : ''}>${m.name} — ${m.desc}</option>`;
+              });
             }
-            return `<option value="${val}" ${isSelected ? 'selected' : ''}>${labelStr}</option>`;
-          }).join('');
-          group.appendChild(sel);
+            sel.innerHTML = optHtml;
+            group.appendChild(sel);
+
+            if (compat.discipline !== 'general') {
+              const hint = document.createElement('div');
+              hint.style.cssText = 'font-size: 12px; color: #38bdf8; margin-top: 4px; line-height: 1.4;';
+              hint.innerHTML = `ℹ️ <strong>${compat.disciplineLabel}:</strong> ${compat.reason}`;
+              group.appendChild(hint);
+            }
+          } else {
+            sel.innerHTML = `<option value="">— Select —</option>` + f.options.map(o => {
+              const val = typeof o === 'object' ? o.value : o;
+              const labelStr = typeof o === 'object' ? o.label : o;
+              let isSelected = String(record?.[f.id] || '').toUpperCase() === String(val).toUpperCase() || (!record && (val === 'sequential' || val === 'PUBLISHED'));
+              if (f.id === 'answer_type' && record?.answer_type) {
+                const norm = String(record.answer_type).toLowerCase();
+                if ((norm === 'spoken' || norm === 'speech_to_text') && val === 'spoken') isSelected = true;
+                else if ((norm === 'written' || norm === 'text') && val === 'written') isSelected = true;
+                else if ((norm === 'selection' || norm === 'dropdown' || norm === 'multiple_choice') && val === 'selection') isSelected = true;
+                else if (norm === 'mixed' && val === 'mixed') isSelected = true;
+              }
+              return `<option value="${val}" ${isSelected ? 'selected' : ''}>${labelStr}</option>`;
+            }).join('');
+            group.appendChild(sel);
+          }
         } else if (f.type === 'textarea') {
           const ta = document.createElement('textarea');
           ta.className = 'form-control';
@@ -1282,7 +1332,7 @@ async function loadDuplicateQuestions() {
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
                   <th style="padding:6px 4px;">ID</th>
                   <th style="padding:6px 4px;">ORDER</th>
-                  <th style="padding:6px 4px;">ANSWER TYPE</th>
+                  <th style="padding:6px 4px;">MODULE</th>
                   <th style="padding:6px 4px;">LOGGED ANSWERS</th>
                   <th style="padding:6px 4px;">CREATED AT</th>
                   <th style="padding:6px 4px; text-align:right;">STATUS</th>
@@ -1361,7 +1411,7 @@ async function loadDuplicateQuestions() {
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
                   <th style="padding:6px 4px;">ORDER</th>
                   <th style="padding:6px 4px;">QUESTION TEXT</th>
-                  <th style="padding:6px 4px;">ANSWER TYPE</th>
+                  <th style="padding:6px 4px;">MODULE</th>
                 </tr>
               </thead>
               <tbody>
@@ -1585,7 +1635,7 @@ function _initBulkEditModal() {
       const chkOrd = document.getElementById('bulk-check-order')?.checked;
 
       if (!chkDur && !chkAns && !chkMin && !chkOrd) {
-        showToast('Select at least one checkbox option (Duration, Answer Type, or Passing Score) to modify.', 'warning');
+        showToast('Select at least one checkbox option (Duration, Module, or Passing Score) to modify.', 'warning');
         return;
       }
 

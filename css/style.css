@@ -320,21 +320,35 @@ button,
   box-sizing: border-box;
 }
 
-/* Universal Button Glow & Active Interaction */
+/* Universal Button Glow & Stationary Interaction (Strict Zero-Movement on Hover per §3.4) */
 button:hover:not([disabled]):not(:disabled),
 .btn:hover:not([disabled]):not(:disabled),
 [role="button"]:hover:not([disabled]):not(:disabled) {
   filter: brightness(1.1) !important;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.25) !important;
-  transform: translateY(-1px) !important;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25) !important;
+  transform: none !important;
 }
 
 button:active:not([disabled]):not(:disabled),
 .btn:active:not([disabled]):not(:disabled),
 [role="button"]:active:not([disabled]):not(:disabled) {
-  filter: brightness(1.2) !important;
-  transform: scale(0.985) translateY(0px) !important;
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.45) !important;
+  filter: brightness(1.15) !important;
+  transform: none !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Strict Zero-Movement Invariant on Hover & Active across all buttons (§3.4) */
+button:hover,
+.btn:hover,
+.action-btn:hover,
+.student-action-btn:hover,
+[role="button"]:hover,
+button:active,
+.btn:active,
+.action-btn:active,
+.student-action-btn:active,
+[role="button"]:active {
+  transform: none !important;
 }
 
 /* Primary button (Tactical Blue / Cyan) */
@@ -392,59 +406,203 @@ button:active:not([disabled]):not(:disabled),
 }
 
 /* Secondary button (Neutral Slate / Subtle Outline) */
+/* Ghost-to-Solid-Glow Button Invariant (SSOT Rule §3.4) */
 .btn-secondary {
-  background: var(--clr-surface);
-  color: var(--clr-text-1);
-  border: 1px solid var(--clr-border-strong);
+  background: transparent !important;
+  color: var(--clr-text-2, #cbd5e1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.15s ease !important;
 }
 
 .btn-secondary:hover:not([disabled]):not(:disabled) {
-  background: var(--clr-surface-hover);
+  background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.35) !important;
-  box-shadow: 0 0 12px rgba(148, 163, 184, 0.4) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.3) !important;
 }
 
-.btn-secondary:active:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 16px rgba(148, 163, 184, 0.6) !important;
+.btn-secondary:active:not([disabled]):not(:disabled),
+.btn-secondary.is-active,
+.btn-secondary.active {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.5) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4) !important;
 }
 
-/* Danger button */
-.btn-danger {
-  background: rgba(var(--grade-e-rgb), 0.15);
-  color: var(--clr-danger);
-  border: 1px solid rgba(var(--grade-e-rgb), 0.3);
+/* Danger / Delete button (Pure Red Grade E SSOT) */
+.btn-danger,
+.btn-red,
+.btn-outline-danger {
+  background: transparent !important;
+  color: var(--grade-e) !important;
+  border: 1px solid var(--grade-e) !important;
+  transition: all 0.15s ease !important;
 }
 
-.btn-danger:hover:not([disabled]):not(:disabled) {
-  background: rgba(var(--grade-e-rgb), 0.25);
-  box-shadow: 0 0 14px rgba(var(--grade-e-rgb), 0.5) !important;
+.btn-danger:hover:not([disabled]):not(:disabled),
+.btn-red:hover:not([disabled]):not(:disabled),
+.btn-outline-danger:hover:not([disabled]):not(:disabled) {
+  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.15) !important;
+  border-color: var(--grade-e) !important;
+  color: var(--grade-e) !important;
+  box-shadow: 0 0 8px rgba(var(--grade-e-rgb, 255, 0, 0), 0.3) !important;
 }
 
-.btn-danger:active:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 18px rgba(var(--grade-e-rgb), 0.75) !important;
+.btn-danger:active:not([disabled]):not(:disabled),
+.btn-danger.is-active,
+.btn-danger.active,
+.btn-red:active:not([disabled]):not(:disabled),
+.btn-red.is-active,
+.btn-red.active,
+.btn-outline-danger:active:not([disabled]):not(:disabled),
+.btn-outline-danger.is-active,
+.btn-outline-danger.active {
+  background: var(--grade-e) !important;
+  border-color: var(--grade-e) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(var(--grade-e-rgb, 255, 0, 0), 0.55) !important;
 }
 
-/* Success button */
-.btn-success {
-  background: rgba(var(--clr-success-rgb), 0.15);
-  color: var(--clr-success);
-  border: 1px solid rgba(var(--clr-success-rgb), 0.35);
+/* Success / Published button (Pure Green Grade A SSOT) */
+.btn-success,
+.btn-green,
+.btn-outline-success {
+  background: transparent !important;
+  color: var(--grade-a) !important;
+  border: 1px solid var(--grade-a) !important;
+  transition: all 0.15s ease !important;
 }
 
-.btn-success:hover {
-  background: rgba(var(--clr-success-rgb), 0.25);
+.btn-success:hover:not([disabled]):not(:disabled),
+.btn-green:hover:not([disabled]):not(:disabled),
+.btn-outline-success:hover:not([disabled]):not(:disabled) {
+  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.15) !important;
+  border-color: var(--grade-a) !important;
+  color: var(--grade-a) !important;
+  box-shadow: 0 0 8px rgba(var(--grade-a-rgb, 0, 192, 0), 0.3) !important;
 }
 
-/* Warning button */
-.btn-warning {
-  background: rgba(var(--grade-d-rgb), 0.18);
-  color: var(--clr-warning);
-  border: 1px solid rgba(var(--grade-d-rgb), 0.4);
+.btn-success:active:not([disabled]):not(:disabled),
+.btn-success.is-active,
+.btn-success.active,
+.btn-green:active:not([disabled]):not(:disabled),
+.btn-green.is-active,
+.btn-green.active,
+.btn-outline-success:active:not([disabled]):not(:disabled),
+.btn-outline-success.is-active,
+.btn-outline-success.active {
+  background: var(--grade-a) !important;
+  border-color: var(--grade-a) !important;
+  color: #0f172a !important; /* Strict Dark Text for Green */
+  box-shadow: 0 0 12px rgba(var(--grade-a-rgb, 0, 192, 0), 0.55) !important;
 }
 
-.btn-warning:hover {
-  background: rgba(var(--grade-d-rgb), 0.28);
-  box-shadow: 0 4px 20px rgba(var(--grade-d-rgb), 0.25);
+/* Warning / Remedial button (Pure Yellow Grade C SSOT) */
+.btn-warning,
+.btn-yellow,
+.btn-remedial,
+.btn-outline-warning {
+  background: transparent !important;
+  color: var(--grade-c) !important;
+  border: 1px solid var(--grade-c) !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-warning:hover:not([disabled]):not(:disabled),
+.btn-yellow:hover:not([disabled]):not(:disabled),
+.btn-remedial:hover:not([disabled]):not(:disabled),
+.btn-outline-warning:hover:not([disabled]):not(:disabled) {
+  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.15) !important;
+  border-color: var(--grade-c) !important;
+  color: var(--grade-c) !important;
+  box-shadow: 0 0 8px rgba(var(--grade-c-rgb, 255, 255, 0), 0.3) !important;
+}
+
+.btn-warning:active:not([disabled]):not(:disabled),
+.btn-warning.is-active,
+.btn-warning.active,
+.btn-yellow:active:not([disabled]):not(:disabled),
+.btn-yellow.is-active,
+.btn-yellow.active,
+.btn-remedial:active:not([disabled]):not(:disabled),
+.btn-remedial.is-active,
+.btn-remedial.active,
+.btn-outline-warning:active:not([disabled]):not(:disabled),
+.btn-outline-warning.is-active,
+.btn-outline-warning.active {
+  background: var(--grade-c) !important;
+  border-color: var(--grade-c) !important;
+  color: #0f172a !important; /* Strict Dark Text for Yellow */
+  box-shadow: 0 0 12px rgba(var(--grade-c-rgb, 255, 255, 0), 0.55) !important;
+}
+
+/* Tactical Cyan / Manual button (Tactical Cyan #38bdf8 SSOT) */
+.btn-tactical,
+.btn-cyan,
+.btn-outline-primary {
+  background: transparent !important;
+  color: #38bdf8 !important;
+  border: 1px solid #38bdf8 !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-tactical:hover:not([disabled]):not(:disabled),
+.btn-cyan:hover:not([disabled]):not(:disabled),
+.btn-outline-primary:hover:not([disabled]):not(:disabled) {
+  background: rgba(56, 189, 248, 0.12) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3) !important;
+}
+
+.btn-tactical:active:not([disabled]):not(:disabled),
+.btn-tactical.is-active,
+.btn-tactical.active,
+.btn-cyan:active:not([disabled]):not(:disabled),
+.btn-cyan.is-active,
+.btn-cyan.active,
+.btn-outline-primary:active:not([disabled]):not(:disabled),
+.btn-outline-primary.is-active,
+.btn-outline-primary.active {
+  background: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.55) !important;
+}
+
+/* Purple / Alumni button (Vibrant Purple var(--quad-d) SSOT) */
+.btn-purple,
+.btn-alumni,
+.btn-outline-purple {
+  background: transparent !important;
+  color: var(--quad-d) !important;
+  border: 1px solid var(--quad-d) !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-purple:hover:not([disabled]):not(:disabled),
+.btn-alumni:hover:not([disabled]):not(:disabled),
+.btn-outline-purple:hover:not([disabled]):not(:disabled) {
+  background: rgba(192, 132, 252, 0.15) !important;
+  border-color: var(--quad-d) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.3) !important;
+}
+
+.btn-purple:active:not([disabled]):not(:disabled),
+.btn-purple.is-active,
+.btn-purple.active,
+.btn-alumni:active:not([disabled]):not(:disabled),
+.btn-alumni.is-active,
+.btn-alumni.active,
+.btn-outline-purple:active:not([disabled]):not(:disabled),
+.btn-outline-purple.is-active,
+.btn-outline-purple.active {
+  background: #8b5cf6 !important;
+  border-color: var(--quad-d) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 12px rgba(192, 132, 252, 0.55) !important;
 }
 
 /* Ghost button */
@@ -1896,12 +2054,12 @@ body.test-page {
 .btn,
 .mc-option,
 .select-option-card {
-  transition: transform 0.15s ease-out, background-color 0.15s ease-out, opacity 0.15s ease-out !important;
+  transition: background-color 0.15s ease-out, border-color 0.15s ease-out, box-shadow 0.15s ease-out, opacity 0.15s ease-out !important;
 }
 
 .btn:active,
 .select-option-card:active {
-  transform: scale(0.96) !important;
+  transform: none !important;
 }
 
 
@@ -1990,10 +2148,10 @@ body.test-page {
   margin-left: 6px;
 }
 
-/* Micro-interaction hover scale on buttons containing icons */
+/* Zero-movement hover discipline on buttons containing icons (§3.4) */
 button:hover .tc-icon,
 .btn:hover .tc-icon,
 .nav-tab:hover .tc-icon {
-  transform: scale(1.08);
+  transform: none !important;
 }
 

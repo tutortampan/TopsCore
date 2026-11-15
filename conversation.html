@@ -16,7 +16,7 @@
     <div class="conv-topbar-left">
       <div class="conv-brand-logo">
         <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>TopsCore</span>
-        <span class="conv-brand-badge">P2P Oral Module</span>
+        <span class="conv-brand-badge">Live Dialogue Room</span>
       </div>
       <div id="room-code-badge" class="conv-room-code-pill" title="Click to copy room code">ROOM: ------</div>
     </div>
@@ -209,87 +209,106 @@
     </div>
   </footer>
 
-  <!-- 4. LOBBY / JOIN ROOM MODAL -->
+  <!-- 4. LOBBY / JOIN ROOM MODAL — Standardized Floating Window (Phase 588) -->
   <div id="lobby-modal" class="conv-modal-overlay" style="display: none;">
     <div class="conv-modal-box">
-      <h3 class="conv-modal-title">
-        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>Peer Conversation Room Setup</span>
-      </h3>
-      <p style="font-size: 13px; color: #94a3b8; margin: 0;">
-        Join an existing 60-minute discussion session with your peer, or generate a fresh room code.
-      </p>
-
-      <div class="conv-input-group">
-        <label class="conv-input-label" for="input-room-code">Room Code</label>
-        <input id="input-room-code" class="conv-input-text" type="text" placeholder="e.g. CONV-8821" maxlength="12" style="text-transform: uppercase;">
+      <!-- 1. Header (Title Area 60px Solid Navy Banner per Invariant 1.5.1) -->
+      <div class="conv-modal-header title-area">
+        <h2 class="conv-modal-title">CONVERSATION ROOM SETUP</h2>
       </div>
 
-      <div class="conv-input-group">
-        <label class="conv-input-label" for="input-assigned-role">Discussion Role</label>
-        <select id="input-assigned-role" class="conv-input-text" style="background: #121c35;">
-          <option value="Lead Engineer">Role A — Lead Engineer / Proponent</option>
-          <option value="Product Manager">Role B — Product Manager / Opponent</option>
-        </select>
+      <!-- 2. Body Area -->
+      <div class="conv-modal-body">
+        <div class="conv-input-group">
+          <label class="conv-input-label" for="input-room-code">Room Code</label>
+          <input id="input-room-code" class="conv-input-text" type="text" placeholder="e.g. CONV-8821" maxlength="12" style="text-transform: uppercase;">
+        </div>
+
+        <div class="conv-input-group">
+          <label class="conv-input-label" for="input-assigned-role">Discussion Role</label>
+          <select id="input-assigned-role" class="conv-input-text" style="background: #121c35;">
+            <option value="Lead Engineer">Role A — Lead Engineer / Proponent</option>
+            <option value="Product Manager">Role B — Product Manager / Opponent</option>
+          </select>
+        </div>
+
+        <!-- Pill Keterangan Waktu Sesi -->
+        <div class="conv-time-pill-wrap">
+          <div class="conv-time-pill">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span>SESSION DURATION: <strong>60 MINUTES</strong></span>
+          </div>
+        </div>
       </div>
 
-      <div style="display: flex; gap: 10px; margin-top: 8px;">
-        <button id="btn-create-room" class="conv-btn conv-btn-secondary" style="flex: 1; height: 38px;">
-          Create New Room
+      <!-- 3. CTA Area / Modal Footer (60px Panel per Invariant 1.5.2 & 1.5.4) -->
+      <div class="conv-modal-footer modal-footer">
+        <button id="btn-create-room" class="btn conv-btn-ghost-sec" type="button">
+          CREATE NEW ROOM
         </button>
-        <button id="btn-join-room" class="conv-btn conv-btn-primary" style="flex: 1; height: 38px;">
-          Join Room
+        <button id="btn-join-room" class="btn conv-btn-solid-glow" type="button">
+          JOIN ROOM
         </button>
       </div>
     </div>
   </div>
 
-  <!-- 5. FINAL SCORECARD & EVALUATION MODAL -->
+  <!-- 5. FINAL SCORECARD & EVALUATION MODAL — Standardized Floating Window (Phase 589) -->
   <div id="eval-modal" class="conv-modal-overlay" style="display: none;">
-    <div class="conv-modal-box" style="max-width: 640px;">
-      <h3 class="conv-modal-title" style="justify-content: space-between;">
-        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><line x1="12" y1="20" x2="12" y2="10"></line><line x1="18" y1="20" x2="18" y2="4"></line><line x1="6" y1="20" x2="6" y2="16"></line></svg>5-Pillar Conversation Report</span>
-        <span id="modal-final-grade" class="grade-circle" style="width: 36px; height: 36px; font-size: 18px; font-weight: 800; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--grade-star); color: #0F172A;">★</span>
-      </h3>
-
-      <div style="display: flex; align-items: baseline; gap: 10px;">
-        <div style="font-size: 32px; font-weight: 900; color: #fff;" id="modal-final-score">94%</div>
-        <div style="font-size: 13px; color: #94a3b8;" id="modal-final-predicate">Excellent Speaking Performance</div>
+    <div class="conv-modal-box conv-eval-modal-box">
+      <!-- 1. Header (Title Area 60px Solid Navy Banner per Invariant 1.5.1) -->
+      <div class="conv-modal-header title-area">
+        <h2 class="conv-modal-title">CONVERSATION REPORT</h2>
       </div>
 
-      <!-- 5 Pillars Breakdown -->
-      <div class="conv-score-card-grid">
-        <div class="conv-pillar-card">
-          <div class="conv-pillar-name">Fluency</div>
-          <div class="conv-pillar-score" id="score-fluency">92%</div>
+      <!-- 2. Body Area -->
+      <div class="conv-modal-body">
+        <!-- Hero Score & Grade Badge -->
+        <div class="conv-eval-hero-strip">
+          <div class="conv-eval-score-wrap">
+            <span style="font-size: 32px; font-weight: 900; color: #fff; line-height: 1;" id="modal-final-score">94%</span>
+            <span id="modal-final-predicate" style="font-size: 12px; color: #94a3b8; font-weight: 600;">Excellent Performance</span>
+          </div>
+          <span id="modal-final-grade" class="grade-circle" style="width: 36px; height: 36px; font-size: 18px; font-weight: 800; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--grade-star); color: #0F172A; flex-shrink: 0;">★</span>
         </div>
-        <div class="conv-pillar-card">
-          <div class="conv-pillar-name">Vocabulary</div>
-          <div class="conv-pillar-score" id="score-vocab">95%</div>
+
+        <!-- 5 Pillars Breakdown (Harmonized 5-column grid) -->
+        <div class="conv-score-card-grid">
+          <div class="conv-pillar-card">
+            <div class="conv-pillar-name">Fluency</div>
+            <div class="conv-pillar-score" id="score-fluency">92%</div>
+          </div>
+          <div class="conv-pillar-card">
+            <div class="conv-pillar-name">Vocab</div>
+            <div class="conv-pillar-score" id="score-vocab">95%</div>
+          </div>
+          <div class="conv-pillar-card">
+            <div class="conv-pillar-name">Grammar</div>
+            <div class="conv-pillar-score" id="score-grammar">90%</div>
+          </div>
+          <div class="conv-pillar-card">
+            <div class="conv-pillar-name">Relevant</div>
+            <div class="conv-pillar-score" id="score-relevance">96%</div>
+          </div>
+          <div class="conv-pillar-card">
+            <div class="conv-pillar-name">Turn</div>
+            <div class="conv-pillar-score" id="score-turn">95%</div>
+          </div>
         </div>
-        <div class="conv-pillar-card">
-          <div class="conv-pillar-name">Grammar</div>
-          <div class="conv-pillar-score" id="score-grammar">90%</div>
-        </div>
-        <div class="conv-pillar-card">
-          <div class="conv-pillar-name">Relevance</div>
-          <div class="conv-pillar-score" id="score-relevance">96%</div>
-        </div>
-        <div class="conv-pillar-card">
-          <div class="conv-pillar-name">Turn-Taking</div>
-          <div class="conv-pillar-score" id="score-turn">95%</div>
+
+        <!-- AI Pedagogical Feedback Card -->
+        <div class="conv-feedback-box">
+          <div class="conv-feedback-title">AI PEDAGOGICAL FEEDBACK</div>
+          <p id="modal-eval-feedback" class="conv-feedback-text">
+            Outstanding conversational fluency. Exemplary use of negotiation collocations and constructive rebuttals during Stage 2. Turn-taking was evenly balanced throughout all 4 stages.
+          </p>
         </div>
       </div>
 
-      <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px;">
-        <div style="font-size: 11px; font-weight: 700; color: #818cf8; text-transform: uppercase; margin-bottom: 4px;">AI Pedagogical Feedback</div>
-        <p id="modal-eval-feedback" style="font-size: 12px; color: #cbd5e1; margin: 0; line-height: 1.5;">
-          Outstanding conversational fluency. Exemplary use of negotiation collocations and constructive rebuttals during Stage 2. Turn-taking was evenly balanced throughout all 4 stages.
-        </p>
-      </div>
-
-      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-        <button id="btn-return-dashboard" class="conv-btn conv-btn-primary" style="height: 38px; padding: 0 20px;">
-          Return to Dashboard
+      <!-- 3. CTA Area / Modal Footer (60px Panel + Single Button Centered per Invariant 1.5.2 & 1.5.4) -->
+      <div class="conv-modal-footer modal-footer">
+        <button id="btn-return-dashboard" class="btn conv-btn-ghost-sec" type="button" style="margin: 0 auto !important; min-width: 200px !important;">
+          RETURN TO DASHBOARD
         </button>
       </div>
     </div>

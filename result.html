@@ -35,11 +35,7 @@
   <header class="dashboard-header" id="result-page-header">
     <div class="result-header-left"></div>
     <div class="dashboard-header-brand" id="result-header-brand">RESULT PAGE</div>
-    <div class="result-header-right">
-      <button class="btn btn-sm btn-print-report" id="btn-print-result" type="button" title="Print Official A4 Diagnostic Report">
-        <span class="print-btn-text">PRINT</span>
-      </button>
-    </div>
+    <div class="result-header-right"></div>
   </header>
 
   <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
@@ -50,103 +46,6 @@
   </div>
 
   <div id="result-content" class="hidden">
-    <!-- PRINTABLE A4 DIAGNOSTIC REPORT CARD (Strictly visible on @media print) -->
-    <div id="printable-report-card" class="print-only">
-      <div class="print-card-header">
-        <div class="print-brand-left">
-          <div class="print-brand-badge">TOPSCORE LMS</div>
-          <h1 class="print-app-title">OFFICIAL DIAGNOSTIC REPORT</h1>
-          <p class="print-inst-meta" id="print-inst-meta">CEC CAMP | 3RD LEVEL</p>
-        </div>
-        <div class="print-report-badge">
-          <div class="print-cert-seal">AUTHENTIC EVALUATION</div>
-          <span class="print-timestamp" id="print-timestamp"></span>
-        </div>
-      </div>
-
-      <div class="print-student-bar">
-        <div class="print-info-col">
-          <span class="print-field-label">STUDENT NAME</span>
-          <span class="print-student-name" id="print-student-name">—</span>
-        </div>
-        <div class="print-info-col">
-          <span class="print-field-label">TEST TITLE</span>
-          <span class="print-test-title" id="print-test-title">—</span>
-        </div>
-        <div class="print-info-col print-info-col-right">
-          <span class="print-field-label">STATUS</span>
-          <span class="print-test-status" id="print-test-status">COMPLETED</span>
-        </div>
-      </div>
-
-      <!-- Test Summary Grid -->
-      <div class="print-summary-grid">
-        <div class="print-metric-box">
-          <span class="print-metric-lbl">CORRECT</span>
-          <span class="print-metric-val print-val-correct" id="print-correct-count">0</span>
-        </div>
-        <div class="print-metric-box">
-          <span class="print-metric-lbl">PARTIAL</span>
-          <span class="print-metric-val print-val-partial" id="print-partial-count">0</span>
-        </div>
-        <div class="print-metric-box">
-          <span class="print-metric-lbl">INCORRECT</span>
-          <span class="print-metric-val print-val-wrong" id="print-wrong-count">0</span>
-        </div>
-        <div class="print-metric-box">
-          <span class="print-metric-lbl">POINTS</span>
-          <span class="print-metric-val" id="print-points">0</span>
-        </div>
-        <div class="print-seal-box">
-          <div class="print-seal-inner">
-            <span class="print-seal-score" id="print-score-pct">0%</span>
-            <div class="print-seal-grade-info">
-              <span class="print-grade-symbol" id="print-grade-symbol">—</span>
-              <span class="print-grade-predicate" id="print-grade-predicate">—</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Question Diagnostic Breakdown Table -->
-      <div class="print-breakdown-section">
-        <h3 class="print-section-title">DETAILED QUESTION EVALUATION BREAKDOWN</h3>
-        <table class="print-breakdown-table" id="print-breakdown-table">
-          <thead>
-            <tr>
-              <th style="width: 38px;">NO</th>
-              <th style="width: 140px;">PROMPT / INDONESIAN</th>
-              <th>STUDENT ANSWER</th>
-              <th>ACCEPTED TARGET</th>
-              <th style="width: 85px;">RESULT</th>
-              <th style="width: 45px;">PTS</th>
-            </tr>
-          </thead>
-          <tbody id="print-breakdown-tbody">
-            <!-- Dynamically populated -->
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Official Sign-off & Verification Footer -->
-      <div class="print-footer-signature">
-        <div class="print-sig-col">
-          <span class="print-sig-line"></span>
-          <span class="print-sig-label">Student Signature</span>
-        </div>
-        <div class="print-sig-col print-sig-center">
-          <div class="print-auth-stamp">
-            <span class="stamp-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>
-            <span class="stamp-title">TOPSCORE VERIFIED</span>
-            <span class="stamp-desc">Official Computerized Test Report</span>
-          </div>
-        </div>
-        <div class="print-sig-col">
-          <span class="print-sig-line"></span>
-          <span class="print-sig-label">Academic Instructor / Director</span>
-        </div>
-      </div>
-    </div>
     <section class="result-hero" id="result-hero-section">
 
       <!-- 1. Header Card (Student Metadata - Strict 150px Uniform with Dashboard) -->
@@ -246,18 +145,17 @@
     <div class="answers-modal-backdrop hidden" id="answers-section" role="dialog" aria-modal="true"
       aria-label="Answer Breakdown Modal">
       <div class="answers-modal-card">
-        <div class="answers-modal-header">
-          <div class="answers-modal-title-wrap">
-            <h2 class="answers-modal-title">Answer Breakdown</h2>
-            <span class="answers-modal-subtitle" id="modal-answers-count-label">Review your detailed question
-              responses</span>
-          </div>
+        <!-- 1. Header (Title Area 40px per Invariant 1.5.1) -->
+        <div class="answers-modal-header title-area">
+          <h2 class="answers-modal-title">ANSWER BREAKDOWN</h2>
         </div>
+        <!-- 2. Scrollable Body Area -->
         <div class="answers-modal-scroll-body">
           <div id="answers-list-container"></div>
         </div>
-        <div class="answers-modal-footer">
-          <button class="btn btn-secondary btn-sm btn-modal-close-left answers-modal-done-btn" id="done-answers-modal-btn" type="button">CLOSE</button>
+        <!-- 3. CTA Area / Modal Footer (60px Panel per Invariant 1.5.2 & 1.5.4) -->
+        <div class="answers-modal-footer modal-footer">
+          <button class="btn answers-modal-done-btn" id="done-answers-modal-btn" type="button" onclick="document.getElementById('answers-section')?.classList.add('hidden')">CLOSE</button>
         </div>
       </div>
     </div>

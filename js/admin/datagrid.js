@@ -72,7 +72,10 @@ export const HEADER_ABBREVIATIONS = {
   'VILLAGE': { full: 'VILLAGE', medium: 'VILLG', short: 'VLG' },
   'CITY / DISTRICT': { full: 'REGENCY', medium: 'REGEN', short: 'RGC' },
   'PROVINCE': { full: 'PROVINCE', medium: 'PROVN', short: 'PRV' },
-  'STATUS': { full: 'STATUS', medium: 'STATUS', short: 'STATUS' },
+  'STATUS': { full: 'STATUS', medium: 'STS', short: 'STS' },
+  'STS': { full: 'STATUS', medium: 'STS', short: 'STS' },
+  'TASK': { full: 'TASK', medium: 'TASK', short: 'TSK' },
+  'DONE': { full: 'DONE', medium: 'DONE', short: 'DONE' },
   'PASSED': { full: 'PASSED', medium: 'PASSD', short: 'PAS' },
   'PASS': { full: 'PASSED', medium: 'PASSD', short: 'PAS' },
   'ACTION': { full: 'ACTION', medium: 'ACTON', short: 'ACT' },
@@ -80,8 +83,11 @@ export const HEADER_ABBREVIATIONS = {
   'PROGRESS': { full: 'PROGRESS', medium: 'PRGRS', short: 'PGS' },
   'RATE': { full: 'RATE', medium: 'RATE', short: 'RATE' },
   'SCORE': { full: 'RATE', medium: 'RATE', short: 'RATE' },
-  'POINTS': { full: 'POINTS', medium: 'POINT', short: 'PTS' },
-  'GRADE': { full: 'GRADE', medium: 'GRADE', short: 'GRD' },
+  'POINTS': { full: 'POINTS', medium: 'PTS', short: 'PTS' },
+  'POINT': { full: 'POINTS', medium: 'PTS', short: 'PTS' },
+  'PTS': { full: 'POINTS', medium: 'PTS', short: 'PTS' },
+  'GRADE': { full: 'GRADE', medium: 'GRD', short: 'GRD' },
+  'GRD': { full: 'GRADE', medium: 'GRD', short: 'GRD' },
   'BATCH': { full: 'BATCH', medium: 'BATCH', short: 'BTC' },
   'PROGRAM': { full: 'PROGRAM', medium: 'PROGM', short: 'PRG' },
   'INSTITUTION': { full: 'INSTITUTION', medium: 'INSTN', short: 'INS' },
@@ -111,10 +117,6 @@ export function resolveHeaderLabel(label, widthPx, shortOverride = null, microOv
     cleanLabel = cleanLabel.replace(/<[^>]*>/g, '').trim();
   }
   const key = cleanLabel.toUpperCase();
-  // USER DIRECTIVE: Header dengan judul STATUS jangan pernah disingkat jadi 5 (STATS) atau 3 (STT/STS) untuk mencegah kerancuan
-  if (key === 'STATUS') {
-    return 'STATUS';
-  }
   const rule = HEADER_ABBREVIATIONS[key];
 
   if (widthPx != null && widthPx < 55) {

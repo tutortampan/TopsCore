@@ -11,6 +11,18 @@
 
 ## Bab 1: Spasial, Viewport & Workspaces
 
+### 1.0 Dual-Viewport Ecosystem: Student Mobile-Locked (430px) vs Admin Desktop-Locked (100vh) (SSOT)
+- **Student Realm (Strictly Mobile-Locked Everywhere)**:
+  - Seluruh alur antarmuka siswa (`index.html`, `dashboard.html`, `test.html`, `result.html`, `conversation.html`) **WAJIB tampil dalam proporsi mobile terpusat** (`max-width: 430px; margin: 0 auto;`), baik diakses melalui layar smartphone maupun layar monitor laptop/desktop PC.
+  - Kanvas desktop luar menggunakan latar *deep dark slate* (`#060911`).
+  - Seluruh header, sticky navigation, modal pop-up, dan fixed bottom bar (`#fixed-bottom-area`, virtual keyboard) terkunci rapat dalam koridor 430px, tidak boleh bocor melebar ke sisi monitor desktop.
+  - Seluruh verifikasi UI dan screenshot untuk area siswa cukup menggunakan **1 viewport baku: Mobile Viewport**.
+- **Admin & Tutor Realm (Strictly Desktop-Locked Workstation)**:
+  - Seluruh workstation admin dan tutor (`admin.html`) **WAJIB berformat desktop workstation** (`height: 100vh !important`, zero outer page scroll, datagrid density tinggi, 4-pillar quadrant, Sub Panel 40px).
+- **Room-Exclusive Print Protocol (Zero Print in Student Result Page)**:
+  - Fitur cetak (print report, diagnostic summary, evaluasi) DILARANG berada di halaman hasil siswa (`result.html`).
+  - Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
+
 ### 1.1 Zero Outer Page Scroll & Table-Only Viewport Lock (Rule 2.23)
 The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` viewport lock with ZERO outer scrolling:
 - **Table-Only Vertical Scroll**: Vertical scrolling is strictly permitted inside `.table-wrap` only (`overflow-y: auto !important; overflow-x: hidden !important;`).
@@ -36,15 +48,19 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
 - **Modal & Card Containment**: Inside `.modal-box`, `.modal-body`, `.modal-content`, or `.card`, automatically enforces `min-height: 180px !important;`.
 
 ### 1.5 Floating Window Architecture (Window, Wizard, Card & Popup SSOT)
-- **1.5.0 Standardized "Badge Area" Invariant (Above Title Area / Modal Top Hero)**:
-  - Official term **"Badge Area"** (`.badge-area` / `.modal-badge-area`): Dedicated visual status or focal container positioned specifically **ABOVE the Title Area** in floating dialogs, wizard cards, and focus windows (e.g. Pre-Exam Focus Modal, Confirm Logout Modal, Verification Dialogs).
-  - Geometry & Sizing: Height/dimension standardized to **48px–56px** (e.g. `52px × 52px`), rounded square (`border-radius: 12px–14px`) or circular, mathematically centered (`display: flex; align-items: center; justify-content: center; margin: 0 auto;`).
-  - Strict Vector Standard: Strictly houses crisp SVG vector icons (Zero Unicode Emojis per Rule 5.2), with subtle `1.5px` border and soft ambient semantic glow matched to its role.
-- **1.5.1 Standardized 40px "Title Area" Invariant & Authoritative Perimeter Borders**:
-  - Official term **"Title Area"** (`.title-area` / `.modal-header`), height exactly **`40px`** (`height: 40px !important; flex-shrink: 0 !important;`) with prominent border `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`.
-  - Typography: 16px Outfit Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-weight: 700 !important;`).
+- **1.5.0 Standardized "Badge Area" vs "SIGN Area" Architecture**:
+  - **Badge Area** (`.badge-area` / `.modal-badge-area`): Dedicated visual status or focal container positioned specifically **ABOVE the Title Area** in floating dialogs, wizard cards, and focus windows (e.g. Pre-Exam Focus Modal, Confirm Logout Modal, Verification Dialogs). Geometry: 48px–56px (e.g. `52px × 52px`), rounded square (`border-radius: 12px–14px`), with subtle `1.5px` border.
+  - **SIGN Area** (`.sign-area` / `.hazard-sign-area`): Dedicated visual hero status glyph container positioned specifically **UNDER the Title Area** (e.g. Incomplete Test Warning, Alert Windows).
+    - **No Divider Rule**: The SIGN Area connects seamlessly into the body without an internal divider line (`border-bottom: none !important;`).
+    - **50% Window Width Square Rule**: The icon container is strictly a **Square** scaled to **50% of the modal box width** (`width: 50% !important; aspect-ratio: 1 / 1 !important; border-radius: 20px !important;`), with a centered SVG icon scaled to 50–55% of the box, soft ambient glow, and high-contrast styling.
+- **1.5.1 Standardized 60px "Title Area" Invariant & Authoritative Perimeter Borders (SSOT)**:
+  - Official term **"Title Area"** (`.title-area` / `.modal-header`), height strictly **`60px`** (`height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;`) with prominent border `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`. (Replaces legacy 40px standard per user mandate).
+  - **Area-Colored Accent Invariant (Aksen pada Bagian Area, Bukan pada Tulisan)**:
+    - Seluruh aksen warna tema/status (Cyan/Tactical Blue, Hijau Grade A, Kuning Grade C, Merah Grade E, dsb.) **diberikan ke bagian background AREANYA**, bukan ke warna font tulisannya.
+    - Warna font judul WAJIB menggunakan warna kontras pekat (**`#090D16`** / dark slate) untuk background warna cerah/terang, atau putih bersih (**`#FFFFFF`**) untuk background gelap pekat.
+  - Typography: 16px Outfit Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-weight: 800 !important;`).
   - **Centered Title Invariant**: Title text mathematically centered (`text-align: center !important; justify-content: center !important;`). Strictly ZERO close buttons or '✕' icons in the Title Area.
-  - **Mandatory Uppercase Invariant (ALL CAPS)**: Title text MUST be **ALL CAPS (`text-transform: uppercase !important;`)** with `letter-spacing: 0.02em;`.
+  - **Mandatory Uppercase Invariant (ALL CAPS)**: Title text MUST be **ALL CAPS (`text-transform: uppercase !important;`)** with `letter-spacing: 0.05em;`.
 - **1.5.2 Standardized 40px "Toolbar Area" & 60px "CTA Area" Invariant**:
   - Toolbar Area: 40px height with 30px controls.
   - CTA Area: 60px height (`height: 60px !important; min-height: 60px !important; max-height: 60px !important;`) with 36px–40px buttons (`height: 36px` to `40px !important;`), prominent top divider `border-top: 1.5px solid rgba(255, 255, 255, 0.16) !important;`.
@@ -52,11 +68,13 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
     - **Perimeter Boundaries (Title Area & CTA Area)**: Garis pembatas perimeter luar header dan footer wajib tegas dan jelas (`1.5px solid rgba(255, 255, 255, 0.16)`).
     - **Internal Section Dividers**: Garis pemisah internal antar-seksi dalam isi modal (misal: di bawah nama siswa atau antar-grup formulir) adalah garis pembatas seksi konten terpisah yang berkarakter halus (`1px solid rgba(255, 255, 255, 0.08)`). Keduanya memiliki fungsi struktural yang berbeda dan sengaja dipertahankan.
 - **1.5.3 Single-Screen Max Height Limit**: Modals capped at **75vh–80vh** (`max-height: 80vh !important;`) with internal scroll in `.modal-body`.
-- **1.5.4 Universal Floating Window Close Policy & Button Glow Invariant (SSOT)**:
+- **1.5.4 Universal Floating Window Close Policy & Button Alignment Invariant (SSOT)**:
   - **Eradication of Top-Right 'X'**: Floating windows, dialogs, and modals MUST NOT render a top-right 'X' close button (`✕` / `&times;` / `.btn-close`) anywhere in the application.
-  - **Bottom-Left CTA Close Button**: If a close or cancel option exists, it MUST be rendered as an explicit button in the **CTA Area (Modal Footer) at the bottom-left corner** (`align-self: flex-start; margin-right: auto;`).
+  - **CTA Button Alignment Rule (Single vs Multi-Button)**:
+    - **Single Button Invariant**: Saat di CTA Area **hanya ada 1 tombol** (misal tombol tunggal `CLOSE` atau `CONFIRM`), maka tombol tersebut **WAJIB diletakkan di TENGAH (Centered)** (`margin: 0 auto !important; justify-content: center !important;`).
+    - **Multi-Button Invariant**: Jika terdapat 2 tombol atau lebih (misal Cancel & Submit), tombol sekunder/tutup diletakkan di sisi kiri (`align-self: flex-start; margin-right: auto;`) dan tombol aksi utama di sisi kanan.
   - **Button Size Golden Rules**:
-    - Modal CTA Area: Strictly **36px–40px** height (`height: 36px` to `40px !important; padding: 0 16px !important; font-size: 12px !important; font-weight: 700 !important; border-radius: 6px !important;`). Must never exceed 40px.
+    - Modal CTA Area: Strictly **36px–40px** height (`height: 36px` to `40px !important; padding: 0 20px !important; font-size: 14px !important; font-weight: 800 !important; border-radius: 6px !important;`). Must never exceed 40px.
     - In-Panel / Toolbar: Strictly **30px** height (`height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; border-radius: 4px !important;`). Must never exceed 30px.
   - **Universal Hover & Click (Active) Glow**: Every button across the application MUST emit a smooth, luminous glow on `:hover` and click/press (`:active`) via dynamic `box-shadow` matched to its theme/semantic color token.
 
@@ -67,6 +85,21 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
 ---
 
 ## Bab 2: Tipografi & Skala Font Terpusat (Dual-Scale Typography Architecture)
+
+### 2.0 Tri-Font System Architecture & Role Governance (SSOT)
+TopsCore LMS strictly governs typography through an authoritative tri-font ecosystem bound to centralized CSS custom properties:
+1. **`Outfit`** (`--font-display` / `--fm-font-display`):
+   - **Role**: Display, Headings & Hero Metrics.
+   - **Authorized Usage**: Major page headers (`.page-title`, `.workspace-title`), Modal/Dialog Title Area (`.title-area`, `.modal-title`), Hero Score & KPI metrics (`.metric-number`, `.kpi-val`, 30px/40px hero values), card titles, and primary action buttons (CTA 40px in modals/student cards).
+   - **Visual Identity**: Geometric, modern, crisp, bold visual impact.
+2. **`Inter`** (`--font-body` / `--font-sans` / `--fm-font-sans`):
+   - **Role**: Body Text, Form Controls & Datagrid UI.
+   - **Authorized Usage**: All data table cells and headers (`th`, `td`), form inputs, selects/dropdowns, in-panel toolbar controls (30px buttons), descriptions, instructional passages, reading text, and UI labels/metadata.
+   - **Visual Identity**: High legibility, neutral, optimized for high-density 12px workstation datagrids.
+3. **`JetBrains Mono` / Monospace** (`--font-mono` / `--fm-font-mono`):
+   - **Role**: Technical, Security & Audit Data.
+   - **Authorized Usage**: PIN verification displays (`#prof-pin-display`), token strings, raw UUIDs, JSON logs, and audit trails.
+   - **Visual Identity**: Monospaced tabular alignment, zero character ambiguity (distinguishing 0/O, 1/l/I).
 
 ### 2.1 Dual-Scale Typography Architecture & Authoritative 3-Level Typographic System
 TopsCore LMS operates on a strict Dual-Scale Typography Architecture:
@@ -129,6 +162,25 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 9. **Zero Emojis**: Dilarang unicode emojis di UI/tabel; strictly vector SVG icons via `getClassSvgIcon()`.
 10. **Git Commit Gate**: "No commit until I say so!" All changes remain uncommitted in working tree for user review.
 
+### 3.4 Ghost-to-Solid-Glow Button Invariant (Aturan Baku Tombol TopsCore SSOT)
+Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem:
+1. **Standby / Inaktif = Ghost Outline Mode**:
+   - Latar belakang transparan (`background: transparent`).
+   - Garis tepi (*border*) tipis 1px dan teks menyala mengikuti warna semantik token yang dialokasikan (Cyan, Kuning, Merah, Hijau, Ungu, Pink).
+   - Mengeliminasi *visual noise* dan kejenuhan mata pada tema gelap kanvas `#090D16`.
+2. **Aktif / ON / Pressed = Solid Filled + Neon Glow Mode**:
+   - Latar terisi penuh warna padat sesuai alokasi token (`#0284c7` untuk Cyan, `var(--grade-c)` untuk Kuning, `var(--grade-e)` untuk Merah, `var(--grade-a)` untuk Hijau, `var(--quad-d)` untuk Ungu).
+   - Efek pendaran neon taktis: `box-shadow: 0 0 10px rgba(var(--token-rgb), 0.45)` sebagai penanda visual seketika bahwa mode sedang aktif berjalan.
+3. **Aturan Kontras Teks (Luminance Contrast)**:
+   - Warna latar terang (Kuning `var(--grade-c)`, Hijau `var(--grade-a)`): Teks WAJIB gelap (**`#0F172A`**).
+   - Warna latar pekat (Merah `var(--grade-e)`, Cyan `#0284c7`, Ungu `var(--quad-d)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
+4. **Anti-Layout Shift (Zero CLS)**:
+   - Tombol toggle mode yang labelnya berganti (misal: `Manual (M)` $\to$ `Done Editing (Manual)`) WAJIB mengunci lebar tetap (`width`, `min-width`, `max-width`) untuk mencegah pergeseran layout tombol di sekitarnya.
+5. **Strict Zero-Movement Hover Invariant (Anti-Clipping & Anti-Jitter SSOT)**:
+   - **DILARANG KERAS** menggunakan animasi pergerakan fisik saat hover atau ditekan (`transform: translateY(...)`, `transform: scale(...)`, `translate`, atau pergeseran margin/top).
+   - Pergerakan fisik sekecil 1px (`translateY(-1px)`) terbukti membuat garis batas atas tombol (*top border*) terpotong/hilang karena membentur batas *overflow* kontainer atau terdistorsi *sub-pixel rendering*.
+   - Efek hover MURNI HANYA pendaran cahaya halus (*subtle glow* via `box-shadow`) dan peningkatan saturasi warna latar tipis (*subtle background tint*), posisi fisik tombol WAJIB tetap diam 100% (*strictly stationary* `transform: none !important;`).
+
 ---
 
 ## Bab 4: Arsitektur Tabel, Grid & Master Edit Mode
@@ -164,8 +216,15 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
   - DISTRICT: Full `DISTRICT`, 5-Letter `DISTR`, 3-Letter `DST`.
   - VILLAGE: Full `VILLAGE`, 5-Letter `VILLG`, 3-Letter `VLG`.
 - **Common Terms**: INSTITUTION (`INS`), PROGRAM (`PRG`), BATCH (`BTC`), STUDENT (`STD`), ATTENDANCE (`ATT`), EDUCATION (`EDU`), AVERAGE (`AVG`), ACTION (`ACT`), ACCURACY (`ACC`), LEVEL (`LVL`), PERCENTAGE (`PCT`), POINTS (`PTS`), DOB, PHOTO (`PIC`), GENDER (`SEX`, tanpa singkatan 5-huruf `GNDER`), PROGRESS (`PGS`), REMEDIAL (`RMD`), QUESTIONS (`QST`), DURATION (`DRT`), TOTAL (`TTL`).
-- **STATUS Non-Abbreviation Invariant (Strict SSOT)**: Header dengan judul **`STATUS` DILARANG KERAS disingkat** menjadi 5-huruf (`STATS`) atau 3-huruf (`STT`/`STS`) di seluruh sistem. Singkatan `STATS` atau `STT` menimbulkan kerancuan makna dengan istilah statistik (*statistics* / *stats*). Di semua resolusi kolom, judul kolom STATUS wajib tetap ditampilkan penuh sebagai **`STATUS`**.
-- **Dynamic Activation via `resolveHeaderLabel`**: $< 55$px uses 3-Letter form, $55-84$px uses 5-Letter form, $\ge 85$px uses Full form. Full name in `title="..."` tooltip. Header `STATUS` terkecualikan dari penyingkatan dan selalu bernilai `'STATUS'`.
+- **Points (PTS) Half-Up Whole Integer Invariant (Strict SSOT)**: Seluruh metrik dan nilai poin (Theme Exam Points, Overall Points, Class Average Points) yang memiliki desimal **`.5` ke atas WAJIB dibulatkan ke atas** menjadi bilangan bulat penuh via `Math.round()`. Tidak boleh ada nilai berkoma (`.5`, `.9`, `.2`, dsb.) pada kolom poin. Header kolom poin di semua tabel WAJIB disingkat 3-huruf baku **`PTS`** (bukan `POINT` 5-huruf) agar tidak menumpuk (*anti-crowding*).
+- **STATUS ('STS'), GRADE ('GRD'), TASK & DONE Compact Header Standards (Strict SSOT)**: Sesuai direktif pengguna ("GRADE = GRD, kolom Progress ganti namanya dengan TASK, STATUS pakai nama STS, pakai DONE untuk Progress Overall"):
+  - Header `STATUS` resmi menggunakan singkatan 3-huruf **`STS`** pada resolusi kolom $< 85$px agar tidak menumpuk.
+  - Header `GRADE` resmi menggunakan singkatan 3-huruf **`GRD`** pada resolusi kolom $< 85$px.
+  - Kolom progres tugas formatif tema resmi menggunakan nama **`TASK`** (bukan `PROGRESS`/`PRGRS`).
+  - Kolom progres penyelesaian kurikulum keseluruhan resmi menggunakan nama **`DONE`** (bukan `PRGRS`, untuk mencegah kerancuan dengan singkatan Program `PRG`).
+  - Struktur 5 subheader per tema: **`TASK`** | **`RATE`** | **`PTS`** | **`GRD`** | **`STS`**.
+  - Struktur 3 subheader performa keseluruhan (Overall Performance): **`DONE`** | **`PTS`** | **`GRD`**.
+- **Dynamic Activation via `resolveHeaderLabel`**: $< 55$px uses 3-Letter form, $55-84$px uses 3/5-Letter form, $\ge 85$px uses Full form. Full name in `title="..."` tooltip.
 
 #### 4.2.3 Geographical & Address Sequencing
 - Sequence: `VILLAGE` $\to$ `DISTRICT` $\to$ `REGENCY` $\to$ `PROVINCE`. Regency is ALWAYS to the left of Province. Age numeric-only. Recognized abbreviations (NTB, NTT, DIY).
@@ -204,6 +263,19 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
   2. **Remedi (Kuning `#FFFF00` / `var(--grade-c)`)**: Menghasilkan Grade R (cap 60%).
   3. **Forgive (Merah `#FF0000` / `var(--grade-e)`)**: Menghasilkan Grade F (dispensasi kelulusan).
 - **Tombol Alumni (Ungu `#8b5cf6` / `#a855f7`)**: Terletak di Sub Panel / Infobar Student Roster, membuka single-step confirmation untuk meluluskan siswa terpilih langsung ke status Alumni.
+
+---
+
+## Bab 5: Lampiran Spesifik Komponen & Roster
+
+### 5.1 Student Dashboard Dual-Panel Invariants (Dock Panes A & B)
+- **Pane A: Standings / Leaderboard Invariant**:
+  - **Compact Headers (SSOT)**: `NO`, `STUDENT NAME`, `PTS`, `GRD`.
+  - **Dashboard Honors & Royal Titles**: Gelar kehormatan siswa (`King` / `Queen` untuk Rank 1, serta `Mr.` / `Miss` untuk siswa lainnya) **wajib ditampilkan pada tabel peringkat (leaderboard) Student Dashboard** sebagai elemen kebanggaan dan motivasi siswa.
+  - **Global PTS & Global Grade Harmonization**: Nilai PTS dan chip GRD pada leaderboard diambil dari **Global Points** (`mastery.totalPoints`) dan **Global Grade** (`st.grade`). Warna teks angka PTS wajib menggunakan warna `theme.color` (warna Grade Global siswa) agar identik dan selaras dengan badge Grade di sampingnya.
+- **Pane B: Completed Tests Invariant**:
+  - **Strict 5-Column Grid Geometry**: Header dan baris data terkunci tepat 5 kolom (`grid-template-columns: 28px 1fr 48px 40px 38px !important;`) dengan header ringkas: `NO`, `TEST NAME`, `SCORE`, `GRD`, `ACT`. Dilarang menggabungkan class yang menimpa kolom ke-5 (`GRADERETRY` terlarang permanen).
+  - **Aturan Baku Sub-Row 7 Nilai Terbaik Task (Top-7 Highest Attempts)**: 7 kotak kecil (pips) di bawah nama Task pada Completed Tests adalah **daftar 7 nilai riwayat percobaan terbaik (Top 7 Highest Scores, sorted descending)**, di mana nilai akhir dan grade task adalah rata-rata dari ke-7 percobaan tersebut. **Aturan ini bersifat permanen dan DILARANG diubah menjadi rainbow pips**.
 
 ---
 

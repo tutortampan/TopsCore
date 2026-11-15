@@ -608,10 +608,12 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
  * E     : 0% – 29%   - Fail (Red #ff0000)
  */
 export function calculateGrade(percentage, options = {}) {
+  const isAlumni = Boolean(options?.isAlumni);
   const isManual = Boolean(options?.isManual);
   const isForgiven = Boolean(options?.isForgiven);
   const isRem = typeof options === 'boolean' ? options : Boolean(options?.isRemedial);
 
+  if (isAlumni) return 'X';
   if (isManual) return 'M';
   if (isForgiven) return 'F';
   if (isRem) return 'R';
@@ -1208,7 +1210,8 @@ export function computeUnifiedScore({
   const effectiveWordsPts = wordsPts ?? 0;
   const effectivePhrasesPts = phrasesPts ?? 0;
 
-  const totalPoints = Math.round((effectiveWordsPts + effectivePhrasesPts) * 10) / 10;
+  // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+  const totalPoints = Math.round(effectiveWordsPts + effectivePhrasesPts);
   const maxPoints = hasPhrases ? (wordsMax + phrasesMax) : wordsMax;
   const percentage = (isAttempted && maxPoints > 0) ? Math.round((totalPoints / maxPoints) * 100) : 0;
   const isRemedial = Boolean(
@@ -1322,10 +1325,9 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
   const completedExamCount = cleanExamEntries.length;
   const completedWeeklyCount = completedExamCount; // Backward compatibility alias
 
-  // Riwayat Akumulasi Seluruh Poin (Total Poin dari Seluruh Exam yang Dikerjakan Sah)
+  // Riwayat Akumulasi Seluruh Poin (Rule 2.10: Points Half-Up Whole Integer Invariant)
   const cumulativePoints =
-    Math.round(cleanExamEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0) * 10) /
-    10;
+    Math.round(cleanExamEntries.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0));
 
   // Helper to extract theme code from test
   const helperThemeCode = (t) => {
@@ -1455,7 +1457,7 @@ export function computeMilestoneExamMastery(examEntries = [], allClassExams = []
       break;
     }
   }
-  const latestThemePoints = latestAttemptedTheme ? Math.round(latestAttemptedTheme.earned * 10) / 10 : 0;
+  const latestThemePoints = latestAttemptedTheme ? Math.round(latestAttemptedTheme.earned) : 0;
 
   return {
     totalPoints: cumulativePoints, // Authoritative: Total points earned from all completed exams

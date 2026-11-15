@@ -326,7 +326,7 @@ export async function openAutoGenerateModal(options = {}) {
             </button>
 
             <!-- Action 2: Generate & Sync All -->
-            <button type="button" class="btn btn-primary btn-sm" id="wizard-generate-btn" style="font-size: 12px; font-weight:700; background:#4f46e5; border-color:#4f46e5; display:inline-flex; align-items:center; gap:5px;">
+            <button type="button" class="btn btn-purple btn-sm" id="wizard-generate-btn" style="font-size: 12px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
               ${getSvgIcon('zap', 14)} Generate &amp; Sinkronkan Soal
             </button>
           </div>

@@ -21,6 +21,7 @@ import {
 } from '../api.js?v=20261114_v517';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
+import { getAllowedModulesForClass, OFFICIAL_MODULES } from './modules.js';
 
 export async function openTestBuilder(testId = null, initialClassId = null) {
   const isEdit = !!testId;
@@ -48,14 +49,14 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
           <button class="builder-tab" data-tab="tab-topics" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 700;">
             2. Topic Coverage
           </button>
-          
+
           <button class="builder-tab" data-tab="tab-publish" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; font-weight: 700;">
             3. Review &amp; Freeze
           </button>
         </div>
 
         <div class="builder-content" style="flex: 1; overflow-y: auto; padding: 24px; background: var(--clr-bg-1);">
-          
+
           <!-- TAB 1: BASIC DETAILS -->
           <div id="tab-details" class="b-tab-content">
             <div class="card p-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
@@ -119,15 +120,20 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
                     <option value="">None (Available immediately)</option>
                   </select>
                 </div>
-                
+
                 <div class="form-group mb-3">
-                  <label class="form-label">Answer Type (Interaction Mode)</label>
+                  <label class="form-label">Module</label>
                   <select class="form-control" id="wiz-answer-type">
-                    <option value="MULTIPLE_CHOICE">Multiple Choice</option>
-                    <option value="DROPDOWN">Dropdown / Cards (Phrase)</option>
-                    <option value="WRITTEN">Written Text</option>
-                    <option value="SPEECH">Speech-to-Text</option>
+                    <option value="description">Description (m1)</option>
+                    <option value="selection">Selection (m2)</option>
+                    <option value="written">Written (m3)</option>
+                    <option value="spoken">Spoken (m4)</option>
+                    <option value="speech">Speech (m5)</option>
+                    <option value="monologue">Monologue (m6)</option>
+                    <option value="dialogue">Dialogue (m7)</option>
+                    <option value="interview">Interview (m8)</option>
                   </select>
+                  <div id="wiz-module-hint" style="font-size: 12px; color: #38bdf8; margin-top: 5px; display: none; line-height: 1.4;"></div>
                 </div>
 
                 <div class="form-group mb-3">
@@ -138,7 +144,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
                   </select>
                 </div>
 
-                
+
 
                 <div class="form-group mb-3">
                   <label class="form-label">Availability End (Optional)</label>
@@ -213,7 +219,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
           <div id="tab-publish" class="b-tab-content hidden">
             <div class="card p-4" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
               <h3 style="font-size: 16px;margin-bottom:1rem;">Test Summary &amp; Snapshot Freeze</h3>
-              
+
               <div class="p-4 rounded mb-4" style="background:rgba(0,0,0,0.25);border:1px solid var(--clr-border);">
                 <div class="d-flex justify-between align-center mb-3">
                   <h4 class="m-0" id="rev-title" style="font-size: 16px;font-weight:700;">—</h4>
@@ -321,6 +327,71 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       if (!isEdit && initialClassId) subSel.value = initialClassId;
     }
 
+    // Smart Class-Centric Module Filter Guardrail
+    const updateModuleOptions = (desiredVal = null) => {
+      const ansSel = document.getElementById('wiz-answer-type');
+      const hintEl = document.getElementById('wiz-module-hint');
+      if (!ansSel || !subSel) return;
+
+      const selectedClass = allClasses.find(c => c.id === subSel.value);
+      const className = selectedClass ? selectedClass.name : '';
+      const compat = getAllowedModulesForClass(className);
+
+      const targetVal = String(desiredVal || ansSel.value || '').toLowerCase().trim();
+      const normVal = targetVal === 'multiple_choice' ? 'selection' : (targetVal === 'speech_to_text' ? 'spoken' : targetVal);
+      const allowedSet = new Set(compat.allowedKeys);
+
+      let optionsHtml = '';
+      const recModules = OFFICIAL_MODULES.filter(m => allowedSet.has(m.key));
+      const otherModules = OFFICIAL_MODULES.filter(m => !allowedSet.has(m.key));
+
+      if (compat.discipline !== 'general') {
+        optionsHtml += `<optgroup label="✅ Compatible with ${compat.disciplineLabel}">`;
+        recModules.forEach(m => {
+          optionsHtml += `<option value="${m.key}">${m.name} — ${m.desc}</option>`;
+        });
+        optionsHtml += `</optgroup>`;
+
+        if (otherModules.length > 0) {
+          optionsHtml += `<optgroup label="🔒 Incompatible with ${compat.disciplineLabel} (Disabled)">`;
+          otherModules.forEach(m => {
+            optionsHtml += `<option value="${m.key}" disabled>${m.name} — (Incompatible with ${compat.disciplineLabel})</option>`;
+          });
+          optionsHtml += `</optgroup>`;
+        }
+      } else {
+        OFFICIAL_MODULES.forEach(m => {
+          optionsHtml += `<option value="${m.key}">${m.name} — ${m.desc}</option>`;
+        });
+      }
+
+      ansSel.innerHTML = optionsHtml;
+
+      if (allowedSet.has(normVal)) {
+        ansSel.value = normVal;
+      } else {
+        ansSel.value = compat.primaryKey;
+      }
+
+      if (hintEl) {
+        if (compat.discipline !== 'general') {
+          hintEl.style.display = 'block';
+          hintEl.innerHTML = `ℹ️ <strong>${compat.disciplineLabel}:</strong> ${compat.reason}`;
+        } else {
+          hintEl.style.display = 'none';
+        }
+      }
+    };
+
+    updateModuleOptions();
+
+    if (subSel) {
+      subSel.addEventListener('change', () => {
+        updatePrereqs();
+        updateModuleOptions();
+      });
+    }
+
     // Populate Prerequisite dropdown
     const updatePrereqs = () => {
       const displayOrderInput = document.getElementById('wiz-display-order');
@@ -328,7 +399,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       const prereqSel = document.getElementById('wiz-prereq');
       if (!prereqSel) return;
       const currentVal = prereqSel.value;
-      
+
       prereqSel.innerHTML = `<option value="">None (Available immediately)</option>` +
         existingTests
           .filter(a => a.id !== testId && subSel && a.class_id === subSel.value)
@@ -338,12 +409,12 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
             const isDisabled = ord >= currentOrder;
             return `<option value="${a.id}" ${isDisabled ? 'disabled' : ''}>[ORD ${ord}] ${escapeHtml(a.title)} (${escapeHtml(a.test_type || 'EVALUATION')})</option>`;
           }).join('');
-          
+
       if (prereqSel.querySelector(`option[value="${currentVal}"]`)) {
         prereqSel.value = currentVal;
       }
     };
-    
+
     const displayOrderInputEl = document.getElementById('wiz-display-order');
     if (displayOrderInputEl) displayOrderInputEl.addEventListener('change', updatePrereqs);
 
@@ -533,31 +604,33 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
 
       const statusSel = document.getElementById('wiz-status');
       if (statusSel) statusSel.value = editTest.status || 'DRAFT';
-      
+
       const displayOrderInput = document.getElementById('wiz-display-order');
       if (displayOrderInput) displayOrderInput.value = editTest.display_order || 999;
-      
+
       const maxAttemptsInput = document.getElementById('wiz-max-attempts');
       if (maxAttemptsInput) maxAttemptsInput.value = editTest.max_attempts || 0;
-      
+
       const passThresholdInput = document.getElementById('wiz-pass-threshold');
       if (passThresholdInput) passThresholdInput.value = editTest.minimum_required_score || 0;
-      
+
       const answerTypeSel = document.getElementById('wiz-answer-type');
-      if (answerTypeSel) answerTypeSel.value = editTest.answer_type || 'MULTIPLE_CHOICE';
+      if (answerTypeSel) {
+        updateModuleOptions(editTest.answer_type);
+      }
 
       updatePrereqs();
       const prereqSelEl = document.getElementById('wiz-prereq');
       if (prereqSelEl && (editTest.prerequisite_test_id || editTest.prerequisite_test_id)) {
         prereqSelEl.value = editTest.prerequisite_test_id || editTest.prerequisite_test_id;
       }
-      
+
       // PUBLISHED Guardrails
       if (editTest.status === 'PUBLISHED') {
         if (typeRadio) typeRadio.disabled = true;
         subSel.disabled = true;
         answerTypeSel.disabled = true;
-        
+
         // Disable structural edits on tab 2
         document.querySelectorAll('.topic-checkbox, .eval-checkbox').forEach(cb => cb.disabled = true);
         document.getElementById('btn-wiz-add-topic').disabled = true;
@@ -625,7 +698,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
         showToast('Please select at least one topic (or source evaluation) for this test.', 'warning');
         return;
       }
-      
+
       const typeVal = builderDiv.querySelector('input[name="wiz-type"]:checked').value;
       const title = document.getElementById('wiz-title').value;
       const duration = document.getElementById('wiz-duration').value;
@@ -637,7 +710,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       document.getElementById('rev-duration').textContent = `${duration} minutes`;
       document.getElementById('rev-order').textContent = order;
       document.getElementById('rev-assignment').textContent = 'Auto by Level';
-      
+
       switchTab('tab-publish');
     };
 
@@ -661,7 +734,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       const duration = Number(document.getElementById('wiz-duration').value) || 60;
       const order = document.getElementById('wiz-order').value;
       const prereqId = document.getElementById('wiz-prereq').value || null;
-      
+
       // New fields
       const statusVal = document.getElementById('wiz-status').value;
       const displayOrder = parseInt(document.getElementById('wiz-display-order').value) || 999;
@@ -675,7 +748,7 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       showLoading(targetStatus === 'PUBLISHED' ? 'Publishing & Freezing Snapshot...' : 'Saving Test Draft...');
       try {
         let asmId = createdTestId;
-        
+
         const isExamType = String(typeVal).toLowerCase() === 'test' || String(typeVal).toLowerCase() === 'exam';
         const resolvedType = isExamType ? 'exam' : 'task';
         const resolvedCategory = isExamType ? 'EXAM' : 'TASK';
@@ -708,8 +781,8 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
           createdTestId = asmId;
         } else {
           await updateTestWithTopics(
-            asmId, 
-            updatePayload, 
+            asmId,
+            updatePayload,
             (editTest && editTest.status === 'PUBLISHED') ? null : Array.from(selectedTopicIds)
           );
         }

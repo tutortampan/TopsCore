@@ -1,7 +1,7 @@
 import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
 import { computeUnifiedScore, computeTopicPassLevel } from '../grading.js?v=20261106_v160';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, calculateAutoDurationMinutes } from '../api.js?v=20261114_v517';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261114_v517';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 if (typeof window !== 'undefined') {
@@ -403,7 +403,7 @@ import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261115_v518';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261114_v465';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261114_v474';
-import { renderTopics, renderWordTypes, renderResults } from './class.js?v=20261114_v474';
+import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261114_v474';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261114_v512';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
@@ -435,7 +435,7 @@ if (typeof window !== 'undefined') {
       'class-hub': 'Class Hub',
       import_ai_tests: 'Import AI Tests',
       institutions: 'Batches', students: 'Students', alumni: 'Alumni', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
-      Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Blocks)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
+      Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Engines)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
       tests: 'Test Analytics', 'test-access': 'Test Access', assignments: 'Assignments & Rosters', results: 'Test Results', recalibrator: 'Test Engine Recalibration', question_types: 'Validation Dictionary',
       audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
       'class-panel': 'Class Panel'
@@ -1775,6 +1775,7 @@ if (typeof window !== 'undefined') {
             lastSubmittedAt,
             asmScores,
             asmPassCounts,
+            allAttempts: studentAttempts,
             activeThemeCode: mastery.activeThemeCode || null,
             includedThemeCodes: mastery.includedThemeCodes || [],
             includedExamIds: mastery.includedExamIds || new Set(),
@@ -1946,13 +1947,13 @@ if (typeof window !== 'undefined') {
             `;
             const rightHtml = `
               <div class="class-tests-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-settings" style="font-size: 12px; font-weight:700; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#38bdf8; padding:4px 10px; cursor:pointer;" title="Open Default Test System &amp; Blueprint Settings">
+                <button type="button" class="btn btn-tactical btn-sm" id="btn-open-blueprint-settings" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer;" title="Open Default Test System &amp; Blueprint Settings">
                   ${getSvgIcon('lock', 14)} Test System Settings
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="font-size: 12px; font-weight:600; background:#334155; border:1px solid rgba(255,255,255,0.15); color:#f8fafc; padding:4px 10px; cursor:pointer;" title="Open Complete Curriculum Roadmap in Test Blueprint">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="height: 30px; font-size: 12px; font-weight:600; padding: 0 10px; cursor:pointer;" title="Open Complete Curriculum Roadmap in Test Blueprint">
                   ${getSvgIcon('book-open', 14)} Open Test Blueprint ↗
                 </button>
-                <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="font-size: 12px; font-weight:700; background:#4f46e5; border-color:#4f46e5; color:#fff; padding:4px 10px; cursor:pointer;" title="Open Generator &amp; Curriculum Settings Wizard">
+                <button type="button" class="btn btn-purple btn-sm" id="btn-open-generator-from-class" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer;" title="Open Generator &amp; Curriculum Settings Wizard">
                   ${getSvgIcon('zap', 14)} Generator &amp; Settings Wizard
                 </button>
               </div>
@@ -2163,8 +2164,8 @@ if (typeof window !== 'undefined') {
               {
                 key: 'status',
                 label: 'STATUS',
-                shortLabel: 'STATUS',
-                microLabel: 'STATUS',
+                shortLabel: 'STS',
+                microLabel: 'STS',
                 sortable: true,
                 width: '95px',
                 render: (val, row) => {
@@ -2423,26 +2424,32 @@ if (typeof window !== 'undefined') {
             if (!window._manualInputState.drafts[studentId]) {
               window._manualInputState.drafts[studentId] = {};
             }
+            const input = document.querySelector(`.input-matrix-exam-score-${studentId}-${testId}`);
+            const origScoreStr = input?.dataset?.originalScore ?? '';
+
             if (!valStr || valStr.trim() === '') {
-              window._manualInputState.drafts[studentId][testId] = { score: null, pts: null, totalQ, isDirty: true };
+              const isDirty = origScoreStr !== '';
+              window._manualInputState.drafts[studentId][testId] = { score: null, pts: null, totalQ, isDirty };
               const ptsInput = document.querySelector(`.input-matrix-exam-pts-${studentId}-${testId}`);
               if (ptsInput) ptsInput.value = '';
               return;
             }
             const valNum = Number(valStr);
             const clampedPct = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
-            const calcPts = Math.round(totalQ * (clampedPct / 100) * 10) / 10;
+            // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+            const calcPts = Math.round(totalQ * (clampedPct / 100));
+            const isDirty = origScoreStr === '' || Number(origScoreStr) !== clampedPct;
 
             window._manualInputState.drafts[studentId][testId] = {
               score: clampedPct,
               pts: calcPts,
               totalQ,
-              isDirty: true
+              isDirty
             };
 
             const ptsInput = document.querySelector(`.input-matrix-exam-pts-${studentId}-${testId}`);
             if (ptsInput) {
-              ptsInput.value = (calcPts % 1 !== 0) ? calcPts.toFixed(1) : calcPts.toString();
+              ptsInput.value = calcPts.toString();
             }
           };
 
@@ -2450,21 +2457,27 @@ if (typeof window !== 'undefined') {
             if (!window._manualInputState.drafts[studentId]) {
               window._manualInputState.drafts[studentId] = {};
             }
+            const input = document.querySelector(`.input-matrix-exam-pts-${studentId}-${testId}`);
+            const origPtsStr = input?.dataset?.originalPts ?? '';
+
             if (!valStr || valStr.trim() === '') {
-              window._manualInputState.drafts[studentId][testId] = { score: null, pts: null, totalQ, isDirty: true };
+              const isDirty = origPtsStr !== '';
+              window._manualInputState.drafts[studentId][testId] = { score: null, pts: null, totalQ, isDirty };
               const scoreInput = document.querySelector(`.input-matrix-exam-score-${studentId}-${testId}`);
               if (scoreInput) scoreInput.value = '';
               return;
             }
             const valNum = Number(valStr);
-            const clampedPts = Math.max(0, Math.min(totalQ, isNaN(valNum) ? 0 : valNum));
+            // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+            const clampedPts = Math.round(Math.max(0, Math.min(totalQ, isNaN(valNum) ? 0 : valNum)));
             const calcScore = totalQ > 0 ? Math.round((clampedPts / totalQ) * 100) : 0;
+            const isDirty = origPtsStr === '' || Math.abs(Number(origPtsStr) - clampedPts) >= 0.5;
 
             window._manualInputState.drafts[studentId][testId] = {
               score: calcScore,
               pts: clampedPts,
               totalQ,
-              isDirty: true
+              isDirty
             };
 
             const scoreInput = document.querySelector(`.input-matrix-exam-score-${studentId}-${testId}`);
@@ -2478,16 +2491,21 @@ if (typeof window !== 'undefined') {
               window._manualInputState.drafts[studentId] = {};
             }
             const taskKey = `task_${themeCode}`;
+            const input = document.querySelector(`.input-matrix-task-progress-${studentId}-${themeCode.toLowerCase()}`);
+            const origEarnedStr = input?.dataset?.originalEarned ?? '';
+
             if (!valStr || valStr.trim() === '') {
-              window._manualInputState.drafts[studentId][taskKey] = { earned: null, maxTasks, isDirty: true };
+              const isDirty = origEarnedStr !== '';
+              window._manualInputState.drafts[studentId][taskKey] = { earned: null, maxTasks, isDirty };
               return;
             }
             const valNum = parseInt(valStr, 10);
             const clampedEarned = Math.max(0, Math.min(maxTasks, isNaN(valNum) ? 0 : valNum));
+            const isDirty = origEarnedStr === '' || Number(origEarnedStr) !== clampedEarned;
             window._manualInputState.drafts[studentId][taskKey] = {
               earned: clampedEarned,
               maxTasks,
-              isDirty: true
+              isDirty
             };
           };
 
@@ -2569,10 +2587,14 @@ if (typeof window !== 'undefined') {
               const ptsInput = document.querySelector(`.input-matrix-exam-pts-${studentId}-${testId}`);
               if (scoreInput && scoreInput.value !== '') {
                 window.onMatrixExamScoreChange(studentId, testId, totalQ, scoreInput.value);
-                dirtyTestIds.push(testId);
+                if (window._manualInputState.drafts?.[studentId]?.[testId]?.isDirty) {
+                  dirtyTestIds.push(testId);
+                }
               } else if (ptsInput && ptsInput.value !== '') {
                 window.onMatrixExamPtsChange(studentId, testId, totalQ, ptsInput.value);
-                dirtyTestIds.push(testId);
+                if (window._manualInputState.drafts?.[studentId]?.[testId]?.isDirty) {
+                  dirtyTestIds.push(testId);
+                }
               }
             }
 
@@ -2582,7 +2604,8 @@ if (typeof window !== 'undefined') {
                 const testActions = dirtyTestIds.map(tId => {
                   const d = studentDraft[tId];
                   const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
-                  const pts = d?.pts != null ? Number(d.pts) : Math.round((d?.totalQ || totalQ || 120) * (pct / 100) * 10) / 10;
+                  // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                  const pts = d?.pts != null ? Math.round(Number(d.pts)) : Math.round((d?.totalQ || totalQ || 120) * (pct / 100));
                   const g = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'E');
                   return {
                     testId: tId,
@@ -2685,7 +2708,8 @@ if (typeof window !== 'undefined') {
                   } else {
                     const d = studentDraft[k];
                     const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
-                    const pts = d?.pts != null ? Number(d.pts) : Math.round((d?.totalQ || 120) * (pct / 100) * 10) / 10;
+                    // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                    const pts = d?.pts != null ? Math.round(Number(d.pts)) : Math.round((d?.totalQ || 120) * (pct / 100));
                     testActions.push({ testId: k, action: 'manual', percentage: pct, score: pts });
                   }
                 });
@@ -2696,17 +2720,36 @@ if (typeof window !== 'undefined') {
               });
 
               if (updatesByStudent.length > 0) {
-                if (typeof showLoading === 'function') showLoading(`Saving manual scores for ${updatesByStudent.length} students...`);
+                if (typeof showLoading === 'function') showLoading(`Saving manual scores for ${updatesByStudent.length} student(s)...`);
+                const targetClassId = window._selectedClassId || classId || cid || window._currentClassHubContext?.classId;
                 try {
-                  for (const item of updatesByStudent) {
-                    await adminApplyForgiven({
-                      classId: window._selectedClassId || classId || cid,
+                  const BATCH_SIZE = 5;
+                  for (let i = 0; i < updatesByStudent.length; i += BATCH_SIZE) {
+                    const slice = updatesByStudent.slice(i, i + BATCH_SIZE);
+                    await Promise.all(slice.map(item => adminApplyForgiven({
+                      classId: targetClassId,
                       studentIds: [item.studentId],
                       testActions: item.testActions,
                       forgivenBy: 'Mr. Top',
-                      reason: 'Manual Grade Batch Input'
+                      reason: 'Manual Grade Batch Input',
+                      skipAudit: true
+                    })));
+                  }
+
+                  if (typeof logAuditEvent === 'function') {
+                    await logAuditEvent({
+                      actor_role: 'ADMIN',
+                      action: 'MANUAL_SCORE_BATCH',
+                      entity_type: 'class',
+                      entity_id: targetClassId,
+                      new_value: {
+                        studentCount: updatesByStudent.length,
+                        reason: 'Manual Grade Batch Input'
+                      }
                     });
                   }
+
+                  if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
                   if (typeof showToast === 'function') showToast(`✓ Manual scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
                 } catch (err) {
                   console.error('Batch save error:', err);
@@ -2749,44 +2792,6 @@ if (typeof window !== 'undefined') {
               return;
             }
 
-            // Sweep DOM inputs to ensure all current values are captured in drafts
-            document.querySelectorAll('.input-matrix-exam-score').forEach(input => {
-              const sId = input.dataset.studentId;
-              const tId = input.dataset.testId;
-              const totalQ = Number(input.dataset.totalQ || 120);
-              if (sId && tId && input.value !== '') {
-                const curDraft = window._manualInputState?.drafts?.[sId]?.[tId];
-                if (!curDraft || String(curDraft.score) !== String(input.value)) {
-                  window.onMatrixExamScoreChange(sId, tId, totalQ, input.value);
-                }
-              }
-            });
-
-            document.querySelectorAll('.input-matrix-exam-pts').forEach(input => {
-              const sId = input.dataset.studentId;
-              const tId = input.dataset.testId;
-              const totalQ = Number(input.dataset.totalQ || 120);
-              if (sId && tId && input.value !== '') {
-                const curDraft = window._manualInputState?.drafts?.[sId]?.[tId];
-                if (!curDraft || String(curDraft.pts) !== String(input.value)) {
-                  window.onMatrixExamPtsChange(sId, tId, totalQ, input.value);
-                }
-              }
-            });
-
-            document.querySelectorAll('.input-matrix-task-progress').forEach(input => {
-              const sId = input.dataset.studentId;
-              const tc = input.dataset.themeCode;
-              const maxT = Number(input.dataset.maxTasks || 21);
-              if (sId && tc && input.value !== '') {
-                const taskKey = `task_${tc}`;
-                const curDraft = window._manualInputState?.drafts?.[sId]?.[taskKey];
-                if (!curDraft || String(curDraft.earned) !== String(input.value)) {
-                  window.onMatrixTaskChange(sId, tc, maxT, input.value);
-                }
-              }
-            });
-
             const drafts = window._manualInputState?.drafts || {};
             const studentIds = Object.keys(drafts);
             const updatesByStudent = [];
@@ -2818,7 +2823,8 @@ if (typeof window !== 'undefined') {
                 } else {
                   const d = studentDraft[k];
                   const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
-                  const pts = d?.pts != null ? Number(d.pts) : Math.round((d?.totalQ || 120) * (pct / 100) * 10) / 10;
+                  // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                  const pts = d?.pts != null ? Math.round(Number(d.pts)) : Math.round((d?.totalQ || 120) * (pct / 100));
                   const g = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'E');
                   testActions.push({ testId: k, action: 'manual', percentage: pct, score: pts, grade: g });
                 }
@@ -2831,16 +2837,36 @@ if (typeof window !== 'undefined') {
 
             if (updatesByStudent.length > 0) {
               if (typeof showLoading === 'function') showLoading(`Saving manual scores for ${updatesByStudent.length} student(s)...`);
+              const targetClassId = window._selectedClassId || window._currentClassHubContext?.classId;
               try {
-                for (const item of updatesByStudent) {
-                  await adminApplyForgiven({
-                    classId: window._selectedClassId || window._currentClassHubContext?.classId,
+                // Execute students concurrently in parallel slices (max 5 concurrent) for ultra-fast throughput
+                const BATCH_SIZE = 5;
+                for (let i = 0; i < updatesByStudent.length; i += BATCH_SIZE) {
+                  const slice = updatesByStudent.slice(i, i + BATCH_SIZE);
+                  await Promise.all(slice.map(item => adminApplyForgiven({
+                    classId: targetClassId,
                     studentIds: [item.studentId],
                     testActions: item.testActions,
                     forgivenBy: 'Mr. Top',
-                    reason: 'Manual Grade Input'
+                    reason: 'Manual Grade Input',
+                    skipAudit: true
+                  })));
+                }
+
+                // Single consolidated audit log for the entire batch (non-blocking)
+                if (typeof logAuditEvent === 'function') {
+                  await logAuditEvent({
+                    actor_role: 'ADMIN',
+                    action: 'MANUAL_SCORE_BATCH',
+                    entity_type: 'class',
+                    entity_id: targetClassId,
+                    new_value: {
+                      studentCount: updatesByStudent.length,
+                      reason: 'Manual Grade Input'
+                    }
                   });
                 }
+
                 if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
                 if (typeof showToast === 'function') showToast(`✓ Manual scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
               } catch (err) {
@@ -2894,7 +2920,7 @@ if (typeof window !== 'undefined') {
                   <button type="button" id="btn-manual-prompt-cancel" class="btn btn-secondary btn-sm" style="font-size: 12px; font-weight: 600; padding: 6px 16px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: #94a3b8; cursor: pointer; border-radius: 4px;">
                     Cancel (Discard)
                   </button>
-                  <button type="button" id="btn-manual-prompt-save" class="btn btn-sm" style="background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; font-size: 12px; font-weight: 700; padding: 6px 20px; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 0 10px rgba(56,189,248,0.4); cursor: pointer; border-radius: 4px;">
+                  <button type="button" id="btn-manual-prompt-save" class="btn btn-tactical btn-sm" style="font-size: 12px; font-weight: 700; padding: 6px 20px; display: inline-flex; align-items: center; gap: 6px; border-radius: 4px;">
                     ${getSvgIcon('check-circle', 14)} Save Changes
                   </button>
                 </div>
@@ -3165,7 +3191,8 @@ if (typeof window !== 'undefined') {
                   }
                 });
 
-                const cleanThemeEarned = Math.round(themeEarned * 10) / 10;
+                // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                const cleanThemeEarned = Math.round(themeEarned);
                 const themePct = (hasAtt && studentThemeMaxQ > 0) ? Math.round((cleanThemeEarned / studentThemeMaxQ) * 100) : -1;
                 row[`theme_${tc}_total_pts`] = hasAtt ? cleanThemeEarned : -1;
                 row[`theme_${tc}_score`] = hasAtt ? themePct : -1;
@@ -3197,10 +3224,10 @@ if (typeof window !== 'undefined') {
                 }
 
                 // Gating & Completion Invariant:
-                // If student has already taken the theme exam (hasAtt === true) OR has passed all prerequisite
-                // topics in this theme (topicsPassedCount >= numTopics), they have met the exam prerequisite gate
-                // and the formative task progress is 100% full ("sebab mereka sudah bisa ambil ujian").
-                if (hasAtt || (numTopics > 0 && topicsPassedCount >= numTopics)) {
+                // Only if student has passed all prerequisite topics in this theme (topicsPassedCount >= numTopics)
+                // is the formative task progress marked as 100% full. Never artificially inflate task progress
+                // merely because an exam attempt exists.
+                if (numTopics > 0 && topicsPassedCount >= numTopics) {
                   earnedTasks = maxThemeTasks;
                 } else if (topicsPassedCount > 0 && maxThemeTasks > 0) {
                   const topicWeight = numTopics > 0 ? (maxThemeTasks / numTopics) : targetReps;
@@ -3224,10 +3251,9 @@ if (typeof window !== 'undefined') {
               row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
             });
 
-            // Dynamic super-headers: STUDENTS DATA (2 cols: BATCH & STUDENT NAME), and OVERALL PERFORMANCE (3 cols: PROG, POINT, GRADE)
+            // Dynamic super-headers: STUDENTS DATA (2 cols: BATCH & STUDENT NAME), active themes, and OVERALL PERFORMANCE (3 cols) at the far right
             const dynamicSuperHeaders = [
-              { label: 'STUDENTS DATA', colSpan: 2, className: 'super-hdr super-hdr-identity super-hdr-students-data' },
-              { label: 'OVERALL PERFORMANCE', colSpan: 3, className: 'super-hdr super-hdr-overall' }
+              { label: 'STUDENTS DATA', colSpan: 2, className: 'super-hdr super-hdr-identity super-hdr-students-data' }
             ];
 
             const themeColorClasses = {
@@ -3246,6 +3272,8 @@ if (typeof window !== 'undefined') {
               });
             });
 
+            dynamicSuperHeaders.push({ label: 'OVERALL PERFORMANCE', colSpan: 3, className: 'super-hdr super-hdr-overall' });
+
             // Build dynamic test and exam columns across all active themes (Progress | Score | Points | Grade)
             const dynamicAsmCols = [];
             window._themeTaskAsmsMap = window._themeTaskAsmsMap || {};
@@ -3258,17 +3286,17 @@ if (typeof window !== 'undefined') {
               const examAsm = examAsms[0];
               const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
 
-              // 1. Theme Formative PROGRESS Column (Tasks Completed / Max Required)
+              // 1. Theme Formative TASK Column (Tasks Completed / Max Required)
               dynamicAsmCols.push({
                 key: `theme_${tc}_task`,
                 className: `col-asm col-task col-theme-task col-theme-task-${tc.toLowerCase()}`,
                 width: '65px',
                 minWidth: '55px',
-                headerTitle: `Theme ${tc} Progress (Tasks Completed / Max Required)`,
-                title: `Theme ${tc} Progress`,
-                label: 'PROGRESS',
-                shortLabel: 'PRGRS',
-                microLabel: 'PGS',
+                headerTitle: `Theme ${tc} Tasks (Completed / Max Required)`,
+                title: `Theme ${tc} Tasks`,
+                label: 'TASK',
+                shortLabel: 'TASK',
+                microLabel: 'TASK',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
@@ -3291,6 +3319,7 @@ if (typeof window !== 'undefined') {
                                data-student-id="${row.id}"
                                data-theme-code="${tc}"
                                data-max-tasks="${maxT}"
+                               data-original-earned="${earned}"
                                value="${displayEarned}"
                                placeholder="0"
                                oninput="window.onMatrixTaskChange('${row.id}', '${tc}', ${maxT}, this.value)"
@@ -3344,6 +3373,7 @@ if (typeof window !== 'undefined') {
                                data-student-id="${row.id}"
                                data-test-id="${examAsm.id}"
                                data-total-q="${totalQ}"
+                               data-original-score="${scoreVal != null && scoreVal >= 0 ? scoreVal : ''}"
                                value="${displayScore}"
                                placeholder="%"
                                oninput="window.onMatrixExamScoreChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
@@ -3356,7 +3386,8 @@ if (typeof window !== 'undefined') {
 
                   // 3-State Gated Display:
                   if (hasExamAttempt && scoreVal !== undefined && scoreVal !== null && scoreVal >= 0) {
-                    const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
+                    const studentExamAtts = examAsm ? (row.allAttempts || []).filter(a => (a.test_id || a.Test_id) === examAsm.id) : [];
+                    const examAtt = studentExamAtts.find(a => a.is_forgiven || a.is_remedial_unlocked || a.is_remedial || (a.forgiven_reason && a.forgiven_reason.startsWith('MANUAL_OVERRIDE'))) || (examAsm ? row.asmScores?.[examAsm.id] : null);
                     const isManual = examAtt?.grade === 'M' || (examAtt?.forgiven_reason && String(examAtt.forgiven_reason).startsWith('MANUAL_OVERRIDE'));
                     const isForgiven = Boolean(examAtt?.is_forgiven);
                     const isRem = Boolean(examAtt?.is_remedial_unlocked || examAtt?.is_remedial);
@@ -3404,7 +3435,7 @@ if (typeof window !== 'undefined') {
                 headerTitle: `Theme ${tc} Exam Points`,
                 title: `Theme ${tc} Exam Points`,
                 label: 'POINTS',
-                shortLabel: 'POINT',
+                shortLabel: 'PTS',
                 microLabel: 'PTS',
                 sortable: true,
                 align: 'center',
@@ -3419,14 +3450,16 @@ if (typeof window !== 'undefined') {
                   // Manual Mode ON: render inline Excel-style input
                   if (isManualMode && examAsm) {
                     const currentDraft = window._manualInputState?.drafts?.[row.id]?.[examAsm.id];
-                    const cleanTotal = ptsVal != null && ptsVal >= 0 ? Math.round(ptsVal * 2) / 2 : '';
-                    const displayPts = currentDraft?.pts != null ? currentDraft.pts : cleanTotal;
+                    // Rule 2.10: Points Half-Up Whole Integer Invariant
+                    const cleanTotal = ptsVal != null && ptsVal >= 0 ? Math.round(Number(ptsVal)) : '';
+                    const displayPts = currentDraft?.pts != null ? Math.round(Number(currentDraft.pts)) : cleanTotal;
                     return `
                       <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                        <input type="number" min="0" max="${totalQ}" step="any" class="input-matrix-exam-pts input-matrix-exam-pts-${row.id}-${examAsm.id}"
+                        <input type="number" min="0" max="${totalQ}" step="1" class="input-matrix-exam-pts input-matrix-exam-pts-${row.id}-${examAsm.id}"
                                data-student-id="${row.id}"
                                data-test-id="${examAsm.id}"
                                data-total-q="${totalQ}"
+                               data-original-pts="${cleanTotal !== '' ? cleanTotal : ''}"
                                value="${displayPts}"
                                placeholder="pts"
                                oninput="window.onMatrixExamPtsChange('${row.id}', '${examAsm.id}', ${totalQ}, this.value)"
@@ -3439,10 +3472,12 @@ if (typeof window !== 'undefined') {
 
                   // 3-State Gated Display:
                   if (hasExamAttempt && ptsVal !== undefined && ptsVal !== null && ptsVal >= 0) {
-                    const examAtt = examAsm ? row.asmScores?.[examAsm.id] : null;
+                    const studentExamAtts = examAsm ? (row.allAttempts || []).filter(a => (a.test_id || a.Test_id) === examAsm.id) : [];
+                    const examAtt = studentExamAtts.find(a => a.is_forgiven || a.is_remedial_unlocked || a.is_remedial || (a.forgiven_reason && a.forgiven_reason.startsWith('MANUAL_OVERRIDE'))) || (examAsm ? row.asmScores?.[examAsm.id] : null);
                     const isManual = examAtt?.grade === 'M' || (examAtt?.forgiven_reason && String(examAtt.forgiven_reason).startsWith('MANUAL_OVERRIDE'));
-                    const cleanTotal = Math.round(ptsVal * 2) / 2;
-                    const displayVal = (cleanTotal % 1 !== 0) ? cleanTotal.toFixed(1) : cleanTotal.toString();
+                    // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                    const cleanTotal = Math.round(Number(ptsVal || 0));
+                    const displayVal = cleanTotal.toString();
                     const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0
                       ? row[`theme_${tc}_score`]
                       : 0;
@@ -3488,7 +3523,7 @@ if (typeof window !== 'undefined') {
                 headerTitle: `Theme ${tc} Exam Grade`,
                 title: `Theme ${tc} Exam Grade`,
                 label: 'GRADE',
-                shortLabel: 'GRADE',
+                shortLabel: 'GRD',
                 microLabel: 'GRD',
                 sortable: true,
                 align: 'center',
@@ -3541,19 +3576,22 @@ if (typeof window !== 'undefined') {
               dynamicAsmCols.push({
                 key: `theme_${tc}_status`,
                 className: `col-asm col-exam col-exam-status col-test-theme-status col-test-theme-status-${tc.toLowerCase()} super-hdr-divider`,
-                width: '55px',
-                minWidth: '50px',
+                width: '58px',
+                minWidth: '58px',
                 headerTitle: `Theme ${tc} Exam Status`,
                 title: `Theme ${tc} Exam Status`,
                 label: 'STATUS',
-                shortLabel: 'STATUS',
-                microLabel: 'STATUS',
+                shortLabel: 'STS',
+                microLabel: 'STS',
                 sortable: true,
                 align: 'center',
                 render: (val, row) => {
                   const scoreVal = row[`theme_${tc}_score`];
                   const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
-                  const themeAtts = examAsms.map(e => row.asmScores?.[e.id]).filter(Boolean);
+                  const examTestIds = new Set(examAsms.map(e => e.id));
+                  const studentAtts = (row.allAttempts || []).filter(a => examTestIds.has(a.test_id || a.Test_id));
+                  const bestAtts = examAsms.map(e => row.asmScores?.[e.id]).filter(Boolean);
+                  const themeAtts = studentAtts.length > 0 ? studentAtts : bestAtts;
                   const isForgiven = themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_forgiven || att?.grade === 'F'));
                   const isRem = themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_remedial_unlocked || att?.is_remedial || att?.grade === 'R'));
                   const isManual = themeAtts.length > 0 && themeAtts.some(att => att?.grade === 'M' || (att?.forgiven_reason && String(att.forgiven_reason).startsWith('MANUAL_OVERRIDE')));
@@ -3728,14 +3766,14 @@ if (typeof window !== 'undefined') {
                   } else if (col.key === 'progressPct') {
                     const avgProgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgProg) : '#ffffff';
                     cellsHtml += `
-                      <td class="col-sticky col-sticky-3 text-center">
+                      <td class="col-overall col-overall-prog text-center">
                         <div style="color:${avgProgColor}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums; line-height:1;">${avgProg}%</div>
                       </td>
                     `;
                   } else if (col.key === 'totalEarnedScore') {
                     const avgPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgScore) : '#ffffff';
                     cellsHtml += `
-                      <td class="col-sticky col-sticky-4 text-center">
+                      <td class="col-overall col-overall-pts text-center">
                         <div style="font-weight:700; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${avgPtsColor} !important;" title="Class Avg Exam Points: ${avgPts}">
                           ${avgPts}
                         </div>
@@ -3744,14 +3782,14 @@ if (typeof window !== 'undefined') {
                   } else if (col.key === 'grade') {
                     if (totalStudents === 0 || avgGrade === '—' || avgGrade === '-') {
                       cellsHtml += `
-                        <td class="col-sticky col-sticky-5 col-sticky-last text-center">
+                        <td class="col-overall col-overall-grade text-center">
                           <span class="text-muted" style="font-size:12px;">—</span>
                         </td>
                       `;
                     } else {
                       const cleanAvgGrade = String(avgGrade || '').trim().toUpperCase();
                       cellsHtml += `
-                        <td class="col-sticky col-sticky-5 col-sticky-last text-center">
+                        <td class="col-overall col-overall-grade text-center">
                           ${isAvgGradeS
                             ? '<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star); font-size:calc(var(--matrix-font-size, 0.75rem) * 1.15); font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Average Grade ★ (100%)">★</span>'
                             : `<span class="grid-grade-val" style="color:${avgGradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Average Grade ${cleanAvgGrade}">${cleanAvgGrade}</span>`}
@@ -3882,7 +3920,8 @@ if (typeof window !== 'undefined') {
                       }
                     });
                     if (count > 0) {
-                      const avgThemePts = (totalPtsSum / count).toFixed(1).replace(/\.0$/, '');
+                      // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                      const avgThemePts = Math.round(totalPtsSum / count);
                       const avgThemePct = totalMaxQSum > 0 ? Math.round((totalPtsSum / totalMaxQSum) * 100) : 0;
                       const avgThemeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemePct) : '#ffffff';
                       cellsHtml += `
@@ -4061,16 +4100,19 @@ if (typeof window !== 'undefined') {
                     `;
                   }
                 },
+                ...dynamicAsmCols,
                 {
                   key: 'progressPct',
-                  label: 'PROGRESS',
-                  shortLabel: 'PRGRS',
-                  microLabel: 'PGS',
-                  className: 'col-sticky col-sticky-3',
+                  label: 'DONE',
+                  shortLabel: 'DONE',
+                  microLabel: 'DONE',
+                  headerTitle: 'Overall Completion Rate % (Exams & Activities Completed)',
+                  title: 'Overall Completion Rate %',
+                  className: 'col-overall col-overall-prog',
                   sortable: true,
                   align: 'center',
-                  width: '80px',
-                  minWidth: '70px',
+                  width: '65px',
+                  minWidth: '55px',
                   render: (val, row) => {
                     const progVal = Number(row.progressPct ?? 0);
                     const progColor = ((row.completedExamCount > 0 || row.completedCount > 0) && typeof getGradeColorByScore === 'function')
@@ -4085,11 +4127,13 @@ if (typeof window !== 'undefined') {
                 {
                   key: 'totalEarnedScore',
                   label: 'POINTS',
-                  className: 'col-sticky col-sticky-4',
+                  shortLabel: 'PTS',
+                  microLabel: 'PTS',
+                  className: 'col-overall col-overall-pts',
                   sortable: true,
                   align: 'center',
-                  width: '75px',
-                  minWidth: '65px',
+                  width: '65px',
+                  minWidth: '55px',
                   render: (val, row) => {
                     const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
                     if (!isExamTaken && (!val || val === 0)) {
@@ -4098,7 +4142,8 @@ if (typeof window !== 'undefined') {
                     const scoreColor = (typeof getGradeColorByScore === 'function')
                       ? getGradeColorByScore(row.averageScorePct)
                       : '#ffffff';
-                    const displayScore = Number(val || 0).toFixed(1).replace(/\.0$/, '');
+                    // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                    const displayScore = Math.round(Number(val || 0)).toString();
                     return `
                       <div style="font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor} !important;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
                         ${displayScore}
@@ -4109,11 +4154,13 @@ if (typeof window !== 'undefined') {
                 {
                   key: 'grade',
                   label: 'GRADE',
-                  className: 'col-sticky col-sticky-5 col-sticky-last',
+                  shortLabel: 'GRD',
+                  microLabel: 'GRD',
+                  className: 'col-overall col-overall-grade',
                   sortable: true,
                   align: 'center',
-                  width: '65px',
-                  minWidth: '60px',
+                  width: '55px',
+                  minWidth: '45px',
                   render: (val, row) => {
                     if (!row.grade || row.grade === '—' || row.grade === '-') {
                       return '<span class="text-muted" style="font-size:12px;" title="No exams completed">&mdash;</span>';
@@ -4130,8 +4177,7 @@ if (typeof window !== 'undefined') {
                       <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:calc(var(--matrix-font-size, 0.75rem) * 1.05); line-height:1;" title="Exam Grade ${cleanGrade}">${cleanGrade}</span>
                     `;
                   }
-                },
-                ...dynamicAsmCols
+                }
               ]
             });
 
@@ -4176,21 +4222,10 @@ if (typeof window !== 'undefined') {
             const wrap = grid.querySelector('.table-wrap');
             const tbl = wrap?.querySelector('table.datagrid-table');
             if (wrap && tbl) {
-              wrap.style.overflowX = 'auto';
+              wrap.style.overflowX = 'hidden';
               const totalTableHeight = headerHeight + (count * rowHeight) + footerHeight;
               wrap.style.overflowY = totalTableHeight <= (availHeight - 5) ? 'hidden' : 'auto';
               tbl.style.zoom = '1';
-
-              // Attach mouse wheel horizontal scroll
-              if (!wrap._wheelAttached) {
-                wrap._wheelAttached = true;
-                wrap.addEventListener('wheel', (e) => {
-                  if (e.deltaY !== 0 && wrap.scrollWidth > wrap.clientWidth) {
-                    e.preventDefault();
-                    wrap.scrollLeft += e.deltaY * 1.5;
-                  }
-                }, { passive: false });
-              }
             }
           };
 
@@ -4771,8 +4806,8 @@ if (typeof window !== 'undefined') {
           case 'classes-org':         await _renderClassesModule(area); break;
           case 'class_instances':     return loadSection('class-hub');
           case 'class-detail':        await renderClassDetail(area); break;
-          case 'topics':              await renderTopics(area); break;
-          case 'question_types':          await renderWordTypes(area); break;
+          case 'topics':
+          case 'question_types':
           case 'vocab_vault':             await renderVocabularyVault(area); break;
           case 'modules':                 await renderModules(area); break;
           case 'alumni':
@@ -5245,13 +5280,13 @@ if (typeof window !== 'undefined') {
               </div>
               <div style="display:flex; gap:0.5rem;">
                 ${isVocabClass ? `
-                  <button class="btn btn-sm" id="cpanel-auto-gen-words" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Tests">Gen Words</button>
-                  <button class="btn btn-sm" id="cpanel-auto-gen-phrases" style="background:#6366f1;color:#fff;border:1px solid #818cf8;font-weight:700;" title="Auto-Generate Phrases & Idioms">${getSvgIcon('zap', 14)} Gen Phrases</button>
+                  <button class="btn btn-tactical btn-sm" id="cpanel-auto-gen-words" style="font-weight:700;" title="Auto-Generate Vocabulary Tests">Gen Words</button>
+                  <button class="btn btn-purple btn-sm" id="cpanel-auto-gen-phrases" style="font-weight:700;" title="Auto-Generate Phrases & Idioms">${getSvgIcon('zap', 14)} Gen Phrases</button>
                 ` : `
-                  <button class="btn btn-sm" id="cpanel-auto-generate-btn" style="background:var(--clr-primary);color:#fff;border:1px solid var(--clr-primary);font-weight:700;" title="Auto-Generate Vocabulary Tests">${getSvgIcon('zap', 14)} Auto-Generate</button>
+                  <button class="btn btn-tactical btn-sm" id="cpanel-auto-generate-btn" style="font-weight:700;" title="Auto-Generate Vocabulary Tests">${getSvgIcon('zap', 14)} Auto-Generate</button>
                 `}
-                <button class="btn btn-sm" id="cpanel-add-task-btn" style="background:var(--grade-c);color:#0f172a;border:1px solid var(--grade-c);font-weight:700;">${getSvgIcon('plus', 14)} Add Task</button>
-                <button class="btn btn-sm" id="cpanel-add-test-btn" style="background:var(--grade-e);color:#fff;border:1px solid var(--grade-e);font-weight:700;">${getSvgIcon('plus', 14)} Add Test</button>
+                <button class="btn btn-warning btn-sm" id="cpanel-add-task-btn" style="font-weight:700;">${getSvgIcon('plus', 14)} Add Task</button>
+                <button class="btn btn-danger btn-sm" id="cpanel-add-test-btn" style="font-weight:700;">${getSvgIcon('plus', 14)} Add Test</button>
               </div>
             </div>
 

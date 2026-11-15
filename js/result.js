@@ -267,7 +267,80 @@ if (!session) {
       requestAnimationFrame(animate);
     }
 
-    let currentFilterCallback = null;
+    // ─── 3-Column Answer Breakdown Renderer (Question | Your Answer | Point) ───
+    function renderAnswers(answers) {
+      const container = document.getElementById('answers-list-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!Array.isArray(answers) || answers.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:2rem 1rem; color:#94a3b8; font-size:13px;">
+            No question responses recorded for this attempt.
+          </div>
+        `;
+        return;
+      }
+
+      // Generate 3-column table: Question | Your Answer | Point
+      const rowsHtml = answers.map((a, idx) => {
+        const snap = typeof a.question_snapshot === 'string'
+          ? (() => { try { return JSON.parse(a.question_snapshot); } catch { return {}; } })()
+          : (a.question_snapshot || {});
+
+        const cat = getEvalCategory(a);
+        const isCorrect = cat === 'correct';
+        const isPartial = cat === 'minor_spelling_error';
+        const isIncorrect = !isCorrect && !isPartial;
+
+        // Font color rules: Green for correct, Yellow for partial (0.5), Red for incorrect
+        const fontColor = isCorrect
+          ? 'var(--grade-a, #00c000)'
+          : isPartial
+            ? 'var(--grade-c, #FFFF00)'
+            : 'var(--grade-e, #FF0000)';
+
+        const qNum = a.question_index !== undefined ? (a.question_index + 1) : (idx + 1);
+        const qText = snap.question_text || snap.question || snap.indonesian || snap.english || `Question ${qNum}`;
+        const studentAns = a.student_answer || '—';
+        const rawScore = Number(a.score ?? 0);
+        const pointStr = rawScore % 1 === 0 ? String(rawScore) : rawScore.toFixed(1);
+
+        return `
+          <tr class="answer-row" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+            <td class="ans-col-q" style="padding: 10px 8px; font-size: 12px; color: #F8FAFC; font-weight: 600; text-align: left; vertical-align: middle;">
+              <span style="color: #94A3B8; margin-right: 4px;">${qNum}.</span> ${escapeHtml(qText)}
+            </td>
+            <td class="ans-col-ans" style="padding: 10px 8px; font-size: 13px; font-weight: 700; color: ${fontColor}; text-align: left; vertical-align: middle; word-break: break-word;">
+              ${escapeHtml(studentAns)}
+            </td>
+            <td class="ans-col-pts" style="padding: 10px 8px; font-size: 13px; font-weight: 800; color: ${fontColor}; text-align: center; vertical-align: middle; white-space: nowrap;">
+              ${pointStr}
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      const tableHtml = `
+        <div class="answers-table-wrap" style="width: 100%; overflow-x: auto;">
+          <table class="answers-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead>
+              <tr style="border-bottom: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(15, 23, 42, 0.6);">
+                <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 50%;">QUESTION</th>
+                <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 35%;">YOUR ANSWER</th>
+                <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 15%;">POINT</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      container.innerHTML = tableHtml;
+    }
+
     function openAnswersModal(filterType = 'all') {
       const modal = document.getElementById('answers-section');
       if (modal) {
@@ -1184,7 +1257,8 @@ if (!session) {
         const attemptTotalQ = Number(attempt.total_questions || answers.length || 50);
         const maxRemedialPts = attemptTotalQ * 0.6;
         const totalPoints = isRemedial ? Math.min(rawTotalPoints, maxRemedialPts) : rawTotalPoints;
-        const formattedPoints = (totalPoints % 1 !== 0) ? totalPoints.toFixed(1) : totalPoints;
+        // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+        const formattedPoints = Math.round(Number(totalPoints || 0));
 
         const resPointsEl = document.getElementById('res-points');
         if (resPointsEl) {
@@ -1287,6 +1361,13 @@ if (!session) {
         document.getElementById('card-filter-correct')?.addEventListener('click', () => openBreakdownWithFilter('correct'));
         document.getElementById('card-filter-partial')?.addEventListener('click', () => openBreakdownWithFilter('partial'));
         document.getElementById('card-filter-wrong')?.addEventListener('click', () => openBreakdownWithFilter('incorrect'));
+        document.getElementById('done-answers-modal-btn')?.addEventListener('click', closeAnswersModal);
+        const answersModalEl = document.getElementById('answers-section');
+        if (answersModalEl) {
+          answersModalEl.addEventListener('click', (e) => {
+            if (e.target === answersModalEl) closeAnswersModal();
+          });
+        }
 
         // FEATURE 9: Tutor note card (narrative_report support)
         if (attempt.narrative_report) {
@@ -1347,24 +1428,6 @@ if (!session) {
         if (loadingEl) loadingEl.classList.add('hidden');
         if (contentEl) contentEl.classList.remove('hidden');
 
-        // Populate printable diagnostic report card for parent review / PDF export
-        populatePrintableReportCard({
-          instName: resolvedInstName,
-          progName: resolvedProgName,
-          batchName: resolvedBatchName,
-          lvlName: resolvedLvlName,
-          studentName: studentFullName,
-          testTitle: asmRawTitle || `${titleType} - ${titleTopic}`,
-          correct,
-          partial,
-          wrong,
-          points: formattedPoints,
-          pct,
-          grade: (isGradeSOr100 ? '★' : grade),
-          isRemedial,
-          answers
-        });
-
         // Launch unified top-to-bottom sequential cascade animation
         await runResultEntranceSequence({
           targetPct: pct,
@@ -1388,99 +1451,6 @@ if (!session) {
           <p class="text-muted">${escapeHtml(e.message)}</p>
           <a href="dashboard.html" class="btn btn-primary mt-4">Back to Class</a>
         `;
-      }
-    }
-
-    function populatePrintableReportCard({
-      instName,
-      progName,
-      batchName,
-      lvlName,
-      studentName,
-      testTitle,
-      correct,
-      partial,
-      wrong,
-      points,
-      pct,
-      grade,
-      isRemedial,
-      answers
-    }) {
-      const metaEl = document.getElementById('print-inst-meta');
-      if (metaEl) {
-        metaEl.textContent = `${instName || 'CEC'} • ${progName || 'CAMP'} • BATCH ${batchName || '—'} • ${lvlName || '—'}`;
-      }
-      const timeEl = document.getElementById('print-timestamp');
-      if (timeEl) {
-        timeEl.textContent = new Date().toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        });
-      }
-      const nameEl = document.getElementById('print-student-name');
-      if (nameEl) nameEl.textContent = studentName || '—';
-
-      const titleEl = document.getElementById('print-test-title');
-      if (titleEl) titleEl.textContent = testTitle || '—';
-
-      const corrEl = document.getElementById('print-correct-count');
-      if (corrEl) corrEl.textContent = correct;
-
-      const partEl = document.getElementById('print-partial-count');
-      if (partEl) partEl.textContent = partial;
-
-      const wrongEl = document.getElementById('print-wrong-count');
-      if (wrongEl) wrongEl.textContent = wrong;
-
-      const ptsEl = document.getElementById('print-points');
-      if (ptsEl) ptsEl.textContent = points;
-
-      const scorePctEl = document.getElementById('print-score-pct');
-      if (scorePctEl) {
-        const finalVal = (pct % 1 === 0 ? Math.round(pct) : pct.toFixed(1)) + '%';
-        scorePctEl.textContent = finalVal;
-      }
-
-      const gradeSymEl = document.getElementById('print-grade-symbol');
-      if (gradeSymEl) gradeSymEl.textContent = (grade === 'S' ? '★' : grade);
-
-      const gradePredEl = document.getElementById('print-grade-predicate');
-      if (gradePredEl) gradePredEl.textContent = getAchievementStatus(grade, pct);
-
-      const tbody = document.getElementById('print-breakdown-tbody');
-      if (tbody && Array.isArray(answers)) {
-        tbody.innerHTML = answers.map((a, idx) => {
-          const snap = typeof a.question_snapshot === 'string'
-            ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
-            : (a.question_snapshot || {});
-          const promptText = snap.indonesian || snap.prompt || snap.question || '—';
-          const studentAns = a.student_answer || '—';
-          const targetAns = a.correct_answer_snapshot || snap.english || snap.correct_answer || '—';
-          const cat = getEvalCategory(a);
-          let resBadge = '<span class="print-badge-correct">CORRECT</span>';
-          let pts = '1.0';
-          if (cat === 'minor_spelling_error') {
-            resBadge = '<span class="print-badge-partial">PARTIAL</span>';
-            pts = '0.5';
-          } else if (cat === 'incorrect') {
-            resBadge = '<span class="print-badge-wrong">INCORRECT</span>';
-            pts = '0.0';
-          }
-          return `
-            <tr>
-              <td style="text-align:center; font-weight:700;">${idx + 1}</td>
-              <td>${escapeHtml(promptText)}</td>
-              <td><strong>${escapeHtml(studentAns)}</strong></td>
-              <td>${escapeHtml(String(targetAns))}</td>
-              <td>${resBadge}</td>
-              <td style="text-align:center; font-weight:700;">${pts}</td>
-            </tr>
-          `;
-        }).join('');
       }
     }
 

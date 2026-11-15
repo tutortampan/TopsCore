@@ -106,8 +106,12 @@ Dynamic prerequisites supporting 0 to N parent modules with minimum score thresh
 ## 2.8 Overall score
 Average of all Tests that are available/takeable under current rules and completed by the Student.
 
-## 2.9 Question scoring
-Every question is worth **1 point**. Answer evaluation preserves question-level score and result code.
+## 2.9 Question scoring & Points (PTS) Half-Up Whole Integer Invariant
+- Every question is worth **1 point** (partial credit 0.5 for minor spelling/word form error).
+- **Points Half-Up Whole Integer Invariant (Aturan Pembulatan Poin Penuh)**: Seluruh akumulasi poin dan nilai poin siswa/kelas (Theme Exam Points, Overall Points, Class Average Points) yang memiliki desimal **`.5` ke atas WAJIB dibulatkan ke atas** menjadi bilangan bulat penuh via `Math.round()` (misal `274.5` $\rightarrow$ `275`, `257.5` $\rightarrow$ `258`, `225.9` $\rightarrow$ `226`, `473.2` $\rightarrow$ `473`, `814.6` $\rightarrow$ `815`). Tidak boleh ada angka berkoma/pecahan desimal pada kolom dan metrik poin.
+- **3-Letter 'PTS' Header Abbreviation Invariant**: Header kolom poin wajib menggunakan singkatan 3-huruf resmi **`PTS`** di seluruh resolusi tabel untuk mencegah tumpang tindih (*anti-crowding / zero text wrapping*).
+- **5-Pillar Theme Matrix Compact Header Standards (SSOT)**: Seluruh subheader matriks tema kelas resmi menggunakan format ringkas 3–4 huruf: **`TASK`** (Formative Tasks), **`RATE`** (Exam Rate %), **`PTS`** (Exam Points whole integer), **`GRD`** (Exam Grade), dan **`STS`** (Exam/Administrative Status). Mencegah tumpang tindih teks (*anti-crowding*) pada tabel workstation desktop.
+- **Overall Performance 3-Pillar Compact Header Standards (SSOT)**: Subheader performa keseluruhan di sisi kanan tabel resmi menggunakan format ringkas: **`DONE`** (Completion Rate %), **`PTS`** (Total Points whole integer), dan **`GRD`** (Overall Grade). Istilah `DONE` menggantikan `PROGRESS` / `PRGRS` untuk melenyapkan kerancuan dengan istilah Program (`PRG`).
 
 ## 2.10 Grade
 Centralized authoritative grading (Official Grading Scale):
@@ -164,8 +168,16 @@ Struktur 4 tahap, 4 tema kelas, atau 4 domain navigasi menetapkan palet resmi **
   6. **Pip 6 (Nila)**: `var(--clr-accent-1)` (`#6366f1` / Royal Indigo)
   7. **Pip 7 (Ungu)**: `var(--quad-d)` (`#C084FC` / Quad D Violet Mastery)
 
-## 2.11 The 8 Test Evaluation Modules
-1. Point & Speak! (Visual Pronouns), 2. Storytelling (Narrative Tense), 3. Conversation-based, 4. Multiple Choice, 5. Read Aloud / Pronunciation, 6. Turn-based Roleplay (Realtime/WebSockets), 7. Speaking Performance (5 Pillars), 8. Vocabulary Mastery.
+## 2.11 The 8 Test Evaluation Modules (Unification of Module & Answer Type SSOT)
+TopsCore consolidates all legacy 'Module' and 'Answer Type' terminology into a single authoritative concept: **Module** (`m1`–`m8`):
+1. **Description** (`m1`, formerly *Point & Speak!* — Visual Context & Pronouns)
+2. **Selection** (`m2`, formerly *Multiple Choice* — Standardized Multi-Option Choices)
+3. **Written** (`m3`, formerly *Vocabulary Mastery* — Text, Spelling & Lexical Precision)
+4. **Spoken** (`m4`, formerly *Read Aloud / Pronunciation* — Speech & Phonetic Analysis)
+5. **Speech** (`m5`, formerly *Speaking Performance* — Formal 5-Pillar Speaking Assessment)
+6. **Monologue** (`m6`, formerly *Storytelling* — Independent 3–5 min Narrative Speech)
+7. **Dialogue** (`m7`, formerly *Turn-based Roleplay* — Pair Live Conversation Room via WebRTC)
+8. **Interview** (`m8`, formerly *Conversation-based* — Guided Sequential Q&A)
 
 ## 2.12 AI Scoring Pipeline (Stateless)
 Stateless & Low-Egress. Audio/media processed transiently in browser/Edge Functions and discarded; Supabase stores only structured text/JSON scores, transcripts, and metadata.
@@ -231,6 +243,14 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 - **Batch Status (`batches.is_active`)**: Strictly **`ACTIVE`** and **`INACTIVE`** (`completed` does not exist for batches).
 - **Test Status (`tests.status`)**: Strictly **`PUBLISHED`** and **`DRAFT`** (`unpublished` and `archived` are normalized to `DRAFT`).
 - **Test Type (`tests.test_type` / `tests.category`)**: Strictly **`TASK`** and **`EXAM`** (`quiz` is legacy and eradicated).
+
+## 2.28 Dual-Viewport Ecosystem: Student Mobile-Locked (430px) vs Admin Desktop-Locked (100vh)
+- **Student Realm (Strictly Mobile-Locked)**: Seluruh alur siswa (`index.html`, `dashboard.html`, `test.html`, `result.html`, `conversation.html`) WAJIB tampil dalam proporsi mobile terpusat (`max-width: 430px; margin: 0 auto;`), baik dibuka di perangkat mobile maupun browser laptop/PC desktop. Kanvas luar desktop menggunakan deep dark slate (`#060911`). Seluruh header, sticky navigation, dan fixed bottom bar terkunci dalam koridor 430px.
+- **Admin & Tutor Realm (Strictly Desktop-Locked)**: Seluruh console admin (`admin.html`) WAJIB berformat desktop workstation (`100vh` locked single-screen, multi-kolom high-density data tables, Sub Panel 40px, 4-pillar quadrant).
+
+## 2.29 Room-Exclusive Print Protocol (Zero Print in Student Result Page)
+- Fitur cetak (print report, diagnostic summary, evaluasi) DILARANG berada di halaman hasil siswa (`result.html`).
+- Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
 
 ---
 

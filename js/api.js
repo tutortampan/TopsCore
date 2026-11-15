@@ -180,8 +180,8 @@ export function toShortLevel(val) {
   if (!str || str === '—' || str === '-') return '—';
 
   const lower = str.toLowerCase();
-  if (lower === 'alumni' || lower === 'ex' || lower === 'alumnus' || str === '0') {
-    return 'Alumni';
+  if (lower === 'alumni' || lower === 'ex' || lower === 'alumnus' || str === '0' || lower === 'x') {
+    return 'X';
   }
 
   let n = parseInt(str, 10);
@@ -4143,30 +4143,26 @@ export async function adminOverridePrerequisitesWithRemedial({
   clearAdminCache('tests');
 
   // 9. Record Audit Log (Rule 2.19)
-  try {
-    await sb.from('audit_logs').insert({
-      actor_role: 'ADMIN',
-      action: 'OVERRIDE_PREREQUISITE_REMEDIAL',
-      entity_type: 'class',
-      entity_id: classId,
-      new_value: {
-        target_theme: targetThemeCode,
-        target_exam_id: targetExamId,
-        selected_test_ids: selectedTestIds,
-        fill_score_percent: fillScore,
-        only_fill_empty: onlyFillEmpty,
-        is_remedial: isRemedial,
-        student_count: finalStudentIds.length,
-        affected_students: affectedStudentSet.size,
-        affected_tests: affectedTestSet.size,
-        created_attempts: createdCount,
-        updated_attempts: updatedCount,
-        grade: fillGrade
-      }
-    });
-  } catch (auditErr) {
-    console.warn('[adminOverridePrerequisitesWithRemedial] Audit log warning:', auditErr);
-  }
+  await logAuditEvent({
+    actor_role: 'ADMIN',
+    action: 'OVERRIDE_PREREQUISITE_REMEDIAL',
+    entity_type: 'class',
+    entity_id: classId,
+    new_value: {
+      target_theme: targetThemeCode,
+      target_exam_id: targetExamId,
+      selected_test_ids: selectedTestIds,
+      fill_score_percent: fillScore,
+      only_fill_empty: onlyFillEmpty,
+      is_remedial: isRemedial,
+      student_count: finalStudentIds.length,
+      affected_students: affectedStudentSet.size,
+      affected_tests: affectedTestSet.size,
+      created_attempts: createdCount,
+      updated_attempts: updatedCount,
+      grade: fillGrade
+    }
+  });
 
   return {
     success: true,
@@ -4183,6 +4179,36 @@ export async function adminOverridePrerequisitesWithRemedial({
 }
 
 /**
+ * Safe, non-blocking audit logging helper (Rule 2.19).
+ * Validates UUID entity_id and suppresses RLS 401 permission errors so essential operations never fail.
+ */
+export async function logAuditEvent(logData) {
+  if (!logData) return;
+  try {
+    const sb = await getSupabase();
+    const isUuid = (str) => typeof str === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+    const safeEntityId = isUuid(logData.entity_id) ? logData.entity_id : null;
+
+    const payload = {
+      actor_role: logData.actor_role || 'ADMIN',
+      action: logData.action || 'GENERAL_ACTION',
+      entity_type: logData.entity_type || 'system',
+      entity_id: safeEntityId,
+      new_value: logData.new_value || null,
+      old_value: logData.old_value || null,
+      created_at: logData.created_at || new Date().toISOString()
+    };
+
+    const { error } = await sb.from('audit_logs').insert(payload);
+    if (error) {
+      console.warn('[logAuditEvent] Audit log write skipped (RLS/policy):', error.message || error);
+    }
+  } catch (err) {
+    console.warn('[logAuditEvent] Audit log suppressed:', err?.message || err);
+  }
+}
+
+/**
  * Phase 305: Forgiven & Exam Manual Override
  * Apply 'forgiven' flag to selected tests for selected students.
  * Also supports manual score input for EXAM type tests.
@@ -4192,7 +4218,8 @@ export async function adminApplyForgiven({
   studentIds = [],
   testActions = [],   // [{ testId, action: 'forgive'|'manual', percentage, score }]
   forgivenBy = 'Mr. Top',
-  reason = 'Pacing Adjustment'
+  reason = 'Pacing Adjustment',
+  skipAudit = false
 }) {
   const sb = await getSupabase();
   if (!classId) throw new Error('classId is required for Forgiven / Override.');
@@ -4403,9 +4430,9 @@ export async function adminApplyForgiven({
     }
   }
 
-  // Audit log per Rule 2.19
-  try {
-    await sb.from('audit_logs').insert({
+  // Audit log per Rule 2.19 (unless suppressed by batch caller)
+  if (!skipAudit) {
+    await logAuditEvent({
       actor_role: 'ADMIN',
       action: 'FORGIVEN_OVERRIDE',
       entity_type: 'class',
@@ -4421,8 +4448,6 @@ export async function adminApplyForgiven({
       },
       created_at: nowIso
     });
-  } catch (auditErr) {
-    console.warn('[adminApplyForgiven] Audit log warning:', auditErr);
   }
 
   clearAdminCache('attempts');
@@ -6116,6 +6141,7 @@ if (typeof window !== 'undefined') {
   window.closeTestSession = closeTestSession;
   window.checkStudentTestAccess = checkStudentTestAccess;
   window.adminOverridePrerequisitesWithRemedial = adminOverridePrerequisitesWithRemedial;
+  window.logAuditEvent = logAuditEvent;
   window.adminApplyForgiven = adminApplyForgiven;
   window.adminRevokeForgiven = adminRevokeForgiven;
   window.fetchClassTestSettings = fetchClassTestSettings;

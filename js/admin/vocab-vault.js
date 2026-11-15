@@ -1806,18 +1806,18 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         <input type="search" id="vault-topic-search" placeholder="Search Theme or Topic..." value="${escapeHtml(window._vaultTopicSearchQuery || '')}" style="width: 200px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 10px; outline: none;">
 
         <div style="display: flex; gap: 3px; align-items: center; background: rgba(255,255,255,0.04); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
-          <button type="button" class="btn-theme-curriculum-tab" data-lvl="ALL" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${getSvgIcon('target', 14)} ALL (${totalTopicsAll})</button>
+          <button type="button" class="btn btn-tactical btn-sm btn-theme-curriculum-tab ${activeLevel === 'ALL' ? 'active' : ''}" data-lvl="ALL" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px;">${getSvgIcon('target', 14)} ALL (${totalTopicsAll})</button>
           ${levels.map(lvl => {
             const isActive = (String(activeLevel) === String(lvl));
             const count = levelStats[lvl]?.topics || 0;
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-            return `<button type="button" class="btn-theme-curriculum-tab" data-lvl="${lvl}" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">${shortLbl} (${count})</button>`;
+            return `<button type="button" class="btn btn-tactical btn-sm btn-theme-curriculum-tab ${isActive ? 'active' : ''}" data-lvl="${lvl}" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px;">${shortLbl} (${count})</button>`;
           }).join('')}
         </div>
 
         <!-- Program Quick Filter Pills (Phase 432) -->
         <div style="display: flex; gap: 3px; align-items: center; background: rgba(255,255,255,0.04); padding: 2px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.08);">
-          <button type="button" class="btn-theme-prog-tab" data-prog="ALL" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${(window._vaultActiveProgramFilter || 'ALL') === 'ALL' ? 'background: var(--grade-a); color: #ffffff;' : 'background: transparent; color: #94a3b8;'}">PROG: ALL</button>
+          <button type="button" class="btn btn-success btn-sm btn-theme-prog-tab ${(window._vaultActiveProgramFilter || 'ALL') === 'ALL' ? 'active' : ''}" data-prog="ALL" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px;">PROG: ALL</button>
           ${(() => {
             const seen = new Set();
             const progs = [];
@@ -2703,11 +2703,11 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           </select>
         </div>
         <div style="display: flex; gap: 2px; align-items: center; background: rgba(15,23,42,0.8); padding: 2px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
-          <button type="button" class="btn-bp-level-tab" data-lvl="ALL" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${activeLevel === 'ALL' ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'}">ALL LEVELS</button>
+          <button type="button" class="btn btn-tactical btn-sm btn-bp-level-tab ${activeLevel === 'ALL' ? 'active' : ''}" data-lvl="ALL" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px;">ALL LEVELS</button>
           ${levels.map(lvl => {
             const isActive = (String(activeLevel) === String(lvl));
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-            return `<button type="button" class="btn-bp-level-tab" data-lvl="${lvl}" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px; cursor: pointer; border: none; ${isActive ? 'background: #3b82f6; color: #fff;' : 'background: transparent; color: #94a3b8;'};">${shortLbl}</button>`;
+            return `<button type="button" class="btn btn-tactical btn-sm btn-bp-level-tab ${isActive ? 'active' : ''}" data-lvl="${lvl}" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px;">${shortLbl}</button>`;
           }).join('')}
         </div>
       </div>
@@ -2720,7 +2720,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     const rightHtml = `
       <input type="search" id="bp-search-input" placeholder="Search Topics..." style="width: 140px; height: 28px; font-size: 12px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
       <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 28px; font-size: 12px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Test System Settings">${getSvgIcon('settings', 14)} Test Settings</button>
-      <button class="btn btn-primary btn-sm" id="btn-bp-autogen" style="background: var(--clr-primary); font-size: 12px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; box-shadow: 0 2px 8px rgba(99,102,241,0.45); border: none; cursor: pointer; border-radius: 5px;" title="Auto-Generate Curriculum Tests">${getSvgIcon('zap', 14)} Auto-Generate All Tests</button>
+      <button class="btn btn-tactical btn-sm" id="btn-bp-autogen" style="font-size: 12px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; border-radius: 5px;" title="Auto-Generate Curriculum Tests">${getSvgIcon('zap', 14)} Auto-Generate All Tests</button>
     `;
     window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
   }
@@ -2924,7 +2924,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
               <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
               <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
-              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">ANSWER TYPE</th>
+              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">METHOD</th>
 
               <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">TASK STATUS</th>
               <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center;">EXAM STATUS</th>
@@ -3153,8 +3153,8 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} group(s) with duplicate Indonesian words found.</p>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-secondary btn-sm" id="dup-modal-keep-all" style="background:var(--grade-a); color:white;">&#10004; Keep First (All)</button>
-          <button class="btn btn-secondary btn-sm" id="dup-modal-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>
+          <button class="btn btn-success btn-sm" id="dup-modal-keep-all">&#10004; Keep First (All)</button>
+          <button class="btn btn-purple btn-sm" id="dup-modal-merge-all">&#9889; Merge All</button>
         </div>
       </div>
       <div style="overflow-y:auto; flex-grow:1;">
@@ -3455,7 +3455,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
           <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} automated similar group(s) detected &bull; ${allDistinctTopics.length} total topics active</p>
         </div>
         <div class="d-flex gap-2">
-          ${duplicateGroups.length > 0 ? `<button class="btn btn-secondary btn-sm" id="dup-topic-merge-all" style="background:#4f46e5; color:white;">&#9889; Merge All</button>` : ''}
+          ${duplicateGroups.length > 0 ? `<button class="btn btn-purple btn-sm" id="dup-topic-merge-all">&#9889; Merge All</button>` : ''}
         </div>
       </div>
 

@@ -100,7 +100,7 @@ assert(classesMgmtJs.includes('pageSize: 1000'), 'classes-management.js ClassGri
 assert(classesMgmtJs.includes('white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden;'), 'classes-management.js Title column must be single-line nowrap');
 assert(!classesMgmtJs.includes('<span class="badge ${statusColors[st]'), 'classes-management.js Status column must not render capsule badge in view mode');
 
-const classJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'class.js'), 'utf-8');
+const classJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'class.js'), 'utf-8').replace(/\r\n/g, '\n');
 assert(classJs.includes("container: 'results-grid-container'") && classJs.includes('hideToolbar: true'), 'class.js results-grid-container must have hideToolbar: true');
 assert(classJs.includes('pageSize: 1000'), 'class.js results-grid-container must have pageSize: 1000');
 assert(!classJs.includes('<span class="badge badge-success text-xs" style="font-size:0.65rem;padding:1px 5px;" title="Highest score recorded across attempts">Highest</span>'), 'class.js Score column must not render Highest capsule badge');

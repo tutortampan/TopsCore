@@ -3389,7 +3389,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
-                <span style="color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#94a3b8')}; font-weight:800; font-size:16px; font-variant-numeric:tabular-nums;">
+                <span style="color:${hasExam ? theme.color : '#94a3b8'}; font-weight:800; font-size:16px; font-variant-numeric:tabular-nums;">
                   ${st.totalPoints}
                 </span>
               </div>

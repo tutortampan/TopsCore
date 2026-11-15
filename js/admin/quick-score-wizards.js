@@ -491,7 +491,7 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
       <!-- Footer CTA -->
       <div style="padding: 12px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(30, 41, 59, 0.4); display: flex; align-items: center; justify-content: space-between;">
         <button type="button" id="btn-cancel-quick-alumni" class="btn btn-secondary btn-sm">Cancel</button>
-        <button type="button" id="btn-confirm-quick-alumni" class="btn btn-sm" style="background: #8b5cf6; border: 1px solid #a855f7; color: #ffffff; font-weight: 800; padding: 6px 18px; display: inline-flex; align-items: center; gap: 6px;">
+        <button type="button" id="btn-confirm-quick-alumni" class="btn btn-purple btn-sm" style="font-weight: 800; padding: 6px 18px; display: inline-flex; align-items: center; gap: 6px;">
           ${getSvgIcon('graduation-cap', 16)} Confirm Graduation to ALUMNI
         </button>
       </div>

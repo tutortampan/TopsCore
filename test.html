@@ -124,47 +124,51 @@
     <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
   </footer>
 
-  <!-- Centered Modal Question Matrix -->
-  <div id="matrix-popup" class="matrix-popup" role="dialog" aria-modal="true" aria-labelledby="matrix-title-text">
-    <div class="matrix-header">
-      <div class="matrix-title-group">
-        <span id="matrix-title-text" class="matrix-title">QUESTION MATRIX</span>
-        <span id="matrix-progress-pill" class="matrix-progress-pill">0 / 0</span>
+  <!-- Centered Modal Question Matrix (Pop-up 09 Standard) -->
+  <div id="matrix-popup" class="matrix-popup-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="matrix-title-group" onclick="if(event.target===this) window.toggleMatrixPopup(false)">
+    <div class="matrix-box">
+      <!-- 1. Header (40px Title Area + 1.5px Perimeter Divider per Invariant 1.5.1) -->
+      <div class="matrix-header title-area">
+        <div class="matrix-title-group" id="matrix-title-group">
+          <span class="matrix-stat-answered">ANSWERED = <span id="matrix-title-answered">0</span></span>
+          <span class="matrix-stat-divider">•</span>
+          <span class="matrix-stat-unanswered">UNANSWERED = <span id="matrix-title-unanswered">0</span></span>
+        </div>
       </div>
-    </div>
 
-    <!-- Inline Status Legend -->
-    <div class="matrix-legend-bar">
-      <div class="matrix-legend-item"><span class="matrix-dot matrix-dot-blue"></span> Current</div>
-      <div class="matrix-legend-item"><span class="matrix-dot matrix-dot-green"></span> Answered (<span id="matrix-legend-answered">0</span>)</div>
-      <div class="matrix-legend-item"><span class="matrix-dot matrix-dot-slate"></span> Blank (<span id="matrix-legend-blank">0</span>)</div>
-    </div>
-    
-    <!-- GRID CONTAINER -->
-    <div class="matrix-scroll-area">
-      <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question">
-        <!-- Filled dynamically -->
+      <!-- 2. Body Area -->
+      <div class="matrix-body">
+        <!-- Dual Progress Bar (Hijau = Answered, Merah = Unanswered) -->
+        <div class="matrix-progress-track" role="progressbar" aria-label="Question Completion Progress">
+          <div class="matrix-progress-fill-answered" id="matrix-bar-answered" style="width: 0%;"></div>
+          <div class="matrix-progress-fill-unanswered" id="matrix-bar-unanswered" style="width: 100%;"></div>
+        </div>
+        
+        <!-- GRID CONTAINER -->
+        <div class="matrix-scroll-area">
+          <div class="q-nav-grid" id="q-nav-grid" role="navigation" aria-label="Jump to question">
+            <!-- Filled dynamically -->
+          </div>
+        </div>
       </div>
-    </div>
-
-    <div class="matrix-tip-box">
-      Tap any question tile to navigate, or jump directly to next pending item.
-    </div>
-    
-    <div class="matrix-footer">
-      <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" onclick="window.toggleMatrixPopup(false)">CLOSE</button>
-      <button class="btn matrix-jump-btn" id="btn-sidebar-jump-unanswered" onclick="window.toggleMatrixPopup(false)">
-        <span>JUMP TO NEXT UNANSWERED</span>
-        <span>&rarr;</span>
-      </button>
+      
+      <!-- 3. CTA Area / Modal Footer (60px CTA Panel + 1.5px Perimeter Divider per Invariant 1.5.2 & 1.5.4) -->
+      <div class="matrix-footer modal-footer">
+        <button type="button" class="btn btn-secondary btn-matrix-close" onclick="window.toggleMatrixPopup(false)">CLOSE</button>
+        <button type="button" class="btn matrix-jump-btn" id="btn-sidebar-jump-unanswered" onclick="window.toggleMatrixPopup(false)">
+          <span>NEXT UNANSWERED</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </button>
+      </div>
     </div>
   </div>
 
   <!-- Pre-Exam Focus & Fullscreen Modal (Pop-up 08 Standard) -->
   <div id="pre-exam-focus-modal" class="pre-exam-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pre-exam-focus-title">
     <div class="pre-exam-focus-box">
-      <div class="focus-modal-body">
-        <!-- Official Badge Area (Positioned Specifically ABOVE Title Area) -->
+      <!-- 3-Tier Modal Architecture: Header (Badge Area + Title Area + 1.5px Perimeter Divider) -->
+      <div class="focus-modal-header">
+        <!-- Official Badge Area (Positioned Specifically ABOVE Title Area per Invariant 1.5.0) -->
         <div class="badge-area focus-badge-area" id="focus-badge-area">
           <div class="badge-icon-box focus-badge-box">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><circle cx="12" cy="11" r="3"></circle></svg>
@@ -176,8 +180,11 @@
           <h2 id="pre-exam-focus-title" class="focus-title">EXAM PREPARATION &amp; FOCUS</h2>
           <p class="focus-subtitle">Focused testing and fullscreen mode enforced.</p>
         </div>
-        
-        <!-- 5 Concise Integrity Checklist Items (Rainbow Spectrum: Red -> Orange -> Yellow -> Lime -> Green) -->
+      </div>
+
+      <!-- Modal Body (5 Concise Integrity Checklist Items) -->
+      <div class="focus-modal-body">
+        <!-- 5 Concise Integrity Checklist Items (Zero Emojis / SVG Rainbow Order: Merah, Oranye, Kuning, Lime, Hijau) -->
         <div class="focus-checklist">
           <div class="focus-check-item">
             <span class="check-ico ico-red">
@@ -236,24 +243,38 @@
     </div>
   </div>
 
-  <!-- Anti-Cheat Overlay — Option B: Ultra Clean Equal-Spacing Card (Phase 426) -->
-  <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-strikes-badge">
+  <!-- Anti-Cheat Overlay — Option B: Standardized 4-Tier Modal Architecture (Phase 587) -->
+  <div id="cheat-overlay" role="alertdialog" aria-modal="true" aria-labelledby="cheat-modal-title">
     <div class="cheat-box" id="cheat-box-card">
-      <!-- ELEMENT 1: TOP STRIKE PILL -->
-      <div id="cheat-strikes-badge" class="cheat-strikes-badge">{ STRIKE 1 / 10 }</div>
-
-      <!-- ELEMENT 2: CENTER COUNTDOWN NUMBER -->
-      <div class="cheat-countdown-group">
-        <div class="cheat-countdown-circle">
-          <span id="cheat-timer-count" class="cheat-timer-count">10</span>
+      <!-- 1. Header (Title Area at top + SIGN Area below Title) -->
+      <div class="hazard-modal-header">
+        <!-- Title Area Invariant (40px) - Inverted Solid Red Warning Banner -->
+        <div class="title-area hazard-title-area hazard-title-area-danger">
+          <h2 id="cheat-modal-title" class="hazard-title">WARNING!</h2>
         </div>
-        <div class="cheat-countdown-label">Seconds to Auto-Submit</div>
+
+        <!-- SIGN Area (Square 50% window width, no divider, holding centered countdown circle) -->
+        <div class="sign-area cheat-sign-area">
+          <div class="sign-icon-box cheat-sign-box">
+            <div class="cheat-countdown-inner">
+              <span id="cheat-timer-count" class="cheat-timer-count">10</span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- ELEMENT 3: BOTTOM RETURN BUTTON (MAX THUMB COMFORT, NO TAP HINT) -->
-      <button type="button" class="btn btn-primary cheat-dismiss-btn" id="dismiss-cheat-btn">
-        <span>RETURN TO TEST</span>
-      </button>
+      <!-- 2. Body Area -->
+      <div class="cheat-modal-body">
+        <div id="cheat-strikes-badge" class="cheat-strikes-badge">{ STRIKE 1 / 10 }</div>
+        <div class="cheat-countdown-label">SECONDS TO AUTO-SUBMIT</div>
+      </div>
+
+      <!-- 3. CTA Area / Modal Footer (60px Panel + 1.5px Perimeter Divider per Invariant 1.5.2 & 1.5.4) -->
+      <div class="hazard-modal-footer modal-footer">
+        <button type="button" class="btn cheat-btn-return" id="dismiss-cheat-btn">
+          RETURN TO TEST
+        </button>
+      </div>
 
       <!-- Hidden accessible announcement elements for screen readers / legacy hooks -->
       <div id="cheat-title" class="sr-only" aria-hidden="true" style="display:none;">Security Violation Detected</div>
@@ -261,32 +282,31 @@
     </div>
   </div>
 
-  <!-- Submit confirm modal — TopsCore Dark Theme & System Color Accents -->
+  <!-- Submit confirm modal — TopsCore Dark Theme & System Color Accents (Pop-up 10 Standard) -->
   <div class="modal-backdrop hidden" id="submit-modal" role="dialog" aria-modal="true" aria-labelledby="submit-modal-title">
     <div class="modal-box modal-box-hazard" id="submit-modal-box">
 
-      <!-- INCOMPLETE STATE: 3-TIER UNIFIED LAYOUT -->
+      <!-- INCOMPLETE STATE: 3-TIER STANDARDIZED MODAL -->
       <div id="hazard-incomplete-wrap" class="hazard-layout-wrap">
-        <!-- TIER 1: GIVE UP! ACTION BUTTON (RED ACCENT) -->
-        <button type="button" class="hazard-btn hazard-btn-giveup" id="danger-submit-btn">
-          <span>GIVE UP!</span>
-        </button>
-
-        <!-- TIER 2: UNIFIED WARNING & 0/40 COUNTER CARD (YELLOW/AMBER ACCENT) -->
-        <div class="hazard-block card-unified-warning-counter" id="hazard-warning-block">
-          <div class="hazard-warning-icon-wrap">
-            <svg class="hazard-neon-warning-icon" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M50 12 L88 78 H12 Z" stroke="#FFCC00" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" class="triangle-neon-stroke" />
-              <line x1="50" y1="36" x2="50" y2="54" stroke="#FFCC00" stroke-width="7" stroke-linecap="round" class="triangle-neon-stroke" />
-              <circle cx="50" cy="68" r="4.5" fill="#FFCC00" class="triangle-neon-dot" />
-            </svg>
+        <!-- 1. Header (Title Area at top + SIGN Area below Title) -->
+        <div class="hazard-modal-header">
+          <!-- Title Area Invariant (40px) - Inverted Solid Warning Banner -->
+          <div class="title-area hazard-title-area hazard-title-area-warning">
+            <h2 id="submit-modal-title" class="hazard-title">WARNING: INCOMPLETE TEST!</h2>
           </div>
 
-          <div class="hazard-warning-title" id="submit-modal-title">WARNING: INCOMPLETE TEST!</div>
+          <!-- SIGN Area (Icon box placed directly UNDER Title Area, 50% window width square, no divider) -->
+          <div class="sign-area hazard-sign-area">
+            <div class="sign-icon-box hazard-sign-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon text-warning hazard-sign-svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </div>
+          </div>
+        </div>
 
-          <!-- Merged Counter Strip Inside Warning Card -->
+        <!-- 2. Body Area -->
+        <div class="hazard-modal-body">
           <div class="hazard-inner-counter-strip" id="hazard-counter-block">
-            <div class="hazard-counter-label">Questions Answered</div>
+            <div class="hazard-counter-label">QUESTIONS ANSWERED</div>
             <div class="hazard-counter-value-white">
               <span id="answered-count">0</span><span class="hazard-counter-slash">/</span><span id="total-count">40</span>
             </div>
@@ -296,26 +316,48 @@
           </div>
         </div>
 
-        <!-- TIER 3: BACK TO THE TEST ACTION BUTTON (GREEN ACCENT) -->
-        <button type="button" class="hazard-btn hazard-btn-back-neon" id="cancel-submit-btn">
-          <span>BACK TO THE TEST</span>
-        </button>
+        <!-- 3. CTA Area / Modal Footer (60px Panel + 1.5px Perimeter Divider per Invariant 1.5.2 & 1.5.4) -->
+        <div class="hazard-modal-footer modal-footer">
+          <button type="button" class="btn hazard-btn-giveup" id="danger-submit-btn">
+            GIVE UP!
+          </button>
+          <button type="button" class="btn hazard-btn-back-neon" id="cancel-submit-btn">
+            BACK TO TEST
+          </button>
+        </div>
       </div>
 
       <!-- COMPLETE STATE (When all questions answered: unanswered === 0) -->
       <div id="hazard-complete-wrap" class="hazard-layout-wrap hidden">
-        <div class="hazard-block hazard-block-ready">
-          <div class="hazard-ready-heading">READY TO SUBMIT</div>
+        <!-- 1. Header (Title Area at top + SIGN Area below Title) -->
+        <div class="hazard-modal-header">
+          <!-- Title Area Invariant (40px) - Inverted Solid Success Banner -->
+          <div class="title-area hazard-title-area hazard-title-area-success">
+            <h2 class="hazard-ready-heading">READY TO SUBMIT</h2>
+          </div>
+
+          <!-- SIGN Area (Icon box placed directly UNDER Title Area, 50% window width square, no divider) -->
+          <div class="sign-area ready-sign-area">
+            <div class="sign-icon-box ready-sign-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="tc-icon text-success hazard-sign-svg"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Body Area -->
+        <div class="hazard-modal-body">
           <p class="hazard-ready-sub">All <strong id="total-count-ready">40</strong> questions answered!</p>
         </div>
 
-        <button type="button" class="hazard-btn hazard-btn-back-neon" id="confirm-submit-btn">
-          SUBMIT TEST
-        </button>
-
-        <button type="button" class="hazard-btn hazard-btn-neutral" id="cancel-ready-btn">
-          BACK TO TEST
-        </button>
+        <!-- 3. CTA Area / Modal Footer (60px Panel + 1.5px Perimeter Divider per Invariant 1.5.2 & 1.5.4) -->
+        <div class="hazard-modal-footer modal-footer">
+          <button type="button" class="btn hazard-btn-neutral" id="cancel-ready-btn">
+            BACK TO TEST
+          </button>
+          <button type="button" class="btn hazard-btn-submit-ready" id="confirm-submit-btn">
+            SUBMIT TEST
+          </button>
+        </div>
       </div>
 
     </div>

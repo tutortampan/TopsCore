@@ -89,7 +89,7 @@ export function sortAllSidebarDomains() {
 
       // Ensure Alumni item stays docked at the bottom of Board domain
       const alumniItem = group.querySelector('.admin-nav-item[data-sub="alumni"]');
-      if (alumniItem && alumniItem.parentNode) {
+      if (alumniItem && alumniItem.parentNode && alumniItem.nextElementSibling !== null) {
         alumniItem.parentNode.appendChild(alumniItem);
       }
     });
@@ -348,7 +348,7 @@ export function initRecordDrawer() {
   };
 }
 
-export function registerServiceWorker() {
+export function unregisterAdminServiceWorker() {
   // Tutor's Room Admin Console must NEVER be cached by Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
@@ -373,7 +373,7 @@ if (typeof document !== 'undefined') {
       initSidebarCache();
       initSidebarDelegation();
       initRecordDrawer();
-      registerServiceWorker();
+      unregisterAdminServiceWorker();
     });
   } else {
     initAuthGate();
@@ -381,6 +381,6 @@ if (typeof document !== 'undefined') {
     initSidebarCache();
     initSidebarDelegation();
     initRecordDrawer();
-    registerServiceWorker();
+    unregisterAdminServiceWorker();
   }
 }

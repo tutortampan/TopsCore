@@ -1,13 +1,194 @@
 # Active Task List — TopsCore LMS
 
 > **Current Focus:** Universal Visual Standardization & Normalization of TopsCore Modals, Tables, Forms & Data Taxonomies
-> **Current Phase:** Phase 572 (Complete) — Alumni Main Panel Routing & Clickability Resolution
+> **Current Phase:** Phase 599 (Complete) — Overall Performance Completion Header Standardization (DONE Replacing PRGRS)
 > **Automated Verification:** 100% Passed Across All Test Suites & Preflight (< 1.5s Fast Loop, < 20s Full Parallel Run)
 
 ---
 
 ## 📋 SSOT Governance & Architecture Milestones (Complete)
+- [x] **Phase 599 (Overall Performance Completion Header Standardization: DONE Replacing PRGRS)**:
+  - **Penggantian Header Progress Overall Menjadi DONE**:
+    - Sesuai instruksi pengguna ("pakai DONE"):
+    - Header kolom persentase capaian kurikulum pada Overall Performance resmi diganti dari `PROGRESS` / `PRGRS` menjadi **`DONE`** di [js/admin/app.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/app.js) dan didaftarkan di [js/admin/datagrid.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/datagrid.js).
+    - Mencegah total kerancuan singkatan `PRGRS` / `PRG` dengan istilah Program.
+    - Struktur 3 subheader Overall Performance kini ultra-ringkas dan elegan: **`DONE`** (Completion Rate %), **`PTS`** (Total Points whole integer), dan **`GRD`** (Overall Grade).
+  - **Codification**: Dibukukan resmi di [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) §2.9 dan [.agents/rules/ui-invariants.md](file:///.agents/rules/ui-invariants.md) §4.2.
+  - **Verification**: Seluruh tes unit AST, 10 pilar standarisasi tabel, dan super-header continuous divider tests 100% green.
+- [x] **Phase 597 (Theme Status Column Quadrant Color Alignment: STS Theme Color Matching)**:
+  - **Penyelarasan Warna Header STS Sesuai Kuadran Tema**:
+    - Sesuai instruksi pengguna ("bagian status warna disamakan dengan yang tema"):
+    - Menambahkan `col-test-theme-status-a` (Pink `--quad-a`), `col-test-theme-status-b` (Orange `--quad-b`), `col-test-theme-status-c` (Lime `--quad-c`), dan `col-test-theme-status-d` (Violet `--quad-d`) ke dalam aturan CSS kuadran tema di [css/admin/admin-tables.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/admin/admin-tables.css).
+    - Header `STS` kini seragam berwarna selaras dengan 4 pilar subheader tema lainnya (`TASK`, `RATE`, `PTS`, `GRD`, `STS`).
+  - **Verification**: Seluruh tes unit AST, 10 pilar standarisasi tabel, dan super-header continuous divider tests 100% green.
+- [x] **Phase 596 (Module Code Integration into Subtitle & Card Top Header Bar Purge)**:
+  - **Eradikasi Baris Header Atas Kartu**: Baris header atas kartu modul (`M1` di kiri dan `● ACTIVE` di kanan) dieliminasi total sesuai instruksi.
+  - **Integrasi Kode Modul pada Subtitle**: Kode modul (`M1` s/d `M8`) kini disematkan langsung di depan teks subtitle pada Title Area (misal: `M1 — VISUAL CONTEXT`, `M2 — STANDARDIZED CHOICES`, dst).
+  - **Focal Alignment**: Kartu langsung diawali dengan Badge Area 48px × 48px yang simetris di posisi paling atas kartu.
+- [x] **Phase 595 (Vertical Top-to-Bottom Stacked Applicable Classes with 10px Gap Rhythm)**:
+  - **Penyusunan Vertikal Atas ke Bawah Pil Kelas**: Kontainer `.module-class-pills` pada setiap kartu modul di [js/admin/modules.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/modules.js) disusun vertikal penuh (`display: flex; flex-direction: column; gap: 10px; width: 100%;`).
+  - **Jarak Universal 10px Antar-Item (Rule 1.2)**: Masing-masing pil kelas (`Vocabulary`, `Storytelling`, `Speaking`, `Basic English`) berbaris rapi dari atas ke bawah dengan jarak tepat **`10px`** antar satu pil ke pil berikutnya.
+  - **Layout & Tipografi Baku**: Tiap pil selebar 100% kontainer, tinggi 28px, ikon SVG (centang untuk aktif, plus untuk tidak aktif), label kelas di tengah, badge status di kanan. Font strictly 12px baseline (zero sub-12px per Rule 2.2).
+- [x] **Phase 594 (5-Pillar Theme Matrix Compact Header Standardization: TASK, RATE, PTS, GRD, STS)**:
+  - **Standarisasi 5 Subheader Tema (Strict 3–4 Karakter)**:
+    - Sesuai instruksi pengguna ("GRADE = GRD lalu kolom Progress ganti namanya dengan TASK saja, STATUS ini pakai nama STS, simpan dalam aturan"):
+    - 1. Formative Progress $\to$ **`TASK`** (bukan `PROGRESS`/`PRGRS`).
+    - 2. Exam Rate % $\to$ **`RATE`**.
+    - 3. Exam Points $\to$ **`PTS`** (Math.round whole integer).
+    - 4. Exam Grade $\to$ **`GRD`** (bukan `GRADE`).
+    - 5. Administrative Status $\to$ **`STS`** (bukan `STATUS`).
+  - **Integrasi Kamus DataGrid & App**:
+    - Diselaraskan di [js/admin/datagrid.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/datagrid.js) dan [js/admin/app.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/app.js) (`dynamicAsmCols` dan Overall Performance).
+  - **Codification**: Dibukukan resmi di [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) §2.9 dan [.agents/rules/ui-invariants.md](file:///.agents/rules/ui-invariants.md) §4.2.
+  - **Verification**: Seluruh tes unit AST, 10 pilar standarisasi tabel, dan super-header divider tests 100% green.
+- [x] **Phase 593 (Sub Panel Elevation of Summary Pills & Zero Duplicate Headers on Modules View)**:
+  - **Relokasi Pil Ringkasan ke Sub Panel (Gambar 2)**: 4 pil ringkasan alokasi kelas (`Vocabulary`, `Storytelling`, `Speaking`, `Basic English`) dan indikator status engine resmi dipindahkan ke dalam Sub Panel 40px (`#admin-bottom-infobar`), dengan tinggi 28px per pil (In-Panel Control Invariant §1.3).
+  - **Eradikasi Header Duplikat pada Konten Area (Gambar 3)**: Judul dan deskripsi modul dinaikkan ke Topbar workstation (`#topbar-tabs-container`), membebaskan ruang vertikal sehingga 8 kartu modul fit 100% dalam kanvas workstation desktop tanpa outer scroll.
+  - **Penyelarasan Spasial & Tipografi Universal**: Strict 10px rhythm (§1.2), Badge Area 48px × 48px (§1.5.0), Title Area 40px ALL CAPS (§1.5.1), dan tombol aksi 30px ghost-to-glow (§3.4).
+  - **Verification**: Seluruh tes unit AST 50 file JS, standarisasi tabel 10 pilar, dan spatial layout checker 100% green.
+- [x] **Phase 591 (4-Over-4 Module Grid Layout & Standardized Badge / 40px Title Area Card Architecture)**:
+  - **Grid 4 Kolom di Atas & 4 Kolom di Bawah**: Layout grid kartu modul dikunci strictly `repeat(4, minmax(0, 1fr))` dengan gap 10px baku (baris 1: Description, Selection, Written, Spoken; baris 2: Speech, Monologue, Dialogue, Interview).
+  - **Standardized Badge Area (Invariant 1.5.0)**: Ikon SVG dibingkai dalam wadah badge 48px × 48px radius 12px, border 1.5px, ambient tactical glow, mathematically centered di atas Title Area.
+  - **Standardized 40px Title Area (Invariant 1.5.1)**: Tinggi tepat 40px, divider perimeter 1.5px (`border-bottom: 1.5px solid rgba(255, 255, 255, 0.16)`), judul ALL CAPS Outfit Bold terpusat, dan subtitle 12px uppercase tactical blue.
+  - **Applicable Classes Section & 30px Ghost Button**: Pil kelas interaktif di tengah kartu dan tombol 30px ghost-to-glow di footer kartu.
+- [x] **Phase 590 (Interactive Module-to-Class Allocation Section & Card UI Invariant Standardization)**:
+  - **Alokasi Kelas Terintegrasi Langsung pada Setiap Kartu Modul**:
+    - Setiap kartu modul di [js/admin/modules.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/modules.js) memiliki seksi khusus **`APPLICABLE CLASSES`** dengan pil status interaktif untuk 4 disiplin kelas resmi: `Vocabulary` (Lime), `Storytelling` (Orange), `Speaking` (Cyan), `Basic English` (Purple).
+    - Admin dapat mengklik pil kelas langsung untuk toggle alokasi modul per kelas, tersimpan otomatis di `localStorage` dan tersinkronisasi ke live summary bar.
+  - **Pencegahan Tumpang-Tindih & Wizard Lockdown**:
+    - `getAllowedModulesForClass()` membaca langsung konfigurasi aktif dari kartu-kartu ini. Pilihan modul pada form ujian (`test-builder.js` dan `crud-modals.js`) otomatis terbatas hanya pada modul yang dialokasikan untuk kelas tersebut.
+  - **Penyelarasan UI Invariants**:
+    - Universal 10px Container Gap Invariant (`gap: 10px !important;`).
+    - Dual-Scale Typography (16px Card Title, 12px Subtitle & Pills, zero sub-12px).
+    - Single-Source Color Governance (token baku `var(--primary-tactical)` & `rgba(15,23,42,0.85)`).
+    - Ghost-to-Solid-Glow Button Invariant (30px ghost button pada standby, luminous glow saat hover/active).
+  - **Verification**: Seluruh tes unit AST 50 file JS, standarisasi tabel, dan spatial checker 100% green.
+- [x] **Phase 589 (Points Half-Up Whole Integer Invariant & 3-Letter 'PTS' Header Standardization)**:
+  - **Points Half-Up Whole Integer Invariant**: Seluruh akumulasi dan nilai poin siswa/kelas (Theme Exam Points, Overall Points, Class Average Points, Student Profile, Result Summary) yang memiliki desimal $\ge 0.5$ dibulatkan ke atas menjadi bilangan bulat penuh via `Math.round()` (misal `274.5` $\to$ `275`, `257.5` $\to$ `258`, `225.9` $\to$ `226`, `473.2` $\to$ `473`, `814.6` $\to$ `815`).
+  - **3-Letter 'PTS' Header Standardization**: Header kolom poin diubah menjadi singkatan 3-huruf baku **`PTS`** di seluruh resolusi kolom (di [js/admin/datagrid.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/datagrid.js) dan [js/admin/app.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/app.js)), melenyapkan penumpukan teks pada header.
+  - **Codification**: Dibukukan resmi di [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) §2.9 dan [.agents/rules/ui-invariants.md](file:///.agents/rules/ui-invariants.md) §4.2.
+  - **Verification**: Seluruh tes unit dan standarisasi tabel lolos 100% green.
+- [x] **Phase 587 (Module SSOT Unification & Smart Class-Centric Module Filter Guardrail)**:
+  - **Unifikasi Istilah Menjadi 'Module' (m1 s/d m8)**:
+    - Seluruh mesin evaluasi diunifikasi secara definitif dengan nama tunggal **`Module`** (m1 Description, m2 Selection, m3 Written, m4 Spoken, m5 Speech, m6 Monologue, m7 Dialogue, m8 Interview).
+  - **Smart Class-Centric Module Filter Guardrail**:
+    - Diimplementasikan di [js/admin/modules.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/modules.js), [js/admin/test-builder.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/test-builder.js), dan [js/admin/crud-modals.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/crud-modals.js).
+    - Mencegah salah pilih atau tertukarnya modul ujian:
+      - Kelas **Vocabulary**: Pilihan modul terkunci ke `Selection`, `Written`, `Spoken`. Modul Speech/Monologue/Dialogue/Interview otomatis dinonaktifkan (`disabled`) dengan pesan peringatan edukatif.
+      - Kelas **Storytelling**: Terkunci ke `Monologue`, `Dialogue`, `Interview`, `Spoken`.
+      - Kelas **Speaking**: Terkunci ke `Speech`, `Spoken`, `Dialogue`, `Interview`, `Monologue`.
+  - **Verification**: Seluruh test suite (Fast AST 50 files, API imports, Table Standardization, Spatial Invariant Checker) 100% Green.
+- [x] **Phase 586 (Room-Exclusive Print Protocol & Dual-Viewport Ecosystem Standardization)**:
+  - **Pembersihan Total Fitur Cetak dari Halaman Result**:
+    - Tombol cetak `#btn-print-result` dan seluruh blok dokumen cetak `#printable-report-card` serta styles `@media print` telah dieliminasi total dari [result.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/result.html), [js/result.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/result.js), dan [css/result.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/result.css).
+    - Seluruh fitur cetak resmi (rapor, dossier, CV, sertifikat evaluasi) kini eksklusif hanya melalui Room (Admin Console / Tutors Room / Live Room).
+  - **Dual-Viewport Ecosystem Standard (SSOT)**:
+    - Seluruh antarmuka siswa (`index.html`, `dashboard.html`, `test.html`, `result.html`, `conversation.html`) terkunci 100% dalam format mobile terpusat (`max-width: 430px; margin: 0 auto;`), baik diakses di smartphone maupun monitor laptop/desktop PC.
+    - Header, bottom bar, dan banner terkunci dalam koridor 430px di [css/auth.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/auth.css), [css/dashboard.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/dashboard.css), [css/test.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/test.css), dan [css/result.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/result.css).
+    - Area admin (`admin.html`) tetap 100% terkunci dalam format desktop workstation (100vh lock).
+  - **Codification**: Dibukukan resmi di [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) §2.28 & §2.29 dan [.agents/rules/ui-invariants.md](file:///.agents/rules/ui-invariants.md) §1.0.
+  - **Verification**: `npm.cmd run test:fast` lolos 50/50 file JS AST (0.10s), 10/10 Pillars Standarisasi Tabel lolos 100%.
+- [x] **Phase 585 (Universal Table Thick Perimeter Frame & Super-Header Vertical Clipping Fix)**:
+  - **Perbaikan Header Terpotong (Zero Vertical Clipping)**:
+    - Menghapus aturan usang `height: 19px` pada `#class-attendance-grid th.super-hdr` dan menyelaraskannya ke standar baku **`height: 30px !important; line-height: 30px !important; vertical-align: middle !important;`**.
+    - Super-headers (`STUDENTS DATA`, `THEME A`..`D`, `OVERALL PERFORMANCE`) kini memiliki ruang vertikal yang lapang dan simetris dengan baris sub-header Row 2 (30px) serta spanning header `rowspan="2"` (60px), bebas dari clipping pada huruf atas maupun bawah.
+    - Mengamankan subheader `STATUS`, `PRGRS ▼`, `POINT`, dan `GRADE` agar tidak terpotong secara horizontal dengan padding terkalibrasi dan text clearance.
+  - **Garis Pembatas Tebal di Sekeliling Seluruh Tabel (Atas, Bawah, Kiri, Kanan)**:
+    - Sesuai instruksi pengguna ("tambahkan garis pembatas tebal di sekeliling semua tabel yang ada, atas, bawah, kiri, kanan. memutar di semua tubuh tabel"):
+    - Container `.table-wrap` dan `.datagrid-container` dikunci dengan perimeter tebal **`2px solid rgba(255, 255, 255, 0.28) !important;`**.
+    - Sel terluar tabel dikunci secara harmonis:
+      - **Atas**: `border-top: 2px solid rgba(255, 255, 255, 0.28) !important;` pada baris pertama header.
+      - **Kiri**: `border-left: 2px solid rgba(255, 255, 255, 0.28) !important;` pada kolom pertama (`col-sticky-1`).
+      - **Kanan**: `border-right: 2px solid rgba(255, 255, 255, 0.28) !important;` pada kolom terakhir (`col-overall-grade` & super-hdr-overall).
+      - **Bawah**: `border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;` pada baris footer/summary row.
+  - **Verification**: Seluruh 10 Pillar Standarisasi Tabel lolos 100%, 16/16 Super-Header Assertions lolos, AST 50 JS files lolos, cache buster bumped ke `v584`.
+- [x] **Phase 584 (Ghost-to-Solid-Glow Button Invariant SSOT System-Wide Standardization)**:
+  - **Pembukuan Resmi Ghost-to-Solid-Glow Invariant (§3.4)**:
+    - Membukukan aturan baku antarmuka untuk seluruh kontrol tombol aksi dan mode toggle di [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md) §3.4:
+      - **Inaktif / Standby = Ghost Outline**: Latar transparan (`background: transparent`), garis tepi 1px dan teks menyala mengikuti token semantik masing-masing untuk melenyapkan *visual noise* di atas kanvas gelap.
+      - **Aktif / ON / Ditekan = Solid Filled + Neon Glow**: Latar penuh warna padat dengan pendaran neon taktis `box-shadow: 0 0 10px rgba(..., 0.45)`.
+      - **Strict Luminance Contrast**: Teks gelap `#0F172A` pada warna terang (Kuning & Hijau); teks putih `#FFFFFF` pada warna pekat (Merah, Cyan, Ungu, Pink).
+  - **Implementasi Terpadu CSS**:
+    - Diterapkan secara terpusat di [css/style.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/style.css), [css/admin.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/admin.css), dan seluruh minified bundles (`.btn-tactical`, `.btn-danger`, `.btn-warning`, `.btn-success`, `.btn-purple`, `.btn-secondary`).
+  - **Verification**: `npm.cmd run test:fast` lolos 50/50 file JS AST (0.18s), 28/28 test suites parallel pool lolos 100% green dalam 18.28s.
+- [x] **Phase 583 (Incomplete & Complete Submit Hazard Modal Standardization — Window 10 Standard)**:
+  - **Arsitektur 3-Tier Baku Modal 10 (`#submit-modal`)**:
+    - **Badge Area (Invariant 1.5.0)**: Container 52px × 52px beradius 14px tepat di atas Title Area. Incomplete state menampilkan segitiga warning SVG dengan border amber & soft glow `var(--grade-c)`; Complete state menampilkan centang hijau SVG dengan border & glow `var(--grade-a)`.
+    - **Title Area 40px Baku (Invariant 1.5.1)**: Tinggi baku tepat **40px** dengan pembatas perimeter tegas `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`. Tipografi 16px Outfit Bold ALL CAPS: `WARNING: INCOMPLETE TEST!` (kuning `var(--grade-c)`) dan `READY TO SUBMIT` (hijau `var(--grade-a)`).
+    - **Body Area**: Menampung peringatan konsekuensi `Unanswered questions will be forfeited with 0 points.` (12px slate) dan deep-well counter strip `QUESTIONS ANSWERED` dengan Hero KPI `14 / 40` (30px Outfit Bold) serta mini progress bar hijau `var(--grade-a)`.
+    - **CTA Area / Modal Footer 60px (Invariant 1.5.2 & 1.5.4)**: Tinggi baku tepat **60px** dengan pembatas perimeter tegas `border-top: 1.5px solid rgba(255, 255, 255, 0.16) !important;`. Tombol aksi proporsional tepat **40px**:
+      - Incomplete State: Tombol bahaya `GIVE UP!` (Merah Grade E `var(--grade-e)`) di sudut kiri-bawah vs `BACK TO TEST` (Hijau Grade A `var(--grade-a)` dengan luminous glow) di sudut kanan-bawah.
+      - Complete State: Tombol `BACK TO TEST` (Netral Slate 40px) di kiri vs `SUBMIT TEST` (Hijau Grade A 40px) di kanan.
+  - **Zero Truncation & Mobile 350px Viewport**:
+    - Terverifikasi 100% bebas dari teks terpotong atau terhimpit pada layar mobile 350px.
+    - Eradikasi tombol 'X' di sudut kanan-atas; seluruh dismiss terpusat pada tombol CTA Area di footer (Invariant 1.5.4).
+  - **Verification**: `npm.cmd run test:fast` lolos 50/50 file JS AST (0.12s), 10/10 Pillars Standarisasi Tabel lolos 100%.
+- [x] **Phase 581 (Inactive Status Red Color SSOT, Level X Automatic Alumni Status & Completed Tests Scroll Clearance)**:
+  - **Urutan Alfabetis Tab Program Alumni & All Alumni di Posisi Akhir**:
+    - Sesuai instruksi pengguna ("urutkan panel dengan cra nama program dengan alpabet, tapi all alumni taruh paling akhir"), tab folder program di top panel Alumni diurutkan menurut abjad A–Z (`Camp`, `Evnikom`, `Sheraton`), dan tab master `All Alumni` diposisikan di paling akhir.
+  - **Inactive Status Red Color SSOT**:
+    - Sesuai direktif user ("inactive pakai warna merah, jangan putih"), status `INACTIVE` pada kolom `STATUS` tabel, opsi dropdown inline, dan badge modal profil kini mutlak merujuk ke token merah resmi Grade E (`var(--grade-e)` / `#FF0000`), bukan warna putih/slate gray (`#94a3b8`).
+  - **Siswa Level X Otomatis Berstatus Alumni**:
+    - Siswa yang memiliki level `X` (`levelName === 'X'` atau `studentLevelNum === 0`) secara otomatis dan berwibawa diakui sebagai `ALUMNI` (`program_status = 'ALUMNI'`, `color = 'var(--quad-d)'`).
+    - Menghubungkan fungsi filter `isStudentAlumni(s)`, konstruksi `rowObj`, batch transfer, dan modal profil sehingga seluruh siswa Level X otomatis dikelompokkan dan ditampilkan sebagai alumni.
+  - **Dashboard Completed Tests Scroll Clearance**:
+    - Menambah bottom padding container scroll `.completed-table-wrap` dan `#completed-Tests-container` di [css/dashboard.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/dashboard.css) menjadi `60px !important`.
+    - Memastikan seluruh tes yang telah diselesaikan siswa (termasuk tes ke-11 di urutan paling bawah) dapat di-scroll sepenuhnya ke atas dengan ruang lega, tanpa terpotong atau tertutup banner bawah ("TopsCore by Mr. Top").
+  - **Verification**: `npm.cmd run test:fast` lolos 50/50 file JS AST (0.12s), 28/28 test suites parallel pool lolos 100% green dalam 16.55s.
+- [x] **Phase 580 (Class Hub Attendance Matrix Far-Right Overall Repositioning, Theme D Progress Inflation Bug Fix & Strict Zero Horizontal Scroll)**:
+  - **Repositioned OVERALL PERFORMANCE to Far Right**:
+    - Relocated super-header `OVERALL PERFORMANCE` and columns (`PRGRS`, `POINT`, `GRADE`) from the left side (between `STUDENTS DATA` and `THEME A`) to the far right after `THEME D`.
+    - Removed sticky classes (`col-sticky-3`, `col-sticky-4`, `col-sticky-5`) from Overall columns, eliminating sticky collision and visual tearing.
+  - **Theme D Progress Inflation Bug Fix**:
+    - Discovered and eliminated root cause in `js/admin/app.js` (line 3224) where `if (hasAtt || ...)` was auto-filling `earnedTasks = maxThemeTasks` (`28/28`) whenever an exam attempt existed, artificially inflating Theme D progress to 28/28 and Overall Progress to 100% for students with 0 task submissions.
+    - Progress is now strictly computed based on real topic completion (`topicsPassedCount >= numTopics`). Abdul Basit, Muhamad Alifurrahman, and Abd. Qoyyim H. Dahuri accurately return to `0/28`.
+  - **Strict Zero Horizontal Scroll**:
+    - Enforced `overflow-x: hidden !important;` on `#class-attendance-grid .table-wrap` and `table-layout: fixed !important; width: 100% !important;` on `table.datagrid-table` in `css/admin/admin-tables.css`.
+    - Purged mousewheel horizontal scroll listener (`e.deltaY` hijacking) in `fitMatrixToScreen()`.
+  - **Verification**: All 10 Pillars of Table Standardization 100% PASS, 16/16 super-header assertions PASS, AST syntax checks PASS.
+- [x] **Phase 579 (Alumni Multi-Program Top Panel Tabs & Dedicated Program Tables)**:
+  - User Directive: "di tabel alumni, kita bedakan alumni di tiap program, mereka punya tabel deda2 yang dipilih lewat top panel".
+  - Implemented multi-program tab switching in the Alumni topbar via `setTopbarTabs()`:
+    - `All Alumni (20)`: Master view showing all 20 alumni across all programs.
+    - `Sheraton (14)`: Dedicated table view showing strictly 14 Sheraton alumni.
+    - `Camp (6)`: Dedicated table view showing strictly 6 Camp alumni.
+    - `Evnikom (0)`: Empty state table view for programs without graduates.
+  - Linked `window._switchAlumniProgram(progId)` to interactive folder tabs in `#topbar-tabs-container`, filtering `filteredGridData` instantly in-memory without unnecessary network roundtrips.
+  - Dynamically synchronized bottom infobar batch dropdown (`#select-alumni-batch-infobar`) to list only graduating batches belonging to the active program.
+  - Verified with Playwright: clicking `Camp` isolates Camp's 6 alumni, clicking `Sheraton` isolates Sheraton's 14 alumni, and clicking `All Alumni` shows all 20.
+- [x] **Phase 578 (Class Hub Attendance Matrix Responsive Expansion & Multi-Attempt Special Status Recovery)**:
+  - **Akar Masalah Kolom Berantakan & Terpotong**:
+    - Matriks nilai 25 kolom (2 identitas + 3 overall + 4 tema × 5 sub-kolom) sebelumnya dipaksa sempit oleh `table-layout: fixed !important; overflow-x: hidden !important;`, menyebabkan header `STATUS` terpotong menjadi `STATU` dan Theme D terdorong keluar layar tanpa bisa di-scroll.
+    - Dimodifikasi `css/admin/admin-tables.css` (SSOT) dan dikompilasi ke `css/admin.css` & `css/admin.min.css`: `#class-attendance-grid .table-wrap` kini menggunakan `overflow-x: auto !important;`, tabel menggunakan `table-layout: auto !important; min-width: max-content !important;`, dan kolom `STATUS` dikunci pada lebar proporsional `min-width: 58px !important; width: 58px !important;` (zero-truncation).
+    - Kolom BATCH dan STUDENT NAME tetap terkunci sticky di sisi kiri saat horizontal scrolling berjalan lancar.
+  - **Pemulihan Status Administratif M, R, dan F**:
+    - Pada [js/admin/app.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/app.js), baris `studentsGridData` menyematkan `allAttempts: studentAttempts`.
+    - Evaluasi kolom `STATUS` (`theme_${tc}_status`), `RATE`, dan `POINT` kini menginspeksi seluruh riwayat attempt ujian siswa (`row.allAttempts`), mencegah attempt dengan skor murni menutupi attempt berstatus remedial (`is_remedial`), forgiven (`is_forgiven`), atau manual override (`MANUAL_OVERRIDE`).
+    - Siswa berstatus khusus terverifikasi tampil presisi: Abdul Basit $\rightarrow$ **`M`** (Cyan), Muhamad Alifurrahman $\rightarrow$ **`R`** (Kuning), Abd. Qoyyim H. Dahuri $\rightarrow$ **`F`** (Merah), siswa lulus normal $\ge 60\%$ $\rightarrow$ **`✓`** (Hijau), dan unattempted/gagal $\rightarrow$ **`—`**.
+  - **Cache Busters Sync**: Menginkremen versi aset di [admin.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/admin.html) ke `v576` dan cache service worker di [sw.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/sw.js) ke `v132`.
+  - **Verification**: Seluruh 10 Pillar Standarisasi Tabel lolos 100%, 16/16 super-header assertions lolos, AST 50 JS files lolos, CSS minified clean.
+- [x] **Phase 575 (Alumni Level X & Grade X Standardization & Disconnected Eradication)**:
+  - User Directive: "bagi Alumni, level mereka adalah X dan Grade Mereka juga X".
+  - Enforced Level **`X`** in purple (`var(--quad-d)` / `#c084fc`) across all alumni in the `LVL` table column, `levelName` data property, and `toShortLevel` in [js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js) and [js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js).
+  - Enforced Grade **`X`** in purple (`TOPSCORE_COLORS.X: #8B5CF6`) for all alumni students in `globalGrade`, `mastery.grade`, and `calculateGrade({ isAlumni: true })` in [js/grading.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/grading.js).
+  - Eliminated false red `DISCONNECTED` badges for alumni: Guarded `isOrphaned` with `!isAlumni` in [js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js) because alumni belonging to completed/graduated batches (`batches.is_active === false`) are normal graduates, not orphaned records. Added fail-safe `!isAlumniPanel` guard in cell rendering.
+  - Bumped modulepreload and script tags in [admin.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/admin.html) to `v575` to eliminate stale cache.
+- [x] **Phase 574 (Dead Windows, Obsolete Popups & Modals Eradication)**:
+  - Deleted orphaned `js/admin/forgiven-wizard-modal.js` (32.7 KB dead code), fully superseded by unified `quick-score-wizards.js`.
+  - Purged dead `#roster-modal` (lines 458–492) from `admin.html` and deleted corresponding unused CSS (`.modal-box-roster`, `.roster-add-bar`, `.roster-table-scroll`, `.roster-table`) from `css/admin/admin-modals.css`.
+  - Removed obsolete `window.viewClassInstanceRoster` and cleaned unused imports (`fetchClassInstanceRoster`, `addAdditionalMember`) from `js/admin/class.js`.
+  - Streamlined `js/admin/tests-management.js`: eradicated dead stub `renderQuestions` (lines 1571–1574), dead duplicate `renderResults` (lines 1576–1716), and uncalled legacy popup modal `openSessionModal` (lines 1723–1784) (-215 lines dead code).
+  - Cleaned router in `js/admin/app.js`: modernized import from `class.js` and redirected legacy sections `topics` and `question_types` directly to `vocab_vault`.
+  - Renamed `registerServiceWorker` to `unregisterAdminServiceWorker` in `js/admin/admin-init.js` to accurately reflect its actual unregistration behavior on the admin console.
+  - Fixed Answer Breakdown popup close trigger in `result.html` and `js/result.js`: added click listeners to `#done-answers-modal-btn` and modal backdrop.
+  - Rebuilt minified CSS (`admin.min.css`) and verified 100% test pass (28/28 test suites, 0 regressions).
+- [x] **Phase 573 (Manual Edit Surgical Dirty Tracking & Batch Sweep Eradication)**:
+  - Eliminated global DOM sweep in `saveAllManualDrafts()`: Removed loop that swept all input elements and treated untouched inputs (`!curDraft`) as dirty.
+  - Implemented surgical dirty tracking with `data-original-earned`, `data-original-score`, `data-original-pts`: Only fields where values actually differ from existing values are marked `isDirty: true`.
+  - Rolled back 273 accidental `MANUAL_OVERRIDE` flags in Supabase database: Deleted 31 accidental attempt inserts and restored `forgiven_reason = null`, `is_forgiven = false` for 242 existing attempts.
+  - Verified only intentionally modified student rows receive `M` status upon manual saving.
 - [x] **Phase 572 (Alumni Main Panel Routing & Clickability Resolution)**:
+  - Eliminated endless `MutationObserver` loop on `#sidebar-alumni-item`: Added guard `alumniItem.nextElementSibling !== null` in `sortAllSidebarDomains()` in [js/admin/admin-init.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/admin-init.js), preventing repeated `appendChild` on already-docked alumni item which caused 60fps DOM detaches that swallowed click events.
   - Fixed sidebar Alumni navigation item (`#sidebar-alumni-item`) click handling and routing.
   - Added dedicated routing case `case 'alumni':` to `loadSection` switch statement in [js/admin/app.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/app.js) preventing it from falling through to the `default` placeholder ("This section is under development").
   - Registered `alumni: 'Alumni'` in `sectionTitles` and `alumni: 'BOARD'` in `sectionDomainMap`.
@@ -143,20 +324,23 @@
     - `LOG OUT`: Dark slate idle with subtle red border (`rgba(255, 0, 0, 0.4)`), ignites into luminous Grade E red gradient glow on `:hover` (`var(--grade-e)` / `#FF0000`).
 - [x] **08. Pre-Exam Focus Modal (`#pre-exam-focus-modal`)** [COMPLETE]
   - Codified Section 1.5.0 "Badge Area" Invariant in `.agents/rules/ui-invariants.md`: Dedicated visual status/focal container positioned specifically ABOVE the Title Area.
-  - Positioned Tactical Blue integrity shield SVG inside dedicated `.badge-area.focus-badge-area` (50px × 50px) at the top of the modal window.
-  - Standardized 16px Outfit Bold ALL CAPS Title: `EXAM PREPARATION & FOCUS`.
-  - Structured 5 Concise Integrity Checklist Items with 100% SVG Vector Icons:
-    1. `Turn Off All Notifications` (Ico Danger `bell-off` SVG)
-    2. `No Second Devices` (Ico Danger `smartphone-slash` SVG)
-    3. `No Tab Switching` (Ico Warning `layers` SVG)
-    4. `Fullscreen Focus Mode` (Ico Tactical `maximize-2` SVG)
-    5. `Independent Completion` (Ico Success `clock` SVG)
+  - Positioned Tactical Blue integrity shield SVG inside dedicated `.badge-area.focus-badge-area` (48px × 48px) at the top of the modal window.
+  - Standardized 16px Outfit Bold ALL CAPS Title (`EXAM PREPARATION & FOCUS`) with prominent 1.5px neutral perimeter bottom boundary (`border-bottom: 1.5px solid rgba(255, 255, 255, 0.16)`).
+  - Structured 5 Concise Integrity Checklist Items with 100% SVG Vector Icons following TopsCore Rainbow Grade Scale:
+    1. `Turn Off All Notifications` (Ico Red `var(--grade-e)`)
+    2. `No Second Devices` (Ico Orange `var(--grade-d)`)
+    3. `No Tab Switching` (Ico Yellow `var(--grade-c)`)
+    4. `Fullscreen Focus Mode` (Ico Lime `var(--grade-b)`)
+    5. `Independent Completion` (Ico Green `var(--grade-a)`)
   - Dedicated 60px CTA Area / Modal Footer with 1.5px neutral top boundary and 40px `START EXAM` button with responsive hover glow.
-- [ ] **09. Question Matrix 40-Tile Modal** *(Next in Queue)*
-  - Standardize instructions card, countdown display, and start exam CTA.
-- [ ] **09. Question Matrix 40-Tile Modal**
-  - Standardize 40-tile responsive grid, status legends (Answered, Flagged, Unanswered), and jump actions.
-- [ ] **10. Incomplete Submit Hazard Warning Modal**
+- [x] **09. Question Matrix 40-Tile Modal (`#matrix-popup`)** [COMPLETE]
+  - Standardized 3-Tier Modal Architecture with dedicated `.matrix-box` (max-width 380px), dark backdrop overlay (`rgba(0, 0, 0, 0.75)` + 8px blur), and **0 Badge Area** (clean & compact per user directive).
+  - Title Area 40px with 1.5px perimeter bottom divider (`border-bottom: 1.5px solid rgba(255, 255, 255, 0.16)`): Purged "QUESTION MATRIX" text; displays pure stats `ANSWERED = xx` (Green `var(--grade-a)`) and `UNANSWERED = xx` (Red `var(--grade-e)`). Zero '✕' close buttons.
+  - Body Area Progress Bar & Tri-Color Tiles: Replaced redundant legend bar with a sleek dual-color progress bar (Green segment = Answered, Red segment = Unanswered).
+  - Tri-Color Tile Scheme: Answered tiles in Green (`var(--grade-a)`), Current tile in Yellow (`var(--grade-c)` / `#ffff00` with luminous glow), and Unanswered tiles in Red (`var(--grade-e)`).
+  - Completely purged below-grid tip box (`.matrix-tip-box`), connecting the grid directly to the CTA footer.
+  - Dedicated 60px CTA Area / Modal Footer with 1.5px perimeter top divider (`border-top: 1.5px solid rgba(255, 255, 255, 0.16)`), dual 40px action buttons (`CLOSE` at bottom-left corner and `NEXT UNANSWERED →` on right with Tactical Blue hover glow and 100% zero text clipping). Ultra-compact height (< 40% viewport on mobile).
+- [ ] **10. Incomplete Submit Hazard Warning Modal** *(Next in Queue)*
   - Preserve 3-Tier Hazard Yellow & Orange Submit Modal design with 60px footer and 40px buttons.
 - [ ] **11. Complete Submit Confirmation Modal**
   - Standardize clean confirmation dialog with submission summary.
@@ -168,7 +352,7 @@
 ---
 
 ## 🎙️ Planned Architecture / Backlog
-- [ ] **Conversation / Roleplay Room Integration (P2P Oral Module)**:
+- [ ] **Live Dialogue Room Integration (Dialogue Module)**:
   - Tombol standalone `Oral Room` telah dilepas dari header utama `dashboard.html`.
   - Halaman dan logika P2P Conversation (`conversation.html`, `js/conversation-room.js`, `js/conversation-eval.js`) tersimpan aman.
   - Direncanakan terhubung langsung dari dalam konteks kelas Conversation/Roleplay (bukan tombol independen di header siswa).
