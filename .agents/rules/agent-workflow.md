@@ -21,6 +21,12 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 - **Direct Authoritative Component**: Directly open and edit the specific component that renders the element (e.g., `student-management.js` and `datagrid.js` for student tables). Limit initial lookups to $\le 1$ targeted grep if the exact file is uncertain.
 - **Zero-Documentation Overhead on Micro-Tweaks**: Cosmetic label and wording adjustments do not require altering governance documentation (`ui-invariants.md`, `AGENTS.md`) or performing changelog rotations. Edit the code, run targeted tests, and report results immediately.
 
+### 2.2 Strict Zero Unsolicited Action Invariant (No Unrequested Generation, Modification, or Deletion)
+- **No Unsolicited Generation / Creation**: The agent MUST NEVER create new files, directories, modules, UI widgets, or helper scripts that were NOT explicitly requested by the user.
+- **No Unsolicited Modification**: The agent MUST NEVER modify, reformat, or alter components, styles, or logic outside the specific scope instructed by the user.
+- **No Unsolicited Deletion**: The agent MUST NEVER delete or discard existing files, code blocks, UI elements, configurations, or historical records without explicit user command or permission.
+- **Laser-Focused Surgical Scope**: Confine all reasoning, file reads, edits, and verification strictly to the exact task requested. Zero unsolicited "bonus improvements" or speculative refactorings.
+
 ## 3. Plan Lifecycle & Auto-Purge Protocol
 - **Naming Standard**: Major architectural or complex feature plans use `docs/plans/YYYYMMDD - <Plan Name>.md`.
 - **Single-Write Persistence**: Save plans directly in the workspace repository (`docs/plans/`). Do not duplicate or dual-write unless explicitly generating an interactive artifact widget.

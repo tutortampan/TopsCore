@@ -149,4 +149,12 @@ const uiInvariantsMd = fs.readFileSync(path.join(rootDir, '.agents', 'rules', 'u
 assert(uiInvariantsMd.includes('Universal Zero-Truncation Invariant'), 'ui-invariants.md must codify Universal Zero-Truncation Invariant');
 console.log('  ✅ Pillar 10 Passed: Universal Zero-Truncation Invariant verified across data columns, padding & governance.');
 
-console.log('\n🎉 ALL 10 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');
+// 11. Pillar 11: Level Promotion Passing Threshold Invariant (SSOT Rule 2.4.1 & Rule 2.10)
+console.log('▶ Checking Pillar 11: Level Promotion Passing Threshold Invariant...');
+assert(agentsMd.includes('2.4.1 Level Promotion & Passing Threshold Invariant'), 'AGENTS.md must codify Section 2.4.1 Level Promotion & Passing Threshold Invariant');
+assert(uiInvariantsMd.includes('Level Promotion & Passing Threshold Invariant'), 'ui-invariants.md must codify Section 6.4 Level Promotion & Passing Threshold Invariant');
+assert(!studentMgmtJs.includes('pct >= 70 || att?.is_forgiven'), 'student-management.js must not contain hardcoded pct >= 70 passing threshold');
+assert(studentMgmtJs.includes('pct >= minPass || att?.is_forgiven'), 'student-management.js must check pct >= minPass for level promotion eligibility');
+console.log('  ✅ Pillar 11 Passed: Level Promotion Passing Threshold Invariant strictly verified.');
+
+console.log('\n🎉 ALL 11 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');

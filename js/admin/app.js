@@ -413,7 +413,7 @@ import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } fr
 import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261115_v528';
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
-import { renderClassesHub } from './classes-hub.js?v=20261106_v160';
+import { renderClassesHub } from './classes-hub.js?v=20261117_v613';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261114_v474';
 import { openStudentFullEdit } from './student-management.js?v=20261114_v510';
 import { renderStudentsRegistration } from './student-registration.js?v=20261114_v494';
@@ -4020,7 +4020,7 @@ if (typeof window !== 'undefined') {
                   return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { sensitivity: 'base', numeric: true });
                 }
 
-                if (sortKey === 'progressPct' || sortKey === 'PROG' || sortKey === 'PRGRS' || sortKey === 'PGS') {
+                if (sortKey === 'progressPct' || sortKey === 'DONE' || sortKey === 'PROG' || sortKey === 'PRGRS' || sortKey === 'PGS') {
                   const pA = Number(a.progressPct ?? 0);
                   const pB = Number(b.progressPct ?? 0);
                   if (pA !== pB) return direction === 'asc' ? pA - pB : pB - pA;

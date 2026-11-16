@@ -1880,6 +1880,7 @@
     }
     .completed-Tests-table th {
       padding: 10px 14px;
+      font-family: var(--font-sans, 'Inter', sans-serif) !important;
       font-size: 12px;
       text-transform: uppercase;
       letter-spacing: 0.06em;
@@ -1887,7 +1888,7 @@
       background: #0f172a !important;
       border-bottom: 1px solid var(--clr-border);
       box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08);
-      font-weight: 700;
+      font-weight: 600;
       white-space: nowrap;
       position: sticky !important;
       top: 0 !important;
@@ -1897,7 +1898,9 @@
     .completed-Tests-table td {
       padding: 10px 14px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      font-family: var(--font-sans, 'Inter', sans-serif) !important;
       font-size: 12px;
+      font-weight: 400 !important;
       vertical-align: middle;
     }
     .completed-Tests-table tbody tr:last-child td {
@@ -2502,9 +2505,9 @@ body.dashboard-page .dock-tab-btn {
   border: none !important;
   border-bottom: 2.5px solid transparent !important;
   color: #94a3b8 !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   letter-spacing: 0.05em !important;
   padding: 0 8px !important;
   display: flex !important;
@@ -2533,8 +2536,9 @@ body.dashboard-page .rank-number-chip {
   background: rgba(var(--tier-rgb), 0.25) !important;
   color: var(--tier-color) !important;
   border: 1px solid rgba(var(--tier-rgb), 0.4) !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   padding: 1px 6px !important;
   border-radius: 4px !important;
   font-variant-numeric: tabular-nums !important;
@@ -2544,8 +2548,9 @@ body.dashboard-page .count-badge {
   background: rgba(255, 255, 255, 0.1) !important;
   color: #cbd5e1 !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   padding: 1px 6px !important;
   border-radius: 4px !important;
   font-variant-numeric: tabular-nums !important;
@@ -2570,9 +2575,9 @@ body.dashboard-page .standings-table-header {
   gap: 6px !important;
   align-items: center !important;
   padding: 4px 10px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   color: #64748b !important;
   letter-spacing: 0.06em !important;
   background: rgba(30, 41, 59, 0.45) !important;
@@ -2678,9 +2683,9 @@ body.dashboard-page .completed-title-wrap {
 }
 
 body.dashboard-page .completed-type-pill {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
   padding: 1px 5px !important;
   border-radius: 4px !important;
   text-transform: uppercase !important;
@@ -2701,9 +2706,9 @@ body.dashboard-page .completed-type-pill.is-task {
 }
 
 body.dashboard-page .completed-title {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
+  font-weight: 400 !important;
   color: #f8fafc !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -2723,9 +2728,9 @@ body.dashboard-page .completed-right {
 }
 
 body.dashboard-page .completed-score-badge {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 400 !important;
   font-variant-numeric: tabular-nums !important;
 }
 
@@ -2733,9 +2738,9 @@ body.dashboard-page .completed-grade-chip {
   width: 24px !important;
   height: 24px !important;
   border-radius: 6px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2747,9 +2752,9 @@ body.dashboard-page .btn-retry-test {
   align-items: center !important;
   gap: 4px !important;
   padding: 3px 8px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
   border-radius: 6px !important;
   background: rgba(var(--grade-e-rgb), 0.15) !important;
   border: 1px solid rgba(var(--grade-e-rgb), 0.4) !important;
@@ -3595,9 +3600,9 @@ body.dashboard-page .leaderboard-rank-badge {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 400 !important;
   flex-shrink: 0 !important;
   background: rgba(30, 41, 59, 0.8) !important;
   color: #94a3b8 !important;
@@ -3640,9 +3645,9 @@ body.dashboard-page .leaderboard-avatar-init {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
   flex-shrink: 0 !important;
 }
 
@@ -3662,9 +3667,9 @@ body.dashboard-page .leaderboard-name-wrap {
 }
 
 body.dashboard-page .leaderboard-student-name {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
+  font-weight: 400 !important;
   color: #f1f5f9 !important;
   white-space: normal !important;
   overflow: visible !important;
@@ -3678,7 +3683,7 @@ body.dashboard-page .leaderboard-royal-tag {
   align-items: center !important;
   gap: 2px !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   padding: 1px 6px !important;
   border-radius: 6px !important;
   background: rgba(var(--grade-c-rgb), 0.2) !important;
@@ -3689,7 +3694,7 @@ body.dashboard-page .leaderboard-royal-tag {
 }
 
 body.dashboard-page .leaderboard-sub-info {
-  font-family: 'Inter', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
   color: #64748b !important;
 }
@@ -3702,9 +3707,9 @@ body.dashboard-page .leaderboard-col-right {
 }
 
 body.dashboard-page .leaderboard-score-val {
-  font-family: 'Outfit', sans-serif !important;
-  font-size: 16px !important;
-  font-weight: 800 !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
   font-variant-numeric: tabular-nums !important;
 }
 
@@ -3715,9 +3720,9 @@ body.dashboard-page .leaderboard-grade-chip {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
 }
 
 body.dashboard-page .completed-summary-bar {
@@ -3737,9 +3742,9 @@ body.dashboard-page .completed-summary-card {
 }
 
 body.dashboard-page .completed-summary-val {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 16px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   font-variant-numeric: tabular-nums !important;
 }
 
@@ -5094,42 +5099,48 @@ body.dashboard-page .next-test-title-wrap .next-asm-title {
   margin: 0 !important;
 }
 
-/* 7 Kotak Pelangi (20px Height strictly in left column) */
+/* 7 Kotak Pelangi (Square Pips 22px x 22px strictly in left column) */
 body.dashboard-page .rainbow-pass-bar {
-  height: 20px !important;
-  min-height: 20px !important;
-  max-height: 20px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
   display: flex !important;
   align-items: center !important;
-  gap: 3px !important;
-  width: 100% !important;
+  justify-content: flex-start !important;
+  gap: 4px !important;
+  width: auto !important;
   box-sizing: border-box !important;
 }
 
 body.dashboard-page .rainbow-box {
-  flex: 1 1 0% !important;
-  height: 18px !important;
-  border-radius: 4px !important;
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  max-width: 22px !important;
+  flex: 0 0 22px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 5px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-family: 'Outfit', sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 900 !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
   line-height: 1 !important;
+  font-variant-numeric: tabular-nums !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   box-sizing: border-box !important;
   user-select: none !important;
 }
 
-/* 7 Rainbow Colors: Red, Orange, Amber, Yellow, Lime, Cyan, Purple */
+/* 7 Rainbow Colors SSOT: Red, Orange, Yellow, Green, Tactical Blue, Indigo, Violet (AGENTS.md §2.10.2) */
 body.dashboard-page .rainbow-box[data-step="1"].is-lit { background: var(--grade-e) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(var(--grade-e-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 body.dashboard-page .rainbow-box[data-step="2"].is-lit { background: var(--grade-d) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(var(--grade-d-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 body.dashboard-page .rainbow-box[data-step="3"].is-lit { background: var(--grade-c) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(var(--grade-c-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
-body.dashboard-page .rainbow-box[data-step="4"].is-lit { background: var(--grade-c) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(var(--grade-c-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
-body.dashboard-page .rainbow-box[data-step="5"].is-lit { background: var(--grade-b) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(var(--grade-b-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
-body.dashboard-page .rainbow-box[data-step="6"].is-lit { background: #06B6D4 !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(6, 182, 212, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
-body.dashboard-page .rainbow-box[data-step="7"].is-lit { background: #8B5CF6 !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(139, 92, 246, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="4"].is-lit { background: var(--grade-a) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(var(--grade-a-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="5"].is-lit { background: var(--primary-tactical, #38bdf8) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="6"].is-lit { background: var(--clr-accent-1, #6366f1) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(99, 102, 241, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="7"].is-lit { background: var(--quad-d, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(192, 132, 252, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 
 /* Dimmed / Unreached boxes */
 body.dashboard-page .rainbow-box.is-dim {
@@ -5158,16 +5169,18 @@ body.dashboard-page .next-test-col-right .pass-counter-btn {
   width: 44px !important;
   height: 44px !important;
   border-radius: 10px !important;
-  font-family: 'Outfit', sans-serif !important;
-  font-weight: 900 !important;
-  font-size: 16px !important;
-  display: flex !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
+  gap: 3px !important;
   cursor: pointer !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
   transition: transform 0.2s ease !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  font-variant-numeric: tabular-nums !important;
 }
 body.dashboard-page .next-test-col-right .pass-counter-btn:hover {
   transform: none !important;
@@ -5234,12 +5247,12 @@ body.dashboard-page .completed-table-header {
   gap: 6px !important;
   align-items: center !important;
   padding: 4px 10px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
-  color: #ffffff !important;
+  font-weight: 600 !important;
+  color: #64748b !important;
   letter-spacing: 0.06em !important;
-  background: rgba(15, 23, 42, 0.96) !important;
+  background: rgba(30, 41, 59, 0.45) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
   flex-shrink: 0 !important;
 }
@@ -5278,9 +5291,9 @@ body.dashboard-page .completed-col-num {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 400 !important;
   color: #f8fafc !important;
 }
 
@@ -5299,17 +5312,17 @@ body.dashboard-page .exam-number-box {
   height: 20px !important;
   padding: 0 3px !important;
   border-radius: 4px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 900 !important;
+  font-weight: 500 !important;
   line-height: 1 !important;
   box-sizing: border-box !important;
 }
 
 body.dashboard-page .completed-col-name {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 400 !important;
   color: #f8fafc !important;
   white-space: normal !important;
   display: -webkit-box !important;
@@ -5323,9 +5336,9 @@ body.dashboard-page .completed-col-name {
 
 body.dashboard-page .completed-col-score {
   text-align: right !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 400 !important;
   font-variant-numeric: tabular-nums !important;
 }
 
@@ -5512,130 +5525,110 @@ body.dashboard-page .dashboard-header-actions {
   flex-shrink: 0 !important;
 }
 
-/* 3. Hero Card (Students Metadata - Standardized 150px Budget: 20px / 1px / 88px / 1px / 40px) */
+/* 3. Hero Profile & Demographic Card (Profile Standard: Photo Left, Demographics Right) */
 body.dashboard-page #welcome-banner-section {
-  height: 150px !important;
-  min-height: 150px !important;
-  max-height: 150px !important;
+  height: 110px !important;
+  min-height: 110px !important;
+  max-height: 110px !important;
   width: 100% !important;
   border-radius: 14px !important;
-  padding: 0 14px !important;
+  padding: 10px !important; /* Strict 10px Card Internal Padding */
   display: flex !important;
-  flex-direction: column !important;
-  justify-content: space-between !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
   border: 1.5px solid rgba(var(--tier-rgb), 0.70) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0f172a !important;
+  background: radial-gradient(ellipse 90% 70% at 30% 50%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0f172a !important;
   box-shadow: 0 0 25px rgba(var(--tier-rgb), 0.35), 0 8px 24px -6px rgba(0, 0, 0, 0.45) !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
   overflow: hidden !important;
+  position: relative !important;
 }
 
-/* Sub-Row 1: Breadcrumb (20px) */
-body.dashboard-page #welcome-meta-wrapper {
-  height: 20px !important;
-  min-height: 20px !important;
-  max-height: 20px !important;
+body.dashboard-page .hero-profile-row {
   display: flex !important;
+  flex-direction: row !important;
   align-items: center !important;
-  justify-content: center !important;
-  gap: 6px !important;
-  font-family: 'Inter', sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 700 !important;
-  color: #94a3b8 !important;
-  letter-spacing: 0.02em !important;
-  white-space: nowrap !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-}
-
-body.dashboard-page #welcome-meta-wrapper span {
-  white-space: nowrap !important;
-}
-
-body.dashboard-page #banner-welcome-label,
-body.dashboard-page .welcome-meta-label {
-  color: var(--primary-tactical, #38bdf8) !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.08em !important;
-}
-
-/* Refined 1px Slender Horizontal Dividers across Metadata Card (Phase 334 Master Blueprint) */
-body.dashboard-page .hero-divider,
-body.dashboard-page #welcome-meta-wrapper + .hero-divider,
-body.dashboard-page .hero-metrics-row + .hero-divider,
-body.dashboard-page .hero-name-divider {
-  display: block !important;
-  width: 100% !important;
-  height: 1px !important;
-  min-height: 1px !important;
-  max-height: 1px !important;
-  flex-shrink: 0 !important;
-  margin: 0 !important;
-  background: linear-gradient(90deg, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 15%, rgba(var(--tier-rgb, 234, 179, 8), 0.85) 50%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 85%, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 100%) !important;
-  box-shadow: 0 0 4px rgba(var(--tier-rgb, 234, 179, 8), 0.35) !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* Sub-Row 2: Score | Foto | Grade (Strict 93px Sub-Row Budget per Blueprint, Enlarged 84px Photo) */
-body.dashboard-page .hero-metrics-row {
-  height: 93px !important;
-  min-height: 93px !important;
-  max-height: 93px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: space-between !important;
+  justify-content: flex-start !important;
   gap: 12px !important;
-  margin: 0 !important;
-  padding: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
 }
 
-body.dashboard-page #banner-score-box,
-body.dashboard-page #banner-grade-box {
-  flex: 1 1 0% !important;
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
-  width: 56px !important;
-  min-width: 56px !important;
+/* Left Column: Official Profile Photo Container (3:4 Ratio or Rounded) */
+body.dashboard-page .banner-avatar-wrapper {
+  position: relative !important;
+  flex-shrink: 0 !important;
+  cursor: pointer !important;
   display: flex !important;
-  flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
-  background: rgba(23, 33, 56, 0.85) !important;
-  border-radius: 12px !important;
-  border: 1.5px solid rgba(var(--tier-rgb), 0.65) !important;
-  box-shadow: 0 0 16px rgba(var(--tier-rgb), 0.35) !important;
-  box-sizing: border-box !important;
 }
 
 body.dashboard-page #banner-avatar-container {
-  width: 84px !important;
-  height: 84px !important;
-  min-width: 84px !important;
-  min-height: 84px !important;
-  border-radius: 50% !important;
-  padding: 3px !important;
+  width: 68px !important;
+  height: 88px !important;
+  min-width: 68px !important;
+  min-height: 88px !important;
+  border-radius: 8px !important;
+  padding: 2px !important;
   background: rgba(15, 23, 42, 0.9) !important;
-  border: 2.5px solid var(--tier-color) !important;
-  box-shadow: 0 0 24px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
-}
-
-/* Sub-Row 3: Nama Lengkap Siswa dengan Title (Strict 35px Total Sub-Row Budget, CENTERED & Bolder) */
-body.dashboard-page #welcome-name {
-  height: 35px !important;
-  min-height: 35px !important;
-  max-height: 35px !important;
+  border: 2px solid var(--tier-color) !important;
+  box-shadow: 0 0 16px rgba(var(--tier-rgb), 0.55), 0 4px 12px rgba(0, 0, 0, 0.4) !important;
+  overflow: hidden !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  text-align: center !important;
+  box-sizing: border-box !important;
+}
+
+body.dashboard-page #banner-avatar-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 6px !important;
+  display: block !important;
+}
+
+body.dashboard-page #banner-avatar-initial {
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(1.08rem, 3.6vw, 1.25rem) !important;
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  color: var(--tier-color) !important;
+  line-height: 1 !important;
+  user-select: none !important;
+}
+
+body.dashboard-page .avatar-crown-badge {
+  position: absolute !important;
+  top: -8px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  color: #fbbf24 !important;
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)) !important;
+  z-index: 5 !important;
+}
+
+/* Right Column: Demographics & Profile Info */
+body.dashboard-page .hero-profile-info {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  text-align: left !important;
+  gap: 3px !important;
+  overflow: hidden !important;
+}
+
+body.dashboard-page #welcome-name {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.02em !important;
@@ -5644,36 +5637,161 @@ body.dashboard-page #welcome-name {
   text-overflow: ellipsis !important;
   margin: 0 !important;
   padding: 0 !important;
-  line-height: 1 !important;
+  line-height: 1.2 !important;
+  width: 100% !important;
+  text-align: left !important;
 }
 
-/* 4. Grade Description Card (50px) */
+body.dashboard-page #welcome-meta-wrapper,
+body.dashboard-page .hero-profile-academic {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  color: var(--primary-tactical, #38bdf8) !important;
+  letter-spacing: 0.03em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+  width: 100% !important;
+}
+
+body.dashboard-page .hero-profile-academic span {
+  white-space: nowrap !important;
+}
+
+body.dashboard-page .hero-profile-demographics {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: #cbd5e1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+  width: 100% !important;
+}
+
+body.dashboard-page .hero-profile-address {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 400 !important;
+  color: #94a3b8 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+  width: 100% !important;
+}
+
+body.dashboard-page .meta-sep {
+  opacity: 0.5 !important;
+  font-size: 10px !important;
+}
+
+/* 4. Unified 3-Pillar Performance Card: GRADE | GRADE DESCRIPTION | RATE (54px) */
 body.dashboard-page .dashboard-grade-legend {
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+  height: 54px !important;
+  min-height: 54px !important;
+  max-height: 54px !important;
   width: 100% !important;
   flex-shrink: 0 !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1px 1.4fr 1px 1fr !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 12px !important;
+  padding: 6px 10px !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.70) !important;
+  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0f172a !important;
+  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.35) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+body.dashboard-page .perf-pillar {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  height: 100% !important;
+  gap: 2px !important;
+  min-width: 0 !important;
+}
+
+body.dashboard-page .perf-pillar-label {
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #94a3b8 !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
+body.dashboard-page .perf-pillar-val-wrap {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-radius: 10px !important;
-  padding: 0 14px !important;
-  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.22), transparent 75%), #0f172a !important;
-  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.40) !important;
-  box-sizing: border-box !important;
-  margin: 0 !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
 }
 
-body.dashboard-page .dashboard-grade-legend .achievement-status-text {
+body.dashboard-page .perf-pillar-val {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 16px !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.08em !important;
-  text-transform: uppercase !important;
   color: var(--tier-color) !important;
-  filter: drop-shadow(0 0 12px rgba(var(--tier-rgb), 0.85)) !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  filter: drop-shadow(0 0 8px rgba(var(--tier-rgb), 0.75)) !important;
+}
+
+body.dashboard-page .perf-pillar-grade .perf-pillar-val,
+body.dashboard-page #stat-overall-grade-value {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+}
+
+body.dashboard-page .perf-pillar-desc .perf-pillar-val,
+body.dashboard-page #dashboard-achievement-text {
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+}
+
+body.dashboard-page .perf-pillar-rate .perf-pillar-val,
+body.dashboard-page #bottom-stat-avg-score {
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+body.dashboard-page .perf-pillar-divider {
+  width: 1px !important;
+  height: 32px !important;
+  background: linear-gradient(180deg, transparent, rgba(var(--tier-rgb), 0.45) 50%, transparent) !important;
+  box-shadow: 0 0 4px rgba(var(--tier-rgb), 0.3) !important;
 }
 
 /* 5. Next Test Card: Exactly 80px (60px Title Wrap + 20px Rainbow / 80px Action Column) */
@@ -5744,11 +5862,11 @@ body.dashboard-page .next-test-title-wrap {
 
 body.dashboard-page .next-test-title-wrap .next-asm-title,
 body.dashboard-page .next-test-primary-name {
-  font-family: 'Outfit', sans-serif !important;
-  font-size: 12px !important;
-  font-weight: 800 !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
   color: #f8fafc !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -5758,11 +5876,11 @@ body.dashboard-page .next-test-primary-name {
 }
 
 body.dashboard-page .next-test-topic-name {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
+  font-weight: 400 !important;
   color: #94a3b8 !important;
-  line-height: 1.15 !important;
+  line-height: 1.2 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -5772,14 +5890,14 @@ body.dashboard-page .next-test-topic-name {
 }
 
 body.dashboard-page .rainbow-pass-bar {
-  height: 20px !important;
-  min-height: 20px !important;
-  max-height: 20px !important;
+  height: 22px !important;
+  min-height: 22px !important;
+  max-height: 22px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 3px !important;
-  width: 100% !important;
+  gap: 4px !important;
+  width: auto !important;
   box-sizing: border-box !important;
 }
 
@@ -5956,9 +6074,9 @@ body.dashboard-page .task-mini-grade {
   height: 15px !important;
   min-width: 17px !important;
   border-radius: 3px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;

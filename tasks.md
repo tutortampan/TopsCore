@@ -1,12 +1,59 @@
 # Active Task List — TopsCore LMS
 
 > **Current Focus:** Universal Visual Standardization & Normalization of TopsCore Modals, Tables, Forms & Data Taxonomies
-> **Current Phase:** Phase 599 (Complete) — Overall Performance Completion Header Standardization (DONE Replacing PRGRS)
+> **Current Phase:** Phase 615 (Complete) — Curriculum Class Action Column Direct Activation & Deactivation Controls
 > **Automated Verification:** 100% Passed Across All Test Suites & Preflight (< 1.5s Fast Loop, < 20s Full Parallel Run)
 
 ---
 
 ## 📋 SSOT Governance & Architecture Milestones (Complete)
+- [x] **Phase 615 (Curriculum Class Action Direct Activation & Deactivation Controls)**:
+  - **Tombol Langsung `Activate` & `Deactivate` di Kolom ACTIONS**:
+    - Mengeliminasi ketergantungan aktivasi kelas dari toggle switch tersembunyi `edit-mode-only`.
+    - Kelas berstatus `Inactive` kini langsung menampilkan tombol hijau Grade A **`Activate`** berikon SVG `check-circle`.
+    - Kelas berstatus `Active` menampilkan tombol sekunder **`Deactivate`** serta tombol **`Inspect`** tes dan **`Vault`**.
+  - **Sinkronisasi Instan Database & Sidebar `C — CLASS`**:
+    - Mengklik `Activate` langsung memutasi `classes.is_active = true` di Supabase, menyinkronkan status lokal secara instan, dan memicu `loadSidebarClasses()` untuk menyegarkan menu sidebar tanpa reload halaman.
+  - **Status Pill Click Affordance**:
+    - Badge status di kolom STATUS (`Active` / `Inactive`) kini interaktif dan dapat diklik untuk aktivasi/deaktivasi instan.
+- [x] **Phase 612 (Curriculum Global Passing Standards Matrix Cockpit: Dual-Tab Topbar View - Option 1)**:
+  - **Dual-Tab Topbar View (`Classes & Levels` vs `Passing Standards Matrix`)**:
+    - Disematkan langsung di topbar via `setTopbarTabs`.
+    - Tab 1: Menampilkan struktur hirarki kelas dan level L0–L3.
+    - Tab 2: Membuka cockpit Global Passing Standards Matrix yang memantau seluruh 68 tes di semua kelas secara global.
+  - **Institution Filter Toolbar Pills (`All`, `CEC`, `TOP`)**:
+    - Dipindahkan ke toolbar pencarian agar kedua tab dapat difilter seragam tanpa memadati topbar.
+  - **Passing Standards Matrix Table & Interactive Drawer**:
+    - Tabel 2px perimeter border, 12px uniform font, 100vh lock (`LVL`, `CLASS NAME`, `PROGRAM`, `TESTS`, `EXAM STANDARDS`, `TASK STANDARDS`, `RANGE`, `STATUS`, `ACTIONS`).
+    - Laci `Inspect Tests` dengan detail: `Shell Code`, `Title`, `Type`, `Module`, `Questions`, `Passing Score % & Grade`, dan tombol `Edit Standard`.
+    - Modal instan `openQuickEditPassingStandard` (pilihan preset 60%, 70%, 80% & sinkronisasi Supabase payload).
+    - Fitur `Batch Align Standards` untuk meratakan seluruh ujian (60% Grade C) atau seluruh tugas (70%) di suatu kelas dengan 1 klik.
+- [x] **Phase 610 (Live Exam Room Window L1: Open Exam Session Modal Standardization, Mobile-Ready Slim Layout & Module Dropdown Overhaul)**:
+  - **Slim Mobile-Ready Layout Architecture**:
+    - Merampingkan lebar modal dari 920px menjadi **520px** (`max-width: 520px;`) sehingga optimal dan ergonomis diakses melalui perangkat ponsel pintar (mobile) maupun workstation tablet/desktop tanpa horizontal scroll atau layout melebar.
+    - Mengubah tata letak dari 2-kolom terbelah (38%/62%) menjadi **alir vertikal padat (vertical stack)**: seksi pengaturan kompak di bagian atas (~135px) dan tabel siswa lengkap scrollable di bagian bawah.
+  - **Kepatuhan Aturan Tombol CTA (Red Cancel Left & Green Unlock Right)**:
+    - Tombol pembatalan/penutup (`CANCEL`) diletakkan mutlak di pojok kiri bawah dengan **Aksen Merah Grade E** (`background: rgba(255, 0, 0, 0.15); border: 1.5px solid var(--grade-e); color: #ffffff;`).
+    - Tombol aksi utama (`UNLOCK FOR 1 STUDENT`) yang merupakan fungsi kebalikan dari cancel/close diberi **Aksen Hijau Grade A** (`background: var(--grade-a); border: 1.5px solid var(--grade-a); color: #090D16; font-weight: 800;`).
+  - **Unifikasi Terminologi Module & Sistem Dropdown (SSOT Rule 2.11)**:
+    - Mengeliminasi terminologi usang *"Answering Mode"* dan menggantinya 100% dengan **`Module`** sesuai Rule 2.11.
+    - Mengganti pil-pil kecil (24px) dengan **Dropdown Selectors baku 32px**:
+      - `Words Module`: Pilihan `Written (M3)`, `Selection (M2)`, dan `Spoken (M4)`.
+      - `Phrases Module`: Pilihan `Written (M3)`, `Selection (M2)`, dan `Spoken (M4)`.
+  - **Strict 10px Gap Lock & Universal Zero-Truncation Invariant**:
+    - Menetapkan gap dan padding kontainer tepat 10px.
+    - Menyesuaikan lebar kolom tabel: `NO` (40px), `NAME` (flex-grow), dan `STATUS` (215px) sehingga status panjang seperti `Tasks Completed (Exam Ready)` tampil 100% utuh tanpa terpotong (*zero truncation*).
+  - **Verification**: `test:fast` (51 JS files valid in 0.10s), `test:table` (11 pilar 100% lolos), `verify:live-sessions` (5/5 tes lolos). Visual screenshot diverifikasi di [live_room_01_open_session_box_lowres.jpg](file:///C:/Users/Top/.gemini/antigravity/brain/779df3a5-d6c5-47f0-b10a-0377f6852212/live_room_01_open_session_box_lowres.jpg).
+- [x] **Phase 609 (Level Promotion Passing Threshold Bugfix & Batch 134 Level 3rd Synchronization)**:
+  - **Pemberantasan Bug Ambang Batas Promosi (pct >= 60% Grade C SSOT)**:
+    - Di [js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js), memperbaiki ambang batas kelulusan promosi dari `pct >= 70` menjadi **`pct >= minPass`** (default `60%` Grade C "Enough" / Lulus SSOT per Rule 2.10).
+    - Memperbarui konfirmasi promosi dan modal kriteria persyaratan dari `&ge; 70%` menjadi `&ge; 60%`.
+    - Mengeliminasi penyebab siswa dengan nilai Grade C (60%–69%) tertahan dan tidak bisa naik level bersamaan.
+  - **Sinkronisasi Rata 15 Siswa Batch 134 ke 3rd Level**:
+    - Sebanyak 9 siswa yang sebelumnya tertahan di 2nd Level (`Dahuri`, `Adinda`, `Ayya`, `Cinta`, `Lalu Yuda`, `Alifurrahman`, `Afyani`, `Riska`, `Wildian`) telah dinaikkan ke **`3rd Level`** via PostgreSQL transaction lengkap dengan *structured audit logs* (`LEVEL_PROMOTION`).
+    - Seluruh 15 siswa aktif di Batch 134 (`Camp 2nd Vocabulary`) kini **100% rata berada di 3rd Level**.
+    - Memperbarui cache buster di [admin.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/admin.html) menjadi `v=20261116_v603`.
+  - **Verification**: Seluruh tes unit AST, 10 pilar standarisasi tabel, dan preflight tests 100% green.
 - [x] **Phase 599 (Overall Performance Completion Header Standardization: DONE Replacing PRGRS)**:
   - **Penggantian Header Progress Overall Menjadi DONE**:
     - Sesuai instruksi pengguna ("pakai DONE"):
@@ -313,9 +360,6 @@
   - Auto-Calculated Education by Age: Smart calculation via `getEducationEligibility(age)` determining official tier (`Senior High School (SMA/SMK)`) with green `Verified` pill and subtitle `Auto-Calculated by Age (21 yrs)`.
   - Security Action Row & Dedicated Pop-up Modal: Replaced bulky in-line PIN form with a sleek action row (`Personal PIN •••• Active`) and glowing `CHANGE PIN` button that opens a dedicated, compact 350px dialog (`#change-pin-modal`).
   - Spatial Verification: Profile modal height strictly 537px (< 64% viewport, 307px vertical clearance, 100% zero scroll). Change PIN modal height strictly 398px (< 50% viewport). Both equipped with dedicated 60px footers and 40px action buttons. Zero emojis (100% vector SVGs).
-- [ ] **07. Custom Confirm Logout Modal** *(Next in Queue)*
-  - Standardize 480px compact modal dialog, 60px footer with dual 40px action buttons (`CANCEL` & `LOGOUT`).
-- [ ] **08. Pre-Exam Focus Modal**
 - [x] **07. Custom Confirm Logout Modal (`#custom-confirm-modal`)** [COMPLETE]
   - Dedicated 60px CTA panel / modal footer with prominent 1.5px neutral top border (`border-top: 1.5px solid rgba(255, 255, 255, 0.16)`).
   - Neutral Warning Theme: Clean neutral canvas `#0D1424`, 1.5px neutral slate icon box with exit-door SVG, 16px ALL CAPS pure white title `#f8fafc` (`LOG OUT SESSION`), slate description. Zero harsh red fills on dialog chrome.
@@ -340,13 +384,11 @@
   - Tri-Color Tile Scheme: Answered tiles in Green (`var(--grade-a)`), Current tile in Yellow (`var(--grade-c)` / `#ffff00` with luminous glow), and Unanswered tiles in Red (`var(--grade-e)`).
   - Completely purged below-grid tip box (`.matrix-tip-box`), connecting the grid directly to the CTA footer.
   - Dedicated 60px CTA Area / Modal Footer with 1.5px perimeter top divider (`border-top: 1.5px solid rgba(255, 255, 255, 0.16)`), dual 40px action buttons (`CLOSE` at bottom-left corner and `NEXT UNANSWERED →` on right with Tactical Blue hover glow and 100% zero text clipping). Ultra-compact height (< 40% viewport on mobile).
-- [ ] **10. Incomplete Submit Hazard Warning Modal** *(Next in Queue)*
-  - Preserve 3-Tier Hazard Yellow & Orange Submit Modal design with 60px footer and 40px buttons.
-- [ ] **11. Complete Submit Confirmation Modal**
-  - Standardize clean confirmation dialog with submission summary.
-- [ ] **12. Anti-Cheat Security Violation Overlay**
+- [x] **10. Incomplete & Complete Submit Hazard Modal (`#submit-modal`)** [COMPLETE — Phase 583]
+  - Standardized 3-Tier Hazard Yellow & Green Submit Modal design with 60px footer and 40px action buttons.
+- [ ] **11. Anti-Cheat Security Violation Overlay**
   - Standardize warning banner, violation counter, and full-screen enforcement locks.
-- [ ] **13. Result Answers Breakdown Modal**
+- [ ] **12. Result Answers Breakdown Modal**
   - Standardize question breakdown table, tolerance indicators, and review layout.
 
 ---

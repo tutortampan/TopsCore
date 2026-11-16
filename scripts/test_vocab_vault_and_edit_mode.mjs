@@ -45,7 +45,7 @@ assert(vaultJs.includes('theme-manager-flat-table'), 'Theme Manager must use fla
 assert(vaultJs.includes('openThemeProgramAssignModal'), 'Theme Manager must implement theme-level assignment modal');
 // Rule 2.11: Unification of Module & Answer Type into Method (m1-m8)
 assert(!vaultJs.includes('bp-select-all-cb'), 'Test Blueprint must have redundant checkboxes removed');
-assert(vaultJs.includes('>METHOD</th>') || vaultJs.includes('>ANSWER TYPE</th>'), 'Test Blueprint must include discrete METHOD / ANSWER TYPE column');
+assert(vaultJs.includes('>MODULE</th>') || vaultJs.includes('>METHOD</th>') || vaultJs.includes('>ANSWER TYPE</th>'), 'Test Blueprint must include discrete MODULE / METHOD / ANSWER TYPE column');
 assert(vaultJs.includes('bp-setting-badge') && vaultJs.includes('bp-setting-input'), 'Test Blueprint must include settings badges/inputs');
 
 // Check Single Responsibility Column Invariants in Theme Manager:

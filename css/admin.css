@@ -44,6 +44,8 @@
   --fm-accent-amber: var(--grade-c);       /* Tactical amber/yellow (Pending review, Deadlines) */
   --fm-accent-crimson: var(--grade-e);     /* Urgent / Danger / Below threshold */
   --fm-accent-slate: #94a3b8;       /* Neutral status */
+  --primary-tactical: #38bdf8;
+  --primary-tactical-rgb: 56, 189, 248;
 
   /* High-Legibility Tabular Typography */
   --fm-text-primary: var(--clr-text-1);       /* Crisp white header and body */
@@ -6683,6 +6685,42 @@ body.role-tutor .col-manual-input {
 }
 
 /* Universal Floating Window Architecture: Title Area, Toolbar Area & CTA Area (Phase 438, Phase 506 & Phase 601) */
+/* Live Exam Room Floating Windows Flush Architecture */
+#modal-theme-open-session.modal-backdrop .modal-box,
+#modal-theme-live-monitor.modal-backdrop .modal-box,
+#modal-theme-add-late.modal-backdrop .modal-box,
+#modal-student-alarm-detail.modal-backdrop .modal-box,
+#modal-kick-student-confirm.modal-backdrop .modal-box {
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+#modal-theme-open-session .modal-header,
+#modal-theme-live-monitor .modal-header,
+#modal-theme-add-late .modal-header,
+#modal-student-alarm-detail .modal-header,
+#modal-kick-student-confirm .modal-header {
+  margin-bottom: 0 !important;
+}
+
+#modal-theme-open-session .modal-header > div:first-child,
+#modal-theme-live-monitor .modal-header > div:first-child,
+#modal-theme-add-late .modal-header > div:first-child,
+#modal-student-alarm-detail .modal-header > div:first-child,
+#modal-kick-student-confirm .modal-header > div:first-child {
+  flex-direction: row !important;
+  gap: 10px !important;
+  max-width: 100% !important;
+}
+
+#modal-theme-open-session .modal-footer,
+#modal-theme-live-monitor .modal-footer,
+#modal-theme-add-late .modal-footer,
+#modal-student-alarm-detail .modal-footer,
+#modal-kick-student-confirm .modal-footer {
+  margin-top: 0 !important;
+}
+
 .title-area,
 .title-panel,
 .modal-header,

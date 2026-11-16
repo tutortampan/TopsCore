@@ -31,8 +31,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261115_v547" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261116_v547" />
+  <link rel="stylesheet" href="css/style.css?v=20261117_v615" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261117_v615" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
   <!-- Web App Manifest & PWA Metadata -->
   <link rel="manifest" href="manifest.json" />
@@ -78,51 +78,56 @@
   <!-- Main Content -->
   <main class="dashboard-content">
 
-    <!-- Hero Identity Bar -->
-
+    <!-- Hero Identity Bar: Profile & Demographic Card -->
     <section id="welcome-banner-section" class="welcome-banner card" aria-labelledby="welcome-name">
-      <!-- Info Header (Institution, Program, Batch, Level) -->
-      <div id="welcome-meta-wrapper">
-        <span id="meta-inst">CEC</span>
-        <span class="meta-sep">|</span>
-        <span id="meta-prog">CAMP</span>
-        <span class="meta-sep">|</span>
-        <span id="meta-batch">131</span>
-        <span class="meta-sep">|</span>
-        <span id="meta-lvl">3RD LEVEL</span>
-      </div>
-
-      <div class="hero-divider"></div>
-
-      <!-- Center Area: Score, Avatar, Grade -->
-      <div class="hero-metrics-row">
-        <!-- Score Box -->
-        <div id="banner-score-box">
-          <span id="bottom-stat-avg-score">—</span>
-        </div>
-
-        <!-- Center Avatar (Enlarged with Crown Anchor) -->
+      <div class="hero-profile-row">
+        <!-- Photo Container Left -->
         <div class="banner-avatar-wrapper" id="banner-avatar-trigger" role="button" tabindex="0" title="Click to view or edit profile">
-          <span id="banner-avatar-crown" class="avatar-crown-badge hidden" title="Batch Champion"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg></span>
+          <span id="banner-avatar-crown" class="avatar-crown-badge hidden" title="Batch Champion">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
+          </span>
           <div id="banner-avatar-container" title="Click to view or change profile">
             <span id="banner-avatar-initial">S</span>
             <img id="banner-avatar-img" class="hidden" alt="Profile Photo" />
           </div>
         </div>
 
-        <!-- Grade Box -->
-        <div id="banner-grade-box">
-          <span id="stat-overall-grade-value">&mdash;</span>
+        <!-- Demographic & Profile Info Right -->
+        <div class="hero-profile-info">
+          <!-- Student Full Name with Title -->
+          <h1 id="welcome-name">Student</h1>
+
+          <!-- Academic Hierarchy -->
+          <div id="welcome-meta-wrapper" class="hero-profile-academic">
+            <span id="meta-inst">CEC</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="meta-prog">CAMP</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="meta-batch">131</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="meta-lvl">3RD LEVEL</span>
+          </div>
+
+          <!-- Demographics: Gender & Age / DOB -->
+          <div id="hero-profile-demographics" class="hero-profile-demographics">
+            <span id="hero-demographics-gender">—</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="hero-demographics-age">—</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="hero-demographics-dob">—</span>
+          </div>
+
+          <!-- Address / Domicile -->
+          <div id="hero-profile-address" class="hero-profile-address">
+            <span id="hero-address-text">—</span>
+          </div>
         </div>
       </div>
 
-      <div class="hero-divider hero-name-divider"></div>
-
-      <!-- Student Name (below photo) -->
-      <h1 id="welcome-name">Student</h1>
-
       <!-- Hidden JS Compatibility Elements -->
       <div class="hidden">
+        <div id="banner-score-box"></div>
+        <div id="banner-grade-box"></div>
         <span id="welcome-heading"></span>
         <span id="welcome-age"></span>
         <span id="welcome-meta"></span>
@@ -143,9 +148,35 @@
       </div>
     </section>
 
-    <!-- 3. GRADE DESCRIPTION CARD (40px) -->
+    <!-- 3. UNIFIED 3-PILLAR PERFORMANCE CARD (GRADE | GRADE DESCRIPTION | RATE) -->
     <div class="dashboard-grade-legend" id="dashboard-grade-legend" aria-label="Grade Achievement Status">
-      <span class="achievement-status-text" id="dashboard-achievement-text">LET'S GO</span>
+      <!-- Pillar 1: GRADE -->
+      <div class="perf-pillar perf-pillar-grade">
+        <span class="perf-pillar-label">GRADE</span>
+        <div class="perf-pillar-val-wrap">
+          <span id="stat-overall-grade-value" class="perf-pillar-val">—</span>
+        </div>
+      </div>
+
+      <div class="perf-pillar-divider"></div>
+
+      <!-- Pillar 2: GRADE DESCRIPTION -->
+      <div class="perf-pillar perf-pillar-desc">
+        <span class="perf-pillar-label">GRADE DESCRIPTION</span>
+        <div class="perf-pillar-val-wrap">
+          <span class="achievement-status-text perf-pillar-val" id="dashboard-achievement-text">LET'S GO</span>
+        </div>
+      </div>
+
+      <div class="perf-pillar-divider"></div>
+
+      <!-- Pillar 3: RATE -->
+      <div class="perf-pillar perf-pillar-rate">
+        <span class="perf-pillar-label">RATE</span>
+        <div class="perf-pillar-val-wrap">
+          <span id="bottom-stat-avg-score" class="perf-pillar-val">—</span>
+        </div>
+      </div>
     </div>
 
 
@@ -657,7 +688,7 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261115_v542"></script>
+  <script type="module" src="./js/dashboard.js?v=20261117_v615"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 

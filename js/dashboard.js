@@ -69,6 +69,82 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
   const welcomeMetaEl = document.getElementById('welcome-meta');
   if(welcomeMetaEl) welcomeMetaEl.innerHTML = '';
 
+  // Render Hero Profile Demographic & Address Details
+  function renderHeroProfileDetails(s) {
+    if (!s) return;
+    const genderEl = document.getElementById('hero-demographics-gender');
+    const ageEl = document.getElementById('hero-demographics-age');
+    const dobEl = document.getElementById('hero-demographics-dob');
+    const addrEl = document.getElementById('hero-address-text');
+
+    const gRaw = (s.gender || '').toLowerCase();
+    const gText = gRaw === 'female' ? 'Female' : (gRaw === 'male' ? 'Male' : '—');
+    if (genderEl) genderEl.textContent = gText;
+
+    const rawDob = s.birth_date || s.dob;
+    let ageText = '—';
+    let dobText = '—';
+    if (rawDob) {
+      const parts = String(rawDob).split('-');
+      if (parts.length === 3) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const mIdx = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const yr = parts[0];
+        const mName = months[mIdx] || '';
+        dobText = `${day} ${mName} ${yr}`;
+      } else {
+        dobText = rawDob;
+      }
+      const d = new Date(rawDob);
+      if (!isNaN(d.getTime())) {
+        const today = new Date();
+        let age = today.getFullYear() - d.getFullYear();
+        const m = today.getMonth() - d.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+        if (age >= 0 && age <= 120) ageText = `${age} y.o.`;
+      }
+    }
+    if (ageEl) ageEl.textContent = ageText;
+    if (dobEl) dobEl.textContent = dobText;
+
+    if (addrEl) {
+      const parts = [];
+      if (s.village) parts.push(s.village);
+      if (s.district) parts.push(s.district);
+      if (s.city) parts.push(s.city);
+      if (s.province) {
+        const p = s.province === 'Nusa Tenggara Barat' ? 'NTB' : s.province;
+        parts.push(p);
+      }
+      addrEl.textContent = parts.length > 0 ? parts.join(', ') : 'Mataram, NTB';
+    }
+  }
+
+  window.renderHeroProfileDetails = renderHeroProfileDetails;
+  renderHeroProfileDetails(session);
+
+  // Auto-fetch missing demographic/address fields for instant sync
+  if ((!session.district || !session.village || !session.birth_date || !session.province) && session.student_id) {
+    (async () => {
+      try {
+        const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+        const { data: st } = await sb.from('students').select('gender, birth_date, education, province, city, district, village').eq('id', session.student_id).maybeSingle();
+        if (st) {
+          if (st.gender) session.gender = st.gender;
+          if (st.birth_date) { session.birth_date = st.birth_date; session.dob = st.birth_date; }
+          if (st.education) { session.education = st.education; session.education_level = st.education; }
+          if (st.province) session.province = st.province;
+          if (st.city) session.city = st.city;
+          if (st.district) session.district = st.district;
+          if (st.village) session.village = st.village;
+          sessionStorage.setItem('topscore_session', JSON.stringify(session));
+          renderHeroProfileDetails(session);
+        }
+      } catch (_) {}
+    })();
+  }
+
 
 
     function clearPhotoEverywhere() {
@@ -203,6 +279,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       session.gender = g;
       session.student_name = formattedName;
       setStudentSession(session);
+      renderHeroProfileDetails(session);
 
       // Update initials
       const initChar = cleanFullName ? cleanFullName.charAt(0).toUpperCase() : 'S';
@@ -302,6 +379,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (st.district) { currentDistrict = st.district; session.district = st.district; }
             if (st.village) { currentVillage = st.village; session.village = st.village; }
             sessionStorage.setItem('topscore_session', JSON.stringify(session));
+            renderHeroProfileDetails(session);
           }
         } catch (_) {}
       }
@@ -665,6 +743,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (selectedDist) session.district = selectedDist;
             if (selectedVill) session.village = selectedVill;
             sessionStorage.setItem('topscore_session', JSON.stringify(session));
+            renderHeroProfileDetails(session);
 
             applyStudentGenderUI(selectedGender);
           } catch (err) {
@@ -1613,8 +1692,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             ${rainbowHtml}
           </div>
           <div class="next-test-col-right" title="Repetition Pass ${currentPasses}/${targetReps} - Click to practice">
-            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn rainbow-step-${displayStep}">
-              ${displayStep}
+            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn rainbow-step-${displayStep}" aria-label="Practice Pass ${displayStep}">
+              <span>${displayStep}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="margin-left:2px; flex-shrink:0;"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
             </button>
           </div>
         `;
@@ -2655,7 +2734,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           gradeBadgeValue.textContent = '—';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
-            <svg class="pure-star-svg" width="46" height="46" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.55)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)); display:inline-block; vertical-align:middle;">
               <defs>
                 <linearGradient id="starDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
@@ -2934,10 +3013,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let btnFillColor = '#38bdf8';
 
         // Dynamic Title Font Color:
-        // For Exams: Matches the earned Grade/Score color!
+        // For Exams: Pure White (#ffffff)
         // For Tasks: Clean White (#f8fafc)
         let titleColor = '#f8fafc';
-        let titleFontWeight = '700';
+        let titleFontWeight = '400';
 
         let numHtml = `${num}`;
         let rowClass = 'completed-row';
@@ -2954,20 +3033,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           btnRgb = scoreRgb;
           btnFillColor = scoreColor;
           titleColor = '#ffffff';
-          titleFontWeight = '800';
+          titleFontWeight = '400';
 
-          const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:800;margin-left:1px;">R</sup>' : '';
-          scoreHtml = `<span style="color:${scoreColor} !important; font-weight:800;">${best.effPct.toFixed(0)}%${remSup}</span>`;
+          const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:600;margin-left:1px;">R</sup>' : '';
+          scoreHtml = `<span style="color:${scoreColor} !important; font-weight:400; font-family:'Inter', sans-serif;">${best.effPct.toFixed(0)}%${remSup}</span>`;
 
           const dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
           const isStar = dispGrade === '★' || dispGrade === 'S';
           const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-          gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important;">${dispGrade}</span>`;
+          gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
 
           // Row: Smooth gradient from left to right + score-colored top & bottom dividers
           rowClass += ' is-exam-row';
           rowStyle = `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%) !important; border-top: 1.5px solid ${scoreColor} !important; border-bottom: 1.5px solid ${scoreColor} !important; box-shadow: 0 1px 6px rgba(${scoreRgb}, 0.25) !important;`;
-          numHtml = `<span style="color:#ffffff !important; font-weight:800;">${num}</span>`;
+          numHtml = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${num}</span>`;
         }
 
         // Sub-Row 2 for Tasks: Top 7 Highest Scores sorted DESCENDING (Highest to Lowest)
@@ -3000,12 +3079,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             btnRgb = parseHexRgb(scoreColor);
             btnFillColor = scoreColor;
 
-            scoreHtml = `<span style="color:${scoreColor}; font-weight:800;">${taskAvgPct}%</span>`;
+            scoreHtml = `<span style="color:${scoreColor}; font-weight:400; font-family:'Inter', sans-serif;">${taskAvgPct}%</span>`;
 
             const dispGrade = taskAvgGrade;
             const isStar = dispGrade === '★' || dispGrade === 'S';
             const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-            gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:800;">${dispGrade}</span>`;
+            gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
           }
 
           let chipsHtml = '';
@@ -3416,18 +3495,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 ${avatarHtml}
                 <div style="min-width:0; overflow:hidden;">
                   <div class="leaderboard-name-wrap">
-                    <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; font-weight:800 !important; text-shadow:0 0 10px rgba(${parseHexRgb(hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : theme.color)},0.45);` : ''}">${escHtml(displayTitleName)}</span>
+                    <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; text-shadow:0 0 10px rgba(${parseHexRgb(hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : theme.color)},0.45);` : ''}">${escHtml(displayTitleName)}</span>
                   </div>
 
                 </div>
               </div>
               <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
-                <span style="color:${hasExam ? theme.color : '#94a3b8'}; font-weight:800; font-size:16px; font-variant-numeric:tabular-nums;">
+                <span class="leaderboard-score-val" style="color:${hasExam ? theme.color : '#94a3b8'}; font-weight:400; font-size:14px; font-variant-numeric:tabular-nums; font-family:'Inter', sans-serif;">
                   ${st.totalPoints}
                 </span>
               </div>
               <div class="th-col th-grade" style="display:flex; align-items:center; justify-content:center;">
-                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; color:${hasExam && (gradeSymbol === '★' || gradeSymbol === 'Star') ? TOPSCORE_COLORS.TEXT_STAR : (hasExam ? TOPSCORE_COLORS.TEXT_DARK : '#ffffff')} !important;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
+                <div class="leaderboard-grade-chip" style="background:${hasExam ? theme.color : 'rgba(255,255,255,0.12)'}; width:22px; height:22px; border-radius:6px; font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center; color:${hasExam && (gradeSymbol === '★' || gradeSymbol === 'Star') ? TOPSCORE_COLORS.TEXT_STAR : (hasExam ? TOPSCORE_COLORS.TEXT_DARK : '#ffffff')} !important; font-family:'Inter', sans-serif;" title="${hasExam ? `Average: ${st.overallScore}%` : 'No exams completed yet'}">${gradeSymbol}</div>
               </div>
             </div>
           `;

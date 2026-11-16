@@ -31,6 +31,8 @@
   --fm-accent-amber: var(--grade-c);       /* Tactical amber/yellow (Pending review, Deadlines) */
   --fm-accent-crimson: var(--grade-e);     /* Urgent / Danger / Below threshold */
   --fm-accent-slate: #94a3b8;       /* Neutral status */
+  --primary-tactical: #38bdf8;
+  --primary-tactical-rgb: 56, 189, 248;
 
   /* High-Legibility Tabular Typography */
   --fm-text-primary: var(--clr-text-1);       /* Crisp white header and body */

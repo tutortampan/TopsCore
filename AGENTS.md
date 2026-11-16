@@ -52,6 +52,13 @@ Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara 
 6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
 7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
 
+## 0.3 Larangan Mutlak Tindakan Liar / Tanpa Permintaan (Strict Zero Unsolicited Action Invariant)
+Sistem dan AI coding agent MUTLAK DILARANG berinisiatif di luar batas perintah:
+1. **Dilarang Men-generate / Membuat (No Unsolicited Generation/Creation)**: Tidak boleh membuat file baru, folder baru, modul baru, aset, atau fitur tambahan apa pun yang TIDAK secara eksplisit diminta oleh pengguna.
+2. **Dilarang Merubah (No Unsolicited Modification)**: Tidak boleh menyentuh, mengutak-atik, merombak layout/styling, atau mengubah logika/fungsi di luar cakupan file dan instruksi spesifik yang diberikan.
+3. **Dilarang Membuang / Menghapus (No Unsolicited Deletion)**: Tidak boleh menghapus file, fungsi, komponen antarmuka, konfigurasi, atau data yang ada tanpa instruksi eksplisit atau izin tertulis dari pengguna.
+4. **Fokus Bedah Sasaran (Surgical Scope Only)**: Setiap tugas harus diselesaikan secara presisi pada akar masalah yang diminta tanpa efek samping liar (*zero unintended side effects*).
+
 ---
 
 # 1. PRODUCT
@@ -109,6 +116,11 @@ Server verifies that Program belongs to Institution, Batch belongs to Program, S
 
 ## 2.4 Class and Level Assignment
 Classes are assigned to a **Level**. Students/Batches progress through Levels.
+
+### 2.4.1 Level Promotion & Passing Threshold Invariant (SSOT Aturan Baku Promosi Level)
+- **Syarat Kelulusan Promosi (Passing Threshold)**: Kelayakan kenaikan level (`isEligibleNext` / tombol `NEXT`) WAJIB merujuk 100% pada batas kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**).
+- **Mutlak Nol Angka Ambang Batas Arbitrer**: DILARANG KERAS menggunakan angka ambang batas arbitrer atau hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah resmi lulus (*Enough*) dan mutlak berhak dipromosikan bersamaan tanpa ada yang tertahan.
+- **Keselarasan Roster & Batch**: Seluruh siswa dalam batch yang telah menyelesaikan ujian levelnya dengan status lulus/forgiven berhak dipromosikan bersamaan ke level berikutnya agar tidak terjadi ketimpangan level antar-siswa dalam satu rombongan belajar.
 
 ## 2.5 Test Auto-Assignment (Level-Centric)
 Tests (Tasks & Exams) are created within a Class. Because that Class belongs to a Level, the system automatically assigns the test to any Batch/Student that has unlocked that Level. Batches inherit tests automatically based on their current Level.
@@ -271,6 +283,11 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 - Fitur cetak (print report, diagnostic summary, evaluasi) DILARANG berada di halaman hasil siswa (`result.html`).
 - Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
 
+## 2.30 Universal Table Cell Regular Weight Invariant (Aturan Konten Baris Tabel Wajib Regular 400 & Inter Font)
+- **Zero Bold in Table Content**: Di seluruh sistem (Admin Workstation Datagrid, Student Dashboard Standings & Completed Tests, Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, nomor urut/peringkat, nilai poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular)**. Dilarang keras menggunakan huruf atau angka tebal (`700`, `800`, `900`) di dalam sel baris tabel.
+- **Font SSOT Wajib Inter**: Seluruh tabel wajib mengimplementasikan font **`Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Font display geometris membulat (`Outfit`) dilarang keras digunakan di dalam baris/sel data tabel.
+- **Pengecualian**: Header utama tabel (`thead th`) diizinkan `font-weight: 600–700`, dan glif simbol grade di dalam lingkaran kecil (22px–24px) diizinkan `font-weight: 500–600`.
+
 ---
 
 # 3. TARGET ARCHITECTURE
@@ -311,6 +328,7 @@ Every change must be executed atomically:
 4. Update `docs/CURRENT_STATE.md` and `docs/CHANGELOG.md`.
 
 ## 5.2 Do Not Do These Things
+- DO NOT generate, create, modify, or delete any files, code, UI components, configs, or features that were NOT explicitly requested by the user (Strict Zero Unsolicited Action Invariant per §0.3).
 - DO NOT bypass RLS or write plaintext PINs/passwords.
 - DO NOT invent business Student IDs.
 - DO NOT create Test Version entities.

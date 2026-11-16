@@ -51,7 +51,7 @@ assert.ok(html.includes('id="up-next-section"'), 'Must have #up-next-section');
 assert.ok(html.includes('id="up-next-container"'), 'Must have #up-next-container');
 assert.ok(html.includes('id="bottom-dock-section"'), 'Must have #bottom-dock-section');
 assert.ok(html.includes('completed-table-header'), 'Must have .completed-table-header');
-assert.ok(html.includes('<span class="th-col th-action">RETRY</span>'), 'Must have RETRY column in completed table header');
+assert.ok(html.includes('<span class="th-col th-action">ACT</span>') || html.includes('<span class="th-col th-action">RETRY</span>'), 'Must have ACT or RETRY column in completed table header');
 assert.ok(!html.includes('id="dashboard-classes-bar" class="dashboard-classes-bar"'), 'Must NOT have visible dashboard-classes-bar (saved 60px vertical)');
 console.log('  ✅ PASS: dashboard.html DOM elements verified!\n');
 

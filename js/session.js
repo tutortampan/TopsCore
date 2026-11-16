@@ -85,7 +85,9 @@ export function updateStudentSessionGender(gender, studentName) {
 export function getStudentSession() {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const parsed = raw ? JSON.parse(raw) : null;
+    if (parsed && !parsed.student_id) return null;
+    return parsed;
   } catch {
     return null;
   }

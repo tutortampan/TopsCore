@@ -2069,7 +2069,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
 
       <!-- Modernized Flat Data Table (Flush to top, only table container scrolls) -->
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden !important; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 0; margin: 0;">
         <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
           <colgroup>
             <col style="width: 45px;">
@@ -2887,7 +2887,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   let html = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
       <!-- Batch Configuration Grid (ONLY Container With Vertical Scroll) -->
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;">
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden !important; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 8px;">
         <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
           <colgroup>
             <col style="width: 55px;">
@@ -2924,7 +2924,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
               <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
               <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
-              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">METHOD</th>
+              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">MODULE</th>
 
               <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">TASK STATUS</th>
               <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center;">EXAM STATUS</th>

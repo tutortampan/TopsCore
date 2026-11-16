@@ -32,7 +32,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
             <td style="font-weight:700; color:#0f172a;">${escapeHtml(a.title || 'Test')}</td>
             <td style="text-align:center;"><span style="font-size: 12px; font-weight:700; padding:2px 6px; border-radius:4px; background:#f1f5f9; color:#475569;">${escapeHtml(a.type || 'Exam')}</span></td>
             <td style="text-align:center; color:#64748b; font-size: 12px;">${escapeHtml(a.date || '—')}</td>
-            <td style="text-align:center; font-weight:700; color:#0f172a;">${a.points != null ? `${a.points} pts` : '—'}</td>
+            <td style="text-align:center; font-weight:700; color:#0f172a;">${a.points != null ? `${Math.round(Number(a.points))} pts` : '—'}</td>
             <td style="text-align:center; font-weight:800; color:${scoreColor};">${a.score != null ? `${a.score}%` : '—'}</td>
             <td style="text-align:center; font-weight:900; color:${scoreColor};">${escapeHtml(a.grade || '—')}</td>
           </tr>
@@ -322,7 +322,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
             <th>TEST TITLE</th>
             <th style="width:65px; text-align:center;">TYPE</th>
             <th style="width:85px; text-align:center;">DATE</th>
-            <th style="width:75px; text-align:center;">POINTS</th>
+            <th style="width:65px; text-align:center;">PTS</th>
             <th style="width:60px; text-align:center;">SCORE</th>
             <th style="width:50px; text-align:center;">GRADE</th>
           </tr>

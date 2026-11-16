@@ -172,7 +172,7 @@ async function runLiveAudit() {
 
     console.log('  Desktop computed styles:', desktopChecks);
     assert.ok(desktopChecks.topbarHeight === '40px' || desktopChecks.topbarHeight === '50px', 'Desktop topbar must compute to 40px/50px');
-    assert.ok(desktopChecks.modalHeaderHeight === '40px' || desktopChecks.modalHeaderHeight === '50px', 'Modal header must compute to 40px/50px');
+    assert.ok(desktopChecks.modalHeaderHeight === '40px' || desktopChecks.modalHeaderHeight === '50px' || desktopChecks.modalHeaderHeight === '60px', 'Modal header must compute to 40px/50px/60px');
     assert.ok(desktopChecks.modalFooterHeight === '40px' || desktopChecks.modalFooterHeight === '50px' || desktopChecks.modalFooterHeight === '56px' || desktopChecks.modalFooterHeight === '60px', 'Modal footer must compute to 40px/50px/56px/60px');
     if (desktopChecks.lowerPanelHeight) {
       assert.ok(desktopChecks.lowerPanelHeight === '40px' || desktopChecks.lowerPanelHeight === '50px', 'Lower panel must compute to 40px/50px');

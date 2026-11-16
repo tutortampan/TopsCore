@@ -1,10 +1,116 @@
-# TopsCore LMS — Active Changelog (Phases 581–607)
+# TopsCore LMS — Active Changelog (Phases 585–616)
 
 > **Format:** Ultra-Condensed Active Changelog (Strict 25-Phase Rolling Window per AGENTS.md §5.3). Each entry highlights core functional deliverables, architectural milestones, and affected systems.
 > **Full Archives:** Historical verbose logs for earlier phases are preserved in:
 > - [`docs/archive/CHANGELOG_ARCHIVE.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE.md.gz) (Phases 1–228, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_2.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_2.md.gz) (Phases 229–451, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_3.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_3.md.gz) (Phases 452–539, Gzip Compressed)
+
+---
+
+## [2026-11-17 06:06] — Phase 616: Student Dashboard Hero Profile & Unified 3-Pillar Performance Card Redesign
+- **Redesain Hero Card Menjadi Profile & Demographic Card ([dashboard.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/dashboard.html), [css/dashboard.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/dashboard.css), [js/dashboard.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/dashboard.js))**:
+  - Mengubah layout `#welcome-banner-section` menjadi kartu profil horizontal berdimensi $110\text{px}$ dengan padding internal tepat $10\text{px}$.
+  - Sisi kiri memuat foto profil resmi ($68 \times 88\text{px}$, rasio portrait 3:4 dengan tier glowing border) serta crown badge bagi batch champion.
+  - Sisi kanan memuat 4 baris data identitas dan demografi terstruktur:
+    1. Full Name: `#welcome-name` (`Miss Sari Hikmah` / `Mr. Top`) 16px Outfit 800.
+    2. Academic Hierarchy: `#welcome-meta-wrapper` (`CEC • CAMP • Batch 131 • 3RD LEVEL`) 11px Inter 600 Tactical Blue.
+    3. Demographics: `#hero-profile-demographics` (Gender, Usia, Tanggal Lahir terformat e.g. `Female • 27 y.o. • 06 May 1997`) 11px Inter 400.
+    4. Address: `#hero-profile-address` (Desa, Kecamatan, Kota, Provinsi) 11px Inter 400 slate `#94a3b8`.
+- **Unified 3-Pillar Performance Card (`GRADE | GRADE DESCRIPTION | RATE`)**:
+  - Mengubah `.dashboard-grade-legend` menjadi kartu performa 3 kolom simetris ($54\text{px}$) dengan divider vertikal halus:
+    - **Pillar 1 (`GRADE`)**: Label uppercase 10px Inter 600 + Nilai Grade (`#stat-overall-grade-value`, e.g. `B` atau SVG Star) 22px Outfit 900.
+    - **Pillar 2 (`GRADE DESCRIPTION`)**: Label uppercase 10px Inter 600 + Predikat (`#dashboard-achievement-text`, e.g. `GOOD`) 15px Outfit 800.
+    - **Pillar 3 (`RATE`)**: Label uppercase 10px Inter 600 + Skor Rata-rata (`#bottom-stat-avg-score`, e.g. `85%`) 22px Outfit 900.
+- **Square Progress Pips Invariant**:
+  - Mengunci ketujuh kotak repetisi progres (`.rainbow-box`) ke rasio bujur sangkar presisi ($22 \times 22\text{px}$, `aspect-ratio: 1 / 1`, `border-radius: 5px`, `gap: 4px`), melenyapkan pip gepeng.
+  - Membersihkan baris duplikat styling pada baris 5780 `css/dashboard.css`.
+- **Spatial Optimization & 100vh Corridor Lock**:
+  - Total tinggi kedua kartu berkurang dari $210\text{px}$ menjadi $174\text{px}$ (hemat $36\text{px}$), memberikan ruang vertikal ekstra bagi leaderboard table dengan 100% strict 100vh lock compliance.
+- **Verification**:
+  - `npm.cmd run test:fast` lolos 100% (syntax validation 51 JS files dalam 0.11s, minified CSS built).
+  - `npm.cmd run test:table` lolos 100% (all 11 pillars passed).
+
+---
+
+## [2026-11-17 05:58] — Phase 615: Curriculum Class Action Column Direct Activation & Deactivation Controls
+- **Tombol Langsung `Activate` & `Deactivate` di Kolom ACTIONS ([js/admin/classes-hub.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/classes-hub.js))**:
+  - Mengeliminasi ketergantungan aktivasi kelas dari toggle switch tersembunyi berkelas `edit-mode-only` yang sebelumnya tidak tampak dalam mode operasi reguler.
+  - Menghadirkan tombol aksi **`Activate`** berlatar hijau lembut Grade A (`rgba(0,192,0,0.12)`), border `rgba(0,192,0,0.4)`, teks hijau tegas `var(--grade-a)`, dan ikon SVG `check-circle` untuk seluruh kelas yang berstatus `Inactive`.
+  - Menghadirkan tombol aksi sekunder **`Deactivate`** untuk kelas berstatus `Active`, bersanding dengan tombol **`Inspect`** tes dan tombol **`Vault`**.
+- **Sinkronisasi Instan Database & Sidebar C — CLASS**:
+  - Mengklik tombol `Activate` atau `Deactivate` langsung memutasi database Supabase (`classes.is_active`), memperbarui memori lokal seketika tanpa jeda, menampilkan toast status, dan mengeksekusi `window.loadSidebarClasses()` untuk langsung memunculkan atau menyembunyikan kelas pada navigasi `C — CLASS` di sidebar.
+- **Interaktivitas Badge Status**:
+  - Menambahkan affordance klik langsung pada badge status di kolom STATUS (`Active` / `Inactive`) sehingga Tutor/Admin juga dapat mengklik badge status untuk mengaktifkan kelas secara instan.
+  - Memperluas lebar kolom aksi `ACTIONS` menjadi `minmax(185px, 1.2fr)` untuk memastikan seluruh tombol aksi tertata rapi tanpa pembungkusan (*zero text wrap*).
+- **Verification**:
+  - `npm.cmd test` lolos 100% (syntax validation 51 JS files dalam 0.11s, spatial invariant audit 100% green).
+  - `npm.cmd run test:table` lolos 100% (all 11 pillars verified green).
+
+---
+
+## [2026-11-16 23:50] — Phase 613: Hero Next Test Card Typography, Rainbow Pips SSOT & Affordance Harmonization
+- **Penyelarasan Tipografi & Bobot Hero Next Test Card ([css/dashboard.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/dashboard.css))**:
+  - Mengubah judul tugas (`.next-test-primary-name`) dari `Outfit 800` menjadi **`Inter 600`** (13px), dan sub-topik materi (`.next-test-topic-name`) dari `Outfit 700` menjadi **`Inter 400` (Regular)** warna slate `#94a3b8` untuk menciptakan kontras hierarki yang proporsional dan tidak serba tebal.
+  - Memperbarui angka 1–7 pada pips pelangi repetisi (`.rainbow-box`) ke font **`Inter 600` (11px, tabular-nums)** agar pas dan presisi di dalam kotak 18px.
+  - Memperbaiki tombol counter repetisi kanan (`.pass-counter-btn`) ke font **`Inter 700`**.
+- **Koreksi Spektrum 7 Kotak Pelangi (AGENTS.md §2.10.2 SSOT)**:
+  - Memperbaiki bug pemetaan token warna pada `.rainbow-box[data-step="..."]`: kini 100% selaras dengan urutan spektrum pelangi resmi: Merah (`var(--grade-e)`) $\to$ Jingga (`var(--grade-d)`) $\to$ Kuning (`var(--grade-c)`) $\to$ Hijau (`var(--grade-a)`) $\to$ Biru (`var(--primary-tactical)`) $\to$ Nila (`var(--clr-accent-1)`) $\to$ Ungu (`var(--quad-d)`).
+- **Peningkatan Affordance Tombol Latihan ([js/dashboard.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/dashboard.js))**:
+  - Menambahkan glif play SVG mikro (`2 ▶`) di dalam tombol counter repetisi agar siswa memahami secara intuitif bahwa tombol tersebut berfungsi untuk memulai latihan repetisi ke-2.
+- **Proteksi Session & Anti-Loop ([js/session.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/session.js))**:
+  - Menambahkan validasi `if (parsed && !parsed.student_id) return null;` pada `getStudentSession()`, mencegah potensi *infinite redirect loop* jika terdapat payload storage kosong.
+- **Verification**:
+  - `npm.cmd run test:fast` lulus 100% (syntax validation 51 JS files dalam 0.10s, minified CSS up-to-date).
+  - `npm.cmd run test:table` lulus 100% (all 11 pillars verified green).
+
+---
+
+## [2026-11-16 23:38] — Phase 612: Curriculum Global Passing Standards Matrix Cockpit (Dual-Tab Topbar View - Option 1)
+- **Implementasi Cockpit Matriks Standar Kelulusan Global (Option 1 SSOT §2.4, §2.10, §4.1)**:
+  - **Dual-Tab Topbar View**: Menyematkan dua tab navigasi utama di top panel modul Curriculum (`#classes-hub`) via `setTopbarTabs`:
+    1. **`Classes & Levels`** (Icon `layers`, jumlah kelas aktif): Tampilan hirarki level dan kelas L0–L3 yang rapi dan terstruktur.
+    2. **`Passing Standards Matrix`** (Icon `award`, jumlah tes aktif: 68 tes): Cockpit global untuk memantau seluruh kelas beserta seluruh tes dan ambang batas nilai kelulusan minimalnya (`minimum_required_score`).
+  - **Institution Filter Toolbar Pills (`All`, `CEC`, `TOP`)**: Memindahkan filter kampus ke baris toolbar pencarian sehingga kedua tab dapat difilter secara sinkron tanpa mengotori topbar.
+  - **Passing Standards Matrix Table**: Membangun tabel berstandar continuous 2px perimeter border dan font 12px berdisiplin 100vh lock dengan kolom:
+    `LVL` | `CLASS NAME` | `PROGRAM` | `TESTS` | `EXAM STANDARDS` (Grade C 60%) | `TASK STANDARDS` (70%) | `RANGE` | `STATUS` | `ACTIONS` (`Inspect Tests`).
+  - **Expandable Test Drawer & Quick Calibration**:
+    - Tombol `Inspect Tests` membuka laci drawer pengujian berdensitas tinggi: `Shell Code`, `Test Title`, `Type (EXAM/TASK)`, `Module`, `Questions`, `Passing Standard (%)`, dan tombol `Edit Standard`.
+    - Modal cepat `openQuickEditPassingStandard` untuk mengkalibrasi nilai kelulusan per tes dengan sinkronisasi instan ke Supabase (`tests.minimum_required_score` & `payload`).
+    - Fitur `Batch Align Standards` untuk meratakan standar seluruh ujian (60% Grade C) atau seluruh tugas (70%) di suatu kelas dengan satu klik.
+- **Verification**:
+  - `npm.cmd test` lolos 100% (syntax validation 51 JS files dalam 0.64s, spatial invariant audit 100% green).
+  - `npm.cmd run test:table` lolos 100% (all 11 pillars passed).
+
+---
+
+## [2026-11-16 23:15] — Phase 610: Universal Table Cell Regular Weight Invariant & Inter Font Harmonization
+- **Universal Table Cell Regular Weight Invariant (AGENTS.md §2.30 & ui-invariants.md §2.0 & §4.1)**:
+  - **Zero Bold in Table Content**: Di seluruh sistem (Student Dashboard Leaderboard/Standings, Completed Tests, Admin Datagrid, dan Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, nomor peringkat, angka poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular)**. Dilarang keras menggunakan huruf atau angka tebal (`700`, `800`, `900`) di dalam sel baris tabel.
+  - **Font SSOT Wajib Inter**: Mengganti penggunaan font display `Outfit` pada sel/konten tabel data dengan font **`Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Huruf dan angka kini tampil proporsional, rapi, bersih, dan bertaraf workstation (*high-density legibility*).
+  - **Perbaikan CSS & JS Terkait**:
+    - [css/dashboard.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/dashboard.css): Memperbaiki `.standings-table-header` (Inter, 600), `.leaderboard-rank-badge` (Inter, 400), `.leaderboard-student-name` (Inter, 400), `.leaderboard-score-val` (Inter, 14px 400), `.leaderboard-grade-chip` (Inter, 600), `.completed-col-num` (Inter, 400), `.completed-col-name` (Inter, 400), `.completed-col-score` (Inter, 400), `.completed-type-pill` (Inter, 500).
+    - [js/dashboard.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/dashboard.js): Menghapus suntikan inline `font-weight: 800` pada baris siswa aktif, angka skor poin, dan grade chip; mengganti ke `font-weight: 400` dan font family `Inter`.
+    - [css/style.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/style.css): Menambahkan penegasan aturan global *Universal Table Cell Content Regular Weight Invariant* (Inter, 400).
+    - [css/admin.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/admin.css): Memperbaiki `.asm-rep-badge` ke font `Inter` regular 400.
+    - [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) & [.agents/rules/ui-invariants.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/.agents/rules/ui-invariants.md): Mendokumentasikan aturan baku Bab 2.0 & Bab 4.1 secara permanen.
+- **Verification**:
+  - `npm.cmd run test:fast` lolos 100% (syntax validation 51 JS files dalam 0.10s, minified CSS up-to-date).
+  - `npm.cmd run test:table` lolos 100% (all 11 pillars verified green).
+
+---
+
+## [2026-11-16 23:08] — Phase 609: Level Promotion Passing Threshold Bugfix & Batch 134 Level 3rd Synchronization
+- **Pemberantasan Bug Ambang Batas Kelulusan Promosi ([js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js))**:
+  - Memperbaiki ambang batas kelulusan promosi level dari *hardcoded* `pct >= 70` menjadi **`pct >= minPass`** (default `60%` Grade C "Enough" / Lulus SSOT per Rule 2.10).
+  - Memperbarui dialog konfirmasi promosi dan modal kriteria persyaratan dari `&ge; 70%` menjadi `&ge; 60%`.
+  - Mengeliminasi penyebab 9 siswa dengan nilai Grade C (60%–69%) tertahan dan tidak bisa naik level bersamaan dengan siswa lainnya.
+- **Sinkronisasi Rata 15 Siswa Batch 134 ke 3rd Level (PostgreSQL Transaction)**:
+  - Sebanyak 9 siswa yang sebelumnya tertahan di 2nd Level (`Dahuri`, `Adinda`, `Ayya`, `Cinta`, `Lalu Yuda`, `Alifurrahman`, `Afyani`, `Riska`, `Wildian`) berhasil dinaikkan ke **`3rd Level`** via PostgreSQL transaction lengkap dengan *structured audit logs* (`LEVEL_PROMOTION`).
+  - Seluruh 15 siswa aktif di Batch 134 (`Camp 2nd Vocabulary`) kini **100% rata berada di 3rd Level**.
+  - Cache buster di [admin.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/admin.html) dinaikkan ke `v=20261116_v603`.
+- **Verification**:
+  - Seluruh test suites lulus 100% green (*zero syntax errors, 10/10 table pillars green*).
 
 ---
 

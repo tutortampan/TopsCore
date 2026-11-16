@@ -227,7 +227,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           }, 100);
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger);">Failed to load programs.</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--grade-e, #FF0000);">Failed to load programs.</div>`;
       }
     }
 
@@ -238,12 +238,13 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       container.innerHTML = `<div class="opts-spinner"><div class="spinner"></div></div>`;
       try {
         const batches = await fetchBatches(state.programId);
-        const displayBatches = batches.length > 0
-          ? [{ id: '__all__', name: 'All Batches' }, ...batches]
-          : [{ id: '__all__', name: 'All Students' }];
+        if (!batches || batches.length === 0) {
+          container.innerHTML = `<div class="opts-empty">No batches available for this program.</div>`;
+          return;
+        }
 
-        renderOptions('list-batch', 'search-batch', displayBatches, (b) => {
-          state.batchId = b.id === '__all__' ? null : b.id;
+        renderOptions('list-batch', 'search-batch', batches, (b) => {
+          state.batchId = b.id;
           state.batchName = b.name;
           collapseSection('sec-batch', b.name, 'step-num-3');
           resetFrom('student');
@@ -251,17 +252,16 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
         }, autoSelectId);
 
         if (autoSelectId) {
-          const effId = autoSelectId === null ? '__all__' : autoSelectId;
-          const match = displayBatches.find(b => b.id === effId);
-          if (match) { state.batchId = match.id === '__all__' ? null : match.id; state.batchName = match.name; }
-        } else if (displayBatches.length === 1) {
+          const match = batches.find(b => b.id === autoSelectId);
+          if (match) { state.batchId = match.id; state.batchName = match.name; }
+        } else if (batches.length === 1) {
           setTimeout(() => {
             const card = document.querySelector('#list-batch .opt-card');
             if (card) card.click();
           }, 100);
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger);">Failed to load batches.</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--grade-e, #FF0000);">Failed to load batches.</div>`;
       }
     }
 
@@ -290,7 +290,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           if (match) { state.studentId = match.id; state.studentName = match.name; }
         }
       } catch (e) {
-        container.innerHTML = `<div class="opts-empty" style="color:var(--clr-danger);">Failed to load students.</div>`;
+        container.innerHTML = `<div class="opts-empty" style="color:var(--grade-e, #FF0000);">Failed to load students.</div>`;
       }
     }
 
@@ -488,9 +488,8 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       collapseSection('sec-program', saved.programName || state.programName, 'step-num-2');
 
       // Step 3: Load batches
-      const savedBatchEffId = saved.batchId === null ? null : saved.batchId;
-      await loadBatches(savedBatchEffId === null ? '__all__' : savedBatchEffId);
-      if (state.batchName) {
+      await loadBatches(saved.batchId);
+      if (state.batchId && state.batchName) {
         collapseSection('sec-batch', saved.batchName || state.batchName, 'step-num-3');
       } else { unlockSection('sec-batch'); return; }
 

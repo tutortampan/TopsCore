@@ -375,102 +375,93 @@ export async function renderClassTestSessions(container, context = {}) {
       </div>
     </div>
 
-    <!-- Modal 1: Open Test Session (Normal / Remedial) -->
-    <div id="modal-theme-open-session" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:920px; max-height:92vh; height:640px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
+    <!-- Modal 1: Open Test Session (Normal / Remedial) — Standardized Slim Floating Window (Phase 610 Mobile-Ready) -->
+    <div id="modal-theme-open-session" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:10px;">
+      <div class="modal-box" style="background:#0f172a; border:1.5px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:520px; max-height:88vh; height:660px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9); padding:0 !important;">
 
-        <!-- Modal Body: 2-column grid (Left: Config Panel 38%, Right: Full Student Table 62%) -->
-        <div style="display:grid; grid-template-columns:38% 62%; gap:0; overflow:hidden; flex:1; min-height:0;">
+        <!-- 1. Header (Standardized Title Area 60px Solid Navy Banner per Invariant 1.5.1, Centered ALL CAPS) -->
+        <div class="modal-header title-area" style="height:60px; min-height:60px; max-height:60px; padding:0 20px; border-bottom:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
+          <h2 id="open-modal-title" style="margin:0; font-family:var(--fm-font-display, 'Outfit', sans-serif); font-size:16px; font-weight:800; color:#ffffff; line-height:1; letter-spacing:0.05em; text-transform:uppercase; text-align:center;">THEME A — WORKPLACE • EXAM SESSION</h2>
+        </div>
 
-          <!-- LEFT: Settings (Judul, Tipe, Enrolled, Target Batch, Cara Jawab, Durasi, Tutor Override) -->
-          <div style="padding:14px 16px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; border-right:1px solid rgba(255,255,255,0.07); background:rgba(0,0,0,0.15);">
+        <!-- 2. Modal Body: Streamlined Vertical Stack (Compact Settings Top, Full Student Table Bottom) -->
+        <div style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
 
-            <!-- Header Info: Tipe Sesi di ATAS (Pure Colored Font, Zero Capsule), Judul Tema di BAWAHNYA -->
-            <div style="border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:8px;">
-              <div id="open-modal-theme-badge" style="font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.05em; line-height:1.2; margin-bottom:2px; color:var(--grade-a);">EXAM SESSION</div>
-              <h3 id="open-modal-title" style="margin:0; font-size:16px; font-weight:800; color:#ffffff; line-height:1.2;">Theme A — Workplace</h3>
+          <!-- TOP CONFIG SECTION: Batch, Modules (Dropdowns), Duration, Tutor Override -->
+          <div style="padding:10px; display:flex; flex-direction:column; gap:10px; background:rgba(0,0,0,0.25); border-bottom:1px solid rgba(255,255,255,0.12); flex-shrink:0;">
+
+            <!-- Row 1: Target Batch & Enrolled Counter -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:flex-end;">
+              <div>
+                <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Target Batch</label>
+                <select id="open-modal-batch-select" class="form-control" style="width:100%; height:32px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                  ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
+                </select>
+              </div>
+
+              <!-- Enrolled Students Counter Badge -->
+              <div style="height:32px; padding:0 10px; background:#1e293b; border:1px solid rgba(255,255,255,0.16); border-radius:5px; display:flex; align-items:center; justify-content:space-between; box-sizing:border-box;">
+                <span style="font-size:12px; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.04em;">Enrolled</span>
+                <span id="open-modal-student-count" style="color:var(--primary-tactical); font-weight:800; font-size:12px;">0 selected</span>
+              </div>
             </div>
 
-            <!-- Enrolled Students Summary Badge -->
-            <div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; padding:6px 10px; background:rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.06); border-radius:6px;">
-              Enrolled: <span id="open-modal-student-count" style="color:#38bdf8; font-weight:800; text-transform:none;">0 selected</span>
-            </div>
-
-            <!-- 1. Target Test Batch (Compact Dropdown) -->
-            <div>
-              <label class="form-label" style="font-weight:800; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Target Batch</label>
-              <select id="open-modal-batch-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:600; font-size:12px;">
-                ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
-              </select>
-            </div>
-
-            <!-- 2. Answering Mode (Vertical Stacked Arrangement) -->
-            <div>
-              <label class="form-label" style="font-weight:800; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">2. Answering Mode</label>
-
-              <div style="margin-bottom:6px;">
-                <div style="font-size:12px; font-weight:700; color:#38bdf8; margin-bottom:2px;">Words Exam</div>
-                <div style="display:flex; flex-direction:column; gap:3px;" id="open-modal-words-mode-pills">
-                  <button type="button" class="answer-mode-pill active" data-exam="words" data-mode="written" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:700; cursor:pointer; text-align:left; display:flex; align-items:center;">Written</button>
-                  <button type="button" class="answer-mode-pill" data-exam="words" data-mode="multiple_choice" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Multiple Choice</button>
-                  <button type="button" class="answer-mode-pill" data-exam="words" data-mode="spoken" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Spoken</button>
-                </div>
+            <!-- Row 2: Words Module & Phrases Module (Official Rule 2.11 Dropdown System) -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <div>
+                <label class="form-label" style="font-weight:800; font-size:12px; color:var(--primary-tactical); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Words Module</label>
+                <select id="open-modal-words-module-select" class="form-control" style="width:100%; height:32px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                  <option value="written" selected>Written (M3)</option>
+                  <option value="multiple_choice">Selection (M2)</option>
+                  <option value="spoken">Spoken (M4)</option>
+                </select>
               </div>
 
               <div>
-                <div style="font-size:12px; font-weight:700; color:#a855f7; margin-bottom:2px;">Phrases Exam</div>
-                <div style="display:flex; flex-direction:column; gap:3px;" id="open-modal-phrases-mode-pills">
-                  <button type="button" class="answer-mode-pill active" data-exam="phrases" data-mode="written" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(56,189,248,0.4); background:rgba(56,189,248,0.15); color:#38bdf8; font-weight:700; cursor:pointer; text-align:left; display:flex; align-items:center;">Written</button>
-                  <button type="button" class="answer-mode-pill" data-exam="phrases" data-mode="multiple_choice" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Multiple Choice</button>
-                  <button type="button" class="answer-mode-pill" data-exam="phrases" data-mode="spoken" style="font-size:12px; height:24px; padding:0 8px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#94a3b8; font-weight:600; cursor:pointer; text-align:left; display:flex; align-items:center;">Spoken</button>
-                </div>
+                <label class="form-label" style="font-weight:800; font-size:12px; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Phrases Module</label>
+                <select id="open-modal-phrases-module-select" class="form-control" style="width:100%; height:32px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                  <option value="written" selected>Written (M3)</option>
+                  <option value="multiple_choice">Selection (M2)</option>
+                  <option value="spoken">Spoken (M4)</option>
+                </select>
               </div>
             </div>
 
-            <!-- 3. Duration Allocation -->
-            <div>
-              <label class="form-label" style="font-weight:800; font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">3. Duration Allocation</label>
-              <div id="open-modal-duration-suggestion" style="font-size:12px; color:var(--grade-c); margin-bottom:4px; font-weight:600; display:flex; align-items:center; gap:6px;">
-                <span id="open-modal-duration-suggestion-text">Auto-calculating...</span>
-              </div>
+            <!-- Row 3: Duration Allocation & Tutor Override -->
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
               <div style="display:flex; align-items:center; gap:8px;">
-                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:70px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
-                <span style="font-size:12px; color:#94a3b8; line-height:1.2;">Minutes</span>
+                <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.04em; margin:0;">Duration:</label>
+                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:65px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; font-size:12px; text-align:center;">
+                <span id="open-modal-duration-suggestion-text" style="font-size:12px; color:var(--grade-c); font-weight:700;">60 min</span>
               </div>
-            </div>
 
-            <!-- 4. Tutor Override (Placed below Duration Allocation) -->
-            <div style="border-top:1px solid rgba(255,255,255,0.08); padding-top:8px; margin-top:auto;">
-              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:8px; cursor:pointer;" title="Allow students who haven't completed tasks to participate">
+              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;" title="Allow students who haven't completed tasks to participate">
                 <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:15px; height:15px; accent-color:var(--grade-c);">
-                <span style="font-weight:700;">Tutor Override</span>
+                <span style="font-weight:800; letter-spacing:0.03em; text-transform:uppercase;">Tutor Override</span>
               </label>
-              <div style="font-size:12px; color:#64748b; margin-top:2px; line-height:1.2;">
-                Bypass task prerequisites for ineligible students
-              </div>
             </div>
 
           </div>
 
-          <!-- RIGHT: Full Student Table (3 Columns: NO | NAME | STATUS) -->
-          <div style="padding:18px 20px; overflow-y:auto; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; height:100%;">
+          <!-- BOTTOM SECTION: Full Student Table with Filter Controls -->
+          <div style="padding:10px; display:flex; flex-direction:column; gap:10px; flex:1; min-height:0; overflow:hidden;">
 
-            <!-- Search + sort + select buttons -->
-            <div style="display:flex; gap:6px; align-items:center; flex-shrink:0;">
-              <input type="text" id="open-modal-student-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:32px; padding:4px 10px; flex:1; min-width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:5px;">
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="height:32px; padding:0 12px; font-size:12px; font-weight:600; white-space:nowrap;">A → Z</button>
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="height:32px; padding:0 12px; font-size:12px; font-weight:600;">All</button>
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="height:32px; padding:0 12px; font-size:12px; font-weight:600;">None</button>
+            <!-- Search + sort + select buttons with Strict 10px Gap -->
+            <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
+              <input type="text" id="open-modal-student-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:32px; padding:4px 10px; flex:1; min-width:100px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px; font-weight:600;">
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="height:32px; padding:0 10px; font-size:12px; font-weight:700; white-space:nowrap; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">A → Z</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="height:32px; padding:0 10px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">All</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="height:32px; padding:0 10px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">None</button>
             </div>
 
-            <!-- Student Table (All Students Present, Ineligible Disabled unless Override Active) -->
-            <div class="table-wrap" style="flex:1; min-height:0; height:100%; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px; background:rgba(0,0,0,0.25);">
+            <!-- Student Table (Scrollable within container) -->
+            <div class="table-wrap" style="flex:1; min-height:180px; overflow-y:auto; border:1px solid rgba(255,255,255,0.12); border-radius:6px; background:#090D16;">
               <table class="table" style="width:100%; border-collapse:collapse; font-size:12px; display:table; margin:0; table-layout:fixed;">
                 <thead>
-                  <tr style="background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.1); height:40px;">
-                    <th style="position:sticky; top:0; background:#1e293b; z-index:5; padding:6px 8px; text-align:center; font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700; width:50px;">NO</th>
-                    <th style="position:sticky; top:0; background:#1e293b; z-index:5; padding:6px 12px; text-align:center; font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700;">NAME</th>
-                    <th style="position:sticky; top:0; background:#1e293b; z-index:5; padding:6px 12px; text-align:center; font-size:12px; color:#94a3b8; text-transform:uppercase; font-weight:700; width:220px;">STATUS</th>
+                  <tr style="background:#1E293B; border-bottom:1.5px solid rgba(255,255,255,0.18); height:38px;">
+                    <th style="position:sticky; top:0; background:#1E293B; z-index:5; padding:6px 6px; text-align:center; font-size:12px; color:#ffffff; text-transform:uppercase; font-weight:800; letter-spacing:0.05em; width:40px;">NO</th>
+                    <th style="position:sticky; top:0; background:#1E293B; z-index:5; padding:6px 10px; text-align:left; font-size:12px; color:#ffffff; text-transform:uppercase; font-weight:800; letter-spacing:0.05em;">NAME</th>
+                    <th style="position:sticky; top:0; background:#1E293B; z-index:5; padding:6px 8px; text-align:right; font-size:12px; color:#ffffff; text-transform:uppercase; font-weight:800; letter-spacing:0.05em; width:215px;">STATUS</th>
                   </tr>
                 </thead>
                 <tbody id="open-modal-students-table-body">
@@ -482,18 +473,23 @@ export async function renderClassTestSessions(container, context = {}) {
           </div>
         </div>
 
-        <!-- Modal Footer: Status summary on left, Cancel & Unlock on right -->
-        <div style="padding:14px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25); flex-shrink:0;">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <button type="button" class="btn btn-ghost btn-modal-close-left" id="btn-cancel-open-modal" style="color:#94a3b8; font-size:12px; padding:8px 16px;">Cancel</button>
-            <div id="open-modal-footer-summary" style="font-size:12px; color:#94a3b8; font-weight:600;"></div>
-          </div>
-          <div style="display:flex; align-items:center; gap:10px;">
-            <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:6px; font-size:12px;">
-              Unlock Test Now
-            </button>
-          </div>
+        <!-- 3. Modal Footer: Standardized 60px CTA Area Invariant (§1.5.2 & §1.5.4) - Red Left Cancel & Green Right Unlock -->
+        <div class="modal-footer" style="height:60px; min-height:60px; max-height:60px; padding:0 16px; border-top:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
+          <!-- Cancel Button: Strictly on Left with Red Accent -->
+          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-cancel-open-modal" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:14px; font-weight:800; border-radius:6px; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer; text-transform:uppercase;">
+            Cancel
+          </button>
+
+          <!-- Middle Student Count Summary -->
+          <div id="open-modal-footer-summary" style="font-size:12px; color:#cbd5e1; font-weight:700; text-align:center;"></div>
+
+          <!-- Confirm Unlock Button: Strictly on Right with Green Accent -->
+          <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="height:40px; min-height:40px; line-height:38px; font-weight:800; padding:0 20px; display:inline-flex; align-items:center; gap:8px; font-size:14px; border-radius:6px; letter-spacing:0.04em; text-transform:uppercase; background:var(--grade-a); color:#090D16; border:1.5px solid var(--grade-a); box-shadow:0 0 14px rgba(0,192,0,0.45); cursor:pointer;">
+            Unlock Test Now
+          </button>
         </div>
+      </div>
+    </div>
       </div>
     </div>
 
@@ -603,7 +599,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <!-- Sortable Live Monitor Table Container (Zero Horizontal Scroll & Fixed Layout per §1.1 & §4.4) -->
         <div style="padding:14px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column;">
-          <div class="live-monitor-table-wrapper" style="overflow-x:hidden !important; overflow-y:auto; flex:1; border-radius:8px; border:1px solid rgba(255, 255, 255, 0.08); background:#080d1a;">
+          <div class="live-monitor-table-wrapper" style="overflow-x:hidden !important; overflow-y:auto; flex:1; border-radius:8px; border:2px solid rgba(255, 255, 255, 0.28) !important; background:#080d1a;">
             <table class="live-monitor-table" style="width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:12px;">
               <colgroup>
                 <col style="width:85px;">
@@ -1452,28 +1448,21 @@ function openThemeSessionModal(container, theme, mode, context) {
   const titleEl = modal.querySelector('#open-modal-title');
   const badgeEl = modal.querySelector('#open-modal-theme-badge');
   const batchSelect = modal.querySelector('#open-modal-batch-select');
-  // --- Answering mode pill state ---
-  let _selectedAnswerModeWords = 'written';
-  let _selectedAnswerModePhrases = 'written';
+  const wordsModuleSelect = modal.querySelector('#open-modal-words-module-select');
+  const phrasesModuleSelect = modal.querySelector('#open-modal-phrases-module-select');
+  let _selectedAnswerModeWords = wordsModuleSelect ? wordsModuleSelect.value : 'written';
+  let _selectedAnswerModePhrases = phrasesModuleSelect ? phrasesModuleSelect.value : 'written';
 
-  // Bind answering mode pills
-  modal.querySelectorAll('.answer-mode-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const exam = pill.dataset.exam;
-      const modeVal = pill.dataset.mode;
-      if (exam === 'words') _selectedAnswerModeWords = modeVal;
-      else if (exam === 'phrases') _selectedAnswerModePhrases = modeVal;
-      // Update active state within same exam group
-      const groupId = exam === 'words' ? '#open-modal-words-mode-pills' : '#open-modal-phrases-mode-pills';
-      modal.querySelectorAll(groupId + ' .answer-mode-pill').forEach(p => {
-        const isActive = p.dataset.mode === modeVal;
-        p.style.background = isActive ? 'rgba(56,189,248,0.15)' : 'transparent';
-        p.style.border = isActive ? '1px solid rgba(56,189,248,0.4)' : '1px solid rgba(255,255,255,0.1)';
-        p.style.color = isActive ? '#38bdf8' : '#94a3b8';
-        p.style.fontWeight = isActive ? '700' : '600';
-      });
-    });
-  });
+  if (wordsModuleSelect) {
+    wordsModuleSelect.onchange = (e) => {
+      _selectedAnswerModeWords = e.target.value;
+    };
+  }
+  if (phrasesModuleSelect) {
+    phrasesModuleSelect.onchange = (e) => {
+      _selectedAnswerModePhrases = e.target.value;
+    };
+  }
 
   // ── Auto-duration calculation ────────────────────────
   const _wordsQ = theme.wordsTest?.total_questions || 0;
@@ -1493,30 +1482,12 @@ function openThemeSessionModal(container, theme, mode, context) {
 
   const confirmBtn = modal.querySelector('#btn-confirm-open-session');
 
-  if (mode === 'normal') {
-    if (titleEl) titleEl.textContent = `Theme ${theme.code} — ${theme.name || 'Workplace'}`;
-    if (badgeEl) {
-      badgeEl.textContent = 'EXAM SESSION';
-      badgeEl.style.background = 'transparent';
-      badgeEl.style.color = 'var(--grade-a)';
-      badgeEl.style.border = 'none';
-      badgeEl.style.padding = '0';
-    }
-    confirmBtn.style.background = 'var(--grade-a)';
-    confirmBtn.style.borderColor = 'var(--grade-a)';
-    confirmBtn.style.color = '#0f172a';
-  } else {
-    if (titleEl) titleEl.textContent = `Theme ${theme.code} — ${theme.name || 'Workplace'}`;
-    if (badgeEl) {
-      badgeEl.textContent = 'REMEDIAL SESSION';
-      badgeEl.style.background = 'transparent';
-      badgeEl.style.color = 'var(--grade-c)';
-      badgeEl.style.border = 'none';
-      badgeEl.style.padding = '0';
-    }
-    confirmBtn.style.background = 'var(--grade-c)';
-    confirmBtn.style.borderColor = 'var(--grade-c)';
-    confirmBtn.style.color = '#0f172a';
+  const sessionTypeLabel = mode === 'normal' ? 'EXAM SESSION' : 'REMEDIAL SESSION';
+  if (titleEl) {
+    titleEl.textContent = `THEME ${theme.code || 'A'} — ${theme.name || 'WORKPLACE'} • ${sessionTypeLabel}`.toUpperCase();
+  }
+  if (badgeEl) {
+    badgeEl.style.display = 'none';
   }
 
   // Set selected batch
@@ -1536,6 +1507,7 @@ function openThemeSessionModal(container, theme, mode, context) {
   let studentSearchQuery = '';
   let studentSortOrder = 'asc';
   let tutorOverrideActive = false;
+  let hasInitializedSelection = false;
 
   const overrideCheckbox = modal.querySelector('#open-modal-override-checkbox');
 
@@ -1575,9 +1547,10 @@ function openThemeSessionModal(container, theme, mode, context) {
 
     const selectableList = evaluated.filter(isStudentSelectable);
 
-    // Initial check all selectable by default if first time
-    if (checkedStudentIds.size === 0 && selectableList.length > 0) {
+    // Initial check all selectable by default ONLY on first initialization
+    if (!hasInitializedSelection && selectableList.length > 0) {
       selectableList.forEach(e => checkedStudentIds.add(e.student.id));
+      hasInitializedSelection = true;
     }
 
     // Update count display in left panel
@@ -1621,33 +1594,43 @@ function openThemeSessionModal(container, theme, mode, context) {
         const isChecked = checkedStudentIds.has(s.id) && selectable;
         const cleanName = cleanStudentName(s.name);
 
-        let statusColor = '#38bdf8';
-        if (item.statusType === 'success') {
-          statusColor = 'var(--grade-a)';
-        } else if (item.statusType === 'amber') {
-          statusColor = 'var(--grade-c)';
+        let badgeBg = 'rgba(56,189,248,0.16)';
+        let badgeColor = 'var(--primary-tactical)';
+        let badgeBorder = '1px solid rgba(56,189,248,0.4)';
+
+        if (item.statusType === 'success' || item.isEligible) {
+          badgeBg = 'rgba(0,192,0,0.16)';
+          badgeColor = 'var(--grade-a)';
+          badgeBorder = '1px solid rgba(0,192,0,0.4)';
+        } else if (item.statusType === 'amber' || item.statusType === 'warning') {
+          badgeBg = 'rgba(255,255,0,0.16)';
+          badgeColor = 'var(--grade-c)';
+          badgeBorder = '1px solid rgba(255,255,0,0.45)';
         } else if (item.statusType === 'danger') {
-          statusColor = 'var(--grade-e)';
+          badgeBg = 'rgba(255,0,0,0.15)';
+          badgeColor = 'var(--grade-e)';
+          badgeBorder = '1px solid rgba(255,0,0,0.35)';
         }
 
-        const rowOpacity = selectable ? '1' : '0.45';
         const disabledAttr = selectable ? '' : 'disabled';
         const cursorStyle = selectable ? 'cursor:pointer;' : 'cursor:not-allowed;';
         const tooltipTitle = selectable ? escapeHtml(cleanName) : `Ineligible: ${escapeHtml(item.reason || item.statusLabel)}. Check Tutor Override to enable.`;
 
         return `
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.06); opacity:${rowOpacity}; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'" title="${tooltipTitle}">
-            <td style="padding:6px 8px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.06); width:50px;">
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.08); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" title="${tooltipTitle}">
+            <td style="padding:6px 6px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08); width:40px;">
               <label style="display:flex; align-items:center; justify-content:center; gap:6px; ${cursorStyle} margin:0;">
-                <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} ${disabledAttr} style="width:14px; height:14px; ${cursorStyle}">
-                <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:600; font-size:12px;">${idx + 1}</span>
+                <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} ${disabledAttr} style="width:15px; height:15px; accent-color:var(--primary-tactical); ${cursorStyle}">
+                <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:700; font-size:12px;">${idx + 1}</span>
               </label>
             </td>
-            <td style="padding:6px 12px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.06); color:#ffffff; font-weight:600; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <td style="padding:6px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); color:${selectable ? '#ffffff' : '#cbd5e1'}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px; white-space:nowrap;">
               ${escapeHtml(cleanName)}
             </td>
-            <td style="padding:6px 12px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.06); color:${statusColor}; font-weight:700; font-size:12px; white-space:nowrap; width:220px;">
-              ${escapeHtml(item.statusLabel)}
+            <td style="padding:6px 8px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px; white-space:nowrap; width:215px;">
+              <span style="display:inline-block; padding:3px 8px; border-radius:4px; font-weight:800; font-size:12px; letter-spacing:0.02em; background:${badgeBg}; color:${badgeColor}; border:${badgeBorder};">
+                ${escapeHtml(item.statusLabel)}
+              </span>
             </td>
           </tr>
         `;
@@ -1658,21 +1641,34 @@ function openThemeSessionModal(container, theme, mode, context) {
     const summaryEl = modal.querySelector('#open-modal-footer-summary');
     if (summaryEl) {
       summaryEl.textContent = `Ready to unlock for ${checkedStudentIds.size} student${checkedStudentIds.size === 1 ? '' : 's'}`;
+      summaryEl.style.color = '#ffffff';
+      summaryEl.style.fontWeight = '700';
     }
 
-    // Zero-selected button guard & dynamic confirm text
+    // Zero-selected button guard & dynamic confirm text (White Accent Invariant)
     if (confirmBtn) {
       const hasSelected = checkedStudentIds.size > 0;
       confirmBtn.disabled = !hasSelected;
-      confirmBtn.style.opacity = hasSelected ? '1' : '0.5';
-      confirmBtn.style.cursor = hasSelected ? 'pointer' : 'not-allowed';
       confirmBtn.textContent = hasSelected
         ? `Unlock for ${checkedStudentIds.size} Student${checkedStudentIds.size === 1 ? '' : 's'}`
         : 'Unlock Test Now';
-      if (!hasSelected) {
-        confirmBtn.title = 'Select at least 1 student to unlock test';
-      } else {
+
+      if (hasSelected) {
+        confirmBtn.style.setProperty('background', 'var(--grade-a)', 'important');
+        confirmBtn.style.setProperty('border', '1.5px solid var(--grade-a)', 'important');
+        confirmBtn.style.setProperty('color', '#090D16', 'important');
+        confirmBtn.style.setProperty('box-shadow', '0 0 14px rgba(0, 192, 0, 0.45)', 'important');
+        confirmBtn.style.setProperty('cursor', 'pointer', 'important');
+        confirmBtn.style.setProperty('opacity', '1', 'important');
         confirmBtn.removeAttribute('title');
+      } else {
+        confirmBtn.style.setProperty('background', 'rgba(255,255,255,0.08)', 'important');
+        confirmBtn.style.setProperty('border', '1.5px solid rgba(255,255,255,0.15)', 'important');
+        confirmBtn.style.setProperty('color', 'rgba(255,255,255,0.4)', 'important');
+        confirmBtn.style.setProperty('box-shadow', 'none', 'important');
+        confirmBtn.style.setProperty('cursor', 'not-allowed', 'important');
+        confirmBtn.style.setProperty('opacity', '0.6', 'important');
+        confirmBtn.title = 'Select at least 1 student to unlock test';
       }
     }
   };
@@ -1713,6 +1709,7 @@ function openThemeSessionModal(container, theme, mode, context) {
   // Batch changed
   batchSelect.onchange = () => {
     checkedStudentIds.clear();
+    hasInitializedSelection = false;
     if (overrideCheckbox) delete overrideCheckbox.dataset.userInteracted;
     renderModalStudents();
   };
@@ -1740,6 +1737,7 @@ function openThemeSessionModal(container, theme, mode, context) {
   const selectAllBtn = modal.querySelector('#btn-open-modal-select-all');
   if (selectAllBtn) {
     selectAllBtn.onclick = () => {
+      hasInitializedSelection = true;
       (lastEvaluatedStudents || []).forEach(e => {
         const selectable = tutorOverrideActive ? (mode === 'normal' || !e.isAlreadyPassed) : e.isEligible;
         if (selectable) {
@@ -1754,6 +1752,7 @@ function openThemeSessionModal(container, theme, mode, context) {
   if (deselectAllBtn) {
     deselectAllBtn.onclick = () => {
       checkedStudentIds.clear();
+      hasInitializedSelection = true;
       renderModalStudents();
     };
   }
@@ -3265,7 +3264,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
         reason = `Exam attempted and score below 60%. Must take Remedial session.`;
       } else {
         isEligible = true;
-        statusType = 'cyan';
+        statusType = 'success';
         statusLabel = `Tasks Completed (Exam Ready)`;
         reason = `All ${activeTasks.length} prerequisite tasks passed >= 60%. Eligible for normal exam.`;
       }

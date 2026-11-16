@@ -1,82 +1,64 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-16 19:35 UTC+8
-> **Current Phase:** Phase 607 [COMPLETE] — Student Dashboard Hero Next-Test Invariant, Leaderboard Waiver Exclusion & Cultural Honorific Title Fix
-> **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TESTS 100% GREEN)
+> **Last Updated:** 2026-11-17 06:06 UTC+8
+> **Current Phase:** Phase 616 [COMPLETE] — Student Dashboard Hero Profile & Unified 3-Pillar Performance Card Redesign
+> **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TEST SUITES 100% GREEN)
 
 ---
 
 ## 1. Active System Architecture & Invariants
 
-- **Student Dashboard Hero Next-Test Invariant & Leaderboard Parity (Phase 607 — SSOT §2.10, §2.23, §5.1)**:
-  - **False Positive Hero Elimination**: `renderNextAssignmentHero` dilindungi guard ketat `if (!published || published.length === 0)` yang menampilkan status *"No active tests scheduled in this class"* alih-alih secara keliru menyatakan *"All tests in this class completed! ✓ 100%"*. Kelas aktif divalidasi ke daftar kelas resmi siswa.
-  - **Exclusion of Pure Forgiven 0% Waivers from Academic Average**: Menambahkan `is_forgiven` dan `is_manual_override` pada query dan pemetaan `bestMap` di `loadBatchLeaderboard` dan `computeOverallStats`. Nilai dispensasi waiver 0% dieksklusikan dari rata-rata ujian, memulihkan Grade siswa berprestasi yang sebelumnya anjlok (Miss Riska Fetrosia 702 PTS pulih dari Grade D 59% menjadi Grade C 78%, Mr. Lalu Yuda 659 PTS menjadi Grade C 76%, Mr. Wildian 609 PTS menjadi Grade C 69%).
-  - **Cultural Gender Safeguard & Noble Honorifics**: Memperbaiki data `gender: 'male'` pada `Lalu Yuda Handika Prawira` dan `Lalu Arman Maulana`, serta menyematkan aturan kultural otomatis di `dashboard.js`: nama berawalan `Lalu ` otomatis diidentifikasi sebagai pria (`Mr.` / `King`), dan `Baiq ` sebagai wanita (`Miss` / `Queen`).
-  - **Batch Level Synchronization**: Memastikan sesi login siswa (`verifyStudentLogin` di `js/api.js`) dan pemetaan kurikulum kelas (`fetchStudentClasses`) memprioritaskan level aktif batch (`batches.current_level_id`), melenyapkan isu siswa terisolasi di level non-aktif.
-- **System-Wide Invariant, Typography, Entity Emojis & Pure English Hygiene (Phase 606 — SSOT Rule 0.2.1, §2.3, §2.9, §2.14, §2.21, §2.27)**:
-  - **Zero HTML Entity Emojis & Unicode Cleanliness**: Seluruh entitas numerik HTML emoji (`&#9888;`, `&#128128;`, `&#9889;`, `&#128100;`, `&#128269;`, `&#128737;`, `&#9989;`, `&#128272;`, `&#128065;`, `&#128064;`, `&#128229;`, `&#128202;`, `&#9679;`, `&#10060;`) dimusnahkan dan diganti vektor SVG resmi (`getSvgIcon`) atau teks bersih.
-  - **Dual-Scale Typography Architecture (Strict No-Intermediate Scale)**: Seluruh font perantara liar (18px, 15px, 13px, 11px) dinormalisasi ke standar dual-scale (12px, 14px, 16px, 20px, 30px) pada `admin.html`, `conversation.html`, `dashboard.css`, `test.css`, `conversation.css`, `result.js`, `dashboard.js`, dan `offline.html`.
-  - **Punctuation & Zero Space before Colon**: Titik dua wajib menempel ke kata (`RANKING: MY RANK` pada `dashboard.html`).
-  - **Universal Zero-Truncation Invariant**: Dihapusnya `text-overflow: ellipsis; white-space: nowrap;` pada opsi nama kartu siswa (`.opt-card-name`) di `css/auth.css` diganti dengan `word-break: break-word;` agar nama panjang tidak terpotong.
-  - **Language Purity (100% English SSOT)**: Seluruh sisa teks Bahasa Indonesia pada toasts dan alert konfirmasi (`PIN berhasil diperbarui!`, pembatalan/penghentian sesi tes oleh tutor di `js/test.js`, dan toast kurikulum) dinasionalisasi 100% ke bahasa Inggris murni.
-  - **Status & Abbreviation Invariants**: Menyetel unpublish ke status `DRAFT` resmi (bukan legacy `archived`), mengunci header `PTS` pada seluruh resolusi tabel di `js/admin/app.js`, dan mengganti label tabel `STUDENT ID` menjadi `RECORD UUID` per Rule 2.2.
-- **Student Dashboard Zero-Truncation & Dual-Tab Harmonization (Phase 605 — SSOT Rule §2.21 & §5.1)**:
-  - Proporsi grid klasemen dikalibrasi menjadi `grid-template-columns: 24px 1fr 38px 28px !important;` dengan padding 10px rapi (+46px ruang nama).
-  - Teks nama siswa dibungkus secara alami (`white-space: normal; line-height: 1.25; word-break: break-word; text-overflow: clip;`), memulihkan 100% zero-truncation (nama panjang seperti `Queen Isnantika Salsabila` tampil penuh tanpa elipsis).
-  - Label dock tab disederhanakan menjadi **`MY RANK`** bersanding dengan chip `#9`, berpasangan simetris dengan **`COMPLETED TESTS`** `10`.
-- **PIN Micro-Interactions & Seamless Digit Navigation (Phase 604 — SSOT)**:
-  - Auto-focus ke digit pertama (`#pin-0`) saat siswa memilih nama di Langkah 4.
-  - Focus routing: klik/tap pada kotak selanjutnya saat digit sebelumnya kosong dialihkan ke kotak kosong pertama.
-  - Backspace navigation mundur ke kotak sebelumnya secara halus; ArrowLeft/ArrowRight navigasi keyboard.
-  - Verification Error Shake (`@keyframes pinShake`) dengan border merah Grade E (`var(--grade-e)`) selama 450ms sebelum auto-reset.
-- **Universal PWA Network Resilience & Offline Detection (Phase 604 — SSOT)**:
-  - Badge status mengambang (`.pwa-offline-badge`): Kuning Grade C (`var(--grade-c)` / `#FFFF00`) "Offline Mode — Using Cached Data" saat terputus, dan Hijau Grade A (`var(--grade-a)` / `#00c000`) "Back Online" selama 2.5s saat pulih.
-  - Terintegrasi di `initPWA()` untuk seluruh halaman siswa (`index.html`, `dashboard.html`, `test.html`, `result.html`).
-- **Production PWA & Mobile App Experience (Phase 603 — SSOT)**:
-  - Standalone PWA support across Chromium/Android and iOS Safari (`manifest.json`, theme-color `#060911`, full-screen standalone mode).
-  - Official Option A emblem logo: locked to 25% screen width (98×98px squircle golden sweet spot), eliminating redundant `h1 TOPS CORE` text while preserving semantic `aria-label="TOPS CORE"` and strict 10px spacing.
-  - High-resolution brand icons: `icons/icon-192.png`, `icons/icon-512.png`, `icons/icon-maskable-192.png`, `icons/icon-maskable-512.png`, `icons/apple-touch-icon.png`, and `icons/icon.svg`.
-  - Service Worker network-first caching (`sw.js` cache `v140`) ensuring immediate propagation of bug fixes while offering robust offline capabilities.
-  - Ergonomic PWA install banner handler (`js/pwa.js`) hooked to `beforeinstallprompt` and `appinstalled` events without disrupting the Student Gate corridor.
+- **Student Dashboard Hero Profile & Unified 3-Pillar Performance Card Redesign (Phase 616 — SSOT §1.4, §2.3, §2.10, §2.28)**:
+  - **Hero Identity Bar Replaced by Profile & Demographic Card**: Mengubah tata letak Hero Card (`#welcome-banner-section`) menjadi kartu profil identitas siswa ala dossier/profil ($110\text{px}$ height, strict 10px internal padding). Menampilkan foto profil resmi ($68 \times 88\text{px}$ rasio 3:4 dengan tier border & glow) di sebelah kiri, dan 4 baris data terstruktur di sebelah kanan:
+    1. **Full Name with Title**: `#welcome-name` (`Miss Sari Hikmah` / `Mr. Top`) 16px Outfit 800.
+    2. **Academic Hierarchy**: `#welcome-meta-wrapper` (`CEC • CAMP • Batch 131 • 3RD LEVEL`) 11px Inter 600 Tactical Blue.
+    3. **Demographics**: `#hero-profile-demographics` (Gender e.g. `Female` • Usia e.g. `27 y.o.` • Tanggal Lahir e.g. `06 May 1997`) 11px Inter 400.
+    4. **Address / Domicile**: `#hero-profile-address` (Desa, Kecamatan, Kota, Provinsi) 11px Inter 400 slate `#94a3b8`.
+  - **Unified 3-Pillar Performance Card (`GRADE | GRADE DESCRIPTION | RATE`)**: Mengubah kartu deskripsi tunggal (`.dashboard-grade-legend`) menjadi kartu performa 3 kolom simetris ($54\text{px}$ height) dengan pembatas vertikal halus:
+    - **Pillar 1 (`GRADE`)**: Label uppercase 10px Inter 600 + Nilai Grade (`#stat-overall-grade-value`, e.g. `B`, atau pure star SVG untuk Grade ★) 22px Outfit 900.
+    - **Pillar 2 (`GRADE DESCRIPTION`)**: Label uppercase 10px Inter 600 + Kata Predikat (`#dashboard-achievement-text`, e.g. `GOOD` / `VERY GOOD` / `EXCELLENT` / `ENOUGH` / `LESS` / `FAIL`) 15px Outfit 800.
+    - **Pillar 3 (`RATE`)**: Label uppercase 10px Inter 600 + Persentase Rata-rata (`#bottom-stat-avg-score`, e.g. `85%`) 22px Outfit 900.
+  - **Square Progress Pips Invariant**: Ketujuh kotak repetisi progres (`.rainbow-box`) kini terkunci ke rasio bujur sangkar presisi ($22 \times 22\text{px}$, `aspect-ratio: 1 / 1`, `border-radius: 5px`, `gap: 4px`), melenyapkan bentuk pip pipih/gepeng horizontal.
+  - **Zero Regression & Spatial Invariant**: Menghemat $36\text{px}$ ruang vertikal ($110\text{px} + 10\text{px} + 54\text{px} = 174\text{px}$ vs sebelumnya $210\text{px}$), memberikan ruang lebih lapang bagi leaderboard di bawahnya tanpa memicu scrollbar vertikal halaman (100% strict 100vh lock compliance).
+
+- **Curriculum Class Action Direct Activation & Deactivation Controls (Phase 615 — SSOT §1.4, §2.27, §4.1)**:
+  - **Tombol Langsung `Activate` & `Deactivate` di Kolom ACTIONS**: Menghapus ketergantungan aktivasi kelas dari toggle tersembunyi `edit-mode-only`.
+  - **Aksi Kelas Inaktif**: Pada kelas berstatus `Inactive`, kolom ACTIONS langsung menampilkan tombol hijau Grade A **`Activate`** berikon SVG `check-circle`.
+  - **Aksi Kelas Aktif**: Pada kelas berstatus `Active`, kolom ACTIONS menampilkan tombol sekunder **`Deactivate`** serta tombol **`Inspect`** untuk meninjau detail tes.
+  - **Instant State & Sidebar Synchronization**: Mengklik `Activate` langsung memutasi database Supabase (`classes.is_active = true`), menyinkronkan status lokal di memori secara instan, memicu `loadSidebarClasses()` untuk menyegarkan menu `C — CLASS` di sidebar tanpa reload halaman, dan menampilkan notifikasi sukses.
+  - **Status Pill Toggle Affordance**: Pil teks `Active` / `Inactive` di kolom STATUS kini interaktif (`cursor: pointer`), memungkinkan aktivasi/deaktivasi instan langsung dari status maupun tombol aksi.
+
+- **Dual-View Student Roster Architecture (Phase 614 — SSOT Rule §1.4, §2.3, §2.10, §4.1)**:
+  - **Tab 1: `Students Data`**: Fokus pada identitas, demografi, dan alamat (`LVL`, `PIC`, `SEX`, `NAME`, `DOB`, `AGE`, `EDUCATION`, `VILLAGE`, `DISTRICT`, `REGENCY`, `PROVINCE`, `PIN`, `STATUS`). Bersih total dari kolom nilai kelas (*zero exam columns*), melenyapkan horizontal scroll dan tabel sesak.
+  - **Tab 2: `Student's Raport`**: Fokus pada pencapaian akademik dan evaluasi (`LVL`, `PIC`, `NAME`, kolom ujian kelas e.g. `CAMP 2ND VOCABULARY` Exam 1..4, `OVERALL PERFORMANCE` `DONE`, `PTS`, `GRD`, `PIN`, `STATUS` dengan aksi interaktif `LEVEL UP`). Bersih total dari kolom demografi dan alamat.
+  - **Universal Sub Panel `✎ Edit Mode` Toggle**: Tombol aksi di Sub Panel bawah mengaktifkan Master Edit Mode (`body.global-edit-mode-on`) bergaris kisi Excel putih (`rgba(255,255,255,0.45)`). Tombol ghost berstatus `✎ Edit Mode` dan berubah menjadi solid neon glow `✓ Done Editing`.
+  - **Inline Level Selection & Rollback**: Kolom Level (`LVL`) dilengkapi `<select class="student-level-select">` saat Edit Mode aktif, memungkinkan Tutor/Admin menaikkan atau menurunkan level siswa secara langsung jika terjadi kesalahan promosi.
+  - **Class Hub Isolation Maintained (User Directive #1)**: Filter siswa di `Class Hub` (`C — CLASS`) dipertahankan sesuai aturan level agar daftar kelas tidak membengkak seiring bertambahnya siswa baru.
+
+- **Hero Next Test Card Harmonization (Phase 613 — AGENTS.md §2.10.2 & ui-invariants.md §2.0)**:
+  - **Balanced Typographic Hierarchy**: Judul tugas (`.next-test-primary-name`) menggunakan font `Inter` semibold 13px (`font-weight: 600`), sedangkan sub-topik materi (`.next-test-topic-name`) terkunci **Regular 12px (`font-weight: 400`)** warna slate `#94a3b8`, melenyapkan kesan tulisan serba tebal (*bulky/fat*).
+  - **Rainbow Pips SSOT Alignment**: Ketujuh kotak repetisi (`.rainbow-box`) menggunakan font `Inter` tabular-nums 11px berbobot 600, serta menyelaraskan pemetaan warna 100% ke standar AGENTS.md §2.10.2: Merah (`var(--grade-e)`) $\to$ Jingga (`var(--grade-d)`) $\to$ Kuning (`var(--grade-c)`) $\to$ Hijau (`var(--grade-a)`) $\to$ Biru (`var(--primary-tactical)`) $\to$ Nila (`var(--clr-accent-1)`) $\to$ Ungu (`var(--quad-d)`), melenyapkan bug warna kuning ganda sebelumnya.
+  - **Clear Practice Affordance**: Tombol aksi repetisi di sisi kanan (`.pass-counter-btn`) menyertakan nomor repetisi target bersama glif play SVG mikro (`2 ▶`) dengan font `Inter 700`, memperjelas fungsinya sebagai tombol interaktif untuk memulai latihan repetisi.
+
+- **Interactive LEVEL UP Status Action & Alumni Consolidation (Phase 611 — SSOT §1.4, §2.10, §2.27)**:
+  - **Peniadaan Tombol Alumni Terpisah**: Tombol `Alumni` di Sub Panel bawah dihapus total. Kelulusan menjadi alumni merupakan puncak kenaikan level resmi (`Level 1` $\rightarrow$ `Level 2` $\rightarrow$ `Level 3` $\rightarrow$ `Level X / Alumni`).
+  - **Status Interaktif `LEVEL UP` di Kolom Tabel**: Ketika siswa memenuhi kriteria kelulusan level (`row.isEligibleNext === true`), kolom STATUS menampilkan tombol interaktif beranimasi neon **`LEVEL UP`** dengan ikon SVG panah ganda ke atas (`chevrons-up`).
+  - **Bulk Level-Up Action (`btn-promote-all-eligible`)**: Tombol aksi di Sub Panel bawah diperbarui menjadi **`LEVEL UP ALL (X Eligible)`** berikon SVG `chevrons-up` dengan palet hijau Grade A.
+  - **Zero Movement Hover Invariant**: Tombol `.btn-level-up-cell` terkunci `transform: none !important;` dengan transisi ghost-to-solid neon glow.
+
 - **Standing Operational Discipline (Rule 0.2 SSOT: Cepat, Cermat, Tepat, Akurat)**:
   - Setiap instruksi dieksekusi cepat tanpa seremonial dokumen berlebih, cermat memeriksa dampak sistemik, tepat sasaran sesuai konteks & SSOT, dan akurat lolos verifikasi 100% green.
-- **Student Dashboard Dual-Panel Invariants & Tri-Font System (Phase 600 — SSOT §5.1 & §2.0)**:
-  - Pane B Completed Tests terkunci 5 kolom independen (`NO`, `TEST NAME`, `SCORE`, `GRD`, `ACT`), melenyapkan tumpang tindih `GRADERETRY`.
-  - Pane A Standings (`NO`, `STUDENT NAME`, `PTS`, `GRD`) dengan warna teks angka PTS harmonis mengikuti warna Grade global siswa. Gelar kehormatan (`King`/`Queen`, `Mr.`/`Miss`) dipertahankan penuh.
-  - Sub-row 7 pips task dibukukan permanen sebagai Top-7 Highest Attempts (bukan rainbow pips). Metrik hero skor/grade profil dinaikkan ke Level 0 Hero Metric (30px, Outfit 800 Extra Bold).
-  - Tri-Font System baku: Outfit (Headings & Hero), Inter (Data Tables & Body), JetBrains Mono (PIN, Log & Audit).
-- **Overall Performance Completion Header Standardization (Phase 599 — SSOT Rule §2.9)**:
-  - Subheader resmi: **`DONE`** (Completion Rate %), **`PTS`** (Total Points whole integer), dan **`GRD`** (Overall Grade) di sisi paling kanan tabel.
-- **Modules Warehouse Architecture & Class Allocation System (Phase 598 — SSOT §1.5)**:
-  - Unifikasi 8 modul evaluasi (`m1`–`m8`), tata letak simetris 4-Over-4, alokasi kelas vertikal (gap 10px), pil ringkasan di Sub Panel 40px, judul di Topbar (zero duplicate headers), dan wizard test lockdown.
-- **5-Pillar Theme Matrix Compact Headers & Quadrant Color Alignment (Phases 594 & 597 — SSOT §2.9 & §2.10.1)**:
-  - Subheader ringkas: **`TASK`**, **`RATE`**, **`PTS`**, **`GRD`**, dan **`STS`** dengan warna selaras kuadran masing-masing (Pink A, Orange B, Lime C, Violet D). Zero text wrapping.
-- **Points (PTS) Half-Up Whole Integer Invariant (Phase 589 — SSOT Rule §2.9)**:
-  - Seluruh desimal poin $\ge 0.5$ dibulatkan ke atas via `Math.round()`. Kolom poin bebas angka berkoma dan wajib berheader **`PTS`**.
-- **Strict Zero-Movement Hover & Ghost-to-Solid-Glow Invariant (Phases 584, 588, 592 — SSOT §3.4)**:
-  - Tombol stationary pada hover (`transform: none !important;` subtle glow only) mencegah border clipping atas; standby ghost outline vs aktif solid neon glow.
-- **Alumni Multi-Program & Level/Grade X Standards (Phases 575, 579, 581, 588)**:
-  - Tab program alumni A-Z (`Camp`, `Evnikom`, `Sheraton`, `All Alumni`), Level X dan Grade X mutlak, status `INACTIVE` merah `var(--grade-e)`, zero badge Disconnected.
-- **Dual-Viewport Ecosystem & Room-Exclusive Print (Phase 586 — SSOT §2.28 & §2.29)**:
-  - Student mobile-locked (430px) vs Admin desktop-locked (100vh). Fitur cetak eksklusif hanya ada di Room.
-- **Single-Screen 100vh Viewport Lock & Spatial System (SSOT in `ui-invariants.md`)**:
-  - `html, body { height: 100vh; overflow: hidden; }`. 10px container gap, 40px Sub Panel, 60px Title Area & CTA Area, zero sub-12px font, zero emojis, white Excel gridlines in Master Edit Mode.
 
 ---
 
 ## 2. Recent Active Milestones (Latest Rolling Window)
 
-- **Phase 607**: Student Dashboard Hero Next-Test Invariant, Leaderboard Waiver Exclusion & Cultural Honorific Title Fix (`js/dashboard.js`, `js/api.js`, database sync, `d8fc0882` male, waiver 0% excluded from average, guard `!published.length`, noble title fallback).
-- **Phase 606**: System-Wide Invariant, Typography, Entity Emojis & Pure English Hygiene (`admin.html`, `dashboard.css`, `test.css`, `conversation.css`, zero HTML emojis, dual-scale typography).
-- **Phase 605**: Student Dashboard Zero-Truncation Invariant & Dual-Tab Label Harmonization (`css/dashboard.css`, `dashboard.html`, calibrated grid columns, `white-space: normal`, zero-ellipsis name recovery, tab label `MY RANK #9`).
-- **Phase 604**: PIN Micro-Interactions, Smooth Digit Navigation, Grade E Error Shake & Universal PWA Network Status Resilience (`js/auth.js`, `js/pwa.js`, `css/auth.css`, `css/style.css`, auto-focus, backspace routing, keyframes shake, offline/online badge).
-- **Phase 603**: Production PWA Architecture, High-Res Brand Icons, Web App Manifest & Install Handler (`test:pwa`, `manifest.json`, `js/pwa.js`, full standalone mobile display mode, network-first Service Worker).
-- **Phase 602**: Student Gate Login Invariants: Step 1 (Institution) hierarchy restoration via `resetFrom('program')`, Open Book SVG Brand Badge (52px), 30px Brand Hero Landmark (`h1 TOPS CORE`), Zero Subtitle Clutter, Universal 10px Container Gap alignment, 44px ergonomic student option touch target, neutral PIN filled state, pure vector SVG search icons, zero-movement hover compliance, and tactical blue color unification.
-- **Phase 601**: System Governance Rules Harmonization (Bab 5 & 6 separation in `ui-invariants.md`, Title Area 40px/60px fix, and Operational Discipline codification).
-- **Phases 597–600**: Student Dashboard Dual-Panel Invariants, Tri-Font System, `DONE` header, Modules Warehouse 4-Over-4 Architecture, and Theme Status Quadrant Colors.
-- **Phases 589–596**: 5-Pillar Theme Matrix (`TASK`, `RATE`, `PTS`, `GRD`, `STS`), Sub Panel Elevation of Summary Pills, Strict Zero-Movement Hover, and Points Half-Up.
-- **Phases 584–588**: Ghost-to-Solid-Glow Button Invariant System-Wide Audit, Dual-Viewport Ecosystem, and Alumni Multi-Program Alignment.
+- **Phase 614**: Dual-View Student Roster Separation (`Students Data` vs `Student's Raport`), Master Edit Mode Sub Panel Toggle & Inline Level Control (`student-management.js`, `ui-invariants.md`).
+- **Phase 613**: Hero Next Test Card Typography, Rainbow Pips SSOT & Affordance Harmonization (`dashboard.js`, `dashboard.css`, `session.js`).
+- **Phase 612**: Curriculum Global Passing Standards Matrix Cockpit & Dual-Tab Topbar View (`app.js`, `class.js`).
+- **Phase 611**: Interactive LEVEL UP Status Action, Chevrons-Up Icon & Alumni Button Consolidation (`student-management.js`, `svg-icons.js`, `admin.css`).
+- **Phase 610**: Universal Table Cell Regular Weight Invariant (Zero Bold in Table Content, Regular 400 & Inter Font SSOT).
 
 ---
 
@@ -85,6 +67,7 @@
 - **Rule 0.1.1 (Strict Git Gate)**: NEVER execute `git commit` or `git push` autonomously.
 - **Rule 0.1.2 (Strict UTF-8 & No PowerShell File Editing)**: Use native tools or Node.js only.
 - **Rule 0.2 (Standing Operational Discipline)**: Cepat, Cermat, Tepat, dan Akurat di setiap eksekusi perintah.
+- **Rule 0.3 (Strict Zero Unsolicited Action)**: Dilarang men-generate, membuat, merubah, atau menghapus apa pun di luar yang diminta.
 - **Rule 2.10 (Authoritative Color SSOT)**: Zero raw hex codes. CSS variables & `TOPSCORE_COLORS`.
 - **Rule 2.27 (Authoritative Entity Standards)**: Strict status & type taxonomies (ACTIVE, HOLD, ALUMNI, INACTIVE).
 
@@ -92,13 +75,13 @@
 
 ## 4. Verification Suite Status
 
-- **Preflight & Fast AST Check**: 50/50 JavaScript files PASS in 0.10s (`npm.cmd run test:fast`).
-- **Module & API Import Health**: 47/47 JS modules PASS 100% (`npm.cmd run test:imports`).
-- **Universal Table Standardization**: 10/10 Pillars PASS with 100% integrity (`npm.cmd run test:table`).
+- **Universal Table Standardization**: 11/11 Pillars PASS with 100% integrity (`npm.cmd run test:table`).
+- **Preflight & Fast AST Check**: 51/51 JavaScript files PASS syntax validation (`npm.cmd run test:fast`).
+- **Global Parallel Test Pool**: 25/25 suites PASS cleanly (`node scripts/run_all_tests_parallel.mjs`).
 - **Automated Spatial & Visual Invariants**: ALL checks PASS 100% (`npm.cmd run check:spatial`).
 
 ---
 
 ## 5. Next Exact Action
 
-- **Target**: Pembuatan kelas baru dan pengujian integrasi alokasi modul terpilih (Class-to-Module Mapping Wizard). Seluruh perubahan tersimpan rapi dan uncommitted di working tree per Rule 0.1.1.
+- **Target**: Siap menerima instruksi dan arahan berikutnya dari pengguna. Seluruh file tetap aman dan uncommitted di working tree per Rule 0.1.1.

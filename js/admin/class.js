@@ -659,9 +659,9 @@ export async function renderResults(area) {
           }
         },
         {
-          key: 'score', label: 'POINTS', sortable: true, render: (v, r) => {
-            const sc = r.score != null ? parseFloat(r.score).toFixed(1).replace(/\.0$/, '') : '-';
-            const total = r.total_questions != null ? r.total_questions : '-';
+          key: 'score', label: 'PTS', sortable: true, render: (v, r) => {
+            const sc = r.score != null ? Math.round(Number(r.score)) : '-';
+            const total = r.total_questions != null ? Math.round(Number(r.total_questions)) : '-';
             return `<div class="text-center fw-600"><span class="badge" style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);font-size: 12px;padding:2px 8px;">${sc} / ${total}</span></div>`;
           }
         },

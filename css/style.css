@@ -80,6 +80,8 @@
   --clr-danger: var(--grade-e);
   --clr-danger-rgb: var(--grade-e-rgb);
   --clr-info: #06b6d4;
+  --primary-tactical: #38bdf8;
+  --primary-tactical-rgb: 56, 189, 248;
 
   /* 4-Pillar Progression & ABCD System Tokens (SSOT Rule 2.10.1: Pink -> Orange -> Lime -> Purple) */
   /* Entitas A / Theme A uses Electric Pink (#ff2d87) with independent token source, completely decoupled from --grade-star */
@@ -1239,12 +1241,35 @@ thead th,
   white-space: nowrap;
 }
 
+/* Universal Table Cell Content Regular Weight Invariant (SSOT) */
+table tbody td,
+.data-table tbody td,
+.datagrid-table tbody td,
+.table-compact tbody td,
+.standings-row,
+.standings-row .leaderboard-student-name,
+.standings-row .leaderboard-score-val,
+.standings-row .th-point span,
+.completed-row,
+.completed-row .completed-col-num,
+.completed-row .completed-col-name,
+.completed-row .completed-col-score,
+.completed-row .completed-col-score span,
+.completed-test-row,
+.completed-test-row .completed-title,
+.completed-test-row .completed-score-badge {
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  font-weight: 400 !important;
+}
+
 tbody td {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   color: var(--clr-text-2);
   vertical-align: middle;
   font-size: 12px;
+  font-weight: 400 !important;
+  font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-variant-numeric: tabular-nums;
 }
 

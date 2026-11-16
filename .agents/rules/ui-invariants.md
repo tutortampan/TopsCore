@@ -95,8 +95,9 @@ TopsCore LMS strictly governs typography through an authoritative tri-font ecosy
    - **Visual Identity**: Geometric, modern, crisp, bold visual impact.
 2. **`Inter`** (`--font-body` / `--font-sans` / `--fm-font-sans`):
    - **Role**: Body Text, Form Controls & Datagrid UI.
-   - **Authorized Usage**: All data table cells and headers (`th`, `td`), form inputs, selects/dropdowns, in-panel toolbar controls (30px buttons), descriptions, instructional passages, reading text, and UI labels/metadata.
+   - **Authorized Usage**: All data table cells and headers (`th`, `td`), student dashboard rank/leaderboard rows, completed test rows, form inputs, selects/dropdowns, in-panel toolbar controls (30px buttons), descriptions, instructional passages, reading text, and UI labels/metadata.
    - **Visual Identity**: High legibility, neutral, optimized for high-density 12px workstation datagrids.
+   - **Universal Table Cell Regular Invariant**: Seluruh huruf dan angka konten dalam baris tabel di seluruh sistem WAJIB menggunakan `Inter` dan **berbobot Regular (`font-weight: 400 !important;`)**. Dilarang keras menggunakan `Outfit` atau font tebal (`700/800/900`) di dalam sel baris tabel.
 3. **`JetBrains Mono` / Monospace** (`--font-mono` / `--fm-font-mono`):
    - **Role**: Technical, Security & Audit Data.
    - **Authorized Usage**: PIN verification displays (`#prof-pin-display`), token strings, raw UUIDs, JSON logs, and audit trails.
@@ -124,7 +125,7 @@ TopsCore LMS operates on a strict Dual-Scale Typography Architecture:
 ### 2.4 Mobile 350px Standard Viewport & Responsiveness
 - All dialogs, cards, and forms must render cleanly on 350px mobile viewports without clipped text.
 
-### 2.8 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`) (Rule 2.8 / AGENTS.md §2.23)
+### 2.8 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`) (AGENTS.md §2.23)
 - Student names across database, sessions, admin tables, exam rooms, result screens, and exports are authentic standard names (`studentName`).
 - Gender honorific titles (`Mr.` / `Miss`) and champion titles (`King` / `Queen`) are **strictly exclusive to the Student Dashboard greeting**.
 
@@ -194,7 +195,12 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Sub-Header (`.datagrid-sub-header`, `tr:not(.datagrid-super-header-row) th`): Height **30px**, font-weight: **400 (Regular — STRICTLY NOT BOLD)**, `top: 30px; z-index: 19;`.
   - Spanning Standalone Header (`th[rowspan="2"]`, `.datagrid-rowspan-2-header`): Height **60px** (`height: 60px !important;`), sticky at `top: 0; z-index: 26;`, font-weight: 700 (Bold).
 - **Table Footer (`tfoot td`)**: Height **40px**, sticky at `bottom: 0; z-index: 10;`. Empty footers collapse.
-- **Data Rows (`tbody tr td`)**: Harmonic cadence of **30px – 40px** (`line-height: 1.3 !important;`).
+- **Data Rows (`tbody tr td`, `.standings-row`, `.completed-row`) — Universal Table Cell Regular Weight Invariant (SSOT)**:
+  - **Harmonic Cadence**: 30px – 40px (`line-height: 1.3 !important;`).
+  - **Font Family Wajib Inter**: Seluruh tabel data dan list baris (sel data, header, nomor urut, poin, skor, nama siswa) **WAJIB menggunakan font `Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Font display geometris membulat (`Outfit`) **DILARANG KERAS** digunakan di dalam sel, nama siswa, atau angka dalam tabel karena merusak kerapian dan legibilitas datagrid.
+  - **Font Weight Wajib Regular 400**: Di seluruh sistem TopsCore (baik Admin Desktop Workstation maupun Student Mobile Corridor), seluruh konten di dalam baris tabel (teks, nama siswa, nomor peringkat, nilai poin PTS, persentase) **MUTLAK BERBOBOT REGULAR (`font-weight: 400 !important;`)**. Tidak boleh ada huruf atau angka tebal (`700`, `800`, `900`) di dalam sel tabel.
+  - **Tabular Numerics**: Semua angka dalam tabel wajib menyertakan `font-variant-numeric: tabular-nums;` untuk perataan vertikal yang presisi.
+  - **Pengecualian Terisolasi**: Header kolom tabel (`thead th` single header / super-header baris 1) diizinkan `font-weight: 600–700` (sub-header baris 2 tetap regular 400), dan glif simbol grade di dalam badge/chip kecil (22px–24px) diizinkan `font-weight: 500–600` untuk kejelasan glif.
 
 ### 4.2 Aturan Text-Wrap, Universal Zero-Truncation Invariant & Standar Singkatan Header 3-Tier (SSOT)
 
@@ -328,3 +334,8 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 
 ### 6.3 DataGrid Default Configuration & Zero Neon Glow
 - `DataGrid` defaults to `bulkActions: false`. Neon box-shadow glows purged; dividers render as crisp flat lines.
+
+### 6.4 Level Promotion & Passing Threshold Invariant (NEXT Action Invariant SSOT)
+- **Kepatuhan Ambang Batas Resmi (Grade C >= 60%)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**).
+- **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
+
