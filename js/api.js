@@ -612,7 +612,7 @@ export async function fetchStudentProgress(studentId) {
 export async function fetchTestsForStudentClass(programId, classId, institutionId, levelId) {
   const sb = await getSupabase();
   let query = sb.from('tests')
-    .select('id, title, shell_code, payload, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, prerequisite_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
+    .select('id, title, shell_code, payload, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('class_id', classId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -650,7 +650,7 @@ export async function fetchTestsForStudentClass(programId, classId, institutionI
 export async function fetchTestsForStudentLevel(programId, levelId, institutionId) {
   const sb = await getSupabase();
   let query = sb.from('tests')
-    .select('id, title, shell_code, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, prerequisite_id, working_duration_minutes, schedule_mode, deleted_at, levels(id, name, level_number)')
+    .select('id, title, shell_code, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, deleted_at, levels(id, name, level_number)')
     .eq('level_id', levelId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -1004,7 +1004,7 @@ export async function generateTestQuestions(sb, test) {
     // High-speed cached vault retrieval (0ms & 0 egress fast-path)
     let vaultData = null;
     try {
-      const cachedVault = await fetchVaultWords({ targetLevel: levelNum, programId: testProgramId });
+      const cachedVault = await fetchVaultWords({ targetLevel: levelNum });
       if (cachedVault && cachedVault.length > 0) {
         let filtered = cachedVault;
         if (topicCode) {
@@ -1045,7 +1045,6 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (testProgramId) query = query.eq('program_id', testProgramId);
       if (topicCode) {
         if (themeCode) query = query.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1084,7 +1083,6 @@ export async function generateTestQuestions(sb, test) {
         .is('deleted_at', null)
         .eq('target_level', levelNum)
         .range(0, 4999);
-      if (testProgramId) queryNoCat = queryNoCat.eq('program_id', testProgramId);
       if (topicCode) {
         if (themeCode) queryNoCat = queryNoCat.eq('theme_code', themeCode);
         const candidateCodes = [
@@ -1126,7 +1124,6 @@ export async function generateTestQuestions(sb, test) {
           .eq('target_level', levelNum)
           .ilike('topic', `%${titleTopic}%`)
           .range(0, 4999);
-        if (testProgramId) topicNameQuery = topicNameQuery.eq('program_id', testProgramId);
         const resTopic = await topicNameQuery;
         if (!resTopic.error && resTopic.data && resTopic.data.length > 0) {
           vaultData = resTopic.data.map(w => {
@@ -1199,7 +1196,6 @@ export async function generateTestQuestions(sb, test) {
             .is('deleted_at', null)
             .eq('target_level', levelNum)
             .ilike('topic', `%${titleTopic}%`);
-          if (testProgramId) topicQuery = topicQuery.eq('program_id', testProgramId);
           const { data: topicFallback } = await topicQuery.limit(100);
           if (topicFallback && topicFallback.length > 0) {
             vaultWords = topicFallback.filter(w => {
@@ -1217,7 +1213,6 @@ export async function generateTestQuestions(sb, test) {
             .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, target_level')
             .is('deleted_at', null)
             .eq('target_level', levelNum);
-          if (testProgramId) generalVaultQuery = generalVaultQuery.eq('program_id', testProgramId);
           const { data: generalVault } = await generalVaultQuery.limit(100);
           if (generalVault && generalVault.length > 0) {
             vaultWords = generalVault.filter(w => {
@@ -1249,7 +1244,6 @@ export async function generateTestQuestions(sb, test) {
 
       if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
         let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
-        if (testProgramId) allDataQuery = allDataQuery.eq('program_id', testProgramId);
         const { data: allData } = await allDataQuery;
         if (allData) {
           const isTargetPhrase = (category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST');
@@ -1442,7 +1436,7 @@ export async function startTest(studentId, testId) {
 
   // 1. Ambil detail test
   const { data: asmData, error: asmErr } = await sb.from('tests')
-    .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, prerequisite_id, payload, module_id, question_order')
+    .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order')
     .eq('id', testId)
     .single();
   if (asmErr || !asmData) throw new Error('Test not found.');
@@ -2328,10 +2322,11 @@ export async function adminInsert(table, payload) {
         }
         delete payload.duration_minutes;
       }
-      if ('prerequisite_test_id' in payload) {
-        payload.prerequisite_id = payload.prerequisite_test_id;
-      } else if ('prerequisite_id' in payload) {
-        payload.prerequisite_test_id = payload.prerequisite_id;
+      if ('prerequisite_id' in payload) {
+        if (!payload.prerequisite_test_id) {
+          payload.prerequisite_test_id = payload.prerequisite_id;
+        }
+        delete payload.prerequisite_id;
       }
     }
     await enforceTestSystemGuard(sb, payload);
@@ -2355,10 +2350,11 @@ export async function adminUpdate(table, id, payload) {
         }
         delete payload.duration_minutes;
       }
-      if ('prerequisite_test_id' in payload) {
-        payload.prerequisite_id = payload.prerequisite_test_id;
-      } else if ('prerequisite_id' in payload) {
-        payload.prerequisite_test_id = payload.prerequisite_id;
+      if ('prerequisite_id' in payload) {
+        if (!payload.prerequisite_test_id) {
+          payload.prerequisite_test_id = payload.prerequisite_id;
+        }
+        delete payload.prerequisite_id;
       }
     }
     const { data: existing } = await sb.from('tests').select('id, module_id, class_id, level_id').eq('id', id).single();
@@ -2808,8 +2804,8 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
   if (targetLevel !== null && targetLevel !== undefined && targetLevel !== '') {
     filtered = filtered.filter(w => Number(w.target_level) === Number(targetLevel));
   }
-  if (programId) filtered = filtered.filter(w => w.program_id === programId);
-  if (institutionId) filtered = filtered.filter(w => w.institution_id === institutionId);
+  if (programId) filtered = filtered.filter(w => !w.program_id || w.program_id === programId);
+  if (institutionId) filtered = filtered.filter(w => !w.institution_id || w.institution_id === institutionId);
   if (topic) filtered = filtered.filter(w => w.topic === topic);
   if (search) {
     const term = search.trim().toLowerCase();
@@ -2844,9 +2840,6 @@ export async function fetchVaultTopics(targetLevelNum = null, programId = null) 
 
   if (targetLevelNum !== null) {
     query = query.eq('target_level', targetLevelNum);
-  }
-  if (programId) {
-    query = query.eq('program_id', programId);
   }
 
   const { data, error } = await query.order('topic', { ascending: true });
@@ -3784,7 +3777,7 @@ export async function fetchStudentLevel(studentId) {
 export async function exportVaultWords(mode = 'all') {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
-    .select('institution_id, program_id, target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at, institutions!institution_id(name), programs!program_id(name)')
+    .select('id, target_level, theme_code, theme, topic_code, topic, indonesian, english, word_type, created_at, category')
     .is('deleted_at', null)
     .range(0, 99999)
     .order('target_level', { ascending: true })
@@ -4869,7 +4862,6 @@ export async function upsertDynamicTestShell(config) {
     working_duration_minutes:   effectiveDurationMinutes,
     minimum_required_score:     effectiveMinScore,
     prerequisite_test_id:       prerequisiteId,
-    prerequisite_id:            prerequisiteId,
     answer_type:                effectiveAnswerType,
     is_dynamic_shell:           true,
     display_order:              displayOrder,
@@ -5079,19 +5071,12 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     // 1. Fetch Words for Level to know what themes and topics exist (Chunked Pagination Protected)
     let words = [];
     try {
-      words = await fetchVaultWords({ targetLevel: levelNum, programId, institutionId, limit: 10000 });
+      words = await fetchVaultWords({ targetLevel: levelNum, limit: 10000 });
     } catch (_) {
       let vaultQuery = sb.from('vocabulary_vault')
         .select('theme_code, theme, topic_code, topic, word_type, category')
         .is('deleted_at', null)
         .eq('target_level', levelNum);
-
-      if (institutionId) {
-        vaultQuery = vaultQuery.eq('institution_id', institutionId);
-      }
-      if (programId) {
-        vaultQuery = vaultQuery.eq('program_id', programId);
-      }
 
       const { data } = await vaultQuery;
       words = data || [];

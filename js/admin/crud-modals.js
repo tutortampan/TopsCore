@@ -874,9 +874,11 @@ function _initCrudModals() {
       if (payload.prerequisite_test_id === '') {
         payload.prerequisite_test_id = null;
       }
-      // CRITICAL: Always keep prerequisite_test_id and prerequisite_id synchronized in tests table!
-      if ('prerequisite_test_id' in payload) {
-        payload.prerequisite_id = payload.prerequisite_test_id;
+      if ('prerequisite_id' in payload) {
+        if (!payload.prerequisite_test_id) {
+          payload.prerequisite_test_id = payload.prerequisite_id;
+        }
+        delete payload.prerequisite_id;
       }
 
       // Prerequisite Test Validation: Must fill if level and order are not Level A and Order 1
@@ -887,6 +889,7 @@ function _initCrudModals() {
       // Never send display_name or non-existent columns (causes Postgres 428C9 or PGRST204)
       delete payload.display_name;
       delete payload.duration_minutes;
+      delete payload.prerequisite_id;
 
       const targetTable = (_currentSection || '').replace('-', '_');
       const normTarget = (targetTable || '').toLowerCase();

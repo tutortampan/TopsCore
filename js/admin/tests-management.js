@@ -97,7 +97,7 @@ export async function renderTests(area) {
     allStudents,
     answersRes
   ] = await Promise.all([
-    adminFetchAll('tests', 'id, title, name, test_type, status, program_id, class_id, level_id, module_id, shell_code, display_order, category, total_questions, duration_minutes, prerequisite_test_id, prerequisite_id, passing_score, created_at, deleted_at'),
+    adminFetchAll('tests', 'id, title, test_type, test_subtype, status, program_id, class_id, level_id, module_id, shell_code, display_order, category, working_duration_minutes, prerequisite_test_id, minimum_required_score, created_at, deleted_at, payload'),
     adminFetchAll('programs', 'id, name, is_active').catch(() => []),
     adminFetchAll('levels', 'id, name, level_number').catch(() => []),
     adminFetchAll('classes', 'id, name, program_id, level_id, is_active').catch(() => []),
@@ -141,7 +141,12 @@ export async function renderTests(area) {
   const levelMap = {};
   (allLevels || []).forEach(l => { levelMap[l.id] = l; });
   const TestMap = {};
-  (rawData || []).forEach(e => { TestMap[e.id] = e; });
+  (rawData || []).forEach(e => {
+    if (!e.total_questions) e.total_questions = e.payload?.total_questions || (e.test_type === 'exam' ? 120 : 40);
+    if (!e.duration_minutes) e.duration_minutes = e.working_duration_minutes || 15;
+    if (!e.passing_score) e.passing_score = e.minimum_required_score || 60;
+    TestMap[e.id] = e;
+  });
   const testTitleMap = {};
   (rawData || []).forEach(t => { testTitleMap[t.id] = t.title || t.name; });
   const stuMap = {};
