@@ -299,14 +299,14 @@ async function openCrudModal(section, record) {
 
             let optHtml = `<option value="">— Select Module —</option>`;
             if (compat.discipline !== 'general') {
-              optHtml += `<optgroup label="✅ Compatible with ${compat.disciplineLabel}">`;
+              optHtml += `<optgroup label="Compatible with ${compat.disciplineLabel}">`;
               OFFICIAL_MODULES.filter(m => allowedSet.has(m.key)).forEach(m => {
                 const isSel = (normVal === m.key) || (!record && m.key === compat.primaryKey);
                 optHtml += `<option value="${m.key}" ${isSel ? 'selected' : ''}>${m.name} — ${m.desc}</option>`;
               });
               optHtml += `</optgroup>`;
 
-              optHtml += `<optgroup label="🔒 Incompatible with ${compat.disciplineLabel} (Disabled)">`;
+              optHtml += `<optgroup label="Incompatible with ${compat.disciplineLabel} (Disabled)">`;
               OFFICIAL_MODULES.filter(m => !allowedSet.has(m.key)).forEach(m => {
                 optHtml += `<option value="${m.key}" disabled>${m.name} — (Incompatible with ${compat.disciplineLabel})</option>`;
               });
@@ -1213,7 +1213,7 @@ async function loadDuplicateStudents(scope = 'same_class') {
           <table class="table-sm w-100 mb-3 text-sm" style="border-collapse:collapse; width:100%;">
             <thead>
               <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
-                <th style="padding:8px 4px;">STUDENT ID</th>
+                <th style="padding:8px 4px;">RECORD UUID</th>
                 <th style="padding:8px 4px;">PROGRAM / CLASS</th>
                 <th style="padding:8px 4px;">BATCH</th>
                 <th style="padding:8px 4px;">INSTITUTION</th>

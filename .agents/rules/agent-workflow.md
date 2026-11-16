@@ -1,5 +1,12 @@
 # TOPSCORE LMS — AGENT WORKFLOW & EXECUTION PROTOCOLS (LEAN & AGILE)
 
+## 0. Standing Operational Discipline: Cepat, Cermat, Tepat, dan Akurat
+Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pilar operasional:
+1. **Cepat (Fast & Direct)**: Langsung eksekusi ke inti perubahan tanpa overhead/seremonial dokumen yang tidak perlu.
+2. **Cermat (Meticulous & Comprehensive)**: Teliti membaca file target, dependencies, dan dampak menyeluruh ke seluruh sistem sebelum/sesudah mengubah kode.
+3. **Tepat (Precise & Aligned)**: Eksekusi presisi sesuai kemauan pengguna dan standar baku tanpa menyimpang dari SSOT dan hierarki aturan.
+4. **Akurat (Accurate & Verified)**: Lakukan verifikasi otomatis setiap selesai mengedit untuk memastikan 0 syntax error, 0 regresi, dan 100% tests green.
+
 ## 1. Pragmatic Task Management (`tasks.md`)
 - **Complex Multi-Step Tasks**: For complex features involving multiple files or phases, track progress in `tasks.md` in the workspace root.
 - **Zero CLI Pinning Overhead**: DO NOT execute shell/PowerShell commands to force-pin `tasks.md` in IDE tabs. Keep file operations clean and silent.

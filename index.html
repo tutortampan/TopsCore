@@ -10,10 +10,16 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261115_v518" />
   <link rel="stylesheet" href="css/auth.css?v=20261114_v481" />
-  <!-- Web App Manifest -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#3b82f6">
-  <link rel="apple-touch-icon" href="favicon.ico">
+  <!-- Web App Manifest & PWA Metadata -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#060911" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TopsCore" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
 </head>
 <body>
 
@@ -28,8 +34,12 @@
     <div class="login-wrapper" role="main">
       <!-- Brand -->
       <div class="login-brand">
-        <h1>TOPS CORE</h1>
-        <p>Student Gate — Sign in to continue</p>
+        <h1 class="brand-badge-wrap" aria-label="TOPS CORE">
+          <svg width="74" height="74" viewBox="0 0 100 100" fill="none" class="brand-emblem-svg">
+            <text x="50" y="44" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="34" fill="#ffffff" letter-spacing="2">TOPS</text>
+            <text x="50" y="80" text-anchor="middle" font-family="'Outfit', sans-serif" font-weight="900" font-size="34" fill="#38bdf8" letter-spacing="2" style="filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.7));">CORE</text>
+          </svg>
+        </h1>
       </div>
 
       <!-- --- SECTION 1: Institution --- -->
@@ -38,15 +48,14 @@
           <div class="cascade-header">
             <div class="cascade-step-num" id="step-num-1">1</div>
             <div class="cascade-title-wrap">
-              <span class="cascade-label">Institution</span>
-              <span class="cascade-colon">:</span>
+              <span class="cascade-label">Institution</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-institution-label"></span>
             </div>
             <button class="cascade-change-btn hidden" id="change-institution-btn">Change</button>
           </div>
           <div class="cascade-body" id="body-institution">
             <div class="cascade-search">
-              <span class="search-icon">&#128269;</span>
+              <span class="search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
               <input type="text" id="search-institution" placeholder="Search institution..." autocomplete="off" />
             </div>
             <div class="options-grid" id="list-institution" role="list" aria-label="Institutions">
@@ -62,15 +71,14 @@
           <div class="cascade-header">
             <div class="cascade-step-num" id="step-num-2">2</div>
             <div class="cascade-title-wrap">
-              <span class="cascade-label">Program</span>
-              <span class="cascade-colon">:</span>
+              <span class="cascade-label">Program</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-program-label"></span>
             </div>
             <button class="cascade-change-btn hidden" id="change-program-btn">Change</button>
           </div>
           <div class="cascade-body" id="body-program">
             <div class="cascade-search">
-              <span class="search-icon">&#128269;</span>
+              <span class="search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
               <input type="text" id="search-program" placeholder="Search program..." autocomplete="off" />
             </div>
             <div class="options-grid" id="list-program" role="list" aria-label="Programs">
@@ -86,15 +94,14 @@
           <div class="cascade-header">
             <div class="cascade-step-num" id="step-num-3">3</div>
             <div class="cascade-title-wrap">
-              <span class="cascade-label">Batch</span>
-              <span class="cascade-colon">:</span>
+              <span class="cascade-label">Batch</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-batch-label"></span>
             </div>
             <button class="cascade-change-btn hidden" id="change-batch-btn">Change</button>
           </div>
           <div class="cascade-body" id="body-batch">
             <div class="cascade-search">
-              <span class="search-icon">&#128269;</span>
+              <span class="search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
               <input type="text" id="search-batch" placeholder="Search batch..." autocomplete="off" />
             </div>
             <div class="options-grid" id="list-batch" role="list" aria-label="Batches">
@@ -110,15 +117,14 @@
           <div class="cascade-header">
             <div class="cascade-step-num" id="step-num-4">4</div>
             <div class="cascade-title-wrap">
-              <span class="cascade-label">Name</span>
-              <span class="cascade-colon">:</span>
+              <span class="cascade-label">Name</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-student-label"></span>
             </div>
             <button class="cascade-change-btn hidden" id="change-student-btn">Change</button>
           </div>
           <div class="cascade-body" id="body-student">
             <div class="cascade-search">
-              <span class="search-icon">&#128269;</span>
+              <span class="search-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
               <input type="text" id="search-student" placeholder="Search your name..." autocomplete="off" />
             </div>
             <div class="options-grid" id="list-student" role="list" aria-label="Students">
@@ -134,8 +140,7 @@
           <div class="cascade-header">
             <div class="cascade-step-num" id="step-num-5">5</div>
             <div class="cascade-title-wrap">
-              <span class="cascade-label">PIN</span>
-              <span class="cascade-colon">:</span>
+              <span class="cascade-label">PIN</span><span class="cascade-colon">:</span>
             </div>
           </div>
           <div class="pin-section">
@@ -177,19 +182,8 @@
   </div>
 
   <script type="module" src="./js/auth.js?v=20261114_v481"></script>
-  <!-- Service Worker Registration for PWA -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261114_v481')
-          .then(registration => {
-            registration.update();
-            console.log('ServiceWorker registered and updated with scope:', registration.scope);
-          })
-          .catch(error => console.warn('ServiceWorker registration failed:', error));
-      });
-    }
-  </script>
+  <!-- PWA Service Worker & Install Handler -->
+  <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">
     <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>

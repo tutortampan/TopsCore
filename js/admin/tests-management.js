@@ -2225,7 +2225,7 @@ window._overrideSpeechAnswer = async function(ansId) {
     if (window.showToast) window.showToast('Override failed: ' + err.message, 'error');
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '&#9889; Override 100%';
+      btn.innerHTML = `${getSvgIcon('zap', 14)} Override 100%`;
     }
   }
 };
@@ -2376,7 +2376,7 @@ window._openTestCardDrawer = function(testId) {
         <div class="text-xs fw-700 text-muted uppercase mb-1">Configuration Specs</div>
         <div class="text-sm">Program: <strong>${esc(r?.programName || 'Unknown')}</strong></div>
         <div class="text-sm">Class: <strong>${esc(r?.classBoard || 'Unknown')}</strong></div>
-        <div class="text-sm">Structure: <strong>${esc(r?.TestCategory || 'Task')} &bull; ${r?.qIsVault ? '&#9889; ' + (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</strong></div>
+        <div class="text-sm">Structure: <strong>${esc(r?.TestCategory || 'Task')} &bull; ${r?.qIsVault ? (r?.qCount || 0) + ' (Vault)' : (r?.qCount || 0) + ' Qs'}</strong></div>
         <div class="text-sm">Time Limit: <strong>${r?.timeLimit || 60} min</strong> &bull; Pass Mark: <strong>${r?.minScore || 60}%</strong></div>
         ${prereqText ? `<div class="text-sm text-warning mt-1">Prerequisite: <strong>${esc(prereqText)}</strong></div>` : ''}
       </div>

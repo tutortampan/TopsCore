@@ -501,28 +501,28 @@ function renderClassDetail(cls) {
         <div>
           <h2 style="margin:0 0 0.75rem 0; font-size: 20px; color:var(--clr-text-1);">${cls.name.replace(/</g, '&lt;')}</h2>
           <div style="display:flex; gap:0.5rem; flex-wrap:wrap; font-size: 12px;">
-            <span class="badge badge-neutral" style="background:var(--clr-surface-2);">&#127970; ${instName}</span>
-            <span class="badge badge-neutral" style="background:var(--clr-surface-2);">&#128218; ${progName}</span>
-            <span class="badge badge-neutral" style="background:var(--clr-surface-2);">&#11088; ${lvlName}</span>
+            <span class="badge badge-neutral" style="background:var(--clr-surface-2);">${getSvgIcon('building', 12)} ${instName}</span>
+            <span class="badge badge-neutral" style="background:var(--clr-surface-2);">${getSvgIcon('book-open', 12)} ${progName}</span>
+            <span class="badge badge-neutral" style="background:var(--clr-surface-2);">${getSvgIcon('target', 12)} ${lvlName}</span>
             ${statusBadge}
           </div>
         </div>
         <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
            ${isVocab ? `
              <button class="btn btn-primary btn-sm edit-mode-only" id="btn-auto-gen-words" style="background:rgba(59,130,246,0.9); color:#fff; border:1px solid rgba(59,130,246,0.4); font-weight:700;">
-               &#9889; Sync Words (Vocab Mastery)
+               Sync Words (Vocab Mastery)
              </button>
              <button class="btn btn-primary btn-sm edit-mode-only" id="btn-auto-gen-phrases" style="background:rgba(59,130,246,0.9); color:#fff; border:1px solid rgba(59,130,246,0.4); font-weight:700;">
-               &#9889; Sync Phrases (Dropdown 10)
+               Sync Phrases (Dropdown 10)
              </button>
            ` : ''}
            <button class="btn btn-primary btn-sm edit-mode-only" onclick="window.handleAddTask('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(245,158,11,0.9); color:#1a1a1a; border:1px solid rgba(245,158,11,0.4); font-weight:700;">
-             &#128221; Add Task
+             Add Task
            </button>
            <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.handleAddExam('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(239,68,68,0.9); color:#fff; border:1px solid rgba(239,68,68,0.4); font-weight:700;">
-             &#127942; Add Exam
+             Add Exam
            </button>
            <button class="btn btn-danger btn-sm edit-mode-only" id="btn-del-active-class">Delete</button>
         </div>
@@ -530,9 +530,9 @@ function renderClassDetail(cls) {
       
       <!-- 3-TAB NAVIGATION -->
       <div style="display:flex; gap:2rem; margin-top:2rem; border-bottom:1px solid transparent;">
-        <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size: 16px;">&#128203; Learning Path & Tests</div>
-        <div class="workspace-tab" data-tab="students" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size: 16px;">&#128101; Students</div>
-        <div class="workspace-tab" data-tab="gradebook" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size: 16px;">&#128202; Gradebook</div>
+        <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size: 16px;">Learning Path & Tests</div>
+        <div class="workspace-tab" data-tab="students" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size: 16px;">Students</div>
+        <div class="workspace-tab" data-tab="gradebook" style="padding-bottom:0.75rem; cursor:pointer; font-weight:500; color:var(--clr-text-muted); border-bottom:2px solid transparent; font-size: 16px;">Gradebook</div>
       </div>
     </div>
 
@@ -659,7 +659,7 @@ export async function loadClassLearningPath(classId) {
     if (!tests || tests.length === 0) {
       container.innerHTML = `
          <div class="empty-state" style="padding:3rem; text-align:center;">
-           <div style="font-size: 35px; margin-bottom:1rem;">&#128203;</div>
+           <div style="font-size: 35px; margin-bottom:1rem; color: #64748b;">${getSvgIcon('layers', 35)}</div>
            <h4 style="color:var(--clr-text-1); margin:0 0 0.5rem 0;">No tests yet</h4>
            <p class="text-muted text-sm">Use the <strong>Add Task</strong> or <strong>Add Exam</strong> buttons above to start building the curriculum for this class.</p>
          </div>`;
@@ -776,7 +776,7 @@ export async function loadClassLearningPath(classId) {
             if (!confirm(`Unpublish ${ids.length} selected tests?`)) return;
             try {
               for (const id of ids) await adminUpdate('tests', id, { status: 'DRAFT' });
-              showToast(`Unpublished ${ids.length} tests`, 'success');
+              showToast(`Set ${ids.length} test(s) to Draft`, 'success');
               loadClassLearningPath(classId);
             } catch (e) {
               showToast('Error unpublishing: ' + e.message, 'error');

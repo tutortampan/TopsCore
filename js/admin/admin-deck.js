@@ -203,7 +203,7 @@ export async function renderDashboard(container) {
 
         <!-- Live Timetable -->
         <div class="glass-card" style="padding: 1.5rem;">
-          <h3 style="margin-top:0;">&#128197; Live Timetable</h3>
+          <h3 style="margin-top:0;">${getSvgIcon('calendar', 16)} Live Timetable</h3>
           <div style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
             ${upcomingMeetings.length === 0 ? '<div class="text-muted text-sm">No scheduled meetings.</div>' : upcomingMeetings.map(m => 
               `<div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--clr-border);">

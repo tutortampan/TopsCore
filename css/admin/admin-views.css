@@ -1416,7 +1416,8 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .student-reg-dropzone.dragover {
   border-color: #818cf8;
   background: rgba(99, 102, 241, 0.12);
-  transform: translateY(-2px);
+  transform: none !important;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.25) !important;
 }
 
 .student-reg-dropzone-icon {
@@ -1443,7 +1444,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 .theme-test-card-frame:hover {
   border-color: rgba(56, 189, 248, 0.5) !important;
-  transform: translateY(-2px);
+  transform: none !important;
   box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25) !important;
 }
 
@@ -1805,11 +1806,13 @@ body.global-edit-mode-on .vault-edit-input:focus {
 
 .live-table-row .btn-inspect-student-answers:hover {
   color: #ffffff !important;
-  transform: scale(1.18);
+  transform: none !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
 }
 .live-table-row .btn-kick-student:hover {
   color: #ff4d4d !important;
-  transform: scale(1.18);
+  transform: none !important;
+  box-shadow: 0 0 10px rgba(255, 77, 77, 0.45) !important;
 }
 
 /* Borderless Action Button Hover States */

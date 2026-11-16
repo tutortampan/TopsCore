@@ -35,6 +35,23 @@ When sources conflict:
 - **Windows CLI Standard**: Always invoke `npm.cmd run <script>` or direct `node scripts/<script>` with `WaitMsBeforeAsync: 8000–10000`.
 - **Minimal Supabase Footprint**: Zero uncompressed storage, select scalar columns, in-memory reference caching.
 
+## 0.2 Aturan Penerapan di Setiap Perintah (Standing Operational Discipline: Cepat, Cermat, Tepat, dan Akurat)
+Setiap instruksi dan perintah dari pengguna WAJIB dieksekusi dengan 4 pilar kedisiplinan mutlak:
+1. **Cepat (Fast & Direct)**: Eksekusi langsung ke sasaran tanpa penundaan bertele-tele (zero ceremonial overhead). Gunakan tes cepat (`npm.cmd run test:fast`, `npm.cmd run test:table`) dan hindari proses lambat/unbounded grep.
+2. **Cermat (Meticulous & Comprehensive)**: Periksa seluruh dampak sistemik dan keterkaitan file (CSS, JS, template HTML, database/API) sebelum dan sesudah perubahan. Pastikan tidak ada detail atau edge case yang terlewat.
+3. **Tepat (Precise & Aligned)**: Penuhi kehendak pengguna secara persis sesuai konteks, tanpa asumsi liar, tanpa salah sasaran, dan taat 100% pada SSOT serta hierarki aturan.
+4. **Akurat (Accurate & Verified)**: Seluruh sintaks, formula perhitungan, pembulatan, token warna, dan layout wajib 100% valid dan lolos verifikasi pengujian otomatis (Zero Regressions, 100% Green).
+
+### 0.2.1 Protokol Audit Tangkapan Layar (Visual Screenshot Invariant Audit Protocol)
+Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar tanpa menunggu diminta:
+1. **Spacing & Gaps (Strict 10px Lock)**: Jarak antar-elemen dan antar-seksi tepat 10px (bebas gap ganda 20px–30px atau phantom gaps).
+2. **Card Internal Padding (Strict 10px Lock)**: Jarak konten dalam kartu ke garis border luar tepat 10px.
+3. **Dual-Scale Typography Architecture**: Skala terpusat (12px, 14px, 16px, 20px, 30px, 40px); mutlak nol font sub-12px dan nol angka perantara liar (18px, 13px, 15px).
+4. **Punctuation & Zero-Truncation**: Titik dua wajib menempel ke kata tanpa spasi (`Label:` bukan `Label :`), teks tidak terpotong (*zero truncation/ellipsis*).
+5. **Color SSOT & Semantic Precision**: Menggunakan token resmi (`#38bdf8` Tactical Blue), dilarang menggunakan warna hijau Grade A pada status input belum terverifikasi.
+6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
+7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
+
 ---
 
 # 1. PRODUCT
@@ -82,11 +99,13 @@ The admin navigation uses the **ABCD System** hierarchy with dedicated 4-pillar 
 ## 2.2 Student business ID
 There is **no business-facing Student ID**. Use only internal database primary key/UUID. Never request or display Student ID in login, forms, lists, imports, or student-facing screens.
 
-## 2.3 Student login
+## 2.3 Student login & Student Gate Hierarchy
 ```text
-INSTITUTION -> PROGRAM -> STUDENT NAME -> PERSONAL PIN -> LOGIN
+INSTITUTION -> PROGRAM -> BATCH -> STUDENT NAME -> PERSONAL PIN -> LOGIN
 ```
-Server verifies that Program belongs to Institution, Student belongs to Program, Student is active, and PIN is valid. Never store plaintext PINs.
+Server verifies that Program belongs to Institution, Batch belongs to Program, Student belongs to Batch, Student is active, and PIN is valid. Never store plaintext PINs.
+- **Cascade Section Visibility**: Every completed step remains visible in a collapsed `.selected` card with its chosen label and a functional `Change` button.
+- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, 30px Outfit 900 brand header as Level 0 Brand Hero Landmark, vector SVG Open Book badge, and Zero Subtitle Clutter).
 
 ## 2.4 Class and Level Assignment
 Classes are assigned to a **Level**. Students/Batches progress through Levels.

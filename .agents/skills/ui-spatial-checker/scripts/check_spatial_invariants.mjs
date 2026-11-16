@@ -206,8 +206,8 @@ assert.ok(fs.existsSync(rulesPath), '.antigravityrules must exist');
 const rulesText = fs.readFileSync(rulesPath, 'utf-8');
 
 assert.ok(
-  rulesText.includes('9. **SPATIAL & UNIVERSAL TABLE INVARIANTS**'),
-  'Principle 9 (Spatial & Universal Table Invariants) must be codified in .antigravityrules'
+  rulesText.includes('**SPATIAL & UNIVERSAL TABLE INVARIANTS**'),
+  'Principle (Spatial & Universal Table Invariants) must be codified in .antigravityrules'
 );
 assert.ok(
   rulesText.includes('.agents/rules/ui-invariants.md'),

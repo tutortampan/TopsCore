@@ -346,14 +346,14 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       const otherModules = OFFICIAL_MODULES.filter(m => !allowedSet.has(m.key));
 
       if (compat.discipline !== 'general') {
-        optionsHtml += `<optgroup label="✅ Compatible with ${compat.disciplineLabel}">`;
+        optionsHtml += `<optgroup label="Compatible with ${compat.disciplineLabel}">`;
         recModules.forEach(m => {
           optionsHtml += `<option value="${m.key}">${m.name} — ${m.desc}</option>`;
         });
         optionsHtml += `</optgroup>`;
 
         if (otherModules.length > 0) {
-          optionsHtml += `<optgroup label="🔒 Incompatible with ${compat.disciplineLabel} (Disabled)">`;
+          optionsHtml += `<optgroup label="Incompatible with ${compat.disciplineLabel} (Disabled)">`;
           otherModules.forEach(m => {
             optionsHtml += `<option value="${m.key}" disabled>${m.name} — (Incompatible with ${compat.disciplineLabel})</option>`;
           });

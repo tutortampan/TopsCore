@@ -275,7 +275,7 @@ if (!session) {
 
       if (!Array.isArray(answers) || answers.length === 0) {
         container.innerHTML = `
-          <div style="text-align:center; padding:2rem 1rem; color:#94a3b8; font-size:13px;">
+          <div style="text-align:center; padding:2rem 1rem; color:#94a3b8; font-size:12px;">
             No question responses recorded for this attempt.
           </div>
         `;
@@ -311,10 +311,10 @@ if (!session) {
             <td class="ans-col-q" style="padding: 10px 8px; font-size: 12px; color: #F8FAFC; font-weight: 600; text-align: left; vertical-align: middle;">
               <span style="color: #94A3B8; margin-right: 4px;">${qNum}.</span> ${escapeHtml(qText)}
             </td>
-            <td class="ans-col-ans" style="padding: 10px 8px; font-size: 13px; font-weight: 700; color: ${fontColor}; text-align: left; vertical-align: middle; word-break: break-word;">
+            <td class="ans-col-ans" style="padding: 10px 8px; font-size: 12px; font-weight: 700; color: ${fontColor}; text-align: left; vertical-align: middle; word-break: break-word;">
               ${escapeHtml(studentAns)}
             </td>
-            <td class="ans-col-pts" style="padding: 10px 8px; font-size: 13px; font-weight: 800; color: ${fontColor}; text-align: center; vertical-align: middle; white-space: nowrap;">
+            <td class="ans-col-pts" style="padding: 10px 8px; font-size: 12px; font-weight: 800; color: ${fontColor}; text-align: center; vertical-align: middle; white-space: nowrap;">
               ${pointStr}
             </td>
           </tr>
@@ -1446,7 +1446,7 @@ if (!session) {
       } catch(e) {
         showToast('Failed to load results: ' + e.message, 'error');
         document.getElementById('result-loading').innerHTML = `
-          <div class="empty-state__icon">&#10060;</div>
+          <div class="empty-state__icon" style="color:var(--grade-e, #FF0000);"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
           <h3>Could not load results</h3>
           <p class="text-muted">${escapeHtml(e.message)}</p>
           <a href="dashboard.html" class="btn btn-primary mt-4">Back to Class</a>

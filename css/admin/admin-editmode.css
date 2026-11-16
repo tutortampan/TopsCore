@@ -94,7 +94,7 @@ body.global-edit-mode-on .student-cell-view {
   padding: 0 6px !important;
   border-radius: var(--fm-radius-sm, 4px) !important;
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
   letter-spacing: 0.06em !important;
   cursor: pointer !important;

@@ -414,7 +414,7 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const sb = await getSupabase();
   const { data: student, error } = await sb
     .from('students')
-    .select('id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id')
+    .select('id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id, level_id, batches(current_level_id)')
     .eq('id', studentId)
     .single();
 
@@ -429,13 +429,29 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const pinHash = await sha256(pin);
   if (student.pin_hash !== pinHash) throw new Error('Invalid PIN. Please try again.');
 
+  const effectiveLevelId = student.level_id || student.batches?.current_level_id || null;
+  let levelNumber = null;
+  let levelName = null;
+  if (effectiveLevelId) {
+    try {
+      const { data: lvl } = await sb.from('levels').select('id, level_number, name').eq('id', effectiveLevelId).maybeSingle();
+      if (lvl) {
+        levelNumber = lvl.level_number;
+        levelName = lvl.name;
+      }
+    } catch (_) {}
+  }
+
   return {
     success: true,
     student: {
       id: student.id,
       name: student.name,
       gender: student.gender,
-      batch_id: student.batch_id
+      batch_id: student.batch_id,
+      level_id: effectiveLevelId,
+      level_number: levelNumber,
+      level_name: levelName
     }
   };
 }
@@ -533,7 +549,7 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
     }
 
     // Strict Level Isolation: Only return classes assigned to the student's current level
-    return data.filter(c => {
+    const matched = data.filter(c => {
       if (c.level_id === levelId) return true;
       const cLvlNum = c.levels?.level_number;
       if (cLvlNum != null && studentLevelNum != null) {
@@ -541,6 +557,10 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
       }
       return false;
     });
+    if (matched.length > 0) return matched;
+
+    // Resilient Fallback: If no classes matched this specific level_id, return active program classes
+    return data;
   } catch (e) {
     console.warn('Classes query note:', e.message);
   }
@@ -1412,7 +1432,7 @@ export async function startTest(studentId, testId) {
   // Guard: Strict status and soft-delete check in client DB fallback (never allow soft-deleted or DRAFT attempts)
   const currentStatus = String(asmData.status || '').toUpperCase();
   if (asmData.deleted_at || (currentStatus !== 'PUBLISHED' && currentStatus !== 'ACTIVE')) {
-    const pubErr = new Error('This test is unavailable or has been archived.');
+    const pubErr = new Error('This test is unavailable or is in draft mode.');
     pubErr.code = 'TEST_UNAVAILABLE';
     pubErr.status = 403;
     throw pubErr;

@@ -1213,7 +1213,7 @@ th.super-hdr-security,
 
 #class-attendance-grid .btn-manual-input-toggle:hover {
   filter: brightness(1.25);
-  transform: scale(1.05);
+  transform: none !important;
 }
 
 #class-attendance-grid .btn-manual-input-toggle.active {
@@ -1235,13 +1235,13 @@ th.super-hdr-security,
 
 #class-attendance-grid .btn-matrix-action {
   opacity: 0.85;
-  transition: opacity 0.15s, transform 0.15s;
+  transition: opacity 0.15s, box-shadow 0.15s;
   cursor: pointer !important;
 }
 
 #class-attendance-grid .btn-matrix-action:hover {
   opacity: 1;
-  transform: scale(1.2);
+  transform: none !important;
 }
 
 #class-attendance-grid .datagrid-thead tr:not(.datagrid-super-header-row) th {
@@ -1596,7 +1596,7 @@ th.super-hdr-security,
 }
 
 #class-attendance-grid td.col-exam .test-score-test:hover {
-  transform: scale(1.05);
+  transform: none !important;
   filter: brightness(1.2);
 }
 

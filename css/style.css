@@ -270,7 +270,7 @@ a:hover {
 .glass-card:hover {
   border-color: var(--clr-border-strong);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5), var(--shadow-glow);
-  transform: translateY(-2px);
+  transform: none !important;
 }
 
 .glass-card--elevated {
@@ -289,7 +289,7 @@ a:hover {
 }
 
 .card:hover {
-  transform: translateY(-4px);
+  transform: none !important;
   box-shadow: var(--shadow-lg);
   border-color: rgba(99, 102, 241, 0.4);
 }
@@ -1327,7 +1327,7 @@ tbody tr:last-child td {
 }
 
 .grade-badge:hover {
-  transform: scale(1.08);
+  transform: none !important;
 }
 
 /* ★: Star (100% - Pure Green #00c000ff with Glow) */
@@ -2154,4 +2154,68 @@ button:hover .tc-icon,
 .nav-tab:hover .tc-icon {
   transform: none !important;
 }
+
+/* ============================================================
+   PWA Offline & Network Resilience Badge
+   Strict 10px spacing, dual-scale 12px bold, semantic color SSOT
+   ============================================================ */
+.pwa-offline-badge {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-family: 'Inter', -apple-system, sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  max-width: calc(100vw - 20px);
+  white-space: nowrap;
+}
+
+.pwa-offline-badge.offline {
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid var(--grade-c);
+  color: var(--grade-c);
+}
+
+.pwa-offline-badge.online {
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid var(--grade-a);
+  color: var(--grade-a);
+}
+
+.pwa-network-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pwa-offline-badge.offline .pwa-network-dot {
+  background: var(--grade-c);
+  box-shadow: 0 0 8px var(--grade-c);
+  animation: pwaPulse 1.5s infinite;
+}
+
+.pwa-offline-badge.online .pwa-network-dot {
+  background: var(--grade-a);
+  box-shadow: 0 0 8px var(--grade-a);
+}
+
+@keyframes pwaPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.85); }
+}
+
 

@@ -122,7 +122,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       const searchInput = document.getElementById(searchInputId);
 
       if (!items.length) {
-        container.innerHTML = `<div class="opts-empty">&#128269; No options found</div>`;
+        container.innerHTML = `<div class="opts-empty">No options found</div>`;
         return;
       }
 
@@ -140,9 +140,9 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           btn.setAttribute('role', 'listitem');
           btn.dataset.id = item.id;
           btn.innerHTML = `
-            <span class="opt-card-icon">&#9679;</span>
+            <span class="opt-card-icon"><svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="3.5"/></svg></span>
             <span class="opt-card-name">${escHtml(item.name)}</span>
-            <span class="opt-card-check">&#10003;</span>
+            <span class="opt-card-check"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
           `;
           btn.addEventListener('click', () => {
             container.querySelectorAll('.opt-card').forEach(c => c.classList.remove('active'));
@@ -182,7 +182,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
         renderOptions('list-institution', 'search-institution', institutions, (p) => {
           state.institutionId = p.id; state.institutionName = p.name;
           collapseSection('sec-institution', p.name, 'step-num-1');
-          resetFrom('institution');
+          resetFrom('program');
           loadPrograms();
         }, autoSelectId);
 
@@ -277,7 +277,11 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           collapseSection('sec-student', s.name, 'step-num-4');
           document.getElementById('pin-welcome-text').innerHTML = `Welcome, <strong>${escHtml(s.name)}</strong>! Enter your 4-digit PIN.`;
           unlockSection('sec-pin');
-          setTimeout(() => document.getElementById('pin-0').focus(), 200);
+          const pin0 = document.getElementById('pin-0');
+          if (pin0) {
+            pin0.focus();
+            setTimeout(() => pin0.focus(), 100);
+          }
           saveLogin();
         }, autoSelectId);
 
@@ -315,8 +319,10 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
     }
 
     function resetPin() {
+      const pinRow = document.querySelector('.pin-row');
+      if (pinRow) pinRow.classList.remove('shake');
       const pins = [0,1,2,3].map(i => document.getElementById(`pin-${i}`));
-      pins.forEach(p => { p.value = ''; p.classList.remove('filled'); });
+      pins.forEach(p => { p.value = ''; p.classList.remove('filled', 'pin-error'); });
       document.getElementById('login-btn').disabled = true;
       document.getElementById('login-btn-text').textContent = 'Sign In';
     }
@@ -324,7 +330,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
     // ── Change buttons ──
     document.getElementById('change-institution-btn')?.addEventListener('click', () => {
       reopenSection('sec-institution');
-      resetFrom('institution');
+      resetFrom('program');
     });
     document.getElementById('change-program-btn')?.addEventListener('click', () => {
       reopenSection('sec-program');
@@ -344,20 +350,44 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
     const loginBtn = document.getElementById('login-btn');
 
     pinInputs.forEach((inp, idx) => {
+      inp.addEventListener('focus', () => {
+        // If an earlier box is empty, redirect focus to the first empty box
+        const firstEmpty = pinInputs.find(p => !p.value);
+        if (firstEmpty && pinInputs.indexOf(firstEmpty) < idx) {
+          firstEmpty.focus();
+        }
+      });
       inp.addEventListener('input', () => {
         inp.value = inp.value.replace(/\D/g, '').slice(0, 1);
         inp.classList.toggle('filled', inp.value.length > 0);
+        inp.classList.remove('pin-error');
         if (inp.value && idx < 3) pinInputs[idx + 1].focus();
         checkPinComplete();
       });
       inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !inp.value && idx > 0) {
+        if (e.key === 'Backspace') {
+          if (!inp.value && idx > 0) {
+            e.preventDefault();
+            const prev = pinInputs[idx - 1];
+            prev.value = '';
+            prev.classList.remove('filled', 'pin-error');
+            prev.focus();
+            checkPinComplete();
+          } else if (inp.value) {
+            inp.value = '';
+            inp.classList.remove('filled', 'pin-error');
+            checkPinComplete();
+            e.preventDefault();
+          }
+        } else if (e.key === 'ArrowLeft' && idx > 0) {
+          e.preventDefault();
           pinInputs[idx - 1].focus();
-          pinInputs[idx - 1].value = '';
-          pinInputs[idx - 1].classList.remove('filled');
-          checkPinComplete();
+        } else if (e.key === 'ArrowRight' && idx < 3) {
+          e.preventDefault();
+          pinInputs[idx + 1].focus();
+        } else if (e.key === 'Enter' && !loginBtn.disabled) {
+          loginBtn.click();
         }
-        if (e.key === 'Enter' && !loginBtn.disabled) loginBtn.click();
       });
       inp.addEventListener('paste', (e) => {
         const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
@@ -365,6 +395,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           pinInputs.forEach((p, i) => {
             p.value = paste[i] || '';
             p.classList.toggle('filled', p.value.length > 0);
+            p.classList.remove('pin-error');
           });
           pinInputs[3].focus();
           checkPinComplete();
@@ -417,10 +448,19 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       } catch (e) {
         hideLoading();
         showToast(e.message || 'Invalid PIN. Please try again.', 'error');
-        pinInputs.forEach(p => { p.value = ''; p.classList.remove('filled'); });
-        pinInputs[0].focus();
-        loginBtn.disabled = true;
-        document.getElementById('login-btn-text').textContent = 'Sign In';
+        const pinRow = document.querySelector('.pin-row');
+        if (pinRow) pinRow.classList.add('shake');
+        pinInputs.forEach(p => p.classList.add('pin-error'));
+        setTimeout(() => {
+          if (pinRow) pinRow.classList.remove('shake');
+          pinInputs.forEach(p => {
+            p.value = '';
+            p.classList.remove('filled', 'pin-error');
+          });
+          pinInputs[0].focus();
+          loginBtn.disabled = true;
+          document.getElementById('login-btn-text').textContent = 'Sign In';
+        }, 450);
       }
     });
 

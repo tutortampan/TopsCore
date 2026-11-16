@@ -5,7 +5,8 @@
 > - [Bab 2: Tipografi & Skala Font Terpusat](#bab-2-tipografi--skala-font-terpusat-dual-scale-typography-architecture)
 > - [Bab 3: Desain Sistem & Warna Terpusat](#bab-3-desain-sistem--warna-terpusat)
 > - [Bab 4: Arsitektur Tabel, Grid & Master Edit Mode](#bab-4-arsitektur-tabel-grid--master-edit-mode)
-> - [Bab 5: Lampiran Spesifik Komponen & Roster](#bab-5-lampiran-spesifik-komponen--roster)
+> - [Bab 5: Student Dashboard & Mobile Realm Invariants](#bab-5-student-dashboard--mobile-realm-invariants)
+> - [Bab 6: DataGrid & Roster Table Architecture](#bab-6-datagrid--roster-table-architecture)
 
 ---
 
@@ -53,11 +54,11 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
   - **SIGN Area** (`.sign-area` / `.hazard-sign-area`): Dedicated visual hero status glyph container positioned specifically **UNDER the Title Area** (e.g. Incomplete Test Warning, Alert Windows).
     - **No Divider Rule**: The SIGN Area connects seamlessly into the body without an internal divider line (`border-bottom: none !important;`).
     - **50% Window Width Square Rule**: The icon container is strictly a **Square** scaled to **50% of the modal box width** (`width: 50% !important; aspect-ratio: 1 / 1 !important; border-radius: 20px !important;`), with a centered SVG icon scaled to 50–55% of the box, soft ambient glow, and high-contrast styling.
-- **1.5.1 Standardized 60px "Title Area" Invariant & Authoritative Perimeter Borders (SSOT)**:
-  - Official term **"Title Area"** (`.title-area` / `.modal-header`), height strictly **`60px`** (`height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;`) with prominent border `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`. (Replaces legacy 40px standard per user mandate).
+- **1.5.1 Standardized 60px "Title Area" Height Invariant & Authoritative Perimeter Borders (SSOT)**:
+  - Official term **"Title Area"** (`.title-area` / `.modal-header`), height strictly baku **`60px`** (`height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;`) with prominent border `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`.
   - **Area-Colored Accent Invariant (Aksen pada Bagian Area, Bukan pada Tulisan)**:
-    - Seluruh aksen warna tema/status (Cyan/Tactical Blue, Hijau Grade A, Kuning Grade C, Merah Grade E, dsb.) **diberikan ke bagian background AREANYA**, bukan ke warna font tulisannya.
-    - Warna font judul WAJIB menggunakan warna kontras pekat (**`#090D16`** / dark slate) untuk background warna cerah/terang, atau putih bersih (**`#FFFFFF`**) untuk background gelap pekat.
+    - Seluruh aksen warna tema/status (Cyan/Tactical Blue, Hijau Grade A, Kuning Grade C, Merah Grade E, Ungu Quad D, dsb.) **WAJIB diberikan ke bagian background AREANYA**, bukan ke warna font tulisannya.
+    - Warna font judul WAJIB menggunakan warna kontras pekat (**`#090D16`** / dark slate) untuk background area yang cerah/terang (seperti Kuning Grade C dan Hijau Grade A), atau putih bersih (**`#FFFFFF`**) untuk background area yang pekat/gelap.
   - Typography: 16px Outfit Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-weight: 800 !important;`).
   - **Centered Title Invariant**: Title text mathematically centered (`text-align: center !important; justify-content: center !important;`). Strictly ZERO close buttons or '✕' icons in the Title Area.
   - **Mandatory Uppercase Invariant (ALL CAPS)**: Title text MUST be **ALL CAPS (`text-transform: uppercase !important;`)** with `letter-spacing: 0.05em;`.
@@ -105,11 +106,11 @@ TopsCore LMS strictly governs typography through an authoritative tri-font ecosy
 TopsCore LMS operates on a strict Dual-Scale Typography Architecture:
 1. **Primary Structural Scale (20px – 16px – 14px – 12px SSOT & Authoritative 3-Level Typographic System)**:
    - **Level 1 (20px)**: Major Page Header (`.page-title`, `.workspace-title`), Student Greeting.
-   - **Level 2 (16px)**: Title Area (Modal Header 40px), Modal/Card Titles (`.modal-title`, `.card-title`).
+   - **Level 2 (16px)**: Title Area (Modal Header 60px), Modal/Card Titles (`.modal-title`, `.card-title`).
    - **Level 2.5 (14px Specialized)**: Modal CTA 40px Buttons (`.modal-footer .btn`), Reading/Storytelling Passages, Standalone Dropdown/Selects, Lead Subtitles.
    - **Level 3 (12px Baseline)**: Table data cells (`td`), table headers (`th`), Toolbar/Sub Panel buttons (30px), badges, form inputs, toolbars, descriptions.
-2. **Secondary Functional Scale (30px & 40px Hero Metrics)**:
-   - **Level 0 (30px KPI / Modular Hero)**: Large metrics, KPI values, session indicators, timer counter (`.metric-number`, `.kpi-val`). Replaces deprecated 25px and 35px for exact 10px grid harmony.
+2. **Secondary Functional Scale (30px & 40px Hero Metrics & Brand Hero Titles)**:
+   - **Level 0 (30px KPI / Modular Hero & Brand Landmark)**: Large metrics, KPI values, session indicators, timer counter, student profile average score & grade showcase (`.metric-number`, `.kpi-val`, `#bottom-stat-avg-score`, `#stat-overall-grade-value`), serta **Judul Utama Brand Gerbang Masuk (`h1 TOPS CORE` pada Student Gate `index.html`)**. Skala 30px memberikan wibawa identitas produk yang kuat, proporsional terhadap koridor 430px, dan selaras dengan kisi kelipatan 10px ($10\text{px} \times 3$). Replaces any legacy 25px, 26px, or 35px for exact 10px grid harmony.
    - **Level 00 (40px Hero Score)**: Single Score Hero Display on final score cards and modal certificates.
 
 ### 2.2 Strict Zero Sub-12px Invariant across the entire system
@@ -266,7 +267,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 
 ---
 
-## Bab 5: Lampiran Spesifik Komponen & Roster
+## Bab 5: Student Dashboard & Mobile Realm Invariants
 
 ### 5.1 Student Dashboard Dual-Panel Invariants (Dock Panes A & B)
 - **Pane A: Standings / Leaderboard Invariant**:
@@ -277,17 +278,53 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - **Strict 5-Column Grid Geometry**: Header dan baris data terkunci tepat 5 kolom (`grid-template-columns: 28px 1fr 48px 40px 38px !important;`) dengan header ringkas: `NO`, `TEST NAME`, `SCORE`, `GRD`, `ACT`. Dilarang menggabungkan class yang menimpa kolom ke-5 (`GRADERETRY` terlarang permanen).
   - **Aturan Baku Sub-Row 7 Nilai Terbaik Task (Top-7 Highest Attempts)**: 7 kotak kecil (pips) di bawah nama Task pada Completed Tests adalah **daftar 7 nilai riwayat percobaan terbaik (Top 7 Highest Scores, sorted descending)**, di mana nilai akhir dan grade task adalah rata-rata dari ke-7 percobaan tersebut. **Aturan ini bersifat permanen dan DILARANG diubah menjadi rainbow pips**.
 
+### 5.2 Hero Score & Grade Showcase Card Invariant
+- Kotak metrik profil siswa (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) strictly menerapkan **Level 0 Hero Metric (30px, Outfit 800 Extra Bold)** dengan tabular-nums dan soft ambient glow, terbebas dari font kecil default.
+
+### 5.3 Student Gate & Cascade Login Invariants (index.html SSOT)
+- **Hierarki Alur Cascade Login**:
+  - Alur baku pemilihan identitas siswa: `INSTITUTION -> PROGRAM -> BATCH -> STUDENT -> PIN`.
+  - Setiap seksi yang telah dipilih **wajib tetap terlihat dalam kondisi terlipat (`.selected`)**, lengkap dengan label nilai yang dipilih dan tombol `Change` (`.cascade-change-btn`) untuk memungkinkan siswa mengubah pilihan.
+  - Pemanggilan fungsi reset cascade wajib menargetkan langkah persis di bawahnya (`resetFrom('program')` saat institusi dipilih), DILARANG memanggil reset pada langkah yang baru saja dipilih karena akan melenyapkan elemen tersebut dari DOM visual (`max-height: 0`).
+- **Brand Header, Tipografi & Badge Logo Buku Vektor SVG**:
+  - **Judul Brand `TOPS CORE`**: Wajib menggunakan **30px (`font-size: 30px; font-weight: 900; font-family: 'Outfit', sans-serif; line-height: 1.1; margin: 0;`)** — **Level 0 Brand Hero Landmark**. Skala 30px memberikan wibawa identitas visual (*brand presence*) yang kokoh pada gerbang masuk portal, berharmonisasi secara matematis dengan kelipatan 10px ($10\text{px} \times 3$), serta proporsional dalam koridor mobile 430px. Dilarang menggunakan font perantara liar 18px (*Strict Zero Sub-Scale Invariant*).
+  - **Eliminasi Subtitle (Zero Subtitle Clutter)**: Deskripsi atau subtitle di bawah judul (`Student Gate — Sign in to continue`) **DIHAPUS SECARA PERMANEN**. Menghilangkan elemen teks dekoratif yang berulang, memaksimalkan ruang vertikal *above-the-fold*, dan menjaga tampilan gerbang login tetap bersih (*ultra-lean, high-focus*).
+  - **Badge Logo Buku Vektor SVG**: Menggunakan ikon vektor SVG Open Book resmi TopsCore di dalam lingkaran berdiameter 52px (`.brand-badge-wrap`) dengan aksen Tactical Cyan (`#38bdf8`), background `rgba(56, 189, 248, 0.12)`, border `1.5px solid rgba(56, 189, 248, 0.35)`, pendaran `box-shadow: 0 0 16px rgba(56, 189, 248, 0.25)`, dan animasi mengambang halus (*smooth float animation*). Jarak bawah ke judul tepat 10px (`margin-bottom: 10px;`).
+- **Universal 10px Container Gap & Card Internal Padding Invariant**:
+  - Jarak antar seksi kartu cascade dan banner pada mobile corridor 430px terkunci tepat **10px** (`.login-wrapper { gap: 10px; }`, `.cascade-section.selected { margin-bottom: 10px; }`, `.cascade-section.unlocked { margin-bottom: 10px; }`, `.remember-me-banner { margin: 10px 0; }`).
+  - Jarak elemen internal kartu ke garis batas luar (*Card Internal Padding*) terkunci tepat **10px** (`.cascade-header { padding: 10px; gap: 10px; }`, `.cascade-body { padding: 10px; }`, `.pin-section { padding: 10px; }`).
+- **Options Grid Dynamic Shrink-to-Fit Invariant (Anti-Gap Kosong)**:
+  - Kontainer daftar pilihan (`.options-grid`) **DILARANG KERAS** menggunakan `min-height` statis (seperti `min-height: 120px;`).
+  - Kontainer wajib menyesuaikan tinggi secara dinamis mengikuti jumlah item (*shrink-to-fit*), sehingga bila hanya ada 1 atau 2 opsi (misal institusi/program `TOP`), jarak tepi bawah tombol ke garis pembatas luar kotak tetap **tepat 10px presisi**.
+  - Batas maksimal kontainer adalah `max-height: 35vh` dengan scrollbar tipis 4px.
+- **Kapsul Pilihan Siswa / Dropdown Touch Target Invariant (Level 2.5 SSOT)**:
+  - Tombol kapsul pilihan siswa (`.opt-card`) wajib memiliki tinggi sentuh ergonomis mobile minimal **44px** (`min-height: 44px; padding: 11px 14px; border-radius: 10px; gap: 12px;`) untuk melenyapkan kesan sempit/gepeng.
+  - Teks nama siswa wajib berukuran **14px** (Level 2.5 Specialized Selects, `font-weight: 600; line-height: 1.35;`) dengan bullet dot vektor Tactical Cyan (`#38bdf8`) dan aksen glow halus saat aktif (`.active`).
+  - Label seksi terlipat (`.cascade-label`) menggunakan `min-width: 68px; max-width: 90px; width: auto;` agar nama siswa terpilih pada baris atas tidak terpotong elipsis (`...`) sesuai aturan *Universal Zero-Truncation Invariant*.
+- **Netralisasi Digit PIN (False Affordance Prevention)**:
+  - Kotak digit PIN yang sedang diketik (`.pin-digit.filled`) **DILARANG KERAS menggunakan warna Hijau** (`#00c000`). Hijau eksklusif untuk Grade A (Sukses / Kelulusan). Digit PIN yang belum terverifikasi wajib berkarakter **Netral** (White/Slate Subtle: `border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); color: #fff;`).
+  - Kotak aktif/fokus dan tombol "Sign In" wajib menggunakan token **Tactical Blue** (`#38bdf8` / `#0284c7`), bukan warna ungu legacy.
+- **Strict Zero-Movement Hover Invariant**:
+  - Tombol opsi siswa (`.opt-card:hover`) wajib *strictly stationary* (`transform: none !important;`), efek interaksi murni berupa subtle glow dan background tint.
+- **Strict Zero Emojis Invariant**:
+  - Seluruh kotak pencarian wajib menggunakan ikon vektor SVG Search murni, unicode emoji `🔍` dilarang keras.
+- **PWA Install Banner Ergonomics & Placement Invariant**:
+  - Banner instalasi PWA (`.pwa-install-banner`) disisipkan tepat di antara judul brand `TOPS CORE` dan kartu langkah 1 (`#sec-institution`).
+  - Menggunakan `margin: 0;` dengan gap vertikal 10px otomatis dari `.login-wrapper`.
+  - Teks wajib menggunakan **Bahasa Inggris murni**: Judul "Install TopsCore App" (14px Outfit Bold, Level 2.5 SSOT), tombol aksi "Install" dan "Later" (`pwa-btn-dismiss`).
+  - Dilarang menampilkan teks deskripsi tambahan di bawah judul (*Zero Description Clutter*) untuk menjaga profil kartu tetap ramping (~48px) dan menghemat ruang vertikal layar.
+
 ---
 
-## Bab 5: Lampiran Spesifik Komponen & Roster
+## Bab 6: DataGrid & Roster Table Architecture
 
-### 5.1 Single-Responsibility Columns & Profile Click Invariant
+### 6.1 Single-Responsibility Columns & Profile Click Invariant
 - **Student Roster Column Sequence**: `LEVEL` (46px) $\to$ `PHOTO` (46px, 30px avatar) $\to$ `GENDER` (68px) $\to$ `NAME` (flex-primary, min 200px) $\to$ `DOB` (110px) $\to$ `AGE` (50px) $\to$ `EDUCATION` (140px) $\to$ `VILLAGE` (130px) $\to$ `DISTRICT` (130px) $\to$ `REGENCY` (160px) $\to$ `PROVINCE` (160px) $\to$ `CLASS EXAMS` (4 $\times$ 74px) $\to$ `SECURITY` [`PIN` (70px) $\to$ `STATUS` (90px)].
 - **SECURITY Category Invariant (SSOT)**: Kolom `PIN` dan `STATUS` disatukan di bawah super-header bersama bertajuk **`SECURITY`** (`colSpan: 2`), dengan posisi `PIN` berada tepat di sebelah kiri dari `STATUS`. Kolom `PIN` menampilkan kode PIN otentik siswa dengan font monospace untuk memudahkan identifikasi dan verifikasi langsung oleh admin.
 - Profile modal opens on student photo/name click in Active Students tab. Actions column purged.
 
-### 5.2 Single-Line Compact Program Chips
+### 6.2 Single-Line Compact Program Chips
 - Standardized 3–4 letter uppercase codes: `CMP` (Camp), `EVN` (Evnikom), `SHR` (Sheraton), `EXP` (Explorer). Native tooltip for full name.
 
-### 5.3 DataGrid Default Configuration & Zero Neon Glow
+### 6.3 DataGrid Default Configuration & Zero Neon Glow
 - `DataGrid` defaults to `bulkActions: false`. Neon box-shadow glows purged; dividers render as crisp flat lines.

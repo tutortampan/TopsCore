@@ -1,4 +1,4 @@
-# TopsCore LMS — Active Changelog (Phases 576–600)
+# TopsCore LMS — Active Changelog (Phases 581–607)
 
 > **Format:** Ultra-Condensed Active Changelog (Strict 25-Phase Rolling Window per AGENTS.md §5.3). Each entry highlights core functional deliverables, architectural milestones, and affected systems.
 > **Full Archives:** Historical verbose logs for earlier phases are preserved in:
@@ -7,6 +7,145 @@
 > - [`docs/archive/CHANGELOG_ARCHIVE_3.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_3.md.gz) (Phases 452–539, Gzip Compressed)
 
 ---
+
+## [2026-11-16 19:35] — Phase 607: Student Dashboard Hero Next-Test Invariant, Leaderboard Waiver Exclusion & Cultural Honorific Title Fix
+- **Pembersihan False Positive Banner Hero Next Test ([js/dashboard.js](file:///d:/Tutor%20Tampan/TopsCore/js/dashboard.js))**:
+  - Menambahkan guard proteksi `if (!published || published.length === 0)` pada `renderNextAssignmentHero`: jika array tes kosong atau belum ada tes terjadwal, sistem menampilkan pesan netral `"No active tests scheduled in this class."`, melenyapkan deklarasi keliru `"All tests in this class completed! ✓ 100%"`.
+  - Melindungi resolusi `activeClassId` agar selalu terverifikasi terhadap daftar kelas aktif siswa (`(classes || []).find(...)`), mencegah polusi dari ID kelas usang di `localStorage`.
+- **Eksklusi Dispensasi Waiver 0% pada Rata-Rata Leaderboard ([js/dashboard.js](file:///d:/Tutor%20Tampan/TopsCore/js/dashboard.js))**:
+  - Menyertakan kolom `is_forgiven` dan `is_manual_override` pada query `attempts` dan pemetaan `bestMap` di `loadBatchLeaderboard` dan `computeOverallStats`.
+  - Memastikan `validExamItems` mengeksklusikan tes dispensasi 0% (`isPureForgivenZero`) dari rata-rata ujian, memulihkan Grade dan persentase skor siswa berprestasi yang sebelumnya anjlok (Miss Riska Fetrosia 702 PTS pulih menjadi Grade C 78%, Mr. Lalu Yuda 659 PTS menjadi Grade C 76%, Mr. Wildian 609 PTS menjadi Grade C 69%).
+- **Koreksi Data Gender & Safeguard Gelar Kultural Bangsawan Lombok ([js/dashboard.js](file:///d:/Tutor%20Tampan/TopsCore/js/dashboard.js), Supabase DB)**:
+  - Memperbarui data gender siswa `Lalu Yuda Handika Prawira` dan `Lalu Arman Maulana` menjadi `male` di tabel `students`.
+  - Mengintegrasikan safeguard kultural otomatis: nama berawalan `Lalu ` diidentifikasi sebagai pria (`Mr.` / `King`), dan `Baiq ` sebagai wanita (`Miss` / `Queen`).
+- **Sinkronisasi Level Batch & Student Login Session ([js/api.js](file:///d:/Tutor%20Tampan/TopsCore/js/api.js), Supabase DB)**:
+  - Mengembalikan `level_id` 18 siswa di Batch 134 agar selaras dengan `batches.current_level_id` (`9936683a` Level 2).
+  - Meng-upgrade `verifyStudentLogin` dan `fetchStudentClasses` dengan fallback tangguh ke kelas aktif program bila level siswa tidak memuat kelas.
+
+---
+
+## [2026-11-16 18:35] — Phase 606: Comprehensive System-Wide Invariants, Typography, Entity Emojis & Legacy Hygiene Audit
+- **Zero HTML Entity Emojis & Unicode Cleanliness**: Seluruh entitas numerik HTML emoji diganti vektor SVG resmi (`getSvgIcon`) atau teks bersih.
+- **Dual-Scale Typography Architecture**: Menormalisasi seluruh font liar (18px, 15px, 13px, 11px) ke skala terpusat (12px, 14px, 16px, 20px, 30px).
+
+---
+
+## [2026-11-16 18:25] — Phase 605: Student Dashboard Zero-Truncation Invariant & Dual-Tab Label Harmonization
+- **Pemulihan Penuh Zero-Truncation Nama Siswa pada Klasemen ([css/dashboard.css](file:///d:/Tutor%20Tampan/TopsCore/css/dashboard.css))**:
+  - Mengkalibrasi proporsi kolom grid tabel klasemen (Pane A) menjadi `grid-template-columns: 24px 1fr 38px 28px !important;` dengan padding 10px rapi, menghasilkan penambahan ruang horizontal masif (+46px) untuk nama siswa.
+  - Mengubah `.leaderboard-student-name` dan `.leaderboard-name-wrap` dari `nowrap` + `ellipsis` menjadi pembungkusan teks alami (`white-space: normal; line-height: 1.25; word-break: break-word; text-overflow: clip;`).
+  - Menghapus pemotongan elipsis (`...`) pada nama panjang (seperti `Queen Isnantika Salsabila` kini tampil 100% penuh dan utuh dalam 1 baris), menaati **Rule 2.21 (*Universal Zero-Truncation Invariant*)**.
+  - Mengkalibrasi tabel Completed Tests (Pane B) menjadi `grid-template-columns: 24px 1fr 38px 28px 34px !important;` untuk memberikan ruang seimbang pada nama tes.
+- **Penyelarasan Tab Navigasi Ganda ([dashboard.html](file:///d:/Tutor%20Tampan/TopsCore/dashboard.html))**:
+  - Menyederhanakan label tab pertama dari `RANKING: MY RANK` menjadi **`MY RANK`** bersanding dengan chip `#9`, berpasangan simetris dan elegan dengan tab kedua **`COMPLETED TESTS`** `10` tanpa tanda baca redundan.
+- **Verifikasi Snapshot Visual Mobile 390×800**:
+  - Snapshot Playwright membuktikan seluruh nama siswa dari peringkat 1 s/d 6 tampil 100% utuh tanpa elipsis.
+
+---
+
+## [2026-11-16 16:15] — Phase 604: PIN Micro-Interactions, Smooth Digit Navigation, Grade E Error Shake & Universal PWA Network Status Resilience
+- **Eradikasi Drifting PWA Banner & Restorasi Centering Bottom Banner Desktop (§2.28 SSOT)**:
+  - **Isolasi Mutlak Banner PWA ke Student Gate**: Memperbaiki fallback pada [js/pwa.js](file:///d:/Tutor%20Tampan/TopsCore/js/pwa.js) yang sebelumnya menyisipkan banner ke `body` saat berada di halaman selain login. Banner instalasi PWA kini strictly hanya dirender di [index.html](file:///d:/Tutor%20Tampan/TopsCore/index.html) (`.login-wrapper`). Di layar internal ([dashboard.html](file:///d:/Tutor%20Tampan/TopsCore/dashboard.html), [test.html](file:///d:/Tutor%20Tampan/TopsCore/test.html), [result.html](file:///d:/Tutor%20Tampan/TopsCore/result.html)), banner tidak akan pernah muncul sehingga melenyapkan teks mengambang tanpa gaya di pojok kiri atas desktop (`x:0, y:0`).
+  - **Restorasi Penengahan Bottom Banner di Desktop**: Menghapus deklarasi `margin: 0 !important;` duplikat di [css/dashboard.css](file:///d:/Tutor%20Tampan/TopsCore/css/dashboard.css) yang sebelumnya menimpa `margin: 0 auto !important;`. Banner bawah `#bottom-ad-banner` kini terkunci rapi terpusat (*centered*) tepat di bawah koridor mobile 430px di seluruh resolusi layar desktop maupun laptop.
+- **Ergonomi Input PIN & Navigasi Digit Mulus ([js/auth.js](file:///d:/Tutor%20Tampan/TopsCore/js/auth.js) & [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css))**:
+  - **Auto-Focus ke Digit 1**: Saat siswa memilih nama di Langkah 4, fokus kursor otomatis berpindah ke `#pin-0` tanpa memerlukan tap tambahan.
+  - **Click/Focus Routing**: Mencegah kursor melompati kotak kosong saat siswa mengklik kotak digit 2/3/4 ketika digit sebelumnya masih kosong; kursor otomatis dialihkan ke kotak kosong pertama.
+  - **Navigasi Backspace & Panah**: Tombol `Backspace` pada kotak kosong secara mulus memundurkan fokus ke kotak sebelumnya dan menghapus digitnya; navigasi panah kiri/kanan (`ArrowLeft`, `ArrowRight`) diaktifkan untuk kenyamanan navigasi keyboard fisik.
+  - **Animasi Getar & Border Merah Grade E saat PIN Salah (`@keyframes pinShake`)**: Saat verifikasi PIN gagal, baris PIN bergetar lembut (`.pin-row.shake`) dan kotak digit memancarkan border merah Grade E (`var(--grade-e)` / `#FF0000`) selama 450ms sebelum otomatis dibersihkan dan kursor dikembalikan ke digit pertama.
+- **Deteksi Jaringan & Ketahanan Offline Universal PWA ([js/pwa.js](file:///d:/Tutor%20Tampan/TopsCore/js/pwa.js) & [css/style.css](file:///d:/Tutor%20Tampan/TopsCore/css/style.css))**:
+  - Menyematkan pemantau status jaringan universal di `initPWA()` yang aktif di seluruh ekosistem halaman siswa (`index.html`, `dashboard.html`, `test.html`, `result.html`).
+  - Menampilkan badge status mengambang terpusat (`.pwa-offline-badge`):
+    - **Saat Offline**: Kuning Grade C (`var(--grade-c)` / `#FFFF00`) dengan animasi titik berdenyut (*pulsing dot*) dan pesan *"Offline Mode — Using Cached Data"*.
+    - **Saat Online Kembali**: Berganti ke Hijau Grade A (`var(--grade-a)` / `#00c000`) dengan pesan *"Back Online"* selama 2.5 detik sebelum memudar secara halus (*fade out*).
+  - Mengikuti 7 pilar SSOT: jarak 10px dari batas atas, font 12px bold (Level 3 Baseline), 100% Bahasa Inggris, dan nol redudansi/clutter.
+
+---
+
+## [2026-11-16 16:05] — Phase 603: Official Option A Emblem Logo & Production PWA Architecture
+- **Kalibrasi Golden Sweet Spot 25% Lebar Layar (98px × 98px) & Eradikasi Judul Redundan**:
+  - Mengunci dimensi emblem logo pada [index.html](file:///d:/Tutor%20Tampan/TopsCore/index.html) dan [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) tepat **`98px × 98px`** (persis 25% dari koridor layar mobile 392px), squircle radius 24px, border 2.5px Tactical Cyan, dan ambient cyan glow yang elegan.
+  - Menghapus permanen elemen teks `<h1>TOPS CORE</h1>` di bawah logo (*Zero Redundant Heading Clutter*) karena tulisan `TOPS` dan `CORE` sudah tertera jelas dan tegas di dalam emblem logo.
+  - Membungkus emblem logo ke dalam tag `<h1>` dengan `aria-label="TOPS CORE"` untuk kepatuhan semantik dan aksesibilitas pembaca layar (a11y).
+  - Mengunci margin bawah logo tepat **10px** ke Langkah 1 Institusi (*Strict 10px Container Gap Invariant*).
+- **Penetapan Resmi Logo Emblem "TOPS CORE" Opsi A (Outfit 900, Zero Divider, 100% Identical Font Size)**:
+  - Mengganti ikon buku terbuka generik dengan logo emblem otentik resmi bertuliskan **`TOPS`** (putih bersih) di atas dan **`CORE`** (Tactical Cyan `#38bdf8`) di bawah.
+  - Memastikan ukuran font atas dan bawah **100% persis sama** (38px / 90px pada icon master), tanpa garis pembatas, dengan font tegak tebal geometris (*Outfit 900*) murni non-kursif.
+  - Memasang emblem squircle baru pada badge login Student Gate di [index.html](file:///d:/Tutor%20Tampan/TopsCore/index.html) dan [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) (`border-radius: 14px`, ambient cyan glow).
+- **Penerbitan Icon Pack Lengkap PWA Resmi**:
+  - Mengenerate ulang seluruh paket ikon resmi via Playwright headless engine ke [icons/](file:///d:/Tutor%20Tampan/TopsCore/icons/): `icon-192.png`, `icon-512.png`, `icon-maskable-192.png`, `icon-maskable-512.png`, `apple-touch-icon.png`, dan `icon.svg`.
+  - Icon maskable diatur dengan zona aman 20% agar terhindar dari pemotongan pada launcher Android lingkaran/squircle.
+- **Standarisasi Web App Manifest & Service Worker Network-First ([manifest.json](file:///d:/Tutor%20Tampan/TopsCore/manifest.json) & [sw.js](file:///d:/Tutor%20Tampan/TopsCore/sw.js))**:
+  - `manifest.json` dikonfigurasi penuh dengan `display: standalone`, `theme_color: #060911`, `orientation: portrait`, dan icon pack baru.
+  - Cache Service Worker diperbarui ke `topscore-cache-option-a-v140` dengan strategi *Network-First* untuk dokumen/script demi propagasi instan pembaruan materi.
+- **Suite Pengujian Integritas PWA ([scripts/test_pwa_integrity.mjs](file:///d:/Tutor%20Tampan/TopsCore/scripts/test_pwa_integrity.mjs))**:
+  - Ditambahkan ke `npm.cmd run test:pwa` dalam [package.json](file:///d:/Tutor%20Tampan/TopsCore/package.json), lolos 100% validasi manifest, icon file presence, HTML tags, dan cache registration.
+
+---
+
+## [2026-11-16 15:45] — Phase 602: Student Gate Login Invariants, Step 1 Cascade Restoration & Open Book Brand Badge
+- **Relokasi & Restrukturisasi Ergonomis Banner PWA (Bab 5.3 & 1.2 SSOT)**:
+  - Memindahkan posisi rendering banner instalasi PWA di [js/pwa.js](file:///d:/Tutor%20Tampan/TopsCore/js/pwa.js) agar disisipkan tepat di bawah judul brand `TOPS CORE` dan tepat di atas bilah pilihan institusi (`secInstitution.parentNode.insertBefore(banner, secInstitution)`).
+  - Menyelaraskan jarak margin menjadi murni `margin: 0;` di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) sehingga gap atas ke judul dan gap bawah ke bilah institusi terkunci tepat **10px presisi** mengikuti flex gap `.login-wrapper`.
+  - Menstandarisasi bahasa menjadi **Bahasa Inggris murni**: tombol "Later" (menggantikan teks "Nanti") dan `aria-label="Dismiss"`.
+  - Menghapus permanen teks deskripsi kecil di bawah judul (*Zero Description Clutter*), merampingkan banner ke profil ergonomis (~48px tinggi) dengan padding 10px dan font judul 14px (Level 2.5 SSOT).
+- **Pembesaran Judul Brand ke 30px & Eliminasi Subtitle (Level 0 Brand Hero Landmark SSOT)**:
+  - Menaikkan ukuran font judul brand `TOPS CORE` pada [index.html](file:///d:/Tutor%20Tampan/TopsCore/index.html) dan [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) dari 20px menjadi **30px (`Outfit 900`, line-height: 1.1, margin: 0)**.
+  - Mengkategorisasikannya secara resmi ke dalam **Level 0 (Brand Hero Landmark)** pada Secondary Functional Scale, selaras matematis dengan kisi 10px kelipatan 3 ($10\text{px} \times 3$). Menolak angka perantara liar 18px demi menjaga kemurnian skala tipografi dual-scale.
+  - Menghapus permanen teks deskripsi/subtitle di bawah judul (`Student Gate — Sign in to continue`) (*Zero Subtitle Clutter*), memaksimalkan ruang vertikal koridor mobile 430px agar seluruh langkah cascade login tetap berada *above-the-fold* secara elegan dan fokus.
+  - Meratifikasi aturan baku di [.agents/rules/ui-invariants.md](file:///.agents/rules/ui-invariants.md) §2.1 & §5.3 dan [AGENTS.md](file:///d:/Tutor%20Tampan/TopsCore/AGENTS.md) §2.3.
+- **Eliminasi Total Gap Dobel 20px & Phantom Gaps pada Seksi Terkunci (Strict 10px Lock)**:
+  - Mengunci seluruh jarak vertikal antar-seksi menjadi murni **10px SSOT** dari `gap: 10px` pada `.login-wrapper`.
+  - Menghapus aturan `margin-bottom: 10px` pada `.cascade-section` dan `margin: 10px 0` pada `.remember-me-banner` yang sebelumnya bertumpuk dengan flex gap (menghasilkan 20px–30px dobel).
+  - Menetapkan `display: none` pada seksi yang belum aktif (`:not(.unlocked):not(.selected)`), melenyapkan celah kosong hantu (*phantom flex gaps*) sebesar 40px–60px antara langkah aktif dan banner.
+  - Memperbaiki bug pada `change-institution-btn` (`resetFrom('program')` bukan `'institution'`) sehingga langkah institusi tidak pernah hilang saat tombol Change ditekan.
+  - Merapikan posisi titik dua (`:`) pada label terlipat agar menempel rapi tepat 1px setelah nama label (`margin-left: 1px; margin-right: 8px; width: auto;`), melenyapkan ruang kosong aneh sebelum titik dua.
+- **Pelegaan Kapsul Nama Siswa & Standarisasi Touch Target 44px (Level 2.5 SSOT)**:
+  - Memperluas dimensi kapsul tombol siswa `.opt-card` di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css): `min-height: 44px`, `padding: 11px 14px`, `border-radius: 10px`, dan `gap: 12px` (melenyapkan kesan sempit/gepeng).
+  - Teks nama siswa tetap menggunakan ukuran proporsional **14px** (`font-weight: 600; line-height: 1.35;`) dengan bullet dot Tactical Cyan yang rapi dan aksen neon glow lembut saat aktif.
+  - Memperbaiki `.cascade-label` dari `width: 96px` kaku menjadi `min-width: 68px; max-width: 90px;` agar label nama siswa terpilih pada baris terlipat tidak terpotong (*zero truncation*).
+- **Eradikasi Gap Kosong Berlebih pada Options Grid (Eliminasi `min-height: 120px`)**:
+  - Menghapus aturan `min-height: 120px` dan `padding-bottom: 8px` pada `.options-grid` di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css).
+  - Ketika sebuah daftar hanya berisi 1 item (misal opsi tunggal `TOP`), kontainer kini menyesuaikan tinggi secara pas (*shrink-to-fit*), sehingga jarak antara bagian bawah tombol `TOP` ke garis batas bawah kotak tepat **10px** konsisten sesuai aturan baku 10px (*Universal 10px Container Gap Invariant*).
+- **Neutralization PIN Digit Filled State & Tactical Button (Gambar 2)**:
+  - Mengubah warna border dan background `.pin-digit.filled` di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) dari warna hijau (`rgba(0, 192, 0, 0.5)` — Grade A) menjadi warna netral (`rgba(255, 255, 255, 0.35)` dengan background `rgba(255, 255, 255, 0.08)`), melenyapkan bias false-success pada input PIN belum terverifikasi.
+  - Mengubah gradient tombol `.btn-signin` dari ungu legacy ke Tactical Blue (`#0284c7` s/d `#0369a1` dengan border `#38bdf8`), serta teks sapaan nama siswa menjadi Tactical Blue.
+- **Standarisasi Spasial 10px Universal & Padding Kartu Internal 10px (Bab 1.2)**:
+  - Mengunci jarak elemen internal kartu ke garis luar kotak (`padding: 10px`) pada `.cascade-header`, `.cascade-body`, dan `.pin-section`.
+  - Mengunci seluruh jarak antar-item tepat `10px`: `.options-grid { gap: 10px; }`, `.pin-row { gap: 10px; margin-bottom: 10px; }`, `.cascade-search { margin-bottom: 10px; }`, `.pin-actions { gap: 10px; }`.
+- **Standarisasi Ukuran Font Dropdown ke 14px (Level 2.5 SSOT)**:
+  - Menyelaraskan ukuran teks item dropdown (.opt-card dan .opt-card-name) dari 16px menjadi **14px** (Level 2.5 Specialized Dropdown/Selects) dengan padding `8px 10px`, menghemat ruang vertikal dan mencegah tumpang tindih nama panjang siswa.
+- **Pemulihan Step 1 (Institution) pada Alur Login Siswa (`js/auth.js`)**:
+  - Memperbaiki bug kritis pemanggilan `resetFrom('institution')` menjadi `resetFrom('program')` saat institusi terpilih di [js/auth.js](file:///d:/Tutor%20Tampan/TopsCore/js/auth.js).
+  - Mengembalikan Step 1 (Institution) agar tetap tampil utuh dan terlipat rapi dengan label nama institusi dan tombol `Change` yang berfungsi penuh, memulihkan hierarki resmi AGENTS.md §2.3: `INSTITUTION -> PROGRAM -> BATCH -> STUDENT -> PIN`.
+- **Badge Logo Buku Vektor SVG Resmi (`index.html` & `css/auth.css`)**:
+  - Memasang badge lingkaran berefek neon glow dan floating subtle di atas `TOPS CORE` pada [index.html](file:///d:/Tutor%20Tampan/TopsCore/index.html) menggunakan vektor SVG Open Book (`.brand-badge-wrap .brand-book-icon`).
+  - Menyelaraskan styling di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) dengan token Tactical Cyan `#38bdf8`.
+- **Penerapan Universal 10px Container Gap Invariant (Bab 1.2)**:
+  - Mengunci jarak seluruh kontainer dan seksi cascade di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) tepat `10px` (`.login-wrapper { gap: 10px; }`, `.cascade-section.unlocked { margin-bottom: 10px; }`, `.cascade-section.selected { margin-bottom: 10px; }`, `.remember-me-banner { margin: 10px 0; }`).
+- **Harmonisasi Skala Tipografi & Zero Sub-12px (Bab 2.1 & 2.2)**:
+  - Menyelaraskan ukuran subtitle brand (`.login-brand p`) menjadi 14px (Level 2.5 Lead Subtitle) dan teks banner (`.rmb-text`) menjadi 14px.
+- **Eradikasi Unicode Emojis (Bab 2.3 Strict Zero Emojis Invariant)**:
+  - Mengganti seluruh emoji unicode kaca pembesar `&#128269;` pada kolom pencarian di [index.html](file:///d:/Tutor%20Tampan/TopsCore/index.html) dan pesan kosong di [js/auth.js](file:///d:/Tutor%20Tampan/TopsCore/js/auth.js) dengan ikon vektor SVG Search resmi.
+- **Penerapan Strict Zero-Movement Hover Invariant (Bab 3.4 Poin 5)**:
+  - Menghapus animasi translasi `transform: translateX(3px)` pada `.opt-card:hover` di [css/auth.css](file:///d:/Tutor%20Tampan/TopsCore/css/auth.css) dan menguncinya menjadi stationary (`transform: none !important;`).
+  - Menambahkan `padding-bottom: 8px` pada `.options-grid` untuk melenyapkan visual clipping pada baris nama terbawah.
+- **Unifikasi Warna Kontrol ke Tactical Blue (`#38bdf8`)**:
+  - Menyeragamkan warna badge nomor langkah yang aktif dan toggle switch `Remember me` dari warna ungu legacy menjadi Tactical Blue `#38bdf8` / `#0284c7`.
+
+## [2026-11-16 14:45] — Phase 601: System Governance Rules Harmonization & Operational Discipline Codification
+- **Kodifikasi Aturan Operasional (Cepat, Cermat, Tepat, Akurat — Rule 0.2 SSOT)**:
+  - Membukukan resmi 4 pilar kedisiplinan mutlak di setiap eksekusi perintah:
+    1. **Cepat**: Langsung ke inti perubahan tanpa overhead seremonial dokumen.
+    2. **Cermat**: Teliti memeriksa dampak sistemik dan keterkaitan file (CSS, JS, DB, DOM).
+    3. **Tepat**: Eksekusi presisi sesuai kemauan pengguna dan standar SSOT tanpa menyimpang.
+    4. **Akurat**: Seluruh sintaks, formula, dan layout terverifikasi otomatis 100% green tests.
+  - Diratifikasi di [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) §0.2, [.agents/rules/agent-workflow.md](file:///.agents/rules/agent-workflow.md) §0, dan [.antigravityrules](file:///.antigravityrules).
+- **Pembersihan & Restrukturisasi [ui-invariants.md](file:///.agents/rules/ui-invariants.md)**:
+  - **Pemisahan Bab 5 & Bab 6**: Memisahkan Bab 5 (*Student Dashboard & Mobile Realm Invariants*) dan Bab 6 (*DataGrid & Roster Table Architecture*), melenyapkan duplikasi header Bab 5 dan nomor sub-bab 5.1.
+  - **Penyelarasan Dimensi Title Area (40px Default / 60px Dual-Line)**: Menyelaraskan teks §1.5.1 dengan implementasi CSS aktual (`admin-modals.css`), di mana tinggi baku Title Area adalah **40px**, dan **60px** khusus varian *Dual-Line* (judul + subtitle) serta CTA Area.
+  - **Pembaruan Quick Index**: Menghubungkan Bab 1 s/d Bab 6 secara presisi.
+- **Kompaksi [CURRENT_STATE.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/docs/CURRENT_STATE.md) ($\le 120$ Baris)**:
+  - Mengompakkan resume keadaan proyek menjadi 69 baris bernilai tinggi, patuh penuh pada batasan $\le 120$ baris per AGENTS.md §5.3.
 
 ## [2026-11-16 03:55] — Phase 600: Student Dashboard Dual-Panel Invariants & Tri-Font System Codification
 - **Penyelesaian Tumpang Tindih Kolom Pane B (GRADERETRY Eradicated)**:

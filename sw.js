@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v139';
+const CACHE_NAME = 'topscore-cache-option-a-v140';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,6 +6,11 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
+  './icons/icon.svg',
   './css/style.css?v=20261115_v546',
   './css/dashboard.css?v=20261115_v546',
   './css/auth.css?v=20261028',
@@ -24,7 +29,8 @@ const ASSETS_TO_CACHE = [
   './js/grading.js?v=20261115_v545',
   './js/vendor/supabase.js',
   './js/vendor/xlsx.full.min.js?v=20261027d',
-  './js/wake-lock.js?v=20261027d'
+  './js/wake-lock.js?v=20261027d',
+  './js/pwa.js?v=20261116_v548'
 ];
 
 self.addEventListener('install', event => {

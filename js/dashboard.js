@@ -148,21 +148,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       const cleanFullName = parts.join(' ').trim() || nameStr;
+      const isLaluName = /^lalu\s+/i.test(cleanFullName);
+      const isBaiqName = /^baiq\s+/i.test(cleanFullName);
+      const effG = isLaluName ? 'male' : (isBaiqName ? 'female' : g);
+
       let formattedName = cleanFullName;
 
       const isLeader = Boolean(window._isBatchChampion);
       if (isLeader) {
-        if (g === 'male') {
+        if (effG === 'male') {
           formattedName = `King ${cleanFullName}`;
-        } else if (g === 'female') {
+        } else if (effG === 'female') {
           formattedName = `Queen ${cleanFullName}`;
         } else {
           formattedName = cleanFullName;
         }
       } else {
-        if (g === 'male') {
+        if (effG === 'male') {
           formattedName = `Mr. ${cleanFullName}`;
-        } else if (g === 'female') {
+        } else if (effG === 'female') {
           formattedName = `Miss ${cleanFullName}`;
         }
       }
@@ -1449,7 +1453,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       await renderRepetitionMasteryRow(allTests, attempts, classes).catch(() => {});
 
       const classMap = Object.fromEntries((classes || []).map(c => [c.id, c]));
-      const activeClassId = window._selectedClassId || (classes && classes[0]?.id);
+      const validClass = (classes || []).find(c => c.id === window._selectedClassId) || (classes && classes[0]);
+      const activeClassId = validClass ? validClass.id : null;
+      if (validClass && window._selectedClassId !== validClass.id) {
+        window._selectedClassId = validClass.id;
+      }
       const myClassIds = new Set((classes || []).map(c => c.id));
 
       // Target repetitions & minimum score threshold
@@ -1539,6 +1547,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (siblingPhrase) {
           nextTest = siblingPhrase;
         }
+      }
+
+      if (!published || published.length === 0) {
+        container.innerHTML = `
+          <div class="next-test-left next-asm-left">
+            <span class="next-test-icon next-asm-icon">${getSvgIcon('alert-circle', 16)}</span>
+            <span class="next-test-title next-asm-title">No active tests scheduled in this class.</span>
+          </div>
+        `;
+        return;
       }
 
       if (!nextTest) {
@@ -2377,7 +2395,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);">Not Yet Available</span>`;
           actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">Unavailable</button>`;
         } else if (inProgAtt) {
-          statusBadge = `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">&#9658; In Progress</span>`;
+          statusBadge = `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">In Progress</span>`;
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
           const isAsmTest = ((asm.test_type || '').toLowerCase() === 'exam' ||
@@ -2471,11 +2489,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               </div>
               <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
                 ${isTaskItem && taskProgressBadge ? taskProgressBadge : ''}
-                <span style="font-size:12px;color:var(--clr-text-3);">&#9201; ${duration} min</span>
-                ${qCount !== '—' ? `<span style="font-size:12px;color:var(--clr-text-3);">&#128203; ${qCount} Questions</span>` : ''}
+                <span style="font-size:12px;color:var(--clr-text-3);">${duration} min</span>
+                ${qCount !== '—' ? `<span style="font-size:12px;color:var(--clr-text-3);">${qCount} Questions</span>` : ''}
                 ${statusBadge}
               </div>
-              ${!prereqMet && prereqTitle ? `<div style="margin-top:0.5rem;"><span style="font-size:12px;color:var(--grade-e);">\uD83D\uDD12 Complete prerequisite first: <em>${escapeHtml(prereqTitle)}</em></span></div>` : ''}
+              ${!prereqMet && prereqTitle ? `<div style="margin-top:0.5rem;"><span style="font-size:12px;color:var(--grade-e);">Complete prerequisite first: <em>${escapeHtml(prereqTitle)}</em></span></div>` : ''}
             </div>
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
@@ -2496,7 +2514,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       section.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-          <h3 style="font-size:16px;font-weight:700;color:var(--clr-text-1);margin:0;">\uD83D\uDCCB Assigned Tests <span style="font-size:12px;color:var(--clr-text-3);font-weight:400;margin-left:8px;">${tests.length} total</span></h3>
+          <h3 style="font-size:16px;font-weight:700;color:var(--clr-text-1);margin:0;">Assigned Tests <span style="font-size:12px;color:var(--clr-text-3);font-weight:400;margin-left:8px;">${tests.length} total</span></h3>
         </div>
         ${cards || '<div class="empty-state" style="padding:2rem;text-align:center;"><p class="text-muted">No tests assigned to you yet.</p></div>'}
       `;
@@ -2554,7 +2572,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const curPct = examBestMap[uniqueKey]?.effPct ?? -1;
           const curTime = examBestMap[uniqueKey]?.attTime || 0;
           if (examBestMap[uniqueKey] == null || effPoints > curPts || (effPoints === curPts && effPct > curPct) || (effPoints === curPts && attTime > curTime)) {
-            examBestMap[uniqueKey] = { effPct, effPoints, totalQ, test: asm, testId: uniqueKey, attTime };
+            examBestMap[uniqueKey] = {
+              effPct,
+              effPoints,
+              totalQ,
+              test: asm,
+              testId: uniqueKey,
+              attTime,
+              isForgiven: Boolean(att.is_forgiven),
+              isManual: Boolean(att.is_manual_override)
+            };
           }
         }
       });
@@ -3117,7 +3144,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // 2. Fetch all submitted attempts with complete test metadata
         const { data: attempts, error: attErr } = await sb
           .from('attempts')
-          .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, status, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, deleted_at, status, payload)')
+          .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, deleted_at, status, payload)')
           .in('student_id', studentIds)
           .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
 
@@ -3190,7 +3217,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 totalQ,
                 isRemedial,
                 attTime,
-                is_best_score: Boolean(att.is_best_score)
+                is_best_score: Boolean(att.is_best_score),
+                isForgiven: Boolean(att.is_forgiven),
+                isManual: Boolean(att.is_manual_override)
               };
             }
 
@@ -3233,7 +3262,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // Rule 2.8: overallScore = average percentage of COMPLETED valid exams (not curriculum denominator)
           const validExamItems = examItems.filter(e => {
-            const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0;
+            const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.points ?? e.effPoints ?? 0) === 0;
             return !isPureForgivenZero;
           });
           const overallScore = validExamItems.length > 0
@@ -3350,18 +3379,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // Title & Name (no duplicate king/queen icon tag as title is already prefixed)
           const rawClean = st.cleanName.replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?|king|queen)\s+/i, '').trim();
+          const isLaluName = /^lalu\s+/i.test(rawClean);
+          const isBaiqName = /^baiq\s+/i.test(rawClean);
+          const effectiveGender = isLaluName ? 'male' : (isBaiqName ? 'female' : st.gender);
+
           let displayTitleName = rawClean;
           if (isRank1) {
-            if (st.gender === 'male') {
+            if (effectiveGender === 'male') {
               displayTitleName = `King ${rawClean}`;
-            } else if (st.gender === 'female') {
+            } else if (effectiveGender === 'female') {
               displayTitleName = `Queen ${rawClean}`;
             } else {
               displayTitleName = `Champion ${rawClean}`;
             }
           } else {
-            if (st.gender === 'male') displayTitleName = `Mr. ${rawClean}`;
-            else if (st.gender === 'female') displayTitleName = `Miss ${rawClean}`;
+            if (effectiveGender === 'male') displayTitleName = `Mr. ${rawClean}`;
+            else if (effectiveGender === 'female') displayTitleName = `Miss ${rawClean}`;
           }
 
           const hasExam = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
@@ -3497,7 +3530,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           : [];
 
       if (activeClassesList.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2" class="text-muted" style="text-align: center; padding: 6px 0; font-size: 11px;">No active classes assigned</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="2" class="text-muted" style="text-align: center; padding: 6px 0; font-size: 12px;">No active classes assigned</td></tr>`;
         return;
       }
 
@@ -3945,15 +3978,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const confirmPin = document.getElementById('pin-confirm').value.trim();
 
           if (newPin.length < 4) {
-            showToast('PIN baru minimal 4 digit.', 'warning');
+            showToast('New PIN must be at least 4 digits.', 'warning');
             return;
           }
           if (newPin !== confirmPin) {
-            showToast('Konfirmasi PIN tidak cocok.', 'warning');
+            showToast('PIN confirmation does not match.', 'warning');
             return;
           }
 
-          showLoading('Memperbarui PIN…');
+          showLoading('Updating PIN...');
           try {
             await changePin(session.student_id, oldPin, newPin);
             session.login_pin = newPin;
@@ -3962,7 +3995,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const pinDisplayEl = document.getElementById('prof-pin-display');
             if (pinDisplayEl) pinDisplayEl.textContent = newPin;
             hideLoading();
-            showToast('PIN berhasil diperbarui!', 'success');
+            showToast('PIN successfully updated!', 'success');
             changePinForm.reset();
             closeChangePinModal();
             window.isProfileDirty = false;

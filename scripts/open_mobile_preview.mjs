@@ -110,16 +110,20 @@ async function run() {
     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
   };
 
-  await context.addInitScript(({ ayya, admin }) => {
+  await context.addInitScript(({ ayya, admin, isIndex }) => {
     try {
-      if (!sessionStorage.getItem('topscore_session')) {
-        sessionStorage.setItem('topscore_session', JSON.stringify(ayya));
+      if (isIndex || window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.href.includes('index.html')) {
+        sessionStorage.removeItem('topscore_session');
+      } else {
+        if (!sessionStorage.getItem('topscore_session')) {
+          sessionStorage.setItem('topscore_session', JSON.stringify(ayya));
+        }
       }
       if (!sessionStorage.getItem('topscore_admin_session')) {
         sessionStorage.setItem('topscore_admin_session', JSON.stringify(admin));
       }
     } catch (_) {}
-  }, { ayya: ayyaSession, admin: adminSession });
+  }, { ayya: ayyaSession, admin: adminSession, isIndex: targetPageArg === 'index.html' });
 
   const previewDir = path.resolve('.mobile_previews');
   if ((isScreenshot || isAllScreenshots) && !fs.existsSync(previewDir)) {
@@ -170,6 +174,12 @@ async function run() {
     }, { timeout: 20000 }).catch(() => {});
     await page.waitForSelector('#batch-leaderboard-container .leaderboard-row', { timeout: 10000 }).catch(() => {});
     await page.waitForTimeout(1500);
+    if (targetPageArg === 'index.html') {
+      await page.evaluate(() => {
+        window.dispatchEvent(new Event('beforeinstallprompt'));
+      });
+      await page.waitForTimeout(500);
+    }
     const outPath = path.join(previewDir, `${path.basename(targetPageArg, '.html')}_390x800.png`);
     await page.screenshot({ path: outPath });
     console.log(`  ✅ Saved: .mobile_previews/${path.basename(outPath)}`);

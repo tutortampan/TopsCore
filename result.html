@@ -25,6 +25,16 @@
   <link rel="stylesheet" href="css/style.css?v=20261115_v522" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261115_v522" />
   <link rel="stylesheet" href="css/result.css?v=20261115_v522" />
+  <!-- Web App Manifest & PWA Metadata -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#060911" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TopsCore" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
 </head>
 
 <body class="result-page">
@@ -162,13 +172,8 @@
   </div>
 
   <script type="module" src="./js/result.js?v=20261115_v539"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261115_v125').then(r => r.update()).catch(e => console.warn('SW:', e));
-      });
-    }
-  </script>
+  <!-- PWA Service Worker & Install Handler -->
+  <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
   <footer id="bottom-ad-banner" class="topscore-locked-banner">
     <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
   </footer>

@@ -1086,7 +1086,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
             main.innerHTML = `
               <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
                 <h2 class="fw-800 text-xl mb-3" style="color:var(--grade-e);">${getSvgIcon('lock', 20)} Test Unavailable</h2>
-                <p class="text-sm" style="color:var(--clr-text-2);">This test is unavailable or has been archived by your tutor. Retakes are not available.</p>
+                <p class="text-sm" style="color:var(--clr-text-2);">This test is unavailable or is in draft mode. Retakes are not available.</p>
                 <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
               </div>
             `;
@@ -1457,14 +1457,14 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
             if (st === 'cancelled') {
               isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
-              alert('Sesi ujian Anda telah dibatalkan / dihentikan oleh Pengawas / Tutor.');
+              alert('Your test session has been cancelled or terminated by the Proctor/Tutor.');
               window.location.href = 'dashboard.html';
               return;
             }
             if (st === 'auto_submitted') {
               isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
-              alert('Sesi ujian Anda telah dikumpulkan oleh Pengawas / Tutor.');
+              alert('Your test session has been submitted by the Proctor/Tutor.');
               window.location.href = `result.html?attempt_id=${attemptData.id}`;
               return;
             }
@@ -1478,7 +1478,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
                 attemptData.expires_at = att.expires_at;
                 const currentSec = (testsections && testsections[currentSectionIndex]) || null;
                 startTimer(currentSec);
-                showToast(`Waktu ujian Anda telah diperpanjang oleh Tutor (+${addedMinutes} menit)!`, 'success', 6000);
+                showToast(`Your test time has been extended by the Tutor (+${addedMinutes} minutes)!`, 'success', 6000);
               }
             }
           }
@@ -1495,7 +1495,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
               if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
                 isTestActive = false;
                 clearInterval(_sessionHeartbeatTimer);
-                alert('Akses Anda ke sesi ujian ini telah dicabut oleh Pengawas / Tutor.');
+                alert('Your access to this test session has been revoked by the Proctor/Tutor.');
                 window.location.href = 'dashboard.html';
                 return;
               }
@@ -2595,7 +2595,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       const langSelect = document.createElement('select');
       langSelect.className = 'speech-lang-select';
       langSelect.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 8px; font-size:12px; font-weight:600; outline:none;';
-      langSelect.innerHTML = `<option value="en-US">🇺🇸 EN-US</option><option value="en-GB">🇬🇧 EN-UK</option>`;
+      langSelect.innerHTML = `<option value="en-US">EN-US</option><option value="en-GB">EN-UK</option>`;
       const statusEl = document.createElement('div');
       statusEl.style.cssText = 'font-weight:700; font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:8px;';
       statusEl.textContent = savedAnswer ? '● Recorded' : '● Ready';

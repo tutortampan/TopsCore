@@ -141,7 +141,7 @@ export async function renderVocabularyVault(area) {
 
   } catch (e) {
     hideLoading();
-    area.innerHTML = `<div class="empty-state"><div class="empty-state__icon">&#9888;&#65039;</div><h3>Failed to load Vocabulary Vault</h3><p class="text-muted">${escapeHtml(e.message)}</p></div>`;
+    area.innerHTML = `<div class="empty-state"><div class="empty-state__icon" style="color:var(--grade-e);">${getSvgIcon('alert-triangle', 36)}</div><h3>Failed to load Vocabulary Vault</h3><p class="text-muted">${escapeHtml(e.message)}</p></div>`;
   }
 }
 
@@ -728,7 +728,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
   modal.innerHTML = `
     <div class="modal-box" style="max-width:700px;">
       <div class="d-flex justify-center align-center mb-4 text-center">
-        <h3 class="fw-700" style="margin:0 auto;text-align:center;">&#128229; Import Vocabulary &amp; Phrases from Excel (10-Column Standard)</h3>
+        <h3 class="fw-700" style="margin:0 auto;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;">${getSvgIcon('download', 20)} Import Vocabulary &amp; Phrases from Excel (10-Column Standard)</h3>
       </div>
       <p class="text-muted text-sm mb-3">
         Upload an <strong>.xlsx</strong> file conforming to the official 10-column standard:<br>
@@ -758,7 +758,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       <div id="import-preview-area"></div>
       <div class="d-flex gap-3 justify-between align-center mt-4 pt-3" id="import-action-row" style="border-top:1px solid rgba(255,255,255,0.08);">
         <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-import-modal-2">Cancel</button>
-        <button type="button" class="btn btn-primary btn-sm" id="confirm-import-btn" style="display:none;">&#10003; Import Words</button>
+        <button type="button" class="btn btn-primary btn-sm" id="confirm-import-btn" style="display:none;align-items:center;gap:4px;">${getSvgIcon('check', 14)} Import Words</button>
       </div>
     </div>
   `;
@@ -961,14 +961,14 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       if (!duplicateConflicts.length) {
         previewArea.innerHTML = `
           <div class="p-3 rounded mb-3" style="background:rgba(var(--grade-a-rgb),0.1);border:1px solid rgba(var(--grade-a-rgb),0.3);">
-            <p class="text-success fw-600 mb-1">&#10003; ${_parsedRows.length} total rows parsed — no conflicts detected.</p>
+            <p class="text-success fw-600 mb-1" style="display:flex;align-items:center;gap:6px;">${getSvgIcon('check', 14)} ${_parsedRows.length} total rows parsed — no conflicts detected.</p>
             ${distributionBadge}
           </div>
         `;
       } else {
         previewArea.innerHTML = `
           <div class="p-3 rounded mb-3" style="background:rgba(var(--grade-c-rgb),0.1);border:1px solid rgba(var(--grade-c-rgb),0.3);">
-            <p class="fw-600 mb-1" style="color:var(--grade-c);">&#9888; ${duplicateConflicts.length} conflict(s) detected — choose an action for each:</p>
+            <p class="fw-600 mb-1" style="color:var(--grade-c);display:flex;align-items:center;gap:6px;">${getSvgIcon('alert-triangle', 14)} ${duplicateConflicts.length} conflict(s) detected — choose an action for each:</p>
             <p class="text-muted text-xs mb-1">${cleanRows.length} rows are clean and will be imported automatically.</p>
             ${distributionBadge}
             <div class="d-flex gap-2 flex-wrap mb-3">
@@ -1065,7 +1065,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       const result = await importVaultWords(_parsedRows, _resolutionMap);
       hideLoading();
       close();
-      showToast(`&#10003; Import complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped.`, 'success');
+      showToast(`Import complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped.`, 'success');
       const newWords = await fetchVaultWords({ limit: 10000, targetLevel: null });
       onSuccess(newWords);
 
@@ -1075,7 +1075,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
         Promise.all(importedLevels.map(lvl => autoSyncClassTestsForLevel(lvl, { force: true }))).then(syncResults => {
           const totalNew = syncResults.reduce((acc, r) => acc + (r.tasks || 0) + (r.tests || 0), 0);
           if (totalNew > 0) {
-            showToast(`&#9889; Kurikulum otomatis disinkronkan: ${totalNew} test baru siap digunakan!`, 'info');
+            showToast(`Curriculum automatically synchronized: ${totalNew} new test(s) ready for use!`, 'info');
           }
         }).catch(err => {
           console.warn('[vocab-vault] Auto-sync after import failed:', err);
@@ -1104,7 +1104,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
   modal.innerHTML = `
     <div class="modal-box" style="max-width:720px;max-height:90vh;overflow-y:auto;">
       <div class="d-flex justify-center align-center mb-4 text-center">
-        <h3 class="fw-700" style="margin:0 auto;text-align:center;">&#10133; ${overrides.editTest ? 'Edit' : 'Create'} Vocabulary Test</h3>
+        <h3 class="fw-700" style="margin:0 auto;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;">${getSvgIcon('edit', 20)} ${overrides.editTest ? 'Edit' : 'Create'} Vocabulary Test</h3>
       </div>
 
       <!-- Step Indicators -->
@@ -1169,7 +1169,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       el.style.color = isActive ? 'var(--clr-primary)' : isDone ? 'var(--grade-a)' : 'var(--clr-text-3)';
     });
     document.getElementById('builder-back-btn').style.display = currentStep > 1 ? '' : 'none';
-    document.getElementById('builder-next-btn').innerHTML = currentStep === 4 ? (state.isEdit ? '&#10003; Save Changes' : '&#10003; Create Test') : 'Next →';
+    document.getElementById('builder-next-btn').innerHTML = currentStep === 4 ? (state.isEdit ? 'Save Changes' : 'Create Test') : 'Next →';
   }
 
   function updateAutoTitle() {
@@ -1223,8 +1223,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <label class="form-label">Test Tier</label>
             <div class="d-flex flex-column gap-3 mb-3">
               ${[
-          { val: 'TASK', icon: '&#9889;', label: 'Task', desc: 'Single topic drill' },
-          { val: 'EXAM', icon: '&#127942;', label: 'Exam', desc: 'Milestone aggregated exam' }
+          { val: 'TASK', icon: getSvgIcon('zap', 14), label: 'Task', desc: 'Single topic drill' },
+          { val: 'EXAM', icon: getSvgIcon('award', 14), label: 'Exam', desc: 'Milestone aggregated exam' }
         ].map(t => `
                 <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
                   <input type="radio" name="vocab-tier" value="${t.val}" ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
@@ -1448,11 +1448,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <div class="d-flex gap-3 flex-wrap">
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
               <input type="radio" name="q-order" value="random" ${state.questionOrder === 'random' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-              <span>&#128256; Random (Default)</span>
+              <span>Random (Default)</span>
             </label>
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
               <input type="radio" name="q-order" value="sequential" ${state.questionOrder === 'sequential' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-              <span>&#10132; Sequential (Vault Order)</span>
+              <span>Sequential (Vault Order)</span>
             </label>
           </div>
         </div>
@@ -1462,11 +1462,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <div class="d-flex flex-column gap-2">
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
               <input type="radio" name="q-quota" value="full" ${state.quotaMode === 'full' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-              <span>&#9989; All Questions (100% Full — Default)</span>
+              <span>All Questions (100% Full — Default)</span>
             </label>
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
               <input type="radio" name="q-quota" value="custom" ${state.quotaMode === 'custom' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-              <span>&#9881; Custom Sample (Stratified)</span>
+              <span>Custom Sample (Stratified)</span>
             </label>
           </div>
           <div id="custom-quota-area" style="display:${state.quotaMode === 'custom' ? 'block' : 'none'};margin-top:0.75rem;">
@@ -1506,11 +1506,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <div class="d-flex gap-3 flex-wrap">
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
               <input type="radio" name="sched-mode" value="batch" ${state.scheduleMode === 'batch' || state.scheduleMode === 'flexible' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-              <span>&#128336; Batch Duration (Flexible Self-Paced)</span>
+              <span>Batch Duration (Flexible Self-Paced)</span>
             </label>
             <label class="d-flex align-center gap-2" style="cursor:pointer;">
               <input type="radio" name="sched-mode" value="manual" ${state.scheduleMode === 'manual' ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
-              <span>&#128197; Tutor Live Control (Manual Toggle / In-Class)</span>
+              <span>Tutor Live Control (Manual Toggle / In-Class)</span>
             </label>
           </div>
         </div>
@@ -1525,7 +1525,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         </div>
 
         <div class="p-3 rounded mt-3" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);">
-          <p class="text-xs text-muted mb-1">&#128204; All times are in <strong>WITA (GMT+8, Asia/Makassar)</strong>. The system will convert to UTC for storage.</p>
+          <p class="text-xs text-muted mb-1" style="display:flex;align-items:center;gap:6px;">${getSvgIcon('info', 14)} All times are in <strong>WITA (GMT+8, Asia/Makassar)</strong>. The system will convert to UTC for storage.</p>
         </div>
 
         <!-- Summary -->
@@ -1589,7 +1589,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           });
           hideLoading();
           modal.remove();
-          showToast(`&#10003; Test saved successfully.`, 'success');
+          showToast(`Test saved successfully.`, 'success');
         } else {
           const result = await createVocabMasteryTest({
             institutionId: state.institutionId,
@@ -1613,7 +1613,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           });
           hideLoading();
           modal.remove();
-          showToast(`&#10003; ${state.tier} created: "${result.title}" — ${result.sampledWords} questions.`, 'success');
+          showToast(`${state.tier} created: "${result.title}" — ${result.sampledWords} questions.`, 'success');
         }
       } catch (e) {
         hideLoading();
@@ -3093,7 +3093,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
   });
 
   if (duplicateGroups.length === 0) {
-    showToast('&#10003; No duplicates found in the Vault.', 'success');
+    showToast('No duplicates found in the Vault.', 'success');
     return;
   }
 
@@ -3109,8 +3109,8 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           <td style="padding:10px 8px; color:var(--clr-text-2);" class="cell-eng-${gi}-${wi}">${escapeHtml(w.english)}</td>
           <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size: 12px;">${escapeHtml(w.topic)}</span></td>
           <td style="padding:10px 8px; text-align:right;">
-            <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:var(--grade-a);border:1px solid var(--grade-a);margin-right:4px;" title="Keep this entry, delete others">&#10003; Keep</button>
-            <button class="btn btn-danger btn-xs btn-del-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" title="Delete this entry">&#128465;</button>
+            <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:var(--grade-a);border:1px solid var(--grade-a);margin-right:4px;display:inline-flex;align-items:center;gap:3px;" title="Keep this entry, delete others">${getSvgIcon('check', 12)} Keep</button>
+            <button class="btn btn-danger btn-xs btn-del-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" title="Delete this entry" style="display:inline-flex;align-items:center;justify-content:center;">${getSvgIcon('trash', 12)}</button>
           </td>
         </tr>
       `).join('');
@@ -3135,7 +3135,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
               <div class="d-flex align-center gap-2 flex-wrap">
                 <span class="text-xs text-muted">Merge English into:</span>
                 <input type="text" class="input merge-eng-input" data-gi="${gi}" value="${escapeHtml(mergedEnglish)}" style="flex:1; min-width:200px; padding:4px 8px; font-size: 12px;" />
-                <button class="btn btn-xs btn-merge-group" data-gi="${gi}" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);">&#9889; Merge</button>
+                <button class="btn btn-xs btn-merge-group" data-gi="${gi}" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:3px;">${getSvgIcon('zap', 12)} Merge</button>
               </div>
             </td>
           </tr>
@@ -3149,12 +3149,12 @@ function openDuplicateCheckerModal(allWords, onResolved) {
     <div class="modal-box" style="max-width:860px; max-height:85vh; display:flex; flex-direction:column;">
       <div class="d-flex justify-between align-center mb-3">
         <div>
-          <h3 class="fw-700" style="margin:0;">&#9874; Duplicate Checker</h3>
+          <h3 class="fw-700" style="margin:0;display:flex;align-items:center;gap:6px;">${getSvgIcon('copy', 18)} Duplicate Checker</h3>
           <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} group(s) with duplicate Indonesian words found.</p>
         </div>
         <div class="d-flex gap-2">
-          <button class="btn btn-success btn-sm" id="dup-modal-keep-all">&#10004; Keep First (All)</button>
-          <button class="btn btn-purple btn-sm" id="dup-modal-merge-all">&#9889; Merge All</button>
+          <button class="btn btn-success btn-sm" id="dup-modal-keep-all" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('check', 14)} Keep First (All)</button>
+          <button class="btn btn-purple btn-sm" id="dup-modal-merge-all" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('zap', 14)} Merge All</button>
         </div>
       </div>
       <div style="overflow-y:auto; flex-grow:1;">
@@ -3207,12 +3207,12 @@ function openDuplicateCheckerModal(allWords, onResolved) {
         modal.querySelector('#dup-table').querySelector('tbody[data-group="' + gi + '"]')?.remove();
         if (onResolved) onResolved([...allWords]);
         if (duplicateGroups.length === 0) {
-          modal.querySelector('p.text-muted.text-xs').textContent = '&#10003; All duplicates resolved!';
+          modal.querySelector('p.text-muted.text-xs').textContent = 'All duplicates resolved!';
         }
       } catch (e) {
         showToast('Error: ' + e.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = '&#10003; Keep';
+        btn.innerHTML = `${getSvgIcon('check', 12)} Keep`;
       }
     });
   });
@@ -3242,7 +3242,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
       } catch (e) {
         showToast('Error: ' + e.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = '&#128465;';
+        btn.innerHTML = getSvgIcon('trash', 12);
       }
     });
   });
@@ -3298,7 +3298,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
       } catch (e) {
         showToast('Merge failed: ' + e.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = '&#9889; Merge';
+        btn.innerHTML = `${getSvgIcon('zap', 12)} Merge`;
       }
     });
   });
@@ -3324,12 +3324,12 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           duplicateGroups.splice(i, 1);
         }
         showToast('All groups resolved (Kept First).', 'success');
-        modal.querySelector('p.text-muted.text-xs').textContent = '&#10003; All duplicates resolved!';
+        modal.querySelector('p.text-muted.text-xs').textContent = 'All duplicates resolved!';
         if (onResolved) onResolved([...allWords]);
       } catch (e) {
         showToast('Bulk Keep failed: ' + e.message, 'error');
       }
-      keepAllBtn.innerHTML = '&#10004; Keep First (All)';
+      keepAllBtn.innerHTML = `${getSvgIcon('check', 14)} Keep First (All)`;
       keepAllBtn.disabled = false;
     });
   }
@@ -3374,12 +3374,12 @@ function openDuplicateCheckerModal(allWords, onResolved) {
           }
         }
         showToast('All groups merged.', 'success');
-        modal.querySelector('p.text-muted.text-xs').textContent = '&#10003; All duplicates resolved!';
+        modal.querySelector('p.text-muted.text-xs').textContent = 'All duplicates resolved!';
         if (onResolved) onResolved([...allWords]);
       } catch (e) {
         showToast('Bulk Merge failed: ' + e.message, 'error');
       }
-      mergeAllBtn.innerHTML = '&#9889; Merge All';
+      mergeAllBtn.innerHTML = `${getSvgIcon('zap', 14)} Merge All`;
       mergeAllBtn.disabled = false;
     });
   }
@@ -3412,7 +3412,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
         <tbody>
           <tr>
             <td class="text-center text-muted text-xs" style="padding:16px;">
-              &#10003; No automated similar topic duplicates detected. You can use the manual topic merge tool below.
+              No automated similar topic duplicates detected. You can use the manual topic merge tool below.
             </td>
           </tr>
         </tbody>
@@ -3435,7 +3435,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
               <div class="d-flex align-center gap-2 flex-wrap">
                 <span class="text-xs text-muted">Merge topics into:</span>
                 <input type="text" class="input merge-topic-input" data-gi="${gi}" value="${escapeHtml(mergedTopic)}" style="flex:1; min-width:200px; padding:4px 8px; font-size: 12px;" />
-                <button class="btn btn-xs btn-merge-topic-group" data-gi="${gi}" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);">&#9889; Merge</button>
+                <button class="btn btn-xs btn-merge-topic-group" data-gi="${gi}" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);display:inline-flex;align-items:center;gap:3px;">${getSvgIcon('zap', 12)} Merge</button>
               </div>
             </td>
           </tr>
@@ -3451,11 +3451,11 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     <div class="modal-box" style="max-width:640px; max-height:88vh; display:flex; flex-direction:column; padding:20px;">
       <div class="d-flex justify-between align-center mb-3">
         <div>
-          <h3 class="fw-700" style="margin:0; font-size: 16px; color:#f8fafc;">&#9874; Topic Merge &amp; Unification Wizard</h3>
+          <h3 class="fw-700" style="margin:0; font-size: 16px; color:#f8fafc; display:flex; align-items:center; gap:6px;">${getSvgIcon('layers', 16)} Topic Merge &amp; Unification Wizard</h3>
           <p class="text-muted text-xs mt-1 mb-0">${duplicateGroups.length} automated similar group(s) detected &bull; ${allDistinctTopics.length} total topics active</p>
         </div>
         <div class="d-flex gap-2">
-          ${duplicateGroups.length > 0 ? `<button class="btn btn-purple btn-sm" id="dup-topic-merge-all">&#9889; Merge All</button>` : ''}
+          ${duplicateGroups.length > 0 ? `<button class="btn btn-purple btn-sm" id="dup-topic-merge-all" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('zap', 14)} Merge All</button>` : ''}
         </div>
       </div>
 
@@ -3493,7 +3493,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
           </div>
           <div class="d-flex justify-between align-center mt-3 pt-2" style="border-top:1px solid rgba(255,255,255,0.06);">
             <div id="manual-merge-status" class="text-xs text-muted">All words in the source topic will be re-assigned to the target topic.</div>
-            <button class="btn btn-primary btn-sm" id="btn-execute-manual-merge" style="font-weight:700;">&#9889; Execute Merge</button>
+            <button class="btn btn-primary btn-sm" id="btn-execute-manual-merge" style="font-weight:700;display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('zap', 14)} Execute Merge</button>
           </div>
         </div>
       </div>
@@ -3535,12 +3535,12 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     btnExecManual.innerHTML = 'Merging...';
     try {
       await renameVaultTopic(src, tgt);
-      showToast(`✓ Topic "${src}" successfully merged into "${tgt}"!`, 'success');
+      showToast(`Topic "${src}" successfully merged into "${tgt}"!`, 'success');
       closeModal();
     } catch (err) {
       showToast('Merge failed: ' + err.message, 'error');
       btnExecManual.disabled = false;
-      btnExecManual.innerHTML = '&#9889; Execute Merge';
+      btnExecManual.innerHTML = `${getSvgIcon('zap', 14)} Execute Merge`;
     }
   });
 
@@ -3574,7 +3574,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
       } catch (e) {
         showToast('Topic merge failed: ' + e.message, 'error');
         btn.disabled = false;
-        btn.innerHTML = '&#9889; Merge';
+        btn.innerHTML = `${getSvgIcon('zap', 12)} Merge`;
       }
     });
   });
@@ -3592,11 +3592,11 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
         }
         showToast('All topic groups merged.', 'success');
         const statusEl = modal.querySelector('p.text-muted.text-xs');
-        if (statusEl) statusEl.textContent = '&#10003; All duplicates resolved!';
+        if (statusEl) statusEl.textContent = 'All duplicates resolved!';
       } catch (e) {
         showToast('Bulk Merge failed: ' + e.message, 'error');
       }
-      mergeAllBtn.innerHTML = '&#9889; Merge All';
+      mergeAllBtn.innerHTML = `${getSvgIcon('zap', 14)} Merge All`;
       mergeAllBtn.disabled = false;
     });
   }

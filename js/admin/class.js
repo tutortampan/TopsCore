@@ -35,6 +35,7 @@ import { parseExcelWorkbook, processCentralBankQuestionImport } from '../excel-p
 import { openStudentProfile } from './student-management.js?v=20261106_v160';
 import { generateAvatarDataUri } from '../utils/avatar-engine.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 // escapeHtml / escHtml imported canonically
 
@@ -63,7 +64,7 @@ export async function renderTopics(area) {
 
       ${window._filterClassId ? `
         <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size: 12px;">
-          <span>&#128209; Filtered by Class: <strong>${escapeHtml(window._filterClassName || 'Selected Class')}</strong></span>
+          <span>${getSvgIcon('filter', 14)} Filtered by Class: <strong>${escapeHtml(window._filterClassName || 'Selected Class')}</strong></span>
           <button class="btn btn-ghost btn-xs" id="clear-subj-filter-btn" style="text-decoration:underline;color:#93c5fd;">Show All Classes</button>
         </div>
       ` : ''}
@@ -308,7 +309,7 @@ export async function renderWordTypes(area) {
       const exists = wordTypes.some(wt => wt.name.toLowerCase() === st.toLowerCase());
       return `
                 <button class="btn btn-sm ${exists ? 'btn-ghost' : 'btn-outline-primary'} btn-suggest-wt" data-name="${st}" ${exists ? 'disabled title="Already added"' : ''}>
-                  ${st} ${exists ? '&#10003;' : '+'}
+                  ${st} ${exists ? '✓' : '+'}
                 </button>
               `;
     }).join('')}
@@ -459,14 +460,14 @@ export async function renderResults(area) {
           </div>
           <div>
             <button class="btn btn-secondary btn-sm" id="export-gradebook-btn" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
-              &#128202; Export Gradebook (.xlsx)
+              ${getSvgIcon('download', 14)} Export Gradebook (.xlsx)
             </button>
           </div>
         </div>
 
         ${window._filterTestResults ? `
           <div class="mb-3 p-2 rounded d-flex align-center justify-between" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:#93c5fd;font-size: 12px;">
-            <span>&#9889; Filtered Results for Selected Test (${allData.length} attempts)</span>
+            <span style="display:inline-flex;align-items:center;gap:6px;">${getSvgIcon('filter', 14)} Filtered Results for Selected Test (${allData.length} attempts)</span>
             <button class="btn btn-ghost btn-xs" id="clear-Test-results-btn" style="text-decoration:underline;color:#93c5fd;">Show All Test Results</button>
           </div>
         ` : ''}
@@ -503,7 +504,7 @@ export async function renderResults(area) {
           </div>
 
           <div class="d-flex align-end" style="padding-top:18px;">
-            <button class="btn btn-ghost btn-sm" id="res-btn-reset" title="Reset all filters">&#10006; Reset</button>
+            <button class="btn btn-ghost btn-sm" id="res-btn-reset" title="Reset all filters" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('refresh', 14)} Reset</button>
           </div>
         </div>
 

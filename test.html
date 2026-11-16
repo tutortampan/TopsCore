@@ -29,6 +29,16 @@
   <link rel="stylesheet" href="css/style.css?v=20261115_v518" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261113_v174" />
   <link rel="stylesheet" href="css/test.css?v=20261114_v481" />
+  <!-- Web App Manifest & PWA Metadata -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#060911" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TopsCore" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
 </head>
 <body class="test-page notranslate" translate="no">
 
@@ -365,13 +375,8 @@
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v487"></script>
   <script type="module" src="./js/test.js?v=20261114_v487"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js?v=20261113_v175')
-        .then(registration => registration.update())
-        .catch(err => console.warn('SW registration failed:', err));
-    }
-  </script>
+  <!-- PWA Service Worker & Install Handler -->
+  <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 </body>
 </html>
 

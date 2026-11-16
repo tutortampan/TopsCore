@@ -34,6 +34,16 @@
   <link rel="stylesheet" href="css/style.css?v=20261115_v547" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261116_v547" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
+  <!-- Web App Manifest & PWA Metadata -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#060911" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="TopsCore" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
 
 
 </head>
@@ -153,7 +163,7 @@
       <!-- Dual-Tab Header -->
       <div class="standings-card-header dock-tab-header">
         <button type="button" class="dock-tab-btn active" id="btn-dock-standings" role="tab" aria-selected="true" aria-controls="dock-pane-standings">
-          <span class="tab-label-text">RANKING : MY RANK</span>
+          <span class="tab-label-text">MY RANK</span>
           <span id="dock-my-rank-number" class="rank-number-chip">#--</span>
         </button>
         <button type="button" class="dock-tab-btn" id="btn-dock-completed" role="tab" aria-selected="false" aria-controls="dock-pane-completed">
@@ -648,19 +658,8 @@
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
   <script type="module" src="./js/dashboard.js?v=20261115_v542"></script>
-  <!-- Service Worker Registration for PWA -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js?v=20261115_v130')
-          .then(registration => {
-            registration.update();
-            console.log('ServiceWorker registered and updated with scope:', registration.scope);
-          })
-          .catch(error => console.warn('ServiceWorker registration failed:', error));
-      });
-    }
-  </script>
+  <!-- PWA Service Worker & Install Handler -->
+  <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">

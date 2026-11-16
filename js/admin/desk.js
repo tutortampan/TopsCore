@@ -222,7 +222,7 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
     <div class="purge-modal-overlay" id="purge-modal-backdrop">
       <div class="purge-modal-box">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size: 30px;line-height:1;">&#9888;&#65039;</div>
+          <div style="color:var(--grade-e);display:flex;align-items:center;">${getSvgIcon('alert-triangle', 28)}</div>
           <div>
             <h3 style="margin:0;font-size: 16px;color:var(--grade-e);font-weight:700;">Permanent Purge Warning</h3>
             <div class="text-xs text-muted">Irreversible Database Action</div>
@@ -243,8 +243,8 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
 
         <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
           <button class="btn btn-ghost btn-sm" id="btn-purge-cancel">Cancel</button>
-          <button class="btn btn-danger btn-sm" id="btn-purge-execute" disabled style="opacity:0.5;cursor:not-allowed;">
-            &#128128; Permanently Purge
+          <button class="btn btn-danger btn-sm" id="btn-purge-execute" disabled style="opacity:0.5;cursor:not-allowed;display:inline-flex;align-items:center;gap:6px;">
+            ${getSvgIcon('trash', 14)} Permanently Purge
           </button>
         </div>
       </div>
@@ -336,7 +336,7 @@ export async function renderAuditLog(area) {
       </div>
 
       <div class="d-flex align-end" style="padding-top:18px;">
-        <button class="btn btn-ghost btn-sm" id="audit-reset-btn">&#10006; Reset</button>
+        <button class="btn btn-ghost btn-sm" id="audit-reset-btn" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('refresh', 14)} Reset</button>
       </div>
     </div>
 
@@ -527,7 +527,7 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-4">
         <div class="d-flex justify-between align-center mb-2">
           <span class="text-xs text-muted text-uppercase fw-700">WebSocket / DB Latency</span>
-          <button class="btn btn-ghost btn-xs" id="btn-ping-latency" title="Measure latency">&#9889; Ping</button>
+          <button class="btn btn-ghost btn-xs" id="btn-ping-latency" title="Measure latency" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('activity', 12)} Ping</button>
         </div>
         <div style="font-size: 20px;font-weight:700;color:#38bdf8;" id="metric-latency">Measuring...</div>
         <div class="text-xs text-muted mt-1" id="metric-latency-desc">Testing roundtrip response</div>
@@ -559,7 +559,7 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
         <div>
           <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="font-size: 30px;background:rgba(59,130,246,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128100;</div>
+            <div style="background:rgba(59,130,246,0.12);color:#60a5fa;padding:0.6rem;border-radius:12px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('users', 28)}</div>
             <div>
               <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Student Profile Duplicates</h3>
               <div class="text-xs text-muted">Identical names within the same batch</div>
@@ -569,8 +569,8 @@ export async function renderDataHealth(container) {
             Detect students registered under duplicate records. Safely merge duplicate profiles, transferring historical attempts to the authoritative ID.
           </p>
         </div>
-        <button class="btn btn-primary" id="btn-health-scan-students" style="width:100%;font-weight:600;">
-          &#128269; Scan Students
+        <button class="btn btn-primary" id="btn-health-scan-students" style="width:100%;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+          ${getSvgIcon('search', 14)} Scan Students
         </button>
       </div>
 
@@ -578,7 +578,7 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
         <div>
           <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="font-size: 30px;background:rgba(250,204,21,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#9889;</div>
+            <div style="background:rgba(250,204,21,0.12);color:var(--grade-c);padding:0.6rem;border-radius:12px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('zap', 28)}</div>
             <div>
               <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Question Bank Duplicates</h3>
               <div class="text-xs text-muted">Duplicate text or order conflicts</div>
@@ -588,8 +588,8 @@ export async function renderDataHealth(container) {
             Identify duplicate questions across the centralized question bank or within the same test to maintain question uniqueness.
           </p>
         </div>
-        <button class="btn btn-warning" id="btn-health-scan-questions" style="width:100%;font-weight:600;color:#000;">
-          &#128269; Scan Questions
+        <button class="btn btn-warning" id="btn-health-scan-questions" style="width:100%;font-weight:600;color:#000;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+          ${getSvgIcon('search', 14)} Scan Questions
         </button>
       </div>
 
@@ -597,7 +597,7 @@ export async function renderDataHealth(container) {
       <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
         <div>
           <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="font-size: 30px;background:rgba(16,185,129,0.12);padding:0.6rem;border-radius:12px;line-height:1;">&#128737;&#65039;</div>
+            <div style="background:rgba(16,185,129,0.12);color:var(--grade-a);padding:0.6rem;border-radius:12px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('shield', 28)}</div>
             <div>
               <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Orphaned Records &amp; Integrity</h3>
               <div class="text-xs text-muted">Audits relational foreign keys &amp; integrity</div>
@@ -607,8 +607,8 @@ export async function renderDataHealth(container) {
             Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
-        <button class="btn btn-tactical" id="btn-health-scan-orphans" style="width:100%;font-weight:700;">
-          &#128269; Scan Integrity
+        <button class="btn btn-tactical" id="btn-health-scan-orphans" style="width:100%;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+          ${getSvgIcon('search', 14)} Scan Integrity
         </button>
       </div>
 
@@ -845,7 +845,9 @@ export async function renderDataHealth(container) {
       const resultsHTML = `
         <div style="display:flex;flex-direction:column;gap:1.25rem;">
           <div class="antigravity-card p-4 text-center" style="border:1px solid ${totalIssues === 0 ? 'rgba(var(--grade-a-rgb, 0, 192, 0), 0.3)' : 'rgba(var(--grade-e-rgb, 255, 0, 0), 0.3)'};">
-            <div style="font-size: 35px;margin-bottom:0.25rem;">${totalIssues === 0 ? '&#9989;' : '&#9888;&#65039;'}</div>
+            <div style="display:flex;align-items:center;justify-content:center;margin-bottom:0.5rem;color:${totalIssues === 0 ? 'var(--grade-a)' : 'var(--grade-e)'};">
+              ${totalIssues === 0 ? getSvgIcon('check-circle', 36) : getSvgIcon('alert-triangle', 36)}
+            </div>
             <h3 style="font-weight:700;margin:0 0 4px 0;color:${totalIssues === 0 ? 'var(--clr-success)' : 'var(--clr-warning)'};">
               ${totalIssues === 0 ? 'All Relational Constraints Healthy' : `${totalIssues} Integrity Issue(s) Detected`}
             </h3>
@@ -1096,7 +1098,7 @@ export async function renderSettings(area) {
       <!-- 1. The Cost Guard Engine Card (Crucial) -->
       <div class="antigravity-card p-5" style="border-color:rgba(255,0,0,0.3);box-shadow:0 20px 40px rgba(255,0,0,0.08);">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size: 20px;">&#128737;&#65039;</div>
+          <div style="color:var(--grade-e);display:flex;align-items:center;">${getSvgIcon('shield', 22)}</div>
           <div>
             <h3 style="font-size: 16px;margin:0;color:var(--grade-e);font-weight:700;">The Cost Guard Engine</h3>
             <div class="text-xs text-muted">Global AI Token Bankruptcy Defense</div>
@@ -1207,7 +1209,7 @@ export async function renderSettings(area) {
       <!-- 2. Secure API Key Vault Card -->
       <div class="antigravity-card p-5">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
-          <div style="font-size: 20px;">&#128272;</div>
+          <div style="color:var(--clr-primary);display:flex;align-items:center;">${getSvgIcon('lock', 22)}</div>
           <div>
             <h3 style="font-size: 16px;margin:0;color:var(--clr-primary);font-weight:700;">API Key Vault</h3>
             <div class="text-xs text-muted">Masked credentials for LLM integration</div>
@@ -1218,7 +1220,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm">OpenAI API Key</label>
           <div class="input-password-wrap">
             <input class="form-control" type="password" id="vault-openai-key" value="${escapeHtml(settings.openai_api_key || '')}" placeholder="sk-..." autocomplete="new-password" />
-            <button class="input-password-toggle" type="button" data-target="vault-openai-key" title="Toggle visibility">&#128065;</button>
+            <button class="input-password-toggle" type="button" data-target="vault-openai-key" title="Toggle visibility">${getSvgIcon('eye', 14)}</button>
           </div>
         </div>
 
@@ -1226,7 +1228,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm">Anthropic Claude API Key</label>
           <div class="input-password-wrap">
             <input class="form-control" type="password" id="vault-anthropic-key" value="${escapeHtml(settings.anthropic_api_key || '')}" placeholder="sk-ant-..." autocomplete="new-password" />
-            <button class="input-password-toggle" type="button" data-target="vault-anthropic-key" title="Toggle visibility">&#128065;</button>
+            <button class="input-password-toggle" type="button" data-target="vault-anthropic-key" title="Toggle visibility">${getSvgIcon('eye', 14)}</button>
           </div>
         </div>
 
@@ -1234,7 +1236,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm">Google Gemini API Key</label>
           <div class="input-password-wrap">
             <input class="form-control" type="password" id="vault-gemini-key" value="${escapeHtml(settings.gemini_api_key || '')}" placeholder="AIzaSy..." autocomplete="new-password" />
-            <button class="input-password-toggle" type="button" data-target="vault-gemini-key" title="Toggle visibility">&#128065;</button>
+            <button class="input-password-toggle" type="button" data-target="vault-gemini-key" title="Toggle visibility">${getSvgIcon('eye', 14)}</button>
           </div>
         </div>
 
@@ -1281,7 +1283,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm">Custom Master Password Override</label>
           <div class="input-password-wrap">
             <input class="form-control" type="password" id="setting-custom-password" placeholder="Default: admin123" value="${escapeHtml(currentCustomPass)}" />
-            <button class="input-password-toggle" type="button" data-target="setting-custom-password" title="Toggle visibility">&#128065;</button>
+            <button class="input-password-toggle" type="button" data-target="setting-custom-password" title="Toggle visibility">${getSvgIcon('eye', 14)}</button>
           </div>
           <div class="text-xs text-muted mt-1">Leave blank to use default 'admin123' master key.</div>
         </div>
@@ -1312,7 +1314,7 @@ export async function renderSettings(area) {
           <label class="form-label text-sm">Custom Tutor Password Override</label>
           <div class="input-password-wrap">
             <input class="form-control" type="password" id="setting-tutor-password" placeholder="Default: tutor123" value="${escapeHtml(currentTutorPass)}" />
-            <button class="input-password-toggle" type="button" data-target="setting-tutor-password" title="Toggle visibility">&#128065;</button>
+            <button class="input-password-toggle" type="button" data-target="setting-tutor-password" title="Toggle visibility">${getSvgIcon('eye', 14)}</button>
           </div>
           <div class="text-xs text-muted mt-1">Leave blank to use default 'tutor123' master key.</div>
         </div>
@@ -1362,10 +1364,10 @@ export async function renderSettings(area) {
       if (!input) return;
       if (input.type === 'password') {
         input.type = 'text';
-        e.currentTarget.innerHTML = '&#128064;';
+        e.currentTarget.innerHTML = getSvgIcon('eye-off', 14);
       } else {
         input.type = 'password';
-        e.currentTarget.innerHTML = '&#128065;';
+        e.currentTarget.innerHTML = getSvgIcon('eye', 14);
       }
     });
   });

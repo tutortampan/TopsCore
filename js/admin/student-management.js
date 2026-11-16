@@ -2753,7 +2753,7 @@ export async function renderStudents(area, options = {}) {
           const c = document.createElement('div');
           c.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
           c.innerHTML = `<div style="background:var(--fm-bg-panel, #0F172A);border:1px solid rgba(255,0,0,0.5);border-radius:12px;padding:2rem;max-width:380px;text-align:center;">
-            <div style="font-size: 30px;margin-bottom:0.5rem;">&#9888;&#65039;</div>
+            <div style="color:var(--grade-e);margin-bottom:0.5rem;">${getSvgIcon('alert-triangle', 36)}</div>
             <h3 style="color:var(--grade-e);margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
             <p style="color:var(--clr-text-3);font-size: 12px;margin-bottom:1.5rem;">This will soft-delete all selected students. Their history will be preserved.</p>
             <div style="display:flex;gap:0.75rem;justify-content:center;">

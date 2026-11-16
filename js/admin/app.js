@@ -2911,7 +2911,7 @@ if (typeof window !== 'undefined') {
                 </div>
 
                 <!-- Body -->
-                <div style="padding: 20px; font-size: 13px; color: #e2e8f0; line-height: 1.5;">
+                <div style="padding: 20px; font-size: 14px; color: #e2e8f0; line-height: 1.5;">
                   Do you want to save all modified manual scores and points to the database, or discard the changes?
                 </div>
 
@@ -3434,7 +3434,7 @@ if (typeof window !== 'undefined') {
                 minWidth: '55px',
                 headerTitle: `Theme ${tc} Exam Points`,
                 title: `Theme ${tc} Exam Points`,
-                label: 'POINTS',
+                label: 'PTS',
                 shortLabel: 'PTS',
                 microLabel: 'PTS',
                 sortable: true,
@@ -4126,7 +4126,7 @@ if (typeof window !== 'undefined') {
                 },
                 {
                   key: 'totalEarnedScore',
-                  label: 'POINTS',
+                  label: 'PTS',
                   shortLabel: 'PTS',
                   microLabel: 'PTS',
                   className: 'col-overall col-overall-pts',
@@ -4527,12 +4527,12 @@ if (typeof window !== 'undefined') {
         </div>
         <div class="dashboard-grid mt-4">
           <div class="stat-card" style="cursor:pointer;" onclick="window.loadSection('tests')">
-            <div class="stat-icon">&#128221;</div>
+            <div class="stat-icon">${getSvgIcon('file-text', 24)}</div>
             <div class="stat-value">Manage Tests</div>
             <div class="stat-label">View all tests & assignments</div>
           </div>
           <div class="stat-card" style="cursor:pointer;" onclick="window.loadSection('vocab_vault')">
-            <div class="stat-icon">&#128214;</div>
+            <div class="stat-icon">${getSvgIcon('book-open', 24)}</div>
             <div class="stat-value">Vocab Vault</div>
             <div class="stat-label">Manage word lists & phrases</div>
           </div>
@@ -4905,7 +4905,7 @@ if (typeof window !== 'undefined') {
           case 'work_records':        return loadSection('profile');
           case 'cv_generator':        await renderCVGenerator(area); break;
 
-          default: area.innerHTML = `<div class="empty-state"><div class="empty-state__icon">&#128679;</div><h3>${sectionTitles[section] || section}</h3><p>This section is under development.</p></div>`;
+          default: area.innerHTML = `<div class="empty-state"><div class="empty-state__icon" style="color:#64748b;">${getSvgIcon('settings', 32)}</div><h3>${sectionTitles[section] || section}</h3><p>This section is under development.</p></div>`;
         }
       } catch(e) {
         console.error('[loadSection] CAUGHT ERROR:', e);
@@ -4916,7 +4916,7 @@ if (typeof window !== 'undefined') {
         console.error('[loadSection] error:', section, e);
         area.innerHTML = `
           <div class="empty-state card mt-4" style="padding:3.5rem 1.5rem; text-align:center; max-width:600px; margin:2rem auto; border:1px solid rgba(239,68,68,0.3); background:rgba(239,68,68,0.04);">
-            <div style="font-size: 35px; margin-bottom:1rem;">&#9888;&#65039;</div>
+            <div style="font-size: 35px; margin-bottom:1rem; color:var(--grade-e);">${getSvgIcon('alert-triangle', 35)}</div>
             <h3 style="color:var(--clr-text-1); font-size: 16px; font-weight:700; margin-bottom:0.5rem;">Section Loading Interrupted</h3>
             <p class="text-danger text-sm" style="margin-bottom:1.5rem; word-break:break-word;">${escapeHtml(e?.message || 'An unexpected error occurred.')}</p>
             <div class="d-flex gap-3 justify-center">
@@ -5455,7 +5455,7 @@ if (typeof window !== 'undefined') {
         </div>
       `;
       const tbody = document.getElementById('tbl-institutions');
-      if (!data.length) { tbody.innerHTML = '<tr><td colspan="4"><div class="empty-state"><div class="empty-state__icon">&#127963;</div><p>No institutions yet.</p></div></td></tr>'; return; }
+      if (!data.length) { tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><div class="empty-state__icon" style="color:#64748b;">${getSvgIcon('building', 32)}</div><p>No institutions yet.</p></div></td></tr>`; return; }
       window._progRecords = {};
       data.forEach(r => {
         window._progRecords[r.id] = r;
@@ -5547,15 +5547,15 @@ if (typeof window !== 'undefined') {
         <div class="card p-3 mt-3 mb-3" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
           <div class="text-xs fw-700 mb-2" style="color:var(--clr-text-2);letter-spacing:0.08em;">C &mdash; CLASS TOOLS</div>
           <div class="d-flex gap-2 flex-wrap">
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('levels')">&#128200; Levels</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('topics')">&#127991;&#65039; Topics</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">&#128218; Vocabulary Vault</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('question_types')">&#128284; Validation Dictionary</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('class-hub')">&#128197; Class Hub</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('health')">&#9889; Recalibrator</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">&#128229; Import Vault</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">&#128228; Export Vault</button>
-            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import_ai_tests')">&#129302; Import AI Tests</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('levels')">${getSvgIcon('trending-up', 14)} Levels</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('topics')">${getSvgIcon('tag', 14)} Topics</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">${getSvgIcon('book-open', 14)} Vocabulary Vault</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('question_types')">${getSvgIcon('check-circle', 14)} Validation Dictionary</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('class-hub')">${getSvgIcon('calendar', 14)} Class Hub</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('health')">${getSvgIcon('zap', 14)} Recalibrator</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">${getSvgIcon('upload', 14)} Import Vault</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('vocab_vault')">${getSvgIcon('download', 14)} Export Vault</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.loadSection('import_ai_tests')">${getSvgIcon('cpu', 14)} Import AI Tests</button>
           </div>
         </div>
 
@@ -5587,7 +5587,7 @@ if (typeof window !== 'undefined') {
               <td class="text-right">
                 <div class="d-flex gap-2 justify-end">
                   <button class="btn btn-outline btn-sm" data-nav-topics="${r.id}" title="View Topics in ${escapeHtml(r.name)}">Topics &rarr;</button>
-                  <button class="btn btn-info btn-sm" data-nav-bank="${r.id}" title="Vocabulary Vault">&#128218; Vault</button>
+                  <button class="btn btn-info btn-sm" data-nav-bank="${r.id}" title="Vocabulary Vault">${getSvgIcon('book-open', 14)} Vault</button>
                   <button class="btn btn-secondary btn-sm" data-edit-subj="${r.id}">Edit</button>
                   <button class="btn btn-danger btn-sm" data-del-subj="${r.id}">Delete</button>
                 </div>

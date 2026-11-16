@@ -60,7 +60,7 @@
 .header-avatar:hover {
   border-color: var(--clr-accent-1);
   box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
-  transform: scale(1.08);
+  transform: none !important;
 }
 
 /* Header Action Icon Buttons (Profile, Logout) */
@@ -157,7 +157,7 @@
 .class-card { border-radius: var(--radius-lg); background: var(--clr-bg-2); border: 1px solid rgba(255, 255, 255, 0.08); padding: 10px 14px; cursor: pointer; transition: all var(--transition-fast); position: relative; overflow: hidden; display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; min-height: 0; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15); }
 
 .class-card:hover {
-  transform: translateY(-2px);
+  transform: none !important;
   border-color: rgba(99, 102, 241, 0.4);
   box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
 }
@@ -419,7 +419,7 @@
 .profile-close-btn:hover {
   background: rgba(255, 255, 255, 0.12);
   color: #ffffff;
-  transform: scale(1.08);
+  transform: none !important;
 }
 
 /* Single-Page Academic CV Body (Strict 10px Element Gap) */
@@ -478,7 +478,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 18px;
+  font-size: 20px;
   overflow: hidden !important;
   border: 2px solid rgba(56, 189, 248, 0.45) !important;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.4) !important;
@@ -504,7 +504,7 @@
 .profile-avatar-wrap:hover .profile-avatar-3x4,
 .profile-avatar-wrap:hover .profile-avatar-square,
 .profile-avatar-wrap:hover .profile-avatar-circle {
-  transform: scale(1.03);
+  transform: none !important;
   border-color: #38bdf8 !important;
 }
 
@@ -532,7 +532,7 @@
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   border: 1.5px solid #0d1424 !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5) !important;
   z-index: 5 !important;
@@ -622,7 +622,7 @@
 }
 
 .profile-cv-top-name-wrap .profile-metadata-sentence {
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-weight: 700;
   color: #38bdf8;
   letter-spacing: 0.02em;
@@ -700,7 +700,7 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
-  font-size: 11px !important;
+  font-size: 12px !important;
   color: #cbd5e1;
 }
 
@@ -841,7 +841,7 @@
 }
 
 .profile-metadata-sentence {
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-weight: 700;
   color: #38bdf8;
   letter-spacing: 0.02em;
@@ -859,7 +859,7 @@
 }
 
 .profile-section-divider-title {
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
   color: #38bdf8 !important;
   text-transform: uppercase !important;
@@ -1191,7 +1191,7 @@
 
 #prof-pin-display {
   font-family: var(--font-mono, monospace, sans-serif);
-  font-size: 15px !important;
+  font-size: 16px !important;
   font-weight: 800;
   letter-spacing: 3px;
   color: #38bdf8 !important;
@@ -1628,12 +1628,7 @@
 .btn-profile-modal-footer-close:active {
   background: rgba(255, 255, 255, 0.16) !important;
   box-shadow: 0 0 16px rgba(148, 163, 184, 0.65) !important;
-  transform: scale(0.985) !important;
-}
-  transition: all 0.2s ease !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  transform: none !important;
 }
 
 .btn-profile-modal-footer-close:hover {
@@ -1659,7 +1654,7 @@
 #stat-overall-grade-value,
 #bottom-stat-avg-score {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 26px !important;
+  font-size: 30px !important;
   font-weight: 800 !important;
   line-height: 1 !important;
   letter-spacing: -0.02em !important;
@@ -1722,7 +1717,7 @@
       position: relative;
     }
     .banner-avatar-box:hover {
-      transform: scale(1.04);
+      transform: none !important;
       box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.35);
     }
     .banner-camera-badge {
@@ -1836,7 +1831,7 @@
     }
     .completed-summary-card:hover {
       border-color: var(--clr-accent-1);
-      transform: translateY(-1px);
+      transform: none !important;
     }
     .completed-summary-icon {
       font-size: 16px;
@@ -1940,7 +1935,7 @@
     .completed-Test-mobile-card:active {
       background: rgba(99, 102, 241, 0.08);
       border-color: rgba(99, 102, 241, 0.4);
-      transform: translateY(-1px);
+      transform: none !important;
     }
     .Test-card-header {
       display: flex;
@@ -2336,7 +2331,7 @@ body.dashboard-page .next-asm-left {
 body.dashboard-page .next-test-title,
 body.dashboard-page .next-asm-title {
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(11.5px, 3.2vw, 13px) !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   white-space: normal !important;
@@ -2375,7 +2370,7 @@ body.dashboard-page .next-asm-go-btn {
 body.dashboard-page .next-test-go-btn:hover,
 body.dashboard-page .next-asm-go-btn:hover {
   filter: brightness(1.15) !important;
-  transform: scale(1.05) !important;
+  transform: none !important;
 }
 
 body.dashboard-page .next-test-go-btn.is-retake,
@@ -2456,7 +2451,7 @@ body.dashboard-page .next-asm-go-btn.is-next-arrow-green {
 body.dashboard-page .next-test-go-btn.is-pass-tier-a:hover,
 body.dashboard-page .next-asm-go-btn.is-pass-tier-a:hover {
   filter: brightness(1.15) !important;
-  transform: scale(1.05) !important;
+  transform: none !important;
 }
 
 body.dashboard-page .next-test-status-icon,
@@ -2571,9 +2566,10 @@ body.dashboard-page .dock-tab-pane.hidden {
 
 body.dashboard-page .standings-table-header {
   display: grid !important;
-  grid-template-columns: 28px 1fr 48px 40px !important;
+  grid-template-columns: 24px 1fr 38px 28px !important;
+  gap: 6px !important;
   align-items: center !important;
-  padding: 4px 12px !important;
+  padding: 4px 10px !important;
   font-family: 'Outfit', sans-serif !important;
   font-size: 12px !important;
   font-weight: 800 !important;
@@ -2603,9 +2599,10 @@ body.dashboard-page .standings-table-wrap::-webkit-scrollbar {
 
 body.dashboard-page .standings-row {
   display: grid !important;
-  grid-template-columns: 28px 1fr 48px 40px !important;
+  grid-template-columns: 24px 1fr 38px 28px !important;
+  gap: 6px !important;
   align-items: center !important;
-  padding: 5px 12px !important;
+  padding: 5px 10px !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
   transition: background 0.15s ease !important;
 }
@@ -2766,7 +2763,8 @@ body.dashboard-page .btn-retry-test:hover {
   background: rgba(var(--grade-e-rgb), 0.35) !important;
   border-color: var(--grade-e) !important;
   color: #ffffff !important;
-  transform: scale(1.05) !important;
+  transform: none !important;
+  box-shadow: 0 0 10px rgba(var(--grade-e-rgb), 0.45) !important;
 }
 
 body.dashboard-page .class-deck-title {
@@ -3042,7 +3040,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 .classes-selector-modal-footer .btn-modal-close-left:active {
   background: rgba(255, 255, 255, 0.16) !important;
   box-shadow: 0 0 16px rgba(148, 163, 184, 0.65) !important;
-  transform: scale(0.985) !important;
+  transform: none !important;
 }
 
 .classes-selector-modal-footer .classes-selector-btn-confirm {
@@ -3074,7 +3072,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 
 .classes-selector-modal-footer .classes-selector-btn-confirm:active {
   box-shadow: 0 0 20px rgba(56, 189, 248, 0.8) !important;
-  transform: scale(0.985) !important;
+  transform: none !important;
 }
 
 /* ========================================================
@@ -3198,7 +3196,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 
 .component-card-title {
   font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
-  font-size: 15px !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.06em !important;
   text-transform: uppercase !important;
@@ -3384,7 +3382,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-size: 26px !important;
+  font-size: 30px !important;
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.18) !important;
   color: #cbd5e1 !important;
@@ -3441,7 +3439,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   border: 1px solid rgba(0, 192, 0, 0.4) !important;
   color: #86efac !important;
   font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 700 !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase !important;
@@ -3473,7 +3471,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   border: 1px solid rgba(255, 0, 0, 0.4) !important;
   color: #fca5a5 !important;
   font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase !important;
@@ -3494,7 +3492,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 
 .custom-confirm-btn-action:active,
 .custom-confirm-btn-cancel:active {
-  transform: scale(0.98) !important;
+  transform: none !important;
 }
 
 /* Pinned Standing Summary Bar */
@@ -3658,10 +3656,9 @@ body.dashboard-page .leaderboard-student-info {
 body.dashboard-page .leaderboard-name-wrap {
   display: flex !important;
   align-items: center !important;
-  gap: 5px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  gap: 4px !important;
+  white-space: normal !important;
+  overflow: visible !important;
 }
 
 body.dashboard-page .leaderboard-student-name {
@@ -3669,9 +3666,11 @@ body.dashboard-page .leaderboard-student-name {
   font-size: 12px !important;
   font-weight: 700 !important;
   color: #f1f5f9 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  line-height: 1.25 !important;
+  word-break: break-word !important;
+  text-overflow: clip !important;
 }
 
 body.dashboard-page .leaderboard-royal-tag {
@@ -3757,7 +3756,7 @@ body.dashboard-page .completed-summary-val {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
+  font-weight: 700;
   cursor: pointer;
 }
 
@@ -4054,7 +4053,7 @@ body.dashboard-page .completed-summary-val {
 }
 
 .gender-square-card:hover .gender-card-emoji {
-  transform: scale(1.12);
+  transform: none !important;
 }
 
 .gender-card-icon.symbol-male,
@@ -4071,7 +4070,7 @@ body.dashboard-page .completed-summary-val {
 
 .gender-square-card:hover .gender-card-icon,
 .gender-wide-btn:hover .gender-btn-icon {
-  transform: scale(1.06);
+  transform: none !important;
 }
 
 .gender-card-label,
@@ -4506,12 +4505,12 @@ select option.select-divider {
 }
 
 .camera-square-btn:hover {
-  transform: scale(1.08);
+  transform: none !important;
   box-shadow: 0 6px 22px rgba(56, 189, 248, 0.5);
 }
 
 .camera-square-btn:active {
-  transform: scale(0.96);
+  transform: none !important;
 }
 
 .camera-btn-icon {
@@ -4606,7 +4605,7 @@ select option.select-divider {
   color: #f8fafc;
   padding: 2rem;
   border-radius: 12px;
-  max-width: 480px;
+  max-width: min(430px, 92vw);
   width: 92%;
   box-shadow: 0 20px 40px rgba(0,0,0,0.6);
   border: 1px solid rgba(255,255,255,0.1);
@@ -4689,7 +4688,7 @@ select option.select-divider {
   color: #f8fafc;
   padding: 1.5rem;
   border-radius: 12px;
-  max-width: 540px;
+  max-width: min(430px, 94vw);
   width: 100%;
   max-height: 92vh;
   display: flex;
@@ -4919,14 +4918,15 @@ select option.select-divider {
 
 /* Phase 298: Component Selection Modal Active Click Transition */
 .component-choice-card:active {
-  transform: scale(0.985);
+  transform: none !important;
 }
 
 /* Phase 305: Forgiven & Manual Override on Student Dashboard */
 .asm-forgiven-sup {
   color: var(--grade-c) !important;
   font-weight: 900 !important;
-  font-size: 0.62em !important;
+  font-size: 1.0em !important;
+  vertical-align: super !important;
   cursor: help !important;
   margin-left: 1px !important;
   display: inline-block;
@@ -4934,7 +4934,8 @@ select option.select-divider {
 .asm-manual-sup {
   color: #38bdf8 !important;
   font-weight: 900 !important;
-  font-size: 0.62em !important;
+  font-size: 1.0em !important;
+  vertical-align: super !important;
   cursor: help !important;
   margin-left: 1px !important;
   display: inline-block;
@@ -4979,7 +4980,7 @@ body.dashboard-page .header-door-btn {
 body.dashboard-page .header-door-btn:hover {
   background: rgba(56, 189, 248, 0.15) !important;
   border-color: #38bdf8 !important;
-  transform: scale(1.05) !important;
+  transform: none !important;
   box-shadow: 0 0 12px rgba(56, 189, 248, 0.3) !important;
 }
 
@@ -5006,7 +5007,7 @@ body.dashboard-page #banner-avatar-trigger {
   transition: transform 0.2s ease !important;
 }
 body.dashboard-page #banner-avatar-trigger:hover {
-  transform: scale(1.04) !important;
+  transform: none !important;
 }
 
 /* Purple Tier Styling: New Students (LET'S GO) & Alumni (Grade X) */
@@ -5079,7 +5080,7 @@ body.dashboard-page .next-test-title-wrap {
 
 body.dashboard-page .next-test-title-wrap .next-asm-title {
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(11.5px, 3.2vw, 13px) !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   white-space: normal !important;
@@ -5169,16 +5170,16 @@ body.dashboard-page .next-test-col-right .pass-counter-btn {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
 }
 body.dashboard-page .next-test-col-right .pass-counter-btn:hover {
-  transform: scale(1.08) !important;
+  transform: none !important;
 }
 
 body.dashboard-page .pass-counter-btn.rainbow-step-1 { background: var(--grade-e) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(var(--grade-e-rgb), 0.6) !important; }
 body.dashboard-page .pass-counter-btn.rainbow-step-2 { background: var(--grade-d) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(var(--grade-d-rgb), 0.6) !important; }
 body.dashboard-page .pass-counter-btn.rainbow-step-3 { background: var(--grade-c) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(var(--grade-c-rgb), 0.6) !important; }
-body.dashboard-page .pass-counter-btn.rainbow-step-4 { background: var(--grade-c) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(var(--grade-c-rgb), 0.6) !important; }
-body.dashboard-page .pass-counter-btn.rainbow-step-5 { background: var(--grade-b) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(var(--grade-b-rgb), 0.6) !important; }
-body.dashboard-page .pass-counter-btn.rainbow-step-6 { background: #06B6D4 !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(6, 182, 212, 0.6) !important; }
-body.dashboard-page .pass-counter-btn.rainbow-step-7 { background: #8B5CF6 !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(139, 92, 246, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-4 { background: var(--grade-a) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(var(--grade-a-rgb), 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-5 { background: var(--primary-tactical, #38bdf8) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-6 { background: var(--clr-accent-1, #6366f1) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(99, 102, 241, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-7 { background: var(--quad-d, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(192, 132, 252, 0.6) !important; }
 
 /* Yellow Padlock (Waiting for Exam) in 80px Column */
 body.dashboard-page .next-test-col-right .is-exam-lock {
@@ -5210,27 +5211,29 @@ body.dashboard-page .next-test-col-right .is-exam-play {
   transition: all 0.2s ease !important;
 }
 body.dashboard-page .next-test-col-right .is-exam-play:hover {
-  transform: scale(1.08) !important;
+  transform: none !important;
   box-shadow: 0 0 18px rgba(var(--grade-a-rgb), 0.75) !important;
 }
 
 /* Standings Table Grid Separation */
 body.dashboard-page .standings-table-header {
-  grid-template-columns: 28px 1fr 54px 44px !important;
+  grid-template-columns: 24px 1fr 38px 28px !important;
   gap: 6px !important;
+  padding: 4px 10px !important;
 }
 body.dashboard-page .standings-row {
-  grid-template-columns: 28px 1fr 54px 44px !important;
+  grid-template-columns: 24px 1fr 38px 28px !important;
   gap: 6px !important;
-  padding: 6px 12px !important;
+  padding: 6px 10px !important;
 }
 
 /* Completed Tests Table Header & Rows Grid */
 body.dashboard-page .completed-table-header {
   display: grid !important;
-  grid-template-columns: 28px 1fr 48px 40px 38px !important;
+  grid-template-columns: 24px 1fr 38px 28px 34px !important;
+  gap: 6px !important;
   align-items: center !important;
-  padding: 4px 12px !important;
+  padding: 4px 10px !important;
   font-family: 'Outfit', sans-serif !important;
   font-size: 12px !important;
   font-weight: 800 !important;
@@ -5259,9 +5262,10 @@ body.dashboard-page .completed-table-header .th-action {
 
 body.dashboard-page .completed-row {
   display: grid !important;
-  grid-template-columns: 28px 1fr 48px 40px 38px !important;
+  grid-template-columns: 24px 1fr 38px 28px 34px !important;
+  gap: 6px !important;
   align-items: center !important;
-  padding: 6px 12px !important;
+  padding: 6px 10px !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
   transition: background 0.15s ease !important;
 }
@@ -5351,7 +5355,7 @@ body.dashboard-page .completed-retry-btn {
 body.dashboard-page .completed-retry-btn:hover {
   background: rgba(56, 189, 248, 0.25) !important;
   border-color: #38bdf8 !important;
-  transform: scale(1.1) !important;
+  transform: none !important;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.4) !important;
 }
 
@@ -5441,7 +5445,7 @@ body.dashboard-page .dashboard-content {
   flex: 1 1 0% !important;
   min-height: 0 !important;
   width: 100% !important;
-  max-width: 440px !important;
+  max-width: 430px !important;
   margin: 0 auto !important;
   padding: 10px 14px 10px 14px !important; /* Strict 10px gap below Header & above Banner */
   display: flex !important;
@@ -5458,7 +5462,7 @@ body.dashboard-page .dashboard-header {
   min-height: 50px !important;
   max-height: 50px !important;
   width: 100% !important;
-  max-width: 440px !important;
+  max-width: 430px !important;
   margin: 0 auto !important;
   padding: 0 14px !important;
   display: flex !important;
@@ -5741,7 +5745,7 @@ body.dashboard-page .next-test-title-wrap {
 body.dashboard-page .next-test-title-wrap .next-asm-title,
 body.dashboard-page .next-test-primary-name {
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(11px, 3vw, 12.5px) !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   line-height: 1.2 !important;
@@ -5755,7 +5759,7 @@ body.dashboard-page .next-test-primary-name {
 
 body.dashboard-page .next-test-topic-name {
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(10px, 2.7vw, 11.2px) !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   color: #94a3b8 !important;
   line-height: 1.15 !important;
@@ -5912,7 +5916,7 @@ body.dashboard-page .topscore-locked-banner {
   min-height: 60px !important;
   max-height: 60px !important;
   width: 100% !important;
-  max-width: 440px !important;
+  max-width: 430px !important;
   margin: 0 auto !important;
   flex-shrink: 0 !important;
   display: flex !important;
@@ -5923,7 +5927,6 @@ body.dashboard-page .topscore-locked-banner {
   background: radial-gradient(ellipse 90% 70% at 50% 100%, rgba(var(--tier-rgb), 0.12), transparent 75%), #070b19 !important;
   box-shadow: 0 -4px 18px rgba(var(--tier-rgb), 0.15) !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
   z-index: 50 !important;
 }
 

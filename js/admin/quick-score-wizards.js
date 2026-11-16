@@ -127,7 +127,6 @@ export async function openQuickRemedialModal({ classId, classTests = [], student
             <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Showing ${remedialCandidates.length} students with scores below 60% or pending in this class.</p>
           </div>
         </div>
-        <button type="button" id="btn-close-quick-remedial" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px;">✕</button>
       </div>
 
       <!-- Table Body -->
@@ -170,7 +169,6 @@ export async function openQuickRemedialModal({ classId, classTests = [], student
   };
   window.addEventListener('keydown', handleEsc);
 
-  overlay.querySelector('#btn-close-quick-remedial').onclick = close;
   overlay.querySelector('#btn-cancel-quick-remedial').onclick = close;
 
   overlay.querySelector('#btn-save-quick-remedial').onclick = async () => {
@@ -303,7 +301,6 @@ export async function openQuickForgivenModal({ classId, classTests = [], student
             <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Grant score waiver to unblock sequential prerequisites for ${forgiveCandidates.length} students.</p>
           </div>
         </div>
-        <button type="button" id="btn-close-quick-forgiven" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px;">✕</button>
       </div>
 
       <!-- Reason input -->
@@ -352,7 +349,6 @@ export async function openQuickForgivenModal({ classId, classTests = [], student
   };
   window.addEventListener('keydown', handleEsc);
 
-  overlay.querySelector('#btn-close-quick-forgiven').onclick = close;
   overlay.querySelector('#btn-cancel-quick-forgiven').onclick = close;
 
   overlay.querySelector('#btn-save-quick-forgiven').onclick = async () => {
@@ -456,7 +452,6 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
             <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Select students to graduate directly to Alumni. Alumni receive universal access across all classes.</p>
           </div>
         </div>
-        <button type="button" id="btn-close-quick-alumni" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 4px 8px;">✕</button>
       </div>
 
       <!-- Quick select tools -->
@@ -501,7 +496,6 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
   document.body.appendChild(overlay);
 
   const close = () => overlay.remove();
-  overlay.querySelector('#btn-close-quick-alumni').onclick = close;
   overlay.querySelector('#btn-cancel-quick-alumni').onclick = close;
 
   overlay.querySelector('#btn-select-all-alumni').onclick = () => {
@@ -545,7 +539,7 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
       }
 
       clearAdminCache('students');
-      if (typeof window.showToast === 'function') window.showToast(`🎓 Successfully graduated ${studentIds.length} student(s) to ALUMNI!`, 'success');
+      if (typeof window.showToast === 'function') window.showToast(`Successfully graduated ${studentIds.length} student(s) to ALUMNI!`, 'success');
       close();
       if (typeof onSaved === 'function') await onSaved();
     } catch (err) {

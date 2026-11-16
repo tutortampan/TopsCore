@@ -6,6 +6,7 @@
     "test:syntax": "node --no-warnings --experimental-vm-modules scripts/check_all_js_syntax.mjs",
     "test:syntax:cjs": "node scripts/check_all_js_syntax.cjs",
     "test:fast": "node scripts/test_smart.mjs --fast",
+    "test:pwa": "node scripts/test_pwa_integrity.mjs",
     "test:full": "node scripts/run_all_tests_parallel.mjs",
     "test:manifest": "node scripts/generate_sw_manifest.mjs",
     "test:parity": "node scripts/test_student_dashboard_exam_parity.mjs",
