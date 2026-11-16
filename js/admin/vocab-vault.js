@@ -1144,11 +1144,15 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
     classId: editAsm?.class_id || overrides.classId || '', className: overrides.className || '',
     levelId: editAsm?.level_id || overrides.levelId || '', levelName: overrides.levelName || '',
     testType: editAsm?.test_type || overrides.testType || 'VOCAB_MASTERY',
-    tier: editAsm ? (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'TASK') : (overrides.tier || 'TASK'),
+    tier: editAsm ? (editAsm.payload?.is_standalone_tryout ? 'TRYOUT' : (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'TASK')) : (overrides.tier || 'TASK'),
     title: editAsm?.title || '',
     sourceTopic: null,
     sourceTaskIds: [],
     sourceQuizIds: [],
+    selectedThemes: editAsm?.payload?.themes || ['A', 'B', 'C', 'D'],
+    category: editAsm?.payload?.category || 'words',
+    answerType: editAsm?.answer_type || editAsm?.payload?.answer_type || 'written',
+    isStandalone: overrides.tier === 'TRYOUT' || overrides.isStandalone || false,
     questionOrder: 'random',
     quotaMode: 'full',
     customQuota: null,
@@ -1174,8 +1178,13 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
   function updateAutoTitle() {
     const parts = [state.institutionName, state.programName, state.levelName, state.className].filter(Boolean);
-    let suffix = state.tier === 'EXAM' ? 'Exam' : 'Task';
+    let suffix = state.tier === 'EXAM' ? 'Exam' : (state.tier === 'TRYOUT' ? 'Placement Test' : 'Task');
     if ((state.tier === 'QUIZ' || state.tier === 'TASK') && state.sourceTopic) suffix += ` - ${state.sourceTopic}`;
+    if (state.tier === 'TRYOUT') {
+      const catLabel = state.category === 'phrases' ? 'Phrases' : (state.category === 'all' ? 'Comprehensive' : 'Words');
+      const themesLabel = (state.selectedThemes && state.selectedThemes.length > 0) ? state.selectedThemes.join('') : 'ALL';
+      suffix += ` (${catLabel} Themes ${themesLabel})`;
+    }
     if (parts.length > 0) {
       state.title = `${parts.join(' - ')} - ${suffix}`;
       const titleInput = document.getElementById('b-title');
@@ -1224,7 +1233,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <div class="d-flex flex-column gap-3 mb-3">
               ${[
           { val: 'TASK', icon: getSvgIcon('zap', 14), label: 'Task', desc: 'Single topic drill' },
-          { val: 'EXAM', icon: getSvgIcon('award', 14), label: 'Exam', desc: 'Milestone aggregated exam' }
+          { val: 'EXAM', icon: getSvgIcon('award', 14), label: 'Exam', desc: 'Milestone aggregated exam' },
+          { val: 'TRYOUT', icon: getSvgIcon('target', 14), label: 'Placement / Try-Out', desc: 'Standalone diagnostic across themes (no prerequisites)' }
         ].map(t => `
                 <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
                   <input type="radio" name="vocab-tier" value="${t.val}" ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
@@ -1435,6 +1445,99 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             });
           });
         }
+      } else if (state.tier === 'TRYOUT') {
+        // PLACEMENT / STANDALONE TRYOUT STEP 2
+        sourceArea.innerHTML = `
+          <div class="p-3 mb-3 rounded" style="background:rgba(56, 189, 248, 0.08);border:1px solid rgba(56, 189, 248, 0.25);">
+            <div class="d-flex align-center gap-2 mb-1" style="color:#38bdf8;font-weight:700;font-size:13px;">
+              ${getSvgIcon('compass', 16) || getSvgIcon('target', 16)} Standalone Placement &amp; Try-Out Engine
+            </div>
+            <div class="text-xs" style="color:var(--clr-text-2);line-height:1.5;">
+              This test operates independently from curriculum gating. Students can take it anytime without needing to complete prerequisite tasks or 7×7 repetitive mastery.
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label fw-700">Covered Themes</label>
+            <p class="text-muted text-xs mb-2">Select which themes will be included in the diagnostic pool:</p>
+            <div class="d-flex gap-2 flex-wrap mb-2" id="tryout-theme-checks">
+              ${['A', 'B', 'C', 'D'].map(th => `
+                <label class="d-flex align-center gap-2 p-2 rounded" style="cursor:pointer;border:1px solid var(--clr-border);background:rgba(255,255,255,0.02);min-width:110px;">
+                  <input type="checkbox" class="tryout-theme-cb" value="${th}" ${(state.selectedThemes || ['A','B','C','D']).includes(th) ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                  <span class="fw-700 text-sm">Theme ${th}</span>
+                </label>
+              `).join('')}
+            </div>
+            <div class="d-flex gap-2">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-select-all-themes" style="font-size:11px;padding:2px 8px;">Select All Themes</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-all-themes" style="font-size:11px;padding:2px 8px;">Clear</button>
+            </div>
+          </div>
+
+          <div class="form-group mb-3">
+            <label class="form-label fw-700">Item Category</label>
+            <div class="d-flex gap-3 flex-wrap">
+              <label class="d-flex align-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="tryout-category" value="words" ${(state.category || 'words') === 'words' ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                <span><strong>Words Only</strong> <span class="text-muted text-xs">(Vocabulary drill)</span></span>
+              </label>
+              <label class="d-flex align-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="tryout-category" value="phrases" ${state.category === 'phrases' ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                <span><strong>Phrases &amp; Idioms</strong> <span class="text-muted text-xs">(Phrasal patterns)</span></span>
+              </label>
+              <label class="d-flex align-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="tryout-category" value="all" ${state.category === 'all' ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                <span><strong>Comprehensive</strong> <span class="text-muted text-xs">(Both Words &amp; Phrases)</span></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group mb-2">
+            <label class="form-label fw-700">Answer Modality</label>
+            <div class="d-flex gap-3 flex-wrap">
+              <label class="d-flex align-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="tryout-answer-type" value="written" ${(state.answerType || 'written') === 'written' ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                <span><strong>Written</strong> <span class="text-muted text-xs">(Spelling &amp; typing)</span></span>
+              </label>
+              <label class="d-flex align-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="tryout-answer-type" value="spoken" ${state.answerType === 'spoken' ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                <span><strong>Spoken</strong> <span class="text-muted text-xs">(Voice recognition)</span></span>
+              </label>
+              <label class="d-flex align-center gap-2" style="cursor:pointer;">
+                <input type="radio" name="tryout-answer-type" value="dropdown_10" ${state.answerType === 'dropdown_10' || state.answerType === 'selection' ? 'checked' : ''} style="accent-color:#38bdf8;" />
+                <span><strong>Selection</strong> <span class="text-muted text-xs">(Dropdown multiple choice)</span></span>
+              </label>
+            </div>
+          </div>
+        `;
+
+        document.querySelectorAll('.tryout-theme-cb').forEach(cb => {
+          cb.addEventListener('change', () => {
+            state.selectedThemes = [...document.querySelectorAll('.tryout-theme-cb:checked')].map(c => c.value);
+            updateAutoTitle();
+          });
+        });
+        document.getElementById('btn-select-all-themes')?.addEventListener('click', () => {
+          document.querySelectorAll('.tryout-theme-cb').forEach(c => c.checked = true);
+          state.selectedThemes = ['A', 'B', 'C', 'D'];
+          updateAutoTitle();
+        });
+        document.getElementById('btn-clear-all-themes')?.addEventListener('click', () => {
+          document.querySelectorAll('.tryout-theme-cb').forEach(c => c.checked = false);
+          state.selectedThemes = [];
+          updateAutoTitle();
+        });
+        document.querySelectorAll('input[name="tryout-category"]').forEach(r => {
+          r.addEventListener('change', () => {
+            state.category = r.value;
+            updateAutoTitle();
+          });
+        });
+        document.querySelectorAll('input[name="tryout-answer-type"]').forEach(r => {
+          r.addEventListener('change', () => {
+            state.answerType = r.value;
+          });
+        });
       }
     }
 
@@ -1472,6 +1575,13 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <div id="custom-quota-area" style="display:${state.quotaMode === 'custom' ? 'block' : 'none'};margin-top:0.75rem;">
             <input type="number" class="form-control" id="custom-quota-input" min="1" placeholder="Number of questions to sample" value="${state.customQuota || ''}" style="max-width:240px;" />
             <p class="text-muted text-xs mt-1">Words will be sampled proportionally across all source topics (stratified sampling).</p>
+            ${state.tier === 'TRYOUT' ? `
+              <div class="d-flex gap-2 mt-2 flex-wrap" id="tryout-quota-presets">
+                <button type="button" class="btn btn-secondary btn-sm" data-q="30" style="font-size:11px;padding:2px 8px;">30 Items (Quick Diagnostic)</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-q="50" style="font-size:11px;padding:2px 8px;">50 Items (Standard Placement)</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-q="100" style="font-size:11px;padding:2px 8px;">100 Items (Comprehensive)</button>
+              </div>
+            ` : ''}
           </div>
         </div>
       `;
@@ -1486,6 +1596,14 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       });
       document.getElementById('custom-quota-input')?.addEventListener('input', (e) => {
         state.customQuota = parseInt(e.target.value) || null;
+      });
+      document.querySelectorAll('#tryout-quota-presets button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const q = parseInt(btn.dataset.q, 10);
+          state.customQuota = q;
+          const input = document.getElementById('custom-quota-input');
+          if (input) input.value = q;
+        });
       });
     }
 
@@ -1570,6 +1688,9 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       if (state.tier === 'EXAM' && !state.sourceQuizIds.length && !state.sourceTaskIds.length) {
         showToast('Please select at least one Task.', 'warning'); return;
       }
+      if (state.tier === 'TRYOUT' && (!state.selectedThemes || !state.selectedThemes.length)) {
+        showToast('Please select at least one theme for the placement test.', 'warning'); return;
+      }
     } else if (state.step === 4) {
       // Final submission
       if (!state.title) { showToast('Test title is required.', 'warning'); return; }
@@ -1609,11 +1730,15 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             sourceTaskIds: state.sourceTaskIds,
             sourceQuizIds: state.sourceQuizIds,
             testType: state.testType,
-            answerType: state.testType === 'IDIOM_PROVERB' ? 'dropdown_10' : 'written'
+            answerType: state.answerType || (state.testType === 'IDIOM_PROVERB' ? 'dropdown_10' : 'written'),
+            isStandalone: state.tier === 'TRYOUT',
+            selectedThemes: state.selectedThemes || ['A', 'B', 'C', 'D'],
+            category: state.category || 'words'
           });
           hideLoading();
           modal.remove();
-          showToast(`${state.tier} created: "${result.title}" — ${result.sampledWords} questions.`, 'success');
+          const tierLabel = state.tier === 'TRYOUT' ? 'Placement Test' : state.tier;
+          showToast(`${tierLabel} created: "${result.title}" — ${result.sampledWords} questions.`, 'success');
         }
       } catch (e) {
         hideLoading();

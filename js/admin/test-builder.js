@@ -23,7 +23,7 @@ import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { getAllowedModulesForClass, OFFICIAL_MODULES } from './modules.js';
 
-export async function openTestBuilder(testId = null, initialClassId = null) {
+export async function openTestBuilder(testId = null, initialClassId = null, initialOptions = {}) {
   const isEdit = !!testId;
 
   const builderDiv = document.createElement('div');
@@ -72,6 +72,15 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
                       <input type="radio" name="wiz-type" value="EXAM" />
                       <strong>Exam</strong> <span class="text-muted text-xs">(Comprehensive formal examination)</span>
                     </label>
+                  </div>
+                  <div class="mt-2 p-2 rounded" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);">
+                    <label style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-bottom:0;">
+                      <input type="checkbox" id="wiz-standalone" style="accent-color:#38bdf8;" />
+                      <span style="font-size:12px;font-weight:700;color:#38bdf8;">Placement / Standalone Test</span>
+                    </label>
+                    <div class="text-muted text-xs mt-1" style="margin-left:22px;line-height:1.4;">
+                      Bypasses all prerequisite gating, 7×7 repetitive mastery, and linear topic sequences. Any student can take this test standalone.
+                    </div>
                   </div>
                 </div>
 
@@ -625,6 +634,11 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
         prereqSelEl.value = editTest.prerequisite_test_id || editTest.prerequisite_test_id;
       }
 
+      const standaloneCheck = document.getElementById('wiz-standalone');
+      if (standaloneCheck) {
+        standaloneCheck.checked = Boolean(editTest.payload?.is_standalone_tryout || editTest.payload?.is_placement_test);
+      }
+
       // PUBLISHED Guardrails
       if (editTest.status === 'PUBLISHED') {
         if (typeRadio) typeRadio.disabled = true;
@@ -654,6 +668,11 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
       linkedQuestions.forEach(q => {
         if (q.topic_id) selectedTopicIds.add(q.topic_id);
       });
+    } else {
+      if (initialOptions?.isStandalone) {
+        const standaloneCheck = document.getElementById('wiz-standalone');
+        if (standaloneCheck) standaloneCheck.checked = true;
+      }
     }
 
     subSel.onchange = () => {
@@ -761,17 +780,23 @@ export async function openTestBuilder(testId = null, initialClassId = null) {
             answer_type: answerType || 'spoken'
         };
 
+        const isStandalone = Boolean(document.getElementById('wiz-standalone')?.checked);
         const updatePayload = {
           ...structuralData,
           title,
           working_duration_minutes: duration,
           question_order: order,
-          prerequisite_test_id: prereqId,
+          prerequisite_test_id: isStandalone ? null : prereqId,
           availability_start: startVal ? new Date(startVal).toISOString() : null,
           availability_end: endVal ? new Date(endVal).toISOString() : null,
           status: (targetStatus === 'PUBLISHED' ? 'PUBLISHED' : statusVal),
           max_attempts: maxAttempts,
-          minimum_required_score: passThreshold
+          minimum_required_score: passThreshold,
+          payload: {
+            ...(editTest?.payload || {}),
+            is_standalone_tryout: isStandalone,
+            is_placement_test: isStandalone
+          }
         };
 
         if (!asmId) {

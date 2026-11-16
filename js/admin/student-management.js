@@ -3810,7 +3810,7 @@ window.promoteStudentNextLevel = async function(rowOrId) {
 
   if (!row && typeof rowOrId === 'string') {
     const { data: st } = await sb.from('students')
-      .select('id, name, level_id, program_status, levels(name, level_number)')
+      .select('id, name, level_id, batch_id, program_id, program_status, levels(name, level_number)')
       .eq('id', rowOrId)
       .single();
     if (st) {
@@ -3820,6 +3820,8 @@ window.promoteStudentNextLevel = async function(rowOrId) {
         studentLevelNum: st.levels?.level_number,
         levelName: st.levels?.name,
         level_id: st.level_id,
+        program_id: st.program_id,
+        batch_id: st.batch_id,
         isAlumni: (st.program_status || '').toUpperCase() === 'ALUMNI' || st.levels?.level_number === 0
       };
     }
@@ -3862,6 +3864,12 @@ window.promoteStudentNextLevel = async function(rowOrId) {
       .update(promoUpdates)
       .eq('id', studentId);
     if (updErr) throw updErr;
+
+    // Auto-activate class for target level in student's program if needed
+    const progId = row.program_id || currentProgramId;
+    if (nextLevelNum !== 0 && progId && targetLevel?.id) {
+      await sb.from('classes').update({ is_active: true }).eq('program_id', progId).eq('level_id', targetLevel.id);
+    }
 
     await sb.from('audit_logs').insert({
       actor_role: 'admin',
@@ -4002,6 +4010,20 @@ window.promoteAllEligibleStudents = async function() {
         new_value: { level_id: targetLvl.id, level_number: nextNum, level_name: targetLvl.name },
         created_at: new Date().toISOString()
       });
+    }
+  }
+
+  // Sync batch level and activate target level classes if promoting batch students
+  if (window._filterBatchId && promotedCount > 0 && eligible[0]) {
+    const curNum = parseInt(eligible[0].studentLevelNum != null ? eligible[0].studentLevelNum : 1, 10);
+    const nextNum = curNum >= 3 ? 0 : curNum + 1;
+    const targetLvl = (levels || []).find(l => parseInt(l.level_number, 10) === nextNum || (nextNum === 0 && (l.name || '').toLowerCase() === 'alumni'));
+    if (targetLvl && nextNum !== 0) {
+      await sb.from('batches').update({ current_level_id: targetLvl.id }).eq('id', window._filterBatchId);
+      const progId = eligible[0].program_id || currentProgramId;
+      if (progId) {
+        await sb.from('classes').update({ is_active: true }).eq('program_id', progId).eq('level_id', targetLvl.id);
+      }
     }
   }
 

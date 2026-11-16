@@ -559,8 +559,26 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
     });
     if (matched.length > 0) return matched;
 
-    // Resilient Fallback: If no classes matched this specific level_id, return active program classes
-    return data;
+    // Resilient Level Check: Check if classes exist for this level that need to be active
+    if (studentLevelNum != null && studentLevelNum > 0) {
+      const { data: levelClasses } = await sb.from('classes')
+        .select('id, name, code, description, level_id, is_active, levels!classes_level_id_fkey(level_number, name)')
+        .is('deleted_at', null)
+        .eq('program_id', programId);
+
+      const foundLevelCls = (levelClasses || []).filter(c => c.level_id === levelId || c.levels?.level_number === studentLevelNum);
+      if (foundLevelCls.length > 0) {
+        // Auto-heal: Ensure class is active so student can progress
+        const inactiveIds = foundLevelCls.filter(c => !c.is_active).map(c => c.id);
+        if (inactiveIds.length > 0) {
+          await sb.from('classes').update({ is_active: true }).in('id', inactiveIds);
+        }
+        return foundLevelCls.map(c => ({ ...c, is_active: true }));
+      }
+    }
+
+    // Do not fall back to other levels to preserve Strict Level Isolation
+    return [];
   } catch (e) {
     console.warn('Classes query note:', e.message);
   }

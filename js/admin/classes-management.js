@@ -71,6 +71,26 @@ window.handleAddExam = (classId, className) => {
 };
 window.handleAddTest = window.handleAddExam; // Backwards compatibility
 
+/** ADD PLACEMENT / TRY-OUT — opens standalone diagnostic test wizard */
+window.handleAddPlacement = (classId, className) => {
+  const type = detectClassType(className);
+  switch (type) {
+    case 'VOCABULARY':
+      openVocabWizard(null, { classId, className, testType: 'VOCAB_MASTERY', tier: 'TRYOUT', category: 'EXAM', isStandalone: true });
+      break;
+    case 'BASIC_ENGLISH':
+    case 'TELLING_STORY':
+    case 'PUBLIC_SPEAKING':
+    case 'SPEAKING_PROJECTS':
+    case 'STORYTELLING_L1':
+    case 'GENERIC':
+    default:
+      openTestBuilder(null, classId, { category: 'EXAM', isStandalone: true });
+      break;
+  }
+};
+window.handleAddTryout = window.handleAddPlacement;
+
 /** @deprecated — Use handleAddQuiz / handleAddExam instead */
 window.handleCreateClassTest = (classId, className) => {
   console.warn('[DEPRECATED] handleCreateClassTest — use handleAddQuiz or handleAddExam');
@@ -523,6 +543,10 @@ function renderClassDetail(cls) {
            <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.handleAddExam('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
              style="background:rgba(239,68,68,0.9); color:#fff; border:1px solid rgba(239,68,68,0.4); font-weight:700;">
              Add Exam
+           </button>
+           <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.handleAddPlacement('${cls.id}', '${(cls.name || '').replace(/'/g, "\\'")}')"
+             style="background:rgba(56,189,248,0.9); color:#090D16; border:1px solid rgba(56,189,248,0.4); font-weight:700;" title="Create Standalone Placement Test or Try-Out">
+             Add Placement
            </button>
            <button class="btn btn-danger btn-sm edit-mode-only" id="btn-del-active-class">Delete</button>
         </div>

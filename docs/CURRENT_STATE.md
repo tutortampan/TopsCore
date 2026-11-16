@@ -1,13 +1,19 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-17 06:06 UTC+8
-> **Current Phase:** Phase 616 [COMPLETE] — Student Dashboard Hero Profile & Unified 3-Pillar Performance Card Redesign
+> **Last Updated:** 2026-11-17 06:20 UTC+8
+> **Current Phase:** Phase 617 [COMPLETE] — Level Promotion Auto-Heal & Strict Level Isolation Engine
 > **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TEST SUITES 100% GREEN)
 
 ---
 
 ## 1. Active System Architecture & Invariants
+
+- **Level Promotion Auto-Heal & Strict Level Isolation Engine (Phase 617 — SSOT §1.4, §2.4, §2.5, §2.27)**:
+  - **Auto-Heal Target Level Classes**: `fetchStudentClasses()` di [js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js) secara otomatis mendeteksi dan mengaktifkan (`is_active = true`) kelas level tujuan jika siswa telah dipromosikan (misal ke Level 3) tetapi kelas di level tersebut belum diaktifkan di database.
+  - **Eradication of Cross-Level Fallbacks**: Menghilangkan *unsafe fallback* ke level di bawahnya; siswa level 3 dijamin hanya mengakses kelas level 3 tanpa kebocoran kurikulum level lama.
+  - **Batch & Class Promotion Automation**: Pada `promoteAllEligibleStudents` dan `promoteStudentNextLevel` di [js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js), `batches.current_level_id` dan kelas-kelas program terkait otomatis disinkronkan saat aksi Level Up dieksekusi.
+  - **Diagnostic Placement Test Support**: Menambahkan aksi `Add Placement` di Classes Management dan builder penjenjangan Tryout di Vocab Vault.
 
 - **Student Dashboard Hero Profile & Unified 3-Pillar Performance Card Redesign (Phase 616 — SSOT §1.4, §2.3, §2.10, §2.28)**:
   - **Hero Identity Bar Replaced by Profile & Demographic Card**: Mengubah tata letak Hero Card (`#welcome-banner-section`) menjadi kartu profil identitas siswa ala dossier/profil ($110\text{px}$ height, strict 10px internal padding). Menampilkan foto profil resmi ($68 \times 88\text{px}$ rasio 3:4 dengan tier border & glow) di sebelah kiri, dan 4 baris data terstruktur di sebelah kanan:

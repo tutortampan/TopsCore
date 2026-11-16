@@ -1,12 +1,24 @@
 # Active Task List — TopsCore LMS
 
 > **Current Focus:** Universal Visual Standardization & Normalization of TopsCore Modals, Tables, Forms & Data Taxonomies
-> **Current Phase:** Phase 615 (Complete) — Curriculum Class Action Column Direct Activation & Deactivation Controls
+> **Current Phase:** Phase 617 (Complete) — Level Promotion Auto-Heal & Strict Level Isolation Engine
 > **Automated Verification:** 100% Passed Across All Test Suites & Preflight (< 1.5s Fast Loop, < 20s Full Parallel Run)
 
 ---
 
 ## 📋 SSOT Governance & Architecture Milestones (Complete)
+- [x] **Phase 617 (Level Promotion Auto-Heal & Strict Level Isolation Engine)**:
+  - **Auto-Heal Target Level Classes**:
+    - `fetchStudentClasses()` di [js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js) otomatis mengaktifkan (`is_active: true`) kelas level tujuan jika siswa telah dipromosikan (misal ke Level 3) tetapi kelas di level tersebut masih nonaktif di database.
+    - Menghilangkan *unsafe fallback* ke level bawah; siswa level 3 dijamin hanya mengakses kelas level 3 tanpa kebocoran kurikulum level lama.
+  - **Batch & Class Promotion Automation**:
+    - Pada `promoteAllEligibleStudents` dan `promoteStudentNextLevel` di [js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js), `batches.current_level_id` dan kelas-kelas program terkait otomatis disinkronkan saat aksi Level Up dieksekusi.
+  - **Diagnostic Placement Test Support**:
+    - Menambahkan aksi `Add Placement` di Classes Management dan builder penjenjangan Tryout di Vocab Vault.
+- [x] **Phase 616 (Student Dashboard Hero Profile & Unified 3-Pillar Performance Card Redesign)**:
+  - **Hero Identity Bar Replaced by Profile & Demographic Card**: Mengubah tata letak Hero Card (`#welcome-banner-section`) menjadi kartu profil identitas siswa ala dossier/profil ($110\text{px}$ height, strict 10px internal padding). Menampilkan foto profil resmi ($68 \times 88\text{px}$ rasio 3:4 dengan tier border & glow) di sebelah kiri, dan 4 baris data terstruktur di sebelah kanan.
+  - **Unified 3-Pillar Performance Card (`GRADE | GRADE DESCRIPTION | RATE`)**: Mengubah kartu deskripsi tunggal (`.dashboard-grade-legend`) menjadi kartu performa 3 kolom simetris ($54\text{px}$ height) dengan pembatas vertikal halus.
+  - **Square Progress Pips Invariant**: Ketujuh kotak repetisi progres (`.rainbow-box`) terkunci ke rasio bujur sangkar presisi ($22 \times 22\text{px}$, `aspect-ratio: 1 / 1`, `border-radius: 5px`, `gap: 4px`).
 - [x] **Phase 615 (Curriculum Class Action Direct Activation & Deactivation Controls)**:
   - **Tombol Langsung `Activate` & `Deactivate` di Kolom ACTIONS**:
     - Mengeliminasi ketergantungan aktivasi kelas dari toggle switch tersembunyi `edit-mode-only`.

@@ -1,10 +1,27 @@
-# TopsCore LMS — Active Changelog (Phases 585–616)
+# TopsCore LMS — Active Changelog (Phases 585–617)
 
 > **Format:** Ultra-Condensed Active Changelog (Strict 25-Phase Rolling Window per AGENTS.md §5.3). Each entry highlights core functional deliverables, architectural milestones, and affected systems.
 > **Full Archives:** Historical verbose logs for earlier phases are preserved in:
 > - [`docs/archive/CHANGELOG_ARCHIVE.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE.md.gz) (Phases 1–228, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_2.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_2.md.gz) (Phases 229–451, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_3.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_3.md.gz) (Phases 452–539, Gzip Compressed)
+
+---
+
+## [2026-11-17 06:20] — Phase 617: Level Promotion Auto-Heal & Strict Level Isolation Engine
+- **Auto-Heal Target Level Classes & Elimination of Unsafe Fallbacks ([js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js))**:
+  - Mengeliminasi *unsafe fallback* pada `fetchStudentClasses()` yang sebelumnya mengembalikan kelas level bawah jika kelas level siswa belum aktif.
+  - Mengimplementasikan mekanisme **Auto-Heal**: ketika siswa berada di level tertentu (misal Level 3) dan kelasnya masih berstatus nonaktif di database, sistem secara otomatis mengaktifkannya (`is_active: true`) dan mengembalikan kelas yang tepat sehingga siswa langsung memperoleh kurikulum level barunya.
+- **Sinkronisasi Level Batch & Otomatisasi Aktivasi Kelas ([js/admin/student-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/student-management.js))**:
+  - Memperbarui fungsi `promoteAllEligibleStudents` dan `promoteStudentNextLevel` agar saat promosi dieksekusi, `batches.current_level_id` otomatis disinkronkan ke level baru dan kelas-kelas pada level tujuan di program tersebut otomatis diaktifkan.
+- **Placement & Diagnostic Test Action Integration ([js/admin/classes-management.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/classes-management.js), [js/admin/vocab-vault.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/vocab-vault.js))**:
+  - Menghadirkan tombol aksi **Add Placement** di Classes Management dan dukungan opsi penjenjangan Tryout / Diagnostic Test di Vocab Vault modal wizard.
+- **Database & Visual Parity Verification**:
+  - Mengaktifkan `Camp 3rd Vocabulary` (`VOCAB_3`) dan menyelaraskan `current_level_id` Batch 134 ke 3rd Level.
+  - Memverifikasi secara visual pada dashboard siswa (Miss Sari Hikmah, Batch 134) yang kini sukses mengakses kurikulum Level 3 (`3rd Vocabulary A1 Words Task` — *Professional Identity*).
+- **Verification**:
+  - `npm.cmd run test:fast` lolos 100% (syntax validation 51 JS files dalam 0.12s, minified CSS up-to-date).
+  - `npm.cmd run test:table` lolos 100% (seluruh 11 pilar universal table standardization lolos).
 
 ---
 
