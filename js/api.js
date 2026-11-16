@@ -3366,7 +3366,10 @@ export async function createVocabMasteryTest(config) {
     testType = 'VOCAB_MASTERY',
     // NEW: explicit category for the Task/Test binary taxonomy
     // Defaults derived from tier if not explicitly set
-    test_type = null
+    test_type = null,
+    isStandalone = false,
+    selectedThemes = ['A', 'B', 'C', 'D'],
+    category = 'words'
   } = config;
 
   let vaultWords = [];
@@ -3385,7 +3388,29 @@ export async function createVocabMasteryTest(config) {
     console.warn("Could not fetch level_number, defaulting to 1");
   }
 
-  if (tier === 'TASK') {
+  const isTryoutTier = tier === 'TRYOUT' || isStandalone;
+
+  if (isTryoutTier) {
+    // STANDALONE / PLACEMENT TRYOUT: Gather words across selected themes without prerequisites
+    let q = sb.from('vocabulary_vault')
+      .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
+      .is('deleted_at', null);
+    if (!isAllLevels) q = q.eq('target_level', targetLevel);
+
+    const activeThemes = (selectedThemes && selectedThemes.length > 0) ? selectedThemes : ['A', 'B', 'C', 'D'];
+    q = q.in('theme_code', activeThemes);
+
+    if (category === 'phrases' || testType === 'IDIOM_PROVERB') {
+      q = q.in('word_type', ['Idiom', 'Proverb', 'Expression', 'Phrase']);
+    } else if (category === 'words') {
+      q = q.not('word_type', 'in', '("Idiom","Proverb","Expression","Phrase")');
+    }
+
+    const { data, error } = await q.order('theme_code').order('topic_code').order('indonesian');
+    if (error) throw error;
+    vaultWords = data || [];
+    sourceTopics = [...new Set(vaultWords.map(w => w.topic || w.theme).filter(Boolean))];
+  } else if (tier === 'TASK') {
     if (!sourceTopic) throw new Error('sourceTopic is required for TASK tier.');
     let q = sb.from('vocabulary_vault')
       .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code')
@@ -3485,37 +3510,49 @@ export async function createVocabMasteryTest(config) {
   }
 
   // Resolve the final test_type (PostgreSQL enum / string: 'task' | 'exam') and category ('TASK' | 'EXAM'):
-  const isQuizTier = tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || String(test_type).toLowerCase() === 'task';
+  const isQuizTier = (tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || String(test_type).toLowerCase() === 'task') && !isTryoutTier;
   const resolvedType = isQuizTier ? 'task' : 'exam';
   const resolvedCategory = isQuizTier ? 'TASK' : 'EXAM';
 
   let defaultAnswerType = answerType;
   if (testType === 'IDIOM_PROVERB' ) {
       defaultAnswerType = 'phrase_recognition';
+  } else if (isTryoutTier) {
+      defaultAnswerType = answerType || 'written';
   } else if (isQuizTier) {
       defaultAnswerType = 'spoken';
   } else {
       defaultAnswerType = 'spoken';
   }
 
+  const cleanThemesStr = (selectedThemes && Array.isArray(selectedThemes) && selectedThemes.length > 0) ? selectedThemes.join('') : 'ALL';
+  const generatedShellCode = isTryoutTier
+    ? `TRYOUT-${category === 'phrases' ? 'PHRASE' : 'VOCAB'}-L${targetLevel}-${cleanThemesStr}-${Date.now().toString(36).slice(-4).toUpperCase()}`
+    : null;
+
   const testPayload = {
     institution_id:           institutionId,
     program_id:               programId,
     class_id:                 classId,
     level_id:                 levelId,
-    test_subtype:          'VOCAB_' + (isQuizTier ? 'TASK' : 'EXAM'),
+    test_subtype:             isTryoutTier ? (category === 'phrases' ? 'PHRASE_TEST' : 'VOCAB_TEST') : ('VOCAB_' + (isQuizTier ? 'TASK' : 'EXAM')),
     test_type:                resolvedType,
     category:                 resolvedCategory,
+    shell_code:               generatedShellCode,
+    is_dynamic_shell:         isTryoutTier ? true : false,
     title:                    title,
-    description:              'Vocabulary Mastery (' + (isQuizTier ? 'Task' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
+    description:              isTryoutTier
+      ? `Placement / Standalone Try-Out across Themes: ${(selectedThemes || ['A','B','C','D']).join(', ')} (${category === 'phrases' ? 'Phrases' : (category === 'all' ? 'Comprehensive' : 'Words')})`
+      : 'Vocabulary Mastery (' + (isQuizTier ? 'Task' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
     status:                   'PUBLISHED',
     availability_start:       windowStart || null,
     availability_end:         windowEnd || null,
     working_duration_minutes: durationMinutes || null,
-    prerequisite_test_id:
+    prerequisite_test_id:     isTryoutTier ? null : (
       ((tier === 'QUIZ' || tier === 'TASK') && sourceTaskIds.length > 0) ? sourceTaskIds[0] :
       (tier === 'EXAM' && (sourceTaskIds.length > 0 || sourceQuizIds.length > 0)) ? (sourceTaskIds[0] || sourceQuizIds[0]) :
-      (tier === 'TEST' && sourceTaskIds.length > 0) ? sourceTaskIds[sourceTaskIds.length - 1] : null,
+      (tier === 'TEST' && sourceTaskIds.length > 0) ? sourceTaskIds[sourceTaskIds.length - 1] : null
+    ),
     created_by:               'Admin (Vault)',
     created_at:               new Date().toISOString(),
     updated_at:               new Date().toISOString()
@@ -3563,7 +3600,8 @@ export async function createVocabMasteryTest(config) {
     if (isPhrase) {
       currentAnswerType = 'phrase_recognition';
     } else {
-      if (tier === 'TASK') currentAnswerType = 'spoken';
+      if (isTryoutTier) currentAnswerType = defaultAnswerType;
+      else if (tier === 'TASK') currentAnswerType = 'spoken';
       else if (tier === 'TEST' || tier === 'QUIZ' || tier === 'EXAM') currentAnswerType = 'written';
     }
 
@@ -3602,8 +3640,23 @@ export async function createVocabMasteryTest(config) {
   });
 
   // Modern tests store questions directly in payload
+  const payloadToStore = {
+    questions: aqRows,
+    total_questions: aqRows.length,
+    is_dynamic_shell: true,
+    is_standalone_tryout: isTryoutTier,
+    is_placement_test: isTryoutTier,
+    themes: isTryoutTier ? (selectedThemes || ['A', 'B', 'C', 'D']) : null,
+    category: isTryoutTier ? category : (testType === 'IDIOM_PROVERB' ? 'phrases' : 'words'),
+    duration_minutes: durationMinutes,
+    working_duration_minutes: durationMinutes,
+    answer_type: defaultAnswerType,
+    question_order: questionOrder,
+    schedule_mode: scheduleMode
+  };
+
   await sb.from('tests').update({
-    payload: { questions: aqRows, total_questions: aqRows.length }
+    payload: payloadToStore
   }).eq('id', testId);
 
   clearApiCache('vault');
