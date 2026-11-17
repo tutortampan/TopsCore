@@ -64,8 +64,8 @@ DECLARE
   v_valid_str text;
   v_part text;
 BEGIN
-  -- 1. Fetch Attempt (supports test_id or fallback assessment_id)
-  SELECT id, student_id, COALESCE(test_id, assessment_id) AS test_id, status, is_remedial_unlocked
+  -- 1. Fetch Attempt
+  SELECT id, student_id, test_id, status, is_remedial_unlocked
   INTO v_attempt
   FROM public.attempts
   WHERE id = p_attempt_id;

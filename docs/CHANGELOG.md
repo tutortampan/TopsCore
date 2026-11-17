@@ -1,10 +1,45 @@
-# TopsCore LMS — Active Changelog (Phases 585–617)
+# TopsCore LMS — Active Changelog (Phases 585–619)
 
 > **Format:** Ultra-Condensed Active Changelog (Strict 25-Phase Rolling Window per AGENTS.md §5.3). Each entry highlights core functional deliverables, architectural milestones, and affected systems.
 > **Full Archives:** Historical verbose logs for earlier phases are preserved in:
 > - [`docs/archive/CHANGELOG_ARCHIVE.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE.md.gz) (Phases 1–228, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_2.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_2.md.gz) (Phases 229–451, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_3.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_3.md.gz) (Phases 452–539, Gzip Compressed)
+
+---
+
+## [2026-11-17 07:40] — Phase 619: RPC Error Elimination & Dashboard Address SSOT Formatting
+- **Pembersihan RPC `auto_close_expired_attempts` & `emergency_submit_attempt` (PostgreSQL / Supabase)**:
+  - Mengeliminasi query `SELECT id, student_id, COALESCE(test_id, assessment_id)...` yang memicu PostgreSQL error `42703 (column "assessment_id" does not exist)` dan menyebabkan response `POST .../rpc/auto_close_expired_attempts 400 (Bad Request)` pada konsol browser.
+  - Memperbarui fungsi `emergency_submit_attempt` langsung di PostgreSQL live dan file migrasi; kini pemanggilan RPC `auto_close_expired_attempts` sukses dengan response `204 No Content` (Clean Console).
+- **Audit Format Alamat Hero Profile Card ([js/dashboard.js](file:///d:/Tutor%20Tampan/TopsCore/js/dashboard.js))**:
+  - Mengintegrasikan fungsi format resmi `formatVillageName`, `formatDistrictName`, `formatCityDistrict`, dan `formatProvinceName` pada `#hero-address-text` sehingga tampilan alamat siswa selaras 100% dengan SSOT (misal `Mataram City, NTB` bukan raw `Kota Mataram`, dan `Dalam, Alas, Sumbawa, NTB` tanpa redundant kata `Regency` atau `Desa`).
+- **Verifikasi Info Tangian (Tab Pencarian Pengguna)**:
+  - Mengonfirmasi bahwa "Tangian" yang dicari pengguna adalah **Dusun Tangian** yang berada di bawah naungan administratif resmi **Desa Dalam**, Kecamatan Alas, Kabupaten Sumbawa (sehingga entri desa yang tepat di sistem TopsCore adalah **Dalam**).
+- **Verification**:
+  - `npm.cmd test` lolos 100% dalam 0.98s.
+  - `node scripts/test_regency_city_standardization.mjs` lolos 100%.
+
+---
+
+## [2026-11-17 07:22] — Phase 618: NTB Comprehensive Administrative Hierarchy & Village Autocomplete Overhaul
+- **Kelengkapan 100% Desa Kecamatan Alas & Kabupaten Sumbawa ([js/indonesia-regions.js](file:///d:/Tutor%20Tampan/TopsCore/js/indonesia-regions.js))**:
+  - Memasukkan nama desa resmi **Dalam** (ibu kota kecamatan) serta melengkapi seluruh 8 desa resmi di Kecamatan Alas: `Baru`, `Dalam`, `Juran Alas`, `Kalimango`, `Labuhan Alas`, `Luar`, `Marente`, `Pulau Bungin` (membersihkan entri usang `Jompa` dan `Labaian`).
+  - Mengembangkan cakupan Kabupaten Sumbawa dari 5 kecamatan menjadi **24 kecamatan lengkap** (Alas, Alas Barat, Batu Lanteh, Buer, Empang, Labangka, Labuhan Badas, Lantung, Lape, Lenangguar, Lopok, Lunyuk, Maronge, Moyo Hilir, Moyo Hulu, Moyo Utara, Orong Telu, Plampang, Rhee, Ropang, Sumbawa, Tarano, Unter Iwes, Utan) beserta seluruh desa/kelurahan definitif Kemendagri / BPS.
+- **Cakupan Komprehensif Seluruh NTB (10 Kabupaten & Kota)**:
+  - **Kab. Lombok Tengah**: Melengkapi seluruh 12 kecamatan (Praya, Praya Barat, Praya Barat Daya, Praya Tengah, Praya Timur, Jonggat, Pujut, Kopang, Batukliang, Batukliang Utara, Janapria, Pringgarata).
+  - **Kab. Lombok Timur**: Melengkapi seluruh 21 kecamatan (Selong, Aikmel, Masbagik, Labuhan Haji, Jerowaru, Keruak, Lenek, Montong Gading, Pringgabaya, Pringgasela, Sakra, Sakra Barat, Sakra Timur, Sambelia, Sembalun, Sikur, Sukamulia, Suralaga, Suela, Terara, Wanasaba).
+  - **Kab. Sumbawa Barat**: Melengkapi seluruh 8 kecamatan termasuk Poto Tano dan Sekongkang.
+  - **Kab. Dompu**: Melengkapi seluruh 8 kecamatan (Dompu, Woja, Hu'u, Kempo, Kilo, Manggelewa, Pajo, Pekat).
+  - **Kab. Bima**: Melengkapi seluruh 18 kecamatan (Woha, Ambalawi, Belo, Bolo, Donggo, Lambitu, Lambu, Langgudu, Madapangga, Monta, Palibelo, Parado, Sanggar, Sape, Soromandi, Tambora, Wawo, Wera).
+  - **Kota Mataram, Kab. Lombok Barat, Kab. Lombok Utara, Kota Bima**: Terverifikasi sinkron 100% dengan standar SSOT.
+- **Preservasi Nama Desa & Normalisasi Robust ([js/indonesia-regions.js](file:///d:/Tutor%20Tampan/TopsCore/js/indonesia-regions.js))**:
+  - `formatVillageName`: Menangani konversi prefix `Desa Dalam` -> `Dalam`, `Dalam Village` -> `Dalam`, sekaligus mempreservasi nama desa majemuk seperti `Bao Desa`.
+  - `getVillagesForDistrict`: Mendukung pencarian fleksibel toleran spasi dan alias legacy (`Batuklik` -> `Batukliang`).
+- **Cache-Busting & Test Verification**:
+  - Bumping cache version di `js/admin/student-management.js`, `js/dashboard.js`, dan `sw.js` ke `?v=20261117_v547`.
+  - Menambahkan verifikasi Pillar 6 pada `scripts/test_regency_city_standardization.mjs` (lolos 100%).
+  - Fast Preflight AST syntax check (`npm.cmd test`) lolos 100% (0.93s).
 
 ---
 

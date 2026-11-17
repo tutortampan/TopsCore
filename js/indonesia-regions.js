@@ -279,7 +279,7 @@ export function formatVillageName(name) {
   let s = String(name).trim();
   if (!s || s === '—') return '—';
   s = s.replace(/^(Village|Desa|Kelurahan|Kel\.?)\s+/i, '').trim();
-  s = s.replace(/\s*\b(Village|Desa|Kelurahan)\b/gi, '').trim();
+  s = s.replace(/\s*\b(Village|Kelurahan)\b/gi, '').trim();
   return s || '—';
 }
 
@@ -329,7 +329,7 @@ export function formatCityDistrict(name) {
 
 /**
  * Detailed 4-tier subdistricts (Districts / Kecamatan) and Villages (Desa / Kelurahan)
- * Priority region: Nusa Tenggara Barat (Kota Mataram & Lombok Regencies)
+ * Authoritative coverage for Nusa Tenggara Barat (All 10 Regencies & Cities, Kemendagri / BPS SSOT)
  */
 export const NTB_DISTRICTS_AND_VILLAGES = {
   "Kota Mataram": {
@@ -341,70 +341,133 @@ export const NTB_DISTRICTS_AND_VILLAGES = {
     "Sandubaya": ["Abian Tubuh Baru", "Babakan", "Bertais", "Dasan Cermin", "Mandalika", "Selagalas", "Tete Batu"]
   },
   "Kab. Lombok Barat": {
-    "Gerung": ["Babussalam", "Banyu Urip", "Beleka", "Dasan Geres", "Dasan Tapen", "Gapuk", "Gerung Selatan", "Gerung Utara", "Giri Tembesi", "Kebun Ayu", "Mesanggok", "Suka Makmur", "Tempos"],
-    "Batulayar": ["Batulayar", "Batulayar Barat", "Bengkaung", "Meninting", "Pusuk Lestari", "Sandik", "Senggigi", "Senteluk"],
-    "Gunungsari": ["Bukittinggi", "Dopang", "Gelangsar", "Guntur Macan", "Gunungsari", "Jatisela", "Kekeri", "Kekait", "Mekarsari", "Midang", "Penimbun", "Ranjok", "Sesela", "Taman Sari"],
-    "Kediri": ["Banyumulek", "Dasan Baru", "Gelogor", "Jagaraga", "Kediri", "Kediri Selatan", "Lelede", "Montong Are", "Ombe Baru", "Rumak"],
-    "Kuripan": ["Giri Sasak", "Jagaraga Indah", "Kuripan", "Kuripan Selatan", "Kuripan Timur", "Kuripan Utara"],
-    "Labuapi": ["Bagik Polak", "Bagik Polak Barat", "Bajur", "Bengkel", "Karang Bongkot", "Kuranji", "Kuranji Dalang", "Labuapi", "Merembu", "Perampuan", "Telagawaru"],
+    "Gerung": ["Babussalam", "Banyu Urip", "Beleka", "Dasan Geres", "Dasan Tapen", "Gapuk", "Gerung Selatan", "Gerung Utara", "Giri Tembesi", "Kebun Ayu", "Mesanggok", "Suka Makmur", "Taman Ayu", "Tempos"],
+    "Batulayar": ["Batulayar", "Batulayar Barat", "Bengkaung", "Lembah Sari", "Meninting", "Pusuk Lestari", "Sandik", "Senggigi", "Senteluk"],
+    "Gunungsari": ["Bukittinggi", "Dopang", "Gelangsar", "Guntur Macan", "Gunungsari", "Jatisela", "Jeringo", "Kekait", "Kekeri", "Mambalan", "Mekarsari", "Midang", "Penimbun", "Ranjok", "Sesela", "Taman Sari"],
+    "Kediri": ["Banyumulek", "Dasan Baru", "Gelogor", "Jagaraga Indah", "Kediri", "Kediri Selatan", "Lelede", "Montong Are", "Ombe Baru", "Rumak"],
+    "Kuripan": ["Giri Sasak", "Jagaraga", "Kuripan", "Kuripan Selatan", "Kuripan Timur", "Kuripan Utara"],
+    "Labuapi": ["Bagik Polak", "Bagik Polak Barat", "Bajur", "Bengkel", "Karang Bongkot", "Kuranji", "Kuranji Dalang", "Labuapi", "Merembu", "Perampuan", "Telagawaru", "Terong Tawah"],
     "Lembar": ["Eyat Mayang", "Jembatan Gantung", "Jembatan Kembar", "Jembatan Kembar Timur", "Labuan Tereng", "Lembar", "Lembar Selatan", "Mareje", "Mareje Timur", "Sekotong Timur"],
-    "Lingsar": ["Batu Kumbung", "Dasan Geria", "Duman", "Gegerung", "Giri Madia", "Langko", "Lingsar", "Peteluan Indah", "Saribaye", "Sigerongan"],
-    "Narmada": ["Badrain", "Batu Kuta", "Buwun Sejati", "Dasan Tereng", "Gerimax Indah", "Golong", "Kramat Jaya", "Lebah Sempaga", "Lembuak", "Mekarsari", "Narmada", "Nyur Lembang", "Pakuan", "Peresak", "Sedau", "Selat", "Sembung", "Suranadi", "Tanak Beak"],
-    "Sekotong": ["Batu Putih", "Buwun Mas", "Cendi Manik", "Gili Gede Indah", "Pelangan", "Sekotong Barat", "Sekotong Tengah"]
+    "Lingsar": ["Batu Kumbung", "Batu Mekar", "Bug-bug", "Dasan Geria", "Duman", "Gegelang", "Gegerung", "Giri Madia", "Gontoran", "Karang Bayan", "Langko", "Lingsar", "Peteluan Indah", "Saribaye", "Sigerongan"],
+    "Narmada": ["Badrain", "Batu Kuta", "Buwun Sejati", "Dasan Tereng", "Gerimax Indah", "Golong", "Krama Jaya", "Lebah Sempaga", "Lembuak", "Mekarsari", "Narmada", "Nyur Lembang", "Pakuan", "Peresak", "Peru", "Sedau", "Selat", "Sembung", "Sesaot", "Suranadi", "Tanak Beak"],
+    "Sekotong": ["Batu Putih", "Buwun Mas", "Cendi Manik", "Gili Gede Indah", "Kedaro", "Pelangan", "Sekotong Barat", "Sekotong Tengah", "Taman Baru"]
   },
   "Kab. Lombok Tengah": {
-    "Praya": ["Gerunung", "Gonjak", "Leneng", "Panjisari", "Praya", "Renteng", "Semayan", "Tiwugalih"],
-    "Jonggat": ["Batu Tulis", "Barejulat", "Bonjeruk", "Bual", "Jelantik", "Nyerot", "Perina", "Puyung", "Sukarara", "Ubung"],
-    "Pujut": ["Gapura", "Kawo", "Ketara", "Kuta", "Mertak", "Prabu", "Rembitan", "Sengkol", "Tanah Awu"],
-    "Kopang": ["Bebuak", "Dasan Baru", "Kopang Rembiga", "Lendang Ara", "Montong Gamang"],
-    "Batuklik": ["Aik Darek", "Barabali", "Batuklik", "Mantang", "Selebung", "Tampak Siring"]
+    "Praya": ["Aik Mual", "Bunut Baok", "Gerunung", "Gonjak", "Jago", "Leneng", "Mekar Damai", "Mertak Tombok", "Montong Terep", "Panjisari", "Perapen", "Praya", "Renteng", "Semayan", "Tiwugalih"],
+    "Praya Barat": ["Banyu Urip", "Batujai", "Bonder", "Kateng", "Mangkung", "Mekar Sari", "Penujak", "Selong Belanak", "Setanggor", "Tanak Rarang"],
+    "Praya Barat Daya": ["Batu Jangkih", "Darek", "Kabul", "Montong Ajan", "Montong Sapah", "Pandan Indah", "Pelambik", "Ranggagata", "Serage", "Teduh", "Ungga"],
+    "Praya Tengah": ["Batunyala", "Beraim", "Dakung", "Gerantung", "Jontlak", "Jurang Jaler", "Kelebuh", "Lajut", "Pejanggik", "Pengadang", "Prai Meke", "Sasake"],
+    "Praya Timur": ["Beleka", "Bilelando", "Ganti", "Kidang", "Landah", "Marong", "Mujur", "Semoyang", "Sengkerang", "Sukaraja"],
+    "Jonggat": ["Barejulat", "Batu Tulis", "Bonjeruk", "Bual", "Bunkate", "Gemel", "Jelantik", "Labulia", "Nyerot", "Pengenjek", "Perina", "Puyung", "Sukarara", "Ubung"],
+    "Pujut": ["Bangket Parak", "Gapura", "Kawo", "Ketara", "Kuta", "Mertak", "Pengembur", "Prabu", "Rembitan", "Segala Anyar", "Sengkol", "Sukadana", "Tanah Awu", "Tumpak"],
+    "Kopang": ["Aik Bual", "Bebuak", "Darmaji", "Dasan Baru", "Kopang Rembiga", "Lendang Ara", "Monggas", "Montong Gamang", "Muncan", "Semparu", "Wajageseng"],
+    "Batukliang": ["Aik Darek", "Barabali", "Beber", "Bujak", "Mantang", "Mekar Bersatu", "Pagutan", "Peresak", "Selebung", "Tampak Siring"],
+    "Batukliang Utara": ["Aik Berik", "Aik Bukak", "Karang Sidemen", "Lantan", "Mas Mas", "Setiling", "Tanak Beak", "Teratak"],
+    "Janapria": ["Bakan", "Durian", "Janapria", "Jango", "Kerembong", "Langko", "Lekor", "Loangmaka", "Pendem", "Saba", "Selebung Rembiga", "Setuta"],
+    "Pringgarata": ["Arjangka", "Bagu", "Bilebante", "Menemeng", "Murbaya", "Pemepek", "Pringgarata", "Sepakek", "Sintung", "Sisik", "Taman Indah"]
   },
   "Kab. Lombok Timur": {
-    "Selong": ["Dandek", "Kelayu Selatan", "Kelayu Utara", "Kembang Sari", "Majidi", "Pancor", "Rakam", "Sandubaya", "Sekarteja", "Selong"],
-    "Aikmel": ["Aik Prapa", "Aikmel", "Aikmel Barat", "Aikmel Timur", "Kaliaik", "Toyang"],
-    "Masbagik": ["Danger", "Keserik", "Lendang Nangka", "Masbagik Selatan", "Masbagik Timur", "Masbagik Utara"],
-    "Labuhan Haji": ["Banjarsari", "Ijobalit", "Korleko", "Labuhan Haji", "Teros"]
+    "Selong": ["Denggen", "Denggen Timur", "Kelayu Jorong", "Kelayu Selatan", "Kelayu Utara", "Kembang Sari", "Majidi", "Pancor", "Rakam", "Sandubaya", "Sekarteja", "Selong"],
+    "Aikmel": ["Aik Prapa", "Aikmel", "Aikmel Barat", "Aikmel Timur", "Aikmel Utara", "Bagik Nyaka Santri", "Kalijaga", "Kalijaga Selatan", "Kalijaga Tengah", "Kalijaga Timur", "Kembang Kerang", "Kembang Kerang Daya", "Keroya", "Toya"],
+    "Masbagik": ["Danger", "Kesik", "Kumbang", "Lendang Nangka", "Lendang Nangka Utara", "Masbagik Selatan", "Masbagik Timur", "Masbagik Utara", "Masbagik Utara Baru", "Paok Motong"],
+    "Labuhan Haji": ["Banjarsari", "Geres", "Ijobalit", "Kertasari", "Korleko", "Korleko Selatan", "Labuhan Haji", "Penedagandor", "Suryawangi", "Tanjung", "Teros", "Tirtanadi"],
+    "Jerowaru": ["Batunampar", "Batunampar Selatan", "Ekas Buana", "Jerowaru", "Kwang Rundun", "Pandan Wangi", "Pare Mas", "Pemongkong", "Pene", "Sekaroh", "Sepapan", "Seriwe", "Sukadamai", "Sukaraja", "Wakan"],
+    "Keruak": ["Batu Putik", "Dane Rase", "Keruak", "Ketangga Jeraeng", "Ketapang Raya", "Mendana Raya", "Montong Belae", "Pijot", "Pijot Utara", "Pulau Maringkik", "Selebung Ketangga", "Senyiur", "Sepit", "Setungkep Lingsar", "Tanjung Luar"],
+    "Lenek": ["Kalijaga Baru", "Lenek", "Lenek Baru", "Lenek Daya", "Lenek Duren", "Lenek Kali Bambang", "Lenek Lauk", "Lenek Pasiraman", "Lenek Ramban Biak", "Sukarema"],
+    "Montong Gading": ["Jenggik Utara", "Kilang", "Lendang Belo", "Montong Betok", "Perian", "Pringga Jurang", "Pringga Jurang Utara"],
+    "Pringgabaya": ["Apitaik", "Bagik Pao", "Batuyang", "Labuhan Lombok", "Pohgading", "Pohgading Timur", "Pringgabaya", "Pringgabaya Utara", "Seruni Mumbul", "Telaga Waru"],
+    "Pringgasela": ["Aik Dewa", "Darma Rini", "Jurit", "Jurit Baru", "Pengadangan", "Pengadangan Barat", "Pringgasela", "Pringgasela Selatan", "Pringgasela Timur", "Rempung", "Timbanuh"],
+    "Sakra": ["Kuang Baru", "Moyot", "Rumbuk", "Rumbuk Timur", "Sakra", "Sakra Selatan", "Suwangi", "Suwangi Timur"],
+    "Sakra Barat": ["Bagek Papan", "Borok Toyang", "Boyem East", "Gadungmas", "Gunung Rajak", "Jero Gunung", "Kembang Are Manis", "Menggala", "Pejaring", "Pematung", "Pengkelak Mas", "Rensing", "Sukadana", "Tanah Gadang"],
+    "Sakra Timur": ["Gelanggang", "Lepak", "Lepak Timur", "Menceh", "Montong Tangi", "Surabaya", "Surabaya Utara"],
+    "Sambelia": ["Bagik Manis", "Belanting", "Dara Kunci", "Darak Jati", "Labuhan Pandan", "Madayin", "Obel-Obel", "Padak Guar", "Sambelia", "Senang Gali", "Sugian"],
+    "Sembalun": ["Bilok Petung", "Sajang", "Sembalun", "Sembalun Bumbung", "Sembalun Lawang", "Sembalun Timba Gading"],
+    "Sikur": ["Dara Kunci", "Gelanggang", "Jeruk Manis", "Kotaraja", "Loyok", "Montong Baan", "Montong Baan Selatan", "Semaya", "Sikur", "Sikur Barat", "Sikur Selatan", "Tetebatu", "Tetebatu Selatan"],
+    "Sukamulia": ["Dasan Borok", "Dasan Lekong", "Jenggik", "Nyiur Tondo", "Padamara", "Setanggor", "Setanggor Selatan", "Sukamulia", "Sukamulia Timur"],
+    "Suralaga": ["Anjani", "Bagek Payung", "Bagek Payung Selatan", "Bagek Payung Timur", "Dames Damai", "Gapuk", "Gerung Permai", "Kerongkong", "Paok Lombok", "Suralaga", "Tebaban", "Temberu"],
+    "Suela": ["Ketangga", "Mekarsari", "Perigi", "Puncak Jeringo", "Sapit", "Selaparang", "Suela"],
+    "Terara": ["Embung Kandong", "Embung Raja", "Jenggik", "Kalianyar", "Lando", "Leming", "Pandan Duri", "Rarang", "Rarang Bat", "Rarang Selatan", "Rarang Tengah", "Santong", "Suradadi", "Sukadana", "Terara"],
+    "Wanasaba": ["Bandok", "Bebidas", "Beriri Jarak", "Jineng", "Karang Baru", "Karang Baru Timur", "Mamben Baru", "Mamben Daya", "Mamben Lauk", "Otak Rarangan", "Tembeng Putik", "Wanasaba", "Wanasaba Daya", "Wanasaba Lauk"]
   },
   "Kab. Lombok Utara": {
-    "Tanjung": ["Jenggala", "Medana", "Sigar Penjalin", "Sokong", "Tanjung", "Teniga", "Tegal Maja"],
-    "Pemenang": ["Gili Indah", "Malaka", "Pemenang Barat", "Pemenang Timur"],
-    "Gangga": ["Bentek", "Genggelang", "Rempek", "Sambik Bangkol", "Selelos"],
-    "Kayangan": ["Dangiang", "Gumantar", "Kayangan", "Pendua", "Santong", "Sesait"],
-    "Bayan": ["Akar-Akar", "Bayan", "Karang Bajo", "Loloan", "Mpan Senaru", "Sambik Elen", "Senaru", "Sukadana"]
+    "Tanjung": ["Jenggala", "Medana", "Sama Guna", "Sigar Penjalin", "Sokong", "Tanjung", "Tegal Maja", "Teniga"],
+    "Pemenang": ["Gili Indah", "Malaka", "Menggala", "Pemenang Barat", "Pemenang Timur"],
+    "Gangga": ["Bentek", "Genggelang", "Gondang", "Rempek", "Rempek Darussalam", "Sambik Bangkol", "Segara Katon", "Selelos"],
+    "Kayangan": ["Dangiang", "Gumantar", "Kayangan", "Pansor", "Pendua", "Salut", "Santong", "Santong Mulia", "Selengen", "Sesait"],
+    "Bayan": ["Akar-Akar", "Anyar", "Bayan", "Gunjan Asri", "Karang Bajo", "Loloan", "Mumbul Sari", "Sambik Elen", "Senaru", "Sukadana"]
   },
   "Kab. Sumbawa": {
-    "Sumbawa": ["Brang Biji", "Lempeh", "Uma Sima", "Seketeng", "Samapuin", "Bugis", "Brang Bara", "Pekat"],
-    "Labuhan Badas": ["Labuhan Sumbawa", "Labuhan Badas", "Bajak", "Badas", "Sebotok"],
-    "Alas": ["Baru", "Jompa", "Kalimango", "Labaian", "Marente"],
-    "Utan": ["Bale Brang", "Motong", "Pukat", "Sabedo", "Teratak"],
-    "Moyo Hilir": ["Berare", "Kukin", "Moyo", "Olat Rawa", "Poto"]
+    "Alas": ["Baru", "Dalam", "Juran Alas", "Kalimango", "Labuhan Alas", "Luar", "Marente", "Pulau Bungin"],
+    "Alas Barat": ["Gontar", "Gontar Baru", "Labuhan Mapin", "Lekong", "Mapin Baru", "Mapin Kebak", "Mapin Rea", "Usar Mapin"],
+    "Batu Lanteh": ["Bao Desa", "Batudulang", "Baturotok", "Kelungkung", "Tangkan Pulit", "Tepal"],
+    "Buer": ["Buin Baru", "Juru Mapin", "Kalabeso", "Labuhan Burung", "Pulau Kaung", "Tarusa"],
+    "Empang": ["Boal", "Bunga Eja", "Empang Atas", "Empang Bawah", "Gapit", "Jotang", "Jotang Beru", "Lamenta", "Ongko", "Pamanto"],
+    "Labangka": ["Jaya Makmur", "Labangka", "Sekokat", "Suka Damai", "Suka Mulya"],
+    "Labuhan Badas": ["Bajo Medang", "Bugis Medang", "Karang Dima", "Labuan Aji", "Labuan Sumbawa", "Labuhan Badas", "Sebotok"],
+    "Lantung": ["Ai Mual", "Lantung", "Padesa", "Sepukur"],
+    "Lape": ["Dete", "Hijrah", "Labuhan Kuris", "Lape"],
+    "Lenangguar": ["Ledang", "Lenangguar", "Tatebal", "Telaga"],
+    "Lopok": ["Berora", "Langam", "Lopok", "Lopok Beru", "Mama", "Pungkit", "Tatede"],
+    "Lunyuk": ["Emang Lestari", "Jamu", "Lunyuk Ode", "Lunyuk Rea", "Pada Suka", "Perung", "Suka Maju"],
+    "Maronge": ["Labuhan Sangoro", "Maronge", "Pemasar", "Simu"],
+    "Moyo Hilir": ["Batu Bangka", "Berare", "Kakiang", "Labuhan Ijuk", "Moyo", "Moyo Mekar", "Ngeru", "Olat Rawa", "Poto", "Serading"],
+    "Moyo Hulu": ["Batu Bulan", "Batu Tering", "Brang Rea", "Leseng", "Lito", "Maman", "Marga Karya", "Mokong", "Pernek", "Sebasang", "Semamung", "Sempe"],
+    "Moyo Utara": ["Baru Tahan", "Kukin", "Penyaring", "Pungkit", "Sebewe", "Songkar"],
+    "Orong Telu": ["Kelawis", "Mungkin", "Sebeok", "Senawang"],
+    "Plampang": ["Brang Kolong", "Muer", "Plampang", "Prode SP I", "Prode SP II", "Prode SP III", "Selante", "Sepakat", "Sepayung", "Teluk Santong", "Usar"],
+    "Rhee": ["Luk", "Rhee", "Rhee Loka", "Sampe"],
+    "Ropang": ["Lawin", "Lebangkar", "Lebin", "Lebin Mekar", "Ranan", "Ropang"],
+    "Sumbawa": ["Brang Bara", "Brang Biji", "Bugis", "Lempeh", "Pekat", "Samapuin", "Seketeng", "Uma Sima"],
+    "Tarano": ["Banda", "Bantulanteh", "Labuan Aji", "Labuan Bontong", "Labuan Jambu", "Labuan Pidang", "Mata", "Tolo Oi"],
+    "Unter Iwes": ["Boak", "Jorok", "Kerato", "Kerekeh", "Nijang", "Pelat", "Pungka", "Uma Beringin"],
+    "Utan": ["Bale Brang", "Jorok", "Labuan Bajo", "Motong", "Orong Bawa", "Pukat", "Sabedo", "Stowe Brang", "Tengah"]
   },
   "Kab. Sumbawa Barat": {
-    "Taliwang": ["Kuang", "Menala", "Bugis", "Telaga Bertong", "Sampir", "Arab Kenangan", "Dalam", "Seloto"],
-    "Brang Ene": ["Kalifir", "Manemeng", "Lampok", "Mujahidin", "Mura"],
-    "Brang Rea": ["Bangkat Monteh", "Desa Beru", "Moteng", "Rarak Ronges", "Seminar Salit", "Tepas", "Tepas Sepakat"],
+    "Taliwang": ["Arab Kenangan", "Banjar", "Batu Putih", "Bugis", "Dalam", "Kuang", "Labuhan Kertasari", "Labuhan Lalar", "Labuhan Liang", "Menala", "Sampir", "Seloto", "Sermong", "Tamekan", "Telaga Bertong"],
+    "Brang Ene": ["Kalimantong", "Lampok", "Manemeng", "Mataiyang", "Mujahiddin", "Mura"],
+    "Brang Rea": ["Bangkat Monteh", "Beru", "Lamuntet", "Moteng", "Rarak Ronges", "Sapugara Bree", "Seminar Salit", "Tepas", "Tepas Sepakat"],
     "Jereweh": ["Belo", "Beru", "Dasan Anyar", "Goa"],
-    "Maluk": ["Benete", "Bukit Damai", "Maluk", "Mantun"],
-    "Seteluk": ["Air Suning", "Desa Loka", "Kelanir", "Lamusung", "Meraran", "Rempe", "Seteluk Barat", "Seteluk Tengah", "Tapir"]
+    "Maluk": ["Benete", "Bukit Damai", "Maluk", "Mantun", "Pasir Putih"],
+    "Poto Tano": ["Kiantar", "Kokarlian", "Mantar", "Poto Tano", "Senayan", "Tambak Sari", "Tebo", "Tuananga"],
+    "Sekongkang": ["Ai Kangkung", "Kemuning", "Sekongkang Atas", "Sekongkang Bawah", "Talonang", "Tatar", "Tongo"],
+    "Seteluk": ["Air Suning", "Desaloka", "Kelanir", "Lamusung", "Meraran", "Rempe", "Seran", "Seteluk Atas", "Seteluk Tengah", "Tapir"]
   },
   "Kab. Dompu": {
-    "Dompu": ["Bada", "Dorotangga", "Karijawa", "Potu", "Bali Satu", "Kareke", "Katada", "Mangge Nae", "O'o"],
-    "Woja": ["Bakajaya", "Bara", "Kandai Dua", "Madaprama", "Monta Baru", "Nowa", "Raba Baka", "Riada Baru", "Simpasai", "Wawonduru"],
-    "Hu'u": ["Adu", "Dada", "Hu'u", "Jala", "Marada", "Rasa Bou", "Sawe"],
-    "Kempo": ["Doro Kobo", "Kempo", "Konca", "Soro", "Soro Barat", "Ta'a", "Tolo Kalo"]
+    "Dompu": ["Bada", "Bali", "Dora Tangga", "Dore Bara", "Kandai I", "Karamabura", "Kareke", "Karijawa", "Katua", "Mangge Nae", "Manggeasi", "Mbawi", "O'o", "Potu", "Sori Sakolo"],
+    "Woja": ["Baka Jaya", "Bara", "Kandai II", "Mada Prama", "Matua", "Monta Baru", "Mumbu", "Nowa", "Raba Baka", "Riwo", "Saneo", "Sera Kapi", "Simpasai", "Wawonduru"],
+    "Hu'u": ["Adu", "Cempi Jaya", "Daha", "Hu'u", "Jala", "Merada", "Rasa Bou", "Sawe"],
+    "Kempo": ["Doro Kobo", "Kempo", "Konte", "Songgaja", "Soro", "Soro Barat", "Ta'a", "Tolo Kalo"],
+    "Kilo": ["Kiwu", "Kramat", "Lasi", "Malaju", "Mbuju", "Taropo"],
+    "Manggelewa": ["Anamina", "Banggo", "Doromelo", "Kampasi Meci", "Kwangko", "Lanci Jaya", "Nangatumpu", "Nusa Jaya", "Soriutu", "Suka Damai", "Tanju", "Teka Sire"],
+    "Pajo": ["Jambu", "Lepadi", "Lune", "Ranggo", "Temba Lae", "Woko"],
+    "Pekat": ["Beringin Jaya", "Calabai", "Doro Peti", "Kadindi", "Kadindi Barat", "Karombo", "Nangakara", "Nangamiro", "Pekat", "Sori Nomo", "Sori Tatanga", "Tambora"]
   },
   "Kab. Bima": {
-    "Woha": ["Tente", "Rabakodo", "Penapali", "Nisa", "Donggobolo", "Keli", "Kalampa", "Raba", "Samili", "Tenga", "Talabiu", "Pandai"],
-    "Bolo": ["Bontokape", "Darussalam", "Kananga", "Leu", "Nggembe", "Rada", "Rasabou", "Sanolo", "Sondosia", "Tambe"],
-    "Sape": ["Bajo Pulau", "Bungi", "Galu", "Jia", "Kowo", "Lamere", "Na'e", "Naru Barat", "Naru Timur", "Oi Maci", "Poja", "Rai Oi", "Rasabou", "Sangia"],
-    "Palibelo": ["Belo", "Bre", "Dore", "Nata", "Ntonggu", "Panda", "Ragi", "Teke", "Tonggorisa"]
+    "Woha": ["Dadibou", "Daru", "Donggobolo", "Kaduronggo", "Kalampa", "Keli", "Naru", "Nisa", "Penapali", "Rabakodo", "Rato", "Samili", "Tenga", "Tente", "Wadu Coi"],
+    "Ambalawi": ["Kole", "Mawu", "Nipa", "Rite", "Talapiti", "Tolowata"],
+    "Belo": ["Cenggu", "Diha", "Lido", "Ncera", "Ngali", "Renda", "Roka", "Runggu", "Soki"],
+    "Bolo": ["Bontokape", "Darussalam", "Kananga", "Kara", "Leu", "Nggembe", "Rada", "Rasabau", "Rato", "Sanolo", "Sondosia", "Tambe", "Timu", "Tumpu"],
+    "Donggo": ["Bumi Pajo", "Doridungga", "Kala", "Mbawa", "Mpili", "Ndano Na'e", "O'o", "Palama", "Rora"],
+    "Lambitu": ["Kaboro", "Kaowa", "Kuta", "Londu", "Sambori", "Teta"],
+    "Lambu": ["Hidirasa", "Kaleo", "Lambu", "Lanta", "Lanta Barat", "Mangge", "Melayu", "Monta Baru", "Nggelu", "Rato", "Sangga", "Simpasai", "Soro", "Sumi"],
+    "Langgudu": ["Doro O'o", "Dumu", "Kalodu", "Kangga", "Karampi", "Karumbu", "Kawuwu", "Laju", "Pusu", "Rompo", "Rupe", "Sambane", "Sarae Ruma", "Wadu Ruka", "Waworada"],
+    "Madapangga": ["Bolo", "Campa", "Dena", "Mandawau", "Monggo", "Mpuri", "Ncandi", "Ndano", "Rade", "Tonda", "Woro"],
+    "Monta": ["Baralau", "Monta", "Nontotera", "Pela", "Sekuru", "Sie", "Simpasai", "Sondo", "Tangga", "Tangga Baru", "Tolotangga", "Tolouwi", "Waro", "Willamaci"],
+    "Palibelo": ["Belo", "Bre", "Dore", "Nata", "Ntonggu", "Padolo", "Panda", "Ragi", "Roi", "Teke", "Tolongondoa", "Tonggorisa"],
+    "Parado": ["Kanca", "Kuta", "Lere", "Paradorato", "Paradowane"],
+    "Sanggar": ["Boro", "Calu", "Oi Tui", "Pajo", "Sandue", "Taloko"],
+    "Sape": ["Bajo Pulau", "Bima Selaras", "Bonto", "Bungi", "Galu", "Jia", "Kiro", "Kowo", "Lamere", "Na'e", "Naru", "Naru Barat", "Naru Timur", "Oi Maci", "O'o", "Pampa", "Parangina", "Poja", "Rai Oi", "Rasabou", "Sangia", "Sape", "Sarae", "Simpasai", "Soro", "Tanju"],
+    "Soromandi": ["Bajo", "Kananta", "Pusu", "Sai", "Sampungu", "Sarita", "Wadukopa"],
+    "Tambora": ["Kawinda Nae", "Kawinda Toi", "Labuhan Kananga", "Oi Bura", "Oi Katupa"],
+    "Wawo": ["Kambilo", "Komba", "Maria", "Maria Utara", "Ntoke", "Pesa", "Raba", "Teta"],
+    "Wera": ["Bala", "Hamu Pute", "Nangga Talenta", "Oi Tui", "Sangiang", "Tadewa", "Tawali", "Wera"]
   },
   "Kota Bima": {
-    "Rasanae Barat": ["Paruga", "Tanjung", "Nae", "Sarae", "Pane", "Dara"],
-    "Mpunda": ["Lewirato", "Mande", "Manggemaci", "Matakando", "Panggi", "Sadia", "Sambinae", "Santi"],
-    "Raba": ["Kendo", "Nitu", "Penanae", "Penaraga", "Rabangodu Barat", "Rabangodu Selatan", "Rabangodu Timur", "Rontu"],
-    "Asakota": ["Jatibaru", "Jatibaru Barat", "Jatiwangi", "Kolo", "Melayu", "Ule"],
-    "Rasanae Timur": ["Dodu", "Kodo", "Kumbe", "Lampe", "Lelamase", "Nungga", "Oi Fo'o"]
+    "Rasanae Barat": ["Dara", "Nae", "Pane", "Paruga", "Sarae", "Tanjung"],
+    "Mpunda": ["Lewirato", "Mande", "Manggemaci", "Matakando", "Monggonao", "Panggi", "Penatoi", "Sadia", "Sambinae", "Santi"],
+    "Raba": ["Kendo", "Nitu", "Ntobo", "Penanae", "Penaraga", "Rabangodu Barat", "Rabangodu Selatan", "Rabangodu Timur", "Rabangodu Utara", "Rite", "Rontu"],
+    "Asakota": ["Jatibaru", "Jatibaru Timur", "Jatiwangi", "Kolo", "Melayu", "Ule"],
+    "Rasanae Timur": ["Dodu", "Kodo", "Kumbe", "Lampe", "Lelamase", "Nungga", "Oi Fo'o", "Oimbo"]
   }
 };
 
@@ -516,14 +579,27 @@ export function getDistrictsForCity(cityName) {
 export function getVillagesForDistrict(cityName, districtName) {
   if (!cityName) return NTB_DISTRICTS_AND_VILLAGES['Kota Mataram']['Mataram'] || [];
   const canonical = canonicalizeRegencyName(cityName);
-  const cleanDist = formatDistrictName(districtName);
+  const cleanDist = formatDistrictName(districtName).trim();
+  const lowerDist = cleanDist.toLowerCase();
 
   if (NTB_DISTRICTS_AND_VILLAGES[canonical]) {
-    // Exact or case-insensitive match on district name
-    for (const [dKey, villages] of Object.entries(NTB_DISTRICTS_AND_VILLAGES[canonical])) {
-      if (dKey.toLowerCase() === cleanDist.toLowerCase() || dKey.toLowerCase() === (districtName || '').toLowerCase()) {
+    const regencyMap = NTB_DISTRICTS_AND_VILLAGES[canonical];
+    // 1. Direct or case-insensitive match on district name
+    for (const [dKey, villages] of Object.entries(regencyMap)) {
+      if (dKey.toLowerCase() === lowerDist || dKey.toLowerCase() === (districtName || '').toLowerCase().trim()) {
         return villages;
       }
+    }
+    // 2. Normalized whitespace match (e.g. "Batu Layar" vs "Batulayar")
+    const noSpaceDist = lowerDist.replace(/\s+/g, '');
+    for (const [dKey, villages] of Object.entries(regencyMap)) {
+      if (dKey.toLowerCase().replace(/\s+/g, '') === noSpaceDist) {
+        return villages;
+      }
+    }
+    // 3. Known legacy aliases
+    if (noSpaceDist === 'batuklik' && regencyMap['Batukliang']) {
+      return regencyMap['Batukliang'];
     }
   }
 

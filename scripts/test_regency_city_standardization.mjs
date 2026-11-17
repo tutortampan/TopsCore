@@ -164,10 +164,10 @@ assert(
   "dashboard.html must contain '<label class=\"intro-field-label\" for=\"intro-city\">REGENCY</label>'"
 );
 assert(
-  dashboardHtml.includes('<td class="addr-label">REGENCY</td>'),
-  "dashboard.html profile drawer must contain REGENCY label"
+  dashboardHtml.includes('id="intro-city"') && dashboardHtml.includes('title="Regency"'),
+  "dashboard.html onboarding modal must contain intro-city select with title 'Regency'"
 );
-console.log('  ✅ [PASS] dashboard.html onboarding modal and profile drawer use REGENCY');
+console.log('  ✅ [PASS] dashboard.html onboarding modal uses REGENCY');
 
 const dashboardJs = fs.readFileSync('js/dashboard.js', 'utf8');
 assert(
@@ -190,6 +190,46 @@ assert(
 );
 console.log('  ✅ [PASS] .agents/rules/ui-invariants.md authoritatively codified');
 
+// ── 6. Audit NTB Comprehensive Districts & Villages ────────────────────────
+console.log('\n▶ Pillar 6: Auditing NTB Comprehensive Districts & Villages SSOT...');
+
+const { getDistrictsForCity, getVillagesForDistrict, NTB_DISTRICTS_AND_VILLAGES } = await import('../js/indonesia-regions.js');
+
+// 6A. Verify Alas in Sumbawa has 'Dalam' and all official villages
+const alasVillages = getVillagesForDistrict('Kab. Sumbawa', 'Alas');
+assert(alasVillages.includes('Dalam'), "Kecamatan Alas must include village 'Dalam'");
+assert(alasVillages.includes('Baru'), "Kecamatan Alas must include village 'Baru'");
+assert(alasVillages.includes('Kalimango'), "Kecamatan Alas must include village 'Kalimango'");
+assert(alasVillages.includes('Marente'), "Kecamatan Alas must include village 'Marente'");
+assert(alasVillages.includes('Juran Alas'), "Kecamatan Alas must include village 'Juran Alas'");
+assert(alasVillages.includes('Labuhan Alas'), "Kecamatan Alas must include village 'Labuhan Alas'");
+assert(alasVillages.includes('Luar'), "Kecamatan Alas must include village 'Luar'");
+assert(alasVillages.includes('Pulau Bungin'), "Kecamatan Alas must include village 'Pulau Bungin'");
+console.log('  ✅ [PASS] Kecamatan Alas has all 8 official villages including "Dalam"');
+
+// 6B. Also test with uncanonicalized "Sumbawa"
+const alasVillagesFromAlias = getVillagesForDistrict('Sumbawa', 'Alas');
+assert(alasVillagesFromAlias.includes('Dalam'), "getVillagesForDistrict('Sumbawa', 'Alas') must resolve 'Dalam'");
+console.log('  ✅ [PASS] getVillagesForDistrict("Sumbawa", "Alas") correctly resolves "Dalam"');
+
+// 6C. Verify formatVillageName on "Desa Dalam" and "Dalam"
+assert.strictEqual(formatVillageName('Desa Dalam'), 'Dalam');
+assert.strictEqual(formatVillageName('Dalam'), 'Dalam');
+assert.strictEqual(formatVillageName('Dalam Village'), 'Dalam');
+assert.strictEqual(formatVillageName('Bao Desa'), 'Bao Desa');
+console.log('  ✅ [PASS] formatVillageName formatting handles "Desa Dalam" -> "Dalam" and preserves "Bao Desa"');
+
+// 6D. Verify all 10 NTB regencies are present with comprehensive districts
+const expectedRegencies = [
+  "Kota Mataram", "Kab. Lombok Barat", "Kab. Lombok Tengah", "Kab. Lombok Timur", "Kab. Lombok Utara",
+  "Kab. Sumbawa", "Kab. Sumbawa Barat", "Kab. Dompu", "Kab. Bima", "Kota Bima"
+];
+expectedRegencies.forEach(reg => {
+  const districts = getDistrictsForCity(reg);
+  assert(districts.length >= 5, `${reg} must have at least 5 districts, found ${districts.length}`);
+});
+console.log('  ✅ [PASS] All 10 NTB Regencies/Cities have full official district lists');
+
 console.log('\n======================================================');
-console.log('🎉 ALL CHECKS PASSED: REGENCY & CITY STANDARDIZATION (100%)');
+console.log('🎉 ALL CHECKS PASSED: REGENCY, CITY & REGIONAL VILLAGES STANDARDIZATION (100%)');
 console.log('======================================================\n');

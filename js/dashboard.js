@@ -9,7 +9,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
     import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon } from './grading.js?v=20261106_v160';
-    import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261115_v521';
+    import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
     if (typeof window !== 'undefined') {
@@ -109,15 +109,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     if (dobEl) dobEl.textContent = dobText;
 
     if (addrEl) {
-      const parts = [];
-      if (s.village) parts.push(s.village);
-      if (s.district) parts.push(s.district);
-      if (s.city) parts.push(s.city);
-      if (s.province) {
-        const p = s.province === 'Nusa Tenggara Barat' ? 'NTB' : s.province;
-        parts.push(p);
+      const fVill = s.village ? (typeof formatVillageName === 'function' ? formatVillageName(s.village) : s.village) : '';
+      const fDist = s.district ? (typeof formatDistrictName === 'function' ? formatDistrictName(s.district) : s.district) : '';
+      const fCity = s.city ? (typeof formatCityDistrict === 'function' ? formatCityDistrict(s.city) : s.city) : '';
+      let fProv = s.province || '';
+      if (fProv === 'Nusa Tenggara Barat' || fProv === 'West Nusa Tenggara') {
+        fProv = 'NTB';
+      } else if (typeof formatProvinceName === 'function') {
+        fProv = formatProvinceName(fProv);
       }
-      addrEl.textContent = parts.length > 0 ? parts.join(', ') : 'Mataram, NTB';
+
+      const parts = [fVill, fDist, fCity, fProv].map(x => (x || '').trim()).filter(x => x && x !== '—');
+      addrEl.textContent = parts.length > 0 ? parts.join(', ') : 'Mataram City, NTB';
     }
   }
 
@@ -1867,7 +1870,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const iconSvg = getClassSvgIcon(c.name, 16, strokeColor);
         const pct = c._pct != null ? c._pct : 0;
         const activeStyle = (isSelected && window._tierColor)
-          ? `style="border-color:${window._tierColor} !important; box-shadow:0 0 16px rgba(${window._tierRgb}, 0.45) !important;"`
+          ? `style="border-color:${window._tierColor} !important;"`
           : '';
         html += `
           <div class="class-deck-box ${isSelected ? 'active' : ''}" data-cid="${c.id}" role="button" tabindex="0" ${activeStyle}>
@@ -2761,8 +2764,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
         if (achievementTextEl) {
           achievementTextEl.textContent = 'ALUMNI';
-          achievementTextEl.style.color = targetColor;
-          achievementTextEl.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.75))`;
         }
       } else if (!hasExam) {
         overallGrade = "LET'S GO";
@@ -2772,19 +2773,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
         if (achievementTextEl) {
           achievementTextEl.textContent = "LET'S GO";
-          achievementTextEl.style.color = targetColor;
-          achievementTextEl.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.75))`;
         }
       } else {
         const statusWord = getAchievementStatus(overallGrade, avgPct);
         if (achievementTextEl) {
           achievementTextEl.textContent = statusWord;
-          achievementTextEl.style.color = targetColor;
-          if (isGradeS) {
-            achievementTextEl.style.filter = `drop-shadow(0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85))`;
-          } else {
-            achievementTextEl.style.filter = `drop-shadow(0 0 8px rgba(${rgbColor}, 0.6))`;
-          }
         }
       }
 
@@ -2808,11 +2801,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         sessionStorage.setItem(`topscore_tier_${session.student_id}`, tierPayload);
       } catch (_) {}
 
-      // 1. Ambient Hero Banner Aura & Modular CSS Variables across all Lobby Cards
+      // 1. Ambient Hero Banner Aura & Modular CSS Variables across all Lobby Cards (excluding Grade Card)
       const tierElements = [
         document.getElementById('welcome-banner-section'),
-        document.getElementById('dashboard-grade-legend'),
-        document.getElementById('dashboard-achievement-card'),
         document.getElementById('bottom-dock-section'),
         document.getElementById('bottom-ad-banner'),
         document.querySelector('.next-test-card'),
@@ -2827,76 +2818,96 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           el.style.setProperty('--tier-rgb', rgbColor);
           if (hasExam && isGradeS) {
             el.style.borderColor = `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.65)`;
-            el.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.35), 0 8px 20px -6px rgba(0, 0, 0, 0.5)`;
-            el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.22), transparent 75%), #0f172a`;
+            el.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)';
+            el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.15), transparent 75%), #0f172a`;
           } else {
             // For all evaluated grades (A, B, C, D, E) and New Student / Alumni (Purple):
-            // The border and background strictly follow the calculated score/grade!
+            // The border line keeps pure color without box glow!
             el.style.borderColor = `rgba(${rgbColor}, 0.55)`;
-            el.style.boxShadow = `0 0 18px rgba(${rgbColor}, 0.25), 0 6px 18px -5px rgba(0, 0, 0, 0.35)`;
-            el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.15), transparent 75%), #0f172a`;
+            el.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
+            el.style.background = `radial-gradient(ellipse 90% 70% at 50% 0%, rgba(${rgbColor}, 0.12), transparent 75%), #0f172a`;
           }
         }
       });
 
+      // 1b. Grade Card (Unified 3-Pillar Performance Card: Colored Background Landmark)
+      const isDarkBg = overallGrade === 'E' || isGradeS || isAlumni;
+      const gcText = isDarkBg ? '#FFFFFF' : '#0F172A';
+      const gcMuted = isDarkBg ? 'rgba(255, 255, 255, 0.75)' : 'rgba(15, 23, 42, 0.75)';
+      const gcDivider = isDarkBg ? 'rgba(255, 255, 255, 0.25)' : 'rgba(15, 23, 42, 0.2)';
 
-      // 2. Avatar Container Ring & Glow
+      const gradeCardEl = document.getElementById('dashboard-grade-legend') || document.querySelector('.grade-card');
+      if (gradeCardEl) {
+        gradeCardEl.dataset.tier = isAlumni ? 'X' : (!hasExam ? 'NEW' : (isGradeS ? 'S' : overallGrade));
+        gradeCardEl.style.setProperty('--tier-color', targetColor, 'important');
+        gradeCardEl.style.setProperty('--tier-rgb', rgbColor, 'important');
+        gradeCardEl.style.setProperty('--grade-card-bg', targetColor, 'important');
+        gradeCardEl.style.setProperty('--grade-card-text', gcText, 'important');
+        gradeCardEl.style.setProperty('--grade-card-muted', gcMuted, 'important');
+        gradeCardEl.style.setProperty('--grade-card-divider', gcDivider, 'important');
+
+        gradeCardEl.style.setProperty('background', targetColor, 'important');
+        gradeCardEl.style.setProperty('border-color', isDarkBg ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)', 'important');
+        gradeCardEl.style.setProperty('box-shadow', '0 4px 14px rgba(0, 0, 0, 0.35)', 'important');
+
+        gradeCardEl.querySelectorAll('.perf-pillar-label').forEach(lbl => {
+          lbl.style.color = gcMuted;
+        });
+        gradeCardEl.querySelectorAll('.perf-pillar-divider').forEach(div => {
+          div.style.background = gcDivider;
+        });
+      }
+
+      // 2. Avatar Container Ring (Color only, no outer box glow)
       const avatarBox = document.getElementById('banner-avatar-container');
       if (avatarBox) {
         if (isGradeS) {
           avatarBox.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
-          avatarBox.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
+          avatarBox.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)';
           avatarBox.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
           avatarBox.classList.add('grade-star');
         } else {
           avatarBox.classList.remove('grade-star');
           avatarBox.style.background = 'rgba(15, 23, 42, 0.9)';
-          avatarBox.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35)`;
+          avatarBox.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
           avatarBox.style.border = `2.5px solid ${targetColor}`;
         }
       }
 
-      // 3. Score Value Display
+      // 3. Score Value Display (Inside Grade Card)
       const scoreVal = document.getElementById('bottom-stat-avg-score');
       if (scoreVal) {
         scoreVal.textContent = hasExam ? `${avgPct}%` : '—';
-        scoreVal.style.color = targetColor;
-        if (isGradeS) {
-          scoreVal.style.filter = `drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45))`;
-          scoreVal.classList.add('text-grade-star');
-        } else {
-          scoreVal.classList.remove('text-grade-star');
-          scoreVal.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.55))`;
-        }
+        scoreVal.style.setProperty('color', gcText, 'important');
+        scoreVal.style.setProperty('filter', 'none', 'important');
+        scoreVal.classList.remove('text-grade-star');
       }
 
-      // 4. Grade Value Display
+      // 4. Grade Value Display (Inside Grade Card)
       const gradeVal = document.getElementById('stat-overall-grade-value');
       if (gradeVal) {
-        gradeVal.style.color = targetColor;
-        if (isGradeS) {
-          gradeVal.style.filter = `drop-shadow(0 0 14px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 24px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45))`;
-          gradeVal.classList.add('text-grade-star');
-        } else {
-          gradeVal.classList.remove('text-grade-star');
-          gradeVal.style.filter = `drop-shadow(0 0 10px rgba(${rgbColor}, 0.55))`;
-        }
+        gradeVal.textContent = overallGrade;
+        gradeVal.style.setProperty('color', gcText, 'important');
+        gradeVal.style.setProperty('filter', 'none', 'important');
+        gradeVal.classList.remove('text-grade-star');
       }
 
-      // 5. Border Accent on Score & Grade Cards (Symmetrical Boxes)
+      // 4b. Achievement Description Display (Inside Grade Card)
+      if (achievementTextEl) {
+        achievementTextEl.style.setProperty('color', gcText, 'important');
+        achievementTextEl.style.setProperty('filter', 'none', 'important');
+      }
+
+      // 5. Border Accent on Score & Grade Cards (Symmetrical Boxes - Color only, no box glow)
       const scoreCard = document.getElementById('banner-score-box');
       if (scoreCard) {
         scoreCard.style.borderColor = isGradeS ? `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.6)` : `rgba(${rgbColor}, 0.35)`;
-        scoreCard.style.boxShadow = isGradeS
-          ? `0 0 20px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)`
-          : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
+        scoreCard.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
       }
       const gradeCard = document.getElementById('banner-grade-box');
       if (gradeCard) {
         gradeCard.style.borderColor = isGradeS ? `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.6)` : `rgba(${rgbColor}, 0.35)`;
-        gradeCard.style.boxShadow = isGradeS
-          ? `0 0 20px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45), 0 6px 16px rgba(0, 0, 0, 0.25)`
-          : `0 0 12px rgba(${rgbColor}, 0.15), 0 4px 14px rgba(0, 0, 0, 0.2)`;
+        gradeCard.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
       }
 
       renderCompletedTestsBottom(attempts, avgPct);
@@ -2956,10 +2967,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // STRICT FILTER:
-      // 1. Tests that have never been taken (!bestByTest[t.id], like C Words Exam with — —) MUST NOT appear.
-      // 2. Already taken exams (like Exam A 74%, Exam B 99%) MUST appear.
-      // 3. Tasks with 0% and 0 passes (like uncompleted C4) MUST NOT appear.
+      // EXAM-ONLY TRANSCRIPTS FILTER (SSOT Rule):
+      // Only official milestone Exams completed by the student appear in this transcript table.
+      // Formative Tasks (repetitive drills) are tracked in the Up Next card and excluded here.
       const completedOnlyTests = publishedClassTests.filter(t => {
         const best = bestByTest[t.id];
         if (!best) return false; // Must have an actual completed attempt record
@@ -2968,14 +2978,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                      (t.category || '').toUpperCase() === 'EXAM' ||
                      (t.title || '').toLowerCase().includes('exam');
 
-        if (isEx) {
-          // Exam that has been taken with a valid score or grade MUST appear
-          return best.effPct > 0 || (best.grade && best.grade !== '—' && best.grade !== 'E');
-        } else {
-          // Task must have at least 1 attempt with a score > 0%
-          const taskAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
-          return taskAttempts.length >= 1 && best.effPct > 0;
-        }
+        if (!isEx) return false;
+
+        // Exam that has been taken with a valid score or grade MUST appear
+        return best.effPct > 0 || (best.grade && best.grade !== '—' && best.grade !== 'E');
       });
 
       if (countBadge) {
@@ -2985,141 +2991,55 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!completedOnlyTests.length) {
         container.innerHTML = `
           <div class="empty-state p-4 text-center" style="padding: 24px 12px;">
-            <p style="color:var(--clr-text-3); font-size:12px; margin:0;">No completed tests yet.</p>
+            <p style="color:var(--clr-text-3); font-size:12px; margin:0;">No completed exams yet.</p>
           </div>
         `;
         return;
       }
 
-      // Order strictly from latest completed test down to earliest
+      // Order strictly from latest completed exam down to earliest
       const sortedAccessible = [...completedOnlyTests].reverse();
 
       let html = '';
       sortedAccessible.forEach((t, idx) => {
         const num = idx + 1;
         const best = bestByTest[t.id];
-        const hasTaken = Boolean(best);
-        const testTitle = t.title || t.name || 'Test';
+        const testTitle = t.title || t.name || 'Exam';
 
-        // Distinguish Exam vs Task
-        const isExamItem = (t.test_type || '').toLowerCase() === 'exam' ||
-                           (t.category || '').toUpperCase() === 'EXAM' ||
-                           (t.title || '').toLowerCase().includes('exam');
+        const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(best.effPct) : '#94a3b8';
+        const scoreRgb = parseHexRgb(scoreColor);
 
-        let scoreHtml = '—';
-        let gradeHtml = '—';
-        let btnBorderColor = '#38bdf8';
-        let btnRgb = '56, 189, 248';
-        let btnFillColor = '#38bdf8';
+        // Premium Milestone Exam Styling:
+        // Title font & number are pure white (#ffffff) for maximum contrast
+        // Score, Grade circle, and Retry button retain their vibrant earned grade color
+        const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:600;margin-left:1px;">R</sup>' : '';
+        const scoreHtml = `<span style="color:${scoreColor} !important; font-weight:400; font-family:'Inter', sans-serif;">${best.effPct.toFixed(0)}%${remSup}</span>`;
 
-        // Dynamic Title Font Color:
-        // For Exams: Pure White (#ffffff)
-        // For Tasks: Clean White (#f8fafc)
-        let titleColor = '#f8fafc';
-        let titleFontWeight = '400';
+        const dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
+        const isStar = dispGrade === '★' || dispGrade === 'S';
+        const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
+        const gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
 
-        let numHtml = `${num}`;
-        let rowClass = 'completed-row';
-        let rowStyle = '';
-
-        if (isExamItem && hasTaken) {
-          const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(best.effPct) : '#94a3b8';
-          const scoreRgb = parseHexRgb(scoreColor);
-
-          // Hybrid Premium Milestone:
-          // Title font & number are pure white (#ffffff) for maximum readability
-          // Score, Grade circle, and Retry button retain their vibrant earned grade color
-          btnBorderColor = scoreColor;
-          btnRgb = scoreRgb;
-          btnFillColor = scoreColor;
-          titleColor = '#ffffff';
-          titleFontWeight = '400';
-
-          const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:600;margin-left:1px;">R</sup>' : '';
-          scoreHtml = `<span style="color:${scoreColor} !important; font-weight:400; font-family:'Inter', sans-serif;">${best.effPct.toFixed(0)}%${remSup}</span>`;
-
-          const dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
-          const isStar = dispGrade === '★' || dispGrade === 'S';
-          const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-          gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
-
-          // Row: Smooth gradient from left to right + score-colored top & bottom dividers
-          rowClass += ' is-exam-row';
-          rowStyle = `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%) !important; border-top: 1.5px solid ${scoreColor} !important; border-bottom: 1.5px solid ${scoreColor} !important; box-shadow: 0 1px 6px rgba(${scoreRgb}, 0.25) !important;`;
-          numHtml = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${num}</span>`;
-        }
-
-        // Sub-Row 2 for Tasks: Top 7 Highest Scores sorted DESCENDING (Highest to Lowest)
-        // Score & Grade are calculated as the AVERAGE of the top 7 attempts
-        let taskSubRowHtml = '';
-        if (!isExamItem) {
-          const taskAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
-          const mappedAttempts = taskAttempts.map(a => {
-            const rawPct = parseFloat(a.percentage || 0);
-            const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
-            const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-            const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
-            return { effPct, grade: gr, isRem };
-          });
-          // 1. Get Top 7 highest
-          mappedAttempts.sort((a, b) => b.effPct - a.effPct);
-          const top7 = mappedAttempts.slice(0, 7);
-
-          // 2. SORT DESCENDING: Highest to Lowest (e.g. ★, ★, A, A, B, ...)
-          top7.sort((a, b) => b.effPct - a.effPct);
-
-          // 3. TASK AVERAGE SCORING: Calculate average score & grade from the top 7 attempts
-          if (top7.length > 0) {
-            const sumPct = top7.reduce((acc, curr) => acc + curr.effPct, 0);
-            const taskAvgPct = Math.round(sumPct / top7.length);
-            const taskAvgGrade = typeof calculateGrade === 'function' ? calculateGrade(taskAvgPct) : 'E';
-
-            const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(taskAvgPct) : '#94a3b8';
-            btnBorderColor = scoreColor;
-            btnRgb = parseHexRgb(scoreColor);
-            btnFillColor = scoreColor;
-
-            scoreHtml = `<span style="color:${scoreColor}; font-weight:400; font-family:'Inter', sans-serif;">${taskAvgPct}%</span>`;
-
-            const dispGrade = taskAvgGrade;
-            const isStar = dispGrade === '★' || dispGrade === 'S';
-            const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-            gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor}; color:${textColor}; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
-          }
-
-          let chipsHtml = '';
-          for (let i = 0; i < 7; i++) {
-            const item = top7[i];
-            if (item) {
-              const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
-              const isSt = item.grade === '★' || item.grade === 'S';
-              const txt = isSt ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-              chipsHtml += `<span class="task-mini-grade" style="background:${c}; color:${txt};">${item.grade}</span>`;
-            } else {
-              chipsHtml += `<span class="task-mini-grade is-empty">—</span>`;
-            }
-          }
-          taskSubRowHtml = `<div class="task-grades-subrow">${chipsHtml}</div>`;
-        }
+        const rowStyle = `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%) !important; border-top: 1.5px solid ${scoreColor} !important; border-bottom: 1.5px solid ${scoreColor} !important; box-shadow: 0 1px 6px rgba(${scoreRgb}, 0.25) !important;`;
+        const numHtml = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${num}</span>`;
 
         html += `
-          <div class="${rowClass}" style="${rowStyle}" onclick="window.location.href='test.html?id=${t.id}'">
+          <div class="completed-row is-exam-row" style="${rowStyle}" onclick="window.location.href='test.html?id=${t.id}'">
             <span class="completed-col-num">${numHtml}</span>
             <div class="completed-col-name-wrap">
-              <span class="completed-col-name" style="color: ${titleColor} !important; font-weight: ${titleFontWeight} !important;" title="${escapeHtml(testTitle)}">
+              <span class="completed-col-name" style="color: #ffffff !important; font-weight: 400 !important;" title="${escapeHtml(testTitle)}">
                 ${escapeHtml(testTitle)}
               </span>
-              ${taskSubRowHtml}
             </div>
             <span class="completed-col-score">${scoreHtml}</span>
             <span class="completed-col-grade">${gradeHtml}</span>
             <span class="completed-col-action">
               <button type="button"
                       class="completed-retry-btn"
-                      style="border: 1.5px solid ${btnBorderColor} !important; background: rgba(${btnRgb}, 0.15) !important; box-shadow: 0 0 10px rgba(${btnRgb}, 0.35) !important;"
+                      style="border: 1.5px solid ${scoreColor} !important; background: rgba(${scoreRgb}, 0.15) !important; box-shadow: 0 0 10px rgba(${scoreRgb}, 0.35) !important;"
                       title="Play / Retry ${escapeHtml(testTitle)}"
                       onclick="event.stopPropagation(); window.location.href='test.html?id=${t.id}'">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="${btnFillColor}" stroke="none">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="${scoreColor}" stroke="none">
                   <polygon points="6 3 20 12 6 21 6 3"></polygon>
                 </svg>
               </button>

@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261117_v615" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261117_v615" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261117_v621" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
   <!-- Web App Manifest & PWA Metadata -->
   <link rel="manifest" href="manifest.json" />
@@ -148,8 +148,8 @@
       </div>
     </section>
 
-    <!-- 3. UNIFIED 3-PILLAR PERFORMANCE CARD (GRADE | GRADE DESCRIPTION | RATE) -->
-    <div class="dashboard-grade-legend" id="dashboard-grade-legend" aria-label="Grade Achievement Status">
+    <!-- 3. GRADE CARD (GRADE | GRADE DESCRIPTION | RATE) -->
+    <div class="dashboard-grade-legend grade-card" id="dashboard-grade-legend" aria-label="Grade Card">
       <!-- Pillar 1: GRADE -->
       <div class="perf-pillar perf-pillar-grade">
         <span class="perf-pillar-label">GRADE</span>
@@ -198,7 +198,7 @@
           <span id="dock-my-rank-number" class="rank-number-chip">#--</span>
         </button>
         <button type="button" class="dock-tab-btn" id="btn-dock-completed" role="tab" aria-selected="false" aria-controls="dock-pane-completed">
-          <span class="tab-label-text">COMPLETED TESTS</span>
+          <span class="tab-label-text">COMPLETED EXAMS</span>
           <span id="dock-completed-count-badge" class="count-badge">0</span>
         </button>
       </div>
@@ -219,18 +219,18 @@
         </div>
       </div>
 
-      <!-- Pane B: Completed Tests Table (Latest on Top + Retry Button) -->
+      <!-- Pane B: Completed Exams Table (Latest on Top + Retry Button) -->
       <div id="dock-pane-completed" class="dock-tab-pane hidden" role="tabpanel">
         <div class="completed-table-header">
           <span class="th-col th-rank">NO</span>
-          <span class="th-col th-name">TEST NAME</span>
+          <span class="th-col th-name">EXAM NAME</span>
           <span class="th-col th-score">SCORE</span>
           <span class="th-col th-grade">GRD</span>
           <span class="th-col th-action">ACT</span>
         </div>
         <div class="completed-table-wrap" id="completed-Tests-container">
           <div class="empty-state p-4 text-center">
-            <p style="color:var(--clr-text-3);">Loading Completed Tests...</p>
+            <p style="color:var(--clr-text-3);">Loading Completed Exams...</p>
           </div>
         </div>
       </div>
@@ -688,7 +688,7 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261117_v615"></script>
+  <script type="module" src="./js/dashboard.js?v=20261117_v621"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 
