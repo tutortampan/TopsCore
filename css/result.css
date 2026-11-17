@@ -673,7 +673,7 @@
       text-align: center !important;
     }
 
-    /* ===== 1. HERO BANNER (STUDENT IDENTITY - STRICT 150PX UNIFORM WITH DASHBOARD) ===== */
+    /* ===== 1. HERO BANNER: UNIFIED HERO CARD (OPTION A SSOT - PHASE 622) ===== */
     .result-identity-card {
       --tier-color: var(--grade-star);
       --tier-rgb: var(--grade-star-rgb);
@@ -681,11 +681,8 @@
       max-width: 100% !important;
       margin: 0 !important;
       border-radius: 14px !important;
-      padding: 0 14px !important;
-      height: 150px !important;
-      min-height: 150px !important;
-      max-height: 150px !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.12), transparent 75%), #0f172a !important;
+      padding: 10px 12px !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 15%, rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.12), transparent 75%), #0f172a !important;
       border: 1.5px solid rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.70) !important;
       box-shadow: 0 0 25px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.35), 0 8px 24px -6px rgba(0, 0, 0, 0.45) !important;
       flex-shrink: 0 !important;
@@ -693,7 +690,9 @@
       box-sizing: border-box !important;
       display: flex !important;
       flex-direction: column !important;
-      justify-content: space-between !important;
+      align-items: stretch !important;
+      justify-content: flex-start !important;
+      gap: 6px !important;
       overflow: hidden !important;
       transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
@@ -702,7 +701,7 @@
     .result-identity-card[data-tier="★"] {
       border-color: rgba(var(--grade-star-rgb), 0.55) !important;
       box-shadow: 0 0 35px rgba(var(--grade-star-rgb), 0.45), 0 15px 35px -8px rgba(0, 0, 0, 0.5) !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--grade-star-rgb), 0.22), transparent 75%), #0f172a !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 15%, rgba(var(--grade-star-rgb), 0.22), transparent 75%), #0f172a !important;
     }
     .result-identity-card[data-tier="A"] { border-color: rgba(var(--grade-a-rgb), 0.55) !important; }
     .result-identity-card[data-tier="B"] { border-color: rgba(var(--grade-b-rgb), 0.55) !important; }
@@ -713,38 +712,65 @@
     .result-identity-card[data-tier="R"] {
       border-color: rgba(var(--grade-c-rgb), 0.55) !important;
       box-shadow: 0 0 25px rgba(var(--grade-c-rgb), 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35) !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--grade-c-rgb), 0.15), transparent 75%), #0f172a !important;
+      background: radial-gradient(ellipse 90% 70% at 50% 15%, rgba(var(--grade-c-rgb), 0.15), transparent 75%), #0f172a !important;
     }
 
-    .result-meta-wrapper {
-      height: 20px !important;
-      min-height: 20px !important;
-      max-height: 20px !important;
+    /* 1. Top Identity: Centered Name & Academic Hierarchy */
+    .result-identity-card .hero-identity-top {
       display: flex !important;
+      flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 8px !important;
-      font-family: 'Inter', sans-serif !important;
-      font-size: 12px !important;
-      font-weight: 700 !important;
-      letter-spacing: 0.05em !important;
-      text-transform: uppercase !important;
-      color: #94a3b8 !important;
+      text-align: center !important;
+      gap: 2px !important;
+      width: 100% !important;
+    }
+
+    .result-identity-card .result-student-name-label,
+    .result-identity-card .hero-student-name {
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 15px !important;
+      font-weight: 800 !important;
+      color: #f8fafc !important;
+      letter-spacing: 0.01em !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       margin: 0 !important;
       padding: 0 !important;
-      line-height: 1 !important;
+      line-height: 1.2 !important;
+      width: 100% !important;
+      text-align: center !important;
     }
-    .result-meta-wrapper .meta-sep {
+
+    .result-identity-card .result-meta-wrapper,
+    .result-identity-card .hero-academic-meta {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 5px !important;
+      font-family: var(--font-sans, 'Inter', sans-serif) !important;
+      font-size: 10.5px !important;
+      font-weight: 600 !important;
+      color: var(--primary-tactical, #38bdf8) !important;
+      letter-spacing: 0.03em !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      line-height: 1.2 !important;
+      width: 100% !important;
+    }
+    .result-identity-card .result-meta-wrapper .meta-sep {
+      opacity: 0.5 !important;
+      font-size: 10px !important;
       color: #475569 !important;
-      font-size: 12px !important;
       -webkit-user-select: none !important;
       user-select: none !important;
     }
 
-    .result-identity-card .hero-divider,
+    .result-identity-card .hero-card-divider,
     .result-identity-card .hero-name-divider {
       display: block !important;
       width: 100% !important;
@@ -752,61 +778,62 @@
       min-height: 1px !important;
       max-height: 1px !important;
       flex-shrink: 0 !important;
-      margin: 0 !important;
-      background: linear-gradient(90deg, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 15%, rgba(var(--tier-rgb, 234, 179, 8), 0.85) 50%, rgba(var(--tier-rgb, 234, 179, 8), 0.75) 85%, rgba(var(--tier-rgb, 234, 179, 8), 0.20) 100%) !important;
-      box-shadow: 0 0 4px rgba(var(--tier-rgb, 234, 179, 8), 0.35) !important;
+      margin: 1px 0 3px 0 !important;
+      background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.35) 50%, transparent 100%) !important;
       border: none !important;
       opacity: 1 !important;
       visibility: visible !important;
     }
 
-    /* Centered Avatar Stage (Pure Identity Card) */
-    .result-avatar-stage {
-      height: 93px !important;
-      min-height: 93px !important;
-      max-height: 93px !important;
+    /* 2. Bottom Row: 3:4 Portrait Photo (Left) + Biodata Table (Right) */
+    .result-identity-card .hero-body-row {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: flex-start !important;
+      justify-content: flex-start !important;
+      gap: 12px !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    .result-identity-card .result-avatar-stage,
+    .result-identity-card .banner-avatar-wrapper {
+      position: relative !important;
+      flex-shrink: 0 !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       margin: 0 !important;
       padding: 0 !important;
-      position: relative !important;
-      flex-shrink: 0 !important;
+      height: auto !important;
+      min-height: unset !important;
+      max-height: unset !important;
     }
 
-    /* Center Avatar & Crown */
-    .result-identity-card .banner-avatar-wrapper {
-      position: relative !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      flex-shrink: 0 !important;
-    }
-
-    .result-identity-card #result-avatar-container {
-      width: 84px !important;
+    .result-identity-card #result-avatar-container,
+    .result-identity-card .hero-avatar-3x4 {
+      width: 64px !important;
       height: 84px !important;
-      min-width: 84px !important;
+      min-width: 64px !important;
       min-height: 84px !important;
-      border-radius: 50% !important;
-      padding: 3px !important;
+      border-radius: 8px !important;
+      padding: 2px !important;
       background: rgba(15, 23, 42, 0.9) !important;
-      border: 2.5px solid var(--tier-color, var(--grade-star)) !important;
-      box-shadow: 0 0 24px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.75), 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+      border: 2px solid var(--tier-color, var(--grade-star)) !important;
+      box-shadow: 0 0 12px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.35) !important;
+      overflow: hidden !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
       box-sizing: border-box !important;
-      flex-shrink: 0 !important;
-      overflow: hidden !important;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
     }
 
     .result-identity-card #result-avatar-img {
       width: 100% !important;
       height: 100% !important;
-      border-radius: 50% !important;
       object-fit: cover !important;
+      border-radius: 6px !important;
       background: #1e293b !important;
       display: block !important;
     }
@@ -817,84 +844,84 @@
 
     .result-identity-card #result-avatar-initial {
       font-family: 'Outfit', sans-serif !important;
-      font-size: 30px !important;
+      font-size: 26px !important;
       font-weight: 800 !important;
-      color: #ffffff !important;
-      -webkit-user-select: none !important;
+      color: var(--tier-color, var(--grade-star)) !important;
+      line-height: 1 !important;
       user-select: none !important;
-    }
-
-    .result-identity-card[data-tier="S"] #result-avatar-container,
-    .result-identity-card[data-tier="★"] #result-avatar-container {
-      background: linear-gradient(135deg, var(--grade-star) 0%, #be185d 100%) !important;
-      border: 2.5px solid var(--grade-star) !important;
-      box-shadow: 0 0 25px rgba(var(--grade-star-rgb), 0.85), 0 0 45px rgba(var(--grade-star-rgb), 0.45) !important;
-    }
-    .result-identity-card[data-tier="A"] #result-avatar-container {
-      border: 2.5px solid var(--grade-a) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-a-rgb), 0.45) !important;
-    }
-    .result-identity-card[data-tier="B"] #result-avatar-container {
-      border: 2.5px solid var(--grade-b) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-b-rgb), 0.45) !important;
-    }
-    .result-identity-card[data-tier="C"] #result-avatar-container {
-      border: 2.5px solid var(--grade-c) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-c-rgb), 0.45) !important;
-    }
-    .result-identity-card[data-tier="D"] #result-avatar-container {
-      border: 2.5px solid var(--grade-d) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-d-rgb), 0.45) !important;
-    }
-    .result-identity-card[data-tier="E"] #result-avatar-container,
-    .result-identity-card[data-tier="F"] #result-avatar-container {
-      border: 2.5px solid var(--grade-e) !important;
-      box-shadow: 0 0 16px rgba(var(--grade-e-rgb), 0.45) !important;
-    }
-    .result-identity-card[data-tier="R"] #result-avatar-container {
-      border: 2.5px solid var(--grade-c) !important;
-      box-shadow: 0 0 18px rgba(var(--grade-c-rgb), 0.5) !important;
     }
 
     .result-identity-card .avatar-crown-badge {
       position: absolute !important;
-      top: -15px !important;
+      top: -8px !important;
       left: 50% !important;
       transform: translateX(-50%) !important;
-      font-size: 20px !important;
-      line-height: 1 !important;
-      z-index: 10 !important;
-      filter: drop-shadow(0 2px 8px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 18px rgba(245, 158, 11, 0.85)) !important;
-      animation: crownFloat 2.6s ease-in-out infinite !important;
-      pointer-events: none !important;
-      -webkit-user-select: none !important;
-      user-select: none !important;
+      color: #fbbf24 !important;
+      filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)) !important;
+      z-index: 5 !important;
     }
 
     .result-identity-card .avatar-crown-badge.hidden {
       display: none !important;
     }
 
-    /* Student Name */
-    .result-identity-card .result-student-name-label {
-      height: 35px !important;
-      min-height: 35px !important;
-      max-height: 35px !important;
+    /* Result Biodata Table with Aligned Colons (Sex -> DoB -> Age -> Adr) */
+    .result-identity-card .hero-bio-table {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
       display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      gap: 2.5px !important;
+      padding-top: 1px !important;
+    }
+
+    .result-identity-card .hero-bio-row {
+      display: grid !important;
+      grid-template-columns: 26px 8px 1fr !important;
+      align-items: baseline !important;
+      width: 100% !important;
+    }
+
+    .result-identity-card .hero-bio-lbl {
+      font-family: var(--font-sans, 'Inter', sans-serif) !important;
+      font-size: 9.5px !important;
+      font-weight: 700 !important;
+      color: #94a3b8 !important;
+      letter-spacing: 0.03em !important;
+      text-transform: uppercase !important;
+      white-space: nowrap !important;
+      line-height: 1.5 !important;
+    }
+
+    .result-identity-card .hero-bio-colon {
+      font-size: 9.5px !important;
+      color: #64748b !important;
       text-align: center !important;
-      font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.08rem, 3.6vw, 1.25rem) !important;
-      font-weight: 800 !important;
+      line-height: 1.5 !important;
+    }
+
+    .result-identity-card .hero-bio-val {
+      font-family: var(--font-sans, 'Inter', sans-serif) !important;
+      font-size: 10px !important;
+      font-weight: 500 !important;
       color: #f8fafc !important;
-      letter-spacing: 0.02em !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      line-height: 1 !important;
+      line-height: 1.5 !important;
+    }
+
+    .result-identity-card .hero-bio-gender-val {
+      color: var(--primary-tactical, #38bdf8) !important;
+      font-weight: 600 !important;
+    }
+
+    .result-identity-card .hero-bio-adr-val {
+      white-space: normal !important;
+      line-height: 1.35 !important;
+      color: #cbd5e1 !important;
+      font-size: 9.5px !important;
     }
 
     @keyframes star-vector-pulse {

@@ -1,10 +1,35 @@
-# TopsCore LMS — Active Changelog (Phases 585–619)
+# TopsCore LMS — Active Changelog (Phases 585–622)
 
 > **Format:** Ultra-Condensed Active Changelog (Strict 25-Phase Rolling Window per AGENTS.md §5.3). Each entry highlights core functional deliverables, architectural milestones, and affected systems.
 > **Full Archives:** Historical verbose logs for earlier phases are preserved in:
 > - [`docs/archive/CHANGELOG_ARCHIVE.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE.md.gz) (Phases 1–228, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_2.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_2.md.gz) (Phases 229–451, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_3.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_3.md.gz) (Phases 452–539, Gzip Compressed)
+
+---
+
+## [2026-11-17 10:15] — Phase 622: Unified Hero Card Architecture (Option A SSOT: Sex Above DoB)
+- **Standardisasi 1 Format HERO CARD Tunggal Terpadu (Option A SSOT)**:
+  - Mengintegrasikan format Hero Card di 3 layar utama (**Dashboard**, **Profile Modal**, dan **Result Page**) menjadi 1 format resmi yang identik:
+    1. **Bagian Atas (Centered Identity)**: Nama Siswa (`.hero-student-name`, 15px Outfit 800) dan Hierarki Akademik (`.hero-academic-meta`, Tactical Blue `#38bdf8`, e.g. `CEC • Camp • Batch 134 • 2nd Level`).
+    2. **Garis Pemisah Halus (`.hero-card-divider`)**: Divider dengan gradien halus aksen tier ujian.
+    3. **Bagian Bawah (Split 2-Kolom)**:
+       - **Sisi Kiri**: Foto portrait rasio 3:4 (`64x84px`) dengan border & box-shadow bercahaya dinamis mengikuti nilai grade ujian (`--tier-color`).
+       - **Sisi Kanan**: Tabel biodata vertikal rapi dengan titik dua presisi sejajar (*aligned colons*):
+         - **Sex** (berada di atas DoB sesuai instruksi pengguna, dengan warna biru `#38bdf8` untuk Male dan pink `#ff2d87` untuk Female)
+         - **DoB** (e.g. `16 Oct 2004`)
+         - **Age** (e.g. `22 Years Old`)
+         - **Adr** (format resmi Kemendagri e.g. `Pejanggik, Mataram, Mataram City, NTB` atau `Dalam, Alas, Sumbawa, NTB`)
+- **Implementasi Terpadu di 3 File Halaman**:
+  - **`dashboard.html` & `css/dashboard.css`**: Mentransformasikan `#welcome-banner-section` menjadi `.unified-hero-card`, memperbarui tabel profil modal agar kolom `Sex` berada tepat di atas `DoB`.
+  - **`result.html` & `css/result.css`**: Menggantikan layout vertikal terpusat lama (lingkaran avatar di tengah) dengan `.unified-hero-card` horizontal 2-kolom terpadu.
+  - **`js/result.js`**: Mengintegrasikan `formatVillageName`, `formatDistrictName`, `formatCityDistrict`, dan `formatProvinceName` dari `indonesia-regions.js`, serta mengambil data `gender, birth_date, dob, village, district, city, province` dari Supabase untuk mengisi tabel biodata Result Page secara otomatis.
+- **Cache-Busting & PWA Sync**:
+  - Mengupdate `sw.js` cache name ke `topscore-cache-option-a-v142`.
+  - Cache-busting script tag `dashboard.js?v=20261117_v622` dan `result.js?v=20261117_v540`.
+- **Verification**:
+  - `npm.cmd test` lolos 100% (51 file JS AST valid dalam 0.25s, CSS minified, audit tata letak spasial lolos 100%).
+  - `node scripts/test_regency_city_standardization.mjs` lolos 100% (6 pilar hijau).
 
 ---
 

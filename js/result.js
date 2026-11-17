@@ -11,6 +11,7 @@ import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_01';
+import { formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName } from './indonesia-regions.js?v=20261117_v547';
 
 let session = getStudentSession();
 if (!session) {
@@ -949,7 +950,7 @@ if (!session) {
           const supabase = await getSupabase();
           if (targetStudentId) {
             const { data: st } = await supabase.from('students')
-              .select('id, name, gender, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
+              .select('id, name, gender, birth_date, dob, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
               .eq('id', targetStudentId)
               .maybeSingle();
             if (st) {
@@ -971,6 +972,69 @@ if (!session) {
               if (metaProgEl) metaProgEl.textContent = resolvedProgName;
               if (metaBatchEl) metaBatchEl.textContent = resolvedBatchName;
               if (metaLvlEl) metaLvlEl.textContent = resolvedLvlName;
+
+              // Unified Hero Card Biodata Table: Sex (above DoB) -> DoB -> Age -> Adr
+              const resGenderEl = document.getElementById('result-hero-gender');
+              const gRaw = (st.gender || session.gender || '').toLowerCase();
+              const gText = gRaw === 'female' ? 'Female' : (gRaw === 'male' ? 'Male' : '—');
+              if (resGenderEl) {
+                resGenderEl.textContent = gText;
+                if (gRaw === 'female') {
+                  resGenderEl.style.color = '#ff2d87';
+                } else if (gRaw === 'male') {
+                  resGenderEl.style.color = '#38bdf8';
+                } else {
+                  resGenderEl.style.color = '#f8fafc';
+                }
+              }
+
+              const resDobEl = document.getElementById('result-hero-dob');
+              const resAgeEl = document.getElementById('result-hero-age');
+              const rawDob = st.birth_date || st.dob || session.birth_date || session.dob;
+              let ageText = '—';
+              let dobText = '—';
+              if (rawDob) {
+                const parts = String(rawDob).split('-');
+                if (parts.length === 3) {
+                  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  const mIdx = parseInt(parts[1], 10) - 1;
+                  const day = parseInt(parts[2], 10);
+                  const yr = parts[0];
+                  const mName = months[mIdx] || '';
+                  dobText = `${day} ${mName} ${yr}`;
+                } else {
+                  dobText = rawDob;
+                }
+                const d = new Date(rawDob);
+                if (!isNaN(d.getTime())) {
+                  const today = new Date();
+                  let age = today.getFullYear() - d.getFullYear();
+                  const m = today.getMonth() - d.getMonth();
+                  if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
+                  if (age >= 0 && age <= 120) ageText = `${age} Years Old`;
+                }
+              }
+              if (resDobEl) resDobEl.textContent = dobText;
+              if (resAgeEl) resAgeEl.textContent = ageText;
+
+              const resAdrEl = document.getElementById('result-hero-adr');
+              if (resAdrEl) {
+                const vRaw = st.village || session.village;
+                const dRaw = st.district || session.district;
+                const cRaw = st.city || session.city;
+                const pRaw = st.province || session.province;
+                const fVill = vRaw ? (typeof formatVillageName === 'function' ? formatVillageName(vRaw) : vRaw) : '';
+                const fDist = dRaw ? (typeof formatDistrictName === 'function' ? formatDistrictName(dRaw) : dRaw) : '';
+                const fCity = cRaw ? (typeof formatCityDistrict === 'function' ? formatCityDistrict(cRaw) : cRaw) : '';
+                let fProv = pRaw || '';
+                if (fProv === 'Nusa Tenggara Barat' || fProv === 'West Nusa Tenggara') {
+                  fProv = 'NTB';
+                } else if (typeof formatProvinceName === 'function') {
+                  fProv = formatProvinceName(fProv);
+                }
+                const parts = [fVill, fDist, fCity, fProv].map(x => (x || '').trim()).filter(x => x && x !== '—');
+                resAdrEl.textContent = parts.length > 0 ? parts.join(', ') : 'Mataram City, NTB';
+              }
             }
             if (st && st.photo_url) {
               const avatarImg = document.getElementById('result-avatar-img');

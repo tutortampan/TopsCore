@@ -58,34 +58,66 @@
   <div id="result-content" class="hidden">
     <section class="result-hero" id="result-hero-section">
 
-      <!-- 1. Header Card (Student Metadata - Strict 150px Uniform with Dashboard) -->
-      <div class="result-identity-card cascade-item" id="result-identity-card">
-        <!-- Institutional Metadata -->
-        <div class="result-meta-wrapper" id="result-meta-wrapper">
-          <span id="meta-inst">CEC</span>
-          <span class="meta-sep">|</span>
-          <span id="meta-prog">CAMP</span>
-          <span class="meta-sep">|</span>
-          <span id="meta-batch">131</span>
-          <span class="meta-sep">|</span>
-          <span id="meta-lvl">3RD LEVEL</span>
-        </div>
-
-        <div class="hero-divider"></div>
-
-        <!-- Centered Large Avatar (Dynamic Tier Ring & Crown Anchor) -->
-        <div class="result-avatar-stage" id="result-avatar-stage">
-          <span id="result-crown-badge" class="avatar-crown-badge hidden" title="Batch Champion"><svg width="24" height="24" viewBox="0 0 24 24" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"></path></svg></span>
-          <div id="result-avatar-container" class="banner-avatar-container" title="Profile Photo">
-            <span id="result-avatar-initial">S</span>
-            <img id="result-avatar-img" class="hidden result-avatar-img" alt="Profile Photo" />
+      <!-- 1. Header Card: Unified Hero Card (Option A SSOT - Phase 622) -->
+      <div class="result-identity-card cascade-item unified-hero-card" id="result-identity-card">
+        <!-- 1. Top Identity: Centered Name & Academic Hierarchy -->
+        <div class="hero-identity-top">
+          <div class="result-student-name-label hero-student-name" id="result-student-name-label">Student</div>
+          <div class="result-meta-wrapper hero-academic-meta" id="result-meta-wrapper">
+            <span id="meta-inst">CEC</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="meta-prog">CAMP</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="meta-batch">131</span>
+            <span class="meta-sep">&bull;</span>
+            <span id="meta-lvl">3RD LEVEL</span>
           </div>
         </div>
 
-        <div class="hero-divider hero-name-divider"></div>
+        <!-- Subtle Accent Divider -->
+        <div class="hero-card-divider hero-name-divider"></div>
 
-        <!-- Centered Student Name -->
-        <div class="result-student-name-label" id="result-student-name-label">Student</div>
+        <!-- 2. Bottom Row: 3:4 Portrait Photo (Left) + Biodata Table (Right) -->
+        <div class="hero-body-row">
+          <!-- Photo Container Left -->
+          <div class="result-avatar-stage banner-avatar-wrapper" id="result-avatar-stage">
+            <span id="result-crown-badge" class="avatar-crown-badge hidden" title="Batch Champion">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"></path></svg>
+            </span>
+            <div id="result-avatar-container" class="hero-avatar-3x4" title="Profile Photo">
+              <span id="result-avatar-initial">S</span>
+              <img id="result-avatar-img" class="hidden result-avatar-img" alt="Profile Photo" />
+            </div>
+          </div>
+
+          <!-- Biodata Table Right: Sex -> DoB -> Age -> Adr with Aligned Colons -->
+          <div class="hero-bio-table">
+            <!-- Row 1: Sex (Above DoB per user requirement) -->
+            <div class="hero-bio-row">
+              <span class="hero-bio-lbl">Sex</span>
+              <span class="hero-bio-colon">:</span>
+              <span class="hero-bio-val hero-bio-gender-val" id="result-hero-gender">—</span>
+            </div>
+            <!-- Row 2: DoB -->
+            <div class="hero-bio-row">
+              <span class="hero-bio-lbl">DoB</span>
+              <span class="hero-bio-colon">:</span>
+              <span class="hero-bio-val" id="result-hero-dob">—</span>
+            </div>
+            <!-- Row 3: Age -->
+            <div class="hero-bio-row">
+              <span class="hero-bio-lbl">Age</span>
+              <span class="hero-bio-colon">:</span>
+              <span class="hero-bio-val" id="result-hero-age">—</span>
+            </div>
+            <!-- Row 4: Adr -->
+            <div class="hero-bio-row hero-bio-adr-row">
+              <span class="hero-bio-lbl">Adr</span>
+              <span class="hero-bio-colon">:</span>
+              <span class="hero-bio-val hero-bio-adr-val" id="result-hero-adr" title="Residential Address">—</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 2. Test Full Title (2-Line: Type/Name & Topic/Theme - 50px / 15%) -->
@@ -171,7 +203,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261115_v539"></script>
+  <script type="module" src="./js/result.js?v=20261117_v540"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
   <footer id="bottom-ad-banner" class="topscore-locked-banner">

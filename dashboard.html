@@ -80,51 +80,70 @@
 
     <!-- Hero Identity Bar: Profile & Demographic Card -->
     <section id="welcome-banner-section" class="welcome-banner card" aria-labelledby="welcome-name">
-      <div class="hero-profile-row">
+      <!-- 1. Top Identity: Centered Name & Academic Hierarchy -->
+      <div class="hero-identity-top">
+        <h1 id="welcome-name" class="hero-student-name">Student</h1>
+        <div id="welcome-meta-wrapper" class="hero-academic-meta">
+          <span id="meta-inst">CEC</span>
+          <span class="meta-sep">&bull;</span>
+          <span id="meta-prog">CAMP</span>
+          <span class="meta-sep">&bull;</span>
+          <span id="meta-batch">131</span>
+          <span class="meta-sep">&bull;</span>
+          <span id="meta-lvl">3RD LEVEL</span>
+        </div>
+      </div>
+
+      <!-- Subtle Accent Divider -->
+      <div class="hero-card-divider"></div>
+
+      <!-- 2. Bottom Row: 3:4 Portrait Photo (Left) + Biodata Table (Right) -->
+      <div class="hero-body-row">
         <!-- Photo Container Left -->
         <div class="banner-avatar-wrapper" id="banner-avatar-trigger" role="button" tabindex="0" title="Click to view or edit profile">
           <span id="banner-avatar-crown" class="avatar-crown-badge hidden" title="Batch Champion">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>
           </span>
-          <div id="banner-avatar-container" title="Click to view or change profile">
+          <div id="banner-avatar-container" class="hero-avatar-3x4" title="Click to view or change profile">
             <span id="banner-avatar-initial">S</span>
             <img id="banner-avatar-img" class="hidden" alt="Profile Photo" />
           </div>
         </div>
 
-        <!-- Demographic & Profile Info Right -->
-        <div class="hero-profile-info">
-          <!-- Student Full Name with Title -->
-          <h1 id="welcome-name">Student</h1>
-
-          <!-- Academic Hierarchy -->
-          <div id="welcome-meta-wrapper" class="hero-profile-academic">
-            <span id="meta-inst">CEC</span>
-            <span class="meta-sep">&bull;</span>
-            <span id="meta-prog">CAMP</span>
-            <span class="meta-sep">&bull;</span>
-            <span id="meta-batch">131</span>
-            <span class="meta-sep">&bull;</span>
-            <span id="meta-lvl">3RD LEVEL</span>
+        <!-- Biodata Table Right: Sex -> DoB -> Age -> Adr with Aligned Colons -->
+        <div class="hero-bio-table">
+          <!-- Row 1: Sex (Above DoB per user requirement) -->
+          <div class="hero-bio-row">
+            <span class="hero-bio-lbl">Sex</span>
+            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-val hero-bio-gender-val" id="hero-demographics-gender">—</span>
           </div>
-
-          <!-- Demographics: Gender & Age / DOB -->
-          <div id="hero-profile-demographics" class="hero-profile-demographics">
-            <span id="hero-demographics-gender">—</span>
-            <span class="meta-sep">&bull;</span>
-            <span id="hero-demographics-age">—</span>
-            <span class="meta-sep">&bull;</span>
-            <span id="hero-demographics-dob">—</span>
+          <!-- Row 2: DoB -->
+          <div class="hero-bio-row">
+            <span class="hero-bio-lbl">DoB</span>
+            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-val" id="hero-demographics-dob">—</span>
           </div>
-
-          <!-- Address / Domicile -->
-          <div id="hero-profile-address" class="hero-profile-address">
-            <span id="hero-address-text">—</span>
+          <!-- Row 3: Age -->
+          <div class="hero-bio-row">
+            <span class="hero-bio-lbl">Age</span>
+            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-val" id="hero-demographics-age">—</span>
+          </div>
+          <!-- Row 4: Adr -->
+          <div class="hero-bio-row hero-bio-adr-row">
+            <span class="hero-bio-lbl">Adr</span>
+            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-val hero-bio-adr-val" id="hero-address-text" title="Residential Address">—</span>
           </div>
         </div>
       </div>
 
       <!-- Hidden JS Compatibility Elements -->
+      <div class="hidden" style="display:none !important;">
+        <div id="hero-profile-demographics"></div>
+        <div id="hero-profile-address"></div>
+      </div>
       <div class="hidden">
         <div id="banner-score-box"></div>
         <div id="banner-grade-box"></div>
@@ -373,21 +392,25 @@
             <!-- Stacked Biodata beside Photo: DoB -> Age -> Sex -> Adr with Aligned Colons -->
             <div class="profile-cv-hero-details">
               <div class="profile-hero-meta-table">
-                <div class="profile-hero-meta-row">
-                  <span class="profile-meta-lbl">DoB</span>
-                  <span class="profile-meta-colon">:</span>
-                  <span class="profile-meta-val" id="prof-hero-dob">—</span>
-                </div>
-                <div class="profile-hero-meta-row">
-                  <span class="profile-meta-lbl">Age</span>
-                  <span class="profile-meta-colon">:</span>
-                  <span class="profile-meta-val" id="prof-hero-age">—</span>
-                </div>
+                <!-- Row 1: Sex (Above DoB per user requirement) -->
                 <div class="profile-hero-meta-row">
                   <span class="profile-meta-lbl">Sex</span>
                   <span class="profile-meta-colon">:</span>
                   <span class="profile-meta-val profile-hero-gender-val" id="prof-hero-gender">Male</span>
                 </div>
+                <!-- Row 2: DoB -->
+                <div class="profile-hero-meta-row">
+                  <span class="profile-meta-lbl">DoB</span>
+                  <span class="profile-meta-colon">:</span>
+                  <span class="profile-meta-val" id="prof-hero-dob">—</span>
+                </div>
+                <!-- Row 3: Age -->
+                <div class="profile-hero-meta-row">
+                  <span class="profile-meta-lbl">Age</span>
+                  <span class="profile-meta-colon">:</span>
+                  <span class="profile-meta-val" id="prof-hero-age">—</span>
+                </div>
+                <!-- Row 4: Adr -->
                 <div class="profile-hero-meta-row prof-adr-row">
                   <span class="profile-meta-lbl">Adr</span>
                   <span class="profile-meta-colon">:</span>
@@ -688,7 +711,7 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261117_v621"></script>
+  <script type="module" src="./js/dashboard.js?v=20261117_v622"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 

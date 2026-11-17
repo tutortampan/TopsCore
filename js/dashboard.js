@@ -79,7 +79,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
     const gRaw = (s.gender || '').toLowerCase();
     const gText = gRaw === 'female' ? 'Female' : (gRaw === 'male' ? 'Male' : '—');
-    if (genderEl) genderEl.textContent = gText;
+    if (genderEl) {
+      genderEl.textContent = gText;
+      if (gRaw === 'female') {
+        genderEl.style.color = '#ff2d87';
+      } else if (gRaw === 'male') {
+        genderEl.style.color = '#38bdf8';
+      } else {
+        genderEl.style.color = '#f8fafc';
+      }
+    }
 
     const rawDob = s.birth_date || s.dob;
     let ageText = '—';
@@ -102,7 +111,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let age = today.getFullYear() - d.getFullYear();
         const m = today.getMonth() - d.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
-        if (age >= 0 && age <= 120) ageText = `${age} y.o.`;
+        if (age >= 0 && age <= 120) ageText = `${age} Years Old`;
       }
     }
     if (ageEl) ageEl.textContent = ageText;
