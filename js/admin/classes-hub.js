@@ -475,10 +475,10 @@ export async function renderClassesHub(area) {
         const isDimmed  = !cls.is_active ? 'tree-item-dimmed' : '';
         const effectiveCode = cls.code || (cls.name ? cls.name.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : '');
         const codeHtml  = effectiveCode
-          ? '<span class="text-xs text-muted" style="font-family:monospace;background:rgba(255,255,255,0.04);padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,0.08);">' + escapeHtml(effectiveCode) + '</span>'
+          ? '<span class="text-xs text-muted" style="font-family:monospace;">' + escapeHtml(effectiveCode) + '</span>'
           : '<span class="text-xs text-muted">-</span>';
         const eligibleCount = getEligibleStudentCountForClass(cls);
-        const studentsHtml  = '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:12px;padding:2px 8px;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
+        const studentsHtml  = '<span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
 
         // Class tests and passing standards
         const classTests = testsByClass.get(cls.id) || [];
@@ -493,7 +493,7 @@ export async function renderClassesHub(area) {
           const maxT = Math.max(...taskScores);
           const scoreLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
           taskHtml = `
-            <span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:12px;padding:2px 7px;font-weight:600;display:inline-flex;align-items:center;gap:4px;" title="${tasks.length} Formative Tasks (Pass: ${scoreLabel})">
+            <span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${tasks.length} Formative Tasks (Pass: ${scoreLabel})">
               ${scoreLabel} <span style="font-size:10px;opacity:0.8;">(${tasks.length})</span>
             </span>
           `;
@@ -507,7 +507,7 @@ export async function renderClassesHub(area) {
           const maxE = Math.max(...examScores);
           const scoreLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
           examHtml = `
-            <span class="badge-tag" style="background:rgba(255,140,0,0.15);color:#FF8C00;border:1px solid rgba(255,140,0,0.3);font-size:12px;padding:2px 7px;font-weight:600;display:inline-flex;align-items:center;gap:4px;" title="${exams.length} Formal Exams (Pass: ${scoreLabel})">
+            <span style="color:#FF8C00;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${exams.length} Formal Exams (Pass: ${scoreLabel})">
               ${scoreLabel} <span style="font-size:10px;opacity:0.8;">(${exams.length})</span>
             </span>
           `;
@@ -543,8 +543,8 @@ export async function renderClassesHub(area) {
               const gi = getGradeInfoForScore(score);
               const isExam = (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
               const typeBadge = isExam
-                ? `<span class="badge-tag" style="background:rgba(255,140,0,0.15);color:#FF8C00;border:1px solid rgba(255,140,0,0.3);font-size:11px;font-weight:700;">EXAM</span>`
-                : `<span class="badge-tag" style="background:rgba(99,102,241,0.15);color:#818cf8;border:1px solid rgba(99,102,241,0.3);font-size:11px;font-weight:700;">TASK</span>`;
+                ? `<span style="color:#FF8C00;font-size:11px;font-weight:600;text-shadow:none;">EXAM</span>`
+                : `<span style="color:#818cf8;font-size:11px;font-weight:600;text-shadow:none;">TASK</span>`;
 
               const shellCode = t.shell_code || t.payload?.shell_code || '-';
               const moduleName = t.payload?.answer_type || t.module_type || t.answer_type || 'Core';
@@ -558,7 +558,7 @@ export async function renderClassesHub(area) {
                   <td style="padding:6px 12px;text-align:center;font-size:11px;color:#94a3b8;text-transform:capitalize;">${escapeHtml(moduleName)}</td>
                   <td style="padding:6px 12px;text-align:center;font-size:12px;color:#cbd5e1;">${escapeHtml(String(questionCount))}</td>
                   <td style="padding:6px 12px;text-align:center;">
-                    <span class="badge-tag" style="background:${gi.bg};color:${gi.color};border:1px solid ${gi.color};font-size:12px;padding:2px 8px;font-weight:700;">
+                    <span style="color:${gi.color};font-size:12px;font-weight:600;text-shadow:none;">
                       ${score}% · Grade ${gi.grade} (${gi.label})
                     </span>
                   </td>
@@ -629,7 +629,7 @@ export async function renderClassesHub(area) {
               <div style="text-align:center;">${examHtml}</div>
               <!-- 7. STATUS -->
               <div style="text-align:center;">
-                <span class="badge-tag ${cls.is_active ? 'badge-tag-ongoing' : 'badge-tag-completed'}" style="cursor:pointer;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
+                <span style="cursor:pointer;font-size:12px;font-weight:600;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
                   ${cls.is_active ? 'Active' : 'Inactive'}
                 </span>
               </div>
@@ -694,7 +694,7 @@ export async function renderClassesHub(area) {
               '<span class="classes-hub-collapse-icon">' + (isExpanded ? '▼' : '▶') + '</span>' +
               '<span class="classes-hub-level-badge">L' + (level.level_number !== undefined ? level.level_number : '?') + '</span>' +
               '<span style="font-weight:700;font-size:16px;color:var(--fm-text-primary);">' + levelLabel + '</span>' +
-              '<span class="badge-tag" style="background:rgba(99,102,241,0.12);color:#818cf8;border:1px solid rgba(99,102,241,0.25);font-size:12px;">' + levelClasses.length + ' ' + (levelClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
+              '<span style="color:#818cf8;font-size:12px;font-weight:600;text-shadow:none;">' + levelClasses.length + ' ' + (levelClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
             '</div>' +
             '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
               '<button class="btn btn-primary btn-sm edit-mode-only"   style="font-size:12px;padding:4px 9px;" onclick="window.openClassesHubAddClass(\'' + level.id + '\')">+ Add Class</button>' +
@@ -728,7 +728,7 @@ export async function renderClassesHub(area) {
               '<span class="classes-hub-collapse-icon">' + (isExpandedUnassigned ? '▼' : '▶') + '</span>' +
               '<span class="classes-hub-level-badge" style="background:rgba(var(--grade-c-rgb),0.2);color:var(--grade-c);border-color:rgba(var(--grade-c-rgb),0.4);">L?</span>' +
               '<span style="font-weight:700;font-size:16px;color:var(--fm-text-primary);">Unassigned Level</span>' +
-              '<span class="badge-tag" style="background:rgba(var(--grade-c-rgb),0.15);color:var(--grade-c);border:1px solid rgba(var(--grade-c-rgb),0.3);font-size:12px;">' + unassignedClasses.length + ' ' + (unassignedClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
+              '<span style="color:var(--grade-c);font-size:12px;font-weight:600;text-shadow:none;">' + unassignedClasses.length + ' ' + (unassignedClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
             '</div>' +
             '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
               '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:12px;padding:4px 9px;" onclick="window.openClassesHubAddClass(null)">+ Add Class</button>' +

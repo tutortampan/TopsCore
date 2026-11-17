@@ -950,7 +950,7 @@ if (!session) {
           const supabase = await getSupabase();
           if (targetStudentId) {
             const { data: st } = await supabase.from('students')
-              .select('id, name, gender, birth_date, dob, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
+              .select('id, name, gender, birth_date, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
               .eq('id', targetStudentId)
               .maybeSingle();
             if (st) {
@@ -1034,6 +1034,36 @@ if (!session) {
                 }
                 const parts = [fVill, fDist, fCity, fProv].map(x => (x || '').trim()).filter(x => x && x !== '—');
                 resAdrEl.textContent = parts.length > 0 ? parts.join(', ') : 'Mataram City, NTB';
+              }
+
+              // Dynamic Hero Photo Height Sync: Photo follows biodata height (3:4 ratio)
+              const syncResultPhotoWithBio = () => {
+                const bioTable = document.querySelector('.result-identity-card .hero-bio-table');
+                const avatarBox = document.getElementById('result-avatar-container');
+                const avatarWrap = document.getElementById('result-avatar-stage');
+                if (bioTable && avatarBox) {
+                  const h = bioTable.offsetHeight;
+                  if (h >= 60 && h <= 140) {
+                    const w = Math.round(h * 3 / 4);
+                    avatarBox.style.setProperty('height', `${h}px`, 'important');
+                    avatarBox.style.setProperty('width', `${w}px`, 'important');
+                    avatarBox.style.setProperty('min-width', `${w}px`, 'important');
+                    avatarBox.style.setProperty('min-height', `${h}px`, 'important');
+                    if (avatarWrap) {
+                      avatarWrap.style.setProperty('height', `${h}px`, 'important');
+                      avatarWrap.style.setProperty('width', `${w}px`, 'important');
+                    }
+                  }
+                }
+              };
+              requestAnimationFrame(syncResultPhotoWithBio);
+
+              if (typeof ResizeObserver !== 'undefined' && !window.__resultHeroBioObserverBound) {
+                window.__resultHeroBioObserverBound = true;
+                const bioTable = document.querySelector('.result-identity-card .hero-bio-table');
+                if (bioTable) {
+                  new ResizeObserver(syncResultPhotoWithBio).observe(bioTable);
+                }
               }
             }
             if (st && st.photo_url) {
@@ -1796,3 +1826,32 @@ if (!session) {
       activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
       clearTimeout(safetyTimeout);
     }
+
+    // Wire up Modal Open & Close Triggers
+    document.getElementById('toggle-answers-btn')?.addEventListener('click', () => {
+      openAnswersModal('all');
+    });
+
+    document.getElementById('close-answers-modal-btn')?.addEventListener('click', closeAnswersModal);
+    document.getElementById('done-answers-modal-btn')?.addEventListener('click', closeAnswersModal);
+
+    // Close on backdrop click (outside card)
+    document.getElementById('answers-section')?.addEventListener('click', (e) => {
+      if (e.target.id === 'answers-section') {
+        closeAnswersModal();
+      }
+    });
+
+    // Close on Escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAnswersModal();
+      }
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadResult);
+    } else {
+      loadResult();
+    }
+

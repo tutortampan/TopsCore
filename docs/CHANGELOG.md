@@ -1,10 +1,26 @@
-# TopsCore LMS — Active Changelog (Phases 585–622)
+# TopsCore LMS — Active Changelog (Phases 585–623)
 
 > **Format:** Ultra-Condensed Active Changelog (Strict 25-Phase Rolling Window per AGENTS.md §5.3). Each entry highlights core functional deliverables, architectural milestones, and affected systems.
 > **Full Archives:** Historical verbose logs for earlier phases are preserved in:
 > - [`docs/archive/CHANGELOG_ARCHIVE.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE.md.gz) (Phases 1–228, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_2.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_2.md.gz) (Phases 229–451, Gzip Compressed)
 > - [`docs/archive/CHANGELOG_ARCHIVE_3.md.gz`](file:///docs/archive/CHANGELOG_ARCHIVE_3.md.gz) (Phases 452–539, Gzip Compressed)
+
+---
+
+## [2026-11-17 22:35] — Phase 623: Zero Table Capsule & Zero Table Glow Invariant (System-Wide)
+- **Zero Table Capsule Invariant (Larangan Font Kapsul/Pill Pada Seluruh Tabel & Grid)**:
+  - Mengeliminasi seluruh badge kapsul (`.badge`, `.badge-tag`, background pill, border kotak, padding chip) di seluruh sel tabel dan grid:
+    - `js/admin/classes-hub.js`: Kolom status (`Active`/`Inactive`), kolom type (`EXAM`/`TASK`), dan Passing Standard di drawer tabel kini tampil sebagai tipografi warna bersih tanpa background kapsul dan tanpa border.
+    - `js/admin/classes-management.js`: `statusBadge` (`Active`/`Inactive`) dikonversi menjadi teks berwarna murni.
+    - `js/admin/student-management.js`: Status `FORGIVEN`, `REMEDIAL`, status attempt (`Completed`/`In Progress`/`Not Started`), level badges, penanda `(Disconnected)` & `(Remediation)`, serta indikator kelayakan promosi level (`Eligible`/`Pending Exams`) dikonversi ke teks berwarna bersih tanpa kapsul.
+- **Zero Table Glow Invariant (Nol Pendaran/Glow di Seluruh Sistem)**:
+  - Menegakkan `text-shadow: none !important; box-shadow: none !important; filter: none !important;` pada seluruh sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`). Teks dan angka kini terbaca tajam (*crisp*), tegas, dan bebas efek neon/pendaran yang mengaburkan ketajaman.
+- **Standardisasi CSS & Rule SSOT**:
+  - Memperbarui `css/admin.css` dan `css/admin/admin-tables.css` dengan aturan global zero capsule & zero glow.
+  - Memperbarui SSOT `AGENTS.md` (§2.31) dan `.agents/rules/ui-invariants.md` (§4.9) sebagai aturan permanen non-negosiasi.
+- **Verification**:
+  - `npm.cmd run test:fast` dan `npm.cmd run test:table` lolos 100% (11/11 pilar hijau).
 
 ---
 

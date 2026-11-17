@@ -288,6 +288,13 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 - **Font SSOT Wajib Inter**: Seluruh tabel wajib mengimplementasikan font **`Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Font display geometris membulat (`Outfit`) dilarang keras digunakan di dalam baris/sel data tabel.
 - **Pengecualian**: Header utama tabel (`thead th`) diizinkan `font-weight: 600–700`, dan glif simbol grade di dalam lingkaran kecil (22px–24px) diizinkan `font-weight: 500–600`.
 
+## 2.31 Zero Table Capsule & Zero Table Glow Invariant (Isi Tabel Bebas Kapsul & Nol Glow SSOT)
+- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel & Grid Data**:
+  - Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`).
+  - **Yang Boleh Berwarna HANYA Font Teks Saja**: Arti semantik status (seperti `Active` hijau `var(--grade-a)`, `Inactive` merah `var(--grade-e)`, `Hold` kuning `var(--grade-c)`, `Published` hijau, `Draft` netral, `EXAM` orange, `TASK` indigo, dll.) hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
+- **Mutlak Nol Glow (Zero Text-Shadow & Zero Box-Shadow) di Seluruh Sistem**:
+  - Dilarang keras menggunakan efek glow, shadow, atau pendaran pada teks maupun elemen sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
+
 ---
 
 # 3. TARGET ARCHITECTURE

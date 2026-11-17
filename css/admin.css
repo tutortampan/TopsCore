@@ -2770,14 +2770,52 @@ body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content)
    Zero capsules/pill boxes inside table cells in both View Mode and Edit Mode
    ============================================================ */
 .datagrid-table td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+/* ============================================================
+   ZERO TABLE CAPSULE & ZERO TABLE GLOW INVARIANT (SSOT)
+   Isi tabel/grid mutlak TIDAK BOLEH pakai font dalam kapsul/pill.
+   Yang boleh berwarna HANYA font teks saja.
+   Mutlak NO GLOW (text-shadow: none, box-shadow: none) di seluruh sistem!
+   ============================================================ */
+table td,
+table td *,
+.datagrid-table td,
+.datagrid-table td *,
+.table-wrap td,
+.table-wrap td *,
+.classes-hub-grid-row,
+.classes-hub-grid-row *,
+.tree-grid-row,
+.tree-grid-row *,
+.matrix-table td,
+.matrix-table td * {
+  text-shadow: none !important;
+}
+
 .table-wrap td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
 .table-wrap td .pill-box,
 #blueprint-matrix-table td span.bp-capsule-badge,
 .table-wrap td .badge-tag,
 .datagrid-table td .badge-tag,
 .tree-grid-row-batches .badge-tag,
+.classes-hub-grid-row .badge-tag,
+.classes-hub-grid-row [class*="badge"],
+.classes-hub-grid-row [class*="chip"],
+.classes-hub-grid-row [class*="pill"],
 #class-tests-grid td .badge:not(.badge-grade-symbol),
 #class-attendance-grid td .badge:not(.badge-grade-symbol):not(.grid-grade-star):not(.grid-grade-val),
+table td [class*="badge"]:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+table td [class*="chip"]:not(.user-avatar),
+table td [class*="pill"],
+table td .tac-badge,
+table td .status-badge,
+table td .status-dot-badge,
+table td .pill-empty,
+.datagrid-table td [class*="badge"]:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+.datagrid-table td [class*="chip"]:not(.user-avatar),
+.datagrid-table td [class*="pill"],
+.table-wrap td [class*="badge"]:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+.table-wrap td [class*="chip"]:not(.user-avatar),
+.table-wrap td [class*="pill"],
 #admin-console table td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
 #admin-console table td .tac-badge,
 #admin-console table td .status-badge,
@@ -2788,6 +2826,7 @@ body:not(.global-edit-mode-on) .student-roster-toolbar:not(.has-visible-content)
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
+  text-shadow: none !important;
   padding: 0 !important;
   border-radius: 0 !important;
   font-weight: 500 !important;

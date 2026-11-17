@@ -5095,7 +5095,7 @@ body.dashboard-page .rainbow-box {
   align-items: center !important;
   justify-content: center !important;
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   font-weight: 600 !important;
   line-height: 1 !important;
   font-variant-numeric: tabular-nums !important;
@@ -5142,14 +5142,14 @@ body.dashboard-page .next-test-col-right .pass-counter-btn {
   border-radius: 10px !important;
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-weight: 700 !important;
-  font-size: 15px !important;
+  font-size: 14px !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   gap: 3px !important;
   cursor: pointer !important;
   border: 1px solid rgba(255, 255, 255, 0.4) !important;
-  transition: transform 0.2s ease !important;
+  transition: box-shadow 0.2s ease !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4) !important;
   font-variant-numeric: tabular-nums !important;
 }
@@ -5440,7 +5440,7 @@ body.dashboard-page .dashboard-content {
   overscroll-behavior: none !important;
 }
 
-/* 2. Top Header (50px: Left 120px | Brand Center | Right 120px) */
+/* 2. Top Header (50px: Left 120px | Brand Center | Right 120px) — Grade Color Background Accent */
 body.dashboard-page .dashboard-header {
   height: 50px !important;
   min-height: 50px !important;
@@ -5453,9 +5453,9 @@ body.dashboard-page .dashboard-header {
   align-items: center !important;
   justify-content: space-between !important;
   flex-shrink: 0 !important;
-  border-bottom: 1.5px solid rgba(var(--tier-rgb), 0.50) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), rgba(9, 13, 22, 0.95) !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+  border-bottom: 1.5px solid rgba(var(--tier-rgb), 0.55) !important;
+  background: radial-gradient(ellipse 95% 85% at 50% 0%, rgba(var(--tier-rgb), 0.20), transparent 75%), #0F1524 !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4), 0 0 16px rgba(var(--tier-rgb), 0.14) !important;
   box-sizing: border-box !important;
 }
 
@@ -5478,6 +5478,7 @@ body.dashboard-page .dashboard-header-brand {
   font-weight: 800 !important;
   letter-spacing: 0.05em !important;
   color: #f8fafc !important;
+  text-shadow: 0 0 12px rgba(var(--tier-rgb), 0.45) !important;
   white-space: nowrap !important;
   overflow: visible !important;
   text-overflow: clip !important;
@@ -5496,8 +5497,8 @@ body.dashboard-page .dashboard-header-actions {
   flex-shrink: 0 !important;
 }
 
-/* 3. Hero Profile & Demographic Card (Profile Standard: Photo Left, Demographics Right) */
-/* ===== UNIFIED HERO CARD (Option A SSOT - Phase 622) ===== */
+/* 3. Hero Profile & Demographic Card — Model B Flat Minimalist Wireframe */
+/* ===== UNIFIED HERO CARD (Model B Bento Edition SSOT) ===== */
 body.dashboard-page #welcome-banner-section,
 body.dashboard-page .unified-hero-card {
   width: 100% !important;
@@ -5509,9 +5510,9 @@ body.dashboard-page .unified-hero-card {
   align-items: stretch !important;
   justify-content: flex-start !important;
   gap: 6px !important;
-  border: 1.5px solid rgba(var(--tier-rgb), 0.70) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 15%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 0 20px rgba(var(--tier-rgb), 0.18) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: #0F1524 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
@@ -5533,7 +5534,7 @@ body.dashboard-page .hero-identity-top {
 body.dashboard-page #welcome-name,
 body.dashboard-page .hero-student-name {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 15px !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.01em !important;
@@ -5547,6 +5548,7 @@ body.dashboard-page .hero-student-name {
   text-align: center !important;
 }
 
+/* Font metadata akademis sesuai warna grade! */
 body.dashboard-page #welcome-meta-wrapper,
 body.dashboard-page .hero-academic-meta {
   display: flex !important;
@@ -5554,10 +5556,11 @@ body.dashboard-page .hero-academic-meta {
   justify-content: center !important;
   gap: 5px !important;
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
-  font-size: 10.5px !important;
-  font-weight: 600 !important;
-  color: var(--primary-tactical, #38bdf8) !important;
-  letter-spacing: 0.03em !important;
+  font-size: 12px !important; /* Level 3 Baseline SSOT */
+  font-weight: 700 !important;
+  color: var(--tier-color, #FFFF00) !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.35) !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -5572,17 +5575,17 @@ body.dashboard-page .hero-card-divider {
   height: 1px !important;
   min-height: 1px !important;
   max-height: 1px !important;
-  background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb), 0.35) 50%, transparent 100%) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
   margin: 1px 0 3px 0 !important;
   border: none !important;
   flex-shrink: 0 !important;
 }
 
-/* 2. Bottom Row: 3:4 Portrait Photo (Left) + Biodata Table (Right) */
+/* 2. Bottom Row: 3:4 Portrait Photo Flush vertically with Biodata */
 body.dashboard-page .hero-body-row {
   display: flex !important;
   flex-direction: row !important;
-  align-items: flex-start !important;
+  align-items: flex-start !important; /* Photo aligned at top, follows biodata height */
   justify-content: flex-start !important;
   gap: 12px !important;
   width: 100% !important;
@@ -5594,8 +5597,12 @@ body.dashboard-page .banner-avatar-wrapper {
   flex-shrink: 0 !important;
   cursor: pointer !important;
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  width: 64px !important;
+  height: 84px !important;
 }
 
 body.dashboard-page #banner-avatar-container,
@@ -5604,23 +5611,25 @@ body.dashboard-page .hero-avatar-3x4 {
   height: 84px !important;
   min-width: 64px !important;
   min-height: 84px !important;
+  aspect-ratio: 3 / 4 !important;
   border-radius: 8px !important;
-  padding: 2px !important;
-  background: rgba(15, 23, 42, 0.9) !important;
-  border: 2px solid var(--tier-color, #FFFF00) !important;
-  box-shadow: 0 0 12px rgba(var(--tier-rgb, 255, 255, 0), 0.35) !important;
+  padding: 0 !important;
+  background: #070a12 !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+  box-shadow: none !important;
   overflow: hidden !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   box-sizing: border-box !important;
+  position: relative !important;
 }
 
 body.dashboard-page #banner-avatar-img {
   width: 100% !important;
   height: 100% !important;
   object-fit: cover !important;
-  border-radius: 6px !important;
+  border-radius: 7px !important;
   display: block !important;
 }
 
@@ -5643,91 +5652,112 @@ body.dashboard-page .avatar-crown-badge {
   z-index: 5 !important;
 }
 
-/* Biodata Table with Aligned Colons (Sex -> DoB -> Age -> Adr) */
+body.dashboard-page .banner-camera-badge {
+  position: absolute !important;
+  bottom: 3px !important;
+  right: 3px !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 4px !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #f8fafc !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  pointer-events: none !important;
+  z-index: 4 !important;
+}
+
+/* Biodata Table with Compact Spacing to match Photo Height */
 body.dashboard-page .hero-bio-table {
   flex: 1 1 auto !important;
   min-width: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   justify-content: flex-start !important;
-  gap: 2.5px !important;
-  padding-top: 1px !important;
+  gap: 4px !important;
+  padding-top: 0 !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
 }
 
 body.dashboard-page .hero-bio-row {
   display: grid !important;
-  grid-template-columns: 26px 8px 1fr !important;
+  grid-template-columns: 38px 1fr !important;
+  column-gap: 4px !important;
   align-items: baseline !important;
   width: 100% !important;
 }
 
 body.dashboard-page .hero-bio-lbl {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
-  font-size: 9.5px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
-  color: #94a3b8 !important;
+  color: #64748b !important;
   letter-spacing: 0.03em !important;
   text-transform: uppercase !important;
   white-space: nowrap !important;
-  line-height: 1.5 !important;
+  line-height: 1.35 !important;
 }
 
 body.dashboard-page .hero-bio-colon {
-  font-size: 9.5px !important;
-  color: #64748b !important;
-  text-align: center !important;
-  line-height: 1.5 !important;
+  display: none !important;
 }
 
 body.dashboard-page .hero-bio-val {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 500 !important;
-  color: #f8fafc !important;
+  color: #cbd5e1 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
-  line-height: 1.5 !important;
+  line-height: 1.35 !important;
 }
 
 body.dashboard-page .hero-bio-gender-val {
   color: var(--primary-tactical, #38bdf8) !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
 }
 
 body.dashboard-page .hero-bio-adr-val {
   white-space: normal !important;
-  line-height: 1.35 !important;
+  line-height: 1.3 !important;
   color: #cbd5e1 !important;
-  font-size: 9.5px !important;
+  font-size: 12px !important;
 }
 
 body.dashboard-page .meta-sep {
   opacity: 0.5 !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
 }
 
-/* 4. Grade Card (Unified 3-Pillar Performance Card: GRADE | GRADE DESCRIPTION | RATE) */
+/* 4. Grade Card: Bento 3-Box Architecture (Terpisah 3 Kotak, Font Sesuai Warna Grade) */
 body.dashboard-page #dashboard-grade-legend,
 body.dashboard-page .dashboard-grade-legend,
 body.dashboard-page .grade-card {
-  height: 54px !important;
-  min-height: 54px !important;
-  max-height: 54px !important;
+  height: auto !important;
+  min-height: 60px !important;
   width: 100% !important;
   flex-shrink: 0 !important;
   display: grid !important;
-  grid-template-columns: 1fr 1px 1.4fr 1px 1fr !important;
-  align-items: center !important;
+  grid-template-columns: 1fr 1.35fr 1.1fr !important;
+  gap: 10px !important; /* Strict 10px Gap Lock */
+  align-items: stretch !important;
   justify-content: center !important;
-  border-radius: 12px !important;
-  padding: 6px 10px !important;
-  border: 1.5px solid rgba(0, 0, 0, 0.15) !important;
-  background: var(--grade-card-bg, var(--tier-color, #FFFF00)) !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
   box-sizing: border-box !important;
   margin: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
+}
+
+body.dashboard-page .perf-pillar-divider {
+  display: none !important;
 }
 
 body.dashboard-page .perf-pillar {
@@ -5737,59 +5767,72 @@ body.dashboard-page .perf-pillar {
   justify-content: center !important;
   text-align: center !important;
   height: 100% !important;
-  gap: 2px !important;
+  padding: 8px 6px !important;
+  border-radius: 12px !important;
   min-width: 0 !important;
+  box-sizing: border-box !important;
+  background: #0F1524 !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
 body.dashboard-page .perf-pillar-label {
-  display: none !important;
+  display: block !important;
+  font-size: 12px !important; /* Strict Zero Sub-12px Invariant */
+  font-weight: 800 !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  color: #64748b !important;
+  line-height: 1.2 !important;
+  margin-bottom: 2px !important;
 }
 
 body.dashboard-page .perf-pillar-val-wrap {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  height: 100% !important;
+  height: auto !important;
   min-height: 0 !important;
   max-height: none !important;
 }
 
-body.dashboard-page .perf-pillar-val {
-  font-family: 'Outfit', sans-serif !important;
-  color: var(--grade-card-text, #0F172A) !important;
-  line-height: 1 !important;
-  white-space: nowrap !important;
-  filter: none !important;
-}
-
+/* Pillar 1: GRADE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-grade .perf-pillar-val,
 body.dashboard-page #stat-overall-grade-value {
+  font-family: 'Outfit', sans-serif !important;
   font-size: 30px !important;
   font-weight: 900 !important;
-}
-
-body.dashboard-page .perf-pillar-desc .perf-pillar-val,
-body.dashboard-page #dashboard-achievement-text {
-  font-size: 30px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.01em !important;
-  text-transform: uppercase !important;
-  color: var(--grade-card-text, #0F172A) !important;
+  color: var(--tier-color, #FFFF00) !important;
+  text-shadow: 0 0 14px rgba(var(--tier-rgb), 0.4) !important;
+  line-height: 1 !important;
   filter: none !important;
 }
 
+/* Pillar 2: DESCRIPTION (Level 2.5: 14px, Font Sesuai Warna Grade) */
+body.dashboard-page .perf-pillar-desc .perf-pillar-val,
+body.dashboard-page #dashboard-achievement-text {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-transform: uppercase !important;
+  color: var(--tier-color, #FFFF00) !important;
+  text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.3) !important;
+  line-height: 1.1 !important;
+  filter: none !important;
+}
+
+/* Pillar 3: RATE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-rate .perf-pillar-val,
 body.dashboard-page #bottom-stat-avg-score {
+  font-family: 'Outfit', sans-serif !important;
   font-size: 30px !important;
   font-weight: 900 !important;
   font-variant-numeric: tabular-nums !important;
-}
-
-body.dashboard-page .perf-pillar-divider {
-  width: 1px !important;
-  height: 32px !important;
-  background: var(--grade-card-divider, rgba(15, 23, 42, 0.2)) !important;
-  box-shadow: none !important;
+  color: var(--tier-color, #FFFF00) !important;
+  text-shadow: 0 0 14px rgba(var(--tier-rgb), 0.4) !important;
+  line-height: 1 !important;
+  filter: none !important;
 }
 
 /* 5. Next Test Card: Exactly 80px (60px Title Wrap + 20px Rainbow / 80px Action Column) */
@@ -5861,7 +5904,7 @@ body.dashboard-page .next-test-title-wrap {
 body.dashboard-page .next-test-title-wrap .next-asm-title,
 body.dashboard-page .next-test-primary-name {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
-  font-size: 13px !important;
+  font-size: 14px !important;
   font-weight: 600 !important;
   color: #f8fafc !important;
   line-height: 1.25 !important;
@@ -5963,7 +6006,7 @@ body.dashboard-page .completed-table-header {
   background: rgba(15, 23, 42, 0.96) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
   color: #ffffff !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   letter-spacing: 0.06em !important;
 }
 
@@ -5972,7 +6015,7 @@ body.dashboard-page .completed-table-header span,
 body.dashboard-page .standings-table-header .th-col,
 body.dashboard-page .completed-table-header .th-col {
   color: #ffffff !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
 }
 
 /* Scrollable Table Area with Touch Momentum */
@@ -6046,10 +6089,10 @@ body.dashboard-page .topscore-locked-banner {
   z-index: 50 !important;
 }
 
-/* Leaderboard Current User Highlighting (No (You) text) */
+/* Leaderboard Current User Highlighting (Regular 400 Weight SSOT, No (You) text) */
 body.dashboard-page .leaderboard-student-name.is-current-user {
   color: #38bdf8 !important;
-  font-weight: 800 !important;
+  font-weight: 400 !important;
   text-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
 }
 

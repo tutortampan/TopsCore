@@ -82,9 +82,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     if (genderEl) {
       genderEl.textContent = gText;
       if (gRaw === 'female') {
-        genderEl.style.color = '#ff2d87';
+        genderEl.style.color = 'var(--quad-a, #ff2d87)';
       } else if (gRaw === 'male') {
-        genderEl.style.color = '#38bdf8';
+        genderEl.style.color = 'var(--primary-tactical, #38bdf8)';
       } else {
         genderEl.style.color = '#f8fafc';
       }
@@ -111,7 +111,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let age = today.getFullYear() - d.getFullYear();
         const m = today.getMonth() - d.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
-        if (age >= 0 && age <= 120) ageText = `${age} Years Old`;
+        if (age >= 0 && age <= 120) ageText = `${age} y.o.`;
       }
     }
     if (ageEl) ageEl.textContent = ageText;
@@ -130,6 +130,36 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const parts = [fVill, fDist, fCity, fProv].map(x => (x || '').trim()).filter(x => x && x !== '—');
       addrEl.textContent = parts.length > 0 ? parts.join(', ') : 'Mataram City, NTB';
+    }
+
+    // Dynamic Hero Photo Height Sync: Photo follows biodata height (3:4 ratio)
+    const syncPhotoHeightWithBio = () => {
+      const bioTable = document.querySelector('.hero-bio-table');
+      const avatarBox = document.getElementById('banner-avatar-container');
+      const avatarWrap = document.querySelector('.banner-avatar-wrapper');
+      if (bioTable && avatarBox) {
+        const h = bioTable.offsetHeight;
+        if (h >= 60 && h <= 140) {
+          const w = Math.round(h * 3 / 4);
+          avatarBox.style.setProperty('height', `${h}px`, 'important');
+          avatarBox.style.setProperty('width', `${w}px`, 'important');
+          avatarBox.style.setProperty('min-width', `${w}px`, 'important');
+          avatarBox.style.setProperty('min-height', `${h}px`, 'important');
+          if (avatarWrap) {
+            avatarWrap.style.setProperty('height', `${h}px`, 'important');
+            avatarWrap.style.setProperty('width', `${w}px`, 'important');
+          }
+        }
+      }
+    };
+    requestAnimationFrame(syncPhotoHeightWithBio);
+
+    if (typeof ResizeObserver !== 'undefined' && !window.__heroBioObserverBound) {
+      window.__heroBioObserverBound = true;
+      const bioTable = document.querySelector('.hero-bio-table');
+      if (bioTable) {
+        new ResizeObserver(syncPhotoHeightWithBio).observe(bioTable);
+      }
     }
   }
 
@@ -2839,32 +2869,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // 1b. Grade Card (Unified 3-Pillar Performance Card: Colored Background Landmark)
-      const isDarkBg = overallGrade === 'E' || isGradeS || isAlumni;
-      const gcText = isDarkBg ? '#FFFFFF' : '#0F172A';
-      const gcMuted = isDarkBg ? 'rgba(255, 255, 255, 0.75)' : 'rgba(15, 23, 42, 0.75)';
-      const gcDivider = isDarkBg ? 'rgba(255, 255, 255, 0.25)' : 'rgba(15, 23, 42, 0.2)';
-
+      // 1b. Grade Card (Bento 3-Box Architecture: Transparent Container, Inner Boxes Styled via CSS)
       const gradeCardEl = document.getElementById('dashboard-grade-legend') || document.querySelector('.grade-card');
       if (gradeCardEl) {
         gradeCardEl.dataset.tier = isAlumni ? 'X' : (!hasExam ? 'NEW' : (isGradeS ? 'S' : overallGrade));
         gradeCardEl.style.setProperty('--tier-color', targetColor, 'important');
         gradeCardEl.style.setProperty('--tier-rgb', rgbColor, 'important');
-        gradeCardEl.style.setProperty('--grade-card-bg', targetColor, 'important');
-        gradeCardEl.style.setProperty('--grade-card-text', gcText, 'important');
-        gradeCardEl.style.setProperty('--grade-card-muted', gcMuted, 'important');
-        gradeCardEl.style.setProperty('--grade-card-divider', gcDivider, 'important');
-
-        gradeCardEl.style.setProperty('background', targetColor, 'important');
-        gradeCardEl.style.setProperty('border-color', isDarkBg ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.15)', 'important');
-        gradeCardEl.style.setProperty('box-shadow', '0 4px 14px rgba(0, 0, 0, 0.35)', 'important');
-
-        gradeCardEl.querySelectorAll('.perf-pillar-label').forEach(lbl => {
-          lbl.style.color = gcMuted;
-        });
-        gradeCardEl.querySelectorAll('.perf-pillar-divider').forEach(div => {
-          div.style.background = gcDivider;
-        });
+        gradeCardEl.style.setProperty('background', 'transparent', 'important');
+        gradeCardEl.style.setProperty('border', 'none', 'important');
+        gradeCardEl.style.setProperty('box-shadow', 'none', 'important');
       }
 
       // 2. Avatar Container Ring (Color only, no outer box glow)

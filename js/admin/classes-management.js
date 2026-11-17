@@ -510,7 +510,7 @@ function renderClassDetail(cls) {
   const progName = cls.programs?.name || 'Unassigned Program';
   const instName = cls.institutions?.name || 'Unassigned Institution';
   const lvlName = cls.levels?.name || 'Unassigned Level';
-  const statusBadge = cls.is_active ? '<span class="badge badge-success">Active</span>' : '<span class="badge badge-neutral">Inactive</span>';
+  const statusBadge = cls.is_active ? '<span style="color:var(--grade-a);font-weight:600;text-shadow:none;">Active</span>' : '<span style="color:var(--grade-e);font-weight:600;text-shadow:none;">Inactive</span>';
 
   const isVocab = (cls.name || '').toLowerCase().includes('vocab');
 

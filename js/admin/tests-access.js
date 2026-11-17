@@ -394,13 +394,13 @@ export async function renderClassTestSessions(container, context = {}) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:flex-end;">
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Target Batch</label>
-                <select id="open-modal-batch-select" class="form-control" style="width:100%; height:32px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                <select id="open-modal-batch-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
                   ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
                 </select>
               </div>
 
               <!-- Enrolled Students Counter Badge -->
-              <div style="height:32px; padding:0 10px; background:#1e293b; border:1px solid rgba(255,255,255,0.16); border-radius:5px; display:flex; align-items:center; justify-content:space-between; box-sizing:border-box;">
+              <div style="height:30px; padding:0 10px; background:#1e293b; border:1px solid rgba(255,255,255,0.16); border-radius:5px; display:flex; align-items:center; justify-content:space-between; box-sizing:border-box;">
                 <span style="font-size:12px; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.04em;">Enrolled</span>
                 <span id="open-modal-student-count" style="color:var(--primary-tactical); font-weight:800; font-size:12px;">0 selected</span>
               </div>
@@ -410,7 +410,7 @@ export async function renderClassTestSessions(container, context = {}) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:var(--primary-tactical); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Words Module</label>
-                <select id="open-modal-words-module-select" class="form-control" style="width:100%; height:32px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                <select id="open-modal-words-module-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
                   <option value="written" selected>Written (M3)</option>
                   <option value="multiple_choice">Selection (M2)</option>
                   <option value="spoken">Spoken (M4)</option>
@@ -419,7 +419,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Phrases Module</label>
-                <select id="open-modal-phrases-module-select" class="form-control" style="width:100%; height:32px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                <select id="open-modal-phrases-module-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
                   <option value="written" selected>Written (M3)</option>
                   <option value="multiple_choice">Selection (M2)</option>
                   <option value="spoken">Spoken (M4)</option>
@@ -429,13 +429,13 @@ export async function renderClassTestSessions(container, context = {}) {
 
             <!-- Row 3: Duration Allocation & Tutor Override -->
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <div style="display:flex; align-items:center; gap:8px;">
+              <div style="display:flex; align-items:center; gap:10px;">
                 <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.04em; margin:0;">Duration:</label>
                 <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:65px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; font-size:12px; text-align:center;">
                 <span id="open-modal-duration-suggestion-text" style="font-size:12px; color:var(--grade-c); font-weight:700;">60 min</span>
               </div>
 
-              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0;" title="Allow students who haven't completed tasks to participate">
+              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:10px; cursor:pointer; margin:0;" title="Allow students who haven't completed tasks to participate">
                 <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:15px; height:15px; accent-color:var(--grade-c);">
                 <span style="font-weight:800; letter-spacing:0.03em; text-transform:uppercase;">Tutor Override</span>
               </label>
@@ -448,10 +448,10 @@ export async function renderClassTestSessions(container, context = {}) {
 
             <!-- Search + sort + select buttons with Strict 10px Gap -->
             <div style="display:flex; gap:10px; align-items:center; flex-shrink:0;">
-              <input type="text" id="open-modal-student-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:32px; padding:4px 10px; flex:1; min-width:100px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px; font-weight:600;">
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="height:32px; padding:0 10px; font-size:12px; font-weight:700; white-space:nowrap; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">A → Z</button>
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="height:32px; padding:0 10px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">All</button>
-              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="height:32px; padding:0 10px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">None</button>
+              <input type="text" id="open-modal-student-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:30px; padding:4px 10px; flex:1; min-width:100px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px; font-weight:600;">
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-sort" style="height:30px; padding:0 10px; font-size:12px; font-weight:700; white-space:nowrap; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">A → Z</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-select-all" style="height:30px; padding:0 10px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">All</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-open-modal-deselect-all" style="height:30px; padding:0 10px; font-size:12px; font-weight:700; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff; border-radius:5px;">None</button>
             </div>
 
             <!-- Student Table (Scrollable within container) -->
@@ -484,7 +484,7 @@ export async function renderClassTestSessions(container, context = {}) {
           <div id="open-modal-footer-summary" style="font-size:12px; color:#cbd5e1; font-weight:700; text-align:center;"></div>
 
           <!-- Confirm Unlock Button: Strictly on Right with Green Accent -->
-          <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="height:40px; min-height:40px; line-height:38px; font-weight:800; padding:0 20px; display:inline-flex; align-items:center; gap:8px; font-size:14px; border-radius:6px; letter-spacing:0.04em; text-transform:uppercase; background:var(--grade-a); color:#090D16; border:1.5px solid var(--grade-a); box-shadow:0 0 14px rgba(0,192,0,0.45); cursor:pointer;">
+          <button type="button" class="btn btn-primary" id="btn-confirm-open-session" style="height:40px; min-height:40px; line-height:38px; font-weight:800; padding:0 20px; display:inline-flex; align-items:center; gap:10px; font-size:14px; border-radius:6px; letter-spacing:0.04em; text-transform:uppercase; background:var(--grade-a); color:#090D16; border:1.5px solid var(--grade-a); box-shadow:0 0 14px rgba(0,192,0,0.45); cursor:pointer;">
             Unlock Test Now
           </button>
         </div>
@@ -1619,7 +1619,7 @@ function openThemeSessionModal(container, theme, mode, context) {
         return `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.08); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'" title="${tooltipTitle}">
             <td style="padding:6px 6px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08); width:40px;">
-              <label style="display:flex; align-items:center; justify-content:center; gap:6px; ${cursorStyle} margin:0;">
+              <label style="display:flex; align-items:center; justify-content:center; gap:10px; ${cursorStyle} margin:0;">
                 <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} ${disabledAttr} style="width:15px; height:15px; accent-color:var(--primary-tactical); ${cursorStyle}">
                 <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:700; font-size:12px;">${idx + 1}</span>
               </label>

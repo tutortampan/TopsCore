@@ -1988,6 +1988,8 @@ if (typeof window !== 'undefined') {
 
         syncClassHubLowerPanel(window._classHubActiveTab);
 
+        let renderAttendanceGridMatrix = null;
+
         // Render content depending on tab
         if (window._classHubActiveTab === 'test-sessions') {
           const testSessionContainer = document.getElementById('class-test-sessions-container');
@@ -3128,7 +3130,7 @@ if (typeof window !== 'undefined') {
           };
 
           // Function to build and mount the attendance grid based on selected theme
-          const renderAttendanceGridMatrix = (selectedTheme = 'ALL') => {
+          renderAttendanceGridMatrix = (selectedTheme = 'ALL') => {
             window._classAttendanceThemeFilter = selectedTheme;
 
             // Update active pill button state

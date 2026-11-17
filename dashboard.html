@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261117_v615" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261117_v621" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261117_v624" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
   <!-- Web App Manifest & PWA Metadata -->
   <link rel="manifest" href="manifest.json" />
@@ -107,33 +107,35 @@
           <div id="banner-avatar-container" class="hero-avatar-3x4" title="Click to view or change profile">
             <span id="banner-avatar-initial">S</span>
             <img id="banner-avatar-img" class="hidden" alt="Profile Photo" />
+            <div class="banner-camera-badge" title="Change Photo" aria-hidden="true">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
           </div>
         </div>
 
-        <!-- Biodata Table Right: Sex -> DoB -> Age -> Adr with Aligned Colons -->
+        <!-- Biodata Table Right: Sex -> DoB -> Age -> Adr -->
         <div class="hero-bio-table">
           <!-- Row 1: Sex (Above DoB per user requirement) -->
           <div class="hero-bio-row">
-            <span class="hero-bio-lbl">Sex</span>
-            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-lbl">Sex:</span>
             <span class="hero-bio-val hero-bio-gender-val" id="hero-demographics-gender">—</span>
           </div>
           <!-- Row 2: DoB -->
           <div class="hero-bio-row">
-            <span class="hero-bio-lbl">DoB</span>
-            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-lbl">DoB:</span>
             <span class="hero-bio-val" id="hero-demographics-dob">—</span>
           </div>
           <!-- Row 3: Age -->
           <div class="hero-bio-row">
-            <span class="hero-bio-lbl">Age</span>
-            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-lbl">Age:</span>
             <span class="hero-bio-val" id="hero-demographics-age">—</span>
           </div>
           <!-- Row 4: Adr -->
           <div class="hero-bio-row hero-bio-adr-row">
-            <span class="hero-bio-lbl">Adr</span>
-            <span class="hero-bio-colon">:</span>
+            <span class="hero-bio-lbl">Adr:</span>
             <span class="hero-bio-val hero-bio-adr-val" id="hero-address-text" title="Residential Address">—</span>
           </div>
         </div>
@@ -217,7 +219,7 @@
           <span id="dock-my-rank-number" class="rank-number-chip">#--</span>
         </button>
         <button type="button" class="dock-tab-btn" id="btn-dock-completed" role="tab" aria-selected="false" aria-controls="dock-pane-completed">
-          <span class="tab-label-text">COMPLETED EXAMS</span>
+          <span class="tab-label-text">COMPLETED TESTS</span>
           <span id="dock-completed-count-badge" class="count-badge">0</span>
         </button>
       </div>
@@ -231,25 +233,26 @@
           <span class="th-col th-grade">GRD</span>
         </div>
         <div class="standings-table-wrap" id="batch-leaderboard-container">
-          <div class="empty-state p-4 text-center">
+          <div class="topscore-loading-center">
             <div class="spinner"></div>
             <p>Loading Rank Standings...</p>
           </div>
         </div>
       </div>
 
-      <!-- Pane B: Completed Exams Table (Latest on Top + Retry Button) -->
+      <!-- Pane B: Completed Tests Table (Latest on Top + Retry Button) -->
       <div id="dock-pane-completed" class="dock-tab-pane hidden" role="tabpanel">
         <div class="completed-table-header">
           <span class="th-col th-rank">NO</span>
-          <span class="th-col th-name">EXAM NAME</span>
+          <span class="th-col th-name">TEST NAME</span>
           <span class="th-col th-score">SCORE</span>
           <span class="th-col th-grade">GRD</span>
           <span class="th-col th-action">ACT</span>
         </div>
         <div class="completed-table-wrap" id="completed-Tests-container">
-          <div class="empty-state p-4 text-center">
-            <p style="color:var(--clr-text-3);">Loading Completed Exams...</p>
+          <div class="topscore-loading-center">
+            <div class="spinner"></div>
+            <p>Loading Completed Tests...</p>
           </div>
         </div>
       </div>
@@ -711,7 +714,7 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261117_v622"></script>
+  <script type="module" src="./js/dashboard.js?v=20261117_v624"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 

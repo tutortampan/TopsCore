@@ -790,19 +790,18 @@ export async function renderStudents(area, options = {}) {
     || (s.program_status || '').toUpperCase() === 'COMPLETED'
     || (s.program_status || '').toUpperCase() === 'PROGRAM_COMPLETED'
   );
-  const isStudentHold = s => !isStudentAlumni(s) && (s.program_status || '').toUpperCase() === 'HOLD';
-  const isStudentInactive = s => !isStudentAlumni(s) && !isStudentHold(s) && ((s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false) || (s.program_status || '').toUpperCase() === 'INACTIVE');
-  const isStudentActive = s => !isStudentAlumni(s) && !isStudentHold(s) && !isStudentInactive(s);
-  const isStudentHoldOrInactive = s => !isStudentAlumni(s) && (isStudentHold(s) || isStudentInactive(s));
+  const isStudentInactive = s => !isStudentAlumni(s) && (((s.batches ? s.batches.is_active === false : false) || ((s._raw || s).is_active === false) || (s.program_status || '').toUpperCase() === 'INACTIVE' || (s.program_status || '').toUpperCase() === 'HOLD'));
+  const isStudentActive = s => !isStudentAlumni(s) && !isStudentInactive(s);
+  const isStudentHoldOrInactive = isStudentInactive; // SSOT: hold is redundant, hold == inactive
 
-  // Determine current status tab (User directive: Hold & Inactive is ONE single combined category)
+  // Determine current status tab (SSOT: Active vs Inactive vs All)
   let currentBatchStatus = 'active';
   if (isAlumniPanel) {
     currentBatchStatus = 'alumni';
   } else {
     const rawStatus = window._filterBatchStatus;
-    if (rawStatus === 'hold_inactive' || rawStatus === 'hold' || rawStatus === 'inactive') {
-      currentBatchStatus = 'hold_inactive';
+    if (rawStatus === 'inactive' || rawStatus === 'hold_inactive' || rawStatus === 'hold') {
+      currentBatchStatus = 'inactive';
     } else if (rawStatus === 'all') {
       currentBatchStatus = 'all';
     } else {
@@ -834,10 +833,10 @@ export async function renderStudents(area, options = {}) {
     if (currentBatchStatus === 'active') {
       return isStudentActive(s);
     }
-    if (currentBatchStatus === 'hold_inactive') {
-      return isStudentHoldOrInactive(s);
+    if (currentBatchStatus === 'inactive' || currentBatchStatus === 'hold_inactive') {
+      return isStudentInactive(s);
     }
-    return !isStudentAlumni(s); // 'all' active and hold/inactive students in this batch
+    return !isStudentAlumni(s); // 'all' active and inactive students in this batch
   });
   window._currentStudentsGridData = filteredGridData;
 
@@ -883,8 +882,8 @@ export async function renderStudents(area, options = {}) {
         window._switchStudentRosterTab('raport');
         showToast("Tab: Student's Raport", 'info');
       } else if (e.key === '3') {
-        window._switchStudentRosterTab('hold_inactive');
-        showToast('Tab: Hold & Inactive', 'info');
+        window._switchStudentRosterTab('inactive');
+        showToast('Tab: Inactive', 'info');
       } else if (e.key === '4') {
         window._switchStudentRosterTab('all');
         showToast('Tab: All Students', 'info');
@@ -947,7 +946,7 @@ export async function renderStudents(area, options = {}) {
     }
   } else {
     const activeCount = rosterScopeStudents.filter(isStudentActive).length;
-    const holdAndInactiveCount = rosterScopeStudents.filter(isStudentHoldOrInactive).length;
+    const inactiveCount = rosterScopeStudents.filter(isStudentInactive).length;
     const totalCount = rosterScopeStudents.filter(s => !isStudentAlumni(s)).length;
 
     if (!window._studentRosterTab) {
@@ -960,7 +959,7 @@ export async function renderStudents(area, options = {}) {
 
     const currentTabId = (currentBatchStatus === 'active')
       ? (window._studentRosterTab === 'raport' ? 'raport' : 'data')
-      : currentBatchStatus;
+      : (currentBatchStatus === 'hold_inactive' ? 'inactive' : currentBatchStatus);
 
     window._switchStudentRosterTab = (tabId) => {
       if (tabId === 'data') {
@@ -969,8 +968,8 @@ export async function renderStudents(area, options = {}) {
       } else if (tabId === 'raport') {
         window._studentRosterTab = 'raport';
         window._filterBatchStatus = 'active';
-      } else if (tabId === 'hold_inactive') {
-        window._filterBatchStatus = 'hold_inactive';
+      } else if (tabId === 'inactive' || tabId === 'hold_inactive') {
+        window._filterBatchStatus = 'inactive';
       } else if (tabId === 'all') {
         window._filterBatchStatus = 'all';
       }
@@ -986,7 +985,7 @@ export async function renderStudents(area, options = {}) {
       window.setTopbarTabs([
         { id: 'data', icon: getSvgIcon('user', 14), label: 'Students Data', val: activeCount, valColor: 'var(--clr-accent-1, #38bdf8)' },
         { id: 'raport', icon: getSvgIcon('award', 14), label: "Student's Raport", val: activeCount, valColor: 'var(--grade-b)' },
-        { id: 'hold_inactive', icon: getSvgIcon('alert-circle', 14), label: 'Hold & Inactive', val: holdAndInactiveCount, valColor: 'var(--grade-c)' },
+        { id: 'inactive', icon: getSvgIcon('alert-circle', 14), label: 'Inactive', val: inactiveCount, valColor: 'var(--grade-e)' },
         { id: 'all', icon: getSvgIcon('users', 14), label: 'All Students', val: totalCount, valColor: '#94a3b8' }
       ], currentTabId, 'window._switchStudentRosterTab');
     }
@@ -1224,14 +1223,14 @@ export async function renderStudents(area, options = {}) {
         if (isForgiven) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size: 12px; background:rgba(var(--grade-e-rgb),0.15); color:var(--grade-e); border:1px solid var(--grade-e); padding:2px 6px;" title="Score Exemption: ${escapeHtml(r.forgiven_reason || 'Admin Exemption')}">FORGIVEN</span>
+              <span style="font-size:12px; color:var(--grade-e); font-weight:600; text-shadow:none;" title="Score Exemption: ${escapeHtml(r.forgiven_reason || 'Admin Exemption')}">FORGIVEN</span>
               <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size: 12px;" title="Revoke score exemption">↩️</button>
             </div>
           `;
         } else if (isRem) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span class="badge" style="font-size: 12px; background:rgba(var(--grade-c-rgb),0.15); color:var(--grade-c); border:1px solid var(--grade-c); padding:2px 6px;">REMEDIAL</span>
+              <span style="font-size:12px; color:var(--grade-c); font-weight:600; text-shadow:none;">REMEDIAL</span>
               <button class="btn btn-ghost btn-xs btn-prog-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 6px; font-size: 12px;" title="Revert remedial status (return to normal)">${getSvgIcon('refresh', 12)}</button>
             </div>
           `;
@@ -1258,22 +1257,25 @@ export async function renderStudents(area, options = {}) {
       const scoreColor = isForgiven ? (TOPSCORE_COLORS?.E || 'var(--grade-e)') : (r.bestPct != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(r.bestPct) : TOPSCORE_COLORS.STAR) : 'var(--clr-text-3)');
       const ptsDisplay = (r.bestScore != null && r.totalQuestions) ? `${r.bestScore}/${r.totalQuestions} pts` : '—';
 
+      const statusColor = r.is_completed ? 'var(--grade-a)' : r.is_in_progress ? 'var(--grade-c)' : 'var(--clr-text-3)';
+      const statusLabel = r.is_completed ? 'Completed' : r.is_in_progress ? 'In Progress' : 'Not Started';
+
       return `
         <tr>
           <td class="fw-600 text-sm" style="color:var(--clr-text-1);">
             <div style="display:flex;align-items:center;gap:6px;">
               <span>${escapeHtml(r.testTitle || '—')}</span>
-              ${r.shellCode ? `<span class="badge" style="font-size: 12px;background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);">${escapeHtml(r.shellCode)}</span>` : ''}
+              ${r.shellCode ? `<span style="font-size:12px;color:#94a3b8;font-family:var(--font-mono, monospace);text-shadow:none;">${escapeHtml(r.shellCode)}</span>` : ''}
             </div>
           </td>
           <td class="text-center">
-            <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size: 12px;white-space:nowrap;">
+            <span style="color:#cbd5e1;font-weight:600;font-size:12px;white-space:nowrap;text-shadow:none;">
               ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(r.levelNumber || r.levelName) : (r.levelName || `Level ${r.levelNumber}`))}
             </span>
           </td>
           <td class="text-center">
-            <span class="badge ${r.is_completed ? 'badge-success' : r.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size: 12px;padding:3px 8px;">
-              ${r.is_completed ? 'Completed' : r.is_in_progress ? 'In Progress' : 'Not Started'}
+            <span style="font-size:12px;font-weight:600;color:${statusColor};text-shadow:none;">
+              ${statusLabel}
             </span>
           </td>
           <td class="text-center">
@@ -1735,12 +1737,12 @@ export async function renderStudents(area, options = {}) {
                 </div>
               </td>
               <td class="text-center">
-                <span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-weight:700;font-size: 12px;white-space:nowrap;">
+                <span style="color:#cbd5e1;font-weight:600;font-size:12px;white-space:nowrap;text-shadow:none;">
                   ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(d.levelNumber || d.levelName) : (d.levelName || `Level ${d.levelNumber || '3'}`))}
                 </span>
               </td>
               <td class="text-center">
-                <span class="badge ${d.is_completed ? 'badge-success' : d.is_in_progress ? 'badge-warning' : 'badge-neutral'}" style="font-size: 12px;padding:3px 8px;display:inline-flex;align-items:center;gap:4px;">
+                <span style="font-size:12px;font-weight:600;color:${d.is_completed ? 'var(--grade-a)' : d.is_in_progress ? 'var(--grade-c)' : 'var(--clr-text-3)'};display:inline-flex;align-items:center;gap:4px;text-shadow:none;">
                   ${d.is_completed ? `${getSvgIcon('check-circle', 12)} Completed` : d.is_in_progress ? `${getSvgIcon('clock', 12)} In Progress` : 'Not Started'}
                 </span>
               </td>
@@ -2570,7 +2572,7 @@ export async function renderStudents(area, options = {}) {
         label: 'SECURITY',
         colSpan: 2,
         className: 'super-hdr super-hdr-security',
-        style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12);'
       });
     } else {
       // Group 1: STUDENTS DATA (Colspan 4: Level, Photo, Gender, Name)
@@ -2602,13 +2604,10 @@ export async function renderStudents(area, options = {}) {
         label: 'SECURITY',
         colSpan: 2,
         className: 'super-hdr super-hdr-security',
-        style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12);'
       });
     }
 
-    if (currentBatchStatus === 'hold_inactive' || currentBatchStatus === 'inactive' || currentBatchStatus === 'hold') {
-      sh.push({ key: 'actions', rowSpan: 2 });
-    }
     return sh;
   };
 
@@ -3000,8 +2999,8 @@ export async function renderStudents(area, options = {}) {
                  onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
                  title="${escapeHtml(row.displayName)}&#10;Click to view student profile">
               <span style="color:var(--clr-text-1);font-weight:400;font-size: 12px;">${escapeHtml(row.displayName)}</span>
-              ${!isAlumniPanel && row.isOrphaned ? `<span class="badge badge-danger" style="margin-left:6px;font-size: 12px;">Disconnected</span>` : ''}
-              ${row.remediationPending ? `<span class="badge badge-warning" style="white-space:nowrap;margin-left:6px;font-size: 12px;">Remediation</span>` : ''}
+              ${!isAlumniPanel && row.isOrphaned ? `<span style="margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-e);text-shadow:none;">(Disconnected)</span>` : ''}
+              ${row.remediationPending ? `<span style="white-space:nowrap;margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-c);text-shadow:none;">(Remediation)</span>` : ''}
             </div>
             <input type="text" class="student-inline-input" data-id="${row.id}" data-field="name" value="${escapeHtml(row.name || row.displayName)}" placeholder="Student Name" onclick="event.stopPropagation();">
           `;
@@ -3338,7 +3337,7 @@ export async function renderStudents(area, options = {}) {
         width: '108px',
         minWidth: '95px',
         render: (row) => {
-          const isInactive = ((row._raw || row).is_active === false) || ((row.program_status || '').toUpperCase() === 'INACTIVE');
+          const isInactive = ((row._raw || row).is_active === false) || ((row.program_status || '').toUpperCase() === 'INACTIVE') || ((row.program_status || '').toUpperCase() === 'HOLD');
           const rawStatus = (row.program_status || 'ACTIVE').toUpperCase();
           const isLvlX = row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'X' || (row.levelName && row.levelName.toLowerCase() === 'alumni') || isAlumniPanel;
           let currentStatus = 'active';
@@ -3353,19 +3352,29 @@ export async function renderStudents(area, options = {}) {
             currentStatus = 'inactive';
             label = 'Inactive';
             color = 'var(--grade-e)'; // Strictly RED (Grade E SSOT), never white or slate!
-          } else if (rawStatus === 'HOLD' || rawStatus === 'PENDING') {
-            currentStatus = 'hold';
-            label = 'Hold';
-            color = 'var(--grade-c)';
           } else {
             currentStatus = 'active';
             label = 'Active';
             color = 'var(--grade-a)';
           }
 
+          const curNum = parseInt(row.studentLevelNum != null ? row.studentLevelNum : 1, 10);
+          const canAlumni = curNum >= 3 || currentStatus === 'alumni' || isLvlX;
+          const canDelete = currentStatus === 'inactive';
+
+          let statusOptionsHtml = `
+            <option value="active" style="color:var(--grade-a);" ${currentStatus === 'active' ? 'selected' : ''}>Active</option>
+            <option value="inactive" style="color:var(--grade-e);" ${currentStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
+          `;
+          if (canAlumni) {
+            statusOptionsHtml += `<option value="alumni" style="color:var(--quad-d);" ${currentStatus === 'alumni' ? 'selected' : ''}>Alumni</option>`;
+          }
+          if (canDelete) {
+            statusOptionsHtml += `<option value="delete" style="color:var(--grade-e);font-weight:700;">Delete</option>`;
+          }
+
           // Active and fully eligible for promotion: Render interactive LEVEL UP button
           if (currentStatus === 'active' && row.isEligibleNext && !isLvlX) {
-            const curNum = parseInt(row.studentLevelNum != null ? row.studentLevelNum : 1, 10);
             const isGrad = curNum >= 3;
             const targetTitle = isGrad ? 'Graduate to ALUMNI (Level X)' : `Promote to Level ${curNum + 1}`;
             return `
@@ -3375,11 +3384,8 @@ export async function renderStudents(area, options = {}) {
                   ${getSvgIcon('chevrons-up', 12)} LEVEL UP
                 </button>
               </div>
-              <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
-                <option value="active" style="color:var(--grade-a);" selected>Active</option>
-                <option value="hold" style="color:var(--grade-c);">Hold</option>
-                <option value="alumni" style="color:var(--quad-d);">Alumni</option>
-                <option value="inactive" style="color:var(--grade-e);">Inactive</option>
+              <select class="student-inline-select student-status-select" data-id="${row.id}" data-name="${escapeHtml(row.displayName || row.name || 'Student')}" data-prev-status="${currentStatus}" data-level-num="${curNum}" data-field="program_status" onclick="event.stopPropagation();">
+                ${statusOptionsHtml}
               </select>
             `;
           }
@@ -3388,31 +3394,12 @@ export async function renderStudents(area, options = {}) {
             <div class="student-cell-view">
               <span style="color:${color};font-size: 12px;font-weight:600;">${label}</span>
             </div>
-            <select class="student-inline-select student-status-select" data-id="${row.id}" data-field="program_status" onclick="event.stopPropagation();">
-              <option value="active" style="color:var(--grade-a);" ${currentStatus === 'active' ? 'selected' : ''}>Active</option>
-              <option value="hold" style="color:var(--grade-c);" ${currentStatus === 'hold' ? 'selected' : ''}>Hold</option>
-              <option value="alumni" style="color:var(--quad-d);" ${currentStatus === 'alumni' ? 'selected' : ''}>Alumni</option>
-              <option value="inactive" style="color:var(--grade-e);" ${currentStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
+            <select class="student-inline-select student-status-select" data-id="${row.id}" data-name="${escapeHtml(row.displayName || row.name || 'Student')}" data-prev-status="${currentStatus}" data-level-num="${curNum}" data-field="program_status" onclick="event.stopPropagation();">
+              ${statusOptionsHtml}
             </select>
           `;
         }
-      },
-      // 13. Actions (Rendered on Hold & Inactive tab to allow restoration and deletion)
-      ...((currentBatchStatus === 'hold_inactive' || currentBatchStatus === 'inactive' || currentBatchStatus === 'hold') ? [{
-        label: 'ACTIONS',
-        className: 'actions-col',
-        align: 'right',
-        width: '120px',
-        render: (row) => {
-          const div = document.createElement('div');
-          div.className = 'student-actions-cell actions-col d-flex align-center justify-end gap-1';
-          div.innerHTML = `
-            <button class="btn btn-secondary btn-sm" title="Restore to Active" onclick="event.stopPropagation();if(window.activateStudent)window.activateStudent('${row.id}');" style="font-size:12px; padding:2px 6px;">Restore</button>
-            <button class="btn btn-danger btn-sm" title="Delete Student" onclick="event.stopPropagation();if(window.deleteStudentDirect)window.deleteStudentDirect('${row.id}');" style="font-size:12px; padding:2px 6px;">Delete</button>
-          `;
-          return div;
-        }
-      }] : [])
+      }
     ]
   });
 
@@ -3610,15 +3597,32 @@ export async function renderStudents(area, options = {}) {
           }
         }
       } else if (field === 'program_status') {
-        if (value === 'inactive') {
-          updates.is_active = false;
-          updates.program_status = 'INACTIVE';
-        } else if (value === 'hold') {
-          updates.is_active = true;
-          updates.program_status = 'HOLD';
+        const prevStatus = target.dataset.prevStatus || 'active';
+        const levelNum = parseInt(target.dataset.levelNum || 1, 10);
+
+        if (value === 'delete') {
+          target.value = prevStatus;
+          if (prevStatus !== 'inactive') {
+            showToast('Delete is only permitted for Inactive students.', 'warning');
+            return;
+          }
+          const studentName = target.dataset.name || 'this student';
+          if (!confirm(`Are you sure you want to delete ${studentName}? This will soft-delete the record.`)) return;
+          await adminSoftDelete('students', studentId);
+          showToast('Student deleted successfully', 'success');
+          renderStudents(area, { isAlumniPanel });
+          return;
         } else if (value === 'alumni') {
+          if (levelNum < 3 && prevStatus !== 'alumni') {
+            target.value = prevStatus;
+            showToast('Alumni status is only available for students who have graduated from Level 3.', 'warning');
+            return;
+          }
           updates.is_active = true;
           updates.program_status = 'ALUMNI';
+        } else if (value === 'inactive') {
+          updates.is_active = false;
+          updates.program_status = 'INACTIVE';
         } else {
           updates.is_active = true;
           updates.program_status = 'ACTIVE';
@@ -3780,17 +3784,17 @@ export async function renderStudents(area, options = {}) {
     if (!error) {
       clearAdminCache('students');
       showToast('Student restored to Active', 'success');
-      renderStudents(area);
+      renderStudents(area, { isAlumniPanel });
     } else {
       showToast('Error restoring student: ' + error.message, 'error');
     }
   };
 
-  window.deleteStudentDirect = async (studentId) => {
-    if (!confirm('Are you sure you want to delete this inactive student? This will soft-delete the record.')) return;
+  window.deleteStudentDirect = async (studentId, studentName = 'student') => {
+    if (!confirm(`Are you sure you want to delete ${studentName}? This will soft-delete the record.`)) return;
     await adminSoftDelete('students', studentId);
-    showToast('Student deleted', 'success');
-    renderStudents(area);
+    showToast('Student deleted successfully', 'success');
+    renderStudents(area, { isAlumniPanel });
   };
 
   // Toolbar hidden per user directive (hideToolbar: true) - students added via Student Registration and batch sizes are compact.
@@ -3915,7 +3919,7 @@ export function showPromotionRequirementsModal(students = []) {
         <td style="padding: 8px 12px; text-align: center; color: var(--clr-accent-1, #38bdf8);">${escapeHtml(s.levelName || '—')}</td>
         <td style="padding: 8px 12px; text-align: center; font-weight: 700; color: ${s.overallColor || '#fff'};">${escapeHtml(s.overallScoreStr || '—')}</td>
         <td style="padding: 8px 12px; text-align: center;">
-          ${s.isEligibleNext ? `<span class="badge" style="background:var(--grade-a);color:#0F172A;font-weight:700;">${getSvgIcon('check-circle', 12)} Eligible</span>` : `<span class="badge" style="background:rgba(var(--grade-e-rgb),0.15);border:1px solid rgba(var(--grade-e-rgb),0.3);color:var(--grade-e);">${getSvgIcon('clock', 12)} Pending Exams</span>`}
+          ${s.isEligibleNext ? `<span style="color:var(--grade-a);font-weight:600;display:inline-flex;align-items:center;gap:4px;text-shadow:none;">${getSvgIcon('check-circle', 12)} Eligible</span>` : `<span style="color:var(--grade-e);font-weight:600;display:inline-flex;align-items:center;gap:4px;text-shadow:none;">${getSvgIcon('clock', 12)} Pending Exams</span>`}
         </td>
       </tr>
     `;
@@ -4111,7 +4115,6 @@ window.openTransferBatchModal = async function(studentId) {
           <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Academic Status</label>
           <select id="tb-status" class="form-input" style="width:100%;">
             <option value="active" selected>Active</option>
-            <option value="hold">Hold (Pending Batch Transfer / Next Term)</option>
             <option value="inactive">Inactive</option>
           </select>
         </div>
@@ -4139,7 +4142,7 @@ window.openTransferBatchModal = async function(studentId) {
     const inheritLevel = overlay.querySelector('#tb-inherit-level').checked;
     const rawStatus = overlay.querySelector('#tb-status').value;
     const isActive = rawStatus !== 'inactive';
-    const programStatus = rawStatus === 'hold' ? 'HOLD' : (rawStatus === 'inactive' ? 'INACTIVE' : 'ACTIVE');
+    const programStatus = rawStatus === 'inactive' ? 'INACTIVE' : 'ACTIVE';
 
     if (!targetBatchId) {
       showToast('Please select a destination batch.', 'warning');

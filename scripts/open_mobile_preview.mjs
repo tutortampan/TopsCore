@@ -35,7 +35,7 @@ async function isServerRunning(port = 5500) {
 function resolvePageUrl(p, baseUrl) {
   let target = p;
   if (target === 'result.html' && !target.includes('attempt_id')) {
-    target = 'result.html?attempt_id=ba8cb716-6cdd-4017-a631-3ee0558ca04a';
+    target = 'result.html?attempt_id=3ccb03bc-c1b6-4b3c-8e60-78c7a06d431b';
   }
   if (target === 'test.html' && !target.includes('test_id')) {
     target = 'test.html?test_id=93ed8f86-1427-4d04-8a97-31531fb26851';
