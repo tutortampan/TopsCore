@@ -1830,6 +1830,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
     }
+    window.renderNextAssignmentHero = renderNextAssignmentHero;
     function renderClasses(rawClasses, progress, allTests = [], allAttempts = []) {
       window._loadedClasses = rawClasses;
       window._classesProgress = progress;
