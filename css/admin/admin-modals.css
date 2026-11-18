@@ -47,6 +47,56 @@
   overflow: hidden !important;
 }
 
+/* Universal Table Content Zero-Glow Invariant (§2.31 / §4.9) */
+table td *,
+table td .grade-circle,
+table td .grade-circle.grade-circle-star,
+table td .grade-circle.grade-circle-★,
+table td .grade-circle.grade-circle-s,
+.live-monitor-table td *,
+.live-monitor-table td .grade-circle,
+.live-monitor-table td .grade-circle.grade-circle-star,
+.live-monitor-table td .grade-circle.grade-circle-★,
+.live-monitor-table td .grade-circle.grade-circle-s,
+.datagrid-table td *,
+.datagrid-table td .grade-circle {
+  text-shadow: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Live Monitor Filter Tabs */
+.live-filter-btn {
+  height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  border-radius: 5px !important;
+  white-space: nowrap !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  color: #cbd5e1 !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.live-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+}
+
+.live-filter-btn.active {
+  background: rgba(56, 189, 248, 0.18) !important;
+  border: 1.5px solid var(--primary-tactical) !important;
+  color: #ffffff !important;
+}
+
+.live-filter-btn[data-filter="alarm"].has-alarms {
+  color: var(--grade-e) !important;
+  border-color: rgba(255, 0, 0, 0.4) !important;
+}
+
 #modal-theme-open-session .modal-header,
 #modal-theme-live-monitor .modal-header,
 #modal-theme-add-late .modal-header,

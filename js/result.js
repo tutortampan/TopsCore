@@ -283,6 +283,63 @@ if (!session) {
         return;
       }
 
+      // Check if this is a P2P Conversation / Dialogue attempt
+      const isDialogue = answers.some(a => a.question_type_snapshot === 'P2P_CONVERSATION');
+      if (isDialogue) {
+        const firstAns = answers.find(a => a.question_type_snapshot === 'P2P_CONVERSATION') || answers[0];
+        let evalData = null;
+        try {
+          evalData = typeof firstAns.accepted_answers_snapshot === 'string'
+            ? JSON.parse(firstAns.accepted_answers_snapshot)
+            : firstAns.accepted_answers_snapshot;
+        } catch (_) {}
+
+        let turns = [];
+        try {
+          turns = typeof firstAns.student_answer === 'string'
+            ? JSON.parse(firstAns.student_answer)
+            : firstAns.student_answer;
+        } catch (_) {}
+
+        const pillars = evalData?.pillars || {};
+        const pillarCards = [
+          { name: 'Fluency', score: pillars.fluency?.score || 85 },
+          { name: 'Vocab', score: pillars.vocabulary?.score || 85 },
+          { name: 'Grammar', score: pillars.grammar?.score || 85 },
+          { name: 'Relevance', score: pillars.relevance?.score || 85 },
+          { name: 'Turn', score: pillars.turn_taking?.score || 85 }
+        ];
+
+        container.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:12px; padding:10px 0;">
+            <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:8px;">
+              ${pillarCards.map(p => `
+                <div style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 4px; text-align:center;">
+                  <div style="font-size:12px; color:#94a3b8; font-weight:700; text-transform:uppercase;">${p.name}</div>
+                  <div style="font-size:16px; font-weight:800; color:var(--primary-tactical); margin-top:2px;">${p.score}%</div>
+                </div>
+              `).join('')}
+            </div>
+            ${evalData?.feedback ? `
+              <div style="padding:10px 12px; background:rgba(56,189,248,0.06); border:1px solid rgba(56,189,248,0.2); border-radius:8px; font-size:12px; color:#cbd5e1; line-height:1.5;">
+                <strong style="color:var(--primary-tactical);">AI Feedback:</strong> ${escapeHtml(evalData.feedback)}
+              </div>
+            ` : ''}
+            ${Array.isArray(turns) && turns.length > 0 ? `
+              <div style="font-size:12px; font-weight:700; color:#cbd5e1; margin-top:4px;">Recorded Speaking Turns (${turns.length}):</div>
+              <div style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto;">
+                ${turns.map((t, idx) => `
+                  <div style="padding:8px 10px; background:rgba(255,255,255,0.03); border-radius:6px; font-size:12px; color:#94a3b8; border-left:3px solid var(--primary-tactical);">
+                    <span style="font-weight:700; color:#fff;">Turn ${idx + 1}:</span> "${escapeHtml(t)}"
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
+          </div>
+        `;
+        return;
+      }
+
       // Generate 3-column table: Question | Your Answer | Point
       const rowsHtml = answers.map((a, idx) => {
         const snap = typeof a.question_snapshot === 'string'
@@ -381,7 +438,7 @@ if (!session) {
               <span>${isNormal ? '●' : '○'}</span> NORMAL
             </button>
             <button type="button" class="remedial-segment-btn segment-remidi ${isRemedial ? 'active' : ''}" id="btn-segment-remidi" title="Set Status: Remedial Exam (Max 60%)">
-              <span>${isRemedial ? '●' : '○'}</span> REMIDI
+              <span>${isRemedial ? '●' : '○'}</span> REMEDIAL
             </button>
             <button type="button" class="remedial-segment-btn segment-forgive ${isForgiven ? 'active' : ''}" id="btn-segment-forgive" title="Set Status: Forgiven Waiver (Skor F)">
               <span>${isForgiven ? '●' : '○'}</span> FORGIVE
@@ -679,11 +736,14 @@ if (!session) {
     // Synchronized Tier Glow Trigger: Ignites ALL panels when evaluation description reveals
     function activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100) {
       document.body.classList.add('tier-glow-active');
+      document.documentElement.style.setProperty('--tier-color', gradeColor);
+      document.documentElement.style.setProperty('--tier-rgb', rgbColor);
       document.body.style.setProperty('--tier-color', gradeColor);
       document.body.style.setProperty('--tier-rgb', rgbColor);
 
-      const heroEl = document.getElementById('result-hero-section');
+      const heroEl = document.getElementById('result-hero-section') || document.querySelector('.result-hero');
       if (heroEl) {
+        heroEl.className = `result-hero tier-${currentTier}`;
         heroEl.style.setProperty('--tier-color', gradeColor);
         heroEl.style.setProperty('--tier-rgb', rgbColor);
       }
@@ -708,8 +768,15 @@ if (!session) {
       const avatarCont = document.getElementById('result-avatar-container');
       if (avatarCont) {
         avatarCont.style.setProperty('--tier-color', gradeColor);
-        avatarCont.style.borderColor = gradeColor;
-        avatarCont.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.75), 0 4px 14px rgba(0, 0, 0, 0.35)`;
+        if (isGradeSOr100) {
+          avatarCont.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
+          avatarCont.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
+          avatarCont.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
+        } else {
+          avatarCont.style.background = 'rgba(15, 23, 42, 0.9)';
+          avatarCont.style.borderColor = gradeColor;
+          avatarCont.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.75), 0 4px 14px rgba(0, 0, 0, 0.35)`;
+        }
       }
 
       // 3. Test Full Title Panel
@@ -761,7 +828,8 @@ if (!session) {
       const pctEl = document.getElementById('result-percentage');
       if (pctEl) {
         pctEl.style.color = gradeColor;
-        pctEl.style.textShadow = `0 0 16px rgba(${rgbColor}, 0.65)`;
+        pctEl.style.setProperty('-webkit-text-fill-color', gradeColor);
+        pctEl.style.textShadow = `0 0 16px rgba(${rgbColor}, 0.65), 0 0 32px rgba(${rgbColor}, 0.35)`;
       }
       const ptsEl = document.getElementById('res-points');
       if (ptsEl) {
@@ -786,14 +854,6 @@ if (!session) {
       if (nextBtn) {
         nextBtn.style.borderColor = gradeColor;
         nextBtn.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.55)`;
-      }
-
-      // 7. Tutor active segment button (NORMAL / REMIDI / FORGIVE)
-      const activeSegment = document.querySelector('.remedial-segment-btn.active');
-      if (activeSegment) {
-        activeSegment.style.borderColor = gradeColor;
-        activeSegment.style.color = gradeColor;
-        activeSegment.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.50)`;
       }
     }
 
@@ -883,13 +943,11 @@ if (!session) {
         const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, !isAdminSession ? false : isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || (pct >= 100 && (!isAdminSession || (!isRemedial && !isForgiven))));
 
-        // FEATURE 1: Launch grade-specific background particles
-        launchBgParticles(grade);
-
-        // Dynamic Tier Atmosphere on Result Hero
+        // Background particles and dynamic tier atmosphere are deferred to Step 5 (Grade Reveal)
+        // to deliver the authentic surprise impact requested by the user.
         const heroSection = document.getElementById('result-hero-section') || document.querySelector('.result-hero');
         if (heroSection) {
-          heroSection.className = `result-hero tier-${grade}`;
+          heroSection.className = 'result-hero';
         }
 
         // Wire up Top Header matching Student Dashboard / Lobby
@@ -1131,15 +1189,12 @@ if (!session) {
         }
         const rgbColor = TOPSCORE_COLORS[`${isGradeSOr100 ? 'STAR' : (grade === '★' ? 'STAR' : grade)}_RGB`] || hexToRgbString(gradeColor);
 
-        // Immediate application of dynamic tier colors and variables across page
-        document.documentElement.style.setProperty('--tier-color', gradeColor);
-        document.documentElement.style.setProperty('--tier-rgb', rgbColor);
-        document.body.style.setProperty('--tier-color', gradeColor);
-        document.body.style.setProperty('--tier-rgb', rgbColor);
-        document.body.classList.add('tier-glow-active');
-        activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100);
+        // Guaranteed Clean Slate for Entrance Animation:
+        // Tier glow and background particles are held until Step 5 (Grade Reveal / Stamp Impact)
+        // so the user experiences the true visceral surprise!
+        document.body.classList.remove('tier-glow-active');
 
-        // 5. Achievement Status (Rule DECISION-018: strictly FAIL, LESS, ENOUGH, GOOD, VERY GOOD, EXCELLENT)
+        // 5. Achievement Status (Prepared for Step 6 reveal)
         const motEl = document.getElementById('result-motivation-msg');
         if (motEl) {
           const statusText = getAchievementStatus(grade, pct);
@@ -1149,11 +1204,8 @@ if (!session) {
           } else {
             motEl.textContent = statusText;
           }
-          motEl.style.display = 'flex';
-          motEl.classList.remove('hidden');
-          motEl.dataset.tier = currentTier;
-          motEl.style.setProperty('--tier-color', gradeColor);
-          motEl.style.setProperty('--tier-rgb', rgbColor);
+          motEl.style.display = 'none';
+          motEl.classList.remove('cascade-revealed');
         }
 
         let displayGradeHtml = isGradeSOr100 ? `
@@ -1168,58 +1220,12 @@ if (!session) {
             </svg>
           ` : `${grade}`;
 
-        // 1. Initial State: Setup data attributes without premature glow
-        const identityCard = document.getElementById('result-identity-card');
-        if (identityCard) {
-          identityCard.dataset.tier = currentTier;
-        }
-
-        // Propagate tier color & border aura to all cards (Wireframe Rule)
-        const compositeCardEl = document.getElementById('result-metrics-composite-card');
-        if (compositeCardEl) {
-          compositeCardEl.dataset.tier = currentTier;
-          compositeCardEl.style.setProperty('--tier-color', gradeColor);
-          compositeCardEl.style.setProperty('--tier-rgb', rgbColor);
-        }
-        document.body.style.setProperty('--tier-color', gradeColor);
-        document.body.style.setProperty('--tier-rgb', rgbColor);
-        const resultHeroEl = document.getElementById('result-hero-section');
-        if (resultHeroEl) {
-          resultHeroEl.style.setProperty('--tier-color', gradeColor);
-          resultHeroEl.style.setProperty('--tier-rgb', rgbColor);
-        }
-        const asmTitleWrap = document.getElementById('result-Test-name-container');
-        if (asmTitleWrap) {
-          asmTitleWrap.dataset.tier = currentTier;
-          asmTitleWrap.style.setProperty('--tier-color', gradeColor);
-          asmTitleWrap.style.setProperty('--tier-rgb', rgbColor);
-        }
-        const metricsTable = document.getElementById('result-metrics-bar');
-        if (metricsTable) {
-          metricsTable.dataset.tier = currentTier;
-          metricsTable.style.setProperty('--tier-color', gradeColor);
-          metricsTable.style.setProperty('--tier-rgb', rgbColor);
-        }
-        const scoreGradeCard = document.getElementById('result-score-grade-card');
-        if (scoreGradeCard) {
-          scoreGradeCard.dataset.tier = currentTier;
-          scoreGradeCard.style.setProperty('--tier-color', gradeColor);
-          scoreGradeCard.style.setProperty('--tier-rgb', rgbColor);
-        }
-
-        // 2. Student Avatar Container Ring & Glow: Dynamically 100% follows student's Grade (1:1 Dashboard)
+        // 1. Initial State for Student Avatar Container Ring: Neutral Slate
         const avatarContainer = document.getElementById('result-avatar-container');
         if (avatarContainer) {
-          avatarContainer.style.setProperty('--tier-color', gradeColor);
-          if (isGradeSOr100) {
-            avatarContainer.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
-            avatarContainer.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
-            avatarContainer.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
-          } else {
-            avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
-            avatarContainer.style.border = `2.5px solid ${gradeColor}`;
-            avatarContainer.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45), 0 4px 14px rgba(0, 0, 0, 0.35)`;
-          }
+          avatarContainer.style.background = 'rgba(15, 23, 42, 0.9)';
+          avatarContainer.style.border = '2.5px solid rgba(255, 255, 255, 0.25)';
+          avatarContainer.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
         }
 
         // Modern Pure Star Accent (★ Vector Badge for S / Star 100%, Letter for A-E / R)
@@ -1253,33 +1259,25 @@ if (!session) {
           gradeStamp.style.color = gradeColor;
         }
 
-        // 3. Percentage in Dual Score & Grade Card (Synchronized font color with Grade)
+        // 3. Percentage in Dual Score & Grade Card (Clean white text during count-up)
         const pctEl = document.getElementById('result-percentage');
-        const textGradeClass = (grade === '★' || grade === 'S') ? 'text-grade-star' : `text-grade-${grade}`;
-        pctEl.className = `result-percentage ${textGradeClass}`;
+        pctEl.className = 'result-percentage';
 
-        const scoreColor = gradeColor;
-        const scoreGlow = `0 0 16px ${hexToRgba(scoreColor, 0.65)}, 0 0 32px ${hexToRgba(scoreColor, 0.35)}`;
-
-        // 4. Score Box Accent
+        // 4. Score Box Accent (Neutral border during count-up)
         const scoreBox = document.getElementById('result-score-box') || document.querySelector('.score-grade-box.score-box');
         if (scoreBox) {
-          scoreBox.style.borderColor = isGradeSOr100 ? `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.6)` : `rgba(${rgbColor}, 0.55)`;
-          scoreBox.style.boxShadow = isGradeSOr100
-            ? `0 0 18px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)`
-            : `0 0 12px rgba(${rgbColor}, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2)`;
+          scoreBox.style.border = '1px solid rgba(255, 255, 255, 0.12)';
+          scoreBox.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.25)';
         }
 
-        pctEl.style.cssText = `font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-feature-settings:'tnum' on, 'lnum' on !important;letter-spacing:-0.01em !important;font-weight:900 !important;font-size:clamp(1.5rem, 3.8vw, 1.85rem) !important;line-height:1 !important;color:${scoreColor} !important;-webkit-text-fill-color:${scoreColor} !important;background:none !important;text-shadow:${scoreGlow} !important;`;
+        pctEl.style.cssText = `font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-feature-settings:'tnum' on, 'lnum' on !important;letter-spacing:-0.01em !important;font-weight:900 !important;font-size:clamp(1.5rem, 3.8vw, 1.85rem) !important;line-height:1 !important;color:#F8FAFC !important;-webkit-text-fill-color:#F8FAFC !important;background:none !important;text-shadow:none !important;`;
 
-        // 5. Grade Box & Value Accent (Kotak Grade simetris dengan Kotak Skor, TANPA .pure-star-nobox)
+        // 5. Grade Box & Value Accent (Neutral border during count-up, grade hidden)
         const gradeBox = document.getElementById('result-grade-box') || document.querySelector('.score-grade-box.grade-box');
         if (gradeBox) {
-          gradeBox.style.borderColor = isGradeSOr100 ? `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.6)` : `rgba(${rgbColor}, 0.55)`;
+          gradeBox.style.border = '1px solid rgba(255, 255, 255, 0.12)';
           gradeBox.style.background = 'rgba(23, 33, 56, 0.8)';
-          gradeBox.style.boxShadow = isGradeSOr100
-            ? `0 0 18px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.35), 0 6px 16px rgba(0, 0, 0, 0.25)`
-            : `0 0 12px rgba(${rgbColor}, 0.25), 0 4px 14px rgba(0, 0, 0, 0.2)`;
+          gradeBox.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.25)';
           gradeBox.classList.remove('pure-star-nobox');
           gradeBox.classList.remove('box-stamped');
         }
@@ -1329,6 +1327,8 @@ if (!session) {
           if (titleTopic) {
             topicEl.textContent = titleTopic.toUpperCase();
             topicEl.style.display = 'block';
+            topicEl.style.color = '#cbd5e1';
+            topicEl.style.textShadow = 'none';
           } else {
             topicEl.style.display = 'none';
           }
@@ -1360,8 +1360,7 @@ if (!session) {
           if (isRemedial) {
             resPointsEl.title = `Remedial capped at max 60% (${formattedPoints}/${attemptTotalQ} pts). Raw: ${rawTotalPoints} pts.`;
           }
-          const ptsColor = getGradeColorByScore(pct);
-          resPointsEl.style.color = ptsColor;
+          resPointsEl.style.color = '#F8FAFC';
           resPointsEl.style.fontWeight = '800';
         }
 
@@ -1677,6 +1676,7 @@ if (!session) {
         if (wrongEl) wrongEl.textContent = wrongCount;
         const pointsEl = document.getElementById('res-points');
         if (pointsEl) pointsEl.textContent = formattedPoints;
+        launchBgParticles(grade);
         activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
         return;
       }
@@ -1691,6 +1691,7 @@ if (!session) {
           gradeValEl.classList.remove('grade-delayed');
           gradeValEl.classList.add('grade-revealed');
         }
+        launchBgParticles(grade);
         activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
       }, 5000);
 
@@ -1782,7 +1783,7 @@ if (!session) {
         animateCount(pctEl, targetPct, isRemedial, () => resolve());
       });
 
-      // Step 5: The EXACT moment score count-up finishes -> Grade Stamp Impact!
+      // Step 5: The EXACT moment score count-up finishes -> Grade Stamp Impact & SURPRISE TIER IGNITION!
       if (gradeValEl) {
         gradeValEl.classList.remove('grade-delayed');
         gradeValEl.classList.add('grade-revealed');
@@ -1793,19 +1794,23 @@ if (!session) {
       if (gradeStamp) {
         gradeStamp.classList.add('stamped');
       }
+
+      // SURPRISE EFFECT: Ignite Tier Glow & Launch Particles at this exact moment!
+      launchBgParticles(grade);
+      activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
+
       if (isGradeSOr100 || targetPct >= 100) {
         launchConfetti();
       }
 
-      // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals AND Synchronized Tier Glow ignites across ALL panels!
+      // Step 6: 280ms after Grade Stamp -> Evaluation Word Card reveals
       await sleep(280);
       const evalCard = document.getElementById('result-motivation-msg');
       if (evalCard) {
+        evalCard.style.display = 'flex';
+        evalCard.classList.remove('hidden');
         evalCard.classList.add('cascade-revealed');
       }
-
-      // ACTIVATE SYNCHRONIZED TIER GLOW SIMULTANEOUSLY ACROSS ALL PANELS
-      activateTierGlow(gradeColor, resolvedRgb, resolvedTier, isGradeSOr100);
 
       // Step 7: 220ms after Evaluation Word Card -> Action Buttons reveal in sequence
       await sleep(220);

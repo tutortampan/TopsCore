@@ -493,132 +493,154 @@ export async function renderClassTestSessions(container, context = {}) {
       </div>
     </div>
 
-    <!-- Modal 2: Add Late Arrival Students to Live Session -->
-    <div id="modal-theme-add-late" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:100%; max-width:640px; max-height:92vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 50px rgba(0,0,0,0.8);">
-        <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
-            <div style="font-size: 12px; text-transform:uppercase; letter-spacing:0.08em; color:#a5b4fc; font-weight:800;">Live Test Session in Progress</div>
-            <h3 id="late-modal-theme-title" style="margin:2px 0 0; font-size: 16px; font-weight:800; color:#ffffff;">Theme Test Name</h3>
-            <div id="late-modal-batch-name" style="font-size: 12px; color:#94a3b8; margin-top:2px;">Batch Name</div>
+    <!-- Modal 2: Add Late Arrival Students to Live Session (Window L3) -->
+    <div id="modal-theme-add-late" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
+      <div class="modal-box card" style="background:#0F172A; border:1.5px solid rgba(255,255,255,0.18); border-radius:12px; width:95vw; max-width:520px; height:560px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <!-- Standardized 60px Solid Navy Title Area (§1.5.1 Centered Title & Stacked Subtitle Invariant) -->
+        <div class="title-area dual-line" style="position:relative; padding:0 16px; height:60px; min-height:60px; max-height:60px; border-bottom:1.5px solid rgba(255,255,255,0.12); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0;">
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:calc(100% - 40px); overflow:hidden;">
+            <h3 id="late-modal-theme-title" style="margin:0; font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#ffffff; letter-spacing:0.04em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              THEME G — GENERAL • LATE ARRIVAL
+            </h3>
+            <span id="late-modal-batch-name" style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#94a3b8; margin-top:2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              Batch Name
+            </span>
           </div>
         </div>
 
-        <div style="padding:20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:16px;">
-          <!-- Live Global Countdown & Mode Alert -->
-          <div style="background:rgba(99, 102, 241, 0.12); border:1px solid rgba(99, 102, 241, 0.35); border-radius:8px; padding:12px 14px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-              <div style="font-size: 12px; font-weight:700; color:#a5b4fc; display:flex; align-items:center; gap:6px;">
-                <span>Global Remaining Session Time:</span>
-                <span id="late-modal-remaining-time" style="color:#ffffff; font-size: 16px; font-weight:800;">-- Mins</span>
-              </div>
-              <div id="late-modal-mode-badge" style="font-size: 12px; font-weight:700; padding:2px 8px; border-radius:4px;">
-                NORMAL
-              </div>
+        <!-- Top Info & Toolbar Settings Container (Strict 10px Padding & Gaps) -->
+        <div style="padding:10px 16px; display:flex; flex-direction:column; gap:10px; background:#0F172A; border-bottom:1px solid rgba(255,255,255,0.08); box-sizing:border-box; flex-shrink:0;">
+          <!-- Session Info Row (Mode Badge, Remaining Time, Tutor Override) -->
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:nowrap;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="late-modal-mode-badge" style="font-size:12px; font-weight:700; padding:3px 10px; border-radius:5px; text-transform:uppercase; background:rgba(0,192,0,0.12); border:1px solid var(--grade-a); color:var(--grade-a);">
+                EXAM SESSION
+              </span>
+              <span style="font-size:12px; color:#cbd5e1; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                <span style="color:#94a3b8;">TIME LEFT:</span>
+                <span id="late-modal-remaining-time" style="color:var(--grade-c); font-weight:800; font-variant-numeric:tabular-nums;">-- Mins</span>
+              </span>
             </div>
-            <div class="text-xs" style="color:#cbd5e1; margin-top:6px; line-height:1.4;">
-              Late arrival students <strong>automatically inherit session status</strong> and work time refers to this remaining live duration to ensure fairness.
-            </div>
-          </div>
-
-          <!-- Unenrolled Eligible Students Checklist -->
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
-              <label class="form-label" style="font-weight:700; font-size: 12px; color:#ffffff; margin:0;">
-                Select Late Arrival Students (<span id="late-modal-selected-count" style="color:#38bdf8;">0</span> Selected)
-              </label>
-              <div style="display:flex; gap:6px; align-items:center;">
-                <input type="text" id="late-modal-search" placeholder="Search name..." class="form-control" style="font-size: 12px; padding:4px 8px; width:120px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="padding:4px 8px; font-size: 12px;">All</button>
-                <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="padding:4px 8px; font-size: 12px;">None</button>
-              </div>
-            </div>
-
-            <!-- Tutor Override for Late Arrival -->
-          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:rgba(var(--grade-c-rgb),0.08); border:1px solid rgba(var(--grade-c-rgb),0.25); border-radius:6px; margin-bottom:8px;">
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size: 12px; font-weight:700; color:var(--grade-c); margin:0;">
-              <input type="checkbox" id="late-modal-override-checkbox" style="width:15px; height:15px; cursor:pointer;">
-              <span>Tutor Override (Allow all late arrival students)</span>
+            <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:12px; font-weight:700; color:var(--grade-c); margin:0; user-select:none; white-space:nowrap;">
+              <input type="checkbox" id="late-modal-override-checkbox" style="width:14px; height:14px; cursor:pointer; accent-color:var(--grade-c);">
+              <span>TUTOR OVERRIDE</span>
             </label>
           </div>
-          <div id="late-modal-students-list" style="max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(0,0,0,0.3); padding:8px; display:flex; flex-direction:column; gap:6px;">
-              <!-- Populated dynamically with UNENROLLED ELIGIBLE students only -->
-            </div>
-            <div class="text-xs" style="color:#94a3b8; margin-top:6px;">
-              * Students already enrolled in this session are automatically filtered out and hidden above.
+
+          <!-- Search & Selection Toolbar Row (Strict 30px Height Controls) -->
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <input type="text" id="late-modal-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:30px; padding:0 10px; flex:1; background:#1e293b; border:1px solid rgba(255,255,255,0.18); color:#ffffff; border-radius:5px;">
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-select-all" style="height:30px; line-height:28px; padding:0 12px; font-size:12px; font-weight:700; border-radius:5px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff;">All</button>
+              <button type="button" class="btn btn-secondary btn-xs" id="btn-late-modal-deselect-all" style="height:30px; line-height:28px; padding:0 12px; font-size:12px; font-weight:700; border-radius:5px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); color:#ffffff;">None</button>
             </div>
           </div>
         </div>
 
-        <div style="padding:14px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.25);">
-          <button type="button" class="btn btn-ghost btn-modal-close-left" id="btn-cancel-late-modal" style="color:#94a3b8;">Cancel</button>
-          <button type="button" class="btn btn-tactical" id="btn-confirm-add-late" style="font-weight:700; padding:8px 20px; display:flex; align-items:center; gap:8px;">
-            Add Students to Test
+        <!-- Student Table Container (Zero-Truncation & Standardized Dimensions per §4.2) -->
+        <div style="padding:10px 16px; overflow-y:auto; flex:1; display:flex; flex-direction:column; box-sizing:border-box; min-height:220px;">
+          <div class="table-wrap" style="overflow-x:hidden !important; overflow-y:auto; flex:1; border-radius:6px; border:1px solid rgba(255, 255, 255, 0.16) !important; background:#080D1A;">
+            <table style="width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:12px; font-family:var(--fm-font-sans, 'Inter', sans-serif);">
+              <colgroup>
+                <col style="width:40px;">
+                <col style="min-width:160px;">
+                <col style="width:215px;">
+              </colgroup>
+              <thead>
+                <tr style="height:36px; background:#0F172A;">
+                  <th style="padding:6px 4px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">NO</th>
+                  <th style="padding:6px 10px; text-align:left; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">STUDENT NAME</th>
+                  <th style="padding:6px 8px; text-align:right; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="late-modal-students-table-body">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <div id="late-modal-students-list" style="display:none;"></div>
+        </div>
+
+        <!-- Standardized 60px CTA Area Invariant (Solid Navy, Left Red Cancel & Right Green Add) -->
+        <div class="modal-footer" style="height:60px; min-height:60px; max-height:60px; padding:0 16px; border-top:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
+          <!-- Cancel Button: Strictly on Left with Red Accent -->
+          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-cancel-late-modal" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:14px; font-weight:800; border-radius:6px; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer; text-transform:uppercase;">
+            Cancel
+          </button>
+
+          <!-- Middle Student Count Summary -->
+          <div style="font-size:12px; color:#cbd5e1; font-weight:700; text-align:center;">
+            Selected: <span id="late-modal-selected-count" style="color:var(--primary-tactical);">0</span> Students
+          </div>
+
+          <!-- Confirm Add Button: Strictly on Right with Green Accent -->
+          <button type="button" class="btn btn-primary" id="btn-confirm-add-late" style="height:40px; min-height:40px; line-height:38px; font-weight:800; padding:0 20px; display:inline-flex; align-items:center; gap:8px; font-size:14px; border-radius:6px; letter-spacing:0.04em; text-transform:uppercase; background:var(--grade-a); color:#090D16; border:1.5px solid var(--grade-a); box-shadow:0 0 14px rgba(0,192,0,0.45); cursor:pointer;">
+            Add to Test Now
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Modal 3: Live Test Session Monitor & Student Controller (Tier 3: 960px Wide Modal per §1.5) -->
+    <!-- Modal 3: Live Test Session Monitor & Student Controller (Window L2) -->
     <div id="modal-theme-live-monitor" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;">
-      <div class="modal-box card" style="background:#0b1329; border:1px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:960px; height:75vh; max-height:75vh; min-height:500px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
-        <!-- Standardized 60px Dual-Line Title Area (§1.5.1 Centered Title & Stacked Subtitle Invariant) -->
-        <div class="title-area dual-line" style="position:relative; padding:0 24px; height:60px; min-height:60px; max-height:60px; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:center; align-items:center; background:rgba(15,23,42,0.85); box-sizing:border-box; flex-shrink:0;">
-          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:calc(100% - 80px); overflow:hidden;">
+      <div class="modal-box card" style="background:#0F172A; border:1.5px solid rgba(255,255,255,0.18); border-radius:12px; width:95vw; max-width:860px; max-height:85vh; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <!-- Standardized 60px Solid Navy Title Area (§1.5.1 Centered Title & Stacked Subtitle Invariant) -->
+        <div class="title-area dual-line" style="position:relative; padding:0 16px; height:60px; min-height:60px; max-height:60px; border-bottom:1.5px solid rgba(255,255,255,0.12); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0;">
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:calc(100% - 40px); overflow:hidden;">
             <span id="live-modal-theme-badge" style="display:none;"></span>
-            <h3 id="live-modal-title" style="margin:0; font-size:16px; font-weight:700; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#ffffff; letter-spacing:0.02em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <h3 id="live-modal-title" style="margin:0; font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#ffffff; letter-spacing:0.04em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               LIVE TEST SESSION MONITOR
             </h3>
-            <span id="live-modal-subtitle" style="font-size:12px; font-weight:500; color:#94a3b8; margin-top:2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <span id="live-modal-subtitle" style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#94a3b8; margin-top:2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               Real-time Progress, Alarm &amp; Scoring
             </span>
           </div>
         </div>
 
-        <!-- Standardized In-Window Sub-Panel & Toolbar (§1.5.3 Strict 40px Height, 30px Controls & 5px Margin) -->
-        <div style="padding:0 24px; height:40px; min-height:40px; max-height:40px; display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:nowrap; background:rgba(15,23,42,0.6); border-bottom:1px solid rgba(255,255,255,0.06); box-sizing:border-box;">
-          <div style="display:flex; gap:5px; flex-wrap:nowrap; align-items:center;" id="live-modal-filter-tabs">
-            <button type="button" class="btn live-filter-btn active" data-filter="all" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">All (<span id="tab-cnt-all">0</span>)</button>
-            <button type="button" class="btn live-filter-btn" data-filter="in_progress" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">In Progress (<span id="tab-cnt-in-progress">0</span>)</button>
-            <button type="button" class="btn live-filter-btn" data-filter="submitted" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">Submitted (<span id="tab-cnt-submitted">0</span>)</button>
-            <button type="button" class="btn live-filter-btn" data-filter="not_started" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">Not Started (<span id="tab-cnt-not-started">0</span>)</button>
-            <button type="button" class="btn live-filter-btn" data-filter="alarm" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; border-radius:4px; white-space:nowrap;">Alarm (<span id="tab-cnt-alarm">0</span>)</button>
+        <!-- Standardized In-Window Sub-Panel & Toolbar (40px Height, 10px Gap) -->
+        <div style="padding:0 16px; height:40px; min-height:40px; max-height:40px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:nowrap; background:#0F172A; border-bottom:1px solid rgba(255,255,255,0.08); box-sizing:border-box; flex-shrink:0;">
+          <div style="display:flex; gap:8px; flex-wrap:nowrap; align-items:center;" id="live-modal-filter-tabs">
+            <button type="button" class="btn live-filter-btn active" data-filter="all" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; border-radius:5px; white-space:nowrap;">All (<span id="tab-cnt-all">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="in_progress" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; border-radius:5px; white-space:nowrap;">In Progress (<span id="tab-cnt-in-progress">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="submitted" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; border-radius:5px; white-space:nowrap;">Submitted (<span id="tab-cnt-submitted">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="not_started" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; border-radius:5px; white-space:nowrap;">Not Started (<span id="tab-cnt-not-started">0</span>)</button>
+            <button type="button" class="btn live-filter-btn" data-filter="alarm" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; border-radius:5px; white-space:nowrap;">Alarm (<span id="tab-cnt-alarm">0</span>)</button>
           </div>
 
-          <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-            <button type="button" class="btn btn-secondary" id="btn-live-modal-refresh" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:600; display:inline-flex; align-items:center; gap:5px; border-radius:4px; color:#cbd5e1; white-space:nowrap;" title="Manual Refresh">
+          <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+            <button type="button" class="btn btn-secondary" id="btn-live-modal-refresh" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px; border-radius:5px; color:#ffffff; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); white-space:nowrap;" title="Manual Refresh">
               Refresh
             </button>
-            <label style="display:inline-flex; align-items:center; gap:5px; font-size:12px; color:#cbd5e1; cursor:pointer; user-select:none; margin:0; white-space:nowrap;">
-              <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer; width:13px; height:13px;">
-              <span>Auto-Refresh (5s)</span>
+            <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#cbd5e1; cursor:pointer; user-select:none; margin:0; white-space:nowrap;">
+              <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer; width:14px; height:14px; accent-color:var(--primary-tactical);">
+              <span>Auto (5s)</span>
             </label>
-            <input type="text" id="live-modal-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:30px; padding:0 10px; width:130px; background:#1e293b; border:1px solid rgba(255,255,255,0.12); color:#ffffff; border-radius:4px;">
+            <input type="text" id="live-modal-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:30px; padding:0 10px; width:130px; background:#1e293b; border:1px solid rgba(255,255,255,0.18); color:#ffffff; border-radius:5px;">
           </div>
         </div>
 
         <!-- Sortable Live Monitor Table Container (Zero Horizontal Scroll & Fixed Layout per §1.1 & §4.4) -->
-        <div style="padding:14px 24px; overflow-y:auto; flex:1; display:flex; flex-direction:column;">
-          <div class="live-monitor-table-wrapper" style="overflow-x:hidden !important; overflow-y:auto; flex:1; border-radius:8px; border:2px solid rgba(255, 255, 255, 0.28) !important; background:#080d1a;">
-            <table class="live-monitor-table" style="width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:12px;">
+        <div style="padding:10px 16px; overflow-y:auto; flex:1; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div class="live-monitor-table-wrapper" style="overflow-x:hidden !important; overflow-y:auto; flex:1; border-radius:6px; border:1px solid rgba(255, 255, 255, 0.16) !important; background:#080D1A;">
+            <table class="live-monitor-table" style="width:100%; table-layout:fixed; border-collapse:separate; border-spacing:0; font-size:12px; font-family:var(--fm-font-sans, 'Inter', sans-serif);">
               <colgroup>
-                <col style="width:85px;">
-                <col style="min-width:230px;">
+                <col style="width:75px;">
+                <col style="min-width:180px;">
                 <col style="width:130px;">
-                <col style="width:120px;">
-                <col style="width:85px;">
-                <col style="width:85px;">
-                <col style="width:65px;">
+                <col style="width:130px;">
+                <col style="width:90px;">
+                <col style="width:80px;">
+                <col style="width:55px;">
               </colgroup>
               <thead>
-                <tr>
-                  <th style="text-align:center;">BATCH</th>
-                  <th class="sortable-th" data-sort-key="name" style="text-align:center;">NAME <span class="sort-icon" id="th-sort-name"></span></th>
-                  <th class="sortable-th" data-sort-key="status" style="text-align:center;">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
-                  <th class="sortable-th" data-sort-key="progress" style="text-align:center;">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
-                  <th class="sortable-th" data-sort-key="score" style="text-align:center;">SCORE <span class="sort-icon" id="th-sort-score"></span></th>
-                  <th class="sortable-th" data-sort-key="alarm" style="text-align:center;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
-                  <th style="text-align:center;">EXPEL</th>
+                <tr style="height:36px; background:#0F172A;">
+                  <th style="padding:6px 4px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">BATCH</th>
+                  <th class="sortable-th" data-sort-key="name" style="padding:6px 10px; text-align:left; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">NAME <span class="sort-icon" id="th-sort-name"></span></th>
+                  <th class="sortable-th" data-sort-key="status" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
+                  <th class="sortable-th" data-sort-key="progress" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
+                  <th class="sortable-th" data-sort-key="score" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">SCORE <span class="sort-icon" id="th-sort-score"></span></th>
+                  <th class="sortable-th" data-sort-key="alarm" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
+                  <th style="padding:6px 4px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">EXPEL</th>
                 </tr>
               </thead>
               <tbody id="live-modal-table-body">
@@ -629,25 +651,27 @@ export async function renderClassTestSessions(container, context = {}) {
           <div id="live-modal-students-container" style="display:none;"></div>
         </div>
 
-        <!-- Standardized 60px CTA Panel (§1.5.2 Strict 60px Height, Left Close CTA & Right Operational Panel) -->
-        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 24px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); box-sizing:border-box; flex-shrink:0;">
-          <!-- Left: Bottom-Left Close CTA Invariant -->
-          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-close-live-modal-footer" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:12px; font-weight:600; border-radius:4px; box-sizing:border-box; color:#cbd5e1;">Close Monitor</button>
+        <!-- Standardized 60px CTA Panel (Solid Navy, Left Red Close CTA & Right Operational Panel) -->
+        <div class="modal-footer" style="height:60px; min-height:60px; max-height:60px; padding:0 16px; border-top:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
+          <!-- Left: Bottom-Left Close CTA Invariant (Red Accent) -->
+          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-close-live-modal-footer" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:14px; font-weight:800; border-radius:6px; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer; text-transform:uppercase;">
+            Close Monitor
+          </button>
 
-          <!-- Right Operational Controls: NORMAL/REMEDIAL -> EDIT TIME -> TIME (Neutral Idle with Glowing Hover/Active) -->
-          <div style="display:flex; align-items:center; gap:8px;">
-            <!-- 1. Keterangan Normal/Remedial (Button with green/yellow font, neutral idle, color glow on hover) -->
-            <button type="button" class="btn btn-session-mode mode-normal" id="live-modal-mode-badge" style="cursor:default;" title="Session Mode">
+          <!-- Right Operational Controls: NORMAL/REMEDIAL -> EDIT TIME -> TIME (Standard 40px Height) -->
+          <div style="display:flex; align-items:center; gap:10px;">
+            <!-- 1. Keterangan Normal/Remedial (40px Height) -->
+            <button type="button" class="btn btn-session-mode mode-normal" id="live-modal-mode-badge" style="height:40px; min-height:40px; line-height:38px; padding:0 16px; font-size:12px; font-weight:800; border-radius:6px; border:1.5px solid rgba(0,192,0,0.4); background:rgba(0,192,0,0.08); color:var(--grade-a); cursor:default; text-transform:uppercase; white-space:nowrap;" title="Session Mode">
               NORMAL (FULL SCORE)
             </button>
 
-            <!-- 2. Edit Session Time Button (with Pop-up Menu, yellow font, neutral idle, yellow glow on hover) -->
+            <!-- 2. Edit Session Time Button (40px Height) -->
             <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
-              <button type="button" class="btn btn-session-edit-time" id="btn-live-modal-add-time" title="Adjust Remaining Exam Time (+ / -)">
+              <button type="button" class="btn btn-session-edit-time" id="btn-live-modal-add-time" style="height:40px; min-height:40px; line-height:38px; padding:0 16px; font-size:12px; font-weight:800; border-radius:6px; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.22); color:var(--grade-c); cursor:pointer; display:inline-flex; align-items:center; gap:8px; text-transform:uppercase; white-space:nowrap;" title="Adjust Remaining Exam Time (+ / -)">
                 <span>EDIT TIME</span>
                 <span style="font-size:10px;">▲</span>
               </button>
-              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
+              <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:8px; box-shadow:0 16px 36px rgba(0,0,0,0.92); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
                 <!-- Yellow Header Banner -->
                 <div style="background:rgba(var(--grade-c-rgb), 0.12); border:1px solid rgba(var(--grade-c-rgb), 0.4); color:var(--grade-c); font-weight:800; font-size:12px; padding:5px 8px; border-radius:5px; text-transform:uppercase; letter-spacing:0.05em; display:flex; align-items:center; justify-content:space-between;">
                   <span>ADJUST SESSION TIME</span>
@@ -659,7 +683,7 @@ export async function renderClassTestSessions(container, context = {}) {
                   <div style="font-size:12px; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                     ADD TIME (+)
                   </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                     <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       +5 Min
                     </button>
@@ -680,7 +704,7 @@ export async function renderClassTestSessions(container, context = {}) {
                   <div style="font-size:12px; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                     REDUCE TIME (-)
                   </div>
-                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                  <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                     <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       -5 Min
                     </button>
@@ -703,8 +727,8 @@ export async function renderClassTestSessions(container, context = {}) {
               </div>
             </div>
 
-            <!-- 3. Time Button (Neutral font, neutral idle, subtle white glow on hover) -->
-            <button type="button" class="btn btn-session-time" id="btn-live-modal-time" title="Remaining Exam Time">
+            <!-- 3. Time Button (40px Height) -->
+            <button type="button" class="btn btn-session-time" id="btn-live-modal-time" style="height:40px; min-height:40px; line-height:38px; padding:0 16px; font-size:12px; font-weight:800; border-radius:6px; background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.15); color:#ffffff; display:inline-flex; align-items:center; gap:6px; cursor:default; white-space:nowrap;" title="Remaining Exam Time">
               <span style="font-weight:600; color:#94a3b8;">TIME:</span>
               <span id="live-modal-remaining" style="font-weight:800; font-variant-numeric:tabular-nums; color:#ffffff;">--m</span>
             </button>
@@ -712,36 +736,36 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
       </div>
     </div>
+      </div>
+    </div>
 
     <!-- Modal 4: Kick Student Confirmation Modal -->
     <div id="modal-kick-student-confirm" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10005; padding:16px;">
       <div class="modal-box card" style="background:#0f172a; border:2px solid var(--grade-e); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(var(--grade-e-rgb),0.35);">
-        <div style="padding:18px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; align-items:center; gap:12px;">
-          <div>
-            <h4 style="margin:0; font-size: 16px; font-weight:800; color:var(--grade-e);">Expel Student from Exam</h4>
-            <div id="kick-confirm-student-name" style="font-size: 12px; color:#cbd5e1; margin-top:2px;">Student Name</div>
-          </div>
+        <div style="height:60px; min-height:60px; max-height:60px; padding:0 20px; background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
+          <h4 style="margin:0; font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--grade-e); text-transform:uppercase; letter-spacing:0.5px;">EXPEL STUDENT FROM EXAM</h4>
+          <div id="kick-confirm-student-name" style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Student Name</div>
         </div>
-        <div style="padding:20px; font-size: 12px; color:#cbd5e1; display:flex; flex-direction:column; gap:12px;">
-          <div>Select an action for the student's active exam attempt:</div>
+        <div style="padding:16px 20px; font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;">
+          <div style="font-family:'Inter',sans-serif; font-size:12px; font-weight:600; color:#cbd5e1;">Select an action for the student's active exam attempt:</div>
           <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
-            <input type="radio" name="kick_action" value="submit" checked style="margin-top:3px; cursor:pointer;">
+            <input type="radio" name="kick_action" value="submit" checked style="margin-top:2px; cursor:pointer;">
             <div>
-              <div style="font-weight:700; color:#ffffff;">Submit &amp; Grade Current Answers</div>
-              <div style="font-size: 12px; color:#94a3b8; margin-top:2px;">Student's exam is stopped immediately. Current answers are saved and graded automatically.</div>
+              <div style="font-family:'Inter',sans-serif; font-weight:700; color:#ffffff; font-size:12px;">Submit &amp; Grade Current Answers</div>
+              <div style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Student's exam is stopped immediately. Current answers are saved and graded automatically.</div>
             </div>
           </label>
           <label style="display:flex; align-items:flex-start; gap:10px; background:rgba(255,255,255,0.04); padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); cursor:pointer;">
-            <input type="radio" name="kick_action" value="cancel" style="margin-top:3px; cursor:pointer;">
+            <input type="radio" name="kick_action" value="cancel" style="margin-top:2px; cursor:pointer;">
             <div>
-              <div style="font-weight:700; color:var(--grade-e);">Cancel Exam (Score 0 / Cancelled)</div>
-              <div style="font-size: 12px; color:#94a3b8; margin-top:2px;">Exam is voided and the attempt status is set to 'cancelled' with score 0.</div>
+              <div style="font-family:'Inter',sans-serif; font-weight:700; color:var(--grade-e); font-size:12px;">Cancel Exam (Score 0 / Cancelled)</div>
+              <div style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Exam is voided and the attempt status is set to 'cancelled' with score 0.</div>
             </div>
           </label>
         </div>
-        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); box-sizing:border-box;">
-          <button type="button" class="btn btn-ghost" id="btn-cancel-kick" style="height:40px; min-height:40px; line-height:38px; padding:0 18px; font-size:12px; font-weight:600; border-radius:4px; box-sizing:border-box; color:#94a3b8;">Cancel</button>
-          <button type="button" class="btn btn-danger" id="btn-confirm-kick" style="height:40px; min-height:40px; line-height:38px; background:var(--grade-e); border-color:var(--grade-e, #cc0000); font-weight:700; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; display:inline-flex; align-items:center; gap:6px;">
+        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box;">
+          <button type="button" class="btn btn-modal-close-left" id="btn-cancel-kick" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); color:#ffffff; font-weight:600; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; cursor:pointer;">Cancel</button>
+          <button type="button" class="btn" id="btn-confirm-kick" style="height:40px; min-height:40px; line-height:38px; background:var(--grade-e) !important; border:1.5px solid var(--grade-e) !important; color:#ffffff !important; font-weight:800; font-size:14px; padding:0 18px; border-radius:4px; box-sizing:border-box; display:inline-flex; align-items:center; gap:6px; cursor:pointer; box-shadow:0 0 14px rgba(255,0,0,0.45);">
             Expel Now
           </button>
         </div>
@@ -750,21 +774,17 @@ export async function renderClassTestSessions(container, context = {}) {
 
     <!-- Modal 5: Student Alarm Detail & Forgive Modal -->
     <div id="modal-student-alarm-detail" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:10010; padding:16px;">
-      <div class="modal-box card" style="background:#0f172a; border:1px solid rgba(var(--grade-e-rgb),0.35); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
-        <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.1); display:flex; justify-content:space-between; align-items:center; background:rgba(var(--grade-e-rgb),0.12);">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <div>
-              <h4 id="alarm-detail-student-name" style="margin:0; font-size: 16px; font-weight:800; color:#ffffff;">Log Alarm Anti-Cheat</h4>
-              <div id="alarm-detail-meta" style="font-size: 12px; color:#fca5a5; margin-top:2px;">Exam integrity warning history</div>
-            </div>
-          </div>
+      <div class="modal-box card" style="background:#0f172a; border:1.5px solid rgba(var(--grade-e-rgb),0.35); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
+        <div style="height:60px; min-height:60px; max-height:60px; padding:0 20px; background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
+          <h4 id="alarm-detail-student-name" style="margin:0; font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">STUDENT INTEGRITY &amp; TAB-SWITCH ALARMS</h4>
+          <div id="alarm-detail-meta" style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Exam integrity warning history</div>
         </div>
-        <div id="alarm-detail-logs-list" style="padding:16px 20px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+        <div id="alarm-detail-logs-list" style="padding:10px 16px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;">
           <!-- Items injected dynamically -->
         </div>
-        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); background:rgba(15,23,42,0.6); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; box-sizing:border-box;">
-          <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; font-size: 12px; font-weight:600; padding:0 16px; border-radius:4px; box-sizing:border-box;">Close</button>
-          <button type="button" class="btn" id="btn-clear-student-alarms" style="height:40px; min-height:40px; line-height:38px; background:rgba(var(--grade-c-rgb),0.12); border:1px solid var(--grade-c); color:var(--grade-c); font-size: 12px; font-weight:700; padding:0 14px; border-radius:4px; cursor:pointer; box-sizing:border-box;">
+        <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); background:#1E293B; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
+          <button type="button" class="btn btn-modal-close-left" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); color:#ffffff; font-weight:600; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; cursor:pointer;">Close</button>
+          <button type="button" class="btn" id="btn-clear-student-alarms" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,255,0,0.12); border:1.5px solid var(--grade-c); color:var(--grade-c); font-size:12px; font-weight:700; padding:0 16px; border-radius:4px; cursor:pointer; box-sizing:border-box;">
             Reset / Forgive Student Alarms
           </button>
         </div>
@@ -992,10 +1012,10 @@ function renderThemeAnalyticsColumn(theme, questions = []) {
 
         return `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
-            <td style="padding:6px 8px; color:#ffffff; font-weight:600; font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06);" title="${escapeHtml(target)}">${escapeHtml(target)}</td>
-            <td style="padding:6px 8px; color:${rateColor}; font-weight:500; font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06);" title="${escapeHtml(cleanMistake)}">${escapeHtml(cleanMistake)}</td>
-            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:600; font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:50px;">${failCount}</td>
-            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:700; font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:52px;" title="Error Rate: ${failRate}%">${failRate}%</td>
+            <td style="padding:6px 8px; color:#ffffff; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:none;" title="${escapeHtml(target)}">${escapeHtml(target)}</td>
+            <td style="padding:6px 8px; color:#38bdf8; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:none;" title="${escapeHtml(cleanMistake)}">${escapeHtml(cleanMistake)}</td>
+            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:50px; text-shadow:none;">${failCount}</td>
+            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:52px; text-shadow:none;" title="Error Rate: ${failRate}%">${failRate}%</td>
           </tr>
         `;
       }).join('');
@@ -1594,22 +1614,14 @@ function openThemeSessionModal(container, theme, mode, context) {
         const isChecked = checkedStudentIds.has(s.id) && selectable;
         const cleanName = cleanStudentName(s.name);
 
-        let badgeBg = 'rgba(56,189,248,0.16)';
-        let badgeColor = 'var(--primary-tactical)';
-        let badgeBorder = '1px solid rgba(56,189,248,0.4)';
+        let statusColor = 'var(--primary-tactical)';
 
         if (item.statusType === 'success' || item.isEligible) {
-          badgeBg = 'rgba(0,192,0,0.16)';
-          badgeColor = 'var(--grade-a)';
-          badgeBorder = '1px solid rgba(0,192,0,0.4)';
+          statusColor = 'var(--grade-a)';
         } else if (item.statusType === 'amber' || item.statusType === 'warning') {
-          badgeBg = 'rgba(255,255,0,0.16)';
-          badgeColor = 'var(--grade-c)';
-          badgeBorder = '1px solid rgba(255,255,0,0.45)';
+          statusColor = 'var(--grade-c)';
         } else if (item.statusType === 'danger') {
-          badgeBg = 'rgba(255,0,0,0.15)';
-          badgeColor = 'var(--grade-e)';
-          badgeBorder = '1px solid rgba(255,0,0,0.35)';
+          statusColor = 'var(--grade-e)';
         }
 
         const disabledAttr = selectable ? '' : 'disabled';
@@ -1621,14 +1633,14 @@ function openThemeSessionModal(container, theme, mode, context) {
             <td style="padding:6px 6px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08); width:40px;">
               <label style="display:flex; align-items:center; justify-content:center; gap:10px; ${cursorStyle} margin:0;">
                 <input type="checkbox" class="open-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} ${disabledAttr} style="width:15px; height:15px; accent-color:var(--primary-tactical); ${cursorStyle}">
-                <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:700; font-size:12px;">${idx + 1}</span>
+                <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px;">${idx + 1}</span>
               </label>
             </td>
             <td style="padding:6px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); color:${selectable ? '#ffffff' : '#cbd5e1'}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px; white-space:nowrap;">
               ${escapeHtml(cleanName)}
             </td>
             <td style="padding:6px 8px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px; white-space:nowrap; width:215px;">
-              <span style="display:inline-block; padding:3px 8px; border-radius:4px; font-weight:800; font-size:12px; letter-spacing:0.02em; background:${badgeBg}; color:${badgeColor}; border:${badgeBorder};">
+              <span style="font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px; letter-spacing:0.02em; color:${statusColor}; text-shadow:none;">
                 ${escapeHtml(item.statusLabel)}
               </span>
             </td>
@@ -1861,17 +1873,17 @@ function openThemeLateModal(container, theme, context) {
   const modeBadgeEl = modal.querySelector('#late-modal-mode-badge');
   const confirmBtn = modal.querySelector('#btn-confirm-add-late');
 
-  titleEl.textContent = `Theme ${theme.code} • ${theme.name}`;
-  batchNameEl.textContent = `${theme.liveBatchName} (${theme.allowedStudentIds.length} Enrolled Students)`;
-  remainingEl.textContent = `${theme.remainingMinutes} Mins`;
+  titleEl.textContent = `THEME ${theme.code || 'G'} — ${(theme.name || 'GENERAL').toUpperCase()} • LATE ARRIVAL`;
+  batchNameEl.textContent = `${theme.liveBatchName || 'Batch'} • ${(theme.allowedStudentIds?.length || 0)} Enrolled`;
+  remainingEl.textContent = `${theme.remainingMinutes || 0} Mins`;
 
   if (theme.isRemedial) {
-    modeBadgeEl.style.background = 'rgba(var(--grade-c-rgb), 0.2)';
+    modeBadgeEl.style.background = 'rgba(255, 255, 0, 0.12)';
     modeBadgeEl.style.border = '1px solid var(--grade-c)';
     modeBadgeEl.style.color = 'var(--grade-c)';
     modeBadgeEl.textContent = 'REMEDIAL SESSION';
   } else {
-    modeBadgeEl.style.background = 'rgba(var(--grade-a-rgb), 0.2)';
+    modeBadgeEl.style.background = 'rgba(0, 192, 0, 0.12)';
     modeBadgeEl.style.border = '1px solid var(--grade-a)';
     modeBadgeEl.style.color = 'var(--grade-a)';
     modeBadgeEl.textContent = 'EXAM SESSION';
@@ -1917,56 +1929,82 @@ function openThemeLateModal(container, theme, context) {
     let list = lateOverrideActive ? evaluated : eligibleLateList;
     const q = lateSearchQuery.trim().toLowerCase();
     if (q) {
-      list = list.filter(e => (e.student.name || '').toLowerCase().includes(q));
+      list = list.filter(e => {
+        const raw = (e.student.name || '').toLowerCase();
+        const clean = cleanStudentName(e.student.name).toLowerCase();
+        return raw.includes(q) || clean.includes(q);
+      });
     }
 
-    list.sort((a, b) => (a.student.name || '').localeCompare(b.student.name || '', undefined, { sensitivity: 'base', numeric: true }));
+    list.sort((a, b) => {
+      const nA = cleanStudentName(a.student.name);
+      const nB = cleanStudentName(b.student.name);
+      return nA.localeCompare(nB, undefined, { sensitivity: 'base', numeric: true });
+    });
 
     const selectedCountEl = modal.querySelector('#late-modal-selected-count');
     if (selectedCountEl) selectedCountEl.textContent = String(checkedLateIds.size);
 
-    const listContainer = modal.querySelector('#late-modal-students-list');
-    if (!listContainer) return;
+    const tableBody = modal.querySelector('#late-modal-students-table-body');
+    if (!tableBody) return;
 
     if (list.length === 0) {
-      listContainer.innerHTML = `
-        <div style="padding:16px; text-align:center; color:#94a3b8; font-size: 12px;">
-          ${q ? `No students match "${escapeHtml(q)}".` : 'All eligible students in this batch are already enrolled in the test.'}
-        </div>
+      tableBody.innerHTML = `
+        <tr>
+          <td colspan="3" style="padding:24px 16px; text-align:center; color:#94a3b8; font-size:12px;">
+            ${q ? `No students match "${escapeHtml(q)}".` : 'All eligible students in this batch are already enrolled in the test.'}
+          </td>
+        </tr>
       `;
       return;
     }
 
-    listContainer.innerHTML = list.map(item => {
+    tableBody.innerHTML = list.map((item, idx) => {
       const s = item.student;
       const isChecked = checkedLateIds.has(s.id);
-      const studentName = String(s.name || 'Unnamed').replace(/^(mr\.?|miss|mrs\.?|ms\.?)\s+/i, '').trim();
-      const initial = (studentName || 'S').charAt(0).toUpperCase();
+      const cleanName = cleanStudentName(s.name);
+
+      let statusColor = 'var(--primary-tactical)';
+      if (item.statusType === 'success' || item.isEligible) {
+        statusColor = 'var(--grade-a)';
+      } else if (item.statusType === 'amber' || item.statusType === 'warning') {
+        statusColor = 'var(--grade-c)';
+      } else if (item.statusType === 'danger' || !item.isEligible) {
+        statusColor = 'var(--grade-e)';
+      }
 
       return `
-        <label style="display:flex; align-items:center; justify-content:space-between; gap:10px; padding:7px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); cursor:pointer;">
-          <div style="display:flex; align-items:center; gap:10px;">
-            <input type="checkbox" class="late-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
-            <span style="width:24px; height:24px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size: 12px; font-weight:700;">
-              ${initial}
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.08); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
+          <td style="padding:6px 6px; text-align:center; border-bottom:1px solid rgba(255,255,255,0.08); width:40px;">
+            <label style="display:flex; align-items:center; justify-content:center; gap:10px; cursor:pointer; margin:0;">
+              <input type="checkbox" class="late-student-checkbox" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:15px; height:15px; accent-color:var(--primary-tactical); cursor:pointer;">
+              <span style="font-variant-numeric:tabular-nums; color:#94a3b8; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px;">${idx + 1}</span>
+            </label>
+          </td>
+          <td style="padding:6px 10px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.08); color:#ffffff; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px; white-space:nowrap;">
+            ${escapeHtml(cleanName)}
+          </td>
+          <td style="padding:6px 8px; text-align:right; border-bottom:1px solid rgba(255,255,255,0.08); font-size:12px; white-space:nowrap; width:215px;">
+            <span style="font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size:12px; letter-spacing:0.02em; color:${statusColor}; text-shadow:none;">
+              ${escapeHtml(item.statusLabel)}
             </span>
-            <span style="font-size: 12px; font-weight:600; color:#ffffff;">${escapeHtml(studentName)}</span>
-          </div>
-          <span style="font-size: 12px; font-weight:700; padding:2px 8px; border-radius:4px; background:rgba(99, 102, 241, 0.2); color:#a5b4fc;">
-            ${escapeHtml(item.statusLabel)}
-          </span>
-        </label>
+          </td>
+        </tr>
       `;
     }).join('');
   };
 
-  modal.querySelector('#late-modal-students-list')?.addEventListener('change', (e) => {
-    if (e.target.classList.contains('late-student-checkbox')) {
-      if (e.target.checked) checkedLateIds.add(e.target.value);
-      else checkedLateIds.delete(e.target.value);
-      renderLateList();
-    }
-  });
+  const tableBodyEl = modal.querySelector('#late-modal-students-table-body');
+  if (tableBodyEl) {
+    tableBodyEl.onchange = (e) => {
+      if (e.target.classList.contains('late-student-checkbox')) {
+        if (e.target.checked) checkedLateIds.add(e.target.value);
+        else checkedLateIds.delete(e.target.value);
+        const selectedCountEl = modal.querySelector('#late-modal-selected-count');
+        if (selectedCountEl) selectedCountEl.textContent = String(checkedLateIds.size);
+      }
+    };
+  }
 
   modal.querySelector('#late-modal-search').oninput = (e) => {
     lateSearchQuery = e.target.value;
@@ -2073,17 +2111,23 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     themeBadgeEl.textContent = `Theme ${theme.code}`;
   }
 
-  titleEl.innerHTML = `LIVE TEST SESSION MONITOR: THEME ${theme.code}`;
+  titleEl.innerHTML = `THEME ${theme.code || 'G'} — ${(theme.name || 'EXAM').toUpperCase()} • LIVE MONITOR`;
   const modLabel = (theme.wordsTest && theme.phrasesTest) ? 'Words & Phrases Modules' : (theme.wordsTest ? 'Words Module' : (theme.phrasesTest ? 'Phrases Module' : 'Tasks Module'));
-  subtitleEl.textContent = `${theme.name} Test • ${theme.liveBatchName} • ${modLabel}`;
+  subtitleEl.textContent = `${theme.name} Test • ${theme.liveBatchName || 'Batch'} • ${modLabel}`;
 
   if (modeBadgeEl) {
     if (theme.isRemedial) {
       modeBadgeEl.className = 'btn btn-session-mode mode-remedial';
       modeBadgeEl.textContent = 'REMEDIAL (MAX 60%)';
+      modeBadgeEl.style.borderColor = 'rgba(255,255,0,0.4)';
+      modeBadgeEl.style.background = 'rgba(255,255,0,0.08)';
+      modeBadgeEl.style.color = 'var(--grade-c)';
     } else {
       modeBadgeEl.className = 'btn btn-session-mode mode-normal';
       modeBadgeEl.textContent = 'NORMAL (FULL SCORE)';
+      modeBadgeEl.style.borderColor = 'rgba(0,192,0,0.4)';
+      modeBadgeEl.style.background = 'rgba(0,192,0,0.08)';
+      modeBadgeEl.style.color = 'var(--grade-a)';
     }
   }
 
@@ -2095,7 +2139,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   const updateRemainingDisplay = () => {
     const diffMs = targetEndMs - Date.now();
     if (diffMs <= 0) {
-      remainingEl.innerHTML = '<span style="color:var(--grade-e); font-weight:800;">HABIS</span>';
+      remainingEl.innerHTML = '<span style="color:var(--grade-e); font-weight:800;">EXPIRED</span>';
     } else {
       const mins = Math.floor(diffMs / 60000);
       const secs = Math.floor((diffMs % 60000) / 1000);
@@ -2420,8 +2464,8 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       renderLiveMonitorUI();
 
       if (footerInfoEl) {
-        const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        footerInfoEl.textContent = `Last updated: ${timeStr} WITA • Real-time synchronized`;
+        const timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        footerInfoEl.textContent = `Last updated: ${timeStr} • Real-time synchronized`;
       }
     } catch (err) {
       console.error('Error loading live test session data:', err);
@@ -2495,9 +2539,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     const alarmTabBtn = modal.querySelector('.live-filter-btn[data-filter="alarm"]');
     if (alarmTabBtn) {
       if (studentsWithAlarms > 0) {
-        alarmTabBtn.style.color = 'var(--grade-e)';
+        alarmTabBtn.classList.add('has-alarms');
       } else {
-        alarmTabBtn.style.color = '';
+        alarmTabBtn.classList.remove('has-alarms');
       }
     }
 
@@ -2505,11 +2549,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     modal.querySelectorAll('.live-filter-btn').forEach(btn => {
       const f = btn.getAttribute('data-filter');
       if (f === _liveMonitorActiveFilter) {
-        btn.classList.add('btn-primary', 'active');
-        btn.classList.remove('btn-secondary');
+        btn.classList.add('active');
       } else {
-        btn.classList.add('btn-secondary');
-        btn.classList.remove('btn-primary', 'active');
+        btn.classList.remove('active');
       }
     });
 
@@ -2604,65 +2646,65 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       }
 
       return `
-        <tr class="${rowClass}">
+        <tr class="${rowClass}" style="border-bottom:1px solid rgba(255,255,255,0.08); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='transparent'">
           <!-- 1. BATCH: Dedicated Column to the left of Name -->
-          <td style="text-align:center; white-space:nowrap; font-size:12px; font-weight:600; color:#94a3b8;">
+          <td style="padding:6px 4px; text-align:center; white-space:nowrap; font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.08);">
             ${escapeHtml(theme.liveBatchName || '—')}
           </td>
 
           <!-- 2. NAME: Flex Primary Column (Student Name only, zero parentheses, zero avatar/circle) -->
-          <td style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <td style="padding:6px 10px; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.08);">
             <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:12px;">
-              <span style="font-weight:600; color:#ffffff;">${escapeHtml(studentName)}</span>
+              <span style="font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#ffffff;">${escapeHtml(studentName)}</span>
             </div>
           </td>
 
-          <!-- 3. TEST STATUS: Borderless semantic text on single line, centered -->
-          <td style="text-align:center; white-space:nowrap;">
-            <span style="display:inline-flex; align-items:center; gap:6px; color:${item.heartbeatColor}; font-size:12px; font-weight:500;">
+          <!-- 3. TEST STATUS: Borderless semantic text on single line, centered (No Capsule, No Glow) -->
+          <td style="padding:6px 6px; text-align:center; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <span style="display:inline-flex; align-items:center; gap:6px; color:${item.heartbeatColor}; font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); text-shadow:none;">
               <span style="width:7px; height:7px; border-radius:50%; background:${item.heartbeatColor}; display:inline-block; flex-shrink:0;"></span>
               ${item.heartbeatText}
             </span>
           </td>
 
-          <!-- 4. PROGRESS: Tabular single line, neutral when unstarted, centered -->
-          <td style="text-align:center; white-space:nowrap;">
-            <span style="font-size:12px; font-weight:500; color:${progressColor}; font-variant-numeric:tabular-nums;">
+          <!-- 4. PROGRESS: Tabular single line, neutral when unstarted, centered (No Capsule, No Glow) -->
+          <td style="padding:6px 6px; text-align:center; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,0.08);">
+            <span style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:${progressColor}; font-variant-numeric:tabular-nums; text-shadow:none;">
               ${progressText}
             </span>
           </td>
 
-          <!-- 5. SCORE: Single line, em dash if un-evaluated, centered -->
-          <td style="text-align:center; white-space:nowrap;">
+          <!-- 5. SCORE: Single line, em dash if un-evaluated, centered (No Glow) -->
+          <td style="padding:6px 6px; text-align:center; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,0.08);">
             ${item.isEvaluated ? `
-              <span style="display:inline-flex; align-items:center; gap:6px;">
-                <span class="grade-circle ${circleClass}" style="width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; background:${scoreColor}; color:${circleText}; flex-shrink:0;">
+              <span style="display:inline-flex; align-items:center; gap:6px; text-shadow:none;">
+                <span class="grade-circle ${circleClass}" style="width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; background:${scoreColor}; color:${circleText}; flex-shrink:0; text-shadow:none;">
                   ${gradeText}
                 </span>
-                <span style="font-size:12px; font-weight:500; color:${scoreColor}; font-variant-numeric:tabular-nums;">
+                <span style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:${scoreColor}; font-variant-numeric:tabular-nums; text-shadow:none;">
                   ${scoreDisplay}
                 </span>
               </span>
             ` : `
-              <span style="font-size:12px; font-weight:400; color:#64748b; font-variant-numeric:tabular-nums;">—</span>
+              <span style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#64748b; font-variant-numeric:tabular-nums; text-shadow:none;">—</span>
             `}
           </td>
 
-          <!-- 6. ALARM: Borderless text (Green if 0, Red if > 0), centered -->
-          <td style="text-align:center; white-space:nowrap;">
+          <!-- 6. ALARM: Borderless text (Green if 0, Red if > 0), centered (No Capsule, No Glow) -->
+          <td style="padding:6px 6px; text-align:center; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,0.08);">
             ${item.alarmCount === 0 ? `
-              <span style="font-size:12px; font-weight:500; color:var(--grade-a);">
+              <span style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:var(--grade-a); text-shadow:none;">
                 0 Clean
               </span>
             ` : `
-              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(studentName)}" style="font-size:12px; font-weight:600; color:var(--grade-e); cursor:pointer; text-decoration:underline;" title="Click to view details of ${item.alarmCount} anti-cheat alarms">
+              <span class="btn-inspect-student-alarms" data-student-id="${s.id}" data-student-name="${escapeHtml(studentName)}" style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:var(--grade-e); cursor:pointer; text-decoration:underline; text-shadow:none;" title="Click to view details of ${item.alarmCount} anti-cheat alarms">
                 ${item.alarmCount}x Alarm
               </span>
             `}
           </td>
 
           <!-- 7. EXPEL: Single responsibility column with SVG vector icon -->
-          <td style="text-align:center; white-space:nowrap;">
+          <td style="padding:6px 4px; text-align:center; white-space:nowrap; border-bottom:1px solid rgba(255,255,255,0.08);">
             <button type="button" class="btn-kick-student" data-student-id="${s.id}" data-student-name="${escapeHtml(studentName)}" style="background:transparent; border:none; padding:4px; color:var(--grade-e); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; transition:color 0.15s ease, transform 0.15s ease;" title="Expel student from exam session">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -2976,31 +3018,31 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   const listEl = alarmModal.querySelector('#alarm-detail-logs-list');
 
   const studentName = String(student.name || 'Student').replace(/^(mr\.?|miss|mrs\.?|ms\.?)\s+/i, '').trim();
-  if (nameEl) nameEl.textContent = `${studentName} (${alarmsList.length}x ALARMS)`;
-  if (metaEl) metaEl.textContent = `Batch ${theme.liveBatchName} • Theme ${theme.code} (${theme.name})`;
+  if (nameEl) nameEl.textContent = 'STUDENT INTEGRITY & TAB-SWITCH ALARMS';
+  if (metaEl) metaEl.textContent = `${studentName} • ${alarmsList.length} Alarm${alarmsList.length === 1 ? '' : 's'} Recorded • Theme ${theme.code}`;
 
   if (listEl) {
     if (alarmsList.length === 0) {
       listEl.innerHTML = `
-        <div style="text-align:center; color:var(--grade-a); padding:24px 10px; font-weight:700;">
+        <div style="text-align:center; color:var(--grade-a); padding:24px 10px; font-family:'Inter',sans-serif; font-size:12px; font-weight:600;">
           No integrity alarm records for this student.
         </div>
       `;
     } else {
       listEl.innerHTML = alarmsList.map((item, idx) => {
         const timeStr = item.time
-          ? new Date(item.time).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' WITA'
+          ? new Date(item.time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
           : '-';
         return `
-          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+          <div style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.25); border-radius:8px; padding:10px 14px; display:flex; justify-content:space-between; align-items:center; gap:10px; box-sizing:border-box;">
             <div>
-              <div style="font-weight:700; color:#ffffff; font-size: 12px; display:flex; align-items:center; gap:6px;">
-                <span style="color:var(--grade-e);">Incident #${idx + 1}</span>
-                <span style="font-size: 12px; color:#fca5a5;">(Strike ${item.strike || 1})</span>
+              <div style="font-family:'Inter',sans-serif; font-size:12px; display:flex; align-items:center; gap:6px;">
+                <span style="font-weight:700; color:var(--grade-e);">Incident #${idx + 1}</span>
+                <span style="font-weight:400; color:#cbd5e1;">(Strike ${item.strike || 1})</span>
               </div>
-              <div style="font-size: 12px; color:#cbd5e1; margin-top:3px;">${escapeHtml(item.reason)}</div>
+              <div style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:3px;">${escapeHtml(item.reason)}</div>
             </div>
-            <div style="font-size: 12px; font-weight:700; color:#94a3b8; white-space:nowrap;">
+            <div style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; white-space:nowrap;">
               ${timeStr}
             </div>
           </div>
@@ -3016,7 +3058,7 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   if (resetBtn) {
     resetBtn.onclick = async () => {
       const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
-      if (!confirm(`Reset all anti-cheat alarms for ${student.name}? This will treat previous warnings as false alarms.`)) return;
+      if (!confirm(`Reset all exam integrity alarms for ${student.name}? This will treat previous warnings as false alarms.`)) return;
 
       try {
         await resetStudentTestAlarms({ studentId: student.id, testIds });

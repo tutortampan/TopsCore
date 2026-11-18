@@ -4999,9 +4999,9 @@ body.dashboard-page #welcome-banner-section[data-tier="LET'S GO"] {
 
 /* Next Assessment Deck: Exact 80px Height (60px Left Title + 20px Rainbow / Full-Height 80px Right Test Icon) */
 body.dashboard-page .dashboard-next-test-deck {
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
   flex-shrink: 0 !important;
   display: flex !important;
   align-items: center !important;
@@ -5010,9 +5010,9 @@ body.dashboard-page .dashboard-next-test-deck {
 }
 
 body.dashboard-page .next-test-card {
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
   width: 100% !important;
   border-radius: 12px !important;
   display: flex !important;
@@ -5033,25 +5033,28 @@ body.dashboard-page .next-test-card:hover {
   box-shadow: 0 0 16px rgba(var(--tier-rgb), 0.35) !important;
 }
 
-/* Left Column: Title (top 60px) + Rainbow 1-7 (bottom 20px) */
+/* Left Column: Title + Rainbow 1-7 (Flexible Height & Strict 10px Padding) */
 body.dashboard-page .next-test-col-left {
   flex: 1 1 auto !important;
   min-width: 0 !important;
-  height: 100% !important;
+  height: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: space-between !important;
-  padding: 6px 10px 6px 12px !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  padding: 10px !important;
   box-sizing: border-box !important;
 }
 
 body.dashboard-page .next-test-title-wrap {
-  height: 44px !important;
-  min-height: 44px !important;
-  max-height: 44px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
   display: flex !important;
-  align-items: center !important;
+  flex-direction: column !important;
+  justify-content: center !important;
   min-width: 0 !important;
+  gap: 3px !important;
 }
 
 body.dashboard-page .next-test-title-wrap .next-asm-title {
@@ -5084,19 +5087,19 @@ body.dashboard-page .rainbow-pass-bar {
 }
 
 body.dashboard-page .rainbow-box {
-  width: 22px !important;
-  height: 22px !important;
-  min-width: 22px !important;
-  max-width: 22px !important;
-  flex: 0 0 22px !important;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  flex: 0 0 24px !important;
   aspect-ratio: 1 / 1 !important;
-  border-radius: 5px !important;
+  border-radius: 6px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   line-height: 1 !important;
   font-variant-numeric: tabular-nums !important;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -5113,27 +5116,28 @@ body.dashboard-page .rainbow-box[data-step="5"].is-lit { background: var(--prima
 body.dashboard-page .rainbow-box[data-step="6"].is-lit { background: var(--clr-accent-1, #6366f1) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(99, 102, 241, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 body.dashboard-page .rainbow-box[data-step="7"].is-lit { background: var(--quad-d, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(192, 132, 252, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 
-/* Dimmed / Unreached boxes */
+/* Dimmed / Unreached boxes: jelas dan kontras */
 body.dashboard-page .rainbow-box.is-dim {
-  background: rgba(30, 41, 59, 0.45) !important;
-  border: 1px dashed rgba(255, 255, 255, 0.15) !important;
-  color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1.5px dashed rgba(255, 255, 255, 0.45) !important;
+  color: #f1f5f9 !important;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Right Column: Full-Height 80px Action Column (TEST ICON) */
+/* Right Column: Action Slot (Sekat Dibiarkan & Padding Tepat) */
 body.dashboard-page .next-test-col-right {
-  width: 68px !important;
-  min-width: 68px !important;
-  max-width: 68px !important;
-  height: 100% !important;
+  width: auto !important;
+  min-width: 64px !important;
+  height: auto !important;
+  align-self: stretch !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-left: 1px solid rgba(var(--tier-rgb), 0.28) !important;
-  background: rgba(var(--tier-rgb), 0.05) !important;
+  border-left: 1.5px solid rgba(var(--tier-rgb), 0.35) !important;
+  background: transparent !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
-  transition: background 0.2s ease !important;
+  padding: 10px !important;
 }
 
 body.dashboard-page .next-test-col-right .pass-counter-btn {
@@ -5363,9 +5367,9 @@ body.dashboard-page #bottom-ad-banner,
   align-items: center !important;
   justify-content: flex-start !important;
   text-align: left !important;
-  padding-left: clamp(16px, 4vw, 24px) !important;
+  padding-left: 16px !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
   box-sizing: border-box !important;
@@ -5374,7 +5378,7 @@ body.dashboard-page #bottom-ad-banner,
 
 .topscore-locked-banner .banner-brand,
 #bottom-ad-banner .banner-brand {
-  font-size: clamp(1.05rem, 3vw, 1.25rem) !important;
+  font-size: 16px !important;
   font-weight: 900 !important;
   color: #38bdf8 !important;
   letter-spacing: 0.05em !important;
@@ -5383,7 +5387,7 @@ body.dashboard-page #bottom-ad-banner,
 
 .topscore-locked-banner .banner-author,
 #bottom-ad-banner .banner-author {
-  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.02em !important;
@@ -5474,7 +5478,7 @@ body.dashboard-page .dashboard-header-brand {
   text-align: center !important;
   text-transform: uppercase !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(0.95rem, 3.8vw, 1.15rem) !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
   letter-spacing: 0.05em !important;
   color: #f8fafc !important;
@@ -5635,7 +5639,7 @@ body.dashboard-page #banner-avatar-img {
 
 body.dashboard-page #banner-avatar-initial {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 26px !important;
+  font-size: 30px !important;
   font-weight: 800 !important;
   color: var(--tier-color, #FFFF00) !important;
   line-height: 1 !important;
@@ -5742,7 +5746,7 @@ body.dashboard-page .grade-card {
   width: 100% !important;
   flex-shrink: 0 !important;
   display: grid !important;
-  grid-template-columns: 1fr 1.35fr 1.1fr !important;
+  grid-template-columns: 0.8fr 1.55fr 0.95fr !important;
   gap: 10px !important; /* Strict 10px Gap Lock */
   align-items: stretch !important;
   justify-content: center !important;
@@ -5767,7 +5771,7 @@ body.dashboard-page .perf-pillar {
   justify-content: center !important;
   text-align: center !important;
   height: 100% !important;
-  padding: 8px 6px !important;
+  padding: 8px 4px !important;
   border-radius: 12px !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
@@ -5777,21 +5781,15 @@ body.dashboard-page .perf-pillar {
 }
 
 body.dashboard-page .perf-pillar-label {
-  display: block !important;
-  font-size: 12px !important; /* Strict Zero Sub-12px Invariant */
-  font-weight: 800 !important;
-  letter-spacing: 0.05em !important;
-  text-transform: uppercase !important;
-  color: #64748b !important;
-  line-height: 1.2 !important;
-  margin-bottom: 2px !important;
+  display: none !important;
 }
 
 body.dashboard-page .perf-pillar-val-wrap {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  height: auto !important;
+  height: 100% !important;
+  width: 100% !important;
   min-height: 0 !important;
   max-height: none !important;
 }
@@ -5808,18 +5806,19 @@ body.dashboard-page #stat-overall-grade-value {
   filter: none !important;
 }
 
-/* Pillar 2: DESCRIPTION (Level 2.5: 14px, Font Sesuai Warna Grade) */
+/* Pillar 2: DESCRIPTION (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-desc .perf-pillar-val,
 body.dashboard-page #dashboard-achievement-text {
   font-family: 'Outfit', sans-serif !important;
-  font-size: 14px !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.04em !important;
+  font-size: 30px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.01em !important;
   text-transform: uppercase !important;
   color: var(--tier-color, #FFFF00) !important;
   text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.3) !important;
-  line-height: 1.1 !important;
+  line-height: 1 !important;
   filter: none !important;
+  white-space: nowrap !important;
 }
 
 /* Pillar 3: RATE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
@@ -5835,12 +5834,12 @@ body.dashboard-page #bottom-stat-avg-score {
   filter: none !important;
 }
 
-/* 5. Next Test Card: Exactly 80px (60px Title Wrap + 20px Rainbow / 80px Action Column) */
+/* 5. Next Test Card: Flexible Dynamic Height, Strict 10px Padding, High-Contrast Text & Rainbow Pips */
 body.dashboard-page #up-next-section,
 body.dashboard-page .dashboard-next-test-deck {
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
   width: 100% !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
@@ -5853,14 +5852,14 @@ body.dashboard-page .dashboard-next-test-deck {
 }
 
 body.dashboard-page .next-test-card {
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
   width: 100% !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   margin: 0 !important;
-  border-radius: 14px !important;
+  border-radius: 12px !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: stretch !important;
@@ -5875,22 +5874,23 @@ body.dashboard-page .next-test-card {
 body.dashboard-page .next-test-col-left {
   flex: 1 1 auto !important;
   min-width: 0 !important;
-  height: 100% !important;
+  height: auto !important;
   display: flex !important;
   flex-direction: column !important;
-  justify-content: space-between !important;
+  justify-content: center !important;
   align-items: flex-start !important;
   text-align: left !important;
-  padding: 4px 10px 4px 12px !important;
+  padding: 10px !important; /* Strict 10px Card Internal Padding */
+  gap: 8px !important;
   box-sizing: border-box !important;
-  border-top-left-radius: 13px !important;
-  border-bottom-left-radius: 13px !important;
+  border-top-left-radius: 11px !important;
+  border-bottom-left-radius: 11px !important;
 }
 
 body.dashboard-page .next-test-title-wrap {
-  height: 52px !important;
-  min-height: 52px !important;
-  max-height: 52px !important;
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important;
@@ -5898,15 +5898,15 @@ body.dashboard-page .next-test-title-wrap {
   text-align: left !important;
   width: 100% !important;
   min-width: 0 !important;
-  gap: 1px !important;
+  gap: 3px !important;
 }
 
 body.dashboard-page .next-test-title-wrap .next-asm-title,
 body.dashboard-page .next-test-primary-name {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 14px !important;
-  font-weight: 600 !important;
-  color: #f8fafc !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
   line-height: 1.25 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -5919,9 +5919,9 @@ body.dashboard-page .next-test-primary-name {
 body.dashboard-page .next-test-topic-name {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 400 !important;
-  color: #94a3b8 !important;
-  line-height: 1.2 !important;
+  font-weight: 500 !important;
+  color: #cbd5e1 !important; /* High contrast bright slate */
+  line-height: 1.25 !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -5931,39 +5931,59 @@ body.dashboard-page .next-test-topic-name {
 }
 
 body.dashboard-page .rainbow-pass-bar {
-  height: 22px !important;
-  min-height: 22px !important;
-  max-height: 22px !important;
+  height: 24px !important;
+  min-height: 24px !important;
+  max-height: 24px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 4px !important;
+  gap: 5px !important;
   width: auto !important;
   box-sizing: border-box !important;
 }
 
 body.dashboard-page .next-test-col-right {
-  width: 68px !important;
-  min-width: 68px !important;
-  max-width: 68px !important;
-  height: 100% !important; /* Full 80px Height */
+  width: auto !important;
+  min-width: 64px !important;
+  height: auto !important;
+  align-self: stretch !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-left: 1.5px solid rgba(var(--tier-rgb), 0.40) !important;
-  background: rgba(var(--tier-rgb), 0.08) !important;
+  border-left: 1.5px solid rgba(var(--tier-rgb), 0.40) !important; /* Sekat dibiarkan */
+  background: transparent !important; /* Murni slot tombol tanpa filler latar */
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
-  border-top-right-radius: 13px !important;
-  border-bottom-right-radius: 13px !important;
+  padding: 10px !important; /* Strict 10px Card Internal Padding */
+  border-top-right-radius: 11px !important;
+  border-bottom-right-radius: 11px !important;
 }
 
+body.dashboard-page .next-test-col-right .next-test-go-btn,
 body.dashboard-page .next-test-col-right .pass-counter-btn,
 body.dashboard-page .next-test-col-right .is-exam-lock,
 body.dashboard-page .next-test-col-right .is-exam-play {
   width: 44px !important;
   height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
   border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  border: 1.5px solid #38bdf8 !important;
+  background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
+  color: #ffffff !important;
+}
+
+body.dashboard-page .next-test-col-right .is-exam-lock {
+  background: rgba(var(--grade-c-rgb), 0.15) !important;
+  border: 1.5px solid var(--grade-c) !important;
+  box-shadow: 0 0 10px rgba(var(--grade-c-rgb), 0.35) !important;
+}
 }
 
 /* 6. Standings & Leaderboard: Scroll INSIDE Table (Page remains locked) */
@@ -6025,20 +6045,20 @@ body.dashboard-page .completed-table-wrap,
 body.dashboard-page #completed-Tests-container {
   flex: 1 1 0% !important;
   min-height: 0 !important;
-  overflow-y: scroll !important;
+  overflow-y: auto !important;
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   overscroll-behavior: contain !important;
-  padding: 4px 6px 60px 6px !important;
+  padding: 4px 6px 10px 6px !important;
   scrollbar-width: thin !important;
-  scrollbar-color: rgba(var(--tier-rgb), 0.6) rgba(15, 23, 42, 0.4) !important;
+  scrollbar-color: rgba(var(--tier-rgb), 0.6) transparent !important;
 }
 
 body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar,
 body.dashboard-page .standings-table-wrap::-webkit-scrollbar,
 body.dashboard-page .completed-table-wrap::-webkit-scrollbar,
 body.dashboard-page #completed-Tests-container::-webkit-scrollbar {
-  width: 5px !important;
+  width: 4px !important;
   display: block !important;
 }
 
@@ -6046,7 +6066,7 @@ body.dashboard-page #batch-leaderboard-container::-webkit-scrollbar-track,
 body.dashboard-page .standings-table-wrap::-webkit-scrollbar-track,
 body.dashboard-page .completed-table-wrap::-webkit-scrollbar-track,
 body.dashboard-page #completed-Tests-container::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.4) !important;
+  background: transparent !important;
   border-radius: 4px !important;
 }
 

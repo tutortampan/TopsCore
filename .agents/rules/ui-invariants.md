@@ -83,6 +83,16 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
 - **1.6.1 MutationObserver Loop Prevention & DOM Re-Entrancy Guard**: Always disconnect observers or flag `isMutating` during programmatic DOM updates.
 - **1.6.2 In-Memory Reference Data Caching & Anti-Query-Waterfall Invariant**: Cache structural reference data in memory; never re-query static tables on every tab switch.
 
+### 1.7 Protokol Audit Tangkapan Layar & Visual Invariant Audit (7 Pillars SSOT)
+Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar tanpa menunggu diminta:
+1. **Spacing & Gaps (Strict 10px Lock)**: Jarak antar-elemen dan antar-seksi tepat 10px (bebas gap ganda 20px–30px atau phantom gaps).
+2. **Card Internal Padding (Strict 10px Lock)**: Jarak konten dalam kartu ke garis border luar tepat 10px.
+3. **Dual-Scale Typography Architecture**: Skala terpusat (12px, 14px, 16px, 20px, 30px, 40px); mutlak nol font sub-12px dan nol angka perantara liar (18px, 13px, 15px).
+4. **Punctuation & Zero-Truncation**: Titik dua wajib menempel ke kata tanpa spasi (`Label:` bukan `Label :`), teks tidak terpotong (*zero truncation/ellipsis*).
+5. **Color SSOT & Semantic Precision**: Menggunakan token resmi (`#38bdf8` Tactical Blue), dilarang menggunakan warna hijau Grade A pada status input belum terverifikasi.
+6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
+7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
+
 ---
 
 ## Bab 2: Tipografi & Skala Font Terpusat (Dual-Scale Typography Architecture)
@@ -272,12 +282,12 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Tombol Alumni (Ungu `#8b5cf6` / `#a855f7`)**: Terletak di Sub Panel / Infobar Student Roster, membuka single-step confirmation untuk meluluskan siswa terpilih langsung ke status Alumni.
 
 ### 4.9 Zero Table Capsule & Zero Table Glow Invariant (SSOT)
-- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel & Grid Data**:
-  - Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`).
-  - **Yang Boleh Berwarna HANYA Font Teks Saja**: Arti semantik status (seperti `Active` hijau `var(--grade-a)`, `Inactive` merah `var(--grade-e)`, `Hold` kuning `var(--grade-c)`, `Published` hijau, `Draft` netral, `EXAM` orange, `TASK` indigo, dll.) hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
+- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel & Grid Data (No Capsule / Pill / Badge in Table Cells)**:
+  - Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, floating window tables, modal student lists `#modal-theme-open-session`, `#modal-theme-live-monitor`, dll.) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill/box (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`).
+  - **Yang Boleh Berwarna HANYA Font Teks Saja**: Arti semantik status (seperti `Active` hijau `var(--grade-a)`, `Inactive` merah `var(--grade-e)`, `Hold` kuning `var(--grade-c)`, `Published` hijau, `Draft` netral, `EXAM` orange, `TASK` indigo, status kesiapan ujian `Tasks Completed (Exam Ready)`, `Tasks Incomplete`, status eligibility, dll.) HANYA boleh direpresentasikan melalui warna font teks tipografi (`color: ...`). Font di dalam tabel tampil flat menyatu dengan baris tabel tanpa kapsul pembungkus.
 - **Mutlak Nol Glow (Zero Text-Shadow & Zero Box-Shadow) di Seluruh Sistem**:
-  - Dilarang keras menggunakan efek glow, shadow, atau pendaran pada teks maupun elemen sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`).
-  - Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
+  - Dilarang keras menggunakan efek GLOW, text-shadow, box-shadow, filter glow, atau pendaran neon apa pun pada teks maupun elemen di dalam isi sel tabel di SELURUH SISTEM (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`).
+  - Teks di dalam tabel wajib terbaca tegas, bersih (*crisp, matte*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
 
 ---
 
@@ -292,8 +302,20 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - **Strict 5-Column Grid Geometry**: Header dan baris data terkunci tepat 5 kolom (`grid-template-columns: 28px 1fr 48px 40px 38px !important;`) dengan header ringkas: `NO`, `TEST NAME`, `SCORE`, `GRD`, `ACT`. Dilarang menggabungkan class yang menimpa kolom ke-5 (`GRADERETRY` terlarang permanen).
   - **Aturan Baku Sub-Row 7 Nilai Terbaik Task (Top-7 Highest Attempts)**: 7 kotak kecil (pips) di bawah nama Task pada Completed Tests adalah **daftar 7 nilai riwayat percobaan terbaik (Top 7 Highest Scores, sorted descending)**, di mana nilai akhir dan grade task adalah rata-rata dari ke-7 percobaan tersebut. **Aturan ini bersifat permanen dan DILARANG diubah menjadi rainbow pips**.
 
-### 5.2 Hero Score & Grade Showcase Card Invariant
-- Kotak metrik profil siswa (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) strictly menerapkan **Level 0 Hero Metric (30px, Outfit 800 Extra Bold)** dengan tabular-nums dan soft ambient glow, terbebas dari font kecil default.
+### 5.2 Hero Score & Grade Showcase Card Invariant (Unified Hero Format SSOT)
+- **Universal Unified Hero Card Standard (Dashboard, Profile Modal & Result Page SSOT)**:
+  - Seluruh kartu profil hero siswa (`dashboard.html`, `#studentProfileModal`, `result.html`) menerapkan tata letak baku terpadu:
+    1. **Spacing & Padding (Strict 10px Lock)**: Jarak antar-kartu 10px dan jarak konten internal ke border luar tepat **10px** (`padding: 10px !important; gap: 10px !important;`).
+    2. **Avatar Kolom Kiri**: Avatar foto/SVG siswa berukuran baku **70px × 70px** (`.hero-avatar-wrap`, `.hero-avatar-img`), border halus `1.5px solid rgba(255, 255, 255, 0.12)`, terpusat dan rapi.
+    3. **Identitas Siswa Kolom Tengah**:
+       - Nama Siswa: **20px Outfit Bold** (`font-size: 20px; font-weight: 800; font-family: var(--font-display); line-height: 1.2;`).
+       - Baris Metadata: **12px Inter Regular** (`font-size: 12px; font-weight: 400; color: #94A3B8; margin-top: 4px;`) dengan format `Batch • Class • Level`.
+    4. **Dual Metrics Kolom Kanan**:
+       - Pasangan metrik `RATE %` dan `PTS` ditampilkan horizontal dengan angka **20px Outfit Bold**, warna angka dinamis mengikuti warna Grade siswa (`theme.color`).
+       - Label metrik: **12px Inter** berbobot regular warna slate (`#94A3B8`).
+    5. **Badge Grade Bulat**: Lingkaran grade berdiameter **44px** (`.grade-circle-44`), latar belakang mengikuti warna token Grade siswa, huruf Grade berbobot `font-weight: 800` warna **Dark Slate (`#0F172A`)** untuk seluruh simbol (★, A, B, C, D, E).
+    6. **Zero Subtitle Clutter**: Dilarang menampilkan teks subtitle deskriptif yang redundan di bawah nama siswa.
+- **Standar Metrik Hero Individual**: Metrik hero tunggal pada kartu nilai (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) menerapkan **Level 0 Hero Metric (30px, Outfit 800 Extra Bold)** dengan tabular-nums dan soft ambient glow.
 
 ### 5.3 Student Gate & Cascade Login Invariants (index.html SSOT)
 - **Hierarki Alur Cascade Login**:
@@ -344,6 +366,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - `DataGrid` defaults to `bulkActions: false`. Neon box-shadow glows purged; dividers render as crisp flat lines.
 
 ### 6.4 Level Promotion & Passing Threshold Invariant (NEXT Action Invariant SSOT)
-- **Kepatuhan Ambang Batas Resmi (Grade C >= 60%)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**).
+- **Kepatuhan Ambang Batas Resmi (Grade C >= 60%)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**) per [`AGENTS.md` §2.4.1](file:///AGENTS.md#241-level-promotion--passing-threshold-invariant-ssot-aturan-baku-promosi-level).
 - **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
+- **Aktivasi Tombol Aksi NEXT di Roster**: Tombol `NEXT` di Sub Panel atau toolbar roster otomatis aktif (*enabled*) hanya saat seluruh siswa aktif dalam batch telah memenuhi batas kelulusan (lulus, remedial tuntas, atau dispensasi Grade F). Jika masih ada siswa yang belum tuntas, tombol dinonaktifkan (*disabled*) dengan tooltip alasan.
 

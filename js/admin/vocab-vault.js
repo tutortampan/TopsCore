@@ -33,7 +33,7 @@ import {
   updateVaultTopicCascade,
   updateVaultTopicCodeCascade,
   updateVaultTopicLevelCascade
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261118_v600';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGradeColorByScore, getInvertedGradeColor } from '../grading.js?v=20261106_v160';
@@ -314,19 +314,48 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       </div>
     `;
 
+    const isEditOn = document.body.classList.contains('global-edit-mode-on') || Boolean(window._globalEditMode);
+    const editBtnStyle = isEditOn
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#0f172a;box-shadow:0 0 10px rgba(56,189,248,0.4);'
+      : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+    const editBtnLabel = isEditOn
+      ? `${getSvgIcon('check-circle', 14)} Done Editing`
+      : `${getSvgIcon('edit', 14)} Edit Mode`;
+
     const rightHtml = `
       <div style="display: flex; align-items: center; gap: 6px;">
-        <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('upload', 14)} Import</button>
-        <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('download', 14)} Export</button>
-        <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:32px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:6px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('search', 14)} Dups</button>
+        <button type="button" class="btn btn-sm" id="btn-toggle-vault-grid-edit-mode" style="${editBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:30px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('upload', 14)} Import</button>
+        <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:30px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('download', 14)} Export</button>
+        <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:30px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('search', 14)} Dups</button>
       </div>
     `;
 
+    window._syncActiveVaultGridBottomBar = () => _syncVaultGridBottomBar(filtered, allModeWords, currentMode);
     window.setBottomInfobar(leftHtml, rightHtml);
     bindVaultGridBottomActions();
   }
 
   function bindVaultGridBottomActions() {
+    const toggleGridEditBtn = document.getElementById('btn-toggle-vault-grid-edit-mode');
+    if (toggleGridEditBtn) {
+      toggleGridEditBtn.onclick = () => {
+        if (typeof window.toggleGlobalEditMode === 'function') {
+          const newState = window.toggleGlobalEditMode();
+          _syncVaultGridBottomBar(filtered, allModeWords, currentMode);
+          showToast(newState ? 'Master Edit Mode ON (Inline Excel Grid)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+        }
+      };
+    }
+
+    if (!window._vaultGridEditModeListenerBound) {
+      window._vaultGridEditModeListenerBound = true;
+      window.addEventListener('admin-edit-mode-changed', () => {
+        if (typeof window._syncActiveVaultGridBottomBar === 'function') {
+          window._syncActiveVaultGridBottomBar();
+        }
+      });
+    }
     const sInput = document.getElementById('vault-search');
     if (sInput && !sInput.dataset.bound) {
       sInput.dataset.bound = 'true';
@@ -930,7 +959,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       }
 
       showLoading('Checking for duplicates...');
-      const { cleanRows, duplicateConflicts } = await checkVaultDuplicates(_parsedRows);
+      const { cleanRows, duplicateConflicts } = await checkVaultDuplicates(_parsedRows, existingWords);
       hideLoading();
 
       _cleanRows = cleanRows;
@@ -1066,7 +1095,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       hideLoading();
       close();
       showToast(`Import complete: ${result.inserted} inserted, ${result.updated} updated, ${result.skipped} skipped.`, 'success');
-      const newWords = await fetchVaultWords({ limit: 10000, targetLevel: null });
+      const newWords = await fetchVaultWords({ limit: 10000, targetLevel: null, forceRefresh: true });
       onSuccess(newWords);
 
       // Auto-sync class tests for all imported levels in the background (Zero-Maintenance)
@@ -1966,9 +1995,19 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         <div class="bottom-info-chip"><span class="chip-label">Vault:</span><span class="chip-val">${words.length}</span></div>
       </div>
     `;
+
+    const isEditOn = document.body.classList.contains('global-edit-mode-on') || Boolean(window._globalEditMode);
+    const editBtnStyle = isEditOn
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#0f172a;box-shadow:0 0 10px rgba(56,189,248,0.4);'
+      : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+    const editBtnLabel = isEditOn
+      ? `${getSvgIcon('check-circle', 14)} Done Editing`
+      : `${getSvgIcon('edit', 14)} Edit Mode`;
+
     const rightHtml = `
       <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-theme-bottom-merge" style="height: 32px; font-size: 12px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">${getSvgIcon('zap', 14)} Merge Topics</button>
+        <button type="button" class="btn btn-sm" id="btn-toggle-theme-edit-mode" style="${editBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-theme-bottom-merge" style="height: 30px; font-size: 12px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">${getSvgIcon('zap', 14)} Merge Topics</button>
       </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml);
@@ -1985,6 +2024,24 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         const tbody = document.getElementById('theme-manager-tbody');
         if (tbody) tbody.innerHTML = rowsHtml;
         bindRowActionHandlers();
+      });
+    }
+
+    const toggleEditBtn = document.getElementById('btn-toggle-theme-edit-mode');
+    if (toggleEditBtn) {
+      toggleEditBtn.onclick = () => {
+        if (typeof window.toggleGlobalEditMode === 'function') {
+          const newState = window.toggleGlobalEditMode();
+          syncThemeManagerBottomBar();
+          showToast(newState ? 'Theme Manager Edit Mode ON (Inline Excel Grid)' : 'Edit Mode OFF', newState ? 'info' : 'success');
+        }
+      };
+    }
+
+    if (!window._themeManagerEditModeListenerBound) {
+      window._themeManagerEditModeListenerBound = true;
+      window.addEventListener('admin-edit-mode-changed', () => {
+        syncThemeManagerBottomBar();
       });
     }
 
@@ -2021,9 +2078,9 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           });
         });
         openTopicDuplicateCheckerModal(allTopicList, words, () => {
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
+          const container = document.getElementById('admin-content-area') || document.getElementById('classes-detail-canvas');
+          if (container && typeof renderVocabularyVault === 'function') {
+            renderVocabularyVault(container);
           }
         });
       };
@@ -2047,6 +2104,8 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       themeList.forEach(th => {
         const thCode = String(th.code || '').trim().toUpperCase();
         const assignedProgs = allOrderedProgs.filter(p => assignSet.has(`${thCode}_${lvl}_${p.id}`));
+        const thTopicCount = th.topicsMap.size;
+        const thTotalWords = Array.from(th.topicsMap.values()).reduce((sum, t) => sum + (t.totalCount || 0), 0);
 
         // Program Filter Check
         const activeProgFilter = window._vaultActiveProgramFilter || 'ALL';
@@ -2165,9 +2224,16 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                   </button>
                 </div>
               </td>
-              <!-- 19. ACT (Delete only when Edit ON) -->
-              <td class="edit-mode-only" style="padding: 4px 6px; text-align: center; width: 45px; border-left: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap;">
-                <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" title="Delete Topic" style="background:transparent;border:none;cursor:pointer;color:var(--grade-e);font-size:12px;padding:2px 4px;">${getSvgIcon('trash', 14)}</button>
+              <!-- 19. ACT (Delete Topic or Delete Theme when Edit ON) -->
+              <td class="edit-mode-only" style="padding: 4px 4px; text-align: center; width: 65px; border-left: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap;">
+                <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
+                  <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" data-level="${lvl}" data-theme-code="${thCode}" data-theme="${escapeHtml(th.name)}" data-item-count="${tp.totalCount}" title="Delete Topic '${escapeHtml(tp.name)}' (${tp.totalCount} items)" style="height:22px; font-size:10px; font-weight:800; padding:0 4px; background:rgba(255,0,0,0.18); border:1px solid rgba(255,0,0,0.45); color:var(--grade-e); border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; line-height:1;">
+                    ${getSvgIcon('trash', 11)} <span>TP</span>
+                  </button>
+                  <button type="button" class="btn-del-theme-mini" data-theme="${escapeHtml(th.name)}" data-theme-code="${thCode}" data-level="${lvl}" data-topic-count="${thTopicCount}" data-word-count="${thTotalWords}" title="Delete entire Theme '${escapeHtml(th.name)}' (${thCode}) and all ${thTopicCount} topics" style="height:22px; font-size:10px; font-weight:800; padding:0 4px; background:rgba(255,140,0,0.18); border:1px solid rgba(255,140,0,0.45); color:var(--grade-d); border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; line-height:1;">
+                    ${getSvgIcon('trash', 11)} <span>TH</span>
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -2215,7 +2281,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             <col style="width: 58px;">
             <col style="width: 52px;">
             <col style="width: 105px;">
-            <col class="edit-mode-only" style="width: 45px;">
+            <col class="edit-mode-only" style="width: 65px;">
           </colgroup>
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
             <!-- Super-Headers Grouping -->
@@ -2225,7 +2291,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               <th colspan="4" class="super-th super-hdr" style="background:#1a1936; color:#c084fc; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES BREAKDOWN</th>
               <th colspan="3" class="super-th super-hdr" style="background:rgba(var(--grade-a-rgb), 0.15); color:var(--grade-a); font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">METRICS SUMMARY</th>
               <th rowspan="2" class="super-th super-hdr-divider" style="background:#1e293b; color:var(--grade-a); font-size:12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; vertical-align:middle; height:60px;" title="Assigned Programs">PROGRAMS</th>
-              <th rowspan="2" class="edit-mode-only" style="background:rgba(var(--grade-e-rgb), 0.2); color:var(--grade-e); font-size:12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); vertical-align:middle; height:60px;" title="Action">ACT</th>
+              <th rowspan="2" class="edit-mode-only" style="background:rgba(var(--grade-e-rgb), 0.2); color:var(--grade-e); font-size:12px; font-weight:700; text-align:center; padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.1); vertical-align:middle; height:60px;" title="Action">ACT</th>
             </tr>
             <!-- Sub-Headers (Exact 17 Grouped Sub-Columns; Programs & Act Span RowSpan 2) -->
             <tr>
@@ -2292,23 +2358,59 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
       };
     });
 
-    // Delete Topic (Delete button only)
+    // Delete Topic (Individual topic and all its vocabulary)
     area.querySelectorAll('.btn-del-topic-mini').forEach(btn => {
       btn.onclick = async (e) => {
         const topic = e.currentTarget.getAttribute('data-topic');
-        if (!confirm(`Delete topic "${topic}" and all its vocabulary items from Vault?`)) return;
+        const lvl = parseInt(e.currentTarget.getAttribute('data-level'), 10);
+        const thCode = e.currentTarget.getAttribute('data-theme-code');
+        const thName = e.currentTarget.getAttribute('data-theme') || '';
+        const itemCount = e.currentTarget.getAttribute('data-item-count') || '';
+
+        const itemStr = itemCount ? ` (${itemCount} items)` : '';
+        if (!confirm(`Are you sure you want to delete Topic "${topic}"${itemStr} at Level ${lvl} and all its vocabulary items from Vault?\n\nThis cannot be undone.`)) return;
+
         try {
           showLoading('Deleting topic...');
-          await deleteVaultTopic(topic);
+          await deleteVaultTopic(topic, lvl, thCode);
           hideLoading();
           showToast(`Topic "${topic}" deleted.`, 'success');
-          if (typeof renderVocabularyVault === 'function') {
-            const container = document.getElementById('classes-detail-canvas');
-            if (container) renderVocabularyVault(container);
+          const mainArea = document.getElementById('admin-content-area') || area;
+          if (mainArea && typeof renderVocabularyVault === 'function') {
+            await renderVocabularyVault(mainArea);
           }
         } catch (err) {
           hideLoading();
           showToast(`Failed to delete topic: ${err.message}`, 'error');
+        }
+      };
+    });
+
+    // Delete Entire Theme (All topics & vocabulary in this theme at this level)
+    area.querySelectorAll('.btn-del-theme-mini').forEach(btn => {
+      btn.onclick = async (e) => {
+        const thName = e.currentTarget.getAttribute('data-theme');
+        const thCode = e.currentTarget.getAttribute('data-theme-code');
+        const lvl = parseInt(e.currentTarget.getAttribute('data-level'), 10);
+        const topicCount = e.currentTarget.getAttribute('data-topic-count') || '';
+        const wordCount = e.currentTarget.getAttribute('data-word-count') || '';
+
+        const countMsg = topicCount ? `This will permanently delete ${topicCount} topic(s)${wordCount ? ` and ${wordCount} vocabulary item(s)` : ''} under this theme from Vault.` : 'This will permanently delete all topics and vocabulary items under this theme from Vault.';
+
+        if (!confirm(`⚠️ DANGER: Delete ENTIRE Theme "${thName}" (${thCode}) at Level ${lvl}?\n\n${countMsg}\n\nThis action cannot be undone. Continue?`)) return;
+
+        try {
+          showLoading('Deleting theme...');
+          await deleteVaultTheme(thName, lvl, thCode);
+          hideLoading();
+          showToast(`Theme "${thName}" (${thCode}) and all its topics deleted.`, 'success');
+          const mainArea = document.getElementById('admin-content-area') || area;
+          if (mainArea && typeof renderVocabularyVault === 'function') {
+            await renderVocabularyVault(mainArea);
+          }
+        } catch (err) {
+          hideLoading();
+          showToast(`Failed to delete theme: ${err.message}`, 'error');
         }
       };
     });
@@ -2358,6 +2460,11 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 setTimeout(() => thInput.classList.remove('save-success'), 700);
               }
               if (thSpan) thSpan.textContent = newVal;
+
+              const delThBtn = row.querySelector('.btn-del-theme-mini');
+              if (delThBtn) delThBtn.setAttribute('data-theme', newVal);
+              const delTpBtn = row.querySelector('.btn-del-topic-mini');
+              if (delTpBtn) delTpBtn.setAttribute('data-theme', newVal);
             });
 
             // Update in-memory array
@@ -2403,6 +2510,13 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 setTimeout(() => codeInput.classList.remove('save-success'), 700);
               }
               if (codeSpan) codeSpan.textContent = cleanNewCode;
+
+              const delThBtn = row.querySelector('.btn-del-theme-mini');
+              if (delThBtn) delThBtn.setAttribute('data-theme-code', cleanNewCode);
+              const delTpBtn = row.querySelector('.btn-del-topic-mini');
+              if (delTpBtn) delTpBtn.setAttribute('data-theme-code', cleanNewCode);
+              const assignBtn = row.querySelector('.btn-assign-pill');
+              if (assignBtn) assignBtn.setAttribute('data-theme-code', cleanNewCode);
 
               // Recalculate composite code column
               const tpCodeInput = row.querySelector('[data-action="edit-topic-code"]');
@@ -2492,7 +2606,15 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             const thCode = input.dataset.thCode;
             await updateVaultTopicLevelCascade(topic, oldLvl, newLvl, thCode);
             input.dataset.oldLvl = newLvl;
-            if (tr) tr.setAttribute('data-level', newLvl);
+            if (tr) {
+              tr.setAttribute('data-level', newLvl);
+              const delTpBtn = tr.querySelector('.btn-del-topic-mini');
+              if (delTpBtn) delTpBtn.setAttribute('data-level', newLvl);
+              const delThBtn = tr.querySelector('.btn-del-theme-mini');
+              if (delThBtn) delThBtn.setAttribute('data-level', newLvl);
+              const assignBtn = tr.querySelector('.btn-assign-pill');
+              if (assignBtn) assignBtn.setAttribute('data-level', newLvl);
+            }
             if (viewSpan) {
               const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(newLvl) : `${newLvl}ST`;
               viewSpan.textContent = shortLbl.toUpperCase();

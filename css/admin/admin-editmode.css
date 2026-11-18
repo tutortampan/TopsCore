@@ -172,16 +172,22 @@ body:not(.global-edit-mode-on) .btn-add-topic-action {
 }
 
 /* When Edit Mode is OFF, static view badges for test settings are visible */
-body:not(.global-edit-mode-on) .bp-setting-badge {
+body:not(.global-edit-mode-on) .bp-setting-badge,
+body:not(.global-edit-mode-on) .classes-hub-score-view {
   display: inline-flex !important;
 }
 
 /* When Edit Mode is ON, static badges are hidden, inline inputs are shown */
-body.global-edit-mode-on .bp-setting-badge {
+body.global-edit-mode-on .bp-setting-badge,
+body.global-edit-mode-on .classes-hub-score-view {
   display: none !important;
 }
-body.global-edit-mode-on .bp-setting-input {
+body.global-edit-mode-on .bp-setting-input,
+body.global-edit-mode-on .classes-hub-score-input-wrap {
   display: inline-flex !important;
+}
+body:not(.global-edit-mode-on) .classes-hub-score-input-wrap {
+  display: none !important;
 }
 
 

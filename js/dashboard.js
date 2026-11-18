@@ -16,7 +16,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       window.INDONESIA_REGIONS = INDONESIA_REGIONS;
     }
 
-    window._isBatchChampion = false;
+    if (typeof window !== 'undefined') {
+      window._isBatchChampion = false;
+    }
 
     function parseHexRgb(hex) {
       if (!hex) return '56, 189, 248';
@@ -26,6 +28,47 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (clean.length !== 6) return '56, 189, 248';
       const num = parseInt(clean, 16);
       return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
+    }
+
+    /**
+     * Module M7 Dialogue Detection & URL Resolver
+     */
+    export function isDialogueTest(test) {
+      if (!test) return false;
+      const modId = String(test.module_id || '').toLowerCase();
+      const modCode = String(test.module_code || test.payload?.module_code || '').toLowerCase();
+      const modType = String(test.payload?.module_type || '').toUpperCase();
+      const shell = String(test.shell_code || '').toUpperCase();
+      const subType = String(test.test_subtype || '').toUpperCase();
+      const cat = String(test.category || '').toLowerCase();
+      const title = String(test.title || '').toLowerCase();
+      const ansType = String(test.answer_type || test.payload?.answer_type || '').toLowerCase();
+
+      return modId === 'c590c69f-44dc-4d26-9c19-263c6e7cbbec' ||
+             modCode === 'm7' ||
+             modCode === '7' ||
+             modType === 'TURN_BASED_ROLEPLAY' ||
+             shell.endsWith('-DIAL') ||
+             shell.includes('-DIAL-') ||
+             shell.includes('-M7-') ||
+             subType.includes('DIALOGUE') ||
+             subType.includes('ROLEPLAY') ||
+             cat === 'dialogue' ||
+             ansType === 'dialogue' ||
+             title.includes('dialogue room') ||
+             title.includes('p2p dialogue');
+    }
+
+    export function getTestLaunchUrl(test, activeSession = null) {
+      if (!test) return 'test.html';
+      const testId = test.id || test.test_id;
+      if (isDialogueTest(test)) {
+        const classId = test.class_id || '';
+        const title = encodeURIComponent(test.title || 'Live Dialogue');
+        const roomCode = activeSession?.dialogue_room_code ? `&room=${encodeURIComponent(activeSession.dialogue_room_code)}` : '';
+        return `conversation.html?test_id=${testId}&class_id=${classId}&title=${title}${roomCode}`;
+      }
+      return `test.html?id=${testId}`;
     }
 
 
@@ -111,7 +154,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let age = today.getFullYear() - d.getFullYear();
         const m = today.getMonth() - d.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < d.getDate())) age--;
-        if (age >= 0 && age <= 120) ageText = `${age} y.o.`;
+        if (age >= 0 && age <= 120) ageText = `${age} Years Old`;
       }
     }
     if (ageEl) ageEl.textContent = ageText;
@@ -1733,13 +1776,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             </div>
             ${rainbowHtml}
           </div>
-          <div class="next-test-col-right" title="Repetition Pass ${currentPasses}/${targetReps} - Click to practice">
-            <button type="button" class="next-test-go-btn next-asm-go-btn pass-counter-btn rainbow-step-${displayStep}" aria-label="Practice Pass ${displayStep}">
-              <span>${displayStep}</span><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" style="margin-left:2px; flex-shrink:0;"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+          <div class="next-test-col-right" title="Start Task - Click to practice">
+            <button type="button" class="next-test-go-btn next-asm-go-btn is-start" aria-label="Start Task">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
             </button>
           </div>
         `;
-        container.onclick = () => { window.location.href = `test.html?id=${nextTest.id}`; };
+        container.onclick = () => { window.location.href = getTestLaunchUrl(nextTest); };
       } else {
         const activeSession = await fetchActiveTestSession(nextTest.id, session.batch_id).catch(() => null);
         const isUnlocked = activeSession?.is_unlocked === true;
@@ -1768,7 +1811,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               </button>
             </div>
           `;
-          container.onclick = () => { window.location.href = `test.html?id=${nextTest.id}`; };
+          container.onclick = () => { window.location.href = getTestLaunchUrl(nextTest, activeSession); };
         } else {
           container.innerHTML = `
             <div class="next-test-col-left">
@@ -2642,9 +2685,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       // Wire up buttons
       section.querySelectorAll('[data-aid]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          sessionStorage.setItem('topscore_test_id', btn.dataset.aid);
-          window.location.href = 'test.html';
+        btn.addEventListener('click', async () => {
+          const testId = btn.dataset.aid;
+          sessionStorage.setItem('topscore_test_id', testId);
+          const matchedTest = (tests || []).find(t => t.id === testId);
+          if (matchedTest && isDialogueTest(matchedTest)) {
+            const activeSession = await fetchActiveTestSession(testId, session?.batch_id).catch(() => null);
+            window.location.href = getTestLaunchUrl(matchedTest, activeSession);
+          } else {
+            window.location.href = 'test.html';
+          }
         });
       });
       section.querySelectorAll('[data-aid-result]').forEach(btn => {
@@ -2820,6 +2870,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
 
+      if (achievementTextEl) {
+        const txtLen = (achievementTextEl.textContent || '').trim().length;
+        if (txtLen > 8) {
+          achievementTextEl.style.setProperty('font-size', '24px', 'important');
+        } else {
+          achievementTextEl.style.setProperty('font-size', '30px', 'important');
+        }
+      }
+
       // Set globally on documentElement and body so all components inherit seamlessly
       document.documentElement.style.setProperty('--tier-color', targetColor);
       document.documentElement.style.setProperty('--tier-rgb', rgbColor);
@@ -2900,7 +2959,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const scoreVal = document.getElementById('bottom-stat-avg-score');
       if (scoreVal) {
         scoreVal.textContent = hasExam ? `${avgPct}%` : '—';
-        scoreVal.style.setProperty('color', gcText, 'important');
+        scoreVal.style.setProperty('color', targetColor, 'important');
         scoreVal.style.setProperty('filter', 'none', 'important');
         scoreVal.classList.remove('text-grade-star');
       }
@@ -2909,14 +2968,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const gradeVal = document.getElementById('stat-overall-grade-value');
       if (gradeVal) {
         gradeVal.textContent = overallGrade;
-        gradeVal.style.setProperty('color', gcText, 'important');
+        gradeVal.style.setProperty('color', targetColor, 'important');
         gradeVal.style.setProperty('filter', 'none', 'important');
         gradeVal.classList.remove('text-grade-star');
       }
 
       // 4b. Achievement Description Display (Inside Grade Card)
       if (achievementTextEl) {
-        achievementTextEl.style.setProperty('color', gcText, 'important');
+        achievementTextEl.style.setProperty('color', targetColor, 'important');
         achievementTextEl.style.setProperty('filter', 'none', 'important');
       }
 

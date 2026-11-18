@@ -2134,7 +2134,7 @@ export async function renderStudents(area, options = {}) {
         <tr>
           <td style="text-align:center;font-weight:600;color:#64748b;">${idx + 1}</td>
           <td style="font-weight:600;">${escapeHtml(title)}</td>
-          <td style="text-align:center;"><span style="font-size: 12px;padding:2px 6px;border-radius:4px;background:#f1f5f9;font-weight:700;">${escapeHtml(type)}</span></td>
+          <td style="text-align:center;"><span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);text-shadow:none;">${escapeHtml(type)}</span></td>
           <td style="text-align:center;color:#475569;font-size: 12px;">${dateStr}</td>
           <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pts} / ${maxQ}</td>
           <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pct}%${remTag}</td>

@@ -40,12 +40,18 @@ class ConversationRoomApp {
     this.remoteVolume = 0;
     this._avatarIdleTimer = null;
     this._animFrame = null;
+
+    this.classId = null;
+    this.testTitle = null;
+    this.className = null;
+    this.lastAttemptId = null;
   }
 
   async init() {
     this.sb = await getSupabase();
     this._loadStudentSession();
     this._parseUrlParams();
+    await this._loadTestDetails();
 
     this._bindDomEvents();
     this.initWaveformVisualizer();
@@ -154,6 +160,50 @@ class ConversationRoomApp {
     if (params.get('room')) this.roomCode = params.get('room').toUpperCase();
     if (params.get('test_id')) this.testId = params.get('test_id');
     if (params.get('role')) this.student.role = params.get('role');
+    this.classId = params.get('class_id') || null;
+    this.testTitle = params.get('title') ? decodeURIComponent(params.get('title')) : null;
+  }
+
+  async _loadTestDetails() {
+    if (!this.testId || !this.sb) return;
+    try {
+      const { data: testData } = await this.sb.from('tests')
+        .select('id, title, payload, description, working_duration_minutes, classes(name)')
+        .eq('id', this.testId)
+        .single();
+      if (testData) {
+        if (testData.title) this.testTitle = testData.title;
+        if (testData.classes?.name) this.className = testData.classes.name;
+        if (testData.payload?.topic) this.topicData.title = testData.payload.topic;
+        if (testData.payload?.category) this.topicData.category = testData.payload.category;
+        if (testData.payload?.description || testData.description) {
+          this.topicData.description = testData.payload?.description || testData.description;
+        }
+        if (Array.isArray(testData.payload?.target_vocab) && testData.payload.target_vocab.length > 0) {
+          this.topicData.targetVocab = testData.payload.target_vocab;
+        }
+        this._renderTopicData();
+      }
+    } catch (e) {
+      console.warn('[Room] Could not load test metadata:', e);
+    }
+  }
+
+  _renderTopicData() {
+    const titleEl = document.getElementById('conv-topic-title');
+    const catEl = document.getElementById('conv-topic-category');
+    const descEl = document.getElementById('conv-topic-desc');
+    const chipsEl = document.getElementById('conv-vocab-chips');
+    const brandBadge = document.querySelector('.conv-brand-badge');
+
+    if (titleEl && this.topicData.title) titleEl.textContent = this.topicData.title;
+    if (catEl && this.topicData.category) catEl.textContent = this.topicData.category;
+    if (descEl && this.topicData.description) descEl.textContent = this.topicData.description;
+    if (brandBadge && this.testTitle) brandBadge.textContent = `${this.testTitle} • Dialogue`;
+
+    if (chipsEl && Array.isArray(this.topicData.targetVocab)) {
+      chipsEl.innerHTML = this.topicData.targetVocab.map(v => `<span class="conv-vocab-chip">${String(v).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span>`).join('');
+    }
   }
 
   _bindDomEvents() {
@@ -244,7 +294,8 @@ class ConversationRoomApp {
     const btnCreate = document.getElementById('btn-create-room');
     if (btnCreate) {
       btnCreate.onclick = () => {
-        const randCode = 'CONV-' + Math.floor(1000 + Math.random() * 9000);
+        const prefix = this.testId ? 'DIAL-' : 'CONV-';
+        const randCode = prefix + Math.floor(1000 + Math.random() * 9000);
         this.isInitiator = true;
         this.joinRoom(randCode);
       };
@@ -265,7 +316,21 @@ class ConversationRoomApp {
 
   _showLobbyModal() {
     const modal = document.getElementById('lobby-modal');
-    if (modal) modal.style.display = 'flex';
+    if (modal) {
+      modal.style.display = 'flex';
+      const ctxCard = document.getElementById('lobby-test-context-card');
+      const ctxTitle = document.getElementById('lobby-test-title');
+      const ctxClass = document.getElementById('lobby-test-class');
+      if (this.testTitle && ctxCard) {
+        ctxCard.style.display = 'block';
+        if (ctxTitle) ctxTitle.textContent = this.testTitle;
+        if (ctxClass) ctxClass.textContent = this.className || 'Live Dialogue Room (Module M7)';
+      }
+      const roomInput = document.getElementById('input-room-code');
+      if (roomInput && this.roomCode) {
+        roomInput.value = this.roomCode;
+      }
+    }
   }
 
   _hideLobbyModal() {
@@ -644,6 +709,14 @@ class ConversationRoomApp {
 
     const feedbackElem = document.getElementById('modal-eval-feedback');
     if (feedbackElem) feedbackElem.textContent = evalData.feedback || '';
+
+    const btnReport = document.getElementById('btn-view-report');
+    if (btnReport && evalData.attemptId) {
+      btnReport.style.display = 'inline-flex';
+      btnReport.onclick = () => {
+        window.location.href = `result.html?attempt_id=${evalData.attemptId}`;
+      };
+    }
 
     modal.style.display = 'flex';
   }

@@ -1568,6 +1568,24 @@ tbody tr:last-child td {
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
+/* Universal Table Content Zero-Glow Invariant (§2.31 / §4.9) */
+table td *,
+table td .grade-circle,
+table td .grade-circle.grade-circle-star,
+table td .grade-circle.grade-circle-★,
+table td .grade-circle.grade-circle-s,
+.live-monitor-table td *,
+.live-monitor-table td .grade-circle,
+.live-monitor-table td .grade-circle.grade-circle-star,
+.live-monitor-table td .grade-circle.grade-circle-★,
+.live-monitor-table td .grade-circle.grade-circle-s,
+.datagrid-table td *,
+.datagrid-table td .grade-circle {
+  text-shadow: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
 .grade-circle.grade-circle-a {
   background: var(--grade-a) !important;
   color: var(--badge-text-dark) !important;

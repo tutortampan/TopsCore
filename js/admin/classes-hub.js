@@ -167,7 +167,7 @@ export async function renderClassesHub(area) {
       }
     };
 
-    window._classesHubSort = window._classesHubSort || { key: 'name', asc: true };
+    window._classesHubSort = window._classesHubSort || { key: 'level', asc: true };
     window.sortClassesHub = (key) => {
       if (window._classesHubSort.key === key) {
         window._classesHubSort.asc = !window._classesHubSort.asc;
@@ -399,6 +399,17 @@ export async function renderClassesHub(area) {
         ? filteredClasses.filter(c => {
             const prog = progMap.get(c.program_id);
             const inst = prog ? instMap.get(prog.institution_id) : (c.institution_id ? instMap.get(c.institution_id) : null);
+            let lvl = c.level_id ? levelMap.get(c.level_id) : null;
+            if (!lvl) {
+              for (const cl of (classLevels || [])) {
+                if (cl.class_id === c.id && cl.level_id && levelMap.has(cl.level_id)) {
+                  lvl = levelMap.get(cl.level_id);
+                  break;
+                }
+              }
+            }
+            const lvlName = lvl ? (lvl.name || '').toLowerCase() : '';
+            const lvlNum = lvl?.level_number != null ? 'l' + lvl.level_number : '';
             const cTests = testsByClass.get(c.id) || [];
             const matchesTest = cTests.some(t =>
               (t.title || '').toLowerCase().includes(searchQuery) ||
@@ -408,21 +419,35 @@ export async function renderClassesHub(area) {
                    (c.code || '').toLowerCase().includes(searchQuery) ||
                    (prog && (prog.name || '').toLowerCase().includes(searchQuery)) ||
                    (inst && (inst.name || '').toLowerCase().includes(searchQuery)) ||
+                   lvlName.includes(searchQuery) ||
+                   lvlNum === searchQuery ||
                    matchesTest;
           })
         : filteredClasses;
 
       const getSortIcon = (key) => {
-        const cur = window._classesHubSort || { key: 'name', asc: true };
-        if (cur.key !== key) return '<span style="opacity:0.35;margin-left:4px;font-size:12px;">↕</span>';
+        const cur = window._classesHubSort || { key: 'level', asc: true };
+        if (cur.key !== key) return '';
         return cur.asc ? '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:12px;">▲</span>' : '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:12px;">▼</span>';
       };
 
       const sortClassList = (list) => {
-        const { key, asc } = window._classesHubSort || { key: 'name', asc: true };
+        const { key, asc } = window._classesHubSort || { key: 'level', asc: true };
         return [...list].sort((a, b) => {
           let res = 0;
-          if (key === 'name') {
+          if (key === 'level') {
+            const getLvlNum = (c) => {
+              if (c.level_id && levelMap.has(c.level_id)) return levelMap.get(c.level_id).level_number ?? 999;
+              for (const cl of (classLevels || [])) {
+                if (cl.class_id === c.id && cl.level_id && levelMap.has(cl.level_id)) {
+                  return levelMap.get(cl.level_id).level_number ?? 999;
+                }
+              }
+              return 999;
+            };
+            res = getLvlNum(a) - getLvlNum(b);
+            if (res === 0) res = (a.name || '').localeCompare(b.name || '');
+          } else if (key === 'name') {
             res = (a.name || '').localeCompare(b.name || '');
           } else if (key === 'program') {
             const pA = progMap.get(a.program_id)?.name || '';
@@ -449,30 +474,11 @@ export async function renderClassesHub(area) {
         });
       };
 
-      // Grid Layout Definition:
-      // CLASS NAME | PROGRAM | CODE | STUDENTS | TASK | EXAM | STATUS | ACTIONS
-      // TASK is positioned strictly BEFORE EXAM per user requirement!
-      const gridTemplate = 'minmax(180px, 2fr) minmax(130px, 1.2fr) minmax(80px, 0.8fr) 85px 125px 125px 85px minmax(185px, 1.2fr)';
-
-      const tableHeaderHtml = `
-        <div class="classes-hub-grid-header" style="display:grid;grid-template-columns:${gridTemplate};gap:8px;padding:6px 12px;font-size:12px;font-weight:700;color:var(--fm-text-muted);text-transform:uppercase;letter-spacing:0.06em;border-bottom:1px solid var(--fm-border-subtle);margin-bottom:4px;user-select:none;align-items:center;">
-          <div style="cursor:pointer;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">Class Name ${getSortIcon('name')}</div>
-          <div style="cursor:pointer;" onclick="window.sortClassesHub('program')" title="Sort by Program">Program ${getSortIcon('program')}</div>
-          <div style="text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">Code ${getSortIcon('code')}</div>
-          <div style="text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">Students ${getSortIcon('students')}</div>
-          <div style="text-align:center;cursor:pointer;color:#818cf8;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Standard">Task ${getSortIcon('task')}</div>
-          <div style="text-align:center;cursor:pointer;color:#FF8C00;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Standard">Exam ${getSortIcon('exam')}</div>
-          <div style="text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">Status ${getSortIcon('status')}</div>
-          <div style="text-align:right;">Actions</div>
-        </div>
-      `;
-
-      const buildClassRow = (cls) => {
+      const buildClassRow = (cls, idx) => {
         const prog = progMap.get(cls.program_id);
         const inst = prog ? instMap.get(prog.institution_id) : (cls.institution_id ? instMap.get(cls.institution_id) : null);
-        const progName  = prog ? escapeHtml(prog.name) : '-- No Program --';
+        const progName  = prog ? escapeHtml(prog.name) : 'No Program';
         const instLabel = inst ? '<span class="text-xs text-muted" style="margin-left:4px;">· ' + escapeHtml(inst.code || inst.name) + '</span>' : '';
-        const isDimmed  = !cls.is_active ? 'tree-item-dimmed' : '';
         const effectiveCode = cls.code || (cls.name ? cls.name.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : '');
         const codeHtml  = effectiveCode
           ? '<span class="text-xs text-muted" style="font-family:monospace;">' + escapeHtml(effectiveCode) + '</span>'
@@ -480,284 +486,194 @@ export async function renderClassesHub(area) {
         const eligibleCount = getEligibleStudentCountForClass(cls);
         const studentsHtml  = '<span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
 
+        // Level detection
+        let lvl = cls.level_id ? levelMap.get(cls.level_id) : null;
+        if (!lvl) {
+          for (const cl of (classLevels || [])) {
+            if (cl.class_id === cls.id && cl.level_id && levelMap.has(cl.level_id)) {
+              lvl = levelMap.get(cl.level_id);
+              break;
+            }
+          }
+        }
+        const levelHtml = lvl
+          ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">L${lvl.level_number}</span><span class="text-xs text-muted" style="margin-left:4px;">· ${escapeHtml(lvl.name || 'Level ' + lvl.level_number)}</span>`
+          : '<span class="text-xs text-muted">-</span>';
+
         // Class tests and passing standards
         const classTests = testsByClass.get(cls.id) || [];
         const tasks = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM');
         const exams = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM');
 
-        // Task passing badge (Task comes BEFORE Exam!)
-        let taskHtml = '<span class="text-muted" style="font-size:12px;">-</span>';
+        // Task passing badge & inline edit
+        const taskScores = tasks.map(getTestMinScore);
+        const curTaskScore = taskScores.length > 0 ? Math.round(taskScores[0]) : 70;
+        let taskLabel = '-';
         if (tasks.length > 0) {
-          const taskScores = tasks.map(getTestMinScore);
           const minT = Math.min(...taskScores);
           const maxT = Math.max(...taskScores);
-          const scoreLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
-          taskHtml = `
-            <span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${tasks.length} Formative Tasks (Pass: ${scoreLabel})">
-              ${scoreLabel} <span style="font-size:10px;opacity:0.8;">(${tasks.length})</span>
-            </span>
-          `;
+          taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
         }
+        const taskHtml = `
+          <span class="classes-hub-score-view" style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${tasks.length} Formative Tasks (Pass: ${taskLabel})">
+            ${taskLabel} ${tasks.length > 0 ? `<span style="font-size:10px;opacity:0.8;">(${tasks.length})</span>` : ''}
+          </span>
+          <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
+            <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" ${tasks.length === 0 ? 'disabled placeholder="-"' : ''} style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#818cf8;border:1px solid rgba(129,140,248,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="${tasks.length > 0 ? `Set passing score for all ${tasks.length} tasks` : 'No tasks in this class'}" />
+            <span style="font-size:11px;color:#94a3b8;">%</span>
+          </span>
+        `;
 
-        // Exam passing badge
-        let examHtml = '<span class="text-muted" style="font-size:12px;">-</span>';
+        // Exam passing badge & inline edit
+        const examScores = exams.map(getTestMinScore);
+        const curExamScore = examScores.length > 0 ? Math.round(examScores[0]) : 60;
+        let examLabel = '-';
         if (exams.length > 0) {
-          const examScores = exams.map(getTestMinScore);
           const minE = Math.min(...examScores);
           const maxE = Math.max(...examScores);
-          const scoreLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
-          examHtml = `
-            <span style="color:#FF8C00;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${exams.length} Formal Exams (Pass: ${scoreLabel})">
-              ${scoreLabel} <span style="font-size:10px;opacity:0.8;">(${exams.length})</span>
-            </span>
-          `;
+          examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
         }
+        const examHtml = `
+          <span class="classes-hub-score-view" style="color:#FF8C00;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${exams.length} Formal Exams (Pass: ${examLabel})">
+            ${examLabel} ${exams.length > 0 ? `<span style="font-size:10px;opacity:0.8;">(${exams.length})</span>` : ''}
+          </span>
+          <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
+            <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" ${exams.length === 0 ? 'disabled placeholder="-"' : ''} style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#FF8C00;border:1px solid rgba(255,140,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="${exams.length > 0 ? `Set passing score for all ${exams.length} exams` : 'No exams in this class'}" />
+            <span style="font-size:11px;color:#94a3b8;">%</span>
+          </span>
+        `;
 
         const isVocab = (cls.name || '').toLowerCase().includes('vocab');
         const vocabBtnHtml = isVocab
-          ? '<button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:12px;border-color:rgba(99,102,241,0.3);color:#818cf8;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">Vault</button>'
+          ? '<button class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:12px;height:26px;border-color:rgba(99,102,241,0.3);color:#818cf8;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">Vault</button>'
           : '';
 
-        const isExpanded = window._classesHubExpandedTests.has(cls.id);
-
-        // Tests Drawer HTML: Tasks BEFORE Exams per user requirement!
-        let drawerHtml = '';
-        if (isExpanded) {
-          if (classTests.length === 0) {
-            drawerHtml = `
-              <div style="padding:10px 14px;background:rgba(0,0,0,0.25);border-top:1px solid rgba(255,255,255,0.06);font-size:12px;color:#94a3b8;text-align:center;">
-                No tests assigned to this class yet.
-              </div>
-            `;
-          } else {
-            // Sort: Tasks first, then Exams second!
-            const sortedDrawerTests = [...classTests].sort((a, b) => {
-              const isExamA = (a.category || (a.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
-              const isExamB = (b.category || (b.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
-              if (isExamA !== isExamB) return isExamA ? 1 : -1; // Tasks first!
-              return (a.title || '').localeCompare(b.title || '');
-            });
-
-            const rowsHtml = sortedDrawerTests.map(t => {
-              const score = getTestMinScore(t);
-              const gi = getGradeInfoForScore(score);
-              const isExam = (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
-              const typeBadge = isExam
-                ? `<span style="color:#FF8C00;font-size:11px;font-weight:600;text-shadow:none;">EXAM</span>`
-                : `<span style="color:#818cf8;font-size:11px;font-weight:600;text-shadow:none;">TASK</span>`;
-
-              const shellCode = t.shell_code || t.payload?.shell_code || '-';
-              const moduleName = t.payload?.answer_type || t.module_type || t.answer_type || 'Core';
-              const questionCount = t.payload?.snapshot_question_count || t.payload?.total_questions || '-';
-
-              return `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s ease;">
-                  <td style="padding:6px 12px;font-family:monospace;font-size:11px;color:#cbd5e1;">${escapeHtml(shellCode)}</td>
-                  <td style="padding:6px 12px;font-size:12px;font-weight:600;color:#f8fafc;">${escapeHtml(t.title || 'Untitled Test')}</td>
-                  <td style="padding:6px 12px;text-align:center;">${typeBadge}</td>
-                  <td style="padding:6px 12px;text-align:center;font-size:11px;color:#94a3b8;text-transform:capitalize;">${escapeHtml(moduleName)}</td>
-                  <td style="padding:6px 12px;text-align:center;font-size:12px;color:#cbd5e1;">${escapeHtml(String(questionCount))}</td>
-                  <td style="padding:6px 12px;text-align:center;">
-                    <span style="color:${gi.color};font-size:12px;font-weight:600;text-shadow:none;">
-                      ${score}% · Grade ${gi.grade} (${gi.label})
-                    </span>
-                  </td>
-                  <td style="padding:6px 12px;text-align:right;">
-                    <div class="d-flex align-center gap-1" style="justify-content:flex-end;">
-                      <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 7px;border-color:rgba(56,189,248,0.4);color:#38bdf8;" onclick="window.openQuickEditPassingStandard('${t.id}')" title="Adjust Passing Score">
-                        Edit Standard
-                      </button>
-                      <button class="btn btn-ghost btn-sm edit-mode-only" style="font-size:11px;padding:2px 5px;" onclick="window.openClassesHubEdit('tests', '${t.id}')" title="Full Test Settings">
-                        ${getSvgIcon('settings', 12)}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              `;
-            }).join('');
-
-            drawerHtml = `
-              <div style="padding:8px 12px;background:rgba(0,0,0,0.3);border-top:1px solid rgba(255,255,255,0.08);">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                  <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">
-                    Tests & Passing Standards for ${escapeHtml(cls.name)} (${tasks.length} Tasks, ${exams.length} Exams)
-                  </div>
-                  <button class="btn btn-secondary btn-sm" style="font-size:11px;padding:2px 8px;color:var(--grade-b);border-color:rgba(149,255,0,0.3);" onclick="window.openBatchAlignStandards('${cls.id}')">
-                    Batch Align Standards
-                  </button>
-                </div>
-                <div style="border:1px solid rgba(255,255,255,0.08);border-radius:6px;overflow:hidden;background:#090D16;">
-                  <table style="width:100%;border-collapse:collapse;text-align:left;">
-                    <thead>
-                      <tr style="background:rgba(255,255,255,0.03);border-bottom:1px solid rgba(255,255,255,0.1);font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:0.05em;">
-                        <th style="padding:6px 12px;width:140px;">Shell Code</th>
-                        <th style="padding:6px 12px;">Test Title</th>
-                        <th style="padding:6px 12px;text-align:center;width:80px;">Type</th>
-                        <th style="padding:6px 12px;text-align:center;width:90px;">Module</th>
-                        <th style="padding:6px 12px;text-align:center;width:70px;">Questions</th>
-                        <th style="padding:6px 12px;text-align:center;width:160px;">Passing Standard</th>
-                        <th style="padding:6px 12px;text-align:right;width:130px;">Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${rowsHtml}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            `;
-          }
-        }
-
         return `
-          <div style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s ease;">
-            <div class="classes-hub-grid-row ${isDimmed}" style="display:grid;grid-template-columns:${gridTemplate};gap:8px;padding:6px 12px;align-items:center;font-size:12px;">
-              <!-- 1. CLASS NAME -->
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s ease;">
+            <!-- 1. NO -->
+            <td class="text-center" style="font-size:12px;color:var(--fm-text-muted);font-variant-numeric:tabular-nums;padding:8px 6px;">${idx + 1}</td>
+            <!-- 2. LEVEL -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${levelHtml}</td>
+            <!-- 3. CLASS NAME -->
+            <td style="font-size:12px;white-space:nowrap;padding:8px 10px;">
               <div class="d-flex align-center gap-2" style="min-width:0;">
                 <span style="display:inline-flex;align-items:center;">${typeof getClassSvgIcon === 'function' ? getClassSvgIcon(cls.name, 16, '#818cf8') : ''}</span>
-                <span class="text-truncate" style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" title="${escapeHtml(cls.name)}">${escapeHtml(cls.name)}</span>
+                <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" title="${escapeHtml(cls.name)}">${escapeHtml(cls.name)}</span>
               </div>
-              <!-- 2. PROGRAM -->
-              <div class="d-flex align-center text-truncate"><span class="text-xs" style="color:var(--fm-text-secondary);">${progName}</span>${instLabel}</div>
-              <!-- 3. CODE -->
-              <div style="text-align:center;">${codeHtml}</div>
-              <!-- 4. STUDENTS -->
-              <div style="text-align:center;">${studentsHtml}</div>
-              <!-- 5. TASK (BEFORE EXAM!) -->
-              <div style="text-align:center;">${taskHtml}</div>
-              <!-- 6. EXAM -->
-              <div style="text-align:center;">${examHtml}</div>
-              <!-- 7. STATUS -->
-              <div style="text-align:center;">
-                <span style="cursor:pointer;font-size:12px;font-weight:600;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
-                  ${cls.is_active ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-              <!-- 8. ACTIONS -->
-              <div class="tree-actions-right" style="justify-content:flex-end;gap:4px;">
-                ${classTests.length > 0 ? `
-                  <button class="btn btn-secondary btn-sm" style="padding:3px 7px;font-size:11px;display:inline-flex;align-items:center;gap:3px;" onclick="window.toggleClassesHubTests('${cls.id}')" title="Inspect Tests">
-                    <span>${isExpanded ? 'Hide' : 'Inspect'}</span>
-                    <span style="font-size:9px;">${isExpanded ? '▲' : '▼'}</span>
-                  </button>
-                ` : ''}
+            </td>
+            <!-- 4. PROGRAM -->
+            <td style="font-size:12px;white-space:nowrap;padding:8px 8px;"><span style="color:var(--fm-text-secondary);">${progName}</span>${instLabel}</td>
+            <!-- 5. CODE -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
+            <!-- 6. STUDENTS -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${studentsHtml}</td>
+            <!-- 7. TASK (BEFORE EXAM!) -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${taskHtml}</td>
+            <!-- 8. EXAM -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${examHtml}</td>
+            <!-- 9. STATUS -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              <span style="cursor:pointer;font-size:12px;font-weight:600;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
+                ${cls.is_active ? 'Active' : 'Inactive'}
+              </span>
+            </td>
+            <!-- 10. ACTIONS -->
+            <td class="text-right" style="white-space:nowrap;padding:8px 10px;min-width:200px;">
+              <div class="d-flex align-center gap-1" style="justify-content:flex-end;">
                 ${!cls.is_active ? `
-                  <button class="btn btn-sm btn-activate-class" style="padding:3px 9px;font-size:11px;color:var(--grade-a);border:1px solid rgba(0,192,0,0.4);background:rgba(0,192,0,0.12);font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',true)" title="Activate this class">
+                  <button class="btn btn-sm btn-activate-class" style="padding:2px 9px;font-size:12px;height:26px;color:var(--grade-a);border:1px solid rgba(0,192,0,0.4);background:rgba(0,192,0,0.12);font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',true)" title="Activate this class">
                     ${getSvgIcon('check-circle', 11)} Activate
                   </button>
                 ` : `
-                  <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11px;color:var(--fm-text-muted);border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);font-weight:500;display:inline-flex;align-items:center;gap:3px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',false)" title="Deactivate this class">
+                  <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:12px;height:26px;color:var(--fm-text-muted);border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);font-weight:500;display:inline-flex;align-items:center;gap:3px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',false)" title="Deactivate this class">
                     Deactivate
                   </button>
                 `}
                 ${vocabBtnHtml}
-                <button class="btn btn-secondary btn-sm edit-mode-only" style="padding:3px 8px;font-size:12px;" onclick="window.openClassesHubEdit('classes','${cls.id}')">Edit</button>
-                <button class="btn btn-danger btn-sm edit-mode-only"    style="padding:3px 7px;font-size:12px;" onclick="window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')">Delete</button>
+                <button class="btn btn-secondary btn-sm edit-mode-only" style="padding:2px 8px;font-size:12px;height:26px;" onclick="window.openClassesHubEdit('classes','${cls.id}')">Edit</button>
+                <button class="btn btn-danger btn-sm edit-mode-only"    style="padding:2px 7px;font-size:12px;height:26px;" onclick="window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')">Delete</button>
               </div>
-            </div>
-            ${drawerHtml}
-          </div>
+            </td>
+          </tr>
         `;
       };
 
-      let levelGroupsHtml = '';
-      const assignedClassIds = new Set();
-
-      activeLevels.forEach(function(level) {
-        const rawLevelClasses = searchedClasses
-          .filter(c => c.level_id === level.id || classLevelPairs.has(c.id + '_' + level.id));
-        const levelClasses = sortClassList(rawLevelClasses);
-
-        levelClasses.forEach(c => assignedClassIds.add(c.id));
-
-        if (levelClasses.length === 0 && searchQuery) return;
-
-        const isExpanded = window._classesHubExpandedLevels.has(level.id) || Boolean(searchQuery);
-        const levelLabel = escapeHtml(level.name || ('Level ' + level.level_number));
-
-        let bodyHtml = '';
-        if (isExpanded) {
-          if (levelClasses.length === 0) {
-            bodyHtml = '<div class="classes-hub-empty-level">No classes in this level yet. Click <strong>+ Add Class</strong> to create one.</div>';
-          } else {
-            let rowsHtml = '';
-            levelClasses.forEach(function(cls) {
-              rowsHtml += buildClassRow(cls);
-            });
-            bodyHtml = tableHeaderHtml + rowsHtml;
-          }
-        }
-
-        levelGroupsHtml += '<div class="classes-hub-level-group" style="border:2px solid rgba(255,255,255,0.1);border-radius:8px;background:var(--fm-bg-panel);margin-bottom:10px;overflow:hidden;">' +
-          '<div class="classes-hub-level-header" onclick="window.toggleClassesHubLevel(\'' + level.id + '\')">' +
-            '<div class="d-flex align-center gap-2">' +
-              '<span class="classes-hub-collapse-icon">' + (isExpanded ? '▼' : '▶') + '</span>' +
-              '<span class="classes-hub-level-badge">L' + (level.level_number !== undefined ? level.level_number : '?') + '</span>' +
-              '<span style="font-weight:700;font-size:16px;color:var(--fm-text-primary);">' + levelLabel + '</span>' +
-              '<span style="color:#818cf8;font-size:12px;font-weight:600;text-shadow:none;">' + levelClasses.length + ' ' + (levelClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
-            '</div>' +
-            '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
-              '<button class="btn btn-primary btn-sm edit-mode-only"   style="font-size:12px;padding:4px 9px;" onclick="window.openClassesHubAddClass(\'' + level.id + '\')">+ Add Class</button>' +
-              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:12px;padding:4px 8px;display:inline-flex;align-items:center;gap:4px;" onclick="window.openClassesHubEdit(\'levels\',\'' + level.id + '\')">' + getSvgIcon('edit', 12) + ' Edit</button>' +
-              '<button class="btn btn-danger btn-sm edit-mode-only"    style="font-size:12px;padding:4px 7px;" onclick="window.deleteClassesHubRecord(\'levels\',\'' + level.id + '\',\'' + levelLabel + '\')">' + getSvgIcon('trash', 12) + '</button>' +
-            '</div>' +
-          '</div>' +
-          (isExpanded ? '<div class="classes-hub-level-body" style="padding:0;">' + bodyHtml + '</div>' : '') +
-        '</div>';
-      });
-
-      // Unassigned classes safeguard
-      const rawUnassigned = searchedClasses
-        .filter(c => !assignedClassIds.has(c.id));
-      const unassignedClasses = sortClassList(rawUnassigned);
-
-      if (unassignedClasses.length > 0) {
-        const isExpandedUnassigned = window._classesHubExpandedLevels.has('unassigned') || Boolean(searchQuery);
-        let unassignedBodyHtml = '';
-        if (isExpandedUnassigned) {
-          let rowsHtml = '';
-          unassignedClasses.forEach(function(cls) {
-            rowsHtml += buildClassRow(cls);
-          });
-          unassignedBodyHtml = tableHeaderHtml + rowsHtml;
-        }
-
-        levelGroupsHtml += '<div class="classes-hub-level-group" style="border:2px solid rgba(var(--grade-c-rgb),0.25);border-radius:8px;background:var(--fm-bg-panel);margin-bottom:10px;overflow:hidden;">' +
-          '<div class="classes-hub-level-header" style="background:rgba(var(--grade-c-rgb),0.06);border-bottom-color:rgba(var(--grade-c-rgb),0.18);" onclick="window.toggleClassesHubLevel(\'unassigned\')">' +
-            '<div class="d-flex align-center gap-2">' +
-              '<span class="classes-hub-collapse-icon">' + (isExpandedUnassigned ? '▼' : '▶') + '</span>' +
-              '<span class="classes-hub-level-badge" style="background:rgba(var(--grade-c-rgb),0.2);color:var(--grade-c);border-color:rgba(var(--grade-c-rgb),0.4);">L?</span>' +
-              '<span style="font-weight:700;font-size:16px;color:var(--fm-text-primary);">Unassigned Level</span>' +
-              '<span style="color:var(--grade-c);font-size:12px;font-weight:600;text-shadow:none;">' + unassignedClasses.length + ' ' + (unassignedClasses.length === 1 ? 'Class' : 'Classes') + '</span>' +
-            '</div>' +
-            '<div class="tree-actions-right" onclick="event.stopPropagation()">' +
-              '<button class="btn btn-secondary btn-sm edit-mode-only" style="font-size:12px;padding:4px 9px;" onclick="window.openClassesHubAddClass(null)">+ Add Class</button>' +
-            '</div>' +
-          '</div>' +
-          (isExpandedUnassigned ? '<div class="classes-hub-level-body" style="padding:0;">' + unassignedBodyHtml + '</div>' : '') +
-        '</div>';
+      const sortedClasses = sortClassList(searchedClasses);
+      let rowsHtml = '';
+      if (sortedClasses.length === 0) {
+        rowsHtml = `
+          <tr>
+            <td colspan="10" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
+              <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No classes found</div>
+              <div style="font-size:12px;">Try adjusting your search query or institution filter.</div>
+            </td>
+          </tr>
+        `;
+      } else {
+        sortedClasses.forEach((cls, idx) => {
+          rowsHtml += buildClassRow(cls, idx);
+        });
       }
 
-      area.innerHTML = '<div>' +
-        '<div class="hub-toolbar mb-3" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">' +
-          '<div class="hub-toolbar-search" style="flex:1;max-width:440px;">' +
-            '<span style="color:var(--fm-text-muted);font-size:12px;display:inline-flex;align-items:center;">' + getSvgIcon('search', 12) + '</span>' +
-            '<input type="text" id="classes-hub-search" class="form-control" placeholder="Search classes, codes, programs, or test standards..." value="' + escapeHtml(searchQuery) + '" style="padding:5px 10px;font-size:12px;height:32px;background:rgba(0,0,0,0.2);" />' +
-          '</div>' +
-          '<div class="d-flex align-center gap-2">' +
-            '<span class="text-xs text-muted">' + filteredClasses.length + ' Classes · ' + activeLevels.length + ' Levels</span>' +
-            '<button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:12px;padding:4px 9px;" title="Open Topic Blueprint & Vocabulary Vault">Open Vault</button>' +
-            '<button class="btn btn-primary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:12px;padding:4px 9px;">+ Add Level</button>' +
-          '</div>' +
-        '</div>' +
-        '<div id="classes-hub-container">' +
-          (activeLevels.length === 0 && unassignedClasses.length === 0
-            ? '<div class="empty-state"><p>No levels defined yet.</p><button class="btn btn-primary mt-2 edit-mode-only" onclick="window.openClassesHubAddLevel()">+ Create First Level</button></div>'
-            : levelGroupsHtml.trim() === ''
-              ? '<div class="empty-state"><p>No classes match your search.</p></div>'
-              : levelGroupsHtml) +
-        '</div>' +
-      '</div>';
+      const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+
+      area.innerHTML = `
+        <div class="classes-hub-workspace" style="display:flex;flex-direction:column;height:100%;width:100%;overflow:hidden;gap:10px;">
+          <!-- Top Hub Toolbar -->
+          <div class="hub-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;">
+            <div class="hub-toolbar-search" style="flex:1;max-width:440px;position:relative;">
+              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--fm-text-muted);font-size:12px;display:inline-flex;align-items:center;">
+                ${getSvgIcon('search', 12)}
+              </span>
+              <input type="text" id="classes-hub-search" class="form-control" placeholder="Search classes, codes, programs, or test standards..." value="${escapeHtml(searchQuery)}" style="padding:5px 10px 5px 30px;font-size:12px;height:30px;background:rgba(0,0,0,0.2);width:100%;box-sizing:border-box;" />
+            </div>
+            <div class="d-flex align-center gap-2">
+              <span class="text-xs text-muted">${sortedClasses.length} of ${filteredClasses.length} Classes · ${activeLevels.length} Levels</span>
+              <button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;" title="Open Topic Blueprint & Vocabulary Vault">Open Vault</button>
+              <button class="btn btn-sm ${isEditOn ? 'btn-warning' : 'btn-secondary'}" id="btn-classes-hub-toggle-edit" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;${isEditOn ? 'background:var(--grade-c);color:#0F172A;font-weight:700;border-color:var(--grade-c);box-shadow:0 0 10px rgba(var(--grade-c-rgb),0.45);' : 'color:#cbd5e1;border-color:rgba(255,255,255,0.16);'}" onclick="window.toggleClassesHubEditMode()" title="Toggle Master Edit Mode for inline standards calibration">
+                ${isEditOn ? `${getSvgIcon('check-circle', 12)} Done Editing` : `${getSvgIcon('edit', 12)} Edit Mode`}
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="window.openClassesHubAddClass(null)" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;background:var(--clr-primary,#6366f1);border-color:var(--clr-primary,#6366f1);font-weight:700;">+ Add Class</button>
+              <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;">+ Add Level</button>
+            </div>
+          </div>
+
+          <!-- Unified Curriculum Table (100vh lock, table-wrap scroll only) -->
+          <div class="table-wrap sticky-first" style="flex:1 1 0 !important;min-height:0 !important;height:100% !important;max-height:none !important;overflow-y:auto;overflow-x:auto !important;background:#0f172a;border:2px solid rgba(255,255,255,0.28) !important;border-radius:8px;margin:0;">
+            <table class="datagrid-table" style="width:100%;min-width:1180px;border-collapse:collapse;table-layout:fixed;">
+              <colgroup>
+                <col style="width:45px;">
+                <col style="width:120px;">
+                <col style="width:210px;">
+                <col style="width:150px;">
+                <col style="width:155px;">
+                <col style="width:75px;">
+                <col style="width:90px;">
+                <col style="width:90px;">
+                <col style="width:80px;">
+                <col style="width:205px;">
+              </colgroup>
+              <thead style="position:sticky;top:0;z-index:10;background:#0f172a;">
+                <tr style="height:40px;">
+                  <th style="width:45px;text-align:center;">NO</th>
+                  <th style="width:120px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('level')" title="Sort by Level">LEVEL ${getSortIcon('level')}</th>
+                  <th style="width:210px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
+                  <th style="width:150px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
+                  <th style="width:155px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
+                  <th style="width:90px;text-align:center;cursor:pointer;color:#818cf8;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Standard">TASK ${getSortIcon('task')}</th>
+                  <th style="width:90px;text-align:center;cursor:pointer;color:#FF8C00;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Standard">EXAM ${getSortIcon('exam')}</th>
+                  <th style="width:80px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
+                  <th style="width:205px;text-align:right;">ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
 
       const searchInp = document.getElementById('classes-hub-search');
       if (searchInp) {

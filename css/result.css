@@ -729,7 +729,7 @@
     .result-identity-card .result-student-name-label,
     .result-identity-card .hero-student-name {
       font-family: 'Outfit', sans-serif !important;
-      font-size: 15px !important;
+      font-size: 20px !important;
       font-weight: 800 !important;
       color: #f8fafc !important;
       letter-spacing: 0.01em !important;
@@ -750,7 +750,7 @@
       justify-content: center !important;
       gap: 5px !important;
       font-family: var(--font-sans, 'Inter', sans-serif) !important;
-      font-size: 10.5px !important;
+      font-size: 12px !important;
       font-weight: 600 !important;
       color: var(--primary-tactical, #38bdf8) !important;
       letter-spacing: 0.03em !important;
@@ -764,7 +764,7 @@
     }
     .result-identity-card .result-meta-wrapper .meta-sep {
       opacity: 0.5 !important;
-      font-size: 10px !important;
+      font-size: 12px !important;
       color: #475569 !important;
       -webkit-user-select: none !important;
       user-select: none !important;
@@ -844,7 +844,7 @@
 
     .result-identity-card #result-avatar-initial {
       font-family: 'Outfit', sans-serif !important;
-      font-size: 26px !important;
+      font-size: 20px !important;
       font-weight: 800 !important;
       color: var(--tier-color, var(--grade-star)) !important;
       line-height: 1 !important;
@@ -874,54 +874,63 @@
       justify-content: flex-start !important;
       gap: 2.5px !important;
       padding-top: 1px !important;
+      text-align: left !important;
     }
 
     .result-identity-card .hero-bio-row {
       display: grid !important;
-      grid-template-columns: 26px 8px 1fr !important;
+      grid-template-columns: 28px 8px 1fr !important;
       align-items: baseline !important;
       width: 100% !important;
+      text-align: left !important;
     }
 
     .result-identity-card .hero-bio-lbl {
       font-family: var(--font-sans, 'Inter', sans-serif) !important;
-      font-size: 9.5px !important;
+      font-size: 12px !important;
       font-weight: 700 !important;
       color: #94a3b8 !important;
       letter-spacing: 0.03em !important;
       text-transform: uppercase !important;
       white-space: nowrap !important;
       line-height: 1.5 !important;
+      text-align: left !important;
+      display: block !important;
     }
 
     .result-identity-card .hero-bio-colon {
-      font-size: 9.5px !important;
+      font-size: 12px !important;
       color: #64748b !important;
       text-align: center !important;
       line-height: 1.5 !important;
+      display: block !important;
     }
 
     .result-identity-card .hero-bio-val {
       font-family: var(--font-sans, 'Inter', sans-serif) !important;
-      font-size: 10px !important;
+      font-size: 12px !important;
       font-weight: 500 !important;
       color: #f8fafc !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
       line-height: 1.5 !important;
+      text-align: left !important;
+      display: block !important;
     }
 
     .result-identity-card .hero-bio-gender-val {
       color: var(--primary-tactical, #38bdf8) !important;
       font-weight: 600 !important;
+      text-align: left !important;
     }
 
     .result-identity-card .hero-bio-adr-val {
       white-space: normal !important;
       line-height: 1.35 !important;
       color: #cbd5e1 !important;
-      font-size: 9.5px !important;
+      font-size: 12px !important;
+      text-align: left !important;
     }
 
     @keyframes star-vector-pulse {
@@ -1119,7 +1128,7 @@
     .metric-stacked-val {
       font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-feature-settings: 'tnum' on, 'lnum' on !important;
-      font-size: clamp(14px, 2.2vh, 17px) !important;
+      font-size: clamp(14px, 2.2vh, 16px) !important;
       font-weight: 900 !important;
       line-height: 1 !important;
       letter-spacing: -0.01em !important;
@@ -1667,31 +1676,6 @@
         font-size: 30px !important;
         margin-bottom: 2px !important;
       }
-      #result-Test-name-container {
-      display: flex !important;
-      flex-direction: column !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 2px !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
-      background: rgba(9, 13, 22, 0.95) !important;
-      border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      font-family: 'Inter', sans-serif !important;
-      font-size: 12px !important;
-      color: #94A3B8 !important;
-      letter-spacing: 0.04em !important;
-      flex-shrink: 0 !important;
-      position: sticky !important;
-      bottom: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      z-index: 100 !important;
-      box-sizing: border-box !important;
     }
 
 .test-rem-sup {
@@ -2045,10 +2029,14 @@ body.result-page:not(.tier-glow-active) #result-Test-name-container,
 body.result-page:not(.tier-glow-active) .result-test-title-wrap,
 body.result-page:not(.tier-glow-active) #result-metrics-composite-card,
 body.result-page:not(.tier-glow-active) .result-metrics-composite-card,
+body.result-page:not(.tier-glow-active) #result-score-grade-card,
+body.result-page:not(.tier-glow-active) .result-score-grade-card,
+body.result-page:not(.tier-glow-active) #result-score-box,
+body.result-page:not(.tier-glow-active) #result-grade-box,
+body.result-page:not(.tier-glow-active) .score-grade-box,
 body.result-page:not(.tier-glow-active) #result-motivation-msg,
 body.result-page:not(.tier-glow-active) .result-evaluation-card,
-body.result-page:not(.tier-glow-active) .btn-next-milestone,
-body.result-page:not(.tier-glow-active) .remedial-segment-btn {
+body.result-page:not(.tier-glow-active) .btn-next-milestone {
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
   background: #0f172a !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
@@ -2061,18 +2049,38 @@ body.result-page:not(.tier-glow-active) .remedial-segment-btn {
 body.result-page:not(.tier-glow-active) #result-avatar-container {
   border: 2.5px solid rgba(255, 255, 255, 0.25) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
-  transition: border-color 0.8s ease, box-shadow 0.8s ease !important;
+  background: rgba(15, 23, 42, 0.9) !important;
+  transition: border-color 0.8s ease, box-shadow 0.8s ease, background 0.8s ease !important;
 }
 
 body.result-page:not(.tier-glow-active) #result-percentage,
 body.result-page:not(.tier-glow-active) #res-points {
   color: #F8FAFC !important;
+  -webkit-text-fill-color: #F8FAFC !important;
   text-shadow: none !important;
 }
 
-body.result-page:not(.tier-glow-active) #result-test-topic-row {
+body.result-page:not(.tier-glow-active) #result-test-topic-row,
+body.result-page:not(.tier-glow-active) .result-title-row-topic {
   color: #cbd5e1 !important;
   text-shadow: none !important;
+}
+
+body.result-page:not(.tier-glow-active) .dashboard-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.10) !important;
+  background: #090d16 !important;
+  box-shadow: none !important;
+}
+
+body.result-page:not(.tier-glow-active) #bottom-ad-banner {
+  border-top: 1px solid rgba(255, 255, 255, 0.10) !important;
+  background: #070b19 !important;
+  box-shadow: none !important;
+}
+
+body.result-page:not(.tier-glow-active) .result-identity-card .hero-name-divider,
+body.result-page:not(.tier-glow-active) .result-identity-card .hero-card-divider {
+  background: rgba(255, 255, 255, 0.10) !important;
 }
 
 /* -------------------------------------------------------------
@@ -2135,11 +2143,44 @@ body.result-page.tier-glow-active .btn-next-milestone {
   background: linear-gradient(135deg, rgba(var(--tier-rgb), 0.35) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
 }
 
-body.result-page.tier-glow-active .tutor-remedial-segmented .remedial-segment-btn.active {
-  border-color: var(--tier-color) !important;
-  color: var(--tier-color) !important;
-  background: rgba(var(--tier-rgb), 0.20) !important;
-  box-shadow: 0 0 18px rgba(var(--tier-rgb), 0.45) !important;
+/* Semantic Tutor Action Segment Colors (SSOT: Normal=Green, Remedial=Yellow, Forgive=Red) */
+body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-normal {
+  border: 1px solid rgba(var(--grade-a-rgb), 0.45) !important;
+  color: var(--grade-a) !important;
+  background: rgba(var(--grade-a-rgb), 0.10) !important;
+}
+body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-normal.active {
+  border: 2px solid var(--grade-a) !important;
+  color: var(--grade-a) !important;
+  background: rgba(var(--grade-a-rgb), 0.25) !important;
+  box-shadow: 0 0 20px rgba(var(--grade-a-rgb), 0.60) !important;
+  font-weight: 900 !important;
+}
+
+body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-remidi {
+  border: 1px solid rgba(var(--grade-c-rgb), 0.45) !important;
+  color: var(--grade-c) !important;
+  background: rgba(var(--grade-c-rgb), 0.10) !important;
+}
+body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-remidi.active {
+  border: 2px solid var(--grade-c) !important;
+  color: var(--grade-c) !important;
+  background: rgba(var(--grade-c-rgb), 0.25) !important;
+  box-shadow: 0 0 20px rgba(var(--grade-c-rgb), 0.60) !important;
+  font-weight: 900 !important;
+}
+
+body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-forgive {
+  border: 1px solid rgba(var(--grade-e-rgb), 0.45) !important;
+  color: var(--grade-e) !important;
+  background: rgba(var(--grade-e-rgb), 0.10) !important;
+}
+body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-forgive.active {
+  border: 2px solid var(--grade-e) !important;
+  color: var(--grade-e) !important;
+  background: rgba(var(--grade-e-rgb), 0.25) !important;
+  box-shadow: 0 0 20px rgba(var(--grade-e-rgb), 0.60) !important;
+  font-weight: 900 !important;
 }
 
 /* ===== ACTION BUTTONS CONTRAST (CLEAR DISTINCTION) =====

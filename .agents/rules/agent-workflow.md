@@ -6,6 +6,7 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 2. **Cermat (Meticulous & Comprehensive)**: Teliti membaca file target, dependencies, dan dampak menyeluruh ke seluruh sistem sebelum/sesudah mengubah kode.
 3. **Tepat (Precise & Aligned)**: Eksekusi presisi sesuai kemauan pengguna dan standar baku tanpa menyimpang dari SSOT dan hierarki aturan.
 4. **Akurat (Accurate & Verified)**: Lakukan verifikasi otomatis setiap selesai mengedit untuk memastikan 0 syntax error, 0 regresi, dan 100% tests green.
+- **Audit Tangkapan Layar Proaktif**: Setiap kali pengguna mengunggah tangkapan layar (screenshot), lakukan audit visual menyeluruh berdasarkan 7 pilar SSOT di [`.agents/rules/ui-invariants.md` §1.7](file:///.agents/rules/ui-invariants.md#17-protokol-audit-tangkapan-layar--visual-invariant-audit-7-pillars-ssot).
 
 ## 1. Pragmatic Task Management (`tasks.md`)
 - **Complex Multi-Step Tasks**: For complex features involving multiple files or phases, track progress in `tasks.md` in the workspace root.

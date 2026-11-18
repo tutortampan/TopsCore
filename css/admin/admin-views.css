@@ -1024,6 +1024,14 @@ body.global-edit-mode-on td.editable-cell {
   background: rgba(255, 255, 255, 0.02) !important;
 }
 
+body.global-edit-mode-on th.edit-mode-only,
+body.global-edit-mode-on td.edit-mode-only {
+  display: table-cell !important;
+}
+body.global-edit-mode-on col.edit-mode-only {
+  display: table-column !important;
+}
+
 /* Explicit Override of Capsule Styling for Vocab Vault: Pure Flat White Grid */
 body.global-edit-mode-on #vault-table td input,
 body.global-edit-mode-on #vault-table td select,

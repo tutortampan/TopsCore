@@ -612,7 +612,7 @@ export async function fetchStudentProgress(studentId) {
 export async function fetchTestsForStudentClass(programId, classId, institutionId, levelId) {
   const sb = await getSupabase();
   let query = sb.from('tests')
-    .select('id, title, shell_code, payload, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
+    .select('id, title, shell_code, payload, module_id, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, levels(id, name, level_number)')
     .eq('class_id', classId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -650,7 +650,7 @@ export async function fetchTestsForStudentClass(programId, classId, institutionI
 export async function fetchTestsForStudentLevel(programId, levelId, institutionId) {
   const sb = await getSupabase();
   let query = sb.from('tests')
-    .select('id, title, shell_code, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, deleted_at, levels(id, name, level_number)')
+    .select('id, title, shell_code, module_id, display_name, test_subtype, test_type, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, deleted_at, levels(id, name, level_number)')
     .eq('level_id', levelId)
     .eq('status', 'PUBLISHED')
     .is('deleted_at', null)
@@ -2884,13 +2884,20 @@ export async function fetchVaultStats() {
   return stats;
 }
 
-export async function checkVaultDuplicates(newRows) {
-  const sb = await getSupabase();
-  const { data: vaultData, error } = await sb.from('vocabulary_vault')
-    .select('id, theme, topic, indonesian, english, target_level, word_type, program_id')
-    .is('deleted_at', null);
-  if (error) throw error;
-  const vault = vaultData || [];
+export async function checkVaultDuplicates(newRows, existingVaultWords = null) {
+  let vault = existingVaultWords;
+  if (!vault || !vault.length) {
+    try {
+      vault = await fetchVaultWords({ limit: 100000 });
+    } catch (_) {
+      const sb = await getSupabase();
+      const { data: vaultData, error } = await sb.from('vocabulary_vault')
+        .select('id, theme, topic, indonesian, english, target_level, word_type')
+        .is('deleted_at', null);
+      if (error) throw error;
+      vault = vaultData || [];
+    }
+  }
 
   const cleanRows = [];
   const duplicateConflicts = [];
@@ -2901,14 +2908,10 @@ export async function checkVaultDuplicates(newRows) {
     const rowEng = normStr(row.english);
     const rowInd = normStr(row.indonesian);
     const rowTopic = normStr(row.topic);
-    const rowLevel = parseInt(row.level || row.target_level || 1, 10) || 1;
-
-    const rowType = normStr(row.word_type || 'Verb');
 
     const conflict = vault.find(v =>
-        (!row.program_id || !v.program_id || v.program_id === row.program_id) &&
-        normStr(v.topic) === rowTopic &&
-        (normStr(v.indonesian) === rowInd || normStr(v.english) === rowEng)
+      normStr(v.topic) === rowTopic &&
+      (normStr(v.indonesian) === rowInd || normStr(v.english) === rowEng)
     );
 
     if (conflict) {
@@ -2970,9 +2973,9 @@ function sanitizeVaultRow(row) {
     topCode = `${thCode}${topCode}`;
   }
 
+  const determinedCategory = cat ? (cat.includes('phrase') ? 'phrases' : 'words') : (['expression', 'idiom', 'proverb'].includes(wType.toLowerCase()) ? 'phrases' : 'words');
+
   return {
-    institution_id: row.institution_id || row.institutionId || null,
-    program_id: row.program_id || row.programId || null,
     theme_code: thCode || (topCode ? topCode[0] : 'A'),
     theme:      String(row.theme || '').trim().replace(/\s+/g, ' '),
     topic_code: topCode || 'A1',
@@ -2980,7 +2983,8 @@ function sanitizeVaultRow(row) {
     indonesian: String(row.indonesian || '').trim().replace(/\s+/g, ' '),
     english:    canonicalEng,
     word_type:  wType,
-    target_level: parseInt(row.level || row.target_level || 1, 10) || 1
+    target_level: parseInt(row.level || row.target_level || 1, 10) || 1,
+    category:   determinedCategory
   };
 }
 
@@ -3049,14 +3053,21 @@ export async function importVaultWords(rows, resolutionMap = {}, onProgress = nu
 
   // Auto-register theme_program_assignments for imported themes with program_id
   const uniqueAssignments = new Map();
-  for (const item of [...toInsert, ...toUpdate]) {
-    if (item.theme_code && item.target_level && item.program_id) {
-      const key = `${item.theme_code}_${item.target_level}_${item.program_id}`;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const resolution = resolutionMap[i];
+    if (resolution === 'skip') continue;
+
+    const progId = row.program_id || row.programId;
+    const thCode = String(row.theme_code || (row.topic_code ? row.topic_code[0] : 'A')).trim().toUpperCase();
+    const tgtLvl = parseInt(row.level || row.target_level || 1, 10) || 1;
+    if (thCode && tgtLvl && progId) {
+      const key = `${thCode}_${tgtLvl}_${progId}`;
       if (!uniqueAssignments.has(key)) {
         uniqueAssignments.set(key, {
-          theme_code: item.theme_code,
-          target_level: item.target_level,
-          program_id: item.program_id,
+          theme_code: thCode,
+          target_level: tgtLvl,
+          program_id: progId,
           is_active: true,
           updated_at: new Date().toISOString()
         });
@@ -3288,6 +3299,13 @@ export async function deleteVaultTheme(theme, targetLevel = null, themeCode = nu
   }
   const { error } = await query;
   if (error) throw error;
+  if (themeCode) {
+    try {
+      let assignQuery = sb.from('theme_program_assignments').delete().eq('theme_code', themeCode);
+      if (targetLevel) assignQuery = assignQuery.eq('target_level', targetLevel);
+      await assignQuery;
+    } catch (_) {}
+  }
   clearApiCache('vault');
   return true;
 }
@@ -5437,10 +5455,10 @@ export async function fetchActiveTestSession(testId, batchId = null) {
   };
 }
 
-export async function openTestSession({ testId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [], answeringMode = null }) {
+export async function openTestSession({ testId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [], answeringMode = null, dialogueRoomCode = null }) {
   const sb = await getSupabase();
   const { data: existing, error: fetchErr } = await sb.from('tests')
-    .select('id, payload')
+    .select('id, module_id, shell_code, payload')
     .eq('id', testId)
     .single();
   if (fetchErr || !existing) throw new Error('Test not found');
@@ -5448,6 +5466,12 @@ export async function openTestSession({ testId, batchId, allocatedMinutes, allow
   const minutes = Math.max(1, parseInt(allocatedMinutes, 10) || 30);
   const now = new Date();
   const autoClose = new Date(now.getTime() + minutes * 60 * 1000);
+
+  const isDialogue = (existing.module_id === 'c590c69f-44dc-4d26-9c19-263c6e7cbbec') ||
+                     (existing.shell_code || '').includes('-DIAL') ||
+                     (existing.payload?.module_type === 'TURN_BASED_ROLEPLAY') ||
+                     (existing.payload?.module_code === 'm7');
+  const code = dialogueRoomCode || (isDialogue ? ('DIAL-' + Math.floor(1000 + Math.random() * 9000)) : null);
 
   const testSession = {
     batch_id: batchId,
@@ -5458,7 +5482,8 @@ export async function openTestSession({ testId, batchId, allocatedMinutes, allow
     allowed_student_ids: Array.isArray(allowedStudentIds) ? allowedStudentIds : [],
     is_remedial: Boolean(isRemedial),
     remedial_student_ids: Array.isArray(remedialStudentIds) ? remedialStudentIds : [],
-    answering_mode: answeringMode || null
+    answering_mode: answeringMode || null,
+    ...(code ? { dialogue_room_code: code } : {})
   };
 
   const updatedPayload = {

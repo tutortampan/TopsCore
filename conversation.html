@@ -219,6 +219,12 @@
 
       <!-- 2. Body Area -->
       <div class="conv-modal-body">
+        <!-- Dynamic Test Context Header (When test_id is passed) -->
+        <div id="lobby-test-context-card" style="display: none; padding: 10px 12px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 8px; margin-bottom: 12px; box-sizing: border-box;">
+          <div style="font-size: 12px; font-weight: 700; color: var(--primary-tactical); text-transform: uppercase;" id="lobby-test-title">DIAL-M7 • LIVE DIALOGUE</div>
+          <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;" id="lobby-test-class">Speaking &amp; Conversation Assessment</div>
+        </div>
+
         <div class="conv-input-group">
           <label class="conv-input-label" for="input-room-code">Room Code</label>
           <input id="input-room-code" class="conv-input-text" type="text" placeholder="e.g. CONV-8821" maxlength="12" style="text-transform: uppercase;">
@@ -305,10 +311,13 @@
         </div>
       </div>
 
-      <!-- 3. CTA Area / Modal Footer (60px Panel + Single Button Centered per Invariant 1.5.2 & 1.5.4) -->
-      <div class="conv-modal-footer modal-footer">
-        <button id="btn-return-dashboard" class="btn conv-btn-ghost-sec" type="button" style="margin: 0 auto !important; min-width: 200px !important;">
+      <!-- 3. CTA Area / Modal Footer (60px Panel per Invariant 1.5.2 & 1.5.4) -->
+      <div class="conv-modal-footer modal-footer" style="display:flex; justify-content:space-between; align-items:center; width:100%; padding:0 20px; box-sizing:border-box;">
+        <button id="btn-return-dashboard" class="btn conv-btn-ghost-sec" type="button" style="height:40px; min-height:40px; line-height:38px; padding:0 18px; font-size:12px; font-weight:700; border-radius:4px; box-sizing:border-box; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); cursor:pointer;">
           RETURN TO DASHBOARD
+        </button>
+        <button id="btn-view-report" class="btn" type="button" style="display:none; height:40px; min-height:40px; line-height:38px; padding:0 18px; font-size:12px; font-weight:800; border-radius:4px; box-sizing:border-box; color:#090D16; background:var(--grade-a); border:1.5px solid var(--grade-a); box-shadow:0 0 14px rgba(0,192,0,0.45); cursor:pointer;">
+          VIEW FULL REPORT &rarr;
         </button>
       </div>
     </div>

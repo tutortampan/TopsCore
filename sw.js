@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v145';
+const CACHE_NAME = 'topscore-cache-option-a-v150';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -15,14 +15,14 @@ const ASSETS_TO_CACHE = [
   './css/dashboard.css?v=20261117_v624',
   './css/auth.css?v=20261028',
   './css/test.css?v=20261115_v539',
-  './css/result.css?v=20261115_v539',
+  './css/result.css?v=20261118_v628',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
   './js/api.js?v=20261115_v541',
   './js/auth.js?v=20261108_v162',
   './js/dashboard.js?v=20261117_v624',
   './js/test.js?v=20261117_v549',
-  './js/result.js?v=20261117_v542',
+  './js/result.js?v=20261118_v628',
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261028',
   './js/indonesia-regions.js?v=20261117_v547',

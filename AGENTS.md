@@ -43,17 +43,10 @@ Setiap instruksi dan perintah dari pengguna WAJIB dieksekusi dengan 4 pilar kedi
 4. **Akurat (Accurate & Verified)**: Seluruh sintaks, formula perhitungan, pembulatan, token warna, dan layout wajib 100% valid dan lolos verifikasi pengujian otomatis (Zero Regressions, 100% Green).
 
 ### 0.2.1 Protokol Audit Tangkapan Layar (Visual Screenshot Invariant Audit Protocol)
-Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar tanpa menunggu diminta:
-1. **Spacing & Gaps (Strict 10px Lock)**: Jarak antar-elemen dan antar-seksi tepat 10px (bebas gap ganda 20px–30px atau phantom gaps).
-2. **Card Internal Padding (Strict 10px Lock)**: Jarak konten dalam kartu ke garis border luar tepat 10px.
-3. **Dual-Scale Typography Architecture**: Skala terpusat (12px, 14px, 16px, 20px, 30px, 40px); mutlak nol font sub-12px dan nol angka perantara liar (18px, 13px, 15px).
-4. **Punctuation & Zero-Truncation**: Titik dua wajib menempel ke kata tanpa spasi (`Label:` bukan `Label :`), teks tidak terpotong (*zero truncation/ellipsis*).
-5. **Color SSOT & Semantic Precision**: Menggunakan token resmi (`#38bdf8` Tactical Blue), dilarang menggunakan warna hijau Grade A pada status input belum terverifikasi.
-6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
-7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
+Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar SSOT di [`.agents/rules/ui-invariants.md` §1.7](file:///.agents/rules/ui-invariants.md#17-protokol-audit-tangkapan-layar--visual-invariant-audit-7-pillars-ssot) (Strict 10px Gap, 10px Card Padding, Dual-Scale Typography, Punctuation & Zero-Truncation, Color SSOT, 100% English, dan Zero Clutter).
 
 ## 0.3 Larangan Mutlak Tindakan Liar / Tanpa Permintaan (Strict Zero Unsolicited Action Invariant)
-Sistem dan AI coding agent MUTLAK DILARANG berinisiatif di luar batas perintah:
+Sistem dan AI coding agent MUTLAK DILARANG berinisiatif di luar batas perintah (detail operasional di [`.agents/rules/agent-workflow.md` §2.2](file:///.agents/rules/agent-workflow.md#22-strict-zero-unsolicited-action-invariant-no-unrequested-generation-modification-or-deletion)):
 1. **Dilarang Men-generate / Membuat (No Unsolicited Generation/Creation)**: Tidak boleh membuat file baru, folder baru, modul baru, aset, atau fitur tambahan apa pun yang TIDAK secara eksplisit diminta oleh pengguna.
 2. **Dilarang Merubah (No Unsolicited Modification)**: Tidak boleh menyentuh, mengutak-atik, merombak layout/styling, atau mengubah logika/fungsi di luar cakupan file dan instruksi spesifik yang diberikan.
 3. **Dilarang Membuang / Menghapus (No Unsolicited Deletion)**: Tidak boleh menghapus file, fungsi, komponen antarmuka, konfigurasi, atau data yang ada tanpa instruksi eksplisit atau izin tertulis dari pengguna.
@@ -284,16 +277,11 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 - Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
 
 ## 2.30 Universal Table Cell Regular Weight Invariant (Aturan Konten Baris Tabel Wajib Regular 400 & Inter Font)
-- **Zero Bold in Table Content**: Di seluruh sistem (Admin Workstation Datagrid, Student Dashboard Standings & Completed Tests, Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, nomor urut/peringkat, nilai poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular)**. Dilarang keras menggunakan huruf atau angka tebal (`700`, `800`, `900`) di dalam sel baris tabel.
-- **Font SSOT Wajib Inter**: Seluruh tabel wajib mengimplementasikan font **`Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Font display geometris membulat (`Outfit`) dilarang keras digunakan di dalam baris/sel data tabel.
-- **Pengecualian**: Header utama tabel (`thead th`) diizinkan `font-weight: 600–700`, dan glif simbol grade di dalam lingkaran kecil (22px–24px) diizinkan `font-weight: 500–600`.
+- **Zero Bold in Table Content**: Di seluruh sistem (Admin Workstation Datagrid, Student Dashboard Standings & Completed Tests, Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, peringkat, nilai poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular) dan font `Inter`**. Huruf tebal (`700`, `800`, `900`) dan font `Outfit` dilarang keras di dalam sel baris tabel. Detail spesifikasi dan pengecualian header diatur dalam [`.agents/rules/ui-invariants.md` §2.0 & §4.1](file:///.agents/rules/ui-invariants.md#41-dimensi-tabel-baku--native-display-lock-universal-table-standardization-protocol--construction-blueprint).
 
 ## 2.31 Zero Table Capsule & Zero Table Glow Invariant (Isi Tabel Bebas Kapsul & Nol Glow SSOT)
-- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel & Grid Data**:
-  - Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`).
-  - **Yang Boleh Berwarna HANYA Font Teks Saja**: Arti semantik status (seperti `Active` hijau `var(--grade-a)`, `Inactive` merah `var(--grade-e)`, `Hold` kuning `var(--grade-c)`, `Published` hijau, `Draft` netral, `EXAM` orange, `TASK` indigo, dll.) hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
-- **Mutlak Nol Glow (Zero Text-Shadow & Zero Box-Shadow) di Seluruh Sistem**:
-  - Dilarang keras menggunakan efek glow, shadow, atau pendaran pada teks maupun elemen sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
+- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel**: Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, modal tables) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`). Status hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
+- **Mutlak Nol Glow di Seluruh Sistem**: Dilarang keras menggunakan efek glow, text-shadow, atau box-shadow pada teks maupun sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur per [`.agents/rules/ui-invariants.md` §4.9](file:///.agents/rules/ui-invariants.md#49-zero-table-capsule--zero-table-glow-invariant-ssot).
 
 ---
 
@@ -346,6 +334,8 @@ Every change must be executed atomically:
 - DO NOT keep or upload oversized screenshots; max height ~600–800px (< 30 KB). WAJIB terapkan protokol Rolling Single Screenshot & Auto-Purge: saat screenshot baru dibuat, screenshot lama wajib langsung dihapus dari sistem untuk mencegah penumpukan file.
 - DO NOT allow table cells, headers, or entity labels to truncate with ellipsis (`...`) when viewport space exists.
 - DO NOT render non-white or missing gridlines when Master Edit Mode is active (Universal White Excel Gridlines).
+- DO NOT use capsules, pills, badges, borders, or background fills in data table cells; status colors are strictly typographic (Rule 2.31 & ui-invariants.md §4.9).
+- DO NOT apply glow, text-shadow, or box-shadow to data table cells, numbers, or text (Rule 2.31 & ui-invariants.md §4.9).
 - DO NOT use unicode emojis in data tables/headers/cards; strictly use SVG vector icons via `getClassSvgIcon()`.
 - DO NOT create ceremonial `/plan` files for standard UI/table tweaks (enforce Fast-Track UI Execution).
 - DO NOT fragment table adjustments across multiple turns; always do single-pass updates (header, cells, edit mode).

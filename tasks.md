@@ -7,6 +7,57 @@
 ---
 
 ## 📋 SSOT Governance & Architecture Milestones (Complete)
+- [x] **Phase 618 (Live Dialogue Room Integration — Module M7 Architecture & Context Routing Engine)**:
+  - **Module M7 Detection & Smart URL Resolver**:
+    - Di [js/dashboard.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/dashboard.js), fungsi `isDialogueTest()` mendeteksi 9 signature Module M7 (`c590c69f-44dc-4d26-9c19-263c6e7cbbec`, `-DIAL`, `-M7-`, `DIALOGUE`, `TURN_BASED_ROLEPLAY`, `m7`, `dialogue`).
+    - `getTestLaunchUrl()` otomatis mengarahkan test dialogue ke `conversation.html?test_id=...&class_id=...&title=...` alih-alih `test.html`.
+    - Mengintegrasikan router pada Next Assignment Hero button dan Assigned Tests card buttons.
+  - **Test-Aware Dialogue Room Lobby & Dynamic Scenario Metadata**:
+    - Di [conversation.html](file:///d:/Drives/Tutor%20Tampan/TopsCore/conversation.html) dan [js/conversation-room.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/conversation-room.js), lobby setup otomatis menampilkan kartu konteks ujian/kelas saat `test_id` diteruskan.
+    - Skenario, kategori, deskripsi, dan target vocabulary dimuat secara dinamis dari database ujian Supabase (`tests.payload`).
+    - Prefix room code otomatis menggunakan `DIAL-XXXX` untuk sesi ujian live.
+  - **Tutor Live Exam Room Integration & Room Code Synchronization**:
+    - Di [js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js), `openTestSession` menyematkan `dialogue_room_code` ke dalam `payload.test_session`.
+    - Dashboard siswa membaca room code aktif via `fetchActiveTestSession()` sehingga siswa masuk otomatis tanpa mengetik manual.
+  - **Standard Attempt Persistence & 5-Pillar Result Visualization**:
+    - Di [js/conversation-eval.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/conversation-eval.js) dan [js/result.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/result.js), hasil evaluasi 5-pilar (Fluency, Vocab, Grammar, Relevance, Turn) tersimpan ke tabel `attempts` standar dan dirender dalam kartu 5-kolom lengkap dengan rekaman giliran bicara (*speaking turns*).
+    - Tombol `VIEW FULL REPORT` di modal akhir membawa siswa langsung ke `result.html?attempt_id=...`.
+  - **Verification**: `node scripts/test_dialogue_integration.mjs` lolos 100%, preflight AST 51 file lolos, 11 pilar tabel lolos.
+- [x] **Phase 611 (Complete Standardization of All 5 Live Exam Floating Windows: L1–L5 Invariant Harmonization)**:
+  - **Window L1 (`#modal-theme-open-session`) — Open Exam Session Modal**:
+    - Merampingkan lebar modal ke 520px (*mobile-ready vertical stack*).
+    - Title Area: Solid Navy 60px (`#1E293B`), Outfit 800 ALL CAPS.
+    - Words & Phrases Module selector menggunakan dropdown 30px standar (Written M3, Selection M2, Spoken M4).
+    - Tabel status siswa bebas kapsul dan bebas glow (*pure font semantic colors*).
+    - CTA: Pojok kiri bawah Cancel (Aksen Merah Grade E), pojok kanan bawah Unlock (Aksen Hijau Grade A).
+    - Screenshot: [live_room_01_open_session_box_lowres.jpg](file:///C:/Users/Top/.gemini/antigravity/brain/779df3a5-d6c5-47f0-b10a-0377f6852212/live_room_01_open_session_box_lowres.jpg).
+  - **Window L2 (`#modal-theme-live-monitor`) — Live Proctoring Room**:
+    - Title Area: Solid Navy 60px (`#1E293B`), Outfit 800 ALL CAPS, stacked Inter 400 12px subtitle.
+    - In-Window Sub-Panel Toolbar: 40px height, tab filter dark slate 30px, toggle auto-poll, input pencarian.
+    - Tabel Live Monitor: Zero capsule, zero glow, Inter 400 reguler di seluruh sel data. Bintang Star ★ grade circle dark slate tanpa glow di dalam tabel.
+    - CTA: Pojok kiri bawah Close Monitor (Aksen Merah Grade E).
+    - Screenshot: [live_room_02_live_monitor_box_lowres.jpg](file:///C:/Users/Top/.gemini/antigravity/brain/779df3a5-d6c5-47f0-b10a-0377f6852212/live_room_02_live_monitor_box_lowres.jpg).
+  - **Window L3 (`#modal-theme-add-late`) — Add Late Arrival Students Modal**:
+    - Layout 520px ramping vertikal, Solid Navy 60px Header.
+    - Info bar sesi aktif (waktu tersisa & nama batch), kontrol All/None 30px.
+    - Tabel peserta susulan: 3 kolom (`NO`, `STUDENT NAME`, `STATUS`), status bebas kapsul dan bebas glow.
+    - CTA: Pojok kiri bawah Cancel (Aksen Merah Grade E), pojok kanan bawah Add to Test Now (Aksen Hijau Grade A).
+    - Screenshot: [live_room_03_add_late_box_lowres.jpg](file:///C:/Users/Top/.gemini/antigravity/brain/779df3a5-d6c5-47f0-b10a-0377f6852212/live_room_03_add_late_box_lowres.jpg).
+  - **Window L4 (`#modal-student-alarm-detail`) — Student Tab-Switch Alarm Detail Modal**:
+    - Window box 480px, Solid Navy 60px Header (`STUDENT INTEGRITY & TAB-SWITCH ALARMS`, Outfit 800 16px, stacked subtitle nama siswa & jumlah alarm).
+    - Daftar insiden: Strict 10px gap & padding, waktu `en-GB`, teks bebas kapsul dan bebas glow.
+    - CTA: Pojok kiri bawah Close (Aksen Merah Grade E), pojok kanan bawah Reset / Forgive Student Alarms (Aksen Kuning Grade C).
+    - Screenshot: [live_room_04_alarm_detail_box_lowres.jpg](file:///C:/Users/Top/.gemini/antigravity/brain/779df3a5-d6c5-47f0-b10a-0377f6852212/live_room_04_alarm_detail_box_lowres.jpg).
+  - **Window L5 (`#modal-kick-student-confirm`) — Expel Student Confirmation Modal**:
+    - Window box 480px, Solid Navy 60px Header (`EXPEL STUDENT FROM EXAM`, teks merah Grade E Outfit 800 16px, stacked subtitle nama siswa & tema).
+    - Opsi tindakan: Pilihan radio tersusun rapi dengan gap 10px dan padding 10px.
+    - CTA: Pojok kiri bawah Cancel (Aksen Merah Grade E), pojok kanan bawah Expel Now (Aksen Merah Solid Grade E 40px bold).
+    - Screenshot: [live_room_05_kick_confirm_box_lowres.jpg](file:///C:/Users/Top/.gemini/antigravity/brain/779df3a5-d6c5-47f0-b10a-0377f6852212/live_room_05_kick_confirm_box_lowres.jpg).
+  - **Automated Verification Suite**:
+    - `audit_l1_invariants.cjs` s/d `audit_l5_invariants.cjs`: 100% lolos (0 invalid fonts, 0 spaced colons, 0 kata non-Inggris, 0 kapsul tabel, 0 glow tabel, 100% Solid Navy 60px, 100% CTA standar).
+    - `npm.cmd run test:fast`: 51 JS files lolos validasi sintaks AST (0.17s).
+    - `npm.cmd run test:table`: 11/11 Pilar tabel lolos 100%.
+    - `npm.cmd run verify:live-sessions`: 5/5 Tes sesi live lolos 100%.
 - [x] **Phase 617 (Level Promotion Auto-Heal & Strict Level Isolation Engine)**:
   - **Auto-Heal Target Level Classes**:
     - `fetchStudentClasses()` di [js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js) otomatis mengaktifkan (`is_active: true`) kelas level tujuan jika siswa telah dipromosikan (misal ke Level 3) tetapi kelas di level tersebut masih nonaktif di database.
@@ -398,19 +449,23 @@
   - Dedicated 60px CTA Area / Modal Footer with 1.5px perimeter top divider (`border-top: 1.5px solid rgba(255, 255, 255, 0.16)`), dual 40px action buttons (`CLOSE` at bottom-left corner and `NEXT UNANSWERED →` on right with Tactical Blue hover glow and 100% zero text clipping). Ultra-compact height (< 40% viewport on mobile).
 - [x] **10. Incomplete & Complete Submit Hazard Modal (`#submit-modal`)** [COMPLETE — Phase 583]
   - Standardized 3-Tier Hazard Yellow & Green Submit Modal design with 60px footer and 40px action buttons.
-- [ ] **11. Anti-Cheat Security Violation Overlay**
-  - Standardize warning banner, violation counter, and full-screen enforcement locks.
-- [ ] **12. Result Answers Breakdown Modal**
-  - Standardize question breakdown table, tolerance indicators, and review layout.
+- [x] **11. Live Exam Room Floating Windows Ecosystem Harmonization (Windows L1, L2, L3)** [COMPLETE — Phase 611]
+  - **Window L1 (`#modal-theme-open-session`)**: Standardized 520px slim vertical stack, Solid Navy 60px header, 10px strict gap lock, Words & Phrases Module dropdowns, bottom-left Red Cancel (`var(--grade-e)`) and bottom-right Green Unlock (`var(--grade-a)`). Anti-Capsule & Zero-Glow table cells.
+  - **Window L2 (`#modal-theme-live-monitor`)**: Standardized Solid Navy 60px header (`THEME G — GENERAL • LIVE MONITOR`), 40px Sub-Panel toolbar with dark slate filter tabs, 10px container gap lock, regular 400 Inter font on all table cells, flat semantic colors for heartbeat & alarms, zero-capsule, zero-glow across all table contents (including `.grade-circle-star`), bottom-left Red Close Monitor (`var(--grade-e)`) and 40px operational controls.
+  - **Window L3 (`#modal-theme-add-late`)**: Standardized 520px slim mobile-ready checklist, Solid Navy 60px header (`THEME G — GENERAL • LATE ARRIVAL`), top info row with session status and remaining time, 30px All/None controls, 3-column table (`NO`, `STUDENT NAME`, `STATUS`) with pure font semantic colors, bottom-left Red Cancel and bottom-right Green Add button.
+- [x] **12. Anti-Cheat Security Violation Overlay & Student Alarm Detail Modal (`#modal-student-alarm-detail` — Window L4)** [COMPLETE — Phase 611]
+  - Standardized 480px slim window, Solid Navy 60px header (`STUDENT INTEGRITY & TAB-SWITCH ALARMS`), stacked subtitle (student name + alarm count + theme), 10px strict gap lock on incident list, en-GB timestamp, zero capsule, zero glow. CTA: bottom-left Close (Red Grade E), bottom-right Reset / Forgive Student Alarms (Yellow Grade C).
+- [x] **13. Expel / Kick Student Confirmation Modal (`#modal-kick-student-confirm` — Window L5)** [COMPLETE — Phase 611]
+  - Standardized 480px hazard red modal, Solid Navy 60px header (`EXPEL STUDENT FROM EXAM`, red Grade E text), stacked subtitle (student name + theme), 10px gap radio options. CTA: bottom-left Cancel (Red Grade E), bottom-right Expel Now (Solid Red Grade E bold 40px).
 
 ---
 
 ## 🎙️ Planned Architecture / Backlog
-- [ ] **Live Dialogue Room Integration (Dialogue Module)**:
-  - Tombol standalone `Oral Room` telah dilepas dari header utama `dashboard.html`.
-  - Halaman dan logika P2P Conversation (`conversation.html`, `js/conversation-room.js`, `js/conversation-eval.js`) tersimpan aman.
-  - Direncanakan terhubung langsung dari dalam konteks kelas Conversation/Roleplay (bukan tombol independen di header siswa).
-  - Dijadwalkan pengingat malam ini untuk pembahasan arsitektur integrasi kelas.
+- [x] **Live Dialogue Room Integration (Dialogue Module)** [COMPLETE — Phase 618]:
+  - Terhubung langsung dari konteks kelas Speaking / Conversation via router `isDialogueTest()`.
+  - P2P WebRTC audio mesh, 4-stage pacing, dan evaluasi 5-pilar AI terintegrasi penuh.
+  - Sesi otomatis menggunakan format room code `DIAL-XXXX` yang tersinkronisasi via `test_sessions`.
+  - Hasil evaluasi tersimpan ke tabel `attempts` standar dan dapat ditinjau via `result.html`.
 
 ---
 
