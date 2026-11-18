@@ -1,8 +1,8 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-17 06:20 UTC+8
-> **Current Phase:** Phase 617 [COMPLETE] — Level Promotion Auto-Heal & Strict Level Isolation Engine
+> **Last Updated:** 2026-11-19 07:00 UTC+8
+> **Current Phase:** Phase 623 [COMPLETE] — Zero Table Capsule & Zero Table Glow Invariant (System-Wide)
 > **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TEST SUITES 100% GREEN)
 
 ---
@@ -60,11 +60,11 @@
 
 ## 2. Recent Active Milestones (Latest Rolling Window)
 
-- **Phase 614**: Dual-View Student Roster Separation (`Students Data` vs `Student's Raport`), Master Edit Mode Sub Panel Toggle & Inline Level Control (`student-management.js`, `ui-invariants.md`).
-- **Phase 613**: Hero Next Test Card Typography, Rainbow Pips SSOT & Affordance Harmonization (`dashboard.js`, `dashboard.css`, `session.js`).
-- **Phase 612**: Curriculum Global Passing Standards Matrix Cockpit & Dual-Tab Topbar View (`app.js`, `class.js`).
-- **Phase 611**: Interactive LEVEL UP Status Action, Chevrons-Up Icon & Alumni Button Consolidation (`student-management.js`, `svg-icons.js`, `admin.css`).
-- **Phase 610**: Universal Table Cell Regular Weight Invariant (Zero Bold in Table Content, Regular 400 & Inter Font SSOT).
+- **Phase 623**: Zero Table Capsule & Zero Table Glow Invariant across all tables & grids (`AGENTS.md` §2.31, `ui-invariants.md` §4.9).
+- **Phase 622**: Unified Hero Card Architecture (Option A SSOT: Sex Above DoB, aligned colons, 64x84px portrait).
+- **Phase 619**: RPC Error Elimination & Dashboard Address SSOT Formatting.
+- **Phase 618**: NTB Comprehensive Administrative Hierarchy & Village Autocomplete Overhaul.
+- **Phase 617**: Level Promotion Auto-Heal & Strict Level Isolation Engine.
 
 ---
 

@@ -12,6 +12,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v160';
     import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
+import { formatTestDisplay } from './grading.js?v=20261106_v160';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -107,7 +108,7 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
     let _activeOscNodes = []; // track all active oscillator/source nodes for clean stop
     let _activeGainNodes = [];
     let _activeAudioSource = null; // for custom audio buffer source
-    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 5, soundType: 'police_siren', customSoundB64: '' };
+    let securityConfig = { enabled: true, soundEnabled: true, countdownSeconds: 10, soundType: 'police_siren', customSoundB64: '' };
 
     // Mobile Audio Unlock on first interaction (iOS / Android Safe)
     // Strictly lazy: do NOT instantiate AudioContext until an anti-cheat siren or tone is explicitly needed!
@@ -753,33 +754,26 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
         _focusLostTimestamp = Date.now();
       }
 
-      if (_blurGraceTimer) clearTimeout(_blurGraceTimer);
-      _blurGraceTimer = setTimeout(() => {
-        if (document.hidden || !document.hasFocus()) {
-          triggerCheatAlert(reason);
-        }
-        _blurGraceTimer = null;
-      }, 3000); // 3s buffer absorbs transient audio intents, but flags external apps & intent dialogs
-    }
-
-    function handleFocusRestored() {
-      if (_focusLostTimestamp) {
-        const awayDurationMs = Date.now() - _focusLostTimestamp;
-        _focusLostTimestamp = null;
-        if (_blurGraceTimer) {
-          clearTimeout(_blurGraceTimer);
-          _blurGraceTimer = null;
-        }
-        // Dual-Defense against OS timer suspension:
-        // If student was away for >= 3.0s, trigger immediately upon wake-up!
-        if (awayDurationMs >= 3000) {
-          triggerCheatAlert(`Left exam screen for ${(awayDurationMs / 1000).toFixed(1)}s`);
-          return;
-        }
-      }
       if (_blurGraceTimer) {
         clearTimeout(_blurGraceTimer);
         _blurGraceTimer = null;
+      }
+
+      // Zero-Tolerance (Direct Enforcement): Immediately sound alarm and trigger 10s countdown without delay
+      triggerCheatAlert(reason);
+    }
+
+    function handleFocusRestored() {
+      if (_blurGraceTimer) {
+        clearTimeout(_blurGraceTimer);
+        _blurGraceTimer = null;
+      }
+      if (_focusLostTimestamp) {
+        const awayDurationMs = Date.now() - _focusLostTimestamp;
+        _focusLostTimestamp = null;
+        if (!isCheatAlertActive) {
+          triggerCheatAlert(`Left exam screen for ${(awayDurationMs / 1000).toFixed(1)}s`);
+        }
       }
     }
 
@@ -1148,6 +1142,23 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
           window.allAnswerRows = allAnswerRows;
         }
 
+        // Section / Component Filter for Unified Tests (Option B: Words or Phrases selection)
+        const requestedSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+        if (requestedSection === 'words') {
+          allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
+          window.allAnswerRows = allAnswerRows;
+        } else if (requestedSection === 'phrases') {
+          allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
+          window.allAnswerRows = allAnswerRows;
+        }
+
+        if (requestedSection && attemptData) {
+          const isExamTest = isExam(testData);
+          const sectionDur = requestedSection === 'words' ? (isExamTest ? 40 : 10) : (isExamTest ? 14 : 5);
+          const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
+          attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
+        }
+
         // Prefill any existing answers (resume from server)
         if (result.resumed) {
           allAnswerRows.forEach(row => {
@@ -1174,38 +1185,35 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
           }
         } catch (_) {}
 
-        // Populate TEST base name
-        testDisplayName = testData?.display_name || testData?.name || '';
-        if (!testDisplayName && testData) {
-          const parts = [
-            session.institution_name || '',
-            session.program_name || '',
-            testData.classes?.name || '',
-            testData.levels?.name ? (String(testData.levels.name).toLowerCase().includes('level') ? testData.levels.name : `Level ${testData.levels.name}`) : '',
-            testData.test_type || '',
-            testData.test_title || ''
-          ].filter(Boolean);
-          testDisplayName = parts.length > 0 ? parts.join(' · ') : (testData.test_title || 'TEST');
+        // Populate TEST display name via authoritative formatTestDisplay (SSOT AGENTS.md § 2.6.2 / ui-invariants.md § 5.4)
+        const formattedTest = formatTestDisplay(testData);
+        let line1Title = formattedTest.line1 || 'Test';
+        if (requestedSection) {
+          const secTag = requestedSection === 'words' ? 'Words' : 'Phrases';
+          if (!line1Title.toLowerCase().includes(secTag.toLowerCase())) {
+            line1Title += ` (${secTag})`;
+          }
         }
+        testDisplayName = line1Title;
 
         try {
           const classEl = document.getElementById('test-class-name');
           if (classEl && testData?.classes?.name) classEl.textContent = testData.classes.name;
           const titleEl = document.getElementById('test-main-title');
           if (titleEl) {
-            const rawTitle = testData?.title || testData?.test_title || testData?.name || testDisplayName || 'Test';
-            titleEl.textContent = rawTitle;
-            titleEl.setAttribute('title', rawTitle);
+            titleEl.textContent = line1Title;
+            titleEl.setAttribute('title', formattedTest.fullTitle || line1Title);
           }
-          // Populate 2nd-line subtitle: class name + level
+          // Populate 2nd-line subtitle: Theme and/or Topic (SSOT AGENTS.md § 2.6.2)
           const subEl = document.getElementById('test-title-sub');
           if (subEl) {
-            const subParts = [
-              testData?.classes?.name || '',
-              testData?.levels?.name ? (String(testData.levels.name).toLowerCase().includes('level') ? testData.levels.name : 'Level ' + testData.levels.name) : ''
-            ].filter(Boolean);
-            subEl.textContent = subParts.length ? subParts.join(' \u00b7 ') : '';
-            subEl.style.display = subEl.textContent ? '' : 'none';
+            if (formattedTest.line2) {
+              subEl.textContent = formattedTest.line2;
+              subEl.setAttribute('title', formattedTest.line2);
+              subEl.style.display = 'block';
+            } else {
+              subEl.style.display = 'none';
+            }
           }
         } catch(e) {}
 
@@ -1380,7 +1388,12 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
           }
         };
 
-        if (preExamModal && !isFullscreenActive()) {
+        const isPWAStandalone = window.matchMedia('(display-mode: standalone)').matches ||
+                                window.navigator.standalone === true ||
+                                (document.referrer && document.referrer.includes('android-app://'));
+
+        // Bypass preExamModal if already running inside installed PWA standalone mode
+        if (preExamModal && !isFullscreenActive() && !isPWAStandalone) {
           preExamModal.classList.remove('hidden');
           document.getElementById('btn-enter-fullscreen-start')?.addEventListener('click', async () => {
             try {
@@ -1389,6 +1402,11 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
             await proceedStartExam();
           }, { once: true });
         } else {
+          if (isPWAStandalone && isFullscreenSupported()) {
+            try {
+              await requestFullscreenMode();
+            } catch (_) {}
+          }
           await proceedStartExam();
         }
       } catch(e) {
@@ -1529,7 +1547,21 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
        window.answerRows = answerRows;
 
        const nameEl = document.getElementById('test-main-title') || document.getElementById('test-name');
-       if (nameEl) nameEl.textContent = testDisplayName + (testsections.length > 1 ? ` - ${currentSection?.title || `Section ${index + 1}`}` : '');
+       if (nameEl) {
+         nameEl.textContent = testDisplayName + (testsections.length > 1 ? ` · ${currentSection?.title || `Section ${index + 1}`}` : '');
+         nameEl.setAttribute('title', (formatTestDisplay(testData)?.fullTitle) || testDisplayName);
+       }
+       const subEl = document.getElementById('test-title-sub');
+       if (subEl) {
+         const formatted = formatTestDisplay(testData);
+         if (formatted.line2) {
+           subEl.textContent = formatted.line2;
+           subEl.setAttribute('title', formatted.line2);
+           subEl.style.display = 'block';
+         } else {
+           subEl.style.display = 'none';
+         }
+       }
        const metaEl = document.getElementById('test-meta');
        if (metaEl) metaEl.textContent = `${allAnswerRows.length} Questions · ${session.student_name || 'Student'}`;
 
@@ -2320,7 +2352,8 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');
 
       testData = scenario.testData || { title: 'Test', status: 'PUBLISHED' };
-      testDisplayName = testData.title || 'Test';
+      const formattedScenario = formatTestDisplay(testData);
+      testDisplayName = formattedScenario.line1 || testData.title || 'Test';
       allAnswerRows = scenario.rows || [scenario.row];
       answerRows = scenario.rows || [scenario.row];
       testsections = scenario.sections || [{ id: 'default', title: 'Part 1: Test' }];
@@ -2328,7 +2361,17 @@ import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
       isTestActive = true;
 
       const titleEl = document.getElementById('test-title') || document.getElementById('test-main-title') || document.getElementById('test-name');
-      if (titleEl) titleEl.textContent = testData.title;
+      if (titleEl) titleEl.textContent = testDisplayName;
+      const subEl = document.getElementById('test-title-sub');
+      if (subEl) {
+        if (formattedScenario.line2) {
+          subEl.textContent = formattedScenario.line2;
+          subEl.setAttribute('title', formattedScenario.line2);
+          subEl.style.display = 'block';
+        } else {
+          subEl.style.display = 'none';
+        }
+      }
       const progressEl = document.getElementById('question-progress');
       if (progressEl) progressEl.textContent = `Q 1/${answerRows.length}`;
       const timerEl = document.getElementById('timer-display');

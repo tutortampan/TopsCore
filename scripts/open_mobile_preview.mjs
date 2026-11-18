@@ -38,7 +38,7 @@ function resolvePageUrl(p, baseUrl) {
     target = 'result.html?attempt_id=3ccb03bc-c1b6-4b3c-8e60-78c7a06d431b';
   }
   if (target === 'test.html' && !target.includes('test_id')) {
-    target = 'test.html?test_id=93ed8f86-1427-4d04-8a97-31531fb26851';
+    target = 'test.html?test_id=1667e0e0-19aa-4a34-86a7-7c1d8d4d97be';
   }
   if (baseUrl) {
     return `${baseUrl}/${target}`;
@@ -179,6 +179,25 @@ async function run() {
         window.dispatchEvent(new Event('beforeinstallprompt'));
       });
       await page.waitForTimeout(500);
+    }
+    if (targetPageArg.includes('dashboard.html')) {
+      await page.evaluate(() => {
+        document.getElementById('profile-modal')?.classList.add('hidden');
+      });
+      await page.waitForTimeout(500);
+    }
+    if (targetPageArg.includes('test.html')) {
+      try {
+        await page.waitForSelector('#btn-enter-fullscreen-start', { state: 'visible', timeout: 10000 });
+        await page.click('#btn-enter-fullscreen-start');
+        await page.waitForFunction(() => {
+          const m = document.getElementById('pre-exam-focus-modal');
+          return !m || m.classList.contains('hidden') || m.style.display === 'none';
+        }, { timeout: 10000 });
+        await page.waitForTimeout(2000);
+      } catch (err) {
+        console.log('  [Notice] Pre-exam modal bypass:', err.message);
+      }
     }
     const outPath = path.join(previewDir, `${path.basename(targetPageArg, '.html')}_390x800.png`);
     await page.screenshot({ path: outPath });

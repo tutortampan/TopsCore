@@ -24,7 +24,7 @@
   - Fitur cetak (print report, diagnostic summary, evaluasi) DILARANG berada di halaman hasil siswa (`result.html`).
   - Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
 
-### 1.1 Zero Outer Page Scroll & Table-Only Viewport Lock (Rule 2.23)
+### 1.1 Zero Outer Page Scroll & Table-Only Viewport Lock (AGENTS.md §2.28)
 The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` viewport lock with ZERO outer scrolling:
 - **Table-Only Vertical Scroll**: Vertical scrolling is strictly permitted inside `.table-wrap` only (`overflow-y: auto !important; overflow-x: hidden !important;`).
 - **Root Containment**: `html` and `body` strictly enforce `height: 100vh !important; max-height: 100vh !important; width: 100vw !important; max-width: 100vw !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important;`.
@@ -59,6 +59,12 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
   - **Area-Colored Accent Invariant (Aksen pada Bagian Area, Bukan pada Tulisan)**:
     - Seluruh aksen warna tema/status (Cyan/Tactical Blue, Hijau Grade A, Kuning Grade C, Merah Grade E, Ungu Quad D, dsb.) **WAJIB diberikan ke bagian background AREANYA**, bukan ke warna font tulisannya.
     - Warna font judul WAJIB menggunakan warna kontras pekat (**`#090D16`** / dark slate) untuk background area yang cerah/terang (seperti Kuning Grade C dan Hijau Grade A), atau putih bersih (**`#FFFFFF`**) untuk background area yang pekat/gelap.
+    - **Domain-Themed Modal & Wizard Color Synchronization Protocol (Title Area & Activation Button SSOT)**:
+      - Setiap modal/wizard wajib memiliki warna tema terpadu yang **IDENTIK antara background Title Area dan tombol aksi utama (Primary Activation / Save Button)**.
+      - **Pillar D / Settings & Engine Wizards**: Menggunakan **Vibrant Violet / Purple (`#7c3aed` / `var(--quad-d)`)** sebagai representasi resmi Kuadran D (*Site Settings, Engine, Blueprint & System Configurations*). Title Area berlatar `#7c3aed` (teks `#FFFFFF`), dan tombol simpan/aktivasi berlatar `#7c3aed` (teks `#FFFFFF`, hover glow `0 0 16px rgba(139, 92, 246, 0.6)`).
+      - **Pillar A (Admin / Master Curriculum Wizards)**: Electric Pink (`#ff2d87` / `var(--quad-a)`).
+      - **Pillar B (Board / Batches / Roster Wizards)**: Dark Orange (`#FF8C00` / `var(--quad-b)`).
+      - **Pillar C (Class / Active Learning Wizards)**: Electric Lime (`#95ff00` / `var(--quad-c)`).
   - Typography: 16px Outfit Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-weight: 800 !important;`).
   - **Centered Title Invariant**: Title text mathematically centered (`text-align: center !important; justify-content: center !important;`). Strictly ZERO close buttons or '✕' icons in the Title Area.
   - **Mandatory Uppercase Invariant (ALL CAPS)**: Title text MUST be **ALL CAPS (`text-transform: uppercase !important;`)** with `letter-spacing: 0.05em;`.
@@ -71,17 +77,24 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
 - **1.5.3 Single-Screen Max Height Limit**: Modals capped at **75vh–80vh** (`max-height: 80vh !important;`) with internal scroll in `.modal-body`.
 - **1.5.4 Universal Floating Window Close Policy & Button Alignment Invariant (SSOT)**:
   - **Eradication of Top-Right 'X'**: Floating windows, dialogs, and modals MUST NOT render a top-right 'X' close button (`✕` / `&times;` / `.btn-close`) anywhere in the application.
-  - **CTA Button Alignment Rule (Single vs Multi-Button)**:
-    - **Single Button Invariant**: Saat di CTA Area **hanya ada 1 tombol** (misal tombol tunggal `CLOSE` atau `CONFIRM`), maka tombol tersebut **WAJIB diletakkan di TENGAH (Centered)** (`margin: 0 auto !important; justify-content: center !important;`).
-    - **Multi-Button Invariant**: Jika terdapat 2 tombol atau lebih (misal Cancel & Submit), tombol sekunder/tutup diletakkan di sisi kiri (`align-self: flex-start; margin-right: auto;`) dan tombol aksi utama di sisi kanan.
+  - **Universal N-Button Spatial Distribution Invariant in CTA Area (Aturan Spasial Baku N-Tombol di CTA Area SSOT)**:
+    - **1 Tombol (Single Button Invariant)**: Posisi **MUTLAK DI TENGAH (Centered)** (`margin: 0 auto !important; justify-content: center !important;`). Contoh: tombol tunggal `OK`, `CONTINUE`, atau dialog informasi tunggal.
+    - **2 Tombol (Dual Buttons — "Ujung dan Ujung")**: Posisi **UJUNG DAN UJUNG (Flush Opposite Ends)**. Tombol penutup/sekunder (`CLOSE`) menempel rapat di ujung KIRI (`margin-right: auto !important;`), dan tombol aksi utama (Save/Submit/Confirm) menempel rapat di ujung KANAN (`justify-content: space-between !important;`).
+    - **3 Tombol (Triple Buttons — "Kiri, Tengah, Kanan")**: Posisi **KIRI, TENGAH, DAN KANAN (Left, Center, Right)**. Tombol penutup/kembali (`CLOSE` / `BACK`) di ujung KIRI, tombol aksi alternatif/sekunder (misal Reset/Preview) di TENGAH, dan tombol aksi utama (Save/Submit/Next) di ujung KANAN (`justify-content: space-between !important;`).
+    - **4 Tombol atau Lebih (N-Buttons Distribution)**: Terdistribusi merata dari ujung kiri ke ujung kanan (*evenly distributed edge-to-edge* via `justify-content: space-between !important;`).
+    - **Universal Left-Anchored CLOSE Button Standard (Zero 'Cancel' Invariant)**: Tombol penutup/pembatalan di sisi kiri CTA Area **WAJIB bernama `CLOSE`** (DILARANG menggunakan `Cancel`). Seluruh tombol `CLOSE` di setiap floating window, modal, wizard, dialog, dan popup **MUTLAK berada di sisi KIRI CTA**. DILARANG KERAS tombol Close bergeser ke tengah saat terdapat tombol aksi di sisi kanan.
   - **Button Size Golden Rules**:
     - Modal CTA Area: Strictly **36px–40px** height (`height: 36px` to `40px !important; padding: 0 20px !important; font-size: 14px !important; font-weight: 800 !important; border-radius: 6px !important;`). Must never exceed 40px.
     - In-Panel / Toolbar: Strictly **30px** height (`height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; border-radius: 4px !important;`). Must never exceed 30px.
   - **Universal Hover & Click (Active) Glow**: Every button across the application MUST emit a smooth, luminous glow on `:hover` and click/press (`:active`) via dynamic `box-shadow` matched to its theme/semantic color token.
 
 ### 1.6 Architectural Anti-Freeze & Performance Invariants
-- **1.6.1 MutationObserver Loop Prevention & DOM Re-Entrancy Guard**: Always disconnect observers or flag `isMutating` during programmatic DOM updates.
-- **1.6.2 In-Memory Reference Data Caching & Anti-Query-Waterfall Invariant**: Cache structural reference data in memory; never re-query static tables on every tab switch.
+
+#### 1.6.1 MutationObserver Loop Prevention & DOM Re-Entrancy Guard (Anti-Freeze Invariant)
+Always disconnect observers or flag `isMutating` during programmatic DOM updates.
+
+#### 1.6.2 In-Memory Reference Data Caching & Anti-Query-Waterfall Invariant
+Cache structural reference data in memory; never re-query static tables on every tab switch.
 
 ### 1.7 Protokol Audit Tangkapan Layar & Visual Invariant Audit (7 Pillars SSOT)
 Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar tanpa menunggu diminta:
@@ -172,7 +185,7 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 7. **Zero Star in Table Footers**: Table summaries dilarang ada bintang `★` (`CLASS AVERAGE`, bukan `★ CLASS AVERAGE`).
 8. **Continuous Neutral Dividers**: Super-header boundary vertical dividers from row 1 to footer are strictly thick 2px neutral (`rgba(255, 255, 255, 0.22)`), never colored.
 9. **Zero Emojis**: Dilarang unicode emojis di UI/tabel; strictly vector SVG icons via `getClassSvgIcon()`.
-10. **Git Commit Gate**: "No commit until I say so!" All changes remain uncommitted in working tree for user review.
+10. **Zero Table Capsule & Zero Table Glow**: Seluruh isi sel tabel bebas kapsul, pill, badge, border, dan background-fill (status semantik hanya melalui warna font teks); mutlak nol glow, text-shadow, atau box-shadow di seluruh sel tabel (`AGENTS.md` §2.31 & §4.9).
 
 ### 3.4 Ghost-to-Solid-Glow Button Invariant (Aturan Baku Tombol TopsCore SSOT)
 Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem:
@@ -246,7 +259,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 #### 4.2.3 Geographical & Address Sequencing
 - Sequence: `VILLAGE` $\to$ `DISTRICT` $\to$ `REGENCY` $\to$ `PROVINCE`. Regency is ALWAYS to the left of Province. Age numeric-only. Recognized abbreviations (NTB, NTT, DIY).
 
-### 4.3 Universal Master Edit Mode White Excel Gridlines Invariant (Rule 2.24)
+### 4.3 Universal Master Edit Mode White Excel Gridlines Invariant (AGENTS.md §2.22)
 - When Master Edit Mode is active (`body.global-edit-mode-on`), all tables render crisp white Excel gridlines (`rgba(255, 255, 255, 0.45)`).
 - Global Master Edit Mode Across All Admin Pages: inputs and selects are borderless, transparent, flush, with glowing focus rings. Absolute Hiding when OFF: edit-mode-only controls completely collapse (`display: none !important;`).
 
@@ -279,7 +292,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   1. **Manual (Cyan `#38bdf8`)**: Menghasilkan Grade M (`GRADE_PALETTE['M']`).
   2. **Remedi (Kuning `#FFFF00` / `var(--grade-c)`)**: Menghasilkan Grade R (cap 60%).
   3. **Forgive (Merah `#FF0000` / `var(--grade-e)`)**: Menghasilkan Grade F (dispensasi kelulusan).
-- **Tombol Alumni (Ungu `#8b5cf6` / `#a855f7`)**: Terletak di Sub Panel / Infobar Student Roster, membuka single-step confirmation untuk meluluskan siswa terpilih langsung ke status Alumni.
+- **Integrasi Kelulusan Alumni (Level X / Alumni)**: Sesuai Phase 611, tombol `Alumni` terpisah di Sub Panel bawah telah ditiadakan. Kelulusan menjadi alumni merupakan puncak resmi promosi level (`Level 1` $\to$ `Level 2` $\to$ `Level 3` $\to$ `Level X / Alumni`), yang dieksekusi secara terpadu melalui tombol interaktif **`LEVEL UP`** di kolom tabel atau **`LEVEL UP ALL (X Eligible)`** di Sub Panel.
 
 ### 4.9 Zero Table Capsule & Zero Table Glow Invariant (SSOT)
 - **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel & Grid Data (No Capsule / Pill / Badge in Table Cells)**:
@@ -288,6 +301,15 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Mutlak Nol Glow (Zero Text-Shadow & Zero Box-Shadow) di Seluruh Sistem**:
   - Dilarang keras menggunakan efek GLOW, text-shadow, box-shadow, filter glow, atau pendaran neon apa pun pada teks maupun elemen di dalam isi sel tabel di SELURUH SISTEM (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`).
   - Teks di dalam tabel wajib terbaca tegas, bersih (*crisp, matte*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
+
+### 4.10 Standar Formula Kode Kelas: PROGRAM-LEVELCLASS (SSOT)
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh: `CMP-3VOCAB`, `CMP-1BASIC`, `EVN-1VOCAB`, `SHR-1VOCAB`, `TMT-1VOCAB`).
+- **Segmen 1 (PROGRAM)**: Singkatan program 3-huruf resmi (`CMP` = Camp, `EVN` = Evnikom, `SHR` = Sheraton, `TMT` = Tamata, `EXP` = English Explorer).
+- **Separator**: Tanda hubung (`-`).
+- **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (contoh: `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
+- **Penegakan Sistemik**:
+  - Kolom `classes.code` di database Supabase wajib mematuhi formula ini.
+  - Tampilan pada tabel admin (`admin.html#classes-hub`) dan auto-generator/placeholder di `crud-modals.js` wajib menghasilkan format ini.
 
 ---
 
@@ -349,6 +371,13 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Menggunakan `margin: 0;` dengan gap vertikal 10px otomatis dari `.login-wrapper`.
   - Teks wajib menggunakan **Bahasa Inggris murni**: Judul "Install TopsCore App" (14px Outfit Bold, Level 2.5 SSOT), tombol aksi "Install" dan "Later" (`pwa-btn-dismiss`).
   - Dilarang menampilkan teks deskripsi tambahan di bawah judul (*Zero Description Clutter*) untuk menjaga profil kartu tetap ramping (~48px) dan menghemat ruang vertikal layar.
+
+### 5.4 Universal 2-Line Test Title Architecture (SSOT Format 2 Baris Judul Tes)
+- **Cakupan Universal**: Seluruh tampilan antarmuka yang menyajikan judul tes (Dashboard Next Assignment Card, Header Ruang Ujian `test.html`, Halaman Hasil `result.html`, dan Modal Konfirmasi/Pilihan Komponen Tes) WAJIB menggunakan format **2 Baris Terpisah**:
+  - **Baris 1 (Kode & Jenis Tes)**: `[KODE] [JENIS]` (misal `A1 Task`, `B1 Task`, `C1 Task`, `D Exam`). Ditampilkan tebal (Outfit / Inter 800), kontras tinggi (Putih `#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman.
+  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Shopping & Choosing Products`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan warna Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
+- **Formula Resolusi**: Menggunakan helper resmi `formatTestDisplay(test)` (`line1` untuk Baris 1, `line2` untuk Baris 2) dan `formatTestTitleHtml(test)`.
+- **Invarian Eliminasi Truncation**: Pembagian 2 baris ini menjamin judul tes dapat terbaca utuh 100% pada koridor mobile 350px–430px tanpa terpotong elipsis (`...`).
 
 ---
 

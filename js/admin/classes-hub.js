@@ -228,12 +228,11 @@ export async function renderClassesHub(area) {
                 <span style="font-size:14px;font-weight:700;color:#94a3b8;">%</span>
               </div>
               <div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.4;">
-                * Standard Exams require <strong>60% (Grade C Enough)</strong> for level promotion eligibility.<br/>
-                * Modular Formative Tasks default to <strong>70%</strong> for repetition mastery.
+                * Standard Tests require <strong>60% (Grade C Enough)</strong> for promotion eligibility per AGENTS.md §2.4.1.
               </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeQuickEditModal()" style="font-size:12px;padding:6px 14px;">Cancel</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeQuickEditModal()" style="font-size:12px;padding:6px 14px;margin-right:auto;">CLOSE</button>
               <button type="button" class="btn btn-primary btn-sm" onclick="window.saveQuickEditPassingStandard('${test.id}')" style="font-size:12px;padding:6px 16px;background:#38bdf8;border-color:#38bdf8;color:#090D16;font-weight:700;">Save Standard</button>
             </div>
           </div>
@@ -317,8 +316,8 @@ export async function renderClassesHub(area) {
                 </div>
               </div>
             </div>
-            <div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeQuickEditModal()" style="font-size:12px;padding:6px 14px;">Cancel</button>
+            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeQuickEditModal()" style="font-size:12px;padding:6px 14px;margin-right:auto;">CLOSE</button>
               <button type="button" class="btn btn-primary btn-sm" onclick="window.applyBatchAlignStandards('${cls.id}')" style="font-size:12px;padding:6px 16px;background:var(--grade-b);border-color:var(--grade-b);color:#090D16;font-weight:700;">Apply to All Tests</button>
             </div>
           </div>
@@ -479,12 +478,6 @@ export async function renderClassesHub(area) {
         const inst = prog ? instMap.get(prog.institution_id) : (cls.institution_id ? instMap.get(cls.institution_id) : null);
         const progName  = prog ? escapeHtml(prog.name) : 'No Program';
         const instLabel = inst ? '<span class="text-xs text-muted" style="margin-left:4px;">· ' + escapeHtml(inst.code || inst.name) + '</span>' : '';
-        const effectiveCode = cls.code || (cls.name ? cls.name.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : '');
-        const codeHtml  = effectiveCode
-          ? '<span class="text-xs text-muted" style="font-family:monospace;">' + escapeHtml(effectiveCode) + '</span>'
-          : '<span class="text-xs text-muted">-</span>';
-        const eligibleCount = getEligibleStudentCountForClass(cls);
-        const studentsHtml  = '<span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
 
         // Level detection
         let lvl = cls.level_id ? levelMap.get(cls.level_id) : null;
@@ -500,14 +493,57 @@ export async function renderClassesHub(area) {
           ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">L${lvl.level_number}</span><span class="text-xs text-muted" style="margin-left:4px;">· ${escapeHtml(lvl.name || 'Level ' + lvl.level_number)}</span>`
           : '<span class="text-xs text-muted">-</span>';
 
+        // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CMP-3VOCAB, CMP-1BASIC, EVN-1VOCAB)
+        const getStandardClassCode = (c, levelObj, progObj) => {
+          if (c.code && /^[A-Z0-9]{2,4}-\d+[A-Z0-9]{3,6}$/.test(c.code)) return c.code;
+          const rawName = (c.name || '').toUpperCase();
+          let progAbbr = 'CMP';
+          if (rawName.includes('CAMP') || (progObj && (progObj.name || '').toUpperCase().includes('CAMP'))) {
+            progAbbr = 'CMP';
+          } else if (rawName.includes('EVNIKOM') || (progObj && (progObj.name || '').toUpperCase().includes('EVNIKOM'))) {
+            progAbbr = 'EVN';
+          } else if (rawName.includes('SHERATON') || (progObj && (progObj.name || '').toUpperCase().includes('SHERATON'))) {
+            progAbbr = 'SHR';
+          } else if (rawName.includes('TAMATA') || (progObj && (progObj.name || '').toUpperCase().includes('TAMATA'))) {
+            progAbbr = 'TMT';
+          } else if (progObj && progObj.code) {
+            progAbbr = progObj.code.slice(0, 3).toUpperCase();
+          }
+
+          let lvlNum = levelObj?.level_number;
+          if (!lvlNum) {
+            if (rawName.includes('1ST')) lvlNum = 1;
+            else if (rawName.includes('2ND')) lvlNum = 2;
+            else if (rawName.includes('3RD')) lvlNum = 3;
+            else lvlNum = 1;
+          }
+
+          let classAbbr = 'VOCAB';
+          if (rawName.includes('BASIC')) classAbbr = 'BASIC';
+          else if (rawName.includes('STORY')) classAbbr = 'STORY';
+          else if (rawName.includes('SPEAK')) classAbbr = 'SPEAK';
+          else if (rawName.includes('VOCAB')) classAbbr = 'VOCAB';
+          else {
+            const words = rawName.split(/\s+/).filter(w => !['CAMP', '1ST', '2ND', '3RD', 'LEVEL'].includes(w));
+            classAbbr = (words[0] || 'CLASS').slice(0, 5);
+          }
+
+          return `${progAbbr}-${lvlNum}${classAbbr}`;
+        };
+
+        const effectiveCode = getStandardClassCode(cls, lvl, prog);
+        const codeHtml  = `<span style="font-family:var(--fm-font-mono, monospace);font-size:12px;font-weight:600;letter-spacing:0.04em;color:#e2e8f0;">${escapeHtml(effectiveCode)}</span>`;
+        const eligibleCount = getEligibleStudentCountForClass(cls);
+        const studentsHtml  = '<span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
+
         // Class tests and passing standards
         const classTests = testsByClass.get(cls.id) || [];
         const tasks = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM');
         const exams = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM');
 
-        // Task passing badge & inline edit
+        // Task passing badge & inline edit (Default Grade C: 60%)
         const taskScores = tasks.map(getTestMinScore);
-        const curTaskScore = taskScores.length > 0 ? Math.round(taskScores[0]) : 70;
+        const curTaskScore = taskScores.length > 0 ? Math.round(taskScores[0]) : 60;
         let taskLabel = '-';
         if (tasks.length > 0) {
           const minT = Math.min(...taskScores);
@@ -524,7 +560,7 @@ export async function renderClassesHub(area) {
           </span>
         `;
 
-        // Exam passing badge & inline edit
+        // Exam passing badge & inline edit (Default Grade C: 60%)
         const examScores = exams.map(getTestMinScore);
         const curExamScore = examScores.length > 0 ? Math.round(examScores[0]) : 60;
         let examLabel = '-';
@@ -545,7 +581,7 @@ export async function renderClassesHub(area) {
 
         const isVocab = (cls.name || '').toLowerCase().includes('vocab');
         const vocabBtnHtml = isVocab
-          ? '<button class="btn btn-secondary btn-sm" style="padding:2px 7px;font-size:12px;height:26px;border-color:rgba(99,102,241,0.3);color:#818cf8;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">Vault</button>'
+          ? '<button class="btn btn-secondary btn-sm" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;border-color:rgba(124,58,237,0.35);color:#c084fc;background:rgba(124,58,237,0.1);font-weight:700;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">Vault</button>'
           : '';
 
         return `
@@ -563,7 +599,7 @@ export async function renderClassesHub(area) {
             </td>
             <!-- 4. PROGRAM -->
             <td style="font-size:12px;white-space:nowrap;padding:8px 8px;"><span style="color:var(--fm-text-secondary);">${progName}</span>${instLabel}</td>
-            <!-- 5. CODE -->
+            <!-- 5. CODE (level_5huruf SSOT) -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
             <!-- 6. STUDENTS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${studentsHtml}</td>
@@ -571,27 +607,27 @@ export async function renderClassesHub(area) {
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${taskHtml}</td>
             <!-- 8. EXAM -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${examHtml}</td>
-            <!-- 9. STATUS -->
+            <!-- 9. STATUS (Strictly ACTIVE / INACTIVE per AGENTS.md §2.27) -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
-              <span style="cursor:pointer;font-size:12px;font-weight:600;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
-                ${cls.is_active ? 'Active' : 'Inactive'}
+              <span style="cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
+                ${cls.is_active ? 'ACTIVE' : 'INACTIVE'}
               </span>
             </td>
             <!-- 10. ACTIONS -->
             <td class="text-right" style="white-space:nowrap;padding:8px 10px;min-width:200px;">
               <div class="d-flex align-center gap-1" style="justify-content:flex-end;">
                 ${!cls.is_active ? `
-                  <button class="btn btn-sm btn-activate-class" style="padding:2px 9px;font-size:12px;height:26px;color:var(--grade-a);border:1px solid rgba(0,192,0,0.4);background:rgba(0,192,0,0.12);font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',true)" title="Activate this class">
-                    ${getSvgIcon('check-circle', 11)} Activate
+                  <button class="btn btn-sm btn-activate-class" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;color:var(--grade-a);border:1px solid rgba(0,192,0,0.4);background:rgba(0,192,0,0.12);font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',true)" title="Activate this class">
+                    ${getSvgIcon('check-circle', 12)} Activate
                   </button>
                 ` : `
-                  <button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:12px;height:26px;color:var(--fm-text-muted);border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);font-weight:500;display:inline-flex;align-items:center;gap:3px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',false)" title="Deactivate this class">
+                  <button class="btn btn-secondary btn-sm" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;color:var(--fm-text-muted);border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);font-weight:600;display:inline-flex;align-items:center;gap:3px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',false)" title="Deactivate this class">
                     Deactivate
                   </button>
                 `}
                 ${vocabBtnHtml}
-                <button class="btn btn-secondary btn-sm edit-mode-only" style="padding:2px 8px;font-size:12px;height:26px;" onclick="window.openClassesHubEdit('classes','${cls.id}')">Edit</button>
-                <button class="btn btn-danger btn-sm edit-mode-only"    style="padding:2px 7px;font-size:12px;height:26px;" onclick="window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')">Delete</button>
+                <button class="btn btn-secondary btn-sm edit-mode-only" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;" onclick="window.openClassesHubEdit('classes','${cls.id}')">Edit</button>
+                <button class="btn btn-danger btn-sm edit-mode-only"    style="padding:0 9px;font-size:12px;height:28px;line-height:26px;" onclick="window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')">Delete</button>
               </div>
             </td>
           </tr>
@@ -599,6 +635,10 @@ export async function renderClassesHub(area) {
       };
 
       const sortedClasses = sortClassList(searchedClasses);
+      const activeCount = sortedClasses.filter(c => c.is_active).length;
+      const inactiveCount = sortedClasses.filter(c => !c.is_active).length;
+      const totalStudentsCount = sortedClasses.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
+
       let rowsHtml = '';
       if (sortedClasses.length === 0) {
         rowsHtml = `
@@ -618,7 +658,7 @@ export async function renderClassesHub(area) {
       const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
 
       area.innerHTML = `
-        <div class="classes-hub-workspace" style="display:flex;flex-direction:column;height:100%;width:100%;overflow:hidden;gap:10px;">
+        <div class="classes-hub-workspace" style="display:flex;flex-direction:column;flex:1 1 0 !important;min-height:0 !important;height:100% !important;overflow:hidden;gap:10px;">
           <!-- Top Hub Toolbar -->
           <div class="hub-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;">
             <div class="hub-toolbar-search" style="flex:1;max-width:440px;position:relative;">
@@ -629,29 +669,35 @@ export async function renderClassesHub(area) {
             </div>
             <div class="d-flex align-center gap-2">
               <span class="text-xs text-muted">${sortedClasses.length} of ${filteredClasses.length} Classes · ${activeLevels.length} Levels</span>
-              <button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;" title="Open Topic Blueprint & Vocabulary Vault">Open Vault</button>
+              <button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;" title="Open Topic Blueprint & Vocabulary Vault">
+                ${getSvgIcon('book-open', 12)} Open Vault
+              </button>
               <button class="btn btn-sm ${isEditOn ? 'btn-warning' : 'btn-secondary'}" id="btn-classes-hub-toggle-edit" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;${isEditOn ? 'background:var(--grade-c);color:#0F172A;font-weight:700;border-color:var(--grade-c);box-shadow:0 0 10px rgba(var(--grade-c-rgb),0.45);' : 'color:#cbd5e1;border-color:rgba(255,255,255,0.16);'}" onclick="window.toggleClassesHubEditMode()" title="Toggle Master Edit Mode for inline standards calibration">
                 ${isEditOn ? `${getSvgIcon('check-circle', 12)} Done Editing` : `${getSvgIcon('edit', 12)} Edit Mode`}
               </button>
-              <button class="btn btn-primary btn-sm" onclick="window.openClassesHubAddClass(null)" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;background:var(--clr-primary,#6366f1);border-color:var(--clr-primary,#6366f1);font-weight:700;">+ Add Class</button>
-              <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;">+ Add Level</button>
+              <button class="btn btn-primary btn-sm" onclick="window.openClassesHubAddClass(null)" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;background:var(--clr-primary,#6366f1);border-color:var(--clr-primary,#6366f1);font-weight:700;">
+                ${getSvgIcon('plus', 12)} Add Class
+              </button>
+              <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;">
+                ${getSvgIcon('plus', 12)} Add Level
+              </button>
             </div>
           </div>
 
           <!-- Unified Curriculum Table (100vh lock, table-wrap scroll only) -->
-          <div class="table-wrap sticky-first" style="flex:1 1 0 !important;min-height:0 !important;height:100% !important;max-height:none !important;overflow-y:auto;overflow-x:auto !important;background:#0f172a;border:2px solid rgba(255,255,255,0.28) !important;border-radius:8px;margin:0;">
+          <div class="table-wrap sticky-first" style="flex:1 1 0 !important;min-height:0 !important;overflow-y:auto;overflow-x:auto !important;background:#0f172a;border:1px solid rgba(255,255,255,0.12) !important;border-radius:8px;margin:0;">
             <table class="datagrid-table" style="width:100%;min-width:1180px;border-collapse:collapse;table-layout:fixed;">
               <colgroup>
                 <col style="width:45px;">
                 <col style="width:120px;">
                 <col style="width:210px;">
                 <col style="width:150px;">
-                <col style="width:155px;">
-                <col style="width:75px;">
-                <col style="width:90px;">
-                <col style="width:90px;">
+                <col style="width:140px;">
                 <col style="width:80px;">
-                <col style="width:205px;">
+                <col style="width:90px;">
+                <col style="width:90px;">
+                <col style="width:90px;">
+                <col style="width:210px;">
               </colgroup>
               <thead style="position:sticky;top:0;z-index:10;background:#0f172a;">
                 <tr style="height:40px;">
@@ -659,18 +705,36 @@ export async function renderClassesHub(area) {
                   <th style="width:120px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('level')" title="Sort by Level">LEVEL ${getSortIcon('level')}</th>
                   <th style="width:210px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
                   <th style="width:150px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
-                  <th style="width:155px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
-                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
+                  <th style="width:140px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:80px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
                   <th style="width:90px;text-align:center;cursor:pointer;color:#818cf8;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Standard">TASK ${getSortIcon('task')}</th>
                   <th style="width:90px;text-align:center;cursor:pointer;color:#FF8C00;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Standard">EXAM ${getSortIcon('exam')}</th>
-                  <th style="width:80px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
-                  <th style="width:205px;text-align:right;">ACTIONS</th>
+                  <th style="width:90px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
+                  <th style="width:210px;text-align:right;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
                 ${rowsHtml}
               </tbody>
             </table>
+          </div>
+
+          <!-- Universal Sub Panel (Lower Panel 40px Height Docked at Bottom per ui-invariants.md §1.3) -->
+          <div class="workspace-lower-panel" style="height:40px !important;min-height:40px !important;max-height:40px !important;line-height:38px !important;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#0f172a;border-top:1px solid rgba(255,255,255,0.08);box-sizing:border-box;flex-shrink:0;">
+            <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;">
+              <span><strong style="color:#f8fafc;">${sortedClasses.length}</strong> Classes</span>
+              <span>·</span>
+              <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${activeCount}</strong> ACTIVE</span>
+              <span>·</span>
+              <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactiveCount}</strong> INACTIVE</span>
+              <span>·</span>
+              <span><strong style="color:#f8fafc;">${activeLevels.length}</strong> Levels</span>
+              <span>·</span>
+              <span><strong style="color:#818cf8;">${totalStudentsCount}</strong> Eligible Students</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:12px;color:#64748b;">Curriculum Level &amp; Subject Master</span>
+            </div>
           </div>
         </div>
       `;

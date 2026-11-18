@@ -118,11 +118,50 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
 ## 2.5 Test Auto-Assignment (Level-Centric)
 Tests (Tasks & Exams) are created within a Class. Because that Class belongs to a Level, the system automatically assigns the test to any Batch/Student that has unlocked that Level. Batches inherit tests automatically based on their current Level.
 
-## 2.6 Test name formula
+### 2.5.1 Class Code Standard Formula (PROGRAM-LEVELCLASS SSOT)
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh: `CMP-3VOCAB`, `CMP-1BASIC`, `EVN-1VOCAB`, `SHR-1VOCAB`, `TMT-1VOCAB`).
+- **Segmen 1 (PROGRAM)**: Singkatan 3-huruf resmi program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
+- **Separator**: Tanda hubung (`-`).
+- **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (misal `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
+- **Invarian Format**: Disimpan di database `classes.code` dan ditampilkan seragam pada tabel workstation, modal, dan export.
+
+## 2.6 Test Naming & Code Standard Formula (SSOT)
+
+### 2.6.1 Test Code Formula (`shell_code` — Machine & Admin SKU)
+- **Formula Baku 4-Blok Simetris**: `PROGRAM-LEVEL_CLASS-CODE-TYPE`
+- **Segmen 1 (PROGRAM)**: Singkatan resmi 3-huruf program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
+- **Segmen 2 (LEVEL_CLASS)**: Angka level belajar langsung digabung dengan 3-huruf singkatan kelas **tanpa huruf 'L'** (misal `3VCB` untuk Level 3 Vocabulary, `2VCB` untuk Level 2 Vocabulary, `2SPK` untuk Speaking, `1STY` untuk Storytelling). Meniadakan huruf 'L' mencegah kerancuan tipografi font (seperti `L1` vs `11` vs `I1`).
+- **Segmen 3 (CODE)**:
+  - Untuk Task: Kode tema dan nomor topik (misal `A1`, `A2`, `B1`, ..., `D4`).
+  - Untuk Exam: Huruf tema tunggal (misal `A`, `B`, `C`, `D`).
+- **Segmen 4 (TYPE)**: Strictly `TASK` atau `EXAM`.
+- **Contoh Resmi**:
+  - `CMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
+  - `CMP-3VCB-D-EXAM` (Camp Level 3 Vocabulary Theme D Exam)
+  - `CMP-2VCB-B2-TASK` (Camp Level 2 Vocabulary Topic B2 Task)
+  - `CMP-2SPK-A1-TASK` (Camp Level 2 Speaking Topic A1 Task)
+  - `EVN-1VCB-A1-TASK` (Evnikom Level 1 Vocabulary Topic A1 Task)
+
+### 2.6.2 Test Name & Display Name Formula (`title` & `display_name` SSOT)
+- **Formula Baku Terpadu (Natural English Flow)**:
+  ```text
+  [LEVEL_ORDINAL] [CLASS_NAME] [CODE] [TASK/EXAM] - [TOPIC/THEME_NAME]
+  ```
+  - **Bebas Simbol Asing**: Tidak menggunakan kurung siku `[ ]` ataupun titik tengah `·`. Mengalir alami sesuai standar bahasa Inggris akademik.
+  - **Task Standar**: `2nd Vocabulary A1 Task - Greetings & Basics`, `2nd Vocabulary B1 Task - Podcast Hosting & Introduction`, `3rd Vocabulary A1 Task - Job Hunting & Application`, `2nd Public Speaking A1 Task - Introduction & Delivery`.
+  - **Exam Standar**: `2nd Vocabulary D Exam - Cooking Class`, `3rd Vocabulary A Exam - World of Work`, `1st Vocabulary A Exam - Foundational Communication`.
+- **Universal 2-Line Test Title Architecture (SSOT Tampilan Card Dashboard & Header)**:
+  Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian menggunakan format **2 Baris Terpisah** via pemisah ` - `:
+  - **Baris 1 (Konteks Kelas, Level & Jenis Tes)**: `[LEVEL] [CLASS] [CODE] [TASK/EXAM]` (misal `2nd Vocabulary A1 Task`, `2nd Vocabulary D Exam`, `3rd Vocabulary A1 Task`). Ditampilkan tebal (Outfit / Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`).
+  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Podcast Hosting & Introduction`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan aksen Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
+- **Unifikasi Mutlak**: Tidak boleh mencantumkan kata `Words` atau `Phrases` di judul/display name karena materi sudah disatukan (*Unified Topic Package* per DECISION-034).
+- **Sinergi 100%**: Formula ini berlaku identik baik untuk `title` (nama resmi) maupun `display_name` (nama tampilan), sehingga zero-mismatch di seluruh dropdown admin, report card, dan tampilan siswa.
+
+### 2.6.3 Canonical Administrative Title (`title` — Relational Audit & Export)
 ```text
 INSTITUTION + PROGRAM + CLASS + LEVEL + TEST TYPE + TEST TITLE
 ```
-Store structured fields separately and generate/display the name dynamically from components.
+Store structured fields separately in database (`institution_id`, `program_id`, `class_id`, `level_id`) and generate/display the student name dynamically via `formatTestDisplay()` SSOT.
 
 ## 2.7 Module Progression & Prerequisites
 Dynamic prerequisites supporting 0 to N parent modules with minimum score thresholds. Report cards store HIGHEST score. Global average counts unattempted available modules as 0.
@@ -244,7 +283,7 @@ Operational, spatial, typographic, and workflow specifications are modularized i
 All table columns, labels, titles, and metrics must display 100% in full without truncation or ellipsis (`...`). Calibrated column dimensions and 3-tier header abbreviations are authoritatively codified in [`.agents/rules/ui-invariants.md` Section 4.2](file:///.agents/rules/ui-invariants.md#42-aturan-text-wrap-universal-zero-truncation-invariant--standar-singkatan-header-3-tier-ssot).
 
 ## 2.22 Universal Master Edit Mode White Excel Gridlines Invariant
-When Master Edit Mode is active (`body.global-edit-mode-on`), every table renders crisp white Excel gridlines (`rgba(255, 255, 255, 0.45)`) with borderless, transparent inputs per [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md).
+When Master Edit Mode is active (`body.global-edit-mode-on`), every table renders crisp white Excel gridlines (`rgba(255, 255, 255, 0.45)`) with borderless, transparent inputs per [`.agents/rules/ui-invariants.md` §4.3](file:///.agents/rules/ui-invariants.md#43-universal-master-edit-mode-white-excel-gridlines-invariant-agentsmd-222).
 
 ## 2.23 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`)
 - **Default Principle**: Authentic standard name (`studentName` / `name` / `session.student_name`) everywhere across system.

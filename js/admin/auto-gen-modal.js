@@ -136,7 +136,7 @@ export async function openAutoGenerateModal(options = {}) {
               <h3 style="margin:0; font-size: 16px; font-weight:700; color:#f8fafc;">Test Generator &amp; Blueprint Wizard</h3>
             </div>
             <div style="font-size: 12px; color:#94a3b8; margin-top:2px;">
-              Konfigurasi blueprint kurikulum, durasi task, cara jawab, dan passing score.
+              Configure curriculum blueprint, task duration, answer mode, and passing score.
             </div>
           </div>
         </div>
@@ -149,7 +149,7 @@ export async function openAutoGenerateModal(options = {}) {
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="font-size: 16px; display:inline-flex; align-items:center;">${getSvgIcon('book-open', 16)}</span>
               <div>
-                <div style="font-size: 12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">KELAS TARGET (TERKUNCI &amp; AMAN)</div>
+                <div style="font-size: 12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">TARGET CLASS (LOCKED &amp; SECURED)</div>
                 <div style="font-size: 12px; font-weight:700; color:#f8fafc;">${escapeHtml(className)}</div>
               </div>
             </div>
@@ -185,7 +185,7 @@ export async function openAutoGenerateModal(options = {}) {
               <span style="font-size: 12px; font-weight:800; color:var(--grade-c); display:inline-flex; align-items:center; gap:4px;">
                 ${getSvgIcon('zap', 14)} 1. TASK SETTINGS (TASKS)
               </span>
-              <span class="badge" style="background:rgba(var(--grade-c-rgb),0.15); color:var(--grade-c); font-size: 12px; font-weight:700;">Mandiri</span>
+              <span class="badge" style="background:rgba(var(--grade-c-rgb),0.15); color:var(--grade-c); font-size: 12px; font-weight:700;">Independent</span>
             </div>
 
             <!-- Row 1: Separate Durations (Words vs Phrases) & Passing Score -->
@@ -195,8 +195,8 @@ export async function openAutoGenerateModal(options = {}) {
                   Words Task (<span id="words-task-calc-dur">10m</span>)
                 </label>
                 <div style="display:flex; align-items:center; gap:4px;">
-                  <input type="number" id="wizard-task-words-pace" min="5" max="60" value="15" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px; width:70px;" title="Detik per kata (default 15s)" />
-                  <span style="font-size: 12px; color:#94a3b8;">detik/soal</span>
+                  <input type="number" id="wizard-task-words-pace" min="5" max="60" value="15" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px; width:70px;" title="Seconds per word (default 15s)" />
+                  <span style="font-size: 12px; color:#94a3b8;">sec/item</span>
                 </div>
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-words-pace" data-val="10" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">10s</button>
@@ -211,8 +211,8 @@ export async function openAutoGenerateModal(options = {}) {
                   Phrases Task (<span id="phrases-task-calc-dur">5m</span>)
                 </label>
                 <div style="display:flex; align-items:center; gap:4px;">
-                  <input type="number" id="wizard-task-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px; width:70px;" title="Detik per frase (default 20s)" />
-                  <span style="font-size: 12px; color:#94a3b8;">detik/soal</span>
+                  <input type="number" id="wizard-task-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px; width:70px;" title="Seconds per phrase (default 20s)" />
+                  <span style="font-size: 12px; color:#94a3b8;">sec/item</span>
                 </div>
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-phrases-pace" data-val="15" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">15s</button>
@@ -223,11 +223,11 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-task-min" class="form-label" style="font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;">Min. Skor (%)</label>
-                <input type="number" id="wizard-task-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px;" title="Batas tuntas kelulusan task" />
+                <label for="wizard-task-min" class="form-label" style="font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;">Min. Score (%)</label>
+                <input type="number" id="wizard-task-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px;" title="Passing threshold for tasks" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="60" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">60%</button>
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="70" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">70%</button>
+                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="60" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">60%</button>
                 </div>
               </div>
             </div>
@@ -237,20 +237,20 @@ export async function openAutoGenerateModal(options = {}) {
               <div>
                 <label for="wizard-task-ans-words" class="form-label" style="font-size: 12px; color:var(--grade-c); font-weight:700; margin-bottom:2px; display:block;">Words Task</label>
                 <select id="wizard-task-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size: 12px; height:32px;">
-                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>Spoken (Lisan / 15s)</option>
-                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>Written (Mengetik / 30s)</option>
-                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>Selection (Pilgan / 20s)</option>
-                  <option value="mixed" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Campuran / 25s)</option>
+                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 15s)</option>
+                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
+                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
+                  <option value="mixed" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
               </div>
 
               <div>
                 <label for="wizard-task-ans-phrases" class="form-label" style="font-size: 12px; color:var(--grade-c); font-weight:700; margin-bottom:2px; display:block;">Phrases Task</label>
                 <select id="wizard-task-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size: 12px; height:32px;">
-                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>Spoken (Lisan / 20s)</option>
-                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>Written (Mengetik / 30s)</option>
-                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>Selection (Pilgan / 20s)</option>
-                  <option value="mixed" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Campuran / 25s)</option>
+                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 20s)</option>
+                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
+                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
+                  <option value="mixed" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
               </div>
             </div>
@@ -267,41 +267,41 @@ export async function openAutoGenerateModal(options = {}) {
 
             <!-- Dynamic Session Duration Callout -->
             <div style="background:rgba(0,0,0,0.3); border-left:3px solid var(--grade-c); padding:6px 10px; border-radius:4px; font-size: 12px; color:#cbd5e1; line-height:1.35;">
-              <strong>Durasi Exam:</strong> Dihitung otomatis per detik/soal sesuai tema kumulatif (Words: 15s/item, Phrases: 20s/item). Sesi live tutor juga dapat menetapkan alokasi waktu sendiri saat membuka ujian.
+              <strong>Exam Duration:</strong> Automatically calculated per item based on cumulative theme scope (Words: 15s/item, Phrases: 20s/item). Live tutor sessions can also define dedicated time limits when launching exams.
             </div>
 
             <div style="display:grid; grid-template-columns:1.2fr 1.2fr 1fr; gap:8px;">
               <div>
                 <label for="wizard-test-ans-words" class="form-label" style="font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;">Words Exam</label>
                 <select id="wizard-test-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size: 12px; height:32px;">
-                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>Spoken (Lisan / 15s)</option>
-                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>Selection (Pilgan / 20s)</option>
-                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>Written (Mengetik / 30s)</option>
-                  <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>Mixed (Campuran / 25s)</option>
+                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 15s)</option>
+                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
+                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
+                  <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
                 <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                  <input type="number" id="wizard-exam-words-pace" min="5" max="60" value="15" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:26px; width:55px;" title="Detik per kata untuk exam" />
-                  <span style="font-size: 12px; color:#94a3b8;">detik/soal</span>
+                  <input type="number" id="wizard-exam-words-pace" min="5" max="60" value="15" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:26px; width:55px;" title="Seconds per word for exam" />
+                  <span style="font-size: 12px; color:#94a3b8;">sec/item</span>
                 </div>
               </div>
 
               <div>
                 <label for="wizard-test-ans-phrases" class="form-label" style="font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;">Phrases Exam</label>
                 <select id="wizard-test-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size: 12px; height:32px;">
-                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>Selection (Pilgan / 20s)</option>
-                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>Written (Mengetik / 30s)</option>
-                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>Spoken (Lisan / 20s)</option>
-                  <option value="mixed" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>Mixed (Campuran / 25s)</option>
+                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
+                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
+                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 20s)</option>
+                  <option value="mixed" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
                 <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                  <input type="number" id="wizard-exam-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:26px; width:55px;" title="Detik per frase untuk exam" />
-                  <span style="font-size: 12px; color:#94a3b8;">detik/soal</span>
+                  <input type="number" id="wizard-exam-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:26px; width:55px;" title="Seconds per phrase for exam" />
+                  <span style="font-size: 12px; color:#94a3b8;">sec/item</span>
                 </div>
               </div>
 
               <div>
-                <label for="wizard-test-min" class="form-label" style="font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;">Min. Skor (%)</label>
-                <input type="number" id="wizard-test-min" min="1" max="100" value="${escapeHtml(String(prefillTestMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px;" title="Batas tuntas kelulusan exam" />
+                <label for="wizard-test-min" class="form-label" style="font-size: 12px; color:#94a3b8; margin-bottom:2px; display:block;">Min. Score (%)</label>
+                <input type="number" id="wizard-test-min" min="1" max="100" value="${escapeHtml(String(prefillTestMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size: 12px; height:32px;" title="Passing threshold for exam" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-test-min" data-val="60" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">60%</button>
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-test-min" data-val="70" style="font-size: 12px; padding:1px 4px; border:1px solid rgba(255,255,255,0.1);">70%</button>
@@ -327,7 +327,7 @@ export async function openAutoGenerateModal(options = {}) {
 
             <!-- Action 2: Generate & Sync All -->
             <button type="button" class="btn btn-purple btn-sm" id="wizard-generate-btn" style="font-size: 12px; font-weight:700; display:inline-flex; align-items:center; gap:5px;">
-              ${getSvgIcon('zap', 14)} Generate &amp; Sinkronkan Soal
+              ${getSvgIcon('zap', 14)} Generate &amp; Sync All
             </button>
           </div>
         </div>

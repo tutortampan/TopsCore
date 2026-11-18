@@ -1640,6 +1640,41 @@ When performing UI redesigns, styling modifications, or visual preflights, captu
 2. **Visual Pre-Flight Integration**:
    - The `visual-preflight` skill and checklist template directly reference `AGENTS.md Rule 2.27` as the single authoritative rule.
 
+---
 
+## DECISION-056 — Standardized Test Code (`shell_code`) and Student Display Name (`display_name`) Architecture
 
+Date: 2026-11-19  
+Status: ACCEPTED
+
+### Context
+1. In earlier versions of TopsCore, test titles were generated as monolithic verbose strings (e.g. `2nd Vocabulary B2 Words Task - Podcast Interviewing & Discussion` or `2nd Vocabulary D Words Exam - COOKING CLASS`).
+2. When rendered on mobile devices (constrained to a 430px viewport), these 60+ character strings caused severe text wrapping and vertical crowding. Furthermore, they introduced information redundancy by repeatedly displaying the class name and level despite them already appearing in the sticky header.
+3. Test codes (`shell_code`) previously had inconsistent legacy patterns (`1A1-WORDS-TASK`, `2D-WORDS-EXAM`, `3A1-TASK`), causing ambiguity and potential collisions across multiple classes and institutions in multi-tenant deployments.
+4. With the unification of Words and Phrases into single integrated topic packages (DECISION-034), retaining explicit "Words" or "Phrases" in the primary test title became obsolete and misleading.
+
+### Decision
+1. **Four-Segment Test Code Architecture (`shell_code`)**:
+   - Standard format: `PROGRAM-LEVEL_CLASS-CODE-TYPE` (15–16 characters).
+   - Segments:
+     - `PROGRAM`: 3-letter program abbreviation (e.g. `CMP`, `EVN`, `SHR`, `TMT`).
+     - `LEVEL_CLASS`: Pure level digit prefixed to 3-letter class abbreviation **without letter 'L'** (e.g. `3VCB`, `2VCB`, `2SPK`, `1STY`). Omitting 'L' prevents font confusion (`L1` vs `11` vs `I1`).
+     - `CODE`: Topic code for tasks (e.g. `A1`, `B2`, `D4`) or single theme letter for exams (e.g. `A`, `B`, `C`, `D`).
+     - `TYPE`: Strictly `TASK` or `EXAM`.
+   - Examples: `CMP-3VCB-A1-TASK`, `CMP-3VCB-D-EXAM`, `CMP-2VCB-B2-TASK`, `CMP-2SPK-A1-TASK`.
+
+2. **Test Name & Student Display Name Standard (`title` & `display_name`)**:
+   - Standard format: `[LEVEL_ORDINAL] [CLASS_NAME] [CODE] [TASK/EXAM] - [TOPIC/THEME_NAME]`.
+   - Examples:
+     - Task: `2nd Vocabulary A1 Task - Greetings & Basics`, `2nd Vocabulary B1 Task - Podcast Hosting & Introduction`, `3rd Vocabulary A1 Task - Job Hunting & Application`.
+     - Exam: `2nd Vocabulary D Exam - Cooking Class`, `3rd Vocabulary A Exam - World of Work`.
+     - Speaking: `2nd Public Speaking A1 Task - Introduction & Delivery`.
+   - Layout 2 Baris di Card Dashboard (Mobile 430px):
+     - Line 1: `2nd Vocabulary A1 Task` / `2nd Vocabulary D Exam` (White, Bold, 14px).
+     - Line 2: `Greetings & Basics` / `Cooking Class` (High-contrast slate, 12px).
+   - Zero brackets `[ ]` and zero middle dots `·` — natural, flowing academic English.
+   - Strictly excludes "Words" and "Phrases" from display labels per DECISION-034.
+
+3. **Canonical Administrative Record Integrity**:
+   - Shared between `title` and `display_name` to maintain 100% parity across dropdowns, reports, and student views.
 

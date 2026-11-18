@@ -1381,15 +1381,16 @@ if (typeof window !== 'undefined') {
         };
 
         const formatAnswerType = (type) => {
-          if (!type) return 'Multiple Choice';
+          if (!type) return 'Selection';
           const t = String(type).toLowerCase().replace(/_/g, ' ').trim();
-          if (t === 'multiple choice' || t === 'selection') return 'Multiple Choice';
-          if (t === 'text match' || t === 'written') return 'Written';
-          if (t === 'voice match' || t === 'spoken') return 'Spoken';
-          if (t === 'file upload' || t === 'upload') return 'Upload';
-          if (t === 'essay') return 'Essay';
-          if (t === 'roleplay') return 'Roleplay';
-          if (t === 'code') return 'Code';
+          if (t === 'multiple choice' || t === 'selection' || t === 'm2') return 'Selection';
+          if (t === 'text match' || t === 'written' || t === 'm3') return 'Written';
+          if (t === 'voice match' || t === 'spoken' || t === 'm4') return 'Spoken';
+          if (t === 'description' || t === 'point & speak' || t === 'm1') return 'Description';
+          if (t === 'speech' || t === 'speaking performance' || t === 'm5') return 'Speech';
+          if (t === 'monologue' || t === 'storytelling' || t === 'm6') return 'Monologue';
+          if (t === 'dialogue' || t === 'roleplay' || t === 'm7') return 'Dialogue';
+          if (t === 'interview' || t === 'conversation' || t === 'm8') return 'Interview';
           return t.charAt(0).toUpperCase() + t.slice(1);
         };
 
@@ -1484,10 +1485,10 @@ if (typeof window !== 'undefined') {
 
         // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
         const classTestSettings = (typeof fetchClassTestSettings === 'function')
-          ? await fetchClassTestSettings(classId || cid).catch(() => ({ taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 }))
-          : { taskRepetitions: 7, taskMinScore: 70, examMinScore: 60 };
+          ? await fetchClassTestSettings(classId || cid).catch(() => ({ taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 }))
+          : { taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 };
         const targetReps = Math.max(7, Number(classTestSettings?.taskRepetitions) || 7);
-        const taskMinScore = Number(classTestSettings?.taskMinScore) || 70;
+        const taskMinScore = Number(classTestSettings?.taskMinScore) || 60;
         const examMinScore = Number(classTestSettings?.examMinScore) || 60;
 
         // Calculate DataGrid format for Students
@@ -1947,6 +1948,9 @@ if (typeof window !== 'undefined') {
             `;
             const rightHtml = `
               <div class="class-tests-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-class-tests" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer; color:#38bdf8; border-color:rgba(56,189,248,0.35);" title="Sync tests for this class with Vocabulary Vault themes &amp; topics">
+                  ${getSvgIcon('refresh', 14)} Sync Tests
+                </button>
                 <button type="button" class="btn btn-tactical btn-sm" id="btn-open-blueprint-settings" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer;" title="Open Default Test System &amp; Blueprint Settings">
                   ${getSvgIcon('lock', 14)} Test System Settings
                 </button>
@@ -2116,7 +2120,7 @@ if (typeof window !== 'undefined') {
                 sortable: true,
                 width: '95px',
                 render: (val, row) => {
-                  const ans = String(row.answerType || 'Multiple Choice');
+                  const ans = String(row.answerType || 'Selection');
                   const cleanAns = ans.replace(/[^\w\s]/gi, '').trim();
                   const titleCaseAns = cleanAns.charAt(0).toUpperCase() + cleanAns.slice(1);
                   return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(titleCaseAns)}</span>`;
@@ -2196,6 +2200,46 @@ if (typeof window !== 'undefined') {
           document.getElementById('btn-open-blueprint-from-class')?.addEventListener('click', () => {
             window._activeVaultTab = 'blueprint';
             window.location.hash = '#vocab_vault';
+          });
+
+          // Sync Class Tests directly from Vocabulary Vault (Scoped strictly to this Class only)
+          document.getElementById('btn-sync-class-tests')?.addEventListener('click', async () => {
+            const btn = document.getElementById('btn-sync-class-tests');
+            if (!btn) return;
+            const targetClassId = classId || cid;
+            if (!targetClassId) {
+              if (window.showToast) window.showToast('Class ID not found.', 'error');
+              return;
+            }
+
+            try {
+              const oldHtml = btn.innerHTML;
+              btn.innerHTML = `${getSvgIcon('clock', 14)} Syncing...`;
+              btn.disabled = true;
+              if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
+
+              const { syncAllCurriculumTests } = await import('../api.js?v=20261114_v517');
+              const res = await syncAllCurriculumTests({ classId: targetClassId, force: true });
+
+              if (window.hideLoading) window.hideLoading();
+              btn.innerHTML = oldHtml;
+              btn.disabled = false;
+
+              const msg = `Class Tests synced: ${res.createdCount} new test shells created, ${res.updatedCount} updated!`;
+              if (window.showToast) window.showToast(msg, 'success');
+              else alert(msg);
+
+              if (window.renderClassHub) {
+                window.renderClassHub(document.getElementById('admin-content-area'));
+              }
+            } catch (err) {
+              if (window.hideLoading) window.hideLoading();
+              btn.innerHTML = `${getSvgIcon('refresh', 14)} Sync Tests`;
+              btn.disabled = false;
+              console.error(err);
+              if (window.showToast) window.showToast('Sync failed: ' + err.message, 'error');
+              else alert('Sync failed: ' + err.message);
+            }
           });
 
           // Open Test System Settings Modal
@@ -4451,6 +4495,42 @@ if (typeof window !== 'undefined') {
             }
           });
         }
+
+        document.getElementById('btn-sync-class-tests')?.addEventListener('click', async () => {
+          const btn = document.getElementById('btn-sync-class-tests');
+          if (!btn) return;
+          const targetClassId = classId || cid;
+          if (!targetClassId) return;
+
+          try {
+            const oldHtml = btn.innerHTML;
+            btn.innerHTML = `${getSvgIcon('clock', 14)} Syncing...`;
+            btn.disabled = true;
+            if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
+
+            const { syncAllCurriculumTests } = await import('../api.js?v=20261114_v517');
+            const res = await syncAllCurriculumTests({ classId: targetClassId, force: true });
+
+            if (window.hideLoading) window.hideLoading();
+            btn.innerHTML = oldHtml;
+            btn.disabled = false;
+
+            const msg = `Class Tests synced: ${res.createdCount} new test shells created, ${res.updatedCount} updated!`;
+            if (window.showToast) window.showToast(msg, 'success');
+            else alert(msg);
+
+            if (window.renderClassHub) {
+              window.renderClassHub(document.getElementById('admin-content-area'));
+            }
+          } catch (err) {
+            if (window.hideLoading) window.hideLoading();
+            btn.innerHTML = `${getSvgIcon('refresh', 14)} Sync Tests`;
+            btn.disabled = false;
+            console.error(err);
+            if (window.showToast) window.showToast('Sync failed: ' + err.message, 'error');
+            else alert('Sync failed: ' + err.message);
+          }
+        });
 
         document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
           try {

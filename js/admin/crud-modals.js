@@ -31,7 +31,7 @@ let _editId     = null;
 let _editRecord = null;
 
 const formFields = {
-  
+
   work_records: [
     { id: 'company_name', label: 'Company / Organization', type: 'text', required: true },
     { id: 'role_title', label: 'Role / Job Title', type: 'text', required: true },
@@ -57,7 +57,7 @@ const formFields = {
     { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: false },
     { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id' },
     { id: 'name', label: 'Class Name', type: 'text', required: true, placeholder: 'e.g. Vocabulary' },
-    { id: 'code', label: 'Class Code', type: 'text', required: false, placeholder: 'e.g. VOCABULARY_1, BASIC_ENGLISH_1' },
+    { id: 'code', label: 'Class Code', type: 'text', required: false, placeholder: 'e.g. CMP-3VOCAB, CMP-1BASIC (PROGRAM-LEVELCLASS)' },
     { id: 'level_id', label: 'Level', type: 'select', source: 'levels', required: false },
     { id: 'is_active', label: 'Active', type: 'checkbox' },
   ],
@@ -97,7 +97,7 @@ const formFields = {
     { id: 'institution_id', label: 'Institution', type: 'select', source: 'institutions', required: true },
     { id: 'program_id', label: 'Program', type: 'select', source: 'programs', required: true, dependsOn: 'institution_id' },
     { id: 'batch_id', label: 'Batch', type: 'select', source: 'batches', required: false, dependsOn: 'program_id' },
-    
+
     { id: 'name', label: 'Full Name', type: 'text', required: true },
     { id: 'gender', label: 'Gender', type: 'select', options: [
       { value: '', label: '— Unassigned (Student will choose) —' },
@@ -252,7 +252,7 @@ async function openCrudModal(section, record) {
             sel.innerHTML = `<option value="">— Select —</option>`;
             let opts = await adminFetchAll(f.source);
             opts = opts.filter(o => !o.deleted_at);
-            
+
             // Phase 5: Filter out inactive items in dropdowns
             opts = opts.filter(o => {
               if (o.is_active !== undefined) return o.is_active === true;
@@ -447,7 +447,7 @@ async function openCrudModal(section, record) {
       const updatePrereqRequirement = () => {
         if (!prereqSelect) return;
         // Keep prerequisite optional unless business rules require it later
-        prereqSelect.required = false; 
+        prereqSelect.required = false;
       };
 
       if (prereqSelect) {
@@ -507,9 +507,9 @@ async function openCrudModal(section, record) {
         if (!levelSelect) return;
         const currentVal = levelSelect.value;
         const targetLvl = record ? (record.current_level_id || record.level_id || null) : null;
-        
+
         levelSelect.innerHTML = `<option value="">— No Level / Optional —</option>`;
-        
+
         const isLevelReadonly = fields.find(f => f.id === 'level_id' || f.id === 'current_level_id')?.readonly;
         levelSelect.disabled = !!isLevelReadonly;
 
@@ -912,7 +912,7 @@ function _initCrudModals() {
           };
         }
       }
-      
+
       if (_currentSection === 'students') {
         if (payload.name) payload.name = cleanStudentName(payload.name);
         if (payload.batch_id) {
@@ -928,6 +928,44 @@ function _initCrudModals() {
       }
       try {
         let payloadToSave = { ...payload };
+
+        if (targetTable === 'classes') {
+          let lvlNum = 1;
+          if (payloadToSave.level_id) {
+            const lvlObj = (tableDataCache.levels || []).find(l => l.id === payloadToSave.level_id);
+            if (lvlObj?.level_number) lvlNum = lvlObj.level_number;
+          }
+          if (!payloadToSave.code || !payloadToSave.code.trim()) {
+            const raw = (payloadToSave.name || '').toUpperCase();
+            const progObj = payloadToSave.program_id ? (tableDataCache.programs || []).find(p => p.id === payloadToSave.program_id) : null;
+            let progAbbr = 'CMP';
+            if (raw.includes('CAMP') || (progObj && (progObj.name || '').toUpperCase().includes('CAMP'))) {
+              progAbbr = 'CMP';
+            } else if (raw.includes('EVNIKOM') || (progObj && (progObj.name || '').toUpperCase().includes('EVNIKOM'))) {
+              progAbbr = 'EVN';
+            } else if (raw.includes('SHERATON') || (progObj && (progObj.name || '').toUpperCase().includes('SHERATON'))) {
+              progAbbr = 'SHR';
+            } else if (raw.includes('TAMATA') || (progObj && (progObj.name || '').toUpperCase().includes('TAMATA'))) {
+              progAbbr = 'TMT';
+            } else if (progObj && progObj.code) {
+              progAbbr = progObj.code.slice(0, 3).toUpperCase();
+            }
+
+            let classAbbr = 'VOCAB';
+            if (raw.includes('BASIC')) classAbbr = 'BASIC';
+            else if (raw.includes('STORY')) classAbbr = 'STORY';
+            else if (raw.includes('SPEAK')) classAbbr = 'SPEAK';
+            else if (raw.includes('VOCAB')) classAbbr = 'VOCAB';
+            else {
+              const words = raw.split(/\s+/).filter(w => !['CAMP', '1ST', '2ND', '3RD', 'LEVEL'].includes(w));
+              classAbbr = (words[0] || 'CLASS').slice(0, 5);
+            }
+            payloadToSave.code = `${progAbbr}-${lvlNum}${classAbbr}`;
+          } else {
+            payloadToSave.code = payloadToSave.code.trim().toUpperCase();
+          }
+        }
+
         if (_editId) {
           try {
             await adminUpdate(targetTable, _editId, payloadToSave);

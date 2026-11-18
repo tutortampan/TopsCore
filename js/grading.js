@@ -1687,4 +1687,165 @@ export function getClassSvgIcon(name = '', size = 18, strokeColor = '#38bdf8') {
 if (typeof window !== 'undefined') {
   window.getClassSvgIcon = getClassSvgIcon;
   window.TOPSCORE_QUAD_COLORS = TOPSCORE_QUAD_COLORS;
+  window.formatTestDisplay = formatTestDisplay;
+  window.formatTestTitleHtml = formatTestTitleHtml;
 }
+
+/**
+ * Authoritative Test Display Name Formatter (SSOT AGENTS.md § 2.6 / DECISION-056)
+ * Generates clean, zero-redundancy student presentation labels:
+ * - Task: "[Code] Task - [Topic Name]" (e.g. "A1 Task - Greetings & Basics")
+ * - Exam: "[Code] Exam - [Theme Name]" (e.g. "D Exam - Cooking Class")
+ * Supports 2-line layout (for Dashboard Hero) and 1-line layout (Header, Modals, Results).
+ */
+export function formatTestDisplay(test) {
+  if (!test) return { typeLabel: 'Task', topicOrTheme: '', fullTitle: 'Task', line1: 'Task', line2: '' };
+
+  // 1. If explicit display_name exists in database and is not empty, respect it
+  if (test.display_name && String(test.display_name).trim()) {
+    const dName = String(test.display_name).trim();
+    const parts = dName.split(/\s*[-–]\s*/);
+    if (parts.length > 1) {
+      const typeLabel = parts[0].trim();
+      const topicOrTheme = parts.slice(1).join(' - ').trim();
+      return {
+        typeLabel,
+        topicOrTheme,
+        fullTitle: `${typeLabel} - ${topicOrTheme}`,
+        line1: typeLabel,
+        line2: topicOrTheme
+      };
+    }
+    return {
+      typeLabel: dName,
+      topicOrTheme: '',
+      fullTitle: dName,
+      line1: dName,
+      line2: ''
+    };
+  }
+
+  const rawTitle = String(test.title || test.name || '').trim();
+  const shell = String(test.shell_code || '').toUpperCase();
+  const isExam = test.test_type === 'exam' || test.category === 'EXAM' || shell.endsWith('-EXAM') || /Exam/i.test(rawTitle);
+
+  // 2. Extract Topic or Theme from rawTitle
+  let topicOrTheme = '';
+  const dashIdx = rawTitle.search(/\s+[-–:]\s+/);
+  if (dashIdx !== -1) {
+    topicOrTheme = rawTitle.substring(dashIdx).replace(/^[\s-–:]+/, '').trim();
+  } else {
+    // If no dash, strip common class prefixes like "1st Vocabulary ", "2nd Vocabulary ", etc.
+    topicOrTheme = rawTitle.replace(/^\d+(st|nd|rd|th)?\s+Vocabulary\s+/i, '')
+                           .replace(/^(Theme\s+[A-D]\s+)?(Words\s+|Phrases\s+)?(Task|Exam)\s*/i, '')
+                           .trim();
+  }
+
+  // Capitalize nicely if all uppercase (e.g. "COOKING CLASS" -> "Cooking Class")
+  if (topicOrTheme && topicOrTheme === topicOrTheme.toUpperCase() && topicOrTheme.length > 3) {
+    topicOrTheme = topicOrTheme.split(' ')
+      .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  // 3. Extract Theme letter & Topic number
+  // Supports new format: CMP-3VCB-A1-TASK -> segments[2] = "A1", CMP-3VCB-D-EXAM -> segments[2] = "D"
+  // As well as legacy formats: 3A1-TASK, 2D-WORDS-EXAM, 1A1-PHRASES-TASK
+  let themeLetter = '';
+  let topicNum = '';
+
+  // Check 4-part format: PROGRAM-CLASS-CODE-TYPE
+  const segments = shell.split('-');
+  if (segments.length >= 4) {
+    const codePart = segments[2]; // e.g. "A1" or "D"
+    const m = codePart.match(/^([A-D])([0-9]?)$/);
+    if (m) {
+      themeLetter = m[1];
+      topicNum = m[2] || '';
+    }
+  }
+
+  // Fallback to legacy regex on shell: ^([0-9]?)([A-D])([0-9]?)-
+  if (!themeLetter) {
+    const legacyMatch = shell.match(/^([0-9]?)([A-D])([0-9]?)-/);
+    if (legacyMatch) {
+      themeLetter = legacyMatch[2];
+      topicNum = legacyMatch[3] || '';
+    }
+  }
+
+  // Fallback to rawTitle matching:
+  if (!themeLetter) {
+    const titleThemeMatch = rawTitle.match(/Theme\s+([A-D])/i) || rawTitle.match(/\b([A-D])([0-9]?)\b/);
+    if (titleThemeMatch) {
+      themeLetter = (titleThemeMatch[1] || '').toUpperCase();
+      topicNum = titleThemeMatch[2] || '';
+    }
+  }
+
+  // 4. Construct Class & Level Context (e.g. "2nd Vocabulary" or "1st Basic English")
+  let levelOrdinal = '';
+  let className = 'Vocabulary';
+
+  if (test.levels?.level_number) {
+    const num = test.levels.level_number;
+    levelOrdinal = num === 1 ? '1st' : num === 2 ? '2nd' : num === 3 ? '3rd' : `${num}th`;
+  }
+  if (test.classes?.name) {
+    const cn = test.classes.name
+      .replace(/^(Camp|Evnikom|Sheraton|Tamata)\s+/i, '')
+      .replace(/^(\d+(st|nd|rd|th)?|Level\s*\d+)\s+/i, '')
+      .trim();
+    if (cn) className = cn;
+  }
+
+  // Fallback from rawTitle (e.g. "2nd Vocabulary" or "1st Basic English")
+  const lvlMatch = rawTitle.match(/^(\d+(st|nd|rd|th)?)\s+([A-Za-z\s]+?)(?=\s+[A-D0-9]|\s+Theme|\s+Words|\s+Phrases|\s+Task|\s+Exam)/i);
+  if (lvlMatch) {
+    if (!levelOrdinal) levelOrdinal = lvlMatch[1];
+    if (lvlMatch[3] && !test.classes?.name) className = lvlMatch[3].trim();
+  }
+
+  // Fallback from shell_code (e.g. "CMP-3VCB-...", "2B1-...", "3A-...")
+  if (!levelOrdinal) {
+    const shellLvl = shell.match(/(?:CMP-)?(\d)/);
+    if (shellLvl) {
+      const n = parseInt(shellLvl[1]);
+      levelOrdinal = n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
+    } else {
+      levelOrdinal = '1st';
+    }
+  }
+
+  // 5. Construct SSOT Format:
+  // "2nd Vocabulary A1 Task - Topic Name"
+  // "2nd Vocabulary D Exam - Theme Name"
+  const codePart = isExam ? (themeLetter || 'A') : `${themeLetter || 'A'}${topicNum || '1'}`;
+  const typePart = isExam ? 'Exam' : 'Task';
+
+  const classPrefix = `${levelOrdinal} ${className}`.trim();
+  const typeLabel = `${classPrefix} ${codePart} ${typePart}`.trim();
+  const fullTitle = topicOrTheme ? `${typeLabel} - ${topicOrTheme}` : typeLabel;
+
+  return {
+    typeLabel,
+    topicOrTheme,
+    fullTitle,
+    line1: typeLabel,
+    line2: topicOrTheme
+  };
+}
+
+export function formatTestTitleHtml(test) {
+  const { line1, line2 } = formatTestDisplay(test);
+  const esc1 = String(line1 || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  const esc2 = String(line2 || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  if (esc2) {
+    return `
+      <span class="next-test-primary-name" title="${esc1}">${esc1}</span>
+      <span class="next-test-topic-name" title="${esc2}">${esc2}</span>
+    `;
+  }
+  return `<span class="next-test-primary-name" title="${esc1}">${esc1}</span>`;
+}
+

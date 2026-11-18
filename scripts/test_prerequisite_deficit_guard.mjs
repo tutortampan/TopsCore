@@ -9,7 +9,7 @@ async function verifyPrereqDeficitGuard() {
 
   const { data: tests } = await sb.from('tests')
     .select('id, shell_code, title, display_order, test_type, minimum_required_score, payload')
-    .ilike('shell_code', '2C%')
+    .or('shell_code.ilike.2C%,shell_code.ilike.%2VCB-C%')
     .is('deleted_at', null)
     .order('display_order');
 
@@ -28,10 +28,10 @@ async function verifyPrereqDeficitGuard() {
   });
 
   console.log(`Ayya status:`);
-  console.log(`  2C1: ${ayyaPasses['2C1-WORDS-TASK']}/7 (Complete)`);
-  console.log(`  2C2: ${ayyaPasses['2C2-WORDS-TASK']}/7 (Complete)`);
-  console.log(`  2C3: ${ayyaPasses['2C3-WORDS-TASK']}/7 (Complete)`);
-  console.log(`  2C4: ${ayyaPasses['2C4-WORDS-TASK']}/7 (Complete)`);
+  console.log(`  2C1: ${(ayyaPasses['2C1-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C1-TASK']) ?? 0}/7`);
+  console.log(`  2C2: ${(ayyaPasses['2C2-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C2-TASK']) ?? 0}/7`);
+  console.log(`  2C3: ${(ayyaPasses['2C3-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C3-TASK']) ?? 0}/7`);
+  console.log(`  2C4: ${(ayyaPasses['2C4-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C4-TASK']) ?? 0}/7`);
   console.log(`  All tasks cleared? ${Object.values(ayyaPasses).every(p => p >= 7) ? '✅ YES' : '❌ NO'}`);
 
   // 2. Verify Prerequisite Deficit Guard for student with deficit
@@ -58,9 +58,9 @@ async function verifyPrereqDeficitGuard() {
   });
 
   const earliestUncompleted = tests.find(t => !isPassedByTest[t.id]);
-  const curAsm = tests.find(t => t.shell_code === '2C4-WORDS-TASK');
+  const curAsm = tests.find(t => t.shell_code === '2C4-WORDS-TASK' || t.shell_code === 'CMP-2VCB-C4-TASK');
 
-  const curIndex = tests.findIndex(t => t.id === curAsm.id);
+  const curIndex = tests.findIndex(t => t.id === curAsm?.id);
   const earliestIndex = tests.findIndex(t => t.id === earliestUncompleted?.id);
 
   console.log(`\nSimulated Deficit status:`);
@@ -68,13 +68,13 @@ async function verifyPrereqDeficitGuard() {
   console.log(`  2C2 Passes: ${passCountByTest[tests[1].id]}/7 (Passed: ${isPassedByTest[tests[1].id]})`);
   console.log(`  2C3 Passes: ${passCountByTest[tests[2].id]}/7 (Passed: ${isPassedByTest[tests[2].id]})`);
   console.log(`  Earliest uncompleted test: ${earliestUncompleted?.shell_code}`);
-  console.log(`  Target test under test: ${curAsm.shell_code}`);
+  console.log(`  Target test under test: ${curAsm?.shell_code}`);
 
   if (earliestIndex < curIndex) {
     const prereqPasses = passCountByTest[earliestUncompleted.id];
     console.log(`  Guard triggered: points to unfulfilled prerequisite ${earliestUncompleted.shell_code} (${prereqPasses}/7)`);
-    if (earliestUncompleted.shell_code !== '2C3-WORDS-TASK') {
-      throw new Error(`Expected earliest uncompleted to be 2C3-WORDS-TASK, got ${earliestUncompleted.shell_code}`);
+    if (earliestUncompleted.shell_code !== '2C3-WORDS-TASK' && earliestUncompleted.shell_code !== 'CMP-2VCB-C3-TASK') {
+      throw new Error(`Expected earliest uncompleted to be 2C3-WORDS-TASK / CMP-2VCB-C3-TASK, got ${earliestUncompleted.shell_code}`);
     }
   } else {
     throw new Error('Expected guard to trigger on 2C4 for unfulfilled 2C3 prerequisite!');

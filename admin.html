@@ -186,7 +186,7 @@
       </div>
       <form id="crud-form" novalidate></form>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary btn-modal-close-left" id="crud-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-secondary btn-modal-close-left" id="crud-cancel-btn">Close</button>
         <button type="submit" form="crud-form" class="btn btn-primary" id="crud-save-btn">Save</button>
       </div>
     </div>
@@ -210,7 +210,7 @@
         <span class="delete-target-val" id="delete-target-val">—</span>
       </div>
       <div class="modal-footer w-100">
-        <button class="btn btn-secondary flex-1" id="delete-cancel-btn">Cancel</button>
+        <button class="btn btn-secondary flex-1 btn-modal-close-left" id="delete-cancel-btn">Close</button>
         <button class="btn btn-danger flex-1" id="delete-confirm-btn">Delete Record</button>
       </div>
     </div>
@@ -434,7 +434,7 @@
       </div>
 
       <div class="modal-footer modal-footer-bordered bulk-edit-footer">
-        <button type="button" class="btn btn-secondary btn-modal-close-left" id="bulk-cancel-btn">Cancel</button>
+        <button type="button" class="btn btn-secondary btn-modal-close-left" id="bulk-cancel-btn">Close</button>
         <button type="button" class="btn btn-primary bulk-edit-save-btn" id="bulk-save-btn">
           <span>Apply Changes</span> (<span id="bulk-save-count">0</span> Tests)
         </button>
@@ -484,7 +484,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary btn-modal-close-left"
-          onclick="document.getElementById('add-class-modal').classList.add('hidden')">Cancel</button>
+          onclick="document.getElementById('add-class-modal').classList.add('hidden')">Close</button>
         <button class="btn btn-primary" id="add-class-save-btn">Save Class</button>
       </div>
     </div>

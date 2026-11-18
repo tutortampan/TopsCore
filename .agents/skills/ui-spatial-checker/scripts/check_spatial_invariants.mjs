@@ -2,8 +2,8 @@
  * check_spatial_invariants.mjs
  * 
  * Automated Spatial & Visual Invariant Verification Suite for TopsCore LMS.
- * Validates Rule 15 (100vh lock), Rule 20 (Lower Panel & 10px gap),
- * Rule 21 (Dynamic Columns, Nowrap & Zero Dead Space), and Rule 22 (Centered Loading & Pure English).
+ * Validates ui-invariants.md §1.1 (100vh lock), §1.2 & §1.3 (Sub Panel & 10px gap),
+ * §4.1 & §4.2 (Dynamic Columns, Nowrap & Zero Dead Space), and §1.4 (Centered Loading & Pure English).
  */
 
 import assert from 'node:assert';
@@ -85,7 +85,7 @@ assert.ok(
 );
 console.log('  ✔ Window, Wizard, Card & Popup buttons (40px) and footers (60px) strictly verified');
 
-// Title Area 40px, Centered Title & ALL CAPS Typography Invariant (§1.5.1)
+// Title Area 60px, Centered Title & ALL CAPS Typography Invariant (§1.5.1)
 assert.ok(
   adminCss.includes('.title-area h3,') &&
   adminCss.includes('text-transform: uppercase !important;') &&
@@ -99,10 +99,10 @@ assert.ok(
 );
 console.log('  ✔ Title Area titles strictly locked to ALL CAPS, Centered alignment & Stacked Subtitles');
 
-// Standard Modal 80vh Height Invariant (§1.5.5)
+// Standard Modal 80vh Height Invariant (§1.5.3)
 assert.ok(
   adminCss.includes('max-height: 80vh;'),
-  '[Rule 1.5.5] Modal dialogs must enforce standard max-height: 80vh'
+  '[Rule 1.5.3] Modal dialogs must enforce standard max-height: 80vh'
 );
 console.log('  ✔ Floating window dialogs strictly bound to standard 80vh height');
 

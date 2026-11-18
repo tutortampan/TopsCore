@@ -98,7 +98,11 @@ export async function getSupabase() {
           createClient = mod.createClient;
         }
       }
-      _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      const effectiveKey = (typeof process !== 'undefined' && process.env?.SUPABASE_SERVICE_ROLE_KEY)
+        ? process.env.SUPABASE_SERVICE_ROLE_KEY
+        : SUPABASE_ANON_KEY;
+
+      _supabase = createClient(SUPABASE_URL, effectiveKey, {
         auth: {
           persistSession: true,
           autoRefreshToken: true,

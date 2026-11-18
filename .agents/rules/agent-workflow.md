@@ -8,7 +8,12 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 4. **Akurat (Accurate & Verified)**: Lakukan verifikasi otomatis setiap selesai mengedit untuk memastikan 0 syntax error, 0 regresi, dan 100% tests green.
 - **Audit Tangkapan Layar Proaktif**: Setiap kali pengguna mengunggah tangkapan layar (screenshot), lakukan audit visual menyeluruh berdasarkan 7 pilar SSOT di [`.agents/rules/ui-invariants.md` §1.7](file:///.agents/rules/ui-invariants.md#17-protokol-audit-tangkapan-layar--visual-invariant-audit-7-pillars-ssot).
 
-## 1. Pragmatic Task Management (`tasks.md`)
+## 1. Task Management & Git Execution Gate
+
+### 1.1 Strict Git Commit & Push Gate ("No commit until I say so!")
+- **Autonomous Commit & Push Prohibited (STRICT)**: The AI coding agent MUST NEVER autonomously execute `git commit` or `git push` commands under any circumstance. All modifications remain strictly uncommitted in the working tree for explicit user review ("no commit until I say so!") per [`AGENTS.md` §0.1](file:///AGENTS.md#01-command--execution-constraints).
+
+### 1.2 Pragmatic Task Management (`tasks.md`)
 - **Complex Multi-Step Tasks**: For complex features involving multiple files or phases, track progress in `tasks.md` in the workspace root.
 - **Zero CLI Pinning Overhead**: DO NOT execute shell/PowerShell commands to force-pin `tasks.md` in IDE tabs. Keep file operations clean and silent.
 - **Quick Tasks & Fixes**: For single-turn fixes, minor tweaks, or immediate requests, execute directly without creating or updating task boards.
@@ -87,7 +92,7 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 
 ## 8. Anti-Yapping Discipline & Direct Communication
 - Keep responses concise, direct, and actionable.
-- When an artifact or plan exists, provide the direct clickable file link ([filename.md](file:///...)) and highlight only key decisions or blockers.
+- When an artifact or plan exists, provide the direct clickable file link (such as `[filename.md](file:///...)`) and highlight only key decisions or blockers.
 - Avoid repeating large blocks of code or re-summarizing entire documents in chat.
 
 ## 9. Lean Documentation Maintenance
@@ -109,6 +114,4 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 - **No Backup Suffixes**: DILARANG membuat file dengan suffix `_2.*`, `_3.*`, `_new.*`, atau file cadangan lainnya. Semua perubahan wajib dilakukan dengan *in-place editing*.
 - **Module Variable Hoisting**: Selalu hoist variabel modul penting (seperti `_currentSection`, modal references) di baris teratas modul.
 - **JavaScript Syntax Validation**: Setiap selesai mengedit file JavaScript, jalankan `npm run test:syntax` (in-process AST engine 0.14 detik untuk 50 file) atau `node --check <file>` untuk memastikan tidak ada syntax error.
-
-
 

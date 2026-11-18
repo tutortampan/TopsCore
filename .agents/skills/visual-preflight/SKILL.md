@@ -7,8 +7,8 @@ description: >-
 
 # Visual Pre-Flight Checklist Protocol
 
-This skill enforces rigorous UI planning standards in compliance with TopsCore AGENTS.md Rule 2.25, Rule 2.27, and `.antigravityrules`:
-1. **Current State Baseline**: Visual snapshot of the existing layout must be captured and embedded (adhering to compact resolution in AGENTS.md Rule 2.27: max height ~600–800px, < 30 KB).
+This skill enforces rigorous UI planning standards in compliance with TopsCore `AGENTS.md` §0.2.1 & §5.2, `.agents/rules/ui-invariants.md` §1.7, and `.antigravityrules`:
+1. **Current State Baseline**: Visual snapshot of the existing layout must be captured and embedded (adhering to compact resolution in `AGENTS.md` §5.2: max height ~600–800px, < 30 KB).
 2. **Rolling Single Screenshot & Auto-Purge Protocol**: Saat screenshot baru dibuat, screenshot lama WAJIB langsung dihapus dari sistem (zero residual bloat). Tidak boleh menumpuk file screenshot historis.
 3. **Proposed Visual Mockup**: Interactive or high-fidelity mockup showing the new layout must be embedded for user review.
 4. **Spatial Invariants Verification**: 10px container gap, 40px Sub Panel (Lower Panel) height, 100vh lock, dynamic nowrap columns, and centered loading states must be explicitly validated in the plan before writing production code.

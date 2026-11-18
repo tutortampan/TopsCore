@@ -234,12 +234,16 @@ function isPlaceholderUrl() {
 const _apiCache = new Map();
 const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5-minute cache for static master records
 
-export function clearApiCache(prefix = null) {
+export function clearApiCache(prefix = null, { keepPersistent = false } = {}) {
   if (!prefix) {
     _apiCache.clear();
+    if (!keepPersistent) _clearPersistentVaultCache();
   } else {
     for (const key of _apiCache.keys()) {
       if (key.startsWith(prefix)) _apiCache.delete(key);
+    }
+    if ((prefix === 'vault' || prefix.startsWith('vault')) && !keepPersistent) {
+      _clearPersistentVaultCache();
     }
   }
 }
@@ -2755,10 +2759,63 @@ export async function getServerTimeWita() {
 }
 
 // ============================================================
-// VOCABULARY VAULT — CRUD & IMPORT
+// VOCABULARY VAULT — CRUD & IMPORT (OFFLINE-FIRST PERSISTENT CACHE)
 // ============================================================
 const VAULT_CACHE_KEY = 'vault_all_master_words';
-const VAULT_CACHE_TTL_MS = 5 * 60 * 1000; // 5-minute in-memory cache to eliminate repeated multi-MB egress
+const VAULT_STORAGE_KEY = 'topscore_vault_cache_v1';
+const VAULT_STORAGE_TTL_MS = 24 * 60 * 60 * 1000; // 24-hour persistent offline cache
+const VAULT_MEMORY_TTL_MS = 5 * 60 * 1000; // 5-minute in-memory refresh check
+
+function _getVaultStorage() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+    if (typeof localStorage !== 'undefined') return localStorage;
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
+  } catch (_) {}
+  return null;
+}
+
+function _readPersistentVaultCache() {
+  try {
+    const storage = _getVaultStorage();
+    if (!storage) return null;
+    const raw = storage.getItem(VAULT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.data) && parsed.data.length > 0) {
+      const age = Date.now() - (parsed.timestamp || 0);
+      const isOffline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+      if (age < VAULT_STORAGE_TTL_MS || isOffline) {
+        return parsed.data;
+      }
+    }
+  } catch (err) {
+    console.warn('[VaultCache] Persistent storage read notice:', err.message);
+  }
+  return null;
+}
+
+function _writePersistentVaultCache(data) {
+  try {
+    const storage = _getVaultStorage();
+    if (!storage || !Array.isArray(data) || data.length === 0) return;
+    storage.setItem(VAULT_STORAGE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      data
+    }));
+  } catch (err) {
+    console.warn('[VaultCache] Persistent storage write notice:', err.message);
+  }
+}
+
+function _clearPersistentVaultCache() {
+  try {
+    const storage = _getVaultStorage();
+    if (storage) {
+      storage.removeItem(VAULT_STORAGE_KEY);
+    }
+  } catch (_) {}
+}
 
 export async function fetchVaultWords({ topic = null, search = null, targetLevel = null, programId = null, institutionId = null, limit = 10000, offset = 0, forceRefresh = false } = {}) {
   let allData = [];
@@ -2766,37 +2823,59 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
   // 1. In-memory cache hit (0ms & 0 egress)
   if (!forceRefresh && _apiCache.has(VAULT_CACHE_KEY)) {
     const cached = _apiCache.get(VAULT_CACHE_KEY);
-    if (Date.now() - cached.timestamp < VAULT_CACHE_TTL_MS && Array.isArray(cached.data)) {
+    if (Date.now() - cached.timestamp < VAULT_MEMORY_TTL_MS && Array.isArray(cached.data)) {
       allData = cached.data;
     }
   }
 
-  // 2. Cache miss or forced refresh: fetch complete vault dataset from Supabase once
-  if (!allData || allData.length === 0) {
-    const sb = await getSupabase();
-    const PAGE_SIZE = 1000;
-    let curOffset = 0;
-    allData = [];
-
-    while (true) {
-      const { data, error } = await sb.from('vocabulary_vault')
-        .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
-        .is('deleted_at', null)
-        .order('target_level', { ascending: true })
-        .order('theme_code', { ascending: true })
-        .order('topic_code', { ascending: true })
-        .order('word_type', { ascending: true })
-        .order('indonesian', { ascending: true })
-        .range(curOffset, curOffset + PAGE_SIZE - 1);
-
-      if (error) throw error;
-      if (!data || data.length === 0) break;
-      allData.push(...data);
-      if (data.length < PAGE_SIZE) break;
-      curOffset += data.length;
+  // 2. Persistent storage hit (Offline-First: 0ms Supabase roundtrip, 0 egress across sessions/tabs)
+  if (!forceRefresh && (!allData || allData.length === 0)) {
+    const persistent = _readPersistentVaultCache();
+    if (persistent && persistent.length > 0) {
+      allData = persistent;
+      _apiCache.set(VAULT_CACHE_KEY, { data: allData, timestamp: Date.now() });
     }
+  }
 
-    _apiCache.set(VAULT_CACHE_KEY, { data: allData, timestamp: Date.now() });
+  // 3. Cache miss or forced refresh: fetch complete vault dataset from Supabase once
+  if (!allData || allData.length === 0) {
+    const persistentFallback = _readPersistentVaultCache();
+    try {
+      const sb = await getSupabase();
+      const PAGE_SIZE = 1000;
+      let curOffset = 0;
+      allData = [];
+
+      while (true) {
+        const { data, error } = await sb.from('vocabulary_vault')
+          .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
+          .is('deleted_at', null)
+          .order('target_level', { ascending: true })
+          .order('theme_code', { ascending: true })
+          .order('topic_code', { ascending: true })
+          .order('word_type', { ascending: true })
+          .order('indonesian', { ascending: true })
+          .range(curOffset, curOffset + PAGE_SIZE - 1);
+
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData.push(...data);
+        if (data.length < PAGE_SIZE) break;
+        curOffset += data.length;
+      }
+
+      _apiCache.set(VAULT_CACHE_KEY, { data: allData, timestamp: Date.now() });
+      _writePersistentVaultCache(allData);
+    } catch (fetchErr) {
+      // Offline fallback: if network fails or Supabase unreachable, fallback to persistent cache
+      if (persistentFallback && persistentFallback.length > 0) {
+        console.warn('[fetchVaultWords] Supabase unreachable, serving from offline persistent cache:', fetchErr.message);
+        allData = persistentFallback;
+        _apiCache.set(VAULT_CACHE_KEY, { data: allData, timestamp: Date.now() });
+      } else {
+        throw fetchErr;
+      }
+    }
   }
 
   // 3. High-speed in-memory filtering (0ms roundtrip)
@@ -3538,9 +3617,9 @@ export async function createVocabMasteryTest(config) {
     selectedWords = stratifiedSample(topicMap, customQuota);
   }
 
-  // Resolve the final test_type (PostgreSQL enum / string: 'task' | 'exam') and category ('TASK' | 'EXAM'):
+  // Resolve the final test_type (PostgreSQL enum 'quiz' | 'exam') and category ('TASK' | 'EXAM'):
   const isQuizTier = (tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || String(test_type).toLowerCase() === 'task') && !isTryoutTier;
-  const resolvedType = isQuizTier ? 'task' : 'exam';
+  const resolvedType = isQuizTier ? 'quiz' : 'exam';
   const resolvedCategory = isQuizTier ? 'TASK' : 'EXAM';
 
   let defaultAnswerType = answerType;
@@ -4731,30 +4810,58 @@ export async function upsertDynamicTestShell(config) {
 
   const isTest = tier === 'TEST' || tier === 'EXAM';
   const isPhrase = category === 'phrases' || modulePrefix === 'PHRASE';
+  const isUnified = category === 'unified' || modulePrefix === 'UNIFIED';
 
-  // Standardized Shell Code: e.g. 3A1-WORDS-TASK, 3A1-PHRASES-TASK, 3A-WORDS-EXAM, 3A-PHRASES-EXAM
+  // Standardized Shell Code: PROGRAM-LEVEL_CLASS-CODE-TYPE (SSOT AGENTS.md § 2.6 / DECISION-056)
+  // e.g. CMP-3VCB-A1-TASK, CMP-3VCB-D-EXAM
   const cleanTopCode = topicCode ? String(topicCode).replace(/^[A-Za-z]/, '') : '1';
-  const code = isPhrase
-    ? (isTest ? `${levelNum}${themeCode}-PHRASES-EXAM` : `${levelNum}${themeCode}${cleanTopCode}-PHRASES-TASK`)
-    : (isTest ? `${levelNum}${themeCode}-WORDS-EXAM` : `${levelNum}${themeCode}${cleanTopCode}-WORDS-TASK`);
-
-  // Standardized Title: e.g. "3rd Vocabulary A1 Words Task - Professional Identity"
-  const ordinal = toOrdinal(levelNum);
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
-  const generatedTitle = isPhrase
+
+  const progCode = (config.programCode || 'CMP').toUpperCase();
+  const classShort = (config.classShort || `${levelNum}VCB`).toUpperCase();
+
+  const code = isUnified
+    ? (isTest ? `${progCode}-${classShort}-${themeCode}-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-TASK`)
+    : (isPhrase
+        ? (isTest ? `${progCode}-${classShort}-${themeCode}-PHRASES-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-PHRASES-TASK`)
+        : (isTest ? `${progCode}-${classShort}-${themeCode}-WORDS-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-WORDS-TASK`));
+
+  // Standardized Student Display Name (SSOT AGENTS.md § 2.6): e.g. "A1 Task - Greetings & Basics" / "D Exam - Cooking Class"
+  const studentDisplayName = isTest
+    ? `${themeCode} Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
+    : `${themeCode}${cleanTopCode} Task${cleanTitle ? ' - ' + cleanTitle : ''}`;
+
+  // Standardized Title: e.g. "3rd Vocabulary A1 Task - Professional Identity"
+  const ordinal = toOrdinal(levelNum);
+  const generatedTitle = isUnified
     ? (isTest
-        ? `${ordinal} Vocabulary ${themeCode} Phrases Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
-    : (isTest
-        ? `${ordinal} Vocabulary ${themeCode} Words Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`);
+        ? `${ordinal} Vocabulary ${themeCode} Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+    : (isPhrase
+        ? (isTest
+            ? `${ordinal} Vocabulary ${themeCode} Phrases Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
+            : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+        : (isTest
+            ? `${ordinal} Vocabulary ${themeCode} Words Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
+            : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`));
 
   // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
-  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : 'written') : 'spoken';
+  const defaultAnswerType = isTest ? (isPhrase ? 'selection' : (isUnified ? 'spoken' : 'written')) : 'spoken';
 
   // Expected question counts (Cumulative per theme for exams)
   let expectedQuestions = 40;
-  if (!isTest) {
+  if (isUnified) {
+    if (!isTest) {
+      expectedQuestions = 50;
+    } else {
+      const th = (themeCode || '').toUpperCase();
+      if (th === 'A') expectedQuestions = 200;
+      else if (th === 'B') expectedQuestions = 350;
+      else if (th === 'C') expectedQuestions = 550;
+      else if (th === 'D') expectedQuestions = 750;
+      else expectedQuestions = 200;
+    }
+  } else if (!isTest) {
     expectedQuestions = isPhrase ? 10 : 40;
   } else {
     const th = (themeCode || '').toUpperCase();
@@ -4870,12 +4977,13 @@ export async function upsertDynamicTestShell(config) {
     class_id:                   classId || (existing ? existing.class_id : null),
     level_id:                   levelId,
     module_id:                  moduleId,
-    test_subtype:               isTest ? (isPhrase ? 'PHRASE_EXAM' : 'VOCAB_EXAM') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK'),
-    test_type:                  isTest ? 'exam' : 'task',
+    test_subtype:               isUnified ? (isTest ? 'UNIFIED_EXAM' : 'UNIFIED_TASK') : (isTest ? (isPhrase ? 'PHRASE_EXAM' : 'VOCAB_EXAM') : (isPhrase ? 'PHRASE_TASK' : 'VOCAB_TASK')),
+    test_type:                  isTest ? 'exam' : 'quiz',
     category:                   isTest ? 'EXAM' : 'TASK',
     shell_code:                 code,
     title:                      generatedTitle,
-    description:                description || `${isTest ? 'Exam' : 'Task'}: ${themeCode}/${topicCode || 'ALL'} (${isPhrase ? 'Phrases' : 'Words'})`,
+    display_name:               studentDisplayName,
+    description:                description || `${isTest ? 'Exam' : 'Task'}: ${themeCode}/${topicCode || 'ALL'} (${isUnified ? 'Words & Phrases' : (isPhrase ? 'Phrases' : 'Words')})`,
     status:                     'PUBLISHED',
     working_duration_minutes:   effectiveDurationMinutes,
     minimum_required_score:     effectiveMinScore,
@@ -4886,13 +4994,13 @@ export async function upsertDynamicTestShell(config) {
     payload:                    {
       ...(existing?.payload || {}),
       is_dynamic_shell: true,
-      is_unified: false,
-      is_unified_test: false,
+      is_unified: isUnified,
+      is_unified_test: isUnified,
       theme_code: themeCode,
       themes: isTest ? cumulativeThemes : (themeCode ? [themeCode] : null),
       is_cumulative: isTest,
       topic_code: isTest ? null : (topicCode || null),
-      category: isPhrase ? 'phrases' : 'words',
+      category: isUnified ? 'unified' : (isPhrase ? 'phrases' : 'words'),
       answer_type: effectiveAnswerType,
       shell_code: code,
       tier: isTest ? 'EXAM' : 'TASK',
@@ -5144,6 +5252,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
     const testPass = config.testPassingScore !== undefined ? Number(config.testPassingScore) : 60;
 
+    const isUnifiedMode = config.category === 'unified' || config.unified === true;
+
     // 3. Generate Tests in strict Linear Sequential Chain
     for (const themeCode of sortedThemes) {
       const themeData = themeMap.get(themeCode);
@@ -5159,39 +5269,18 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         const topicPrereqId = lastTaskId;
         let thisTopicLastId = null;
 
-        // 1. Words Task (First in topic pair)
-        if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
+        if (isUnifiedMode) {
           hasAnyVocab = true;
-          const { testId, action } = await upsertDynamicTestShell({
-            institutionId, programId, levelId, classId: targetClassId, levelNum,
-            tier: 'TASK', themeName: themeData.name, topicName: topicName,
-            description: `Theme: ${themeData.name} | Topic: ${topicName}`,
-            themeCode, topicCode,
-            modulePrefix: 'VOCAB', category: 'words',
-            moduleId: vocabModuleId,
-            answerType: wordsTaskAns,
-            durationMinutes: wordsTaskDur,
-            minimumRequiredScore: taskPass,
-            prerequisiteId: topicPrereqId,
-            displayOrder: displayOrder++
-          });
-          if (action === 'inserted') results.tasks++;
-          if (action === 'updated') results.updated++;
-          thisTopicLastId = testId;
-        }
-
-        // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId)
-        if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
           hasAnyPhrases = true;
           const { testId, action } = await upsertDynamicTestShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'TASK', themeName: themeData.name, topicName: topicName,
-            description: `Theme: ${themeData.name} | Topic: ${topicName}`,
+            description: `Theme: ${themeData.name} | Topic: ${topicName} (Unified Words & Phrases)`,
             themeCode, topicCode,
-            modulePrefix: 'PHRASE', category: 'phrases',
-            moduleId: phraseModuleId,
-            answerType: phrasesTaskAns,
-            durationMinutes: phrasesTaskDur,
+            modulePrefix: 'UNIFIED', category: 'unified',
+            moduleId: vocabModuleId,
+            answerType: wordsTaskAns,
+            durationMinutes: (wordsTaskDur || 10) + (phrasesTaskDur || 5),
             minimumRequiredScore: taskPass,
             prerequisiteId: topicPrereqId,
             displayOrder: displayOrder++
@@ -5199,6 +5288,48 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           if (action === 'inserted') results.tasks++;
           if (action === 'updated') results.updated++;
           thisTopicLastId = testId;
+        } else {
+          // 1. Words Task (First in topic pair)
+          if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
+            hasAnyVocab = true;
+            const { testId, action } = await upsertDynamicTestShell({
+              institutionId, programId, levelId, classId: targetClassId, levelNum,
+              tier: 'TASK', themeName: themeData.name, topicName: topicName,
+              description: `Theme: ${themeData.name} | Topic: ${topicName}`,
+              themeCode, topicCode,
+              modulePrefix: 'VOCAB', category: 'words',
+              moduleId: vocabModuleId,
+              answerType: wordsTaskAns,
+              durationMinutes: wordsTaskDur,
+              minimumRequiredScore: taskPass,
+              prerequisiteId: topicPrereqId,
+              displayOrder: displayOrder++
+            });
+            if (action === 'inserted') results.tasks++;
+            if (action === 'updated') results.updated++;
+            thisTopicLastId = testId;
+          }
+
+          // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId)
+          if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+            hasAnyPhrases = true;
+            const { testId, action } = await upsertDynamicTestShell({
+              institutionId, programId, levelId, classId: targetClassId, levelNum,
+              tier: 'TASK', themeName: themeData.name, topicName: topicName,
+              description: `Theme: ${themeData.name} | Topic: ${topicName}`,
+              themeCode, topicCode,
+              modulePrefix: 'PHRASE', category: 'phrases',
+              moduleId: phraseModuleId,
+              answerType: phrasesTaskAns,
+              durationMinutes: phrasesTaskDur,
+              minimumRequiredScore: taskPass,
+              prerequisiteId: topicPrereqId,
+              displayOrder: displayOrder++
+            });
+            if (action === 'inserted') results.tasks++;
+            if (action === 'updated') results.updated++;
+            thisTopicLastId = testId;
+          }
         }
 
         if (thisTopicLastId) {
@@ -5210,17 +5341,16 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       const lastThemeTaskId = lastTaskId;
       let lastThemeExamId = null;
 
-      // 3. Words Exam (First in exam pair)
-      if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
+      if (isUnifiedMode) {
         const { testId, action } = await upsertDynamicTestShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'EXAM', themeName: themeData.name, topicName: null,
-          description: `Exam: ${themeData.name}`,
+          description: `Exam: ${themeData.name} (Unified Words & Phrases)`,
           themeCode, topicCode: null,
-          modulePrefix: 'VOCAB', category: 'words',
+          modulePrefix: 'UNIFIED', category: 'unified',
           moduleId: vocabModuleId,
           answerType: wordsTestAns,
-          durationMinutes: config.wordsExamDurationMinutes || null,
+          durationMinutes: (config.wordsExamDurationMinutes || 40) + (config.phrasesExamDurationMinutes || 14),
           minimumRequiredScore: testPass,
           prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++
@@ -5228,26 +5358,46 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
         lastThemeExamId = testId;
-      }
+      } else {
+        // 3. Words Exam (First in exam pair)
+        if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
+          const { testId, action } = await upsertDynamicTestShell({
+            institutionId, programId, levelId, classId: targetClassId, levelNum,
+            tier: 'EXAM', themeName: themeData.name, topicName: null,
+            description: `Exam: ${themeData.name}`,
+            themeCode, topicCode: null,
+            modulePrefix: 'VOCAB', category: 'words',
+            moduleId: vocabModuleId,
+            answerType: wordsTestAns,
+            durationMinutes: config.wordsExamDurationMinutes || null,
+            minimumRequiredScore: testPass,
+            prerequisiteId: lastThemeTaskId,
+            displayOrder: displayOrder++
+          });
+          if (action === 'inserted') results.tests++;
+          if (action === 'updated') results.updated++;
+          lastThemeExamId = testId;
+        }
 
-      // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId)
-      if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
-        const { testId, action } = await upsertDynamicTestShell({
-          institutionId, programId, levelId, classId: targetClassId, levelNum,
-          tier: 'EXAM', themeName: themeData.name, topicName: null,
-          description: `Exam: ${themeData.name}`,
-          themeCode, topicCode: null,
-          modulePrefix: 'PHRASE', category: 'phrases',
-          moduleId: phraseModuleId,
-          answerType: phrasesTestAns,
-          durationMinutes: config.phrasesExamDurationMinutes || null,
-          minimumRequiredScore: testPass,
-          prerequisiteId: lastThemeTaskId,
-          displayOrder: displayOrder++
-        });
-        if (action === 'inserted') results.tests++;
-        if (action === 'updated') results.updated++;
-        lastThemeExamId = testId;
+        // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId)
+        if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+          const { testId, action } = await upsertDynamicTestShell({
+            institutionId, programId, levelId, classId: targetClassId, levelNum,
+            tier: 'EXAM', themeName: themeData.name, topicName: null,
+            description: `Exam: ${themeData.name}`,
+            themeCode, topicCode: null,
+            modulePrefix: 'PHRASE', category: 'phrases',
+            moduleId: phraseModuleId,
+            answerType: phrasesTestAns,
+            durationMinutes: config.phrasesExamDurationMinutes || null,
+            minimumRequiredScore: testPass,
+            prerequisiteId: lastThemeTaskId,
+            displayOrder: displayOrder++
+          });
+          if (action === 'inserted') results.tests++;
+          if (action === 'updated') results.updated++;
+          lastThemeExamId = testId;
+        }
       }
 
       if (lastThemeExamId) {
@@ -5262,7 +5412,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
 export async function autoGenerateWordsTests({ classId, levelId, programId, institutionId }) {
   if (!classId || !levelId || !programId) throw new Error("Missing required parameters for auto-generating words.");
-  const { data: levelData } = await getSupabase().from('levels').select('level_number').eq('id', levelId).single();
+  const sb = await getSupabase();
+  const { data: levelData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
   if (!levelData) throw new Error("Level not found.");
   return autoGenerateTestsHierarchy([levelData.level_number], {
     programId,
@@ -5273,12 +5424,26 @@ export async function autoGenerateWordsTests({ classId, levelId, programId, inst
 
 export async function autoGeneratePhrasesTests({ classId, levelId, programId, institutionId }) {
   if (!classId || !levelId || !programId) throw new Error("Missing required parameters for auto-generating phrases.");
-  const { data: levelData } = await getSupabase().from('levels').select('level_number').eq('id', levelId).single();
+  const sb = await getSupabase();
+  const { data: levelData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
   if (!levelData) throw new Error("Level not found.");
   return autoGenerateTestsHierarchy([levelData.level_number], {
     programId,
     explicitClassId: classId,
     category: 'phrases'
+  });
+}
+
+export async function autoGenerateUnifiedTests({ classId, levelId, programId, institutionId }) {
+  if (!classId || !levelId || !programId) throw new Error("Missing required parameters for auto-generating unified tests.");
+  const sb = await getSupabase();
+  const { data: levelData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
+  if (!levelData) throw new Error("Level not found.");
+  return autoGenerateTestsHierarchy([levelData.level_number], {
+    programId,
+    explicitClassId: classId,
+    category: 'unified',
+    unified: true
   });
 }
 
@@ -5379,10 +5544,13 @@ export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) 
       }
     }
 
-    // 6. Run autoGenerateTestsHierarchy
+    // 6. Run autoGenerateTestsHierarchy (defaults to unified test mode for vocabulary classes)
+    const isUnified = options.unified !== false;
     const res = await autoGenerateTestsHierarchy([levelNum], {
       programId,
-      explicitClassId: targetClassId
+      explicitClassId: targetClassId,
+      unified: isUnified,
+      category: isUnified ? 'unified' : (options.category || 'vocab')
     });
 
     clearApiCache('tests');
@@ -5400,6 +5568,85 @@ export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) 
   }
 }
 
+/**
+ * Master One-Click Curriculum & Tests Synchronizer.
+ * Scans Vocabulary Vault themes and topics, dynamically provisioning new test shells
+ * and updating existing test shells to match current naming without losing student attempts.
+ * When classId is supplied, it strictly scopes synchronization to tests for that specific class.
+ *
+ * @param {Object} options - { level, classId, force }
+ * @returns {Promise<{synced: boolean, createdCount: number, updatedCount: number, levels: number[], classId?: string}>}
+ */
+export async function syncAllCurriculumTests({ level = null, classId = null, force = true } = {}) {
+  const sb = await getSupabase();
+  let levels = [];
+  const targetClassId = classId || null;
+
+  // If a specific classId is provided, resolve its assigned level
+  if (targetClassId && (level === null || level === undefined || level === 'ALL')) {
+    try {
+      const { data: cls } = await sb.from('classes')
+        .select('id, level_id')
+        .eq('id', targetClassId)
+        .maybeSingle();
+
+      if (cls && cls.level_id) {
+        const { data: lvl } = await sb.from('levels')
+          .select('id, level_number')
+          .eq('id', cls.level_id)
+          .maybeSingle();
+        if (lvl && lvl.level_number != null) {
+          levels = [Number(lvl.level_number)];
+        }
+      }
+    } catch (cErr) {
+      console.warn('[syncAllCurriculumTests] Error resolving level from classId:', cErr);
+    }
+  }
+
+  // Fallback to explicit level or all levels in vault
+  if (levels.length === 0) {
+    if (level !== null && level !== undefined && level !== 'ALL') {
+      levels = [Number(level)];
+    } else {
+      try {
+        const { data: vLevels } = await sb.from('vocabulary_vault')
+          .select('target_level')
+          .is('deleted_at', null);
+        levels = Array.from(new Set((vLevels || []).map(r => Number(r.target_level)).filter(n => !isNaN(n) && n > 0))).sort();
+      } catch (_) {}
+      if (levels.length === 0) levels = [1, 2, 3];
+    }
+  }
+
+  let totalCreated = 0;
+  let totalUpdated = 0;
+
+  for (const lvl of levels) {
+    try {
+      const res = await autoSyncClassTestsForLevel(lvl, {
+        explicitClassId: targetClassId,
+        force: true
+      });
+      if (res && res.synced) {
+        totalCreated += (res.tasks || 0) + (res.tests || 0);
+        totalUpdated += (res.updated || 0);
+      }
+    } catch (lvlErr) {
+      console.warn(`[syncAllCurriculumTests] Level ${lvl} sync notice:`, lvlErr);
+    }
+  }
+
+  clearApiCache('tests');
+  return {
+    synced: true,
+    createdCount: totalCreated,
+    updatedCount: totalUpdated,
+    levels,
+    classId: targetClassId
+  };
+}
+
 export async function getSecuritySettings() {
   const sb = await getSupabase();
   const { data, error } = await sb.from('site_settings').select('key, value').in('key', ['anti_cheat_enabled', 'anti_cheat_sound_enabled', 'anti_cheat_countdown_seconds', 'anti_cheat_sound_type', 'anti_cheat_custom_sound_b64']);
@@ -5411,7 +5658,7 @@ export async function getSecuritySettings() {
   return {
     enabled: settings.anti_cheat_enabled !== 'false',
     soundEnabled: settings.anti_cheat_sound_enabled !== 'false',
-    countdownSeconds: Math.max(parseInt(settings.anti_cheat_countdown_seconds || '30', 10), 25),
+    countdownSeconds: parseInt(settings.anti_cheat_countdown_seconds || '10', 10) || 10,
     soundType: settings.anti_cheat_sound_type || 'police_siren',
     customSoundB64: settings.anti_cheat_custom_sound_b64 || ''
   };

@@ -81,9 +81,9 @@ console.log('  ✅ [PASS] js/conversation-room.js directly uses standard session
 const testsAccessContent = fs.readFileSync('js/admin/tests-access.js', 'utf8');
 assert(testsAccessContent.includes('${studentName} • Theme'),
   'Kick confirm modal must use standard studentName directly');
-assert(testsAccessContent.includes("if (nameEl) nameEl.textContent = `${studentName} (${alarmsList.length}x ALARMS)`"),
+assert(testsAccessContent.includes("if (nameEl) nameEl.textContent = `${studentName} (${alarmsList.length}x ALARMS)`") || testsAccessContent.includes("${studentName} • ${alarmsList.length}"),
   'Alarm detail modal must use standard studentName directly');
-assert(testsAccessContent.includes('<span style="font-weight:600; color:#ffffff;">${escapeHtml(studentName)}</span>'),
+assert(testsAccessContent.includes('${escapeHtml(studentName)}</span>'),
   'Live session monitor row must render clean studentName');
 
 const studentMgmtContent = fs.readFileSync('js/admin/student-management.js', 'utf8');

@@ -6,7 +6,7 @@
  */
 
 import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName } from './api.js?v=20261115_v541';
-import { isExam, getGradeColorByScore, calculateGrade } from './grading.js?v=20261106_v160';
+import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay } from './grading.js?v=20261106_v160';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
@@ -675,7 +675,8 @@ if (!session) {
         }
 
         const isTest = isExam(nextTest);
-        const nextName = nextTest.title || nextTest.shell_code || 'Next Test';
+        const nextFormatted = formatTestDisplay(nextTest);
+        const nextName = nextFormatted.fullTitle || 'Next Test';
         const safeAttemptPct = (() => {
           const raw = Math.min(100.0, Math.max(0.0, parseFloat(attempt.percentage || 0)));
           const eff = attempt.effective_score != null ? parseFloat(attempt.effective_score) : raw;
@@ -1306,18 +1307,11 @@ if (!session) {
         // Initialize score to 0% for animated count-up sequence
         pctEl.textContent = '0%';
 
-        // 2. Test Title: 2-Line Format (Line 1: Test Title, Line 2: Topic / Theme)
+        // 2. Test Title: 2-Line Format (Line 1: Test Title, Line 2: Topic / Theme) via SSOT formatTestDisplay (AGENTS.md § 2.6 / DECISION-056)
         const asmRawTitle = asmData?.title || asmData?.name || 'Test';
-        const parts = asmRawTitle.split(/\s*[-—]\s*/);
-        let titleType = '';
-        let titleTopic = '';
-        if (parts.length >= 2) {
-          titleType = cleanTitle(parts[0]).trim();
-          titleTopic = parts.slice(1).join(' - ').trim();
-        } else {
-          titleType = cleanTitle(asmRawTitle).trim();
-          titleTopic = asmData?.topic || asmData?.theme || asmData?.payload?.theme_name || asmData?.category || asmData?.test_type || 'TOPIC TEST';
-        }
+        const formattedAsm = formatTestDisplay(asmData);
+        const titleType = formattedAsm.line1 || 'TEST';
+        const titleTopic = formattedAsm.line2 || '';
 
         const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
         const topicEl = document.getElementById('result-test-topic-row') || document.getElementById('result-asm-topic-row');

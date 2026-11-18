@@ -26,6 +26,7 @@ import {
   toOrdinalLevel,
   toShortLevel,
   autoSyncClassTestsForLevel,
+  syncAllCurriculumTests,
   fetchThemeProgramAssignments,
   toggleThemeProgramAssignment,
   updateVaultThemeCascade,
@@ -325,6 +326,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
     const rightHtml = `
       <div style="display: flex; align-items: center; gap: 6px;">
         <button type="button" class="btn btn-sm" id="btn-toggle-vault-grid-edit-mode" style="${editBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-sync-vault-tests" style="height:30px; font-size: 12px; padding:0 8px; font-weight:700; background:rgba(149,255,0,0.12); border:1px solid rgba(149,255,0,0.35); color:var(--quad-c, #95ff00); border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;" title="Synchronize test shells with latest Vocabulary Vault topics and themes">${getSvgIcon('refresh', 14)} Sync Tests</button>
         <button class="btn btn-secondary btn-sm" id="btn-import-vault" style="height:30px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('upload', 14)} Import</button>
         <button class="btn btn-secondary btn-sm" id="btn-export-vault" style="height:30px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#f8fafc; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('download', 14)} Export</button>
         <button class="btn btn-secondary btn-sm" id="btn-check-duplicates" style="height:30px; font-size: 12px; padding:0 8px; font-weight:600; background:rgba(30,41,59,0.85); border:1px solid rgba(255,255,255,0.15); color:#38bdf8; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('search', 14)} Dups</button>
@@ -437,6 +439,34 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           _allWords = updatedWords;
           filterAndRender();
         });
+      });
+    }
+
+    const btnSyncTests = document.getElementById('btn-sync-vault-tests');
+    if (btnSyncTests && !btnSyncTests.dataset.bound) {
+      btnSyncTests.dataset.bound = 'true';
+      btnSyncTests.addEventListener('click', async () => {
+        try {
+          const oldHtml = btnSyncTests.innerHTML;
+          btnSyncTests.innerHTML = `${getSvgIcon('clock', 14)} Syncing...`;
+          btnSyncTests.disabled = true;
+          showLoading('Synchronizing Tests with Vocabulary Vault...');
+
+          const currentLvl = window._vaultGridLevel && window._vaultGridLevel !== 'ALL'
+            ? Number(window._vaultGridLevel)
+            : null;
+          const syncRes = await syncAllCurriculumTests({ level: currentLvl });
+
+          hideLoading();
+          btnSyncTests.innerHTML = oldHtml;
+          btnSyncTests.disabled = false;
+          showToast(`Curriculum & Tests synced: ${syncRes.createdCount} new test shells created, ${syncRes.updatedCount} updated!`, 'success');
+        } catch (syncErr) {
+          hideLoading();
+          btnSyncTests.innerHTML = `${getSvgIcon('refresh', 14)} Sync Tests`;
+          btnSyncTests.disabled = false;
+          showToast('Sync failed: ' + syncErr.message, 'error');
+        }
       });
     }
   }
@@ -2007,6 +2037,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     const rightHtml = `
       <div style="display: flex; align-items: center; gap: 8px;">
         <button type="button" class="btn btn-sm" id="btn-toggle-theme-edit-mode" style="${editBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+        <button class="btn btn-secondary btn-sm" id="btn-theme-sync-tests" style="height: 30px; font-size: 12px; padding: 0 10px; font-weight: 700; background: rgba(149,255,0,0.12); border: 1px solid rgba(149,255,0,0.35); color: var(--quad-c, #95ff00); border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Synchronize all test shells with latest Theme Manager hierarchy">${getSvgIcon('refresh', 14)} Sync Tests</button>
         <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-theme-bottom-merge" style="height: 30px; font-size: 12px; padding: 0 10px; font-weight: 600; background: rgba(30,41,59,0.85); border: 1px solid rgba(255,255,255,0.15); color: #38bdf8; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;" title="Merge Similar Topics">${getSvgIcon('zap', 14)} Merge Topics</button>
       </div>
     `;
@@ -2036,6 +2067,32 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           showToast(newState ? 'Theme Manager Edit Mode ON (Inline Excel Grid)' : 'Edit Mode OFF', newState ? 'info' : 'success');
         }
       };
+    }
+
+    const themeSyncBtn = document.getElementById('btn-theme-sync-tests');
+    if (themeSyncBtn && !themeSyncBtn.dataset.bound) {
+      themeSyncBtn.dataset.bound = 'true';
+      themeSyncBtn.addEventListener('click', async () => {
+        try {
+          const oldHtml = themeSyncBtn.innerHTML;
+          themeSyncBtn.innerHTML = `${getSvgIcon('clock', 14)} Syncing...`;
+          themeSyncBtn.disabled = true;
+          showLoading('Synchronizing Tests with Theme Manager...');
+
+          const targetLvl = activeLevel !== 'ALL' ? Number(activeLevel) : null;
+          const syncRes = await syncAllCurriculumTests({ level: targetLvl });
+
+          hideLoading();
+          themeSyncBtn.innerHTML = oldHtml;
+          themeSyncBtn.disabled = false;
+          showToast(`Curriculum & Tests synchronized: ${syncRes.createdCount} new test shells created, ${syncRes.updatedCount} updated!`, 'success');
+        } catch (syncErr) {
+          hideLoading();
+          themeSyncBtn.innerHTML = `${getSvgIcon('refresh', 14)} Sync Tests`;
+          themeSyncBtn.disabled = false;
+          showToast('Sync failed: ' + syncErr.message, 'error');
+        }
+      });
     }
 
     if (!window._themeManagerEditModeListenerBound) {
@@ -2474,6 +2531,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               }
             });
             showToast(`Theme renamed to "${newVal}" across Level ${lvl}`, 'success');
+            autoSyncClassTestsForLevel(lvl, { force: true }).catch(err => console.warn('[ThemeManager] Auto-sync notice:', err));
 
           } else if (action === 'edit-theme-code') {
             const oldCode = String(input.dataset.oldThCode || '').trim().toUpperCase();
@@ -2560,6 +2618,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               }
             });
             showToast(`Topic renamed to "${newVal}"`, 'success');
+            autoSyncClassTestsForLevel(lvl, { force: true }).catch(err => console.warn('[ThemeManager] Auto-sync notice:', err));
 
           } else if (action === 'edit-topic-code') {
             const oldCode = input.dataset.oldTpCode;
@@ -2967,6 +3026,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     const rightHtml = `
       <input type="search" id="bp-search-input" placeholder="Search Topics..." style="width: 140px; height: 28px; font-size: 12px; background: rgba(15,23,42,0.8); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 5px; padding: 0 8px; outline: none;">
       <button class="btn btn-secondary btn-sm" id="btn-bp-settings" style="height: 28px; font-size: 12px; font-weight: 700; background: rgba(14,165,233,0.18); border: 1px solid rgba(14,165,233,0.4); color: #38bdf8; border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Test System Settings">${getSvgIcon('settings', 14)} Test Settings</button>
+      <button class="btn btn-secondary btn-sm" id="btn-bp-sync-tests" style="height: 28px; font-size: 12px; font-weight: 700; background: rgba(149,255,0,0.12); border: 1px solid rgba(149,255,0,0.35); color: var(--quad-c, #95ff00); border-radius: 5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" title="Synchronize test shells directly with latest Blueprint">${getSvgIcon('refresh', 14)} Sync Tests</button>
       <button class="btn btn-tactical btn-sm" id="btn-bp-autogen" style="font-size: 12px; padding: 0 12px; height: 28px; font-weight: 800; display: inline-flex; align-items: center; gap: 5px; border-radius: 5px;" title="Auto-Generate Curriculum Tests">${getSvgIcon('zap', 14)} Auto-Generate All Tests</button>
     `;
     window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
@@ -3272,6 +3332,35 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
   const btnAutogenBottom = document.getElementById('btn-bp-autogen');
   if (btnAutogenBottom) btnAutogenBottom.onclick = triggerAutoGenerate;
+
+  const btnBpSync = document.getElementById('btn-bp-sync-tests');
+  if (btnBpSync) {
+    btnBpSync.onclick = async () => {
+      try {
+        const oldHtml = btnBpSync.innerHTML;
+        btnBpSync.innerHTML = `${getSvgIcon('clock', 14)} Syncing...`;
+        btnBpSync.disabled = true;
+        showLoading('Synchronizing Tests with Blueprint...');
+
+        const targetLvl = activeLevel !== 'ALL' ? Number(activeLevel) : null;
+        const syncRes = await syncAllCurriculumTests({ level: targetLvl });
+
+        hideLoading();
+        btnBpSync.innerHTML = oldHtml;
+        btnBpSync.disabled = false;
+        showToast(`Curriculum & Tests synced: ${syncRes.createdCount} new test shells created, ${syncRes.updatedCount} updated!`, 'success');
+        if (typeof renderVocabularyVault === 'function') {
+          const container = document.getElementById('classes-detail-canvas');
+          if (container) renderVocabularyVault(container);
+        }
+      } catch (syncErr) {
+        hideLoading();
+        btnBpSync.innerHTML = `${getSvgIcon('refresh', 14)} Sync Tests`;
+        btnBpSync.disabled = false;
+        showToast('Sync failed: ' + syncErr.message, 'error');
+      }
+    };
+  }
 }
 
 // ─── Duplicate Checker Modal ──────────────────────────────────

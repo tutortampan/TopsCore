@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon } from './grading.js?v=20261106_v160';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml } from './grading.js?v=20261106_v160';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
@@ -1682,7 +1682,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         return (a.title || '').localeCompare(b.title || '');
       });
 
-      const isPassed = (t) => {
+      const isTestPassed = (t) => {
+        if (!t) return true;
         if (isForgivenByTest[t.id]) return true;
         if (isExam(t)) {
           const score = bestMap[t.id];
@@ -1695,21 +1696,91 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       };
 
-      let nextTest = published.find(a => !isPassed(a));
+      // Helper to pair tests into unified Topic Packages or Theme Exam Packages
+      function getTestPairInfo(test, testList) {
+        if (!test) return null;
+        const isEx = isExam(test);
+        const theme = test.payload?.theme_code || (test.shell_code ? test.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+        const topic = test.payload?.topic_code || (isEx ? null : (test.shell_code ? test.shell_code.split('-')[0].replace(/^[0-9]+/, '') : null));
 
-      // Theme Exam Pair Transition: If nextTest is Words Exam but student already has an attempt on it,
-      // and sibling Phrases Exam has NO attempt yet, prioritize Phrases Exam so the student
-      // completes both parts of the theme exam package!
-      if (nextTest && isExam(nextTest) && bestMap[nextTest.id] != null) {
-        const tc = nextTest.payload?.theme_code;
-        const siblingPhrase = published.find(a =>
-          a.id !== nextTest.id && isExam(a) &&
-          (tc ? a.payload?.theme_code === tc : (a.title || '').substring(0, 3).toLowerCase() === (nextTest.title || '').substring(0, 3).toLowerCase()) &&
-          (a.category === 'phrases' || a.test_subtype === 'PHRASE_EXAM' || (a.title || '').toLowerCase().includes('phrase') || (a.shell_code || '').toUpperCase().includes('PHRASE')) &&
-          bestMap[a.id] == null
-        );
-        if (siblingPhrase) {
-          nextTest = siblingPhrase;
+        const isUnifiedShell = test.payload?.is_unified === true || test.payload?.category === 'unified' || test.category === 'unified' || (test.test_subtype && test.test_subtype.startsWith('UNIFIED'));
+        if (isUnifiedShell) {
+          return {
+            isPair: true,
+            isUnified: true,
+            wordsTest: test,
+            phrasesTest: test,
+            isExam: isEx,
+            theme,
+            topic
+          };
+        }
+
+        const isWords = (test.payload?.category === 'words') || /words/i.test(test.title || '') || /words/i.test(test.shell_code || '');
+        const isPhrases = (test.payload?.category === 'phrases') || /phrase/i.test(test.title || '') || /phrase/i.test(test.shell_code || '');
+
+        const sibling = testList.find(other => {
+          if (other.id === test.id) return false;
+          if (isExam(other) !== isEx) return false;
+          const oTheme = other.payload?.theme_code || (other.shell_code ? other.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+          if (oTheme && theme && oTheme.toUpperCase() !== theme.toUpperCase()) return false;
+          if (!isEx) {
+            const oTopic = other.payload?.topic_code || (other.shell_code ? other.shell_code.split('-')[0].replace(/^[0-9]+/, '') : null);
+            if (oTopic && topic && oTopic.toUpperCase() !== topic.toUpperCase()) return false;
+          }
+          const oWords = (other.payload?.category === 'words') || /words/i.test(other.title || '') || /words/i.test(other.shell_code || '');
+          const oPhrases = (other.payload?.category === 'phrases') || /phrase/i.test(other.title || '') || /phrase/i.test(other.shell_code || '');
+          return (isWords && oPhrases) || (isPhrases && oWords);
+        });
+
+        const wordsTest = isWords ? test : (sibling && ((sibling.payload?.category === 'words') || /words/i.test(sibling.title || '')) ? sibling : null);
+        const phrasesTest = isPhrases ? test : (sibling && ((sibling.payload?.category === 'phrases') || /phrase/i.test(sibling.title || '')) ? sibling : null);
+
+        return {
+          isPair: Boolean(wordsTest && phrasesTest),
+          wordsTest,
+          phrasesTest,
+          isExam: isEx,
+          theme,
+          topic
+        };
+      }
+
+      // Find the next incomplete assignment
+      let nextAssignment = null;
+      const visitedPairIds = new Set();
+
+      for (const t of published) {
+        if (visitedPairIds.has(t.id)) continue;
+        const pair = getTestPairInfo(t, published);
+        if (pair && pair.isPair) {
+          visitedPairIds.add(pair.wordsTest.id);
+          if (pair.phrasesTest) visitedPairIds.add(pair.phrasesTest.id);
+          const wordsPassed = isTestPassed(pair.wordsTest);
+          const phrasesPassed = pair.isUnified ? wordsPassed : isTestPassed(pair.phrasesTest);
+          if (!wordsPassed || !phrasesPassed) {
+            nextAssignment = {
+              isPair: true,
+              isUnified: Boolean(pair.isUnified),
+              isExam: pair.isExam,
+              wordsTest: pair.wordsTest,
+              phrasesTest: pair.phrasesTest,
+              wordsPassed,
+              phrasesPassed,
+              primaryTest: pair.wordsTest
+            };
+            break;
+          }
+        } else {
+          visitedPairIds.add(t.id);
+          if (!isTestPassed(t)) {
+            nextAssignment = {
+              isPair: false,
+              isExam: isExam(t),
+              primaryTest: t
+            };
+            break;
+          }
         }
       }
 
@@ -1723,7 +1794,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         return;
       }
 
-      if (!nextTest) {
+      if (!nextAssignment) {
         container.innerHTML = `
           <div class="next-test-left next-asm-left">
             <span class="next-test-icon next-asm-icon">${getSvgIcon('award', 16)}</span>
@@ -1734,8 +1805,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         return;
       }
 
-      const className = classMap[nextTest.class_id]?.name || 'Class Module';
-      const isTest = isExam(nextTest);
+      const activeTestItem = nextAssignment.primaryTest;
+      const isTest = nextAssignment.isExam;
 
       // Selected Icons: 1A (Solid Yellow Padlock), 2B (Red Rotate Undo), 3C (Green Circle Play), 4D (White Forward Arrow)
       const ICON_1A_YELLOW_LOCK = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 10V7a5 5 0 0 1 10 0v3" stroke="var(--grade-c)" stroke-width="2.6" stroke-linecap="round"/><rect x="4.5" y="10" width="15" height="11.5" rx="3" fill="var(--grade-c)" stroke="rgba(var(--grade-c-rgb),0.8)" stroke-width="1"/><circle cx="12" cy="14.8" r="1.5" fill="#713f12"/><path d="M12 15.5v2.2" stroke="#713f12" stroke-width="1.6" stroke-linecap="round"/></svg>';
@@ -1743,24 +1814,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
       const ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
 
-      function formatNextTestTitleHtml(rawTitle) {
-        const titleStr = (rawTitle || '').trim();
-        // Check for common separators: " - ", " – ", " : "
-        const parts = titleStr.split(/\s+[-–:]\s+/);
-        if (parts.length > 1) {
-          const line1 = parts[0].trim();
-          const line2 = parts.slice(1).join(' - ').trim();
-          return `
-            <span class="next-test-primary-name" title="${escapeHtml(line1)}">${escapeHtml(line1)}</span>
-            <span class="next-test-topic-name" title="${escapeHtml(line2)}">${escapeHtml(line2)}</span>
-          `;
+      // Build unified display item & title via SSOT formatTestDisplay (AGENTS.md § 2.6 / DECISION-056)
+      const displayItem = nextAssignment.isPair ? nextAssignment.wordsTest : activeTestItem;
+      const formattedTitleObj = formatTestDisplay(displayItem);
+      const displayTitle = formattedTitleObj.fullTitle;
+
+      function formatNextTestTitleHtml(target) {
+        if (target && typeof target === 'object') {
+          return formatTestTitleHtml(target);
         }
-        return `<span class="next-test-primary-name" title="${escapeHtml(titleStr)}">${escapeHtml(titleStr)}</span>`;
+        return formatTestTitleHtml(displayItem);
       }
 
       if (!isTest) {
-        const currentPasses = passCountByTest[nextTest.id] || 0;
-        const displayStep = Math.max(1, Math.min(currentPasses + 1, targetReps));
+        let currentPasses = passCountByTest[activeTestItem.id] || 0;
+        if (nextAssignment.isPair) {
+          const wordsP = passCountByTest[nextAssignment.wordsTest.id] || 0;
+          const phrasesP = passCountByTest[nextAssignment.phrasesTest.id] || 0;
+          currentPasses = Math.min(wordsP, phrasesP);
+        }
 
         let rainbowHtml = '<div class="rainbow-pass-bar">';
         for (let s = 1; s <= 7; s++) {
@@ -1772,7 +1844,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         container.innerHTML = `
           <div class="next-test-col-left">
             <div class="next-test-title-wrap">
-              ${formatNextTestTitleHtml(nextTest.title || 'Task')}
+              ${formatNextTestTitleHtml(displayTitle)}
             </div>
             ${rainbowHtml}
           </div>
@@ -1782,9 +1854,37 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             </button>
           </div>
         `;
-        container.onclick = () => { window.location.href = getTestLaunchUrl(nextTest); };
+
+        if (nextAssignment.isPair) {
+          const wordsP = passCountByTest[nextAssignment.wordsTest.id] || 0;
+          const phrasesP = passCountByTest[nextAssignment.phrasesTest.id] || 0;
+          const encoded = encodeURIComponent(JSON.stringify({
+            badge: 'TOPIC TASK',
+            title: displayTitle,
+            subtitle: 'Choose which part you want to work on:',
+            isExam: false,
+            isUnified: Boolean(nextAssignment.isUnified),
+            wordsTestId: nextAssignment.wordsTest.id,
+            phrasesTestId: nextAssignment.phrasesTest.id,
+            wordsPasses: wordsP,
+            phrasesPasses: phrasesP,
+            targetReps: targetReps
+          }));
+          container.onclick = () => {
+            if (typeof window.triggerComponentChoiceModal === 'function') {
+              window.triggerComponentChoiceModal(encoded);
+            }
+          };
+        } else {
+          container.onclick = () => { window.location.href = getTestLaunchUrl(activeTestItem); };
+        }
       } else {
-        const activeSession = await fetchActiveTestSession(nextTest.id, session.batch_id).catch(() => null);
+        const testIdToCheck = nextAssignment.isPair ? nextAssignment.wordsTest.id : activeTestItem.id;
+        let activeSession = await fetchActiveTestSession(testIdToCheck, session.batch_id).catch(() => null);
+        if (!activeSession && nextAssignment.isPair) {
+          activeSession = await fetchActiveTestSession(nextAssignment.phrasesTest.id, session.batch_id).catch(() => null);
+        }
+
         const isUnlocked = activeSession?.is_unlocked === true;
         const isWhitelisted = !activeSession?.allowed_student_ids ||
                               activeSession.allowed_student_ids.length === 0 ||
@@ -1801,7 +1901,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           container.innerHTML = `
             <div class="next-test-col-left">
               <div class="next-test-title-wrap">
-                ${formatNextTestTitleHtml(nextTest.title || 'Official Exam')}
+                ${formatNextTestTitleHtml(displayTitle)}
               </div>
               ${rainbowHtml}
             </div>
@@ -1811,12 +1911,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               </button>
             </div>
           `;
-          container.onclick = () => { window.location.href = getTestLaunchUrl(nextTest, activeSession); };
+
+          if (nextAssignment.isPair) {
+            const encoded = encodeURIComponent(JSON.stringify({
+              badge: 'OFFICIAL EXAM',
+              title: displayTitle,
+              subtitle: 'Choose which exam component you want to take:',
+              isExam: true,
+              isUnified: Boolean(nextAssignment.isUnified),
+              wordsTestId: nextAssignment.wordsTest.id,
+              phrasesTestId: nextAssignment.phrasesTest.id,
+              wordsBest: bestMap[nextAssignment.wordsTest.id] != null ? { percentage: bestMap[nextAssignment.wordsTest.id] } : null,
+              phrasesBest: bestMap[nextAssignment.phrasesTest.id] != null ? { percentage: bestMap[nextAssignment.phrasesTest.id] } : null
+            }));
+            container.onclick = () => {
+              if (typeof window.triggerComponentChoiceModal === 'function') {
+                window.triggerComponentChoiceModal(encoded);
+              }
+            };
+          } else {
+            container.onclick = () => { window.location.href = getTestLaunchUrl(activeTestItem, activeSession); };
+          }
         } else {
           container.innerHTML = `
             <div class="next-test-col-left">
               <div class="next-test-title-wrap">
-                ${formatNextTestTitleHtml(nextTest.title || 'Official Exam')}
+                ${formatNextTestTitleHtml(displayTitle)}
               </div>
               ${rainbowHtml}
             </div>
@@ -2133,22 +2253,29 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const subtitleEl = document.getElementById('component-modal-subtitle');
 
         if (badgeEl) badgeEl.textContent = data.badge || (data.isExam ? 'EXAM' : 'TOPIC TASK');
-        if (titleEl) titleEl.textContent = data.title || 'Topic Test';
+        if (titleEl) {
+          const f = formatTestDisplay({ display_name: data.title });
+          if (f.line2) {
+            titleEl.innerHTML = `<span style="display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
+          } else {
+            titleEl.textContent = data.title || 'Topic Test';
+          }
+        }
         if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Choose which part you want to work on:';
 
         const wordsCard = document.getElementById('component-opt-words');
         const wordsTitle = document.getElementById('component-words-title');
-        const wordsBadge = document.getElementById('component-words-badge');
         const wordsStatus = document.getElementById('component-words-status');
-        const wordsBestEl = document.getElementById('component-words-best');
         const wordsIconEl = document.getElementById('component-words-icon');
+        const wordsPips = document.getElementById('component-words-pips');
+        const wordsExamView = document.getElementById('component-words-exam-view');
 
         const phrasesCard = document.getElementById('component-opt-phrases');
         const phrasesTitle = document.getElementById('component-phrases-title');
-        const phrasesBadge = document.getElementById('component-phrases-badge');
         const phrasesStatus = document.getElementById('component-phrases-status');
-        const phrasesBestEl = document.getElementById('component-phrases-best');
         const phrasesIconEl = document.getElementById('component-phrases-icon');
+        const phrasesPips = document.getElementById('component-phrases-pips');
+        const phrasesExamView = document.getElementById('component-phrases-exam-view');
 
         const confirmBtn = document.getElementById('btn-confirm-component-selection');
 
@@ -2164,7 +2291,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
         if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
 
-        let selectedPart = data.wordsTestId ? 'words' : (data.phrasesTestId ? 'phrases' : null);
+        // Smart default selection: choose incomplete component first
+        let selectedPart = null;
+        if (data.isExam) {
+          const wordsPct = data.wordsBest ? Number(data.wordsBest.percentage ?? data.wordsBest.effective_score ?? 0) : null;
+          const phrasesPct = data.phrasesBest ? Number(data.phrasesBest.percentage ?? data.phrasesBest.effective_score ?? 0) : null;
+          const wordsDone = wordsPct !== null && wordsPct >= 60;
+          const phrasesDone = phrasesPct !== null && phrasesPct >= 60;
+          if (wordsDone && !phrasesDone && data.phrasesTestId) {
+            selectedPart = 'phrases';
+          } else if (data.wordsTestId) {
+            selectedPart = 'words';
+          } else {
+            selectedPart = data.phrasesTestId ? 'phrases' : null;
+          }
+        } else {
+          const targetReps = Number(data.targetReps) || 7;
+          const wordsDone = (Number(data.wordsPasses) || 0) >= targetReps;
+          const phrasesDone = (Number(data.phrasesPasses) || 0) >= targetReps;
+          if (wordsDone && !phrasesDone && data.phrasesTestId) {
+            selectedPart = 'phrases';
+          } else if (data.wordsTestId) {
+            selectedPart = 'words';
+          } else {
+            selectedPart = data.phrasesTestId ? 'phrases' : null;
+          }
+        }
 
         const updateSelectionUI = () => {
           if (wordsCard) {
@@ -2194,19 +2346,38 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const targetTestId = selectedPart === 'words' ? data.wordsTestId : (selectedPart === 'phrases' ? data.phrasesTestId : null);
           if (targetTestId) {
             modal.classList.add('hidden');
-            location.href = `test.html?test_id=${targetTestId}`;
+            if (data.isUnified) {
+              location.href = `test.html?test_id=${targetTestId}&section=${selectedPart}`;
+            } else {
+              location.href = `test.html?test_id=${targetTestId}`;
+            }
           }
         };
 
+        // Populate Words Card
         if (data.wordsTestId) {
           wordsCard.style.display = 'flex';
           if (wordsTitle) wordsTitle.textContent = data.isExam ? 'WORDS EXAM' : 'WORDS';
-          const wordsPasses = Number(data.wordsPasses || (data.wordsBest && data.wordsBest.percentage >= 70 ? 1 : 0));
-          renderComponentPips('component-words-pips', wordsPasses);
-          if (wordsStatus) {
-            wordsStatus.textContent = data.isExam
-              ? (data.wordsBest ? `${Number(data.wordsBest.percentage || 0).toFixed(0)}%` : '0%')
-              : `${wordsPasses}/7`;
+          if (data.isExam) {
+            if (wordsPips) wordsPips.classList.add('hidden');
+            if (wordsExamView) {
+              wordsExamView.classList.remove('hidden');
+              wordsExamView.style.display = 'flex';
+              if (data.wordsBest) {
+                const pct = Number(data.wordsBest.percentage ?? data.wordsBest.effective_score ?? 0);
+                const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (pct >= 60 ? 'var(--grade-a)' : 'var(--grade-d)');
+                wordsExamView.innerHTML = `<span style="color:${clr};font-size:14px;font-weight:800;">Best: ${pct.toFixed(0)}% ${pct >= 60 ? '✓' : ''}</span>`;
+              } else {
+                wordsExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:13px;font-weight:600;">Not Taken Yet</span>`;
+              }
+            }
+            if (wordsStatus) wordsStatus.textContent = '';
+          } else {
+            if (wordsPips) wordsPips.classList.remove('hidden');
+            if (wordsExamView) wordsExamView.classList.add('hidden');
+            const wordsPasses = Number(data.wordsPasses || 0);
+            renderComponentPips('component-words-pips', wordsPasses);
+            if (wordsStatus) wordsStatus.textContent = `${wordsPasses}/${data.targetReps || 7}`;
           }
           wordsCard.onclick = () => {
             if (selectedPart === 'words') {
@@ -2220,15 +2391,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           wordsCard.style.display = 'none';
         }
 
+        // Populate Phrases Card
         if (data.phrasesTestId) {
           phrasesCard.style.display = 'flex';
           if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'PHRASES EXAM' : 'PHRASES';
-          const phrasesPasses = Number(data.phrasesPasses || (data.phrasesBest && data.phrasesBest.percentage >= 70 ? 1 : 0));
-          renderComponentPips('component-phrases-pips', phrasesPasses);
-          if (phrasesStatus) {
-            phrasesStatus.textContent = data.isExam
-              ? (data.phrasesBest ? `${Number(data.phrasesBest.percentage || 0).toFixed(0)}%` : '0%')
-              : `${phrasesPasses}/7`;
+          if (data.isExam) {
+            if (phrasesPips) phrasesPips.classList.add('hidden');
+            if (phrasesExamView) {
+              phrasesExamView.classList.remove('hidden');
+              phrasesExamView.style.display = 'flex';
+              if (data.phrasesBest) {
+                const pct = Number(data.phrasesBest.percentage ?? data.phrasesBest.effective_score ?? 0);
+                const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (pct >= 60 ? 'var(--grade-a)' : 'var(--grade-d)');
+                phrasesExamView.innerHTML = `<span style="color:${clr};font-size:14px;font-weight:800;">Best: ${pct.toFixed(0)}% ${pct >= 60 ? '✓' : ''}</span>`;
+              } else {
+                phrasesExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:13px;font-weight:600;">Not Taken Yet</span>`;
+              }
+            }
+            if (phrasesStatus) phrasesStatus.textContent = '';
+          } else {
+            if (phrasesPips) phrasesPips.classList.remove('hidden');
+            if (phrasesExamView) phrasesExamView.classList.add('hidden');
+            const phrasesPasses = Number(data.phrasesPasses || 0);
+            renderComponentPips('component-phrases-pips', phrasesPasses);
+            if (phrasesStatus) phrasesStatus.textContent = `${phrasesPasses}/${data.targetReps || 7}`;
           }
           phrasesCard.onclick = () => {
             if (selectedPart === 'phrases') {
