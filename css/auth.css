@@ -17,7 +17,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 10px 10px calc(60px + 10px);
+      padding: 10px 10px calc(80px + 10px);
       background: var(--clr-bg-1, #0a0a1a);
       font-family: 'Inter', sans-serif;
       overflow-y: auto;
@@ -645,7 +645,7 @@
       color: #ffffff;
     }
 
-    /* 430px Mobile-Locked Bottom Banner (Dual-Viewport Invariant SSOT §2.28) */
+    /* 430px Mobile-Locked Bottom Banner (Dual-Viewport Invariant SSOT §2.28 & §2.32) */
     .topscore-locked-banner,
     #bottom-ad-banner {
       position: fixed !important;
@@ -655,6 +655,9 @@
       width: 100% !important;
       max-width: 430px !important;
       margin: 0 auto !important;
+      height: 80px !important;
+      min-height: 80px !important;
+      max-height: 80px !important;
       transform: none !important;
       box-sizing: border-box !important;
       background-color: #030a12 !important;

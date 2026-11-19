@@ -1046,6 +1046,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
     // —— Boot ——
     async function bootTest() {
       window.bootTest = bootTest;
+      window.doSubmit = doSubmit;
       showLoading('Starting TEST…');
       try {
         const [fetchedConfig, result] = await Promise.all([
@@ -3329,6 +3330,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
     });
 
     async function doSubmit(isAuto = false) {
+      window.doSubmit = doSubmit;
       isTestActive = false; // Disable anti-cheat alerts on submission
       // Maintain fullscreen seamlessly into Result Page per user specification
       if (false && isFullscreenActive()) {

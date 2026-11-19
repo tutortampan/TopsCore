@@ -146,6 +146,14 @@ async function run() {
         if (p === 'dashboard.html') {
           await page.waitForSelector('#batch-leaderboard-container .leaderboard-row', { timeout: 10000 }).catch(() => {});
         }
+        if (p.includes('result.html')) {
+          await page.waitForFunction(() => {
+            const loading = document.getElementById('result-loading');
+            const content = document.getElementById('result-content');
+            return (!loading || loading.classList.contains('hidden')) && content && !content.classList.contains('hidden');
+          }, { timeout: 20000 }).catch(() => {});
+          await page.waitForTimeout(3500);
+        }
         await page.waitForTimeout(1500);
         const outPath = path.join(previewDir, `${path.basename(p, '.html')}_390x800.png`);
         await page.screenshot({ path: outPath });

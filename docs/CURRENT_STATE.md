@@ -9,6 +9,14 @@
 
 ## 1. Active System Architecture & Invariants
 
+- **Master Project: Tutor Ecosystem & Dual-Mode Attendance Architecture (`docs/MASTER_PROJECT_TUTOR_ECOSYSTEM.md`, `docs/mockup_tutor_student_ecosystem.html`)**:
+  - **Tri-Role Ecosystem & Multi-Tenancy**: Architecture spanning Admin Workstation, dedicated Mobile Tutor App (`tutor.html`), and Student Dashboard. Dual subdomains (`top.tops-core.com` vs `cec.tops-core.com`) bypass manual institution selection.
+  - **Dual-Mode Proximity Attendance**: Single-shot relative GPS proximity check ($\le 10$m between student and tutor) automatically records attendance once upon session activation. Students arriving late or with indoor GPS blindspots use dynamic barcode QR fallback.
+  - **Session Lifecycle & Auto-Alpha Lockdown**: Tutor closes class via `[ CLOSE SESSION ]`; any unrecorded roster student is automatically locked as `ABSENT (ALPHA)`. Supports Regular Meetings and Exam Sessions (with automatic test arena redirect).
+  - **3-Column English Zone Ledger**: Tracking spoken Indonesian words (IDR 2,000 / word) across 3 distinct columns: **FINE**, **PAID**, and **DEBT** ($\text{DEBT} = \text{FINE} - \text{PAID}$).
+  - **Student Dashboard Integration**: Placed as a 3rd blade (`ATTEND & FINE`) in the bottom dock alongside `MY RANK` and `COMPLETED TESTS` under strict 100vh lock with zero outer scroll.
+  - **Admin Integration (Pillars A & C)**: Universal tutor management with invite QR codes in Pillar A; 20/24 session attendance matrix in Pillar C.
+
 - **Standardized 80px Bottom Banner Invariant & Result Page Revamp (Phase 634 — SSOT §2.28, §2.32, ui-invariants.md §1.1, §1.8)**:
   - **Standardized 80px Bottom Banner (`#bottom-ad-banner` / `.topscore-locked-banner`)**:
     - **Strict 80px Height Lock**: Bottom banner locked to strictly **`80px`** across all application views (`height: 80px !important; min-height: 80px !important; max-height: 80px !important; box-sizing: border-box !important;`).
