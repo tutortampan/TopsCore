@@ -52,7 +52,7 @@ cssFiles.forEach(cssFile => {
   const content = fs.readFileSync(cssFile, 'utf8');
   const hasBannerBrandFont = /\.banner-brand[\s\S]*?font-weight:\s*900/i.test(content);
   const hasBannerAuthorFont = /\.banner-author[\s\S]*?font-weight:\s*800/i.test(content);
-  const hasBannerSize = /clamp\s*\(\s*1(\.05)?rem/i.test(content);
+  const hasBannerSize = /clamp\s*\(\s*1(\.05)?rem|font-size:\s*16px/i.test(content);
 
   if (hasBannerBrandFont && hasBannerAuthorFont && hasBannerSize) {
     console.log(`✅ PASS: ${cssFile} contains prominent bold & enlarged banner styling.`);

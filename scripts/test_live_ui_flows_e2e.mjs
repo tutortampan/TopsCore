@@ -83,9 +83,9 @@ async function runSuite() {
     await wizardOverlay.waitFor({ state: 'visible', timeout: 5000 });
     pass('Blueprint Wizard overlay is displayed');
 
-    const wordsPaceInput = adminPage.locator('#wizard-quiz-words-pace');
+    const wordsPaceInput = adminPage.locator('#wizard-task-words-pace, #wizard-quiz-words-pace');
     const wordsBadge = adminPage.locator('#words-task-calc-dur');
-    const phrasesPaceInput = adminPage.locator('#wizard-quiz-phrases-pace');
+    const phrasesPaceInput = adminPage.locator('#wizard-task-phrases-pace, #wizard-quiz-phrases-pace');
     const phrasesBadge = adminPage.locator('#phrases-task-calc-dur');
 
     // 1. Defaults verification
@@ -106,7 +106,7 @@ async function runSuite() {
     pass('Phrases default duration badge is 5m (clamped)');
 
     // 2. Preset 10s click
-    const preset10 = adminPage.locator('.pace-preset-btn[data-target="wizard-quiz-words-pace"][data-val="10"]');
+    const preset10 = adminPage.locator('.pace-preset-btn[data-target*="words-pace"][data-val="10"]');
     await preset10.click();
     assert.strictEqual(await wordsPaceInput.inputValue(), '10', 'Pace input must update to 10s');
     const badgeText10 = await wordsBadge.textContent();
@@ -114,7 +114,7 @@ async function runSuite() {
     pass('Preset 10s clicked: input updates to 10 and badge dynamically recalculates to 7m');
 
     // 3. Preset 20s click
-    const preset20 = adminPage.locator('.pace-preset-btn[data-target="wizard-quiz-words-pace"][data-val="20"]');
+    const preset20 = adminPage.locator('.pace-preset-btn[data-target*="words-pace"][data-val="20"]');
     await preset20.click();
     assert.strictEqual(await wordsPaceInput.inputValue(), '20', 'Pace input must update to 20s');
     const badgeText20 = await wordsBadge.textContent();
@@ -122,7 +122,7 @@ async function runSuite() {
     pass('Preset 20s clicked: input updates to 20 and badge dynamically recalculates to 14m');
 
     // 4. Modality switch to 'written' (30s default)
-    const wordsAnsSelect = adminPage.locator('#wizard-quiz-ans-words');
+    const wordsAnsSelect = adminPage.locator('#wizard-task-ans-words, #wizard-quiz-ans-words');
     await wordsAnsSelect.selectOption('written');
     await wordsAnsSelect.dispatchEvent('change');
     const badgeTextWritten = await wordsBadge.textContent();

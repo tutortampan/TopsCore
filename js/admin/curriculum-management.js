@@ -495,11 +495,13 @@ export async function renderCurriculum(area) {
             const getDays = it => (it.batch?.enrollment_date && it.batch?.actual_final_date)
               ? Math.round((new Date(it.batch.actual_final_date) - new Date(it.batch.enrollment_date)) / 86400000) : 0;
             res = getDays(a) - getDays(b);
-          } else if (key === 'status') {
-            const getRank = it => it.isActive ? (it.periodInfo.statusBadge.includes('Ongoing') ? 3 : 2) : 1;
+          } else if (key === 'status' || key === 'period' || key === 'active') {
+            const getRank = it => {
+              if (!it.isActive) return 1;
+              if (it.periodInfo?.statusBadge?.includes('Ongoing')) return 3;
+              return 2;
+            };
             res = getRank(a) - getRank(b);
-          } else if (key === 'active') {
-            res = (a.isActive === b.isActive) ? 0 : (a.isActive ? 1 : -1);
           }
           return asc ? res : -res;
         });
@@ -514,14 +516,14 @@ export async function renderCurriculum(area) {
       const instInitials = (activeInst.code || activeInst.name || 'INS').substring(0, 3).toUpperCase();
       const avatarHtml = activeInst.logo_url
         ? `<div class="curriculum-inst-avatar" style="width:40px;height:40px;border-radius:6px;"><img src="${escapeHtml(activeInst.logo_url)}" alt="${escapeHtml(activeInst.name)}" /></div>`
-        : `<div class="curriculum-inst-avatar" style="width:40px;height:40px;border-radius:6px;font-size:14px;">${instInitials}</div>`;
+        : `<div class="curriculum-inst-avatar" style="width:40px;height:40px;border-radius:6px;display:flex;align-items:center;justify-content:center;background:rgba(99,102,241,0.15);color:#818cf8;">${getSvgIcon('building', 20)}</div>`;
 
       // Build Table Rows
       let rowsHtml = '';
       if (sortedItems.length === 0) {
         rowsHtml = `
           <tr>
-            <td colspan="13" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
+            <td colspan="11" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
               <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No records found</div>
               <div style="font-size:12px;">Try adjusting your search query or click "+ Add Batch" below to create one.</div>
             </td>
@@ -542,7 +544,7 @@ export async function renderCurriculum(area) {
             ? `<input type="text" class="form-control form-control-sm table-cell-input" value="${escapeHtml(prog.name)}" onchange="window.updateCurriculumProgramField('${prog.id}','name',this.value)" style="background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:3px 6px;font-size:12px;width:100%;box-sizing:border-box;" title="Edit Program Name" />`
             : `<div class="d-flex align-center gap-2" style="min-width:0;">
                 <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" class="text-truncate" title="${escapeHtml(prog.name)}">${escapeHtml(prog.name)}</span>
-                ${prog.code ? `<span class="badge-tag" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--fm-text-muted);font-size:11px;">${escapeHtml(prog.code)}</span>` : ''}
+                ${(prog.code && prog.code.toUpperCase() !== prog.name.toUpperCase()) ? `<span class="badge-tag" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:var(--fm-text-muted);font-size:12px;">${escapeHtml(prog.code)}</span>` : ''}
               </div>`;
 
           // 2. Batch Name Cell
@@ -558,23 +560,12 @@ export async function renderCurriculum(area) {
             </div>`;
           }
 
-          // 3. Class Cell (Name + Status in Edit Mode per User Requirement)
+          // 3. Class Cell (Clean single-line per ui-invariants.md §1.2 & §4.4)
           let classCellHtml = '';
           if (!cls) {
             classCellHtml = `<span style="color:var(--fm-text-muted);font-size:12px;font-style:italic;">—</span>`;
           } else if (isEditOn) {
-            classCellHtml = `
-              <div style="display:flex;flex-direction:column;gap:3px;">
-                <input type="text" class="form-control form-control-sm table-cell-input" value="${escapeHtml(cls.name)}" onchange="window.updateCurriculumClassField('${cls.id}','name',this.value)" style="background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 6px;font-size:12px;width:100%;box-sizing:border-box;" title="Edit Class Name" />
-                <div style="display:flex;align-items:center;gap:4px;font-size:11px;">
-                  <span style="color:#94a3b8;">Status:</span>
-                  <select onchange="window.toggleEntityActive('classes', '${cls.id}', this.value === 'true')" style="background:#090D16;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};border:1px solid rgba(255,255,255,0.18);border-radius:3px;font-size:11px;font-weight:700;padding:1px 4px;">
-                    <option value="true" ${cls.is_active ? 'selected' : ''}>Active</option>
-                    <option value="false" ${!cls.is_active ? 'selected' : ''}>Inactive</option>
-                  </select>
-                </div>
-              </div>
-            `;
+            classCellHtml = `<input type="text" class="form-control form-control-sm table-cell-input" value="${escapeHtml(cls.name)}" onchange="window.updateCurriculumClassField('${cls.id}','name',this.value)" style="background:rgba(0,0,0,0.4);color:#fff;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:3px 6px;font-size:12px;width:100%;box-sizing:border-box;" title="Edit Class Name" />`;
           } else {
             classCellHtml = `
               <div class="d-flex align-center gap-2" style="min-width:0;">
@@ -584,20 +575,31 @@ export async function renderCurriculum(area) {
             `;
           }
 
-          // 4. Level Cell
+          // 4. Level Cell (Zero-Truncation SSOT per ui-invariants.md §6.5)
           let levelCellHtml = '';
+          const formatLevelOptionLabel = (l) => {
+            if (l.level_number === 0 || (l.name && l.name.toLowerCase().includes('non-level'))) return '—';
+            if (l.level_number === 99 || (l.name && l.name.toLowerCase().includes('alumni'))) return 'X (Alumni)';
+            if (l.level_number === 1 || (l.name && l.name.startsWith('1'))) return '1st';
+            if (l.level_number === 2 || (l.name && l.name.startsWith('2'))) return '2nd';
+            if (l.level_number === 3 || (l.name && l.name.startsWith('3'))) return '3rd';
+            return l.name || (l.level_number ? `Level ${l.level_number}` : '—');
+          };
+
           if (isProgOnly) {
             levelCellHtml = `<span style="color:#94a3b8;font-size:12px;">—</span>`;
           } else if (isEditOn) {
             levelCellHtml = `
-              <select class="table-cell-select" onchange="window.updateCurriculumBatchField('${batch.id}','current_level_id',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;width:100%;">
-                ${activeLevels.map(l => `<option value="${l.id}" ${batch.current_level_id === l.id ? 'selected' : ''}>${l.level_number === 0 ? '—' : (l.name || `Level ${l.level_number}`)}</option>`).join('')}
+              <select class="table-cell-select" onchange="window.updateCurriculumBatchField('${batch.id}','current_level_id',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;width:100%;box-sizing:border-box;">
+                ${activeLevels.map(l => `<option value="${l.id}" ${batch.current_level_id === l.id ? 'selected' : ''}>${formatLevelOptionLabel(l)}</option>`).join('')}
               </select>
             `;
           } else {
             levelCellHtml = item.levelName === '—'
               ? '<span style="color:#94a3b8;font-size:12px;">—</span>'
-              : `<span style="color:#f8fafc;font-weight:600;font-size:12px;">${escapeHtml(item.levelName)}</span>`;
+              : (item.levelName === 'X' || item.levelName === 'Alumni'
+                  ? '<span style="color:var(--quad-d);font-weight:700;font-size:12px;">X</span>'
+                  : `<span style="color:#f8fafc;font-weight:600;font-size:12px;">${escapeHtml(item.levelName)}</span>`);
           }
 
           // 5. Students Cell
@@ -610,7 +612,7 @@ export async function renderCurriculum(area) {
           if (isProgOnly) {
             startCellHtml = '<span style="color:var(--fm-text-muted);font-size:12px;">—</span>';
           } else if (isEditOn) {
-            startCellHtml = `<input type="date" value="${batch.enrollment_date || ''}" onchange="window.updateCurriculumBatchField('${batch.id}','enrollment_date',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:11px;width:100%;box-sizing:border-box;" />`;
+            startCellHtml = `<input type="date" value="${batch.enrollment_date || ''}" onchange="window.updateCurriculumBatchField('${batch.id}','enrollment_date',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;width:100%;box-sizing:border-box;" />`;
           } else {
             startCellHtml = `<span style="color:var(--fm-text-secondary);font-size:12px;">${periodInfo.hasDates ? escapeHtml(periodInfo.startDateFormatted) : '—'}</span>`;
           }
@@ -620,80 +622,58 @@ export async function renderCurriculum(area) {
           if (isProgOnly) {
             finishCellHtml = '<span style="color:var(--fm-text-muted);font-size:12px;">—</span>';
           } else if (isEditOn) {
-            finishCellHtml = `<input type="date" value="${batch.actual_final_date || ''}" onchange="window.updateCurriculumBatchField('${batch.id}','actual_final_date',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:11px;width:100%;box-sizing:border-box;" />`;
+            finishCellHtml = `<input type="date" value="${batch.actual_final_date || ''}" onchange="window.updateCurriculumBatchField('${batch.id}','actual_final_date',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;width:100%;box-sizing:border-box;" />`;
           } else {
             finishCellHtml = `<span style="color:var(--fm-text-secondary);font-size:12px;">${periodInfo.hasDates && periodInfo.endDateFormatted !== '—' ? escapeHtml(periodInfo.endDateFormatted) : '—'}</span>`;
           }
 
-          // 8. Duration Cell
-          const durationCellHtml = `<span style="font-size:12px;color:var(--fm-text-secondary);">${periodInfo.durationText || '—'}</span>`;
+          // 8. Duration Cell (Zero Truncation SSOT per ui-invariants.md §4.2)
+          const durationCellHtml = `<span style="font-size:12px;color:var(--fm-text-secondary);white-space:nowrap;">${periodInfo.durationText || '—'}</span>`;
 
           // 9. Remaining Cell
           const remainingCellHtml = periodInfo.remainingBadge || '<span style="color:var(--fm-text-muted);font-size:12px;">—</span>';
 
-          // 10. Status Cell
-          const statusCellHtml = periodInfo.statusBadge;
-
-          // 11. Active Status Cell
-          let activeCellHtml = '';
+          // 10. Unified Authoritative Status Cell (SSOT per User Directive: No Redundant ACTIVE or ACTIONS Columns)
+          let statusCellHtml = '';
           if (isProgOnly) {
             if (isEditOn) {
-              activeCellHtml = `
-                <select class="table-cell-select" onchange="window.toggleProgramCascade('${prog.id}', this.value === 'true')" style="background:#1e293b;color:${prog.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;font-weight:700;">
-                  <option value="true" ${prog.is_active ? 'selected' : ''}>Active</option>
-                  <option value="false" ${!prog.is_active ? 'selected' : ''}>Inactive</option>
-                </select>
+              statusCellHtml = `
+                <div class="d-flex align-center justify-center gap-1">
+                  <select class="table-cell-select" onchange="window.toggleProgramCascade('${prog.id}', this.value === 'true')" style="background:#1e293b;color:${prog.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;font-weight:700;width:75px;box-sizing:border-box;">
+                    <option value="true" ${prog.is_active ? 'selected' : ''}>Active</option>
+                    <option value="false" ${!prog.is_active ? 'selected' : ''}>Inactive</option>
+                  </select>
+                  <button class="btn btn-danger btn-sm" style="padding:2px 5px;font-size:12px;height:24px;display:inline-flex;align-items:center;justify-content:center;" onclick="window.deleteCurriculumRecord('programs', '${prog.id}', '${escapeHtml(prog.name)}')" title="Delete Program">
+                    ${getSvgIcon('trash', 12)}
+                  </button>
+                </div>
               `;
             } else {
-              activeCellHtml = `
-                <label class="toggle-switch" title="Toggle Program Active (Cascade)" style="margin:0 auto;display:inline-block;">
-                  <input type="checkbox" onchange="window.toggleProgramCascade('${prog.id}', this.checked)" ${prog.is_active ? 'checked' : ''}>
-                  <span class="toggle-slider"></span>
-                </label>
-              `;
+              statusCellHtml = prog.is_active
+                ? `<span class="badge-tag badge-tag-ongoing" style="background:rgba(0,192,0,0.1);color:var(--grade-a);border:1px solid rgba(0,192,0,0.25);font-size:12px;font-weight:700;cursor:pointer;" onclick="window.toggleProgramCascade('${prog.id}', false)" title="Active Program · Click to deactivate">● Active</span>`
+                : `<span class="badge-tag badge-tag-inactive" style="background:rgba(255,0,0,0.1);color:var(--grade-e);border:1px solid rgba(255,0,0,0.25);font-size:12px;font-weight:700;cursor:pointer;" onclick="window.toggleProgramCascade('${prog.id}', true)" title="Inactive Program · Click to activate">● Inactive</span>`;
             }
           } else {
+            const isBatchActive = batch.is_active !== false;
             if (isEditOn) {
-              activeCellHtml = `
-                <select class="table-cell-select" onchange="window.updateCurriculumBatchField('${batch.id}','is_active',this.value === 'true')" style="background:#1e293b;color:${batch.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;font-weight:700;">
-                  <option value="true" ${batch.is_active ? 'selected' : ''}>Active</option>
-                  <option value="false" ${!batch.is_active ? 'selected' : ''}>Inactive</option>
-                </select>
+              statusCellHtml = `
+                <div class="d-flex align-center justify-center gap-1">
+                  <select class="table-cell-select" onchange="window.updateCurriculumBatchField('${batch.id}','is_active',this.value === 'true')" style="background:#1e293b;color:${isBatchActive ? 'var(--grade-a)' : 'var(--grade-e)'};border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;font-weight:700;width:75px;box-sizing:border-box;">
+                    <option value="true" ${isBatchActive ? 'selected' : ''}>Active</option>
+                    <option value="false" ${!isBatchActive ? 'selected' : ''}>Inactive</option>
+                  </select>
+                  <button class="btn btn-danger btn-sm" style="padding:2px 5px;font-size:12px;height:24px;display:inline-flex;align-items:center;justify-content:center;" onclick="window.deleteCurriculumRecord('batches', '${batch.id}', '${escapeHtml(batch.name)}')" title="Delete Batch">
+                    ${getSvgIcon('trash', 12)}
+                  </button>
+                </div>
               `;
             } else {
-              activeCellHtml = `
-                <label class="toggle-switch" title="Toggle Batch Active" style="margin:0 auto;display:inline-block;">
-                  <input type="checkbox" onchange="window.toggleEntityActive('batches', '${batch.id}', this.checked)" ${batch.is_active ? 'checked' : ''}>
-                  <span class="toggle-slider"></span>
-                </label>
-              `;
+              if (!isBatchActive) {
+                statusCellHtml = `<span class="badge-tag badge-tag-inactive" style="background:rgba(255,0,0,0.1);color:var(--grade-e);border:1px solid rgba(255,0,0,0.25);font-size:12px;font-weight:700;cursor:pointer;" onclick="window.toggleEntityActive('batches', '${batch.id}', true)" title="Inactive Batch · Click to activate">● Inactive</span>`;
+              } else {
+                statusCellHtml = `<span style="cursor:pointer;" onclick="window.toggleEntityActive('batches', '${batch.id}', false)" title="${periodInfo.statusBadge.includes('Ongoing') ? 'Ongoing' : 'Completed'} Batch · Click to deactivate">${periodInfo.statusBadge}</span>`;
+              }
             }
-          }
-
-          // 12. Actions Cell
-          let actionsCellHtml = '';
-          if (isProgOnly) {
-            actionsCellHtml = `
-              <div class="d-flex align-center justify-end gap-1">
-                <button class="btn btn-primary btn-sm" style="padding:2px 6px;font-size:11px;height:26px;font-weight:700;" onclick="window.openCurriculumAddBatch('${prog.id}', '${activeInst.id}')" title="Add Batch to Program">
-                  + Batch
-                </button>
-                <button class="btn btn-secondary btn-sm" style="padding:2px 5px;font-size:12px;height:26px;" onclick="window.openCurriculumEdit('programs', '${prog.id}')" title="Edit Program">
-                  ${getSvgIcon('edit', 12)}
-                </button>
-              </div>
-            `;
-          } else {
-            actionsCellHtml = `
-              <div class="d-flex align-center justify-end gap-1">
-                <button class="btn btn-secondary btn-sm" style="padding:2px 6px;font-size:11px;height:26px;display:inline-flex;align-items:center;gap:3px;" onclick="window.openCurriculumEdit('batches', '${batch.id}')" title="Edit Batch Details">
-                  ${getSvgIcon('edit', 12)} Edit
-                </button>
-                <button class="btn btn-danger btn-sm" style="padding:2px 5px;font-size:12px;height:26px;" onclick="window.deleteCurriculumRecord('batches', '${batch.id}', '${escapeHtml(batch.name)}')" title="Delete Batch">
-                  ${getSvgIcon('trash', 12)}
-                </button>
-              </div>
-            `;
           }
 
           return `
@@ -709,8 +689,6 @@ export async function renderCurriculum(area) {
               <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 6px;">${durationCellHtml}</td>
               <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 6px;">${remainingCellHtml}</td>
               <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 6px;">${statusCellHtml}</td>
-              <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 6px;">${activeCellHtml}</td>
-              <td class="text-right" style="font-size:12px;white-space:nowrap;padding:8px 10px;">${actionsCellHtml}</td>
             </tr>
           `;
         }).join('');
@@ -729,21 +707,32 @@ export async function renderCurriculum(area) {
           : `${getSvgIcon('edit', 14)} Edit Mode`;
 
         const leftHtml = `
-          <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
-            <span><strong style="color:#f8fafc;">${instBatches.length}</strong> Batches</span>
-            <span>·</span>
-            <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${activeBatchesCount}</strong> ACTIVE</span>
-            <span>·</span>
-            <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactiveBatchesCount}</strong> INACTIVE</span>
-            <span>·</span>
-            <span><strong style="color:#f8fafc;">${instPrograms.length}</strong> Programs</span>
-            <span>·</span>
-            <span><strong style="color:#818cf8;">${totalStudents}</strong> Enrolled Students</span>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;">
+            <div style="position:relative;display:inline-flex;align-items:center;">
+              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;display:inline-flex;align-items:center;pointer-events:none;">
+                ${getSvgIcon('search', 12)}
+              </span>
+              <input type="text" id="curriculum-search-input" placeholder="Search program, batch, class..." value="${escapeHtml(searchQuery)}" style="padding:0 8px 0 26px;font-size:12px;height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;width:220px;outline:none;box-sizing:border-box;" />
+            </div>
+            <div style="display:inline-flex;align-items:center;gap:10px;font-size:12px;color:#94a3b8;font-weight:600;white-space:nowrap;">
+              <span><strong style="color:#f8fafc;">${instBatches.length}</strong> Batches</span>
+              <span>·</span>
+              <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${activeBatchesCount}</strong> ACTIVE</span>
+              <span>·</span>
+              <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactiveBatchesCount}</strong> INACTIVE</span>
+              <span>·</span>
+              <span><strong style="color:#f8fafc;">${instPrograms.length}</strong> Programs</span>
+              <span>·</span>
+              <span><strong style="color:#818cf8;">${totalStudents}</strong> Students</span>
+            </div>
           </div>
         `;
 
         const rightHtml = `
-          <div style="display:flex;align-items:center;gap:8px;">
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-curriculum-edit-inst" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Edit Institution Details">
+              ${getSvgIcon('edit', 14)} Edit Details
+            </button>
             <button type="button" class="btn btn-sm" id="btn-toggle-curriculum-edit-mode" style="${editBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
             <button type="button" class="btn btn-primary btn-sm" id="btn-curriculum-add-batch" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;">${getSvgIcon('plus', 14)} Add Batch</button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-curriculum-add-prog" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;">${getSvgIcon('plus', 14)} Add Program</button>
@@ -751,6 +740,19 @@ export async function renderCurriculum(area) {
         `;
 
         window.setBottomInfobar(leftHtml, rightHtml);
+
+        const searchInp = document.getElementById('curriculum-search-input');
+        if (searchInp && !searchInp.dataset.bound) {
+          searchInp.dataset.bound = 'true';
+          searchInp.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            renderView();
+          });
+        }
+        const editInstBtn = document.getElementById('btn-curriculum-edit-inst');
+        if (editInstBtn) {
+          editInstBtn.onclick = () => window.openCurriculumEdit('institutions', activeInst.id);
+        }
 
         const toggleBtn = document.getElementById('btn-toggle-curriculum-edit-mode');
         if (toggleBtn) {
@@ -788,7 +790,7 @@ export async function renderCurriculum(area) {
                   <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--fm-text-primary);letter-spacing:-0.01em;">
                     ${escapeHtml(activeInst.name)}
                   </h3>
-                  ${activeInst.code ? `<span class="badge-tag" style="background:rgba(99,102,241,0.2);color:#818cf8;border:1px solid rgba(99,102,241,0.4);font-weight:700;">${escapeHtml(activeInst.code)}</span>` : ''}
+                  ${(activeInst.code && activeInst.code.toUpperCase() !== activeInst.name.toUpperCase()) ? `<span class="badge-tag" style="background:rgba(99,102,241,0.2);color:#818cf8;border:1px solid rgba(99,102,241,0.4);font-weight:700;">${escapeHtml(activeInst.code)}</span>` : ''}
                   <span class="badge-tag ${activeInst.is_active ? 'badge-tag-ongoing' : 'badge-tag-completed'}">
                     ${activeInst.is_active ? 'Active' : 'Inactive'}
                   </span>
@@ -800,69 +802,37 @@ export async function renderCurriculum(area) {
                 </div>
               </div>
             </div>
-
-            <!-- Right Controls for Institution -->
-            <div class="tree-actions-right" style="display:flex;align-items:center;gap:8px;">
-              <label class="toggle-switch edit-mode-only" title="Toggle Institution Active (Cascade)">
-                <input type="checkbox" onchange="window.toggleInstitutionCascade('${activeInst.id}', this.checked)" ${activeInst.is_active ? 'checked' : ''}>
-                <span class="toggle-slider"></span>
-              </label>
-              <button class="btn btn-secondary btn-sm" style="display:inline-flex;align-items:center;gap:4px;height:30px;font-size:12px;padding:0 10px;" onclick="window.openCurriculumEdit('institutions', '${activeInst.id}')" title="Edit Institution Details">
-                ${getSvgIcon('edit', 14)} Edit Details
-              </button>
-              <button class="btn btn-danger btn-sm edit-mode-only" style="height:30px;padding:0 8px;" onclick="window.deleteCurriculumRecord('institutions', '${activeInst.id}', '${escapeHtml(activeInst.name)}')" title="Delete Institution">
-                ${getSvgIcon('trash', 14)}
-              </button>
-            </div>
           </div>
 
-          <!-- 2. Controls & Search Toolbar -->
-          <div class="hub-toolbar" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;">
-            <div class="hub-toolbar-search" style="flex:1;max-width:440px;position:relative;">
-              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--fm-text-muted);font-size:12px;display:inline-flex;align-items:center;">
-                ${getSvgIcon('search', 12)}
-              </span>
-              <input type="text" id="curriculum-search-input" class="form-control" placeholder="Search program, batch, or class..." value="${escapeHtml(searchQuery)}" style="padding:5px 10px 5px 30px;font-size:12px;height:30px;background:rgba(0,0,0,0.2);width:100%;box-sizing:border-box;" />
-            </div>
-            <div class="d-flex align-center gap-2">
-              <span class="text-xs text-muted">${sortedItems.length} of ${tableItems.length} Records · ${instPrograms.length} Programs · ${instBatches.length} Batches</span>
-              <button class="btn btn-ghost btn-sm edit-mode-only" onclick="window.openCrudModal('institutions', null)" style="font-size:12px;padding:0 10px;height:30px;line-height:28px;color:var(--clr-primary,#6366f1);">+ New Institution</button>
-            </div>
-          </div>
-
-          <!-- 3. Desktop Workstation Datagrid Table (100vh lock, table-wrap scroll only per ui-invariants.md §1.1) -->
+          <!-- 2. Desktop Workstation Datagrid Table (100vh lock, table-wrap scroll only per ui-invariants.md §1.1) -->
           <div class="table-wrap sticky-first" style="flex:1 1 0 !important;min-height:0 !important;overflow-y:auto;overflow-x:auto !important;background:#0f172a;border:1px solid rgba(255,255,255,0.12) !important;border-radius:8px;margin:0;">
-            <table class="datagrid-table" style="width:100%;min-width:1170px;border-collapse:collapse;table-layout:fixed;">
+            <table class="datagrid-table" style="width:100%;min-width:1100px;border-collapse:collapse;table-layout:fixed;">
               <colgroup>
                 <col style="width:36px;">   <!-- NO -->
-                <col style="width:135px;">  <!-- PROGRAM -->
-                <col style="width:110px;">  <!-- BATCH NAME -->
-                <col style="width:150px;">  <!-- CLASS -->
-                <col style="width:55px;">   <!-- LEVEL -->
-                <col style="width:65px;">   <!-- STUDENTS -->
-                <col style="width:95px;">   <!-- START -->
-                <col style="width:95px;">   <!-- FINISH -->
-                <col style="width:100px;">  <!-- DURATION -->
-                <col style="width:90px;">   <!-- REMAINING -->
-                <col style="width:85px;">   <!-- STATUS -->
-                <col style="width:70px;">   <!-- ACTIVE -->
-                <col style="width:84px;">   <!-- ACTIONS -->
+                <col style="width:140px;">  <!-- PROGRAM -->
+                <col style="width:120px;">  <!-- BATCH NAME -->
+                <col style="width:180px;">  <!-- CLASS -->
+                <col style="width:80px;">   <!-- LEVEL -->
+                <col style="width:75px;">   <!-- STUDENTS -->
+                <col style="width:100px;">  <!-- START -->
+                <col style="width:100px;">  <!-- FINISH -->
+                <col style="width:135px;">  <!-- DURATION -->
+                <col style="width:100px;">  <!-- REMAINING -->
+                <col style="width:120px;">  <!-- STATUS -->
               </colgroup>
               <thead style="position:sticky;top:0;z-index:10;background:#0f172a;">
                 <tr style="height:40px;">
                   <th style="width:36px;text-align:center;">NO</th>
-                  <th style="width:135px;text-align:left;cursor:pointer;" onclick="window.sortCurriculum('program')" title="Sort by Program">PROGRAM ${getCurriculumSortIcon('program')}</th>
-                  <th style="width:110px;text-align:left;cursor:pointer;" onclick="window.sortCurriculum('name')" title="Sort by Batch Name">BATCH NAME ${getCurriculumSortIcon('name')}</th>
-                  <th style="width:150px;text-align:left;cursor:pointer;" onclick="window.sortCurriculum('class')" title="Sort by Class">CLASS ${getCurriculumSortIcon('class')}</th>
-                  <th style="width:55px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('level')" title="Sort by Level">LEVEL ${getCurriculumSortIcon('level')}</th>
-                  <th style="width:65px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('students')" title="Sort by Enrolled Students">STUDENTS ${getCurriculumSortIcon('students')}</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('start')" title="Sort by Start Date">START ${getCurriculumSortIcon('start')}</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('finish')" title="Sort by Finish Date">FINISH ${getCurriculumSortIcon('finish')}</th>
-                  <th style="width:100px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('duration')" title="Sort by Duration">DURATION ${getCurriculumSortIcon('duration')}</th>
-                  <th style="width:90px;text-align:center;">REMAINING</th>
-                  <th style="width:85px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('status')" title="Sort by Status">STATUS ${getCurriculumSortIcon('status')}</th>
-                  <th style="width:70px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('active')" title="Sort by Active">ACTIVE ${getCurriculumSortIcon('active')}</th>
-                  <th style="width:84px;text-align:right;">ACTIONS</th>
+                  <th style="width:140px;text-align:left;cursor:pointer;" onclick="window.sortCurriculum('program')" title="Sort by Program">PROGRAM ${getCurriculumSortIcon('program')}</th>
+                  <th style="width:120px;text-align:left;cursor:pointer;" onclick="window.sortCurriculum('name')" title="Sort by Batch Name">BATCH NAME ${getCurriculumSortIcon('name')}</th>
+                  <th style="width:180px;text-align:left;cursor:pointer;" onclick="window.sortCurriculum('class')" title="Sort by Class">CLASS ${getCurriculumSortIcon('class')}</th>
+                  <th style="width:80px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('level')" title="Sort by Level">LEVEL ${getCurriculumSortIcon('level')}</th>
+                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('students')" title="Sort by Enrolled Students">STUDENTS ${getCurriculumSortIcon('students')}</th>
+                  <th style="width:100px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('start')" title="Sort by Start Date">START ${getCurriculumSortIcon('start')}</th>
+                  <th style="width:100px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('finish')" title="Sort by Finish Date">FINISH ${getCurriculumSortIcon('finish')}</th>
+                  <th style="width:135px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('duration')" title="Sort by Duration">DURATION ${getCurriculumSortIcon('duration')}</th>
+                  <th style="width:100px;text-align:center;">REMAINING</th>
+                  <th style="width:120px;text-align:center;cursor:pointer;" onclick="window.sortCurriculum('status')" title="Sort by Status (Ongoing/Completed/Inactive)">STATUS ${getCurriculumSortIcon('status')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -878,8 +848,10 @@ export async function renderCurriculum(area) {
 
       // Live search input handler
       const searchInp = document.getElementById('curriculum-search-input');
-      if (searchInp) {
-        searchInp.addEventListener('input', () => {
+      if (searchInp && !searchInp.dataset.bound) {
+        searchInp.dataset.bound = 'true';
+        searchInp.addEventListener('input', (e) => {
+          searchQuery = e.target.value.toLowerCase().trim();
           renderView();
           const updatedInp = document.getElementById('curriculum-search-input');
           if (updatedInp) {

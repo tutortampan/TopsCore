@@ -62,5 +62,4 @@ See [`AGENTS.md`](file:///AGENTS.md) for authoritative rules, [`.antigravityrule
 *Special System Action Tokens:*
 - **Grade R (Remedial)**: Pure Yellow (`#FFFF00`), score capped at 60% (Grade C).
 - **Grade F (Forgiven / Waiver)**: Pure Red (`#FF0000`), administrative progression waiver.
-- **Grade M (Manual Score)**: Tactical Cyan (`#38bdf8`), admin manual input/override.
 - **Grade X (Alumni)**: Vibrant Purple (`#8b5cf6` / `#C084FC`), marks graduate alumni.

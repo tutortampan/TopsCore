@@ -96,10 +96,6 @@ async function renderBulkImportView(container) {
         <h2 class="section-title text-gradient" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">${getSvgIcon('upload', 20)} Bulk Student Ingestion</h2>
         <p class="section-subtitle">Import student rosters from Excel (.xlsx / .xls) or CSV. PINs automatically default to <strong>1234</strong> (SHA-256 hashed).</p>
       </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm" id="btn-export-students-csv">${getSvgIcon('download', 14)} Export CSV</button>
-        <button class="btn btn-primary btn-sm" id="btn-dl-student-template">${getSvgIcon('download', 14)} Download Excel Template (.xlsx)</button>
-      </div>
     </div>
 
     <div class="d-flex flex-wrap gap-4 align-stretch" style="margin-bottom: 1.5rem;">
@@ -183,10 +179,10 @@ async function renderBulkImportView(container) {
             <thead>
               <tr>
                 <th style="width: 38px; text-align: center;">#</th>
-                <th>STUDENT NAME</th>
                 <th>INSTITUTION</th>
                 <th>PROGRAM</th>
                 <th>BATCH</th>
+                <th>STUDENT NAME</th>
                 <th style="width: 70px; text-align: center;">PIN</th>
                 <th style="width: 90px; text-align: center;">STATUS</th>
               </tr>
@@ -278,6 +274,27 @@ async function renderBulkImportView(container) {
       fileInput.dispatchEvent(new Event('change'));
     }
   });
+
+  if (typeof window.setBottomInfobar === 'function') {
+    const leftHtml = `
+      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
+        <span><strong style="color:#f8fafc;">Domain B</strong> · Student Ingestion Engine</span>
+        <span>·</span>
+        <span style="color:#38bdf8;font-weight:700;">Bulk Mode</span>
+      </div>
+    `;
+    const rightHtml = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-export-students-csv" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;">
+          ${getSvgIcon('download', 14)} Export CSV
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-dl-student-template" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+          ${getSvgIcon('download', 14)} Download Template (.xlsx)
+        </button>
+      </div>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+  }
 
   // --- Download Template ---
   document.getElementById('btn-dl-student-template')?.addEventListener('click', () => {
@@ -557,10 +574,10 @@ async function renderBulkImportView(container) {
     tbody.innerHTML = parsedStudents.map(s => `
       <tr style="${s.status === 'error' ? 'background: rgba(239, 68, 68, 0.08);' : ''}">
         <td style="text-align: center; color: var(--fm-text-muted);">${s.no}</td>
-        <td style="font-weight: 600; color: #fff;">${escapeHtml(s.name)}</td>
         <td>${escapeHtml(s.instName)}</td>
         <td>${escapeHtml(s.progName)}</td>
         <td>${escapeHtml(s.batchName)}</td>
+        <td style="font-weight: 600; color: #fff;">${escapeHtml(s.name)}</td>
         <td style="text-align: center;"><code>${escapeHtml(s.pin)}</code></td>
         <td style="text-align: center;">${s.statusBadge}</td>
       </tr>
@@ -590,7 +607,11 @@ async function renderBulkImportView(container) {
       let updatedCount = 0;
       const batchCache = {};
 
-      const { data: allClasses } = await sb.from('classes').select('id, program_id').eq('is_active', true);
+      const { data: allClasses } = await sb.from('classes').select('id, program_id, institution_id, level_id').eq('is_active', true);
+      const { data: allDbLevels } = await sb.from('levels').select('id, level_number');
+      const nonLevelRec = (allDbLevels || []).find(l => l.level_number === 0);
+      const level1Rec = (allDbLevels || []).find(l => l.level_number === 1);
+
       const totalOps = readyList.length;
       let currentOps = 0;
 
@@ -598,7 +619,11 @@ async function renderBulkImportView(container) {
         currentOps++;
         updateLoadingProgress((currentOps / totalOps) * 100, `Saving student ${currentOps} of ${readyList.length}...`);
 
-        // 1. Auto-create batch if needed
+        // Determine appropriate level for student's program (Level 0 for Non-Level programs, Level 1 for tiered programs)
+        const isNonLevelProg = (allClasses || []).some(c => c.program_id === s.progId && nonLevelRec && c.level_id === nonLevelRec.id);
+        const resolvedProgLevelId = isNonLevelProg ? (nonLevelRec?.id || null) : (level1Rec?.id || null);
+
+        // 1. Auto-create batch if needed (or restore if soft-deleted)
         let resolvedBatchId = s.batchId || null;
         if (!resolvedBatchId && s.batchName && s.batchName !== '—' && s.progId) {
           const cacheKey = `${s.progId}::${s.batchName.toLowerCase().trim()}`;
@@ -606,14 +631,27 @@ async function renderBulkImportView(container) {
             resolvedBatchId = batchCache[cacheKey];
           } else {
             const { data: existingB } = await sb.from('batches')
-              .select('id').eq('program_id', s.progId)
+              .select('id, deleted_at, is_active, current_level_id').eq('program_id', s.progId)
               .ilike('name', s.batchName.trim()).maybeSingle();
             if (existingB) {
               resolvedBatchId = existingB.id;
+              const batchFixes = {};
+              if (existingB.deleted_at || existingB.is_active === false) {
+                batchFixes.deleted_at = null;
+                batchFixes.is_active = true;
+                batchFixes.updated_at = new Date().toISOString();
+              }
+              if (!existingB.current_level_id && resolvedProgLevelId) {
+                batchFixes.current_level_id = resolvedProgLevelId;
+              }
+              if (Object.keys(batchFixes).length > 0) {
+                await sb.from('batches').update(batchFixes).eq('id', existingB.id);
+              }
             } else {
               const { data: newB } = await sb.from('batches').insert({
                 program_id: s.progId,
                 name: s.batchName.trim(),
+                current_level_id: resolvedProgLevelId,
                 is_active: true
               }).select('id').single();
               if (newB) resolvedBatchId = newB.id;
@@ -626,15 +664,28 @@ async function renderBulkImportView(container) {
 
         if (s.isExisting && s.existingId) {
           const updData = {
-            batch_id: resolvedBatchId,
             pin_hash: pinHash,
             is_active: true,
             deleted_at: null,
             updated_at: new Date().toISOString()
           };
+          if (resolvedBatchId) updData.batch_id = resolvedBatchId;
+          if (resolvedProgLevelId) updData.level_id = resolvedProgLevelId;
+          if (s.gender) updData.gender = s.gender;
+          if (s.birthDate) updData.birth_date = s.birthDate;
           if (s.province) updData.province = s.province;
           if (s.city) updData.city = s.city;
-          await sb.from('students').update(updData).eq('id', s.existingId).catch(() => {});
+
+          let { error: updErr } = await sb.from('students').update(updData).eq('id', s.existingId);
+          if (updErr && (updData.province || updData.city)) {
+            delete updData.province;
+            delete updData.city;
+            const retry = await sb.from('students').update(updData).eq('id', s.existingId);
+            updErr = retry.error;
+          }
+          if (updErr) {
+            console.warn(`[Bulk Import] Error updating student ${s.existingId} (${s.name}):`, updErr);
+          }
           updatedCount++;
         } else {
           const insData = {
@@ -642,6 +693,7 @@ async function renderBulkImportView(container) {
             institution_id: s.instId || null,
             program_id: s.progId || null,
             batch_id: resolvedBatchId,
+            level_id: resolvedProgLevelId,
             gender: s.gender || null,
             birth_date: s.birthDate || null,
             pin_hash: pinHash,
@@ -650,13 +702,15 @@ async function renderBulkImportView(container) {
           if (s.province) insData.province = s.province;
           if (s.city) insData.city = s.city;
           let created = null;
-          try {
-            const res = await sb.from('students').insert(insData).select('id').single();
-            created = res.data;
-          } catch (_) {
+          let res = await sb.from('students').insert(insData).select('id').single();
+          if (res.error && (insData.province || insData.city)) {
             delete insData.province;
             delete insData.city;
-            const res = await sb.from('students').insert(insData).select('id').single();
+            res = await sb.from('students').insert(insData).select('id').single();
+          }
+          if (res.error) {
+            console.warn(`[Bulk Import] Error inserting student "${s.name}":`, res.error);
+          } else {
             created = res.data;
           }
           insertedCount++;
@@ -745,9 +799,6 @@ async function renderIndividualRegView(container) {
       <div>
         <h2 class="section-title text-gradient" style="font-size: 20px; display: flex; align-items: center; gap: 8px;">${getSvgIcon('user', 20)} Individual Student Registration</h2>
         <p class="section-subtitle">Enroll an individual student directly into an institution, program, and batch with instant credentials.</p>
-      </div>
-      <div class="d-flex gap-2">
-        <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-open-modal-add">${getSvgIcon('edit', 14)} Open Full Edit Modal</button>
       </div>
     </div>
 
@@ -847,12 +898,12 @@ async function renderIndividualRegView(container) {
           <thead>
             <tr>
               <th style="width: 38px; text-align: center;">#</th>
-              <th>STUDENT NAME</th>
+              <th>INSTITUTION</th>
               <th>PROGRAM</th>
               <th>BATCH</th>
+              <th>STUDENT NAME</th>
               <th style="width: 95px; text-align: center;">STATUS</th>
               <th style="width: 90px; text-align: center;">ENROLLED</th>
-              <th style="width: 80px; text-align: center;">ACTIONS</th>
             </tr>
           </thead>
           <tbody id="indiv-recent-tbody">
@@ -869,9 +920,10 @@ async function renderIndividualRegView(container) {
             ` : recentList.map((s, idx) => `
               <tr>
                 <td style="text-align: center; color: var(--fm-text-muted);">${idx + 1}</td>
-                <td style="font-weight: 600; color: #fff;">${escapeHtml(s.name)}</td>
+                <td>${escapeHtml(s.institutions?.name || '—')}</td>
                 <td>${escapeHtml(s.programs?.name || '—')}</td>
                 <td>${escapeHtml(s.batches?.name || '—')}</td>
+                <td style="font-weight: 600; color: #fff; cursor: pointer;" class="btn-edit-student" data-id="${s.id}" title="Click to view/edit profile">${escapeHtml(s.name)}</td>
                 <td style="text-align: center;">
                   <span class="status-dot-badge">
                     <span class="status-dot ${s.is_active ? 'dot-success' : 'dot-draft'}"></span>
@@ -880,9 +932,6 @@ async function renderIndividualRegView(container) {
                 </td>
                 <td style="text-align: center; font-size: 12px; color: var(--fm-text-muted);">
                   ${s.created_at ? s.created_at.split('T')[0] : '—'}
-                </td>
-                <td style="text-align: center;">
-                  <button class="btn btn-ghost btn-xs text-primary btn-edit-student edit-mode-only" data-id="${s.id}" title="Edit Profile">${getSvgIcon('edit', 14)} Edit</button>
                 </td>
               </tr>
             `).join('')}
@@ -1148,6 +1197,47 @@ async function renderIndividualRegView(container) {
   document.getElementById('btn-refresh-recent')?.addEventListener('click', () => {
     renderIndividualRegView(container);
   });
+
+  if (typeof window.setBottomInfobar === 'function') {
+    const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+    const editBtnStyle = isEditOn
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+      : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+    const editBtnLabel = isEditOn
+      ? `${getSvgIcon('check-circle', 14)} Done Editing`
+      : `${getSvgIcon('edit', 14)} Edit Mode`;
+
+    const leftHtml = `
+      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
+        <span><strong style="color:#f8fafc;">Domain B</strong> · Student Ingestion Engine</span>
+        <span>·</span>
+        <span style="color:#38bdf8;font-weight:700;">Individual Registration</span>
+      </div>
+    `;
+    const rightHtml = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-subpanel-reset-form" style="height:30px !important;font-size:12px;padding:0 12px !important;">Clear Form</button>
+        <button type="button" class="btn btn-sm" id="btn-toggle-student-reg-edit-mode" style="${editBtnStyle}" title="Toggle Master Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-student" style="height:30px !important;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:5px;border-radius:4px;">
+          ${getSvgIcon('user-plus', 14)} Register Student
+        </button>
+      </div>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+    document.getElementById('btn-subpanel-reset-form')?.addEventListener('click', () => {
+      document.getElementById('btn-reset-indiv-form')?.click();
+    });
+    document.getElementById('btn-toggle-student-reg-edit-mode')?.addEventListener('click', () => {
+      if (typeof window.toggleGlobalEditMode === 'function') {
+        const newState = window.toggleGlobalEditMode();
+        showToast(newState ? 'Master Edit Mode ON (Inline Excel Grid)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+        renderIndividualRegView(container);
+      }
+    });
+    document.getElementById('btn-subpanel-save-student')?.addEventListener('click', () => {
+      document.getElementById('btn-save-indiv-student')?.click();
+    });
+  }
 }
 
 if (typeof window !== 'undefined') {

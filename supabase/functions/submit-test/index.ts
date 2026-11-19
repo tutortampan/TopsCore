@@ -316,11 +316,173 @@ function isAcousticHomophoneMatch(studentText: string, targetText: string): bool
   return hasHomophone;
 }
 
+const ADJECTIVE_CATEGORIES: Record<number, { name: string; words: Set<string> }> = {
+  1: {
+    name: 'opinion',
+    words: new Set([
+      'beautiful', 'handsome', 'ugly', 'lovely', 'pretty', 'nice', 'cute', 'attractive',
+      'wonderful', 'great', 'excellent', 'fantastic', 'cool', 'good', 'bad', 'awful',
+      'terrible', 'horrible', 'dirty', 'clean', 'neat', 'tidy', 'messy', 'delicious',
+      'tasty', 'yummy', 'fresh', 'sweet', 'bitter', 'sour', 'spicy', 'rich', 'poor',
+      'comfortable', 'uncomfortable', 'cheap', 'expensive', 'precious', 'valuable',
+      'simple', 'complex', 'funny', 'boring', 'interesting', 'exciting',
+      'strange', 'weird', 'unique', 'perfect', 'normal', 'usual', 'unusual', 'favorite'
+    ])
+  },
+  2: {
+    name: 'size',
+    words: new Set([
+      'big', 'small', 'little', 'tiny', 'huge', 'giant', 'gigantic', 'massive', 'large',
+      'mini', 'tall', 'short', 'high', 'low', 'long', 'medium', 'slender', 'slim',
+      'thin', 'fat', 'thick', 'wide', 'broad', 'narrow', 'deep', 'shallow'
+    ])
+  },
+  3: {
+    name: 'physical',
+    words: new Set([
+      'hard', 'soft', 'rough', 'smooth', 'heavy', 'light', 'sharp', 'blunt', 'wet',
+      'dry', 'moist', 'hot', 'warm', 'cold', 'cool', 'freezing', 'boiling', 'sticky',
+      'slippery', 'greasy', 'oily', 'stiff', 'flexible', 'fragile', 'solid', 'hollow',
+      'fluffy', 'silky', 'shiny', 'dull', 'bright', 'dark'
+    ])
+  },
+  4: {
+    name: 'shape',
+    words: new Set([
+      'round', 'circular', 'square', 'rectangular', 'triangular', 'oval', 'cylindrical',
+      'conical', 'spherical', 'flat', 'curved', 'straight', 'crooked', 'bent', 'wavy'
+    ])
+  },
+  5: {
+    name: 'age',
+    words: new Set([
+      'new', 'old', 'young', 'antique', 'ancient', 'vintage', 'modern', 'contemporary',
+      'fresh', 'brand-new', 'elderly', 'mature'
+    ])
+  },
+  6: {
+    name: 'color',
+    words: new Set([
+      'red', 'blue', 'green', 'yellow', 'black', 'white', 'brown', 'grey', 'gray',
+      'purple', 'pink', 'orange', 'violet', 'indigo', 'golden', 'silver', 'bronze',
+      'navy', 'beige', 'cyan', 'magenta', 'maroon', 'blonde', 'turquoise'
+    ])
+  },
+  7: {
+    name: 'origin',
+    words: new Set([
+      'indonesian', 'english', 'american', 'japanese', 'chinese', 'korean', 'italian',
+      'french', 'german', 'spanish', 'australian', 'indian', 'asian', 'european',
+      'african', 'western', 'eastern', 'oriental', 'local', 'foreign', 'native', 'traditional'
+    ])
+  },
+  8: {
+    name: 'material',
+    words: new Set([
+      'wooden', 'plastic', 'metallic', 'metal', 'iron', 'steel', 'leather', 'paper',
+      'cotton', 'silk', 'woolen', 'wool', 'glass', 'ceramic', 'stone', 'marble',
+      'clay', 'rubber', 'cardboard', 'wax', 'diamond', 'concrete'
+    ])
+  },
+  9: {
+    name: 'purpose',
+    words: new Set([
+      'cooking', 'sleeping', 'reading', 'writing', 'swimming', 'running', 'walking',
+      'dining', 'coffee', 'tea', 'sports', 'racing', 'travel', 'school', 'office',
+      'work', 'shopping', 'wedding', 'winter', 'summer', 'water', 'storage', 'kitchen'
+    ])
+  }
+};
+
+const IRREGULAR_PLURALS = new Set(['people', 'men', 'women', 'children', 'teeth', 'feet', 'mice', 'geese', 'oxen']);
+
+function isPluralNoun(noun: string): boolean {
+  const n = String(noun || '').toLowerCase().trim();
+  if (IRREGULAR_PLURALS.has(n)) return true;
+  return n.endsWith('s') || n.endsWith('es') || n.endsWith('ies');
+}
+
+function classifyAdjective(word: string): { order: number; category: string } | null {
+  const w = String(word || '').toLowerCase().trim();
+  for (const [order, cat] of Object.entries(ADJECTIVE_CATEGORIES)) {
+    if (cat.words.has(w)) return { order: Number(order), category: cat.name };
+  }
+  return null;
+}
+
+function validateDescriptionSentence(sentence: string, targetDemonstrative: string | null = null): { valid: boolean; error?: string } {
+  const clean = String(sentence || '').trim().replace(/[.,!?;:]+$/, '').toLowerCase();
+  const tokens = clean.split(/\s+/).filter(Boolean);
+  if (tokens.length < 5) {
+    return { valid: false, error: 'Kalimat terlalu pendek.' };
+  }
+
+  const demo = tokens[0];
+  if (!['this', 'that', 'these', 'those'].includes(demo)) {
+    return { valid: false, error: 'Harus diawali demonstrative pronoun (This, That, These, atau Those).' };
+  }
+
+  if (targetDemonstrative && demo !== targetDemonstrative.toLowerCase().trim()) {
+    return { valid: false, error: `Target demonstrative mismatch.` };
+  }
+
+  const isSingular = (demo === 'this' || demo === 'that');
+  const tobe = tokens[1];
+  if (isSingular && tobe !== 'is') return { valid: false, error: 'To-be must be is.' };
+  if (!isSingular && tobe !== 'are') return { valid: false, error: 'To-be must be are.' };
+
+  let idx = 2;
+  if (isSingular && (tokens[idx] === 'a' || tokens[idx] === 'an')) {
+    idx++;
+  }
+
+  const remaining = tokens.slice(idx);
+  if (remaining.length < 4) return { valid: false, error: 'Insufficient adjectives/noun.' };
+
+  const noun = remaining[remaining.length - 1];
+  const adjTokens = remaining.slice(0, remaining.length - 1);
+  if (adjTokens.length !== 3) return { valid: false, error: 'Must have exactly 3 adjectives.' };
+
+  const nounPlural = isPluralNoun(noun);
+  if (isSingular && nounPlural) return { valid: false, error: 'Singular demo requires singular noun.' };
+  if (!isSingular && !nounPlural) return { valid: false, error: 'Plural demo requires plural noun.' };
+
+  const classified: Array<{ word: string; order: number; category: string }> = [];
+  for (const adj of adjTokens) {
+    const c = classifyAdjective(adj);
+    if (!c) return { valid: false, error: `Unrecognized adjective: ${adj}` };
+    classified.push({ word: adj, ...c });
+  }
+
+  for (let i = 0; i < classified.length - 1; i++) {
+    if (classified[i].order >= classified[i + 1].order) {
+      return { valid: false, error: 'Adjective order violation.' };
+    }
+  }
+
+  return { valid: true };
+}
+
 function evaluateStudentAnswer(
   studentAnswer: string,
   validAnswers: string[],
-  isSpeech: boolean = false
+  isSpeech: boolean = false,
+  isDescription: boolean = false
 ): { result: string; score: number; is_correct: boolean; similarity_score: number } {
+  if (isDescription) {
+    let targetDemo: string | null = null;
+    for (const v of validAnswers) {
+      const m = String(v).toLowerCase().trim().match(/\b(this|that|these|those)\b/);
+      if (m) { targetDemo = m[1]; break; }
+    }
+    const dRes = validateDescriptionSentence(studentAnswer, targetDemo);
+    if (dRes.valid) {
+      return { result: "correct", score: 1.0, is_correct: true, similarity_score: 1.0 };
+    } else {
+      return { result: "incorrect", score: 0.0, is_correct: false, similarity_score: 0.0 };
+    }
+  }
+
   const normStudent = cleanPunctuationAndSymbols(studentAnswer);
   const compactStudent = stripAllPunctuationAndSpaces(studentAnswer);
 
@@ -494,8 +656,11 @@ Deno.serve(async (req) => {
       const isSpeech = row.question_snapshot?.answer_type === "spoken" ||
                        row.question_type_snapshot === "spoken" ||
                        row.answer_type === "spoken";
+      const isDescription = row.question_snapshot?.answer_type === "description" ||
+                            row.question_type_snapshot === "description" ||
+                            row.answer_type === "description";
 
-      const evalResult = evaluateStudentAnswer(studentAns, validAnswers, isSpeech);
+      const evalResult = evaluateStudentAnswer(studentAns, validAnswers, isSpeech, isDescription);
 
       // Only accumulate score for rows that are part of this submission
       if (isInSubmit) {

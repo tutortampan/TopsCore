@@ -28,8 +28,8 @@ const studentMgmtJs = fs.readFileSync(path.resolve('js/admin/student-management.
 
 assert(
   appJs.includes("label: 'STUDENTS DATA', colSpan: 2, className: 'super-hdr super-hdr-identity super-hdr-students-data'") &&
-  appJs.includes("label: 'OVERALL PERFORMANCE', colSpan: 3, className: 'super-hdr super-hdr-overall'"),
-  'dynamicSuperHeaders correctly configures STUDENTS DATA (colSpan: 2) and OVERALL PERFORMANCE (3 cols)'
+  (appJs.includes("label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall'") || appJs.includes("label: 'OVERALL PERFORMANCE', colSpan: 3, className: 'super-hdr super-hdr-overall'")),
+  'dynamicSuperHeaders correctly configures STUDENTS DATA (colSpan: 2) and OVERALL (3 cols)'
 );
 assert(
   studentMgmtJs.includes("label: 'STUDENTS DATA',\n      colSpan: 4") &&

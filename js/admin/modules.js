@@ -140,7 +140,7 @@ export async function renderModules(area) {
   if (topbarTabsEl) {
     topbarTabsEl.innerHTML = `
       <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#f8fafc;">Modules (Core Engines)</span>
+        <span style="font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Inter', sans-serif); color:#f8fafc;">Modules (Core Engines)</span>
         <span style="color:#64748b; font-size:12px;">—</span>
         <span style="font-size:12px; color:#94a3b8; font-weight:500;">Central warehouse for the 8 core AI evaluation engines &amp; class assignment mapping</span>
       </div>
@@ -196,7 +196,7 @@ export async function renderModules(area) {
 
               <!-- Standardized 40px Title Area (Invariant 1.5.1) -->
               <div class="title-area" style="height: 40px !important; min-height: 40px !important; max-height: 40px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin-bottom: 8px; flex-shrink: 0;">
-                <h3 style="font-size: 16px; font-family: var(--fm-font-display, 'Outfit', sans-serif); font-weight: 700; color: #f8fafc; margin: 0; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.2;">
+                <h3 style="font-size: 16px; font-family: var(--fm-font-display, 'Inter', sans-serif); font-weight: 700; color: #f8fafc; margin: 0; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.2;">
                   ${escapeHtml(mod.name)}
                 </h3>
                 <span style="font-size: 12px; font-weight: 700; color: var(--primary-tactical, #38bdf8); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">

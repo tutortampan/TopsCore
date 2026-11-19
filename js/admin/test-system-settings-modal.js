@@ -47,7 +47,7 @@ export async function openTestSystemSettingsModal(options = {}) {
         background: #7c3aed !important; box-sizing: border-box; padding: 0 10px;
       }
       #test-system-settings-modal .title-area h2 {
-        margin: 0; font-family: var(--fm-font-display, 'Outfit', sans-serif);
+        margin: 0; font-family: var(--fm-font-display, 'Inter', sans-serif);
         font-size: 16px; font-weight: 800; text-transform: uppercase;
         letter-spacing: 0.05em; color: #ffffff; text-align: center;
       }
@@ -79,7 +79,7 @@ export async function openTestSystemSettingsModal(options = {}) {
       #test-system-settings-modal .btn-cta-close {
         height: 40px !important; min-height: 40px !important; max-height: 40px !important;
         line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-        font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-size: 14px !important;
+        font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
         font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
         background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
         color: #94a3b8; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box;
@@ -92,7 +92,7 @@ export async function openTestSystemSettingsModal(options = {}) {
       #test-system-settings-modal .btn-cta-save {
         height: 40px !important; min-height: 40px !important; max-height: 40px !important;
         line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-        font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-size: 14px !important;
+        font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
         font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
         background: #7c3aed !important; color: #ffffff !important; border: none; cursor: pointer;
         display: inline-flex; align-items: center; justify-content: center; gap: 8px;

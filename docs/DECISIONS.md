@@ -1836,3 +1836,34 @@ Status: ACCEPTED
    - Cleaned up duplicate Theme `A` assignment from Evnikom, ensuring Theme `A` Level 1 is cleanly assigned to Camp.
    - Updated database test records in `tests` for Evnikom (`EVN-VCB-0G1-TASK`, `EVN-VCB-0G2-TASK`, `EVN-VCB-0G-EXAM`) and Sheraton (`SHR-VCB-0A1-TASK`, `SHR-VCB-0A-EXAM`).
 
+## DECISION-062 — Authoritative Test Duration & Pacing SSOT (Words 10s & Phrases 20s with Tutor Manual Override Authority)
+
+**Date:** 2026-11-19
+**Status:** Approved & Enforced
+
+### Context
+Standardizing test pacing across the platform is critical for consistent exam difficulty, equitable timer evaluation, and accurate auto-generation of assessment shells. Previously, arbitrary pacing formulas (15s, 20s, 30s) varied across different test generators and modalities.
+
+### Decision
+1. **Authoritative Standard Pacing (SSOT)**:
+   - **Per Word**: Strictly **10 seconds** per word/question.
+   - **Per Phrase**: Strictly **20 seconds** per phrase/question.
+2. **Auto-Generation & Blueprint Benchmark Formula**:
+   - `Words Task/Exam Duration (minutes)` = $\lceil (\text{Word Count} \times 10) / 60 \rceil$.
+     * Example: 40 Words Task $\rightarrow 40 \times 10 = 400\text{s} \rightarrow$ **7 minutes**.
+     * Example: 80 Words Exam $\rightarrow 80 \times 10 = 800\text{s} \rightarrow$ **14 minutes**.
+     * Example: 160 Words Exam $\rightarrow 160 \times 10 = 1600\text{s} \rightarrow$ **27 minutes**.
+   - `Phrases Task/Exam Duration (minutes)` = $\lceil (\text{Phrase Count} \times 20) / 60 \rceil$.
+     * Example: 10 Phrases Task $\rightarrow 10 \times 20 = 200\text{s} \rightarrow$ **4 minutes**.
+     * Example: 20 Phrases Exam $\rightarrow 20 \times 20 = 400\text{s} \rightarrow$ **7 minutes**.
+3. **Tutor Manual Duration Override Authority**:
+   - The auto-calculated benchmark serves as the authoritative default during generation and fallback runtime.
+   - Tutors and Admins retain explicit authority to set or override test durations manually (`working_duration_minutes`).
+   - If a manual duration $> 0$ is specified, it strictly takes precedence over the auto-calculated benchmark.
+4. **Implementation Across System**:
+   - `js/api.js` (`calculateAutoDurationMinutes`): rate defaults to 10s (words) and 20s (phrases), with `minMinutes = 1`.
+   - `supabase/functions/start-test/index.ts`: fallback pacing updated to 10s (words) and 20s (phrases), respecting `test.working_duration_minutes` first.
+   - `js/test.js` (`applySectionFilter`): computes section expiration using 10s/word and 20s/phrase unless a manual duration is configured.
+   - `js/admin/auto-gen-modal.js`: defaults wizard inputs to 10s/word and 20s/phrase, with real-time recalculation and manual duration input support.
+   - `js/admin/app.js`: table datagrid honors tutor manual duration before falling back to auto-calculation.
+

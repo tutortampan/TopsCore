@@ -1,5 +1,5 @@
 import { openQuickAlumniGraduateModal } from './quick-score-wizards.js?v=20261115_v549';
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal } from '../api.js?v=20261114_v517';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal, adminApplyForgiven } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261112_v423';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261112_v423';
@@ -138,6 +138,7 @@ export async function renderStudents(area, options = {}) {
   if (isAlumniPanel) {
     window._isAlumniMainPanel = true;
   }
+  window.renderStudents = (targetArea, opts) => renderStudents(targetArea || area || document.getElementById('admin-content-area'), opts || { isAlumniPanel });
   // 1. Resolve Master / Catalog References (Ultra-lean in-memory cache hit)
   const [allLevels, allPrograms, allBatches, allTests, allClasses] = await Promise.all([
     adminFetchAll('levels', 'id, name, level_number'),
@@ -692,18 +693,10 @@ export async function renderStudents(area, options = {}) {
       if (cache[s.id]) localDemographics = cache[s.id];
     } catch (_) {}
 
-    const studentProvince = (localDemographics.province || s.province || (s.is_active !== false && (s.gender || s.education) ? 'Nusa Tenggara Barat' : '')).trim();
-    const studentCity = (localDemographics.city || s.city || (s.is_active !== false && (s.gender || s.education) ? 'Kota Mataram' : '')).trim();
-    let studentDistrict = (localDemographics.district || s.district || '').trim();
-    let studentVillage = (localDemographics.village || s.village || '').trim();
-
-    // Auto-populate district and village per user directive:
-    // District = Administrative Center of Regency; Village = Location of District Office
-    if (!studentDistrict || !studentVillage || studentDistrict === '—' || studentVillage === '—') {
-      const defCenter = getDefaultDistrictAndVillage(studentCity, studentProvince);
-      if (!studentDistrict || studentDistrict === '—') studentDistrict = defCenter.district;
-      if (!studentVillage || studentVillage === '—') studentVillage = defCenter.village;
-    }
+    const studentProvince = (localDemographics.province || s.province || '').trim();
+    const studentCity = (localDemographics.city || s.city || '').trim();
+    const studentDistrict = (localDemographics.district || s.district || '').trim();
+    const studentVillage = (localDemographics.village || s.village || '').trim();
 
     const rowObj = {
       ...s,
@@ -1074,10 +1067,17 @@ export async function renderStudents(area, options = {}) {
     const toggleEditBtn = document.getElementById('btn-toggle-roster-edit-mode');
     if (toggleEditBtn) {
       toggleEditBtn.onclick = () => {
+        if (document.activeElement && typeof document.activeElement.blur === 'function') {
+          document.activeElement.blur();
+        }
         if (typeof window.toggleGlobalEditMode === 'function') {
           const newState = window.toggleGlobalEditMode();
           syncStudentRosterBottomInfobar();
           showToast(newState ? 'Master Edit Mode ON (Inline Excel Grid)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+          // If turning OFF edit mode in Raport view, refresh table to recalculate aggregated totals
+          if (!newState && window._studentRosterTab === 'raport') {
+            renderStudents(area, { isAlumniPanel });
+          }
         }
       };
     }
@@ -1653,7 +1653,7 @@ export async function renderStudents(area, options = {}) {
     }
 
     const examAttempts = studentAttempts.filter(isExamAttempt);
-    const targetAttempts = examAttempts.length > 0 ? examAttempts : studentAttempts;
+    const targetAttempts = examAttempts; // Strictly exams only for official academic report (zero formative tasks)
 
     // Best attempt per test
     const bestByTest = new Map();
@@ -1717,9 +1717,75 @@ export async function renderStudents(area, options = {}) {
       byClass.get(clsId).exams.push({
         pts,
         maxQ,
-        effPct
+        effPct,
+        testId: att.test_id,
+        attemptId: att.id,
+        hasAttempt: true,
+        title: att.tests?.title || 'Exam'
       });
     });
+
+    // Augment with curriculum classes for student's program to enable full calibration in report
+    try {
+      const sb = await getSupabase();
+      let q = sb.from('classes')
+        .select('id, name, code, program_id, level_id, levels(id, name, level_number)')
+        .eq('is_active', true);
+      if (rec.program_id) q = q.eq('program_id', rec.program_id);
+      const { data: progCls } = await q;
+      if (progCls && progCls.length > 0) {
+        const cIds = progCls.map(c => c.id);
+        const { data: progTsts } = await sb.from('tests')
+          .select('id, title, test_type, shell_code, class_id, level_id, payload, total_questions')
+          .in('class_id', cIds);
+
+        (progCls || []).forEach(cls => {
+          const clsExams = (progTsts || []).filter(t => t.class_id === cls.id && isExamAttempt({ tests: t }));
+          if (clsExams.length === 0) return;
+
+          if (!byClass.has(cls.id)) {
+            const exList = clsExams.map(ex => {
+              const maxQ = Number(ex.payload?.total_questions || ex.total_questions || 120);
+              return {
+                pts: 0,
+                maxQ,
+                effPct: 0,
+                testId: ex.id,
+                attemptId: null,
+                hasAttempt: false,
+                title: ex.title || 'Exam'
+              };
+            });
+            byClass.set(cls.id, {
+              id: cls.id,
+              name: cls.name,
+              levelName: cls.levels?.name || rec.levelName || '—',
+              levelNumber: cls.levels?.level_number || 1,
+              exams: exList
+            });
+          } else {
+            const classObj = byClass.get(cls.id);
+            clsExams.forEach(ex => {
+              const alreadyHas = classObj.exams.some(e => e.testId === ex.id);
+              if (!alreadyHas) {
+                const maxQ = Number(ex.payload?.total_questions || ex.total_questions || 120);
+                classObj.exams.push({
+                  pts: 0,
+                  maxQ,
+                  effPct: 0,
+                  testId: ex.id,
+                  attemptId: null,
+                  hasAttempt: false,
+                  title: ex.title || 'Exam'
+                });
+              }
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Error augmenting dossier curriculum classes:', err);
+    }
 
     const classList = Array.from(byClass.values());
     // Sort classes by Level Number ascending, then Class Name
@@ -1733,38 +1799,83 @@ export async function renderStudents(area, options = {}) {
       let totalPts = 0;
       let totalMaxQ = 0;
       let totalPctSum = 0;
+      let attemptedCount = 0;
 
       c.exams.forEach(ex => {
-        totalPts += ex.pts;
-        totalMaxQ += ex.maxQ;
-        totalPctSum += ex.effPct;
+        if (ex.hasAttempt) {
+          totalPts += ex.pts;
+          totalMaxQ += ex.maxQ;
+          totalPctSum += ex.effPct;
+          attemptedCount++;
+        }
       });
 
-      const avgPct = c.exams.length > 0 ? Math.round(totalPctSum / c.exams.length) : 0;
-      const grade = (typeof getGrade === 'function') ? getGrade(avgPct) : '—';
-      const displayGrade = grade === 'S' || grade === '★' ? '★' : grade;
-      const color = getExamGradeColor(displayGrade);
-      const desc = getExamGradeDescription(displayGrade, avgPct);
-      const rateColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : color;
-      const ptsDisplay = totalMaxQ > 0 ? `${totalPts} <span style="font-size: 14px; color: #64748b; font-weight: 400;">/ ${totalMaxQ}</span>` : `${totalPts}`;
+      const hasAnyAttempt = attemptedCount > 0;
+      const avgPct = hasAnyAttempt ? Math.round(totalPctSum / attemptedCount) : 0;
+      const grade = hasAnyAttempt ? ((typeof getGrade === 'function') ? getGrade(avgPct) : '—') : '—';
+      const displayGrade = (grade === 'S' || grade === '★') ? '★' : grade;
+      const color = hasAnyAttempt ? getExamGradeColor(displayGrade) : '#64748b';
+      const desc = hasAnyAttempt ? getExamGradeDescription(displayGrade, avgPct) : 'Not Attempted';
+      const rateColor = hasAnyAttempt ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : color) : '#64748b';
+      const ptsDisplay = hasAnyAttempt
+        ? (totalMaxQ > 0 ? `${totalPts} <span style="font-size: 14px; color: #64748b; font-weight: 400;">/ ${totalMaxQ}</span>` : `${totalPts}`)
+        : `<span style="color:#94a3b8;">—</span>`;
 
       return `
-        <tr style="border-bottom: 1px solid #e2e8f0;">
+        <tr style="border-bottom: 1px solid #e2e8f0;" data-class-id="${c.id}">
           <td style="padding: 14px 16px; font-weight: 600; color: #0f172a; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35;">${escapeHtml(c.levelName)}</td>
           <td style="padding: 14px 16px; font-weight: 500; color: #0f172a; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35;">${escapeHtml(c.name)}</td>
-          <td style="padding: 14px 12px; text-align: center; font-size: 16px; font-weight: 600; color: #0f172a; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
-            ${ptsDisplay}
+          <td class="cell-dossier-pts" style="padding: 14px 12px; text-align: center; font-size: 16px; font-weight: 600; color: #0f172a; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+            <div class="dossier-normal-view">
+              ${ptsDisplay}
+            </div>
+            <div class="dossier-edit-view" style="display:none; align-items:center; justify-content:center; gap:6px;">
+              ${c.exams.length === 1 ? `
+                <input type="number" min="0" max="${c.exams[0].maxQ}" step="1"
+                       class="dossier-score-input"
+                       data-student-id="${studentId}"
+                       data-class-id="${c.id}"
+                       data-test-id="${c.exams[0].testId}"
+                       data-max-q="${c.exams[0].maxQ}"
+                       value="${c.exams[0].hasAttempt ? c.exams[0].pts : ''}"
+                       placeholder="${c.exams[0].maxQ}"
+                       style="width:58px;height:30px;font-size:14px;font-weight:700;text-align:center;color:#0f172a;background:#f8fafc;border:1.5px solid #38bdf8;border-radius:4px;padding:2px 4px;font-variant-numeric:tabular-nums;"
+                       onclick="event.stopPropagation();">
+                <span style="font-size:14px;color:#64748b;font-weight:600;">/ ${c.exams[0].maxQ}</span>
+              ` : `
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:center;">
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
+                    ${c.exams.map((ex, exIdx) => `
+                      <div style="display:inline-flex;align-items:center;gap:2px;" title="${escapeHtml(ex.title)}">
+                        <span style="font-size:11px;font-weight:700;color:#64748b;">E${exIdx + 1}:</span>
+                        <input type="number" min="0" max="${ex.maxQ}" step="1"
+                               class="dossier-score-input"
+                               data-student-id="${studentId}"
+                               data-class-id="${c.id}"
+                               data-test-id="${ex.testId}"
+                               data-max-q="${ex.maxQ}"
+                               value="${ex.hasAttempt ? ex.pts : ''}"
+                               placeholder="${ex.maxQ}"
+                               style="width:46px;height:26px;font-size:12px;font-weight:700;text-align:center;color:#0f172a;background:#f8fafc;border:1.5px solid #38bdf8;border-radius:4px;padding:1px 2px;font-variant-numeric:tabular-nums;"
+                               onclick="event.stopPropagation();">
+                      </div>
+                    `).join('')}
+                  </div>
+                  <span style="font-size:12px;color:#64748b;font-weight:600;">Total: <strong class="dossier-sum-pts">${totalPts}</strong> / ${totalMaxQ || (c.exams.reduce((s, e) => s + e.maxQ, 0))}</span>
+                </div>
+              `}
+            </div>
           </td>
-          <td style="padding: 14px 12px; text-align: center; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
-            <span style="font-weight: 700; color: ${rateColor};">${avgPct}%</span>
+          <td class="cell-dossier-rate" style="padding: 14px 12px; text-align: center; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+            <span class="dossier-rate-val" style="font-weight: 700; color: ${rateColor};">${hasAnyAttempt ? `${avgPct}%` : '—'}</span>
           </td>
-          <td style="padding: 12px 10px; text-align: center;">
-            <span class="grade-circle" style="display: inline-flex; width: 34px; height: 34px; border-radius: 50%; align-items: center; justify-content: center; font-family: var(--fm-font-display, 'Outfit', sans-serif); font-weight: 900; font-size: 18px; color: #0f172a; background: ${color}; box-shadow: 0 1px 4px rgba(0,0,0,0.14);">
+          <td class="cell-dossier-grade" style="padding: 12px 10px; text-align: center;">
+            <span class="grade-circle dossier-grade-badge" style="display: inline-flex; width: 34px; height: 34px; border-radius: 50%; align-items: center; justify-content: center; font-family: var(--fm-font-display, 'Inter', sans-serif); font-weight: 900; font-size: 16px; color: #0f172a; background: ${color}; box-shadow: 0 1px 4px rgba(0,0,0,0.14);">
               ${displayGrade}
             </span>
           </td>
-          <td style="padding: 14px 16px; font-weight: 500; color: #1e293b; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35; font-variant-numeric: tabular-nums;">
-            ${escapeHtml(desc)}
+          <td class="cell-dossier-desc" style="padding: 14px 16px; font-weight: 500; color: #1e293b; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35; font-variant-numeric: tabular-nums;">
+            <span class="dossier-desc-val">${escapeHtml(desc)}</span>
           </td>
         </tr>
       `;
@@ -1780,7 +1891,7 @@ export async function renderStudents(area, options = {}) {
       <div class="student-dossier-dialog" style="max-width: 860px; width: 94vw; max-height: 94vh;">
         <!-- Standardized 60px Title Area (§1.5.1 Centered Title & Zero Subtitle Clutter Invariant) -->
         <div class="modal-header title-area dossier-modal-toolbar" style="height: 60px !important; min-height: 60px !important; max-height: 60px !important; padding: 0 16px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; background: #1E293B !important; box-sizing: border-box !important; flex-shrink: 0 !important; margin: 0 !important;">
-          <h3 class="modal-title" style="margin: 0 !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-size: 16px !important; font-weight: 800 !important; color: #ffffff !important; line-height: 1 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; text-align: center !important;">
+          <h3 class="modal-title" style="margin: 0 !important; font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 16px !important; font-weight: 800 !important; color: #ffffff !important; line-height: 1 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; text-align: center !important;">
             STUDENT ACADEMIC REPORT
           </h3>
         </div>
@@ -1789,9 +1900,9 @@ export async function renderStudents(area, options = {}) {
         <div class="dossier-modal-scroll" style="padding: 24px; background: #060911;">
           <div id="student-dossier-sheet" class="student-dossier-sheet student-raport-portrait" style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 36px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; font-family: var(--fm-font-sans, 'Inter', sans-serif);">
 
-            <!-- 1. JUDUL HALAMAN: STUDENT REPORT CARD (32px Outfit 900) -->
+            <!-- 1. JUDUL HALAMAN: STUDENT REPORT CARD (32px Inter 900) -->
             <div class="raport-header-title" style="text-align: center; border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 22px;">
-              <h1 style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 32px; font-weight: 900; color: #0f172a; margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-transform: uppercase;">
+              <h1 style="font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 30px; font-weight: 900; color: #0f172a; margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-transform: uppercase;">
                 STUDENT REPORT CARD
               </h1>
             </div>
@@ -1813,7 +1924,7 @@ export async function renderStudents(area, options = {}) {
                 <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
                   <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Full Name</span>
                   <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 18px; font-weight: 800; color: #0f172a;">${escapeHtml(rec.displayName || rec.name)}</strong>
+                  <strong style="font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(rec.displayName || rec.name)}</strong>
                 </div>
 
                 <!-- Row 2: Sex / Gender -->
@@ -1883,13 +1994,16 @@ export async function renderStudents(area, options = {}) {
           </div>
         </div>
 
-        <!-- Modal Footer CTA Area: CLOSE (Left) | Student Pager (Center) | Export to PDF (Right) -->
+        <!-- Modal Footer CTA Area: CLOSE & EDIT MODE (Left) | Student Pager (Center) | Export to PDF (Right) -->
         <div class="modal-footer" style="height: 56px; min-height: 56px; max-height: 56px; padding: 10px 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.3); flex-shrink: 0; box-sizing: border-box;">
           
-          <!-- Pojok Kiri Bawah: CLOSE Button -->
-          <div style="flex: 1; display: flex; justify-content: flex-start;">
+          <!-- Pojok Kiri Bawah: CLOSE & EDIT MODE Buttons -->
+          <div style="flex: 1; display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
             <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal" style="display: inline-flex !important; align-items: center; justify-content: center; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 22px; border-radius: 6px; cursor: pointer;">
               CLOSE
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-dossier-toggle-edit" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;" title="Toggle Edit Mode to calibrate student scores">
+              ${getSvgIcon('edit', 14)} Edit Mode
             </button>
           </div>
 
@@ -1944,10 +2058,16 @@ export async function renderStudents(area, options = {}) {
     }
 
     // Event wiring & Instant Single-Click Modal Dismissal
+    let hasDossierEdits = false;
+    let isDossierEditOn = false;
+
     const cleanupDossier = (isReverting = true) => {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', syncRaportPhotoHeight);
       document.body.style.overflow = '';
+      if (hasDossierEdits && typeof window.renderStudents === 'function') {
+        window.renderStudents();
+      }
       if (isReverting) {
         const fallback = window._lastSectionBeforeProfile || localStorage.getItem('topscore_admin_last_section') || 'students';
         if (window.history && window.history.replaceState) {
@@ -1967,12 +2087,148 @@ export async function renderStudents(area, options = {}) {
       cleanupDossier(true);
     };
 
-    // Close action (Pojok Kanan Bawah button - Instant 1-Click Close)
+    // Close action (Pojok Kiri Bawah button - Instant 1-Click Close)
     const closeBtn = backdrop.querySelector('#btn-close-dossier-modal');
     if (closeBtn) closeBtn.onclick = (e) => {
       e.stopPropagation();
       closeAllDossierModals();
     };
+
+    // Edit Mode Toggle Button inside Student Academic Report
+    const toggleDossierEditBtn = backdrop.querySelector('#btn-dossier-toggle-edit');
+    if (toggleDossierEditBtn) {
+      toggleDossierEditBtn.onclick = (e) => {
+        e.stopPropagation();
+        isDossierEditOn = !isDossierEditOn;
+        const sheet = backdrop.querySelector('#student-dossier-sheet');
+        if (sheet) {
+          sheet.querySelectorAll('.dossier-normal-view').forEach(el => {
+            el.style.display = isDossierEditOn ? 'none' : 'block';
+          });
+          sheet.querySelectorAll('.dossier-edit-view').forEach(el => {
+            el.style.display = isDossierEditOn ? 'flex' : 'none';
+          });
+        }
+        toggleDossierEditBtn.innerHTML = isDossierEditOn
+          ? `${getSvgIcon('check-circle', 14)} Done Editing`
+          : `${getSvgIcon('edit', 14)} Edit Mode`;
+        toggleDossierEditBtn.style.cssText = isDossierEditOn
+          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+          : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+      };
+    }
+
+    // Direct Inline Score Edit inside Student Academic Report
+    backdrop.addEventListener('change', async (e) => {
+      const target = e.target;
+      if (!target.matches('.dossier-score-input')) return;
+
+      const sId = target.dataset.studentId;
+      const cId = target.dataset.classId;
+      const tId = target.dataset.testId;
+      const maxQ = Number(target.dataset.maxQ) || 120;
+      const valStr = (target.value || '').trim();
+
+      if (!sId || !cId || !tId) return;
+
+      if (valStr === '') return;
+
+      const valNum = Number(valStr);
+      if (isNaN(valNum)) {
+        if (typeof showToast === 'function') showToast('Please enter a valid numeric score.', 'warning');
+        return;
+      }
+
+      const clampedPts = Math.round(Math.max(0, Math.min(maxQ, valNum)));
+      const pct = maxQ > 0 ? Math.round((clampedPts / maxQ) * 100) : 0;
+      const grade = typeof calculateGrade === 'function' ? calculateGrade(pct) : 'C';
+
+      target.value = clampedPts;
+
+      try {
+        if (typeof showLoading === 'function') showLoading('Saving score...');
+        await adminApplyForgiven({
+          classId: cId,
+          studentIds: [sId],
+          testActions: [{
+            testId: tId,
+            action: 'manual',
+            percentage: pct,
+            score: clampedPts,
+            grade
+          }],
+          forgivenBy: 'Mr. Top',
+          reason: 'Student Dossier Direct Edit'
+        });
+
+        hasDossierEdits = true;
+        if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+
+        // Update the row display live
+        const tr = target.closest('tr');
+        if (tr) {
+          const inputsInRow = Array.from(tr.querySelectorAll('.dossier-score-input'));
+          let rowTotalPts = 0;
+          let rowTotalMaxQ = 0;
+          let rowPctSum = 0;
+          let count = 0;
+          inputsInRow.forEach(inp => {
+            const v = (inp.value || '').trim();
+            if (v !== '') {
+              const p = Number(v) || 0;
+              const m = Number(inp.dataset.maxQ) || 120;
+              rowTotalPts += p;
+              rowTotalMaxQ += m;
+              rowPctSum += (m > 0 ? (p / m) * 100 : 0);
+              count++;
+            }
+          });
+          const rowAvgPct = count > 0 ? Math.round(rowPctSum / count) : 0;
+          const rowGrade = count > 0 ? ((typeof getGrade === 'function') ? getGrade(rowAvgPct) : '—') : '—';
+          const rowDisplayGrade = (rowGrade === 'S' || rowGrade === '★') ? '★' : rowGrade;
+          const rowColor = count > 0 ? getExamGradeColor(rowDisplayGrade) : '#64748b';
+          const rowRateColor = count > 0 ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rowAvgPct) : rowColor) : '#64748b';
+          const rowDesc = count > 0 ? getExamGradeDescription(rowDisplayGrade, rowAvgPct) : 'Not Attempted';
+
+          const normalView = tr.querySelector('.dossier-normal-view');
+          if (normalView) {
+            normalView.innerHTML = count > 0
+              ? (rowTotalMaxQ > 0 ? `${rowTotalPts} <span style="font-size: 14px; color: #64748b; font-weight: 400;">/ ${rowTotalMaxQ}</span>` : `${rowTotalPts}`)
+              : `<span style="color:#94a3b8;">—</span>`;
+          }
+          const sumPtsEl = tr.querySelector('.dossier-sum-pts');
+          if (sumPtsEl) sumPtsEl.textContent = rowTotalPts;
+
+          const rateVal = tr.querySelector('.dossier-rate-val');
+          if (rateVal) {
+            rateVal.textContent = count > 0 ? `${rowAvgPct}%` : '—';
+            rateVal.style.color = rowRateColor;
+          }
+
+          const gradeBadge = tr.querySelector('.dossier-grade-badge');
+          if (gradeBadge) {
+            gradeBadge.textContent = rowDisplayGrade;
+            gradeBadge.style.background = rowColor;
+          }
+
+          const descVal = tr.querySelector('.dossier-desc-val');
+          if (descVal) descVal.textContent = rowDesc;
+        }
+
+        if (typeof showToast === 'function') showToast(`✓ Score saved: ${clampedPts} pts (${pct}%)`, 'success', 2000);
+      } catch (err) {
+        console.error('Error saving dossier score:', err);
+        if (typeof showToast === 'function') showToast('Failed to save score: ' + (err.message || err), 'error');
+      } finally {
+        if (typeof hideLoading === 'function') hideLoading();
+      }
+    });
+
+    backdrop.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.target.matches('.dossier-score-input')) {
+        e.target.blur();
+      }
+    });
 
     backdrop.onclick = (e) => {
       if (e.target === backdrop) {
@@ -2061,11 +2317,11 @@ export async function renderStudents(area, options = {}) {
       if (e.key === 'Escape') {
         backdrop.remove();
         cleanupDossier(true);
-      } else if (e.key === 'ArrowLeft' && hasPrev && !isEditingRaport) {
+      } else if (e.key === 'ArrowLeft' && hasPrev && !isDossierEditOn) {
         backdrop.remove();
         cleanupDossier(false);
         window.showStudentDossierModal(prevId);
-      } else if (e.key === 'ArrowRight' && hasNext && !isEditingRaport) {
+      } else if (e.key === 'ArrowRight' && hasNext && !isDossierEditOn) {
         backdrop.remove();
         cleanupDossier(false);
         window.showStudentDossierModal(nextId);
@@ -2112,93 +2368,111 @@ export async function renderStudents(area, options = {}) {
   const perClassColDefs = activeClassColumns.flatMap(cls => {
     const classAllTests = (testsByClass.get(cls.id) || []).slice().sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
 
-    // Standard multi-theme milestone curriculum (> 6 tests e.g. Camp 2nd / 3rd)
-    if (classAllTests.length > 6) {
+    // Multi-theme milestone curriculum (4 Themes: Exam 1/A, Exam 2/B, Exam 3/C, Exam 4/D):
+    // Covers Camp classes (1st, 2nd, 3rd), classes with > 6 tests, or classes spanning multiple themes (A, B, C, D)
+    const isCampClass = Boolean(cls?.name && /camp/i.test(cls.name)) || Boolean(cls?.code && /^CMP-/i.test(cls.code));
+    const hasMultipleThemes = ['A', 'B', 'C', 'D'].filter(tc =>
+      classAllTests.some(t => t.payload?.theme_code === tc || (t.shell_code && (t.shell_code.includes(`-${tc}-`) || t.shell_code.startsWith(`3${tc}-`))))
+    ).length >= 2;
+    const isMultiTheme = isCampClass || hasMultipleThemes || (classAllTests.length > 6);
+
+    if (isMultiTheme) {
       classColCountMap.set(cls.id, 4);
+
+      const classExams = classAllTests.filter(t => isWeeklyExam(t));
+      const targetExams = classExams.length > 0 ? classExams : classAllTests;
+
+      const findExamForTheme = (tc) => {
+        return targetExams.find(t =>
+          t.payload?.theme_code === tc ||
+          (t.shell_code && (t.shell_code.includes(`-${tc}-`) || t.shell_code.startsWith(`3${tc}-`)))
+        );
+      };
+
+      const getExamTotalQ = (ex, tc) => {
+        let q = Number(ex?.payload?.total_questions || ex?.total_questions || 0);
+        if (q > 0) return q;
+        if (tc === 'A') return 120;
+        if (tc === 'B') return 280;
+        if (tc === 'C') return 480;
+        if (tc === 'D') return 640;
+        return 120;
+      };
+
+      const buildThemeExamCol = (themeCode, colKeySuffix, examLabel, isDivider = false) => {
+        const exObj = findExamForTheme(themeCode);
+        const totalQ = getExamTotalQ(exObj, themeCode);
+        return {
+          key: `_cls_exam${colKeySuffix}_${cls.id}`,
+          label: examLabel,
+          className: isDivider ? 'super-hdr-divider' : '',
+          sortable: true,
+          align: 'center',
+          width: '74px',
+          minWidth: '68px',
+          _classId: cls.id,
+          render: (row) => {
+            const cs = row.perClassFinal?.get(cls.id);
+            const pts = cs?.themes?.[themeCode];
+            const pct = cs?.themeScores?.[themeCode] ?? 0;
+            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+            const formatted = (pts != null && !isNaN(pts)) ? Math.round(Number(pts)) : '';
+            const viewHtml = pts == null
+              ? `<span class="text-muted" style="font-size: 12px;">—</span>`
+              : `<span style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme ${themeCode} Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</span>`;
+
+            if (exObj) {
+              return `
+                <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+                  ${viewHtml}
+                </div>
+                <input type="number"
+                  class="student-inline-input student-inline-score-input text-center"
+                  style="text-align:center !important;"
+                  min="0"
+                  max="${totalQ}"
+                  step="1"
+                  data-student-id="${row.id}"
+                  data-class-id="${cls.id}"
+                  data-test-id="${exObj.id}"
+                  data-total-q="${totalQ}"
+                  data-theme-code="${themeCode}"
+                  value="${formatted}"
+                  placeholder="—"
+                  onclick="event.stopPropagation();">
+              `;
+            }
+            return `
+              <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+                ${viewHtml}
+              </div>
+              <input type="text"
+                class="student-inline-input text-center text-muted"
+                style="text-align:center !important;opacity:0.35;"
+                disabled
+                value="—"
+                onclick="event.stopPropagation();">
+            `;
+          }
+        };
+      };
+
       return [
-        {
-          key: `_cls_exam1_${cls.id}`,
-          label: 'Exam 1',
-          sortable: true,
-          align: 'center',
-          width: '74px',
-          minWidth: '68px',
-          _classId: cls.id,
-          render: (row) => {
-            const cs = row.perClassFinal?.get(cls.id);
-            const pts = cs?.themes?.['A'];
-            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
-            const pct = cs?.themeScores?.['A'] ?? 0;
-            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = Math.round(Number(pts));
-            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme A Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
-          }
-        },
-        {
-          key: `_cls_exam2_${cls.id}`,
-          label: 'Exam 2',
-          sortable: true,
-          align: 'center',
-          width: '74px',
-          minWidth: '68px',
-          _classId: cls.id,
-          render: (row) => {
-            const cs = row.perClassFinal?.get(cls.id);
-            const pts = cs?.themes?.['B'];
-            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
-            const pct = cs?.themeScores?.['B'] ?? 0;
-            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = Math.round(Number(pts));
-            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme B Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
-          }
-        },
-        {
-          key: `_cls_exam3_${cls.id}`,
-          label: 'Exam 3',
-          sortable: true,
-          align: 'center',
-          width: '74px',
-          minWidth: '68px',
-          _classId: cls.id,
-          render: (row) => {
-            const cs = row.perClassFinal?.get(cls.id);
-            const pts = cs?.themes?.['C'];
-            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
-            const pct = cs?.themeScores?.['C'] ?? 0;
-            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = Math.round(Number(pts));
-            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme C Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
-          }
-        },
-        {
-          key: `_cls_exam4_${cls.id}`,
-          label: 'Exam 4',
-          className: 'super-hdr-divider',
-          sortable: true,
-          align: 'center',
-          width: '74px',
-          minWidth: '68px',
-          _classId: cls.id,
-          render: (row) => {
-            const cs = row.perClassFinal?.get(cls.id);
-            const pts = cs?.themes?.['D'];
-            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
-            const pct = cs?.themeScores?.['D'] ?? 0;
-            const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = Math.round(Number(pts));
-            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="Theme D Total Exam Points: ${formatted} pts (${pct}%)">${formatted}</div>`;
-          }
-        }
+        buildThemeExamCol('A', '1', 'Exam 1', false),
+        buildThemeExamCol('B', '2', 'Exam 2', false),
+        buildThemeExamCol('C', '3', 'Exam 3', false),
+        buildThemeExamCol('D', '4', 'Exam 4', true)
       ];
     } else {
-      // Dynamic columns for discrete tests (e.g. Evnikom 1st Vocabulary)
-      const targetTests = classAllTests.length > 0 ? classAllTests : [];
-      classColCountMap.set(cls.id, Math.max(1, targetTests.length));
+      // Dynamic columns for discrete tests (e.g. Evnikom Vocabulary, Sheraton Vocabulary)
+      // SSOT: Student's Raport strictly shows EXAMS ONLY (zero formative tasks)
+      const targetExams = classAllTests.filter(t => isWeeklyExam(t));
+      classColCountMap.set(cls.id, Math.max(1, targetExams.length));
 
-      if (targetTests.length === 0) {
+      if (targetExams.length === 0) {
         return [{
           key: `_cls_empty_${cls.id}`,
-          label: 'No Tests',
+          label: 'No Exams',
           className: 'super-hdr-divider',
           align: 'center',
           width: '90px',
@@ -2207,16 +2481,15 @@ export async function renderStudents(area, options = {}) {
         }];
       }
 
-      return targetTests.map((t, tIdx) => {
-        const isEx = isWeeklyExam(t);
+      return targetExams.map((t, tIdx) => {
         const shell = t.shell_code || '';
-        let shortLabel = shell ? shell.replace('-WORDS-', ' ').replace('-PHRASES-', ' ') : (t.title || 'Test');
+        let shortLabel = shell ? shell.replace('-WORDS-', ' ').replace('-PHRASES-', ' ') : (t.title || 'Exam');
         if (shortLabel.length > 12) {
-          shortLabel = isEx ? `Exam (${t.payload?.theme_code || 'G'})` : `Task (${t.payload?.topic_code || t.display_order})`;
+          shortLabel = `Exam (${t.payload?.theme_code || 'G'})`;
         }
-
+        const totalQ = Number(t.payload?.total_questions || t.total_questions || 100);
         const colKey = `_cls_test_${cls.id}_${t.id}`;
-        const isLastColInClass = (tIdx === targetTests.length - 1);
+        const isLastColInClass = (tIdx === targetExams.length - 1);
         return {
           key: colKey,
           label: shortLabel,
@@ -2230,11 +2503,31 @@ export async function renderStudents(area, options = {}) {
             const cs = row.perClassFinal?.get(cls.id);
             const tScore = cs?.testScores?.get(t.id);
             const pts = tScore?.pts;
-            if (pts == null) return `<span class="text-muted" style="font-size: 12px;">—</span>`;
             const pct = tScore?.pct ?? 0;
             const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
-            const formatted = Math.round(Number(pts));
-            return `<div style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="${escapeHtml(t.title)}: ${formatted} pts (${pct}%)">${formatted}</div>`;
+            const formatted = (pts != null && !isNaN(pts)) ? Math.round(Number(pts)) : '';
+            const viewHtml = pts == null
+              ? `<span class="text-muted" style="font-size: 12px;">—</span>`
+              : `<span style="font-size: 12px;font-weight:500;color:${color} !important;font-variant-numeric:tabular-nums;white-space:nowrap !important;" title="${escapeHtml(t.title)}: ${formatted} pts (${pct}%)">${formatted}</span>`;
+
+            return `
+              <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+                ${viewHtml}
+              </div>
+              <input type="number"
+                class="student-inline-input student-inline-score-input text-center"
+                style="text-align:center !important;"
+                min="0"
+                max="${totalQ}"
+                step="1"
+                data-student-id="${row.id}"
+                data-class-id="${cls.id}"
+                data-test-id="${t.id}"
+                data-total-q="${totalQ}"
+                value="${formatted}"
+                placeholder="—"
+                onclick="event.stopPropagation();">
+            `;
           }
         };
       });
@@ -2283,9 +2576,9 @@ export async function renderStudents(area, options = {}) {
         });
       }
 
-      // Group 3: OVERALL PERFORMANCE (Colspan 3: DONE, PTS, GRD)
+      // Group 3: OVERALL (Colspan 3: DONE, PTS, GRD)
       sh.push({
-        label: 'OVERALL PERFORMANCE',
+        label: 'OVERALL',
         colSpan: 3,
         className: 'super-hdr super-hdr-overall',
         style: 'background:#121e33; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
@@ -2815,18 +3108,16 @@ export async function renderStudents(area, options = {}) {
         render: (row) => {
           const rawCity = (row.city || '').trim();
           const rawDist = (row.district || '').trim();
-          const def = getDefaultDistrictAndVillage(rawCity, row.province);
-          const effectiveDist = rawDist || def.district;
-          const rawVillage = (row.village || def.village || '').trim();
-          const displayVillage = formatVillageName(rawVillage);
+          const rawVillage = (row.village || '').trim();
+          const displayVillage = (rawVillage && rawVillage !== '—') ? formatVillageName(rawVillage) : '—';
 
-          const villagesList = getVillagesForDistrict(rawCity, effectiveDist);
+          const villagesList = (rawCity && rawCity !== '—' && rawDist && rawDist !== '—') ? getVillagesForDistrict(rawCity, rawDist) : [];
           const villageOptionsHtml = (villagesList && villagesList.length > 0)
-            ? villagesList.map(v => {
+            ? `<option value="" ${!rawVillage ? 'selected' : ''}>—</option>` + villagesList.map(v => {
                 const isSel = formatVillageName(v).toLowerCase() === displayVillage.toLowerCase();
                 return `<option value="${v}" ${isSel ? 'selected' : ''}>${escapeHtml(formatVillageName(v))}</option>`;
               }).join('')
-            : `<option value="${rawVillage}" selected>${escapeHtml(displayVillage)}</option>`;
+            : `<option value="${rawVillage || ''}" selected>${escapeHtml(displayVillage)}</option>`;
 
           return `
             <div class="student-cell-view" title="${escapeHtml(displayVillage)}">
@@ -2849,17 +3140,16 @@ export async function renderStudents(area, options = {}) {
         minWidth: '120px',
         render: (row) => {
           const rawCity = (row.city || '').trim();
-          const def = getDefaultDistrictAndVillage(rawCity, row.province);
-          const rawDistrict = (row.district || def.district || '').trim();
-          const displayDistrict = formatDistrictName(rawDistrict);
+          const rawDistrict = (row.district || '').trim();
+          const displayDistrict = (rawDistrict && rawDistrict !== '—') ? formatDistrictName(rawDistrict) : '—';
 
-          const districtsList = getDistrictsForCity(rawCity);
+          const districtsList = (rawCity && rawCity !== '—') ? getDistrictsForCity(rawCity) : [];
           const districtOptionsHtml = (districtsList && districtsList.length > 0)
-            ? districtsList.map(d => {
+            ? `<option value="" ${!rawDistrict ? 'selected' : ''}>—</option>` + districtsList.map(d => {
                 const isSel = formatDistrictName(d).toLowerCase() === displayDistrict.toLowerCase();
                 return `<option value="${d}" ${isSel ? 'selected' : ''}>${escapeHtml(formatDistrictName(d))}</option>`;
               }).join('')
-            : `<option value="${rawDistrict}" selected>${escapeHtml(displayDistrict)}</option>`;
+            : `<option value="${rawDistrict || ''}" selected>${escapeHtml(displayDistrict)}</option>`;
 
           return `
             <div class="student-cell-view" title="${escapeHtml(displayDistrict)}">
@@ -2882,10 +3172,10 @@ export async function renderStudents(area, options = {}) {
         minWidth: '150px',
         render: (row) => {
           const rawCity = (row.city || '').trim();
-          const displayCity = formatCityDistrict(rawCity);
+          const displayCity = (rawCity && rawCity !== '—') ? formatCityDistrict(rawCity) : '—';
 
-          const rawProv = (row.province || '').trim() || 'Nusa Tenggara Barat';
-          let canonicalProv = rawProv;
+          const rawProv = (row.province || '').trim();
+          let canonicalProv = rawProv || 'Nusa Tenggara Barat';
           if (typeof PROVINCE_DISPLAY_MAP !== 'undefined') {
             for (const [fullName, shortName] of Object.entries(PROVINCE_DISPLAY_MAP)) {
               if (rawProv.toLowerCase() === shortName.toLowerCase() || rawProv.toLowerCase() === fullName.toLowerCase()) {
@@ -2926,7 +3216,7 @@ export async function renderStudents(area, options = {}) {
         minWidth: '150px',
         render: (row) => {
           const rawProv = (row.province || '').trim();
-          const displayVal = formatProvinceName(rawProv);
+          const displayVal = (rawProv && rawProv !== '—') ? formatProvinceName(rawProv) : '—';
           const provKeys = (typeof INDONESIA_REGIONS !== 'undefined')
             ? Object.keys(INDONESIA_REGIONS).sort((a, b) => a.localeCompare(b, 'en'))
             : [];
@@ -3029,7 +3319,7 @@ export async function renderStudents(area, options = {}) {
           const color = row.overallColor || '#94a3b8';
           return `
             <div style="display:flex;align-items:center;justify-content:center;">
-              <span class="grade-circle" style="background:${color};color:#0f172a;font-weight:800;font-size:11px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;" title="Overall Grade: ${grd}">${grd}</span>
+              <span class="grade-circle" style="background:${color};color:#0f172a;font-weight:800;font-size:12px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;" title="Overall Grade: ${grd}">${grd}</span>
             </div>
           `;
         }
@@ -3146,6 +3436,93 @@ export async function renderStudents(area, options = {}) {
   // Attach Inline Editing Auto-Save Listeners
   gridContainer.addEventListener('change', async (e) => {
     const target = e.target;
+
+    // Raport View Direct Inline Score Edit
+    if (target.matches('.student-inline-score-input')) {
+      const studentId = target.dataset.studentId;
+      const classId = target.dataset.classId;
+      const testId = target.dataset.testId;
+      const totalQ = Number(target.dataset.totalQ) || 120;
+      const themeCode = target.dataset.themeCode;
+      const valStr = (target.value || '').trim();
+
+      if (!studentId || !testId || !classId) return;
+
+      const cell = target.closest('td');
+
+      if (valStr === '') {
+        return;
+      }
+
+      const valNum = Number(valStr);
+      if (isNaN(valNum)) {
+        showToast('Please enter a valid numeric score.', 'warning');
+        return;
+      }
+
+      const clampedPts = Math.round(Math.max(0, Math.min(totalQ, valNum)));
+      const pct = totalQ > 0 ? Math.round((clampedPts / totalQ) * 100) : 0;
+      const grade = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'C');
+
+      target.value = clampedPts;
+
+      try {
+        if (typeof showLoading === 'function') showLoading('Saving score...');
+        await adminApplyForgiven({
+          classId,
+          studentIds: [studentId],
+          testActions: [{
+            testId,
+            action: 'manual',
+            percentage: pct,
+            score: clampedPts,
+            grade
+          }],
+          forgivenBy: 'Mr. Top',
+          reason: 'Student Raport Direct Inline Edit'
+        });
+
+        if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+
+        // Visual feedback: green cell highlight
+        if (cell) {
+          const origBg = cell.style.background;
+          cell.style.background = 'rgba(0, 192, 0, 0.25)';
+          setTimeout(() => { cell.style.background = origBg; }, 600);
+
+          const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+          const viewSpan = cell.querySelector('.student-cell-view span');
+          if (viewSpan) {
+            viewSpan.textContent = clampedPts;
+            viewSpan.style.color = color;
+            viewSpan.className = '';
+          }
+        }
+
+        // Update in-memory row data
+        const s = filteredGridData.find(x => x.id === studentId);
+        if (s && s.perClassFinal) {
+          const cs = s.perClassFinal.get(classId);
+          if (cs) {
+            if (themeCode) {
+              cs.themes[themeCode] = clampedPts;
+              cs.themeScores[themeCode] = pct;
+            } else if (cs.testScores) {
+              cs.testScores.set(testId, { pts: clampedPts, pct, maxQ: totalQ });
+            }
+          }
+        }
+
+        showToast(`Score saved: ${clampedPts} pts (${pct}%)`, 'success', 2500);
+      } catch (err) {
+        console.error('Save inline score error:', err);
+        showToast('Failed to save score: ' + (err.message || err), 'error');
+      } finally {
+        if (typeof hideLoading === 'function') hideLoading();
+      }
+      return;
+    }
+
     if (target.matches('.student-inline-input, .student-inline-select')) {
       const studentId = target.dataset.id;
       const field = target.dataset.field;

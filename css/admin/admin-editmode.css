@@ -64,6 +64,10 @@ body.class-manual-edit-on .input-matrix-task-progress {
   box-sizing: border-box !important;
 }
 
+body.global-edit-mode-on .student-inline-input,
+body.global-edit-mode-on .student-inline-select {
+  display: block !important;
+}
 body:not(.global-edit-mode-on) .student-inline-input,
 body:not(.global-edit-mode-on) .student-inline-select {
   display: none !important;

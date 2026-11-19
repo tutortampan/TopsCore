@@ -3,7 +3,7 @@
    Dark mode, glassmorphism, micro-animations
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
 /* ============================================================
    CSS CUSTOM PROPERTIES
@@ -103,8 +103,8 @@
   /* Soft slate - clearly legible for subtitles, labels & hints */
 
   /* Typography */
-  --font-display: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: 'Inter', sans-serif;
+  --font-body: 'Inter', sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 
   /* Spacing */
@@ -220,16 +220,16 @@ h6 {
 }
 
 h1 {
-  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-size: 40px;
   font-weight: 800;
 }
 
 h2 {
-  font-size: clamp(1.5rem, 3.5vw, 2.25rem);
+  font-size: 30px;
 }
 
 h3 {
-  font-size: clamp(1.2rem, 2.5vw, 1.75rem);
+  font-size: 20px;
 }
 
 h4 {
@@ -2024,7 +2024,7 @@ table td .grade-circle.grade-circle-s,
 
 /* TopsCore Banner */
 body {
-  padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 .topscore-locked-banner,
@@ -2034,9 +2034,9 @@ body {
   right: 0 !important;
   bottom: 0 !important;
   width: 100% !important;
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
   background-color: #030a12 !important;
   border-top: 1px solid rgba(56, 189, 248, 0.25) !important;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.6) !important;
@@ -2046,9 +2046,9 @@ body {
   justify-content: flex-start !important;
   text-align: left !important;
   padding-left: clamp(16px, 4vw, 24px) !important;
-  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   letter-spacing: 0.04em !important;
   z-index: 99999 !important;
   /* Highest layer */
@@ -2071,7 +2071,7 @@ body.test-page {
 
 .topscore-locked-banner .banner-brand,
 #bottom-ad-banner .banner-brand {
-  font-size: clamp(1.05rem, 3vw, 1.25rem) !important;
+  font-size: 16px !important;
   font-weight: 900 !important;
   color: #38bdf8 !important;
   letter-spacing: 0.05em !important;
@@ -2086,7 +2086,7 @@ body.test-page {
 
 .topscore-locked-banner .banner-author,
 #bottom-ad-banner .banner-author {
-  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-size: 16px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.02em !important;
@@ -2212,7 +2212,7 @@ button:hover .tc-icon,
   gap: 8px;
   padding: 6px 14px;
   border-radius: 999px;
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.01em;
@@ -2258,6 +2258,31 @@ button:hover .tc-icon,
 @keyframes pwaPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+/* ==========================================================================
+   UNIVERSAL NETLIFY BADGE & FLOATING INJECTIONS PURGE
+   ========================================================================== */
+a[href*="netlify.com"],
+:has(> a[href*="netlify.com"]),
+.netlify-badge,
+#netlify-badge,
+[data-netlify-badge],
+iframe[src*="netlify"],
+netlify-drawer,
+div:has(> a[href*="netlify.com"]) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  bottom: -9999px !important;
+  z-index: -9999 !important;
 }
 
 

@@ -856,7 +856,7 @@ Deno.serve(async (req) => {
         });
       }
     } else {
-      snapQuestions = [];
+      snapQuestions = test.payload?.questions || [];
     }
 
     if (!snapQuestions || snapQuestions.length === 0) {
@@ -872,22 +872,15 @@ Deno.serve(async (req) => {
     // 9. Create New Attempt
     const isPhrase = test.test_subtype?.includes('PHRASE') || (test.shell_code && test.shell_code.includes('PHRASE')) || test.category === 'phrases' || test.payload?.category === 'phrases';
 
-    let durationMinutes = test.working_duration_minutes || 60;
-    if (isSelfPacedRetake) {
-      // 24/7 Self-Paced Retake: auto-calibrate duration (15s Words, 20s Phrases)
-      const pace = isPhrase ? 20 : 15;
-      durationMinutes = Math.max(5, Math.ceil((snapQuestions.length * pace) / 60));
-    } else if (test.test_type === 'quiz') {
-      const pace = isPhrase ? 20 : 15;
-      durationMinutes = test.working_duration_minutes || Math.max(5, Math.ceil((snapQuestions.length * pace) / 60));
-    } else if (test.test_type === 'exam') {
-      if (effectiveEnd) {
-        const diffMs = new Date(effectiveEnd).getTime() - now.getTime();
-        durationMinutes = Math.max(5, Math.ceil(diffMs / (60 * 1000)));
-      } else {
-        const pace = dynamicAnswerType === 'written' ? 30 : (dynamicAnswerType === 'selection' ? 20 : (isPhrase ? 20 : 15));
-        durationMinutes = test.working_duration_minutes || Math.max(5, Math.ceil((snapQuestions.length * pace) / 60));
-      }
+    // Standar Pacing SSOT (DECISION-062): 10s per word & 20s per phrase (prioritizes tutor manual override if set)
+    let manualDuration = Number(test.working_duration_minutes || test.payload?.working_duration_minutes || 0);
+    const ssotPace = isPhrase ? 20 : 10;
+    const autoCalcMinutes = Math.max(1, Math.ceil((snapQuestions.length * ssotPace) / 60));
+
+    let durationMinutes = manualDuration > 0 ? manualDuration : autoCalcMinutes;
+    if (test.test_type === 'exam' && effectiveEnd && !isSelfPacedRetake) {
+      const diffMs = new Date(effectiveEnd).getTime() - now.getTime();
+      durationMinutes = Math.max(1, Math.ceil(diffMs / (60 * 1000)));
     }
     const expiresAt = (test.test_type === 'exam' && effectiveEnd && !isSelfPacedRetake)
       ? new Date(effectiveEnd)

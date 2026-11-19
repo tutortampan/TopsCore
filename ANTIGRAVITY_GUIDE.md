@@ -54,7 +54,7 @@ Menyebutkan nama file atau modul membuat AI langsung fokus ke file tersebut tanp
    * `C` (60%–79% - Pure Yellow `#FFFF00` / `var(--grade-c)`) — KKM / Passing Threshold resmi
    * `D` (30%–59% - Dark Orange `#FF8C00` / `var(--grade-d)`)
    * `E` (0%–29% - Pure Red `#FF0000` / `var(--grade-e)`)
-   * *Token Khusus*: `Grade R` (Remedial, capped maksimal 60%), `Grade F` (Forgiven waiver kelulusan), `Grade M` (Manual Override Admin), `Grade X` (Alumni).
+   * *Token Khusus*: `Grade R` (Remedial, capped maksimal 60%), `Grade F` (Forgiven waiver kelulusan), `Grade X` (Alumni).
 5. **Arsitektur Tanpa Framework Backend**:
    * Murni **HTML5 + Modular ES6 JS + CSS3** di frontend.
    * Murni **Supabase PostgreSQL + Edge Functions (Deno)** di backend.

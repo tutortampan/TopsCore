@@ -16,17 +16,40 @@
         if (!sess || !sess.student_id) { window.location.replace('index.html'); }
       } catch (_) { window.location.replace('index.html'); }
     })();
+
+    // Universal Netlify Badge & External Floating Injections Purge
+    (function () {
+      function purgeBadges() {
+        try {
+          var badEls = document.querySelectorAll('a[href*="netlify.com"], netlify-drawer, [data-netlify-badge], .netlify-badge, #netlify-badge');
+          for (var i = 0; i < badEls.length; i++) {
+            var el = badEls[i];
+            var container = el.closest('div') || el;
+            if (container && container.parentNode) {
+              container.parentNode.removeChild(container);
+            }
+          }
+        } catch (_) {}
+      }
+      purgeBadges();
+      if (typeof MutationObserver !== 'undefined') {
+        try {
+          var obs = new MutationObserver(function () { purgeBadges(); });
+          obs.observe(document.documentElement, { childList: true, subtree: true });
+        } catch (_) {}
+      }
+    })();
   </script>
   <title>Result Page — TOPS CORE</title>
   <meta name="description" content="View your test results, score breakdown, and achievements on the TOPS CORE Result Page." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=Outfit:wght@400;600;700;800;900&amp;display=swap"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap"
     rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261115_v522" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261117_v625" />
-  <link rel="stylesheet" href="css/result.css?v=20261118_v630" />
+  <link rel="stylesheet" href="css/style.css?v=20261119_v631" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261119_v631" />
+  <link rel="stylesheet" href="css/result.css?v=20261119_v631" />
   <!-- Web App Manifest & PWA Metadata -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#060911" />
@@ -46,7 +69,7 @@
 
   <header class="dashboard-header" id="result-page-header">
     <div class="result-test-title-wrap" id="result-Test-name-container">
-      <div class="result-title-row-type" id="result-test-type-row">RESULT PAGE</div>
+      <div class="result-title-row-type" id="result-test-type-row">TEST RESULT</div>
       <div class="result-title-row-topic" id="result-test-topic-row"></div>
       <span id="result-Test-name" class="hidden"></span>
     </div>
@@ -199,7 +222,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261118_v629"></script>
+  <script type="module" src="./js/result.js?v=20261119_v631"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
   <footer id="bottom-ad-banner" class="topscore-locked-banner">

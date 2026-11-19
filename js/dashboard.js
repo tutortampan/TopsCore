@@ -2338,9 +2338,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (badgeEl) badgeEl.textContent = data.badge || (data.isExam ? 'EXAM' : 'TOPIC TASK');
         if (titleEl) {
-          const f = formatTestDisplay({ display_name: data.title });
+          const f = formatTestDisplay({ title: data.title });
           if (f.line2) {
-            titleEl.innerHTML = `<span style="display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
+            titleEl.innerHTML = `<span style="display:block;font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
           } else {
             titleEl.textContent = data.title || 'Topic Test';
           }
@@ -2452,7 +2452,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (pct >= 60 ? 'var(--grade-a)' : 'var(--grade-d)');
                 wordsExamView.innerHTML = `<span style="color:${clr};font-size:14px;font-weight:800;">Best: ${pct.toFixed(0)}% ${pct >= 60 ? '✓' : ''}</span>`;
               } else {
-                wordsExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:13px;font-weight:600;">Not Taken Yet</span>`;
+                wordsExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:12px;font-weight:600;">Not Taken Yet</span>`;
               }
             }
             if (wordsStatus) wordsStatus.textContent = '';
@@ -2489,7 +2489,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (pct >= 60 ? 'var(--grade-a)' : 'var(--grade-d)');
                 phrasesExamView.innerHTML = `<span style="color:${clr};font-size:14px;font-weight:800;">Best: ${pct.toFixed(0)}% ${pct >= 60 ? '✓' : ''}</span>`;
               } else {
-                phrasesExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:13px;font-weight:600;">Not Taken Yet</span>`;
+                phrasesExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:12px;font-weight:600;">Not Taken Yet</span>`;
               }
             }
             if (phrasesStatus) phrasesStatus.textContent = '';
@@ -3108,8 +3108,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               test: asm,
               testId: uniqueKey,
               attTime,
-              isForgiven: Boolean(att.is_forgiven),
-              isManual: Boolean(att.is_manual_override)
+              isForgiven: Boolean(att.is_forgiven)
             };
           }
         }
@@ -3144,7 +3143,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       // Rule 2.8: Use average of completed exam percentages as the academic score (not curriculum-wide denominator)
       const validExamEntriesForCard = examEntries.filter(e => {
-        const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0;
+        const isPureForgivenZero = Boolean(e.isForgiven) && Number(e.effPoints ?? e.points ?? 0) === 0;
         return !isPureForgivenZero;
       });
       let avgPct = validExamEntriesForCard.length > 0
@@ -3563,7 +3562,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           : (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(displayScore) : '#94a3b8');
         const scoreRgb = parseHexRgb(scoreColor);
 
-        const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:600;margin-left:1px;">R</sup>' : '';
+        const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:12px;font-weight:600;margin-left:1px;">R</sup>' : '';
         const scoreHtml = `<span style="color:${scoreColor} !important; font-weight:400; font-family:'Inter', sans-serif;">${displayScore.toFixed(0)}%${remSup}</span>`;
 
         const isStar = dispGrade === '★' || dispGrade === 'S';
@@ -3793,8 +3792,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 isRemedial,
                 attTime,
                 is_best_score: Boolean(att.is_best_score),
-                isForgiven: Boolean(att.is_forgiven),
-                isManual: Boolean(att.is_manual_override)
+                isForgiven: Boolean(att.is_forgiven)
               };
             }
 
@@ -3833,7 +3831,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // Rule 2.8: overallScore = average percentage of COMPLETED valid exams (not curriculum denominator)
           const validExamItems = examItems.filter(e => {
-            const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.points ?? e.effPoints ?? 0) === 0;
+            const isPureForgivenZero = Boolean(e.isForgiven) && Number(e.points ?? e.effPoints ?? 0) === 0;
             return !isPureForgivenZero;
           });
           const overallScore = validExamItems.length > 0

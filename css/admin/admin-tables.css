@@ -165,13 +165,13 @@ th.sub-hdr,
   white-space: nowrap !important;
 }
 
-.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
-.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
-.table-wrap table thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
-th.datagrid-sub-header:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
-th.sub-hdr:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
-#class-attendance-grid thead tr:nth-child(2) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
-#blueprint-matrix-table thead tr:nth-child(2) th:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last) {
+.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+.datagrid-thead:has(.datagrid-super-header-row) tr:not(.datagrid-super-header-row) th:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+.table-wrap table thead.has-super-headers tr:not(.datagrid-super-header-row) th:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+th.datagrid-sub-header:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+th.sub-hdr:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+#class-attendance-grid thead tr:nth-child(2) th:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last),
+#blueprint-matrix-table thead tr:nth-child(2) th:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last) {
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
@@ -291,6 +291,7 @@ th.sub-hdr:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-t
   background: rgba(99, 102, 241, 0.06) !important;
 }
 
+/* Universal Table Bottom Perimeter Border (Base Fallback) */
 .table-wrap tbody tr:last-child td,
 .data-table tbody tr:last-child td,
 .datagrid-table tbody tr:last-child td,
@@ -299,7 +300,7 @@ th.sub-hdr:not(.super-hdr-divider):not(.col-test-theme-grade):not([class*="col-t
 #vault-topic-table tbody tr:last-child td,
 #access-tests-table tbody tr:last-child td,
 .dossier-table tbody tr:last-child td {
-  border-bottom: none !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
 }
 
 /* Table Column Helpers */
@@ -1322,7 +1323,7 @@ th.super-hdr-security,
 }
 
 /* Individual Column Widths (BATCH, STUDENT NAME, and OVERALL PERFORMANCE) - Streamlined for 100% Zero-Scroll Viewport Fit */
-#class-attendance-grid .col-sticky-1 { width: 65px !important; min-width: 60px !important; text-align: center !important; }
+#class-attendance-grid .col-sticky-1 { width: var(--batch-col-width, 45px) !important; min-width: 36px !important; text-align: center !important; }
 #class-attendance-grid .col-sticky-2 { width: 220px !important; min-width: 180px !important; max-width: 260px !important; border-right: 2px solid rgba(255, 255, 255, 0.22) !important; }
 
 /* Overall Performance Columns (Located on the Far Right of Class Attendance Grid) */
@@ -1334,22 +1335,19 @@ th.super-hdr-security,
 
 #class-attendance-grid th.col-overall-prog,
 #class-attendance-grid td.col-overall-prog {
-  width: 65px !important;
-  min-width: 55px !important;
+  min-width: 32px !important;
   text-align: center !important;
 }
 
 #class-attendance-grid th.col-overall-pts,
 #class-attendance-grid td.col-overall-pts {
-  width: 65px !important;
-  min-width: 55px !important;
+  min-width: 30px !important;
   text-align: center !important;
 }
 
 #class-attendance-grid th.col-overall-grade,
 #class-attendance-grid td.col-overall-grade {
-  width: 55px !important;
-  min-width: 45px !important;
+  min-width: 26px !important;
   text-align: center !important;
 }
 
@@ -1395,7 +1393,7 @@ th.super-hdr-security,
 #class-attendance-grid thead th.col-sticky-2[rowspan="2"],
 .datagrid-thead tr.datagrid-super-header-row th.col-sticky-2[rowspan="2"] {
   position: sticky !important;
-  left: 65px !important;
+  left: var(--batch-col-width, 45px) !important;
   z-index: 36 !important;
   background: #0b1120 !important;
   font-weight: 700 !important;
@@ -1437,7 +1435,7 @@ th.super-hdr-security,
 #class-attendance-grid td.col-exam-pts,
 #class-attendance-grid th.col-exam-grade,
 #class-attendance-grid td.col-exam-grade {
-  min-width: 55px !important;
+  min-width: 22px !important;
   text-align: center !important;
 }
 
@@ -1445,11 +1443,15 @@ th.super-hdr-security,
 #class-attendance-grid td.col-exam-status,
 #class-attendance-grid th.col-test-theme-status,
 #class-attendance-grid td.col-test-theme-status {
-  min-width: 58px !important;
-  width: 58px !important;
+  min-width: 26px !important;
   text-align: center !important;
   padding: 1px 2px !important;
   box-sizing: border-box !important;
+}
+
+/* Fallback for generic theme task columns */
+th.col-theme-task {
+  min-width: 55px !important;
 }
 
 /* Test Columns Widths & Layout */
@@ -1475,17 +1477,7 @@ th.super-hdr-security,
 #class-attendance-grid th.col-test .test-num {
   font-size: 12px !important;
   font-weight: 500 !important;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-  display: inline-block;
-  cursor: help;
-  line-height: 1.1;
-}
-
-#class-attendance-grid td.col-test .test-score,
-#class-attendance-grid td.col-test .asm-score {
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-variant-numeric: tabular-nums !important;
   font-feature-settings: "tnum" 1 !important;
   display: inline-block;
@@ -1797,13 +1789,13 @@ th.super-hdr-security,
 #class-attendance-grid td,
 #class-attendance-grid span,
 #class-attendance-grid div {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
 }
 
 #class-attendance-grid tbody td,
 #class-attendance-grid tfoot td,
 #class-attendance-grid tr.datagrid-summary-row td {
-  font-size: var(--matrix-font-size, 12px);
+  font-size: 12px;
 }
 
 #class-attendance-grid td.col-sticky-3,
@@ -1826,9 +1818,9 @@ th.super-hdr-security,
 .grid-grade-val {
   display: inline-block !important;
   text-align: center !important;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-weight: 700 !important;
-  font-size: calc(var(--matrix-font-size, 12px) * 1.05) !important;
+  font-size: 12px !important;
   line-height: 1 !important;
   vertical-align: middle !important;
   font-variant-numeric: tabular-nums !important;
@@ -1837,7 +1829,7 @@ th.super-hdr-security,
 }
 
 .grid-grade-val.grid-grade-star {
-  font-size: calc(var(--matrix-font-size, 12px) * 1.15) !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   letter-spacing: normal !important;
 }
@@ -2063,7 +2055,7 @@ tfoot.datagrid-tfoot,
 
 #class-attendance-grid tr.datagrid-summary-row td {
   padding: 2px 2px !important;
-  font-size: var(--matrix-font-size, 12px) !important;
+  font-size: 12px !important;
   line-height: 1.1;
 }
 
@@ -2407,24 +2399,41 @@ td.col-select {
 }
 
 /* ---- Excel-like Table Column Gridlines & Section Dividers (SSOT) ---- */
-body:not(.global-edit-mode-on):not(.class-manual-edit-on) .table-wrap table td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-body:not(.global-edit-mode-on):not(.class-manual-edit-on) .datagrid-table td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
+/* Subtle right gridline for internal data cells (excluding last-child perimeter) */
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .table-wrap table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .datagrid-table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Subtle bottom gridline for intermediate data rows (excluding last-child bottom perimeter) */
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .table-wrap table tbody tr:not(:last-child) td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .datagrid-table tbody tr:not(:last-child) td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table tbody tr:not(:last-child) td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
-/* 1. Thin vertical dividers for ALL table header cells (excluding super-header boundary dividers) */
-.table-wrap table thead th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-table thead th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#admin-console table thead th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#class-attendance-grid thead th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#blueprint-matrix-table thead th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-thead th:not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
+/* 1. Thin vertical dividers for ALL table header cells (excluding super-header boundary dividers and last-child perimeter) */
+.table-wrap table thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-table thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#admin-console table thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#class-attendance-grid thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#blueprint-matrix-table thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
   border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
 }
 
-/* Universal Thick Right Perimeter Border on the very last column (Perimeter Invariant) */
+/* Universal Thick Right Perimeter Border on the very last column across ALL rows (Perimeter Invariant) */
+body:not(.global-edit-mode-on) #admin-console .table-wrap thead tr th:last-child,
+body:not(.global-edit-mode-on) #admin-console .datagrid-thead tr th:last-child,
+body:not(.global-edit-mode-on) #admin-console .datagrid-table thead tr th:last-child,
+body:not(.global-edit-mode-on) #admin-console table thead tr th:last-child,
+body:not(.global-edit-mode-on) #admin-console .table-wrap td:last-child,
+body:not(.global-edit-mode-on) #admin-console .datagrid-table td:last-child,
+body:not(.global-edit-mode-on) #admin-console table td:last-child,
+.datagrid-thead.has-super-headers tr th:last-child,
+.datagrid-thead.has-super-headers tr:not(.datagrid-super-header-row) th:last-child,
+.datagrid-thead tr.datagrid-super-header-row th:last-child,
 .table-wrap table thead th:last-child,
 .datagrid-table thead th:last-child,
 #admin-console table thead th:last-child,
@@ -2443,6 +2452,12 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table t
 }
 
 /* Universal Thick Left Perimeter Border on the first column (Perimeter Invariant) */
+body:not(.global-edit-mode-on) #admin-console .table-wrap th:first-child,
+body:not(.global-edit-mode-on) #admin-console .table-wrap td:first-child,
+body:not(.global-edit-mode-on) #admin-console .datagrid-table th:first-child,
+body:not(.global-edit-mode-on) #admin-console .datagrid-table td:first-child,
+body:not(.global-edit-mode-on) #admin-console table th:first-child,
+body:not(.global-edit-mode-on) #admin-console table td:first-child,
 .table-wrap table thead th:first-child,
 .datagrid-table thead th:first-child,
 #admin-console table thead th:first-child,
@@ -2461,6 +2476,9 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table t
 }
 
 /* Universal Thick Top Perimeter Border (Row 1 Header Invariant) */
+body:not(.global-edit-mode-on) #admin-console .table-wrap thead tr:first-child th,
+body:not(.global-edit-mode-on) #admin-console .datagrid-thead tr:first-child th,
+body:not(.global-edit-mode-on) #admin-console table thead tr:first-child th,
 .table-wrap table thead tr:first-child th,
 .datagrid-table thead tr:first-child th,
 #class-attendance-grid thead tr:first-child th,
@@ -2469,7 +2487,19 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table t
   border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
 }
 
-/* Universal Thick Bottom Perimeter Border (Footer & Summary Row Invariant) */
+/* Universal Thick Bottom Perimeter Border (Unbroken Table Bottom Invariant across ALL columns) */
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .table-wrap table tbody tr:last-child td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .datagrid-table tbody tr:last-child td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .table-wrap table tfoot tr:last-child td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .table-wrap table tfoot tr:last-child th,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .datagrid-table tfoot tr:last-child td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .datagrid-table tfoot tr:last-child th,
+#admin-console .table-wrap table tbody tr:last-child td,
+#admin-console .datagrid-table tbody tr:last-child td,
+#admin-console .table-wrap table tfoot tr:last-child td,
+#admin-console .table-wrap table tfoot tr:last-child th,
+#admin-console .datagrid-table tfoot tr:last-child td,
+#admin-console .datagrid-table tfoot tr:last-child th,
 .table-wrap table tfoot tr:last-child td,
 .table-wrap table tfoot tr:last-child th,
 .table-wrap table tbody tr:last-child td,
@@ -2598,17 +2628,17 @@ tfoot th {
   border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
 }
 
-.table-wrap table tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.table-wrap table tfoot th:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-table tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-table tfoot th:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#blueprint-matrix-table tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-tfoot tr.datagrid-summary-row td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-.datagrid-summary-row td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#class-attendance-grid tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-#class-attendance-grid tr.datagrid-summary-row td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-tfoot td:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-tfoot th:not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
+.table-wrap table tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.table-wrap table tfoot th:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-table tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-table tfoot th:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#blueprint-matrix-table tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-tfoot tr.datagrid-summary-row td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+.datagrid-summary-row td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#class-attendance-grid tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+#class-attendance-grid tr.datagrid-summary-row td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+tfoot th:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
   border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -2822,11 +2852,23 @@ body.global-edit-mode-on .student-inline-input,
 body.global-edit-mode-on .student-inline-select,
 body.global-edit-mode-on .input-matrix-exam-pts,
 body.global-edit-mode-on .input-matrix-exam-score,
-body.global-edit-mode-on .input-matrix-task-progress {
+body.global-edit-mode-on .input-matrix-task-progress,
+body.global-edit-mode-on .student-inline-score-input {
   font-family: var(--fm-font-sans) !important;
   font-size: 12px !important;
   font-weight: 400 !important;
   text-transform: none !important;
+  text-align: center !important;
+}
+
+.student-inline-score-input::-webkit-outer-spin-button,
+.student-inline-score-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.student-inline-score-input {
+  -moz-appearance: textfield;
 }
 
 /* ============================================================
@@ -2854,6 +2896,45 @@ body.global-edit-mode-on .table-wrap td select option,
   color: #f8fafc !important;
   padding: 4px 8px !important;
 }
+
+/* ==========================================================================
+   UNIVERSAL TABLE EDIT BUTTON STYLING (TACTICAL CYAN #38bdf8 SSOT)
+   All Edit buttons for tables across the entire system use uniform Tactical Cyan
+   ========================================================================== */
+.btn-edit,
+.btn-table-edit,
+.row-action-edit,
+.vault-inline-edit-btn,
+.btn-edit-topic,
+.btn-theme-edit-action,
+.btn-topic-edit-action,
+[data-action="edit"],
+button[data-edit-prog],
+button[data-edit-subj],
+button[data-edit-level] {
+  border: 1px solid #38bdf8 !important;
+  color: #38bdf8 !important;
+  background: transparent !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+.btn-edit:hover,
+.btn-table-edit:hover,
+.row-action-edit:hover,
+.vault-inline-edit-btn:hover,
+.btn-edit-topic:hover,
+.btn-theme-edit-action:hover,
+.btn-topic-edit-action:hover,
+[data-action="edit"]:hover,
+button[data-edit-prog]:hover,
+button[data-edit-subj]:hover,
+button[data-edit-level]:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35) !important;
+}
+
 
 
 

@@ -105,7 +105,7 @@ INSTITUTION -> PROGRAM -> BATCH -> STUDENT NAME -> PERSONAL PIN -> LOGIN
 ```
 Server verifies that Program belongs to Institution, Batch belongs to Program, Student belongs to Batch, Student is active, and PIN is valid. Never store plaintext PINs.
 - **Cascade Section Visibility**: Every completed step remains visible in a collapsed `.selected` card with its chosen label and a functional `Change` button.
-- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, 30px Outfit 900 brand header as Level 0 Brand Hero Landmark, vector SVG Open Book badge, and Zero Subtitle Clutter).
+- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, 30px Inter 900 brand header as Level 0 Brand Hero Landmark, vector SVG Open Book badge, and Zero Subtitle Clutter).
 
 ## 2.4 Class and Level Assignment
 Classes are assigned to a **Level**. Students/Batches progress through Levels.
@@ -173,7 +173,7 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
   - **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Segmen `[LEVEL_ORDINAL]` ditiadakan (dianggap kosong) sehingga judul tes mengalir alami: `[CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]` (contoh: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General`, `Sheraton Vocabulary A1 Task - Greetings`). Dilarang mencantumkan kata `1st` atau angka level pada judul tes program tanpa jenjang.
 - **Universal 2-Line Test Title Architecture (SSOT Tampilan Card Dashboard & Header)**:
   Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian dirender menjadi **2 Baris Terpisah** via pemisah ` - `:
-  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`). Ditampilkan tebal (Outfit / Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman (`CAMP 3RD VOCABULARY`).
+  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`). Ditampilkan tebal (Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman (`CAMP 3RD VOCABULARY`).
   - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Job Hunting & Application`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan aksen Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
 - **Unifikasi Mutlak**: Tidak boleh mencantumkan kata `Words` atau `Phrases` di judul karena materi sudah disatukan (*Unified Topic Package* per DECISION-034).
 - **Peniadaan `display_name`**: Seluruh referensi display name dihilangkan. Database dan sistem hanya mengenal `title` sebagai nama tes dan `shell_code` sebagai kode tes.
@@ -220,11 +220,10 @@ Centralized authoritative grading (Official Grading Scale):
 - **Special Grades & Action Tokens**:
   - **Grade R (Remedial)**: Pure Yellow / Kuning (`#FFFF00` / `var(--grade-c)`), skor hasil perbaikan capped maksimal 60%.
   - **Grade F (Forgiven / Waiver)**: Pure Red / Merah (`#FF0000` / `var(--grade-e)`), dispensasi kelulusan untuk membuka progression.
-  - **Grade M (Manual Score)**: Tactical Cyan (`#38bdf8`), skor hasil input atau override manual oleh Admin.
   - **Grade X (Alumni Graduation)**: Vibrant Purple / Ungu (`#C084FC` / `var(--quad-d)`), penanda resmi kelulusan siswa/batch ke status alumni (`level_number = 99`, `program_status = 'ALUMNI'`, simbol `X`). Alumni mutlak dilarang menggunakan angka 0.
 - **Proteksi Kolom Nilai (Score Column Lockdown Invariant)**:
-  - Kolom nilai (PROGRESS, RATE, POINT, GRADE) terkunci dari Master Edit Mode inline text inputs.
-  - Kolom nilai HANYA dapat diakses dan dimutasi melalui 3 tombol aksi resmi di Sub Panel Student Test and Grade: **Manual (Cyan)**, **Remedi (Kuning)**, dan **Forgive (Merah)**.
+  - Kolom nilai (PROGRESS, RATE, POINT, GRADE) terkunci dari Master Edit Mode inline text inputs default.
+  - Kolom nilai HANYA dapat diakses dan dimutasi melalui 3 tombol aksi resmi di Sub Panel Student Test and Grade: **Edit Mode (Cyan `#38bdf8`)**, **Remedi (Kuning)**, dan **Forgive (Merah)**. Hasil pengeditan nilai mendapatkan grade dan warna standar sistem (★, A, B, C, D, E) tanpa token Grade M. Seluruh tombol Edit untuk tabel di seluruh sistem berformat seragam menggunakan warna Tactical Cyan `#38bdf8`.
 - **Remedial Rules**: Capped at 60%. Letter "R" appears beside Score percentage on result and grade pages.
 
 ### 2.10.1 Standar Warna 4-Pillar (ABCD System & ABCD Tema)
@@ -280,6 +279,17 @@ Page refresh resumes existing attempt; network drops do not create duplicates. D
 ## 2.16 Timer
 Server-authoritative timer: client visual countdown is UI only. Server validates deadline on save/submit.
 
+### 2.16.1 Standar Durasi & Pacing Ujian SSOT (Words 10s & Phrases 20s Invariant)
+- **Standar Pacing Otomatis Baku**:
+  - **Per Word**: **10 detik** per kata / soal.
+  - **Per Phrase**: **20 detik** per frasa / idiom / kalimat.
+- **Formula Durasi Otomatis Saat Generate**:
+  - Words: $\lceil (\text{Jumlah Kata} \times 10) / 60 \rceil$ menit (misal 40 kata = 7 menit, 80 kata = 14 menit, 120 kata = 20 menit).
+  - Phrases: $\lceil (\text{Jumlah Frasa} \times 20) / 60 \rceil$ menit (misal 10 frasa = 4 menit, 20 frasa = 7 menit, 40 frasa = 14 menit).
+- **Hak Override Manual Tutor (Tutor Manual Duration Override Authority)**:
+  - Pacing otomatis 10s/word dan 20s/phrase menjadi patokan baku (*default benchmark*) saat membuat tes.
+  - Tutor/Admin memiliki wewenang penuh untuk menentukan durasi secara manual (`working_duration_minutes`) jika kelas/sesi membutuhkan waktu khusus. Jika diset manual, nilai manual tutor selalu diutamakan (*precedence*).
+
 ## 2.17 Historical snapshot without Test Versions
 No `TestVersion` entities. At attempt start, capture immutable snapshots of questions and accepted answers. Historical results are never recalculated by rereading today's records.
 
@@ -297,8 +307,10 @@ Operational, spatial, typographic, and workflow specifications are modularized i
 ## 2.21 Universal Zero-Truncation Invariant & 3-Tier Header Standards (SSOT)
 All table columns, labels, titles, and metrics must display 100% in full without truncation or ellipsis (`...`). Calibrated column dimensions and 3-tier header abbreviations are authoritatively codified in [`.agents/rules/ui-invariants.md` Section 4.2](file:///.agents/rules/ui-invariants.md#42-aturan-text-wrap-universal-zero-truncation-invariant--standar-singkatan-header-3-tier-ssot).
 
-## 2.22 Universal Master Edit Mode White Excel Gridlines Invariant
-When Master Edit Mode is active (`body.global-edit-mode-on`), every table renders crisp white Excel gridlines (`rgba(255, 255, 255, 0.45)`) with borderless, transparent inputs per [`.agents/rules/ui-invariants.md` §4.3](file:///.agents/rules/ui-invariants.md#43-universal-master-edit-mode-white-excel-gridlines-invariant-agentsmd-222).
+## 2.22 Universal Master Edit Mode White Excel Gridlines Invariant & Sub Panel Edit Mode Standard
+- **Mandatory Sub Panel Edit Mode Button**: Di setiap halaman/view pada workspace yang memiliki tabel di dalamnya, bagian **Sub Panel (Lower Panel 40px)** WAJIB memiliki tombol **"Edit Mode"** (yang berganti status/label menjadi `Done Editing` saat aktif).
+- **Peniadaan Tombol Edit di Baris Tabel**: Dilarang keras membuat kolom `ACTIONS` atau tombol `Edit` di dalam baris tabel hanya untuk membuka modal edit, karena pengeditan dilakukan secara terpusat melalui tombol Edit Mode di Sub Panel untuk mode inline gridline Excel.
+- **Excel Gridlines Activation**: Saat Master Edit Mode aktif (`body.global-edit-mode-on`), seluruh tabel me-render garis batas putih tegas khas Excel (`rgba(255, 255, 255, 0.45)`) dengan input dan select borderless transparan per [`.agents/rules/ui-invariants.md` §4.3](file:///.agents/rules/ui-invariants.md#43-universal-master-edit-mode-white-excel-gridlines-invariant-agentsmd-222).
 
 ## 2.23 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`)
 - **Default Principle**: Authentic standard name (`studentName` / `name` / `session.student_name`) everywhere across system.
@@ -331,18 +343,24 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 - Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
 
 ## 2.30 Universal Table Cell Regular Weight Invariant (Aturan Konten Baris Tabel Wajib Regular 400 & Inter Font)
-- **Zero Bold in Table Content**: Di seluruh sistem (Admin Workstation Datagrid, Student Dashboard Standings & Completed Tests, Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, peringkat, nilai poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular) dan font `Inter`**. Huruf tebal (`700`, `800`, `900`) dan font `Outfit` dilarang keras di dalam sel baris tabel. Detail spesifikasi dan pengecualian header diatur dalam [`.agents/rules/ui-invariants.md` §2.0 & §4.1](file:///.agents/rules/ui-invariants.md#41-dimensi-tabel-baku--native-display-lock-universal-table-standardization-protocol--construction-blueprint).
+- **Zero Bold in Table Content**: Di seluruh sistem (Admin Workstation Datagrid, Student Dashboard Standings & Completed Tests, Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, peringkat, nilai poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular) dan font `Inter`**. Huruf tebal (`700`, `800`, `900`) dilarang keras di dalam sel baris tabel. Detail spesifikasi dan pengecualian header diatur dalam [`.agents/rules/ui-invariants.md` §2.0 & §4.1](file:///.agents/rules/ui-invariants.md#41-dimensi-tabel-baku--native-display-lock-universal-table-standardization-protocol--construction-blueprint).
 
 ## 2.31 Zero Table Capsule & Zero Table Glow Invariant (Isi Tabel Bebas Kapsul & Nol Glow SSOT)
 - **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel**: Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, modal tables) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`). Status hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
 - **Mutlak Nol Glow di Seluruh Sistem**: Dilarang keras menggunakan efek glow, text-shadow, atau box-shadow pada teks maupun sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur per [`.agents/rules/ui-invariants.md` §4.9](file:///.agents/rules/ui-invariants.md#49-zero-table-capsule--zero-table-glow-invariant-ssot).
 
-## 2.32 Standardized 80px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`)
-- **Strict 80px Height Lock**: Tinggi banner bawah di seluruh antarmuka aplikasi terkunci mati tepat **`80px`** (`height: 80px !important; min-height: 80px !important; max-height: 80px !important; box-sizing: border-box !important;`).
+## 2.32 Standardized 50px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`)
+- **Strict 50px Height Lock**: Tinggi banner bawah di seluruh antarmuka aplikasi terkunci mati tepat **`50px`** (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box !important;`).
 - **Dual-Viewport Execution**:
   - Pada Student Realm (koridor mobile 430px), banner terkunci di dasar layar terpusat (`max-width: 430px; margin: 0 auto;`).
-  - Pada Admin Desktop Realm (100vh workstation), konsol kerja `#admin-console` memotong tepat 80px (`height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;`) untuk menjamin zero outer page scroll.
-- **Strict 10px Clearance**: Elemen/tombol aksi di atas banner (seperti tombol `#back-dashboard-btn` pada `result.html`) berjarak tepat 10px dari tepi atas banner. Aturan detail diatur dalam [`.agents/rules/ui-invariants.md` §1.8](file:///.agents/rules/ui-invariants.md#18-standardized-80px-bottom-banner-invariant-bottom-ad-banner--topscore-locked-banner-ssot).
+  - Pada Admin Desktop Realm (100vh workstation), konsol kerja `#admin-console` memotong tepat 50px (`height: calc(100vh - 50px) !important; max-height: calc(100vh - 50px) !important;`) untuk menjamin zero outer page scroll.
+- **Strict 10px Clearance**: Elemen/tombol aksi di atas banner (seperti tombol `#back-dashboard-btn` pada `result.html`) berjarak tepat 10px dari tepi atas banner. Aturan detail diatur dalam [`.agents/rules/ui-invariants.md` §1.8](file:///.agents/rules/ui-invariants.md#18-standardized-50px-bottom-banner-invariant-bottom-ad-banner--topscore-locked-banner-ssot).
+
+## 2.33 Single-Font Architecture (SSOT: Inter For Everything)
+- **100% Inter Typeface**: Sistem TopsCore LMS secara mutlak hanya menggunakan **1 font saja: `Inter`** (`'Inter', sans-serif`).
+- **Pemberantasan Total Font Outfit**: Font `Outfit` dihapus dan dilarang di seluruh sistem (judul halaman, title area modal, header tabel, tombol CTA, nilai hero metrics, kartu, hingga banner).
+- Seluruh variabel CSS font display (`--font-display`, `--fm-font-display`) dan font body (`--font-sans`, `--font-body`, `--fm-font-sans`) dipetakan secara terpusat ke `'Inter', sans-serif`.
+- Hierarki visual diatur secara murni melalui skala ukuran terpusat (20px, 16px, 14px, 12px, 30px, 40px) dan ketebalan font (*font-weight*: 400 untuk sel tabel regular, 700/800/900 untuk judul, hero metrics, dan tombol aksi).
 
 ---
 

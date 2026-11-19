@@ -562,7 +562,7 @@ async function openCrudModal(section, record) {
             durationHint = document.createElement('div');
             durationHint.id = 'cec-batch-duration-hint';
             durationHint.style.gridColumn = '1 / -1';
-            durationHint.style.fontSize = '0.75rem';
+            durationHint.style.fontSize = '12px';
             durationHint.style.marginTop = '-6px';
             durationHint.style.marginBottom = '4px';
             durationHint.style.color = 'var(--fm-text-muted)';
@@ -1747,6 +1747,35 @@ function _initBulkEditModal() {
         // 3. If answer_type changed, modern tests encapsulate it directly in tests record
         if (chkAns && ansVal) {
           // No separate test_items table exists in modern schema
+        }
+
+        // 4. SSOT Synchronization: Propagate bulk passing score changes to affected class settings
+        if (chkMin && minVal != null) {
+          try {
+            const { data: affectedClasses } = await sb
+              .from('tests')
+              .select('class_id, test_type, category')
+              .in('id', _bulkEditSelectedIds);
+
+            if (affectedClasses && affectedClasses.length > 0 && typeof window.saveClassTestSettings === 'function') {
+              const uniqueClasses = Array.from(new Set(affectedClasses.map(t => t.class_id).filter(Boolean)));
+              for (const cId of uniqueClasses) {
+                const currentSettings = typeof window.fetchClassTestSettings === 'function'
+                  ? await window.fetchClassTestSettings(cId)
+                  : { taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 };
+                const classTests = affectedClasses.filter(t => t.class_id === cId);
+                const hasExam = classTests.some(t => (t.category || t.test_type || '').toUpperCase() === 'EXAM');
+                const hasTask = classTests.some(t => (t.category || t.test_type || '').toUpperCase() !== 'EXAM');
+                await window.saveClassTestSettings(cId, {
+                  ...currentSettings,
+                  taskMinScore: hasTask ? minVal : currentSettings.taskMinScore,
+                  examMinScore: hasExam ? minVal : currentSettings.examMinScore
+                }, false);
+              }
+            }
+          } catch (syncErr) {
+            console.warn('[BulkEdit] Class settings sync note:', syncErr);
+          }
         }
 
         // Invalidate caches so UI immediately displays new values

@@ -17,7 +17,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 10px 10px calc(80px + 10px);
+      padding: 10px 10px calc(50px + 10px);
       background: var(--clr-bg-1, #0a0a1a);
       font-family: 'Inter', sans-serif;
       overflow-y: auto;
@@ -83,7 +83,7 @@
 
     .login-brand h1,
     .brand-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 30px;
       font-weight: 900;
       color: #ffffff;
@@ -533,7 +533,7 @@
       .brand-badge-wrap { width: 44px; height: 44px; margin: 0; }
       .brand-badge-wrap svg { width: 22px; height: 22px; }
       .login-brand h1,
-      .brand-title { font-size: 26px; margin: 0; }
+      .brand-title { font-size: 20px; margin: 0; }
       .cascade-header { padding: 8px 10px; }
       .pin-section { padding: 8px 10px; }
       .pin-digit { width: 44px; height: 48px; font-size: 16px; }
@@ -602,7 +602,7 @@
       min-width: 0;
     }
     .pwa-install-title {
-      font-family: 'Outfit', sans-serif;
+      font-family: 'Inter', sans-serif;
       font-size: 14px;
       font-weight: 700;
       color: #ffffff;
@@ -655,9 +655,9 @@
       width: 100% !important;
       max-width: 430px !important;
       margin: 0 auto !important;
-      height: 80px !important;
-      min-height: 80px !important;
-      max-height: 80px !important;
+      height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
       transform: none !important;
       box-sizing: border-box !important;
       background-color: #030a12 !important;

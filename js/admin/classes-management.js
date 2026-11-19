@@ -683,7 +683,7 @@ export async function loadClassLearningPath(classId) {
     if (!tests || tests.length === 0) {
       container.innerHTML = `
          <div class="empty-state" style="padding:3rem; text-align:center;">
-           <div style="font-size: 35px; margin-bottom:1rem; color: #64748b;">${getSvgIcon('layers', 35)}</div>
+           <div style="font-size: 30px; margin-bottom:1rem; color: #64748b;">${getSvgIcon('layers', 30)}</div>
            <h4 style="color:var(--clr-text-1); margin:0 0 0.5rem 0;">No tests yet</h4>
            <p class="text-muted text-sm">Use the <strong>Add Task</strong> or <strong>Add Exam</strong> buttons above to start building the curriculum for this class.</p>
          </div>`;

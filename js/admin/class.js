@@ -323,7 +323,7 @@ export async function renderWordTypes(area) {
             <tr>
               <th>WORD TYPE</th>
               <th>CATEGORY</th>
-              <th>ACTIVE STATUS</th>
+              <th>STATUS</th>
               <th style="text-align:right;">TOGGLE</th>
             </tr>
           </thead>

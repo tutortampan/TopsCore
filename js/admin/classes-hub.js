@@ -1,4 +1,4 @@
-import { adminFetchAll, adminUpdate } from '../api.js?v=20261114_v517';
+import { adminFetchAll, adminUpdate, fetchClassTestSettings, saveClassTestSettings, toShortLevel } from '../api.js?v=20261114_v517';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getClassSvgIcon } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
@@ -190,6 +190,55 @@ export async function renderClassesHub(area) {
       }
     };
 
+    window.toggleClassesHubEditMode = () => {
+      if (typeof window.toggleGlobalEditMode === 'function') {
+        const newState = window.toggleGlobalEditMode();
+        showToast(newState ? 'Master Edit Mode ON (Inline Standards)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+        renderView();
+      }
+    };
+
+    window.handleClassPassingScoreChange = async (classId, type, rawVal) => {
+      const val = Math.max(1, Math.min(100, parseInt(rawVal, 10) || 60));
+      const classTests = testsByClass.get(classId) || [];
+      const targetTests = classTests.filter(t => {
+        const isExam = (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
+        return type === 'EXAM' ? isExam : !isExam;
+      });
+      if (targetTests.length === 0) return;
+      try {
+        await Promise.all(targetTests.map(t => {
+          const updatedPayload = { ...(t.payload || {}) };
+          updatedPayload.minimum_required_score = val;
+          updatedPayload.min_score = val;
+          t.minimum_required_score = val;
+          t.payload = updatedPayload;
+          return adminUpdate('tests', t.id, {
+            minimum_required_score: val,
+            payload: updatedPayload
+          });
+        }));
+
+        // SSOT Synchronization: Propagate to class_test_settings in site_settings & cache
+        try {
+          const currentSettings = await fetchClassTestSettings(classId);
+          const updatedSettings = {
+            ...currentSettings,
+            taskMinScore: type === 'EXAM' ? currentSettings.taskMinScore : val,
+            examMinScore: type === 'EXAM' ? val : currentSettings.examMinScore
+          };
+          await saveClassTestSettings(classId, updatedSettings, false);
+        } catch (syncErr) {
+          console.warn('[ClassesHub] site_settings sync note:', syncErr);
+        }
+
+        showToast(`Updated passing score to ${val}% for ${targetTests.length} ${type.toLowerCase()}(s).`, 'success');
+        renderView();
+      } catch (err) {
+        showToast('Failed to update passing score: ' + (err?.message || err), 'error');
+      }
+    };
+
     // Quick Edit Passing Standard Modal
     window.openQuickEditPassingStandard = (testId) => {
       const test = window._classesHubRecords[testId];
@@ -207,11 +256,11 @@ export async function renderClassesHub(area) {
                 <span style="color:#38bdf8;">${getSvgIcon('award', 18)}</span>
                 <span style="font-size:16px;font-weight:700;">Calibrate Passing Standard</span>
               </div>
-              <button onclick="window.closeQuickEditModal()" style="background:transparent;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
+              <button onclick="window.closeQuickEditModal()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;">✕</button>
             </div>
             <div style="margin-bottom:14px;">
-              <div style="font-size:13px;font-weight:600;color:#f1f5f9;margin-bottom:2px;">${escapeHtml(testTitle)}</div>
-              <div style="font-size:11px;color:#94a3b8;display:flex;gap:8px;align-items:center;">
+              <div style="font-size:12px;font-weight:600;color:#f1f5f9;margin-bottom:2px;">${escapeHtml(testTitle)}</div>
+              <div style="font-size:12px;color:#94a3b8;display:flex;gap:8px;align-items:center;">
                 <span style="font-family:monospace;background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;">${escapeHtml(shellCode || '-')}</span>
                 <span>Type: <strong style="color:${testCat === 'EXAM' ? '#FF8C00' : '#818cf8'};">${testCat}</strong></span>
               </div>
@@ -227,7 +276,7 @@ export async function renderClassesHub(area) {
                 <input id="quick-score-input" type="number" min="1" max="100" value="${curScore}" class="form-control" style="font-size:14px;font-weight:700;text-align:center;height:36px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);color:#38bdf8;" />
                 <span style="font-size:14px;font-weight:700;color:#94a3b8;">%</span>
               </div>
-              <div style="font-size:11px;color:#94a3b8;margin-top:6px;line-height:1.4;">
+              <div style="font-size:12px;color:#94a3b8;margin-top:6px;line-height:1.4;">
                 * Standard Tests require <strong>60% (Grade C Enough)</strong> for promotion eligibility per AGENTS.md §2.4.1.
               </div>
             </div>
@@ -241,6 +290,23 @@ export async function renderClassesHub(area) {
       const prev = document.getElementById('quick-edit-standard-overlay');
       if (prev) prev.remove();
       document.body.insertAdjacentHTML('beforeend', modalHtml);
+    };
+
+    // Open Full Class Test Settings & Blueprint Rules Modal directly from Classes Hub
+    window.openClassTestSettingsFromHub = async (classId, className) => {
+      try {
+        const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261106_v140');
+        await openTestSystemSettingsModal({
+          classId,
+          className,
+          onComplete: () => {
+            renderView();
+          }
+        });
+      } catch (err) {
+        console.error(err);
+        showToast('Failed to open test settings: ' + (err?.message || err), 'error');
+      }
     };
 
     window.closeQuickEditModal = () => {
@@ -292,7 +358,7 @@ export async function renderClassesHub(area) {
                 <span style="color:var(--grade-b);">${getSvgIcon('award', 18)}</span>
                 <span style="font-size:16px;font-weight:700;">Batch Align Passing Standards</span>
               </div>
-              <button onclick="window.closeQuickEditModal()" style="background:transparent;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
+              <button onclick="window.closeQuickEditModal()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;">✕</button>
             </div>
             <div style="margin-bottom:14px;">
               <div style="font-size:14px;font-weight:700;color:#f1f5f9;">${escapeHtml(cls.name)}</div>
@@ -304,14 +370,14 @@ export async function renderClassesHub(area) {
               <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
                 <label style="display:block;font-size:12px;font-weight:600;color:#818cf8;margin-bottom:4px;">Set All ${taskCount} Tasks Passing Score (%):</label>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <input id="batch-task-score" type="number" min="1" max="100" value="70" class="form-control" style="font-size:13px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
+                  <input id="batch-task-score" type="number" min="1" max="100" value="70" class="form-control" style="font-size:12px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
                   <span style="font-size:12px;color:#cbd5e1;">% (Standard Formative Mastery)</span>
                 </div>
               </div>
               <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
                 <label style="display:block;font-size:12px;font-weight:600;color:#FF8C00;margin-bottom:4px;">Set All ${examCount} Exams Passing Score (%):</label>
                 <div style="display:flex;align-items:center;gap:8px;">
-                  <input id="batch-exam-score" type="number" min="1" max="100" value="60" class="form-control" style="font-size:13px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
+                  <input id="batch-exam-score" type="number" min="1" max="100" value="60" class="form-control" style="font-size:12px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
                   <span style="font-size:12px;color:#cbd5e1;">% (Standard TopsCore Grade C)</span>
                 </div>
               </div>
@@ -357,6 +423,18 @@ export async function renderClassesHub(area) {
           });
         }));
 
+        // SSOT Synchronization: Propagate to class_test_settings in site_settings & cache
+        try {
+          const currentSettings = await fetchClassTestSettings(classId);
+          await saveClassTestSettings(classId, {
+            ...currentSettings,
+            taskMinScore: newTaskScore,
+            examMinScore: newExamScore
+          }, false);
+        } catch (syncErr) {
+          console.warn('[ClassesHub] site_settings sync note:', syncErr);
+        }
+
         showToast(`Successfully calibrated all ${classTests.length} tests!`, 'success');
         window.closeQuickEditModal();
         renderView();
@@ -393,36 +471,43 @@ export async function renderClassesHub(area) {
             return (prog && prog.institution_id === activeInstFilter) || (c.institution_id === activeInstFilter);
           });
 
-      const searchQuery = (document.getElementById('classes-hub-search') ? document.getElementById('classes-hub-search').value : '').toLowerCase().trim();
-      const searchedClasses = searchQuery
-        ? filteredClasses.filter(c => {
-            const prog = progMap.get(c.program_id);
-            const inst = prog ? instMap.get(prog.institution_id) : (c.institution_id ? instMap.get(c.institution_id) : null);
-            let lvl = c.level_id ? levelMap.get(c.level_id) : null;
-            if (!lvl) {
-              for (const cl of (classLevels || [])) {
-                if (cl.class_id === c.id && cl.level_id && levelMap.has(cl.level_id)) {
-                  lvl = levelMap.get(cl.level_id);
-                  break;
-                }
+      const searchQuery = (window._classesHubSearch !== undefined
+        ? window._classesHubSearch
+        : (document.getElementById('classes-hub-search')?.value || '')
+      ).toLowerCase().trim();
+
+      const filterClassesList = (clsList, query) => {
+        if (!query) return clsList;
+        return clsList.filter(c => {
+          const prog = progMap.get(c.program_id);
+          const inst = prog ? instMap.get(prog.institution_id) : (c.institution_id ? instMap.get(c.institution_id) : null);
+          let lvl = c.level_id ? levelMap.get(c.level_id) : null;
+          if (!lvl) {
+            for (const cl of (classLevels || [])) {
+              if (cl.class_id === c.id && cl.level_id && levelMap.has(cl.level_id)) {
+                lvl = levelMap.get(cl.level_id);
+                break;
               }
             }
-            const lvlName = lvl ? (lvl.name || '').toLowerCase() : '';
-            const lvlNum = lvl?.level_number != null ? 'l' + lvl.level_number : '';
-            const cTests = testsByClass.get(c.id) || [];
-            const matchesTest = cTests.some(t =>
-              (t.title || '').toLowerCase().includes(searchQuery) ||
-              (t.shell_code || '').toLowerCase().includes(searchQuery)
-            );
-            return (c.name || '').toLowerCase().includes(searchQuery) ||
-                   (c.code || '').toLowerCase().includes(searchQuery) ||
-                   (prog && (prog.name || '').toLowerCase().includes(searchQuery)) ||
-                   (inst && (inst.name || '').toLowerCase().includes(searchQuery)) ||
-                   lvlName.includes(searchQuery) ||
-                   lvlNum === searchQuery ||
-                   matchesTest;
-          })
-        : filteredClasses;
+          }
+          const lvlName = lvl ? (lvl.name || '').toLowerCase() : '';
+          const lvlNum = lvl?.level_number != null ? 'l' + lvl.level_number : '';
+          const cTests = testsByClass.get(c.id) || [];
+          const matchesTest = cTests.some(t =>
+            (t.title || '').toLowerCase().includes(query) ||
+            (t.shell_code || '').toLowerCase().includes(query)
+          );
+          return (c.name || '').toLowerCase().includes(query) ||
+                 (c.code || '').toLowerCase().includes(query) ||
+                 (prog && (prog.name || '').toLowerCase().includes(query)) ||
+                 (inst && (inst.name || '').toLowerCase().includes(query)) ||
+                 lvlName.includes(query) ||
+                 lvlNum === query ||
+                 matchesTest;
+        });
+      };
+
+      const searchedClasses = filterClassesList(filteredClasses, searchQuery);
 
       const getSortIcon = (key) => {
         const cur = window._classesHubSort || { key: 'level', asc: true };
@@ -434,7 +519,14 @@ export async function renderClassesHub(area) {
         const { key, asc } = window._classesHubSort || { key: 'level', asc: true };
         return [...list].sort((a, b) => {
           let res = 0;
-          if (key === 'level') {
+          if (key === 'institution') {
+            const getInstCode = (c) => {
+              const p = progMap.get(c.program_id);
+              const i = p ? instMap.get(p.institution_id) : (c.institution_id ? instMap.get(c.institution_id) : null);
+              return (i?.code || i?.name || '').toLowerCase();
+            };
+            res = getInstCode(a).localeCompare(getInstCode(b));
+          } else if (key === 'level') {
             const getLvlNum = (c) => {
               if (c.level_id && levelMap.has(c.level_id)) return levelMap.get(c.level_id).level_number ?? 999;
               for (const cl of (classLevels || [])) {
@@ -476,8 +568,8 @@ export async function renderClassesHub(area) {
       const buildClassRow = (cls, idx) => {
         const prog = progMap.get(cls.program_id);
         const inst = prog ? instMap.get(prog.institution_id) : (cls.institution_id ? instMap.get(cls.institution_id) : null);
+        const instCode  = escapeHtml(inst?.code || inst?.name || '—');
         const progName  = prog ? escapeHtml(prog.name) : 'No Program';
-        const instLabel = inst ? '<span class="text-xs text-muted" style="margin-left:4px;">· ' + escapeHtml(inst.code || inst.name) + '</span>' : '';
 
         // Level detection
         let lvl = cls.level_id ? levelMap.get(cls.level_id) : null;
@@ -489,8 +581,11 @@ export async function renderClassesHub(area) {
             }
           }
         }
-        const levelHtml = (lvl && lvl.level_number > 0 && lvl.level_number < 99)
-          ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">L${lvl.level_number}</span><span class="text-xs text-muted" style="margin-left:4px;">· ${escapeHtml(lvl.name || 'Level ' + lvl.level_number)}</span>`
+        const shortLvl = (lvl && lvl.level_number > 0 && lvl.level_number < 99)
+          ? (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number) : (lvl.name || '—'))
+          : '—';
+        const levelHtml = shortLvl !== '—'
+          ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">${escapeHtml(shortLvl)}</span>`
           : '<span class="text-xs text-muted">—</span>';
 
         // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CMP-3VOCAB, CMP-1BASIC, EVN-VOCAB)
@@ -535,88 +630,92 @@ export async function renderClassesHub(area) {
 
         const effectiveCode = getStandardClassCode(cls, lvl, prog);
         const codeHtml  = `<span style="font-family:var(--fm-font-mono, monospace);font-size:12px;font-weight:600;letter-spacing:0.04em;color:#e2e8f0;">${escapeHtml(effectiveCode)}</span>`;
-        const eligibleCount = getEligibleStudentCountForClass(cls);
-        const studentsHtml  = '<span style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="' + eligibleCount + ' students eligible to take this class">' + getSvgIcon('users', 12) + ' ' + eligibleCount + '</span>';
+        const studentCount = getEligibleStudentCountForClass(cls);
+        const studentsHtml = studentCount > 0
+          ? `<span style="color:var(--fm-text-primary);font-weight:600;font-size:12px;font-variant-numeric:tabular-nums;">${studentCount}</span>`
+          : '<span class="text-xs text-muted" style="font-variant-numeric:tabular-nums;">0</span>';
 
         // Class tests and passing standards
         const classTests = testsByClass.get(cls.id) || [];
         const tasks = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM');
         const exams = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM');
 
-        // Task passing badge & inline edit (Default Grade C: 60%)
-        const taskScores = tasks.map(getTestMinScore);
-        const curTaskScore = taskScores.length > 0 ? Math.round(taskScores[0]) : 60;
-        let taskLabel = '-';
+        // Task passing standard badge & inline edit
+        let taskHtml = '';
         if (tasks.length > 0) {
+          const taskScores = tasks.map(getTestMinScore);
+          const curTaskScore = Math.round(taskScores[0]);
           const minT = Math.min(...taskScores);
           const maxT = Math.max(...taskScores);
-          taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
+          const taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
+          taskHtml = `
+            <span class="classes-hub-score-view" style="color:#818cf8;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
+              ${taskLabel} <span style="font-size:11px;opacity:0.75;font-weight:400;">(${tasks.length})</span>
+            </span>
+            <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
+              <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#818cf8;border:1px solid rgba(129,140,248,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="Set passing score for all ${tasks.length} tasks" />
+              <span style="font-size:12px;color:#94a3b8;">%</span>
+            </span>
+          `;
+        } else {
+          taskHtml = '<span class="text-xs text-muted">—</span>';
         }
-        const taskHtml = `
-          <span class="classes-hub-score-view" style="color:#818cf8;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${tasks.length} Formative Tasks (Pass: ${taskLabel})">
-            ${taskLabel} ${tasks.length > 0 ? `<span style="font-size:10px;opacity:0.8;">(${tasks.length})</span>` : ''}
-          </span>
-          <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-            <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" ${tasks.length === 0 ? 'disabled placeholder="-"' : ''} style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#818cf8;border:1px solid rgba(129,140,248,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="${tasks.length > 0 ? `Set passing score for all ${tasks.length} tasks` : 'No tasks in this class'}" />
-            <span style="font-size:11px;color:#94a3b8;">%</span>
-          </span>
-        `;
 
-        // Exam passing badge & inline edit (Default Grade C: 60%)
-        const examScores = exams.map(getTestMinScore);
-        const curExamScore = examScores.length > 0 ? Math.round(examScores[0]) : 60;
-        let examLabel = '-';
+        // Exam passing standard badge & inline edit
+        let examHtml = '';
         if (exams.length > 0) {
+          const examScores = exams.map(getTestMinScore);
+          const curExamScore = Math.round(examScores[0]);
           const minE = Math.min(...examScores);
           const maxE = Math.max(...examScores);
-          examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
+          const examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
+          examHtml = `
+            <span class="classes-hub-score-view" style="color:#FF8C00;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
+              ${examLabel} <span style="font-size:11px;opacity:0.75;font-weight:400;">(${exams.length})</span>
+            </span>
+            <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
+              <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#FF8C00;border:1px solid rgba(255,140,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="Set passing score for all ${exams.length} exams" />
+              <span style="font-size:12px;color:#94a3b8;">%</span>
+            </span>
+          `;
+        } else {
+          examHtml = '<span class="text-xs text-muted">—</span>';
         }
-        const examHtml = `
-          <span class="classes-hub-score-view" style="color:#FF8C00;font-size:12px;font-weight:400;display:inline-flex;align-items:center;gap:4px;" title="${exams.length} Formal Exams (Pass: ${examLabel})">
-            ${examLabel} ${exams.length > 0 ? `<span style="font-size:10px;opacity:0.8;">(${exams.length})</span>` : ''}
-          </span>
-          <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-            <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" ${exams.length === 0 ? 'disabled placeholder="-"' : ''} style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#FF8C00;border:1px solid rgba(255,140,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="${exams.length > 0 ? `Set passing score for all ${exams.length} exams` : 'No exams in this class'}" />
-            <span style="font-size:11px;color:#94a3b8;">%</span>
-          </span>
-        `;
-
-        const isVocab = (cls.name || '').toLowerCase().includes('vocab');
-        const vocabBtnHtml = isVocab
-          ? '<button class="btn btn-secondary btn-sm" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;border-color:rgba(124,58,237,0.35);color:#c084fc;background:rgba(124,58,237,0.1);font-weight:700;" title="Open Vocabulary Vault for this class" onclick="window.openVocabVaultFromClassHub(\'' + (cls.program_id || '') + '\')">Vault</button>'
-          : '';
 
         return `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s ease;">
             <!-- 1. NO -->
             <td class="text-center" style="font-size:12px;color:var(--fm-text-muted);font-variant-numeric:tabular-nums;padding:8px 6px;">${idx + 1}</td>
-            <!-- 2. LEVEL -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${levelHtml}</td>
-            <!-- 3. CLASS NAME -->
-            <td style="font-size:12px;white-space:nowrap;padding:8px 10px;">
-              <div class="d-flex align-center gap-2" style="min-width:0;">
-                <span style="display:inline-flex;align-items:center;">${typeof getClassSvgIcon === 'function' ? getClassSvgIcon(cls.name, 16, '#818cf8') : ''}</span>
-                <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" title="${escapeHtml(cls.name)}">${escapeHtml(cls.name)}</span>
-              </div>
+            <!-- 2. INSTITUTION (Pure 1 Info) -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);">${instCode}</span>
             </td>
-            <!-- 4. PROGRAM -->
-            <td style="font-size:12px;white-space:nowrap;padding:8px 8px;"><span style="color:var(--fm-text-secondary);">${progName}</span>${instLabel}</td>
-            <!-- 5. CODE (level_5huruf SSOT) -->
+            <!-- 3. PROGRAM (Pure 1 Info) -->
+            <td style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              <span style="color:var(--fm-text-secondary);font-size:12px;">${progName}</span>
+            </td>
+            <!-- 4. LEVEL (Pure 1 Info) -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${levelHtml}</td>
+            <!-- 5. CLASS NAME (Pure 1 Info, Zero Clutter) -->
+            <td style="font-size:12px;white-space:nowrap;padding:8px 10px;">
+              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" title="${escapeHtml(cls.name)}">${escapeHtml(cls.name)}</span>
+            </td>
+            <!-- 6. CODE -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
-            <!-- 6. STUDENTS -->
+            <!-- 7. STUDENTS (Pure Tabular Numbers) -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${studentsHtml}</td>
-            <!-- 7. TASK (BEFORE EXAM!) -->
+            <!-- 8. TASK PASS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${taskHtml}</td>
-            <!-- 8. EXAM -->
+            <!-- 9. EXAM PASS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${examHtml}</td>
-            <!-- 9. STATUS (Strictly ACTIVE / INACTIVE per AGENTS.md §2.27) -->
+            <!-- 10. STATUS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
               <span style="cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
                 ${cls.is_active ? 'ACTIVE' : 'INACTIVE'}
               </span>
             </td>
-            <!-- 10. ACTIONS -->
-            <td class="text-right" style="white-space:nowrap;padding:8px 10px;min-width:200px;">
+            <!-- 11. ACTIONS -->
+            <td class="text-right" style="white-space:nowrap;padding:8px 10px;min-width:140px;">
               <div class="d-flex align-center gap-1" style="justify-content:flex-end;">
                 ${!cls.is_active ? `
                   <button class="btn btn-sm btn-activate-class" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;color:var(--grade-a);border:1px solid rgba(0,192,0,0.4);background:rgba(0,192,0,0.12);font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',true)" title="Activate this class">
@@ -627,7 +726,6 @@ export async function renderClassesHub(area) {
                     Deactivate
                   </button>
                 `}
-                ${vocabBtnHtml}
                 <button class="btn btn-secondary btn-sm edit-mode-only" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;" onclick="window.openClassesHubEdit('classes','${cls.id}')">Edit</button>
                 <button class="btn btn-danger btn-sm edit-mode-only"    style="padding:0 9px;font-size:12px;height:28px;line-height:26px;" onclick="window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')">Delete</button>
               </div>
@@ -637,118 +735,195 @@ export async function renderClassesHub(area) {
       };
 
       const sortedClasses = sortClassList(searchedClasses);
-      const activeCount = sortedClasses.filter(c => c.is_active).length;
-      const inactiveCount = sortedClasses.filter(c => !c.is_active).length;
-      const totalStudentsCount = sortedClasses.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
 
-      let rowsHtml = '';
-      if (sortedClasses.length === 0) {
-        rowsHtml = `
-          <tr>
-            <td colspan="10" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
-              <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No classes found</div>
-              <div style="font-size:12px;">Try adjusting your search query or institution filter.</div>
-            </td>
-          </tr>
+      const renderTableRowsHtml = (list) => {
+        if (list.length === 0) {
+          return `
+            <tr>
+              <td colspan="11" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No classes found</div>
+                <div style="font-size:12px;">Try adjusting your search query or institution filter.</div>
+              </td>
+            </tr>
+          `;
+        }
+        return list.map((cls, idx) => buildClassRow(cls, idx)).join('');
+      };
+
+      const updateTableOnly = () => {
+        const query = (window._classesHubSearch || '').toLowerCase().trim();
+        const activeInst = window._classesHubActiveInst || 'all';
+        const filtered = activeInst === 'all'
+          ? activeClasses
+          : activeClasses.filter(c => {
+              const prog = progMap.get(c.program_id);
+              return (prog && prog.institution_id === activeInst) || (c.institution_id === activeInst);
+            });
+        const searched = filterClassesList(filtered, query);
+        const sorted = sortClassList(searched);
+        const actCount = sorted.filter(c => c.is_active).length;
+        const inactCount = sorted.filter(c => !c.is_active).length;
+        const totalEligible = sorted.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
+
+        const tbody = document.getElementById('classes-hub-tbody');
+        if (tbody) {
+          tbody.innerHTML = renderTableRowsHtml(sorted);
+        }
+        const summaryEl = document.getElementById('classes-hub-summary-text');
+        if (summaryEl) {
+          summaryEl.innerHTML = `
+            <span><strong style="color:#f8fafc;">${sorted.length}</strong>${query ? ` of ${filtered.length}` : ''} Classes</span>
+            <span>·</span>
+            <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${actCount}</strong> ACTIVE</span>
+            <span>·</span>
+            <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactCount}</strong> INACTIVE</span>
+            <span>·</span>
+            <span><strong style="color:#f8fafc;">${activeLevels.length}</strong> Levels</span>
+            <span>·</span>
+            <span><strong style="color:#818cf8;">${totalEligible}</strong> Eligible Students</span>
+          `;
+        }
+      };
+
+      // Synchronize Canonical Sub Panel (Lower Panel 40px Height Docked Directly Above Banner per ui-invariants.md §1.3)
+      const syncSubPanel = (currentSorted, currentFiltered, query) => {
+        if (typeof window.setBottomInfobar !== 'function') return;
+
+        const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+        const actCount = currentSorted.filter(c => c.is_active).length;
+        const inactCount = currentSorted.filter(c => !c.is_active).length;
+        const totalEligible = currentSorted.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
+
+        const leftHtml = `
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;">
+            <div style="position:relative;display:inline-flex;align-items:center;">
+              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;display:inline-flex;align-items:center;pointer-events:none;">
+                ${getSvgIcon('search', 12)}
+              </span>
+              <input type="text" id="classes-hub-search" placeholder="Search classes, codes, programs..." value="${escapeHtml(query)}" style="padding:0 8px 0 26px;font-size:12px;height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;width:240px;outline:none;box-sizing:border-box;" />
+            </div>
+            <div id="classes-hub-summary-text" style="display:inline-flex;align-items:center;gap:10px;font-size:12px;color:#94a3b8;font-weight:600;white-space:nowrap;">
+              <span><strong style="color:#f8fafc;">${currentSorted.length}</strong>${query ? ` of ${currentFiltered.length}` : ''} Classes</span>
+              <span>·</span>
+              <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${actCount}</strong> ACTIVE</span>
+              <span>·</span>
+              <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactCount}</strong> INACTIVE</span>
+              <span>·</span>
+              <span><strong style="color:#f8fafc;">${activeLevels.length}</strong> Levels</span>
+              <span>·</span>
+              <span><strong style="color:#818cf8;">${totalEligible}</strong> Eligible Students</span>
+            </div>
+          </div>
         `;
-      } else {
-        sortedClasses.forEach((cls, idx) => {
-          rowsHtml += buildClassRow(cls, idx);
-        });
-      }
 
-      const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+        const editBtnStyle = isEditOn
+          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+          : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+        const editBtnLabel = isEditOn
+          ? `${getSvgIcon('check-circle', 14)} Done Editing`
+          : `${getSvgIcon('edit', 14)} Edit Mode`;
+
+        const rightHtml = `
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
+              ${getSvgIcon('book-open', 14)} Open Vault
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" style="${editBtnStyle}" title="Toggle Master Edit Mode (Excel Gridlines)">
+              ${editBtnLabel}
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-classes-hub-add-class" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--clr-primary,#6366f1);border-color:var(--clr-primary,#6366f1);color:#fff;" title="Add New Class">
+              ${getSvgIcon('plus', 14)} Add Class
+            </button>
+            ${isEditOn ? `
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-level" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Level">
+                ${getSvgIcon('plus', 14)} Add Level
+              </button>
+            ` : ''}
+          </div>
+        `;
+
+        window.setBottomInfobar(leftHtml, rightHtml);
+
+        // Bind Sub Panel events
+        const sInp = document.getElementById('classes-hub-search');
+        if (sInp && !sInp.dataset.bound) {
+          sInp.dataset.bound = 'true';
+          sInp.addEventListener('input', (e) => {
+            window._classesHubSearch = e.target.value;
+            updateTableOnly();
+          });
+        }
+
+        const openVaultBtn = document.getElementById('btn-classes-hub-open-vault');
+        if (openVaultBtn) {
+          openVaultBtn.onclick = () => window.openVocabVaultFromClassHub();
+        }
+
+        const toggleEditBtn = document.getElementById('btn-classes-hub-toggle-edit');
+        if (toggleEditBtn) {
+          toggleEditBtn.onclick = () => window.toggleClassesHubEditMode();
+        }
+
+        const addClassBtn = document.getElementById('btn-classes-hub-add-class');
+        if (addClassBtn) {
+          addClassBtn.onclick = () => window.openClassesHubAddClass(null);
+        }
+
+        const addLevelBtn = document.getElementById('btn-classes-hub-add-level');
+        if (addLevelBtn) {
+          addLevelBtn.onclick = () => window.openClassesHubAddLevel();
+        }
+      };
 
       area.innerHTML = `
         <div class="classes-hub-workspace" style="display:flex;flex-direction:column;flex:1 1 0 !important;min-height:0 !important;height:100% !important;overflow:hidden;gap:10px;">
-          <!-- Top Hub Toolbar -->
-          <div class="hub-toolbar" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-shrink:0;">
-            <div class="hub-toolbar-search" style="flex:1;max-width:440px;position:relative;">
-              <span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--fm-text-muted);font-size:12px;display:inline-flex;align-items:center;">
-                ${getSvgIcon('search', 12)}
-              </span>
-              <input type="text" id="classes-hub-search" class="form-control" placeholder="Search classes, codes, programs, or test standards..." value="${escapeHtml(searchQuery)}" style="padding:5px 10px 5px 30px;font-size:12px;height:30px;background:rgba(0,0,0,0.2);width:100%;box-sizing:border-box;" />
-            </div>
-            <div class="d-flex align-center gap-2">
-              <span class="text-xs text-muted">${sortedClasses.length} of ${filteredClasses.length} Classes · ${activeLevels.length} Levels</span>
-              <button class="btn btn-secondary btn-sm" onclick="window.openVocabVaultFromClassHub()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;" title="Open Topic Blueprint & Vocabulary Vault">
-                ${getSvgIcon('book-open', 12)} Open Vault
-              </button>
-              <button class="btn btn-sm ${isEditOn ? 'btn-warning' : 'btn-secondary'}" id="btn-classes-hub-toggle-edit" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;${isEditOn ? 'background:var(--grade-c);color:#0F172A;font-weight:700;border-color:var(--grade-c);box-shadow:0 0 10px rgba(var(--grade-c-rgb),0.45);' : 'color:#cbd5e1;border-color:rgba(255,255,255,0.16);'}" onclick="window.toggleClassesHubEditMode()" title="Toggle Master Edit Mode for inline standards calibration">
-                ${isEditOn ? `${getSvgIcon('check-circle', 12)} Done Editing` : `${getSvgIcon('edit', 12)} Edit Mode`}
-              </button>
-              <button class="btn btn-primary btn-sm" onclick="window.openClassesHubAddClass(null)" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;background:var(--clr-primary,#6366f1);border-color:var(--clr-primary,#6366f1);font-weight:700;">
-                ${getSvgIcon('plus', 12)} Add Class
-              </button>
-              <button class="btn btn-secondary btn-sm edit-mode-only" onclick="window.openClassesHubAddLevel()" style="font-size:12px;padding:0 12px;height:30px;line-height:28px;">
-                ${getSvgIcon('plus', 12)} Add Level
-              </button>
-            </div>
-          </div>
-
-          <!-- Unified Curriculum Table (100vh lock, table-wrap scroll only) -->
+          <!-- Unified Curriculum Table (100vh lock, table-wrap scroll only per ui-invariants.md §1.1) -->
           <div class="table-wrap sticky-first" style="flex:1 1 0 !important;min-height:0 !important;overflow-y:auto;overflow-x:auto !important;background:#0f172a;border:1px solid rgba(255,255,255,0.12) !important;border-radius:8px;margin:0;">
-            <table class="datagrid-table" style="width:100%;min-width:1180px;border-collapse:collapse;table-layout:fixed;">
+            <table class="datagrid-table" style="width:100%;min-width:1150px;border-collapse:collapse;table-layout:fixed;">
               <colgroup>
                 <col style="width:45px;">
-                <col style="width:120px;">
+                <col style="width:95px;">
+                <col style="width:110px;">
+                <col style="width:75px;">
                 <col style="width:210px;">
-                <col style="width:150px;">
+                <col style="width:125px;">
+                <col style="width:75px;">
+                <col style="width:95px;">
+                <col style="width:95px;">
+                <col style="width:85px;">
                 <col style="width:140px;">
-                <col style="width:80px;">
-                <col style="width:90px;">
-                <col style="width:90px;">
-                <col style="width:90px;">
-                <col style="width:210px;">
               </colgroup>
               <thead style="position:sticky;top:0;z-index:10;background:#0f172a;">
                 <tr style="height:40px;">
                   <th style="width:45px;text-align:center;">NO</th>
-                  <th style="width:120px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('level')" title="Sort by Level">LEVEL ${getSortIcon('level')}</th>
+                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INSTITUTION ${getSortIcon('institution')}</th>
+                  <th style="width:110px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
+                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('level')" title="Sort by Level">LEVEL ${getSortIcon('level')}</th>
                   <th style="width:210px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
-                  <th style="width:150px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
-                  <th style="width:140px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
-                  <th style="width:80px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
-                  <th style="width:90px;text-align:center;cursor:pointer;color:#818cf8;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Standard">TASK ${getSortIcon('task')}</th>
-                  <th style="width:90px;text-align:center;cursor:pointer;color:#FF8C00;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Standard">EXAM ${getSortIcon('exam')}</th>
-                  <th style="width:90px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
-                  <th style="width:210px;text-align:right;">ACTIONS</th>
+                  <th style="width:125px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
+                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Score">TASK PASS ${getSortIcon('task')}</th>
+                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Score">EXAM PASS ${getSortIcon('exam')}</th>
+                  <th style="width:85px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
+                  <th style="width:140px;text-align:right;">ACTIONS</th>
                 </tr>
               </thead>
-              <tbody>
-                ${rowsHtml}
+              <tbody id="classes-hub-tbody">
+                ${renderTableRowsHtml(sortedClasses)}
               </tbody>
             </table>
-          </div>
-
-          <!-- Universal Sub Panel (Lower Panel 40px Height Docked at Bottom per ui-invariants.md §1.3) -->
-          <div class="workspace-lower-panel" style="height:40px !important;min-height:40px !important;max-height:40px !important;line-height:38px !important;display:flex;align-items:center;justify-content:space-between;padding:0 14px;background:#0f172a;border-top:1px solid rgba(255,255,255,0.08);box-sizing:border-box;flex-shrink:0;">
-            <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;">
-              <span><strong style="color:#f8fafc;">${sortedClasses.length}</strong> Classes</span>
-              <span>·</span>
-              <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${activeCount}</strong> ACTIVE</span>
-              <span>·</span>
-              <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactiveCount}</strong> INACTIVE</span>
-              <span>·</span>
-              <span><strong style="color:#f8fafc;">${activeLevels.length}</strong> Levels</span>
-              <span>·</span>
-              <span><strong style="color:#818cf8;">${totalStudentsCount}</strong> Eligible Students</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span style="font-size:12px;color:#64748b;">Curriculum Level &amp; Subject Master</span>
-            </div>
           </div>
         </div>
       `;
 
-      const searchInp = document.getElementById('classes-hub-search');
-      if (searchInp) {
-        searchInp.addEventListener('input', function() {
-          renderView();
-          const inp = document.getElementById('classes-hub-search');
-          if (inp) {
-            inp.focus();
-            inp.selectionStart = inp.selectionEnd = inp.value.length;
+      // Synchronize Sub Panel (Lower Panel 40px Height Docked Directly Above Banner per ui-invariants.md §1.3)
+      syncSubPanel(sortedClasses, filteredClasses, searchQuery);
+
+      if (!window._classesHubEditModeListenerBound) {
+        window._classesHubEditModeListenerBound = true;
+        window.addEventListener('admin-edit-mode-changed', () => {
+          if (document.getElementById('classes-hub-tbody')) {
+            renderView();
           }
         });
       }

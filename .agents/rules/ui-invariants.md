@@ -28,7 +28,7 @@
 The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` viewport lock with ZERO outer scrolling:
 - **Table-Only Vertical Scroll**: Vertical scrolling is strictly permitted inside `.table-wrap` only (`overflow-y: auto !important; overflow-x: hidden !important;`).
 - **Root Containment**: `html` and `body` strictly enforce `height: 100vh !important; max-height: 100vh !important; width: 100vw !important; max-width: 100vw !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important;`.
-- **Locked Base Banner Compensation**: Fixed height of `80px` (`#bottom-ad-banner` / `.topscore-locked-banner`). `#admin-console` strictly uses `height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;` for exact 100vh zero-overflow containment.
+- **Locked Base Banner Compensation**: Fixed height of `50px` (`#bottom-ad-banner` / `.topscore-locked-banner`). `#admin-console` strictly uses `height: calc(100vh - 50px) !important; max-height: calc(100vh - 50px) !important;` for exact 100vh zero-overflow containment.
 - **Flexbox Toolbar Non-Expansion**: Toolbars (`.student-roster-toolbar`, `.attendance-matrix-toolbar`, `.datagrid-toolbar`, `.admin-toolbar`) are `flex: 0 0 auto !important;`. Grid containers get `flex: 1 1 0 !important; min-height: 0 !important;`.
 - **Empty Toolbar Collapse in Edit Mode OFF**: In Edit Mode OFF, action toolbars with only hidden `.edit-mode-only` buttons collapse completely (`display: none !important;`).
 
@@ -41,6 +41,7 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
 - **Strict 40px Height Alignment**: Sub Panel height is strictly **`40px`** (`height: 40px !important; min-height: 40px !important; max-height: 40px !important; line-height: 40px !important; box-sizing: border-box;`), aligning with sidebar footer (`.sidebar-footer` / Sub Corner) and 40px table headers/footers.
 - **In-Panel 30px Button Invariant**: Buttons and form controls inside any panel (Sub Panel, toolbars, filter strips) strictly enforce **`30px`** height (`height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; border-radius: 4px !important;`), leaving exact 5px vertical margin.
 - **Workspace Containment**: Docked flush at bottom, reserved for action buttons, summary info, search, triage pills. Table footers (`tfoot`) live 100% inside `.table-wrap` and NEVER enter Sub Panel.
+- **Mandatory Sub Panel Edit Mode Button on All Table Pages**: On **EVERY workspace page or view containing a datagrid or table** (e.g. `#organization`, `#classes-hub`, `#students`, `#vocab-vault`, `#settings?tab=audit`, `#registration`, etc.), the 40px Sub Panel (`setBottomInfobar`) **MUST feature an authoritative 30px "Edit Mode" button** (`[Edit Mode]` / `[Done Editing]`). Clicking this button toggles Master Edit Mode (`window.toggleGlobalEditMode()`), activating inline Excel gridlines across the table. In-row buttons dedicated solely to "Edit" are strictly forbidden.
 
 ### 1.4 Centered Loading States & Canonical Component Invariant (Rule SSOT)
 - **Zero Corner-Drifting Rule**: All loading spinners, skeletons, and async messages strictly render centered horizontally and vertically (`display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; width: 100% !important; height: 100% !important; flex: 1 1 0 !important; margin: auto !important;`). Spinners must NEVER drift into top-left or corners.
@@ -65,7 +66,7 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
       - **Pillar A (Admin / Master Curriculum Wizards)**: Electric Pink (`#ff2d87` / `var(--quad-a)`).
       - **Pillar B (Board / Batches / Roster Wizards)**: Dark Orange (`#FF8C00` / `var(--quad-b)`).
       - **Pillar C (Class / Active Learning Wizards)**: Electric Lime (`#95ff00` / `var(--quad-c)`).
-  - Typography: 16px Outfit Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-weight: 800 !important;`).
+  - Typography: 16px Inter Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-weight: 800 !important;`).
   - **Centered Title Invariant**: Title text mathematically centered (`text-align: center !important; justify-content: center !important;`). Strictly ZERO close buttons or '✕' icons in the Title Area.
   - **Mandatory Uppercase Invariant (ALL CAPS)**: Title text MUST be **ALL CAPS (`text-transform: uppercase !important;`)** with `letter-spacing: 0.05em;`.
 - **1.5.2 Standardized 40px "Toolbar Area" & 60px "CTA Area" Invariant**:
@@ -106,39 +107,32 @@ Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara 
 6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
 7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
 
-### 1.8 Standardized 80px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`) (SSOT)
+### 1.8 Standardized 50px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`) (SSOT)
 Seluruh halaman sistem TopsCore LMS (Student Realm & Admin Realm) menerapkan banner bawah permanen terkunci (**Locked Base Banner**) dengan aturan baku mutlak:
-1. **Strict 80px Height Lock**: Tinggi banner bawah terkunci mati tepat **`80px`** (`height: 80px !important; min-height: 80px !important; max-height: 80px !important; box-sizing: border-box !important;`).
+1. **Strict 50px Height Lock**: Tinggi banner bawah terkunci mati tepat **`50px`** (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box !important;`).
 2. **Dual-Viewport Invariant Execution**:
    - **Student Realm (Mobile Corridor 430px)**: Banner terkunci terpusat pada koridor mobile dengan `max-width: 430px !important; margin: 0 auto !important; left: 0; right: 0; bottom: 0; position: fixed !important;`.
-   - **Admin Desktop Realm (100vh Workstation)**: Banner menempel di dasar layar monitor (`width: 100vw; bottom: 0; left: 0; position: fixed !important;`). Konsol kerja `#admin-console` memotong tepat 80px (`height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;`) untuk menjamin zero outer page scroll (100vh lock sempurna).
+   - **Admin Desktop Realm (100vh Workstation)**: Banner menempel di dasar layar monitor (`width: 100vw; bottom: 0; left: 0; position: fixed !important;`). Konsol kerja `#admin-console` memotong tepat 50px (`height: calc(100vh - 50px) !important; max-height: calc(100vh - 50px) !important;`) untuk menjamin zero outer page scroll (100vh lock sempurna).
 3. **Internal Spacing & Clearance**:
-   - Pada halaman dengan scrollable content, body mengalokasikan padding bawah `padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;`.
+   - Pada halaman dengan scrollable content, body mengalokasikan padding bawah `padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px)) !important;`.
    - Pada halaman hasil (`result.html`) dan ruang ujian (`test.html`) yang menerapkan *Zero-Scroll Single Screen Architecture*, jarak vertikal dari elemen/tombol terbawah (misal `#back-dashboard-btn`) ke banner terkunci tepat **10px** (`padding-bottom: 10px; gap: 10px;`).
 4. **Authoritative Brand Typography & Colors**:
-   - **Brand**: `TopsCore` berukuran **16px** (Level 2), font `Outfit`, weight `900`, warna Tactical Blue (`#38bdf8`), letter-spacing `0.05em`, soft glow `text-shadow: 0 0 14px rgba(56, 189, 248, 0.45)`.
-   - **Author**: `by Mr. Top` berukuran **14px** (Level 3), font `Outfit`, weight `800`, warna White Slate (`#f8fafc`), letter-spacing `0.02em`.
+   - **Brand**: `TopsCore` berukuran **16px** (Level 2), font `Inter`, weight `900`, warna Tactical Blue (`#38bdf8`), letter-spacing `0.05em`, soft glow `text-shadow: 0 0 14px rgba(56, 189, 248, 0.45)`.
+   - **Author**: `by Mr. Top` berukuran **14px** (Level 3), font `Inter`, weight `800`, warna White Slate (`#f8fafc`), letter-spacing `0.02em`.
    - **Background & Border**: Background `#030a12` (atau radial glow dinamis sesuai tier), border atas `1px solid rgba(56, 189, 248, 0.25)` (atau `1.5px solid rgba(var(--tier-rgb), 0.40)` saat tier glow aktif).
 
 ---
 
-## Bab 2: Tipografi & Skala Font Terpusat (Dual-Scale Typography Architecture)
+## Bab 2: Tipografi & Skala Font Terpusat (Single-Font Architecture: Inter SSOT)
 
-### 2.0 Tri-Font System Architecture & Role Governance (SSOT)
-TopsCore LMS strictly governs typography through an authoritative tri-font ecosystem bound to centralized CSS custom properties:
-1. **`Outfit`** (`--font-display` / `--fm-font-display`):
-   - **Role**: Display, Headings & Hero Metrics.
-   - **Authorized Usage**: Major page headers (`.page-title`, `.workspace-title`), Modal/Dialog Title Area (`.title-area`, `.modal-title`), Hero Score & KPI metrics (`.metric-number`, `.kpi-val`, 30px/40px hero values), card titles, and primary action buttons (CTA 40px in modals/student cards).
-   - **Visual Identity**: Geometric, modern, crisp, bold visual impact.
-2. **`Inter`** (`--font-body` / `--font-sans` / `--fm-font-sans`):
-   - **Role**: Body Text, Form Controls & Datagrid UI.
-   - **Authorized Usage**: All data table cells and headers (`th`, `td`), student dashboard rank/leaderboard rows, completed test rows, form inputs, selects/dropdowns, in-panel toolbar controls (30px buttons), descriptions, instructional passages, reading text, and UI labels/metadata.
-   - **Visual Identity**: High legibility, neutral, optimized for high-density 12px workstation datagrids.
-   - **Universal Table Cell Regular Invariant**: Seluruh huruf dan angka konten dalam baris tabel di seluruh sistem WAJIB menggunakan `Inter` dan **berbobot Regular (`font-weight: 400 !important;`)**. Dilarang keras menggunakan `Outfit` atau font tebal (`700/800/900`) di dalam sel baris tabel.
-3. **`JetBrains Mono` / Monospace** (`--font-mono` / `--fm-font-mono`):
-   - **Role**: Technical, Security & Audit Data.
-   - **Authorized Usage**: PIN verification displays (`#prof-pin-display`), token strings, raw UUIDs, JSON logs, and audit trails.
-   - **Visual Identity**: Monospaced tabular alignment, zero character ambiguity (distinguishing 0/O, 1/l/I).
+### 2.0 Single-Font System Architecture (100% Inter Typeface SSOT)
+TopsCore LMS strictly governs typography through a pure Single-Font Architecture:
+1. **`Inter`** (`--font-sans` / `--fm-font-sans` / `--font-display` / `--fm-font-display`):
+   - **Exclusive Typeface**: The font **`Inter`** (`'Inter', sans-serif`) is the single authoritative typeface used throughout the entire application for all headers, titles, cards, hero metrics, datagrids, form controls, and CTAs.
+   - **Eradication of Outfit**: The previous font `Outfit` is completely eradicated and forbidden from all parts of the system.
+   - **Weight Hierarchy**: Visual contrast and hierarchy are established exclusively through weights (`400` Regular for table data cells, `700` Bold for labels/subheadings, `800` Extra Bold for card headers and modal titles, `900` Black for brand hero titles and KPI landmarks).
+2. **`JetBrains Mono` / Monospace** (`--font-mono` / `--fm-font-mono`):
+   - **Role**: Technical, Security & Audit Data only (PIN verification displays, raw UUIDs, JSON logs).
 
 ### 2.1 Dual-Scale Typography Architecture & Authoritative 3-Level Typographic System
 TopsCore LMS operates on a strict Dual-Scale Typography Architecture:
@@ -216,7 +210,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
    - Warna latar terang (Kuning `var(--grade-c)`, Hijau `var(--grade-a)`): Teks WAJIB gelap (**`#0F172A`**).
    - Warna latar pekat (Merah `var(--grade-e)`, Cyan `#0284c7`, Ungu `var(--quad-d)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
 4. **Anti-Layout Shift (Zero CLS)**:
-   - Tombol toggle mode yang labelnya berganti (misal: `Manual (M)` $\to$ `Done Editing (Manual)`) WAJIB mengunci lebar tetap (`width`, `min-width`, `max-width`) untuk mencegah pergeseran layout tombol di sekitarnya.
+   - Tombol toggle mode yang labelnya berganti (misal: `Edit Mode` $\to$ `Done Editing`) WAJIB mengunci lebar tetap (`width`, `min-width`, `max-width`) untuk mencegah pergeseran layout tombol di sekitarnya.
 5. **Strict Zero-Movement Hover Invariant (Anti-Clipping & Anti-Jitter SSOT)**:
    - **DILARANG KERAS** menggunakan animasi pergerakan fisik saat hover atau ditekan (`transform: translateY(...)`, `transform: scale(...)`, `translate`, atau pergeseran margin/top).
    - Pergerakan fisik sekecil 1px (`translateY(-1px)`) terbukti membuat garis batas atas tombol (*top border*) terpotong/hilang karena membentur batas *overflow* kontainer atau terdistorsi *sub-pixel rendering*.
@@ -236,7 +230,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Table Footer (`tfoot td`)**: Height **40px**, sticky at `bottom: 0; z-index: 10;`. Empty footers collapse.
 - **Data Rows (`tbody tr td`, `.standings-row`, `.completed-row`) — Universal Table Cell Regular Weight Invariant (SSOT)**:
   - **Harmonic Cadence**: 30px – 40px (`line-height: 1.3 !important;`).
-  - **Font Family Wajib Inter**: Seluruh tabel data dan list baris (sel data, header, nomor urut, poin, skor, nama siswa) **WAJIB menggunakan font `Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Font display geometris membulat (`Outfit`) **DILARANG KERAS** digunakan di dalam sel, nama siswa, atau angka dalam tabel karena merusak kerapian dan legibilitas datagrid.
+  - **Font Family Wajib Inter**: Seluruh tabel data dan list baris (sel data, header, nomor urut, poin, skor, nama siswa) **WAJIB menggunakan font `Inter`** (`var(--font-sans)`, `'Inter', sans-serif`). Font display geometris membulat (`Outfit`) dihapus total dari seluruh sistem TopsCore.
   - **Font Weight Wajib Regular 400**: Di seluruh sistem TopsCore (baik Admin Desktop Workstation maupun Student Mobile Corridor), seluruh konten di dalam baris tabel (teks, nama siswa, nomor peringkat, nilai poin PTS, persentase) **MUTLAK BERBOBOT REGULAR (`font-weight: 400 !important;`)**. Tidak boleh ada huruf atau angka tebal (`700`, `800`, `900`) di dalam sel tabel.
   - **Tabular Numerics**: Semua angka dalam tabel wajib menyertakan `font-variant-numeric: tabular-nums;` untuk perataan vertikal yang presisi.
   - **Pengecualian Terisolasi**: Header kolom tabel (`thead th` single header / super-header baris 1) diizinkan `font-weight: 600–700` (sub-header baris 2 tetap regular 400), dan glif simbol grade di dalam badge/chip kecil (22px–24px) diizinkan `font-weight: 500–600` untuk kejelasan glif.
@@ -275,7 +269,9 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 #### 4.2.3 Geographical & Address Sequencing
 - Sequence: `VILLAGE` $\to$ `DISTRICT` $\to$ `REGENCY` $\to$ `PROVINCE`. Regency is ALWAYS to the left of Province. Age numeric-only. Recognized abbreviations (NTB, NTT, DIY).
 
-### 4.3 Universal Master Edit Mode White Excel Gridlines Invariant (AGENTS.md §2.22)
+### 4.3 Universal Master Edit Mode White Excel Gridlines & Sub Panel Edit Mode Button Invariant (AGENTS.md §2.22)
+- **Mandatory Sub Panel Trigger (SSOT)**: Di setiap halaman/view pada workspace yang memiliki tabel di dalamnya, bagian Sub Panel (Lower Panel 40px) **WAJIB memiliki tombol "Edit Mode"** (yang berganti status/label menjadi `Done Editing` saat aktif). Tidak boleh ada tabel di workspace yang berdiri tanpa tombol Edit Mode di Sub Panelnya.
+- **Peniadaan Tombol Edit di Baris Tabel**: Dilarang keras membuat kolom `ACTIONS` atau tombol `Edit` di dalam baris tabel hanya untuk membuka modal edit, karena pengeditan dilakukan secara terpusat melalui tombol Edit Mode di Sub Panel untuk mode inline gridline Excel.
 - When Master Edit Mode is active (`body.global-edit-mode-on`), all tables render crisp white Excel gridlines (`rgba(255, 255, 255, 0.45)`).
 - Global Master Edit Mode Across All Admin Pages: inputs and selects are borderless, transparent, flush, with glowing focus rings. Absolute Hiding when OFF: edit-mode-only controls completely collapse (`display: none !important;`).
 
@@ -305,7 +301,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 ### 4.8 Proteksi Kolom Nilai & Sub Panel Action Modals (Score Column Lockdown Invariant)
 - **Score Column Lockdown**: Kolom nilai (PROGRESS, RATE, POINT, GRADE) pada data matriks kelas terkunci dari input teks langsung saat Master Edit Mode aktif (`body.global-edit-mode-on`).
 - **Tiga Tombol Resmi Sub Panel**: Mutasi nilai HANYA dapat dilakukan secara terkontrol melalui 3 tombol aksi berurutan di Sub Panel Student Test and Grade:
-  1. **Manual (Cyan `#38bdf8`)**: Menghasilkan Grade M (`GRADE_PALETTE['M']`).
+  1. **Edit Mode (Cyan `#38bdf8`)**: Mengaktifkan input/pengeditan nilai langsung pada tabel. Nilai hasil edit menghasilkan grade standar sistem (★, A, B, C, D, E) tanpa token khusus Grade M. Seluruh tombol Edit tabel di seluruh sistem berformat seragam menggunakan warna Tactical Cyan `#38bdf8`.
   2. **Remedi (Kuning `#FFFF00` / `var(--grade-c)`)**: Menghasilkan Grade R (cap 60%).
   3. **Forgive (Merah `#FF0000` / `var(--grade-e)`)**: Menghasilkan Grade F (dispensasi kelulusan).
 - **Integrasi Kelulusan Alumni (Level X / Alumni)**: Sesuai Phase 611, tombol `Alumni` terpisah di Sub Panel bawah telah ditiadakan. Kelulusan menjadi alumni merupakan puncak resmi promosi level (`Level 1` $\to$ `Level 2` $\to$ `Level 3` $\to$ `Level X / Alumni`), yang dieksekusi secara terpadu melalui tombol interaktif **`LEVEL UP`** di kolom tabel atau **`LEVEL UP ALL (X Eligible)`** di Sub Panel.
@@ -348,14 +344,14 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
     1. **Spacing & Padding (Strict 10px Lock)**: Jarak antar-kartu 10px dan jarak konten internal ke border luar tepat **10px** (`padding: 10px !important; gap: 10px !important;`).
     2. **Avatar Kolom Kiri**: Avatar foto/SVG siswa berukuran baku **70px × 70px** (`.hero-avatar-wrap`, `.hero-avatar-img`), border halus `1.5px solid rgba(255, 255, 255, 0.12)`, terpusat dan rapi.
     3. **Identitas Siswa Kolom Tengah**:
-       - Nama Siswa: **20px Outfit Bold** (`font-size: 20px; font-weight: 800; font-family: var(--font-display); line-height: 1.2;`).
+       - Nama Siswa: **20px Inter Bold** (`font-size: 20px; font-weight: 800; font-family: var(--font-display, 'Inter', sans-serif); line-height: 1.2;`).
        - Baris Metadata: **12px Inter Regular** (`font-size: 12px; font-weight: 400; color: #94A3B8; margin-top: 4px;`) dengan format `Batch • Class • Level`.
     4. **Dual Metrics Kolom Kanan**:
-       - Pasangan metrik `RATE %` dan `PTS` ditampilkan horizontal dengan angka **20px Outfit Bold**, warna angka dinamis mengikuti warna Grade siswa (`theme.color`).
+       - Pasangan metrik `RATE %` dan `PTS` ditampilkan horizontal dengan angka **20px Inter Bold**, warna angka dinamis mengikuti warna Grade siswa (`theme.color`).
        - Label metrik: **12px Inter** berbobot regular warna slate (`#94A3B8`).
     5. **Badge Grade Bulat**: Lingkaran grade berdiameter **44px** (`.grade-circle-44`), latar belakang mengikuti warna token Grade siswa, huruf Grade berbobot `font-weight: 800` warna **Dark Slate (`#0F172A`)** untuk seluruh simbol (★, A, B, C, D, E).
     6. **Zero Subtitle Clutter**: Dilarang menampilkan teks subtitle deskriptif yang redundan di bawah nama siswa.
-- **Standar Metrik Hero Individual**: Metrik hero tunggal pada kartu nilai (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) menerapkan **Level 0 Hero Metric (30px, Outfit 800 Extra Bold)** dengan tabular-nums dan soft ambient glow.
+- **Standar Metrik Hero Individual**: Metrik hero tunggal pada kartu nilai (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) menerapkan **Level 0 Hero Metric (30px, Inter 800 Extra Bold)** dengan tabular-nums dan soft ambient glow.
 
 ### 5.3 Student Gate & Cascade Login Invariants (index.html SSOT)
 - **Hierarki Alur Cascade Login**:
@@ -363,7 +359,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Setiap seksi yang telah dipilih **wajib tetap terlihat dalam kondisi terlipat (`.selected`)**, lengkap dengan label nilai yang dipilih dan tombol `Change` (`.cascade-change-btn`) untuk memungkinkan siswa mengubah pilihan.
   - Pemanggilan fungsi reset cascade wajib menargetkan langkah persis di bawahnya (`resetFrom('program')` saat institusi dipilih), DILARANG memanggil reset pada langkah yang baru saja dipilih karena akan melenyapkan elemen tersebut dari DOM visual (`max-height: 0`).
 - **Brand Header, Tipografi & Badge Logo Buku Vektor SVG**:
-  - **Judul Brand `TOPS CORE`**: Wajib menggunakan **30px (`font-size: 30px; font-weight: 900; font-family: 'Outfit', sans-serif; line-height: 1.1; margin: 0;`)** — **Level 0 Brand Hero Landmark**. Skala 30px memberikan wibawa identitas visual (*brand presence*) yang kokoh pada gerbang masuk portal, berharmonisasi secara matematis dengan kelipatan 10px ($10\text{px} \times 3$), serta proporsional dalam koridor mobile 430px. Dilarang menggunakan font perantara liar 18px (*Strict Zero Sub-Scale Invariant*).
+  - **Judul Brand `TOPS CORE`**: Wajib menggunakan **30px (`font-size: 30px; font-weight: 900; font-family: 'Inter', sans-serif; line-height: 1.1; margin: 0;`)** — **Level 0 Brand Hero Landmark**. Skala 30px memberikan wibawa identitas visual (*brand presence*) yang kokoh pada gerbang masuk portal, berharmonisasi secara matematis dengan kelipatan 10px ($10\text{px} \times 3$), serta proporsional dalam koridor mobile 430px. Dilarang menggunakan font perantara liar 18px (*Strict Zero Sub-Scale Invariant*).
   - **Eliminasi Subtitle (Zero Subtitle Clutter)**: Deskripsi atau subtitle di bawah judul (`Student Gate — Sign in to continue`) **DIHAPUS SECARA PERMANEN**. Menghilangkan elemen teks dekoratif yang berulang, memaksimalkan ruang vertikal *above-the-fold*, dan menjaga tampilan gerbang login tetap bersih (*ultra-lean, high-focus*).
   - **Badge Logo Buku Vektor SVG**: Menggunakan ikon vektor SVG Open Book resmi TopsCore di dalam lingkaran berdiameter 52px (`.brand-badge-wrap`) dengan aksen Tactical Cyan (`#38bdf8`), background `rgba(56, 189, 248, 0.12)`, border `1.5px solid rgba(56, 189, 248, 0.35)`, pendaran `box-shadow: 0 0 16px rgba(56, 189, 248, 0.25)`, dan animasi mengambang halus (*smooth float animation*). Jarak bawah ke judul tepat 10px (`margin-bottom: 10px;`).
 - **Universal 10px Container Gap & Card Internal Padding Invariant**:
@@ -387,12 +383,12 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **PWA Install Banner Ergonomics & Placement Invariant**:
   - Banner instalasi PWA (`.pwa-install-banner`) disisipkan tepat di antara judul brand `TOPS CORE` dan kartu langkah 1 (`#sec-institution`).
   - Menggunakan `margin: 0;` dengan gap vertikal 10px otomatis dari `.login-wrapper`.
-  - Teks wajib menggunakan **Bahasa Inggris murni**: Judul "Install TopsCore App" (14px Outfit Bold, Level 2.5 SSOT), tombol aksi "Install" dan "Later" (`pwa-btn-dismiss`).
+  - Teks wajib menggunakan **Bahasa Inggris murni**: Judul "Install TopsCore App" (14px Inter Bold, Level 2.5 SSOT), tombol aksi "Install" dan "Later" (`pwa-btn-dismiss`).
   - Dilarang menampilkan teks deskripsi tambahan di bawah judul (*Zero Description Clutter*) untuk menjaga profil kartu tetap ramping (~48px) dan menghemat ruang vertikal layar.
 
 ### 5.4 Universal 2-Line Test Title Architecture (SSOT Format 2 Baris Judul Tes)
 - **Cakupan Universal**: Seluruh tampilan antarmuka yang menyajikan judul tes (Dashboard Next Assignment Card, Header Ruang Ujian `test.html`, Halaman Hasil `result.html`, dan Modal Konfirmasi/Pilihan Komponen Tes) WAJIB menggunakan format **2 Baris Terpisah**:
-  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Task B1`, `Task C1`, `Exam A`, `Exam D`). Ditampilkan tebal (Outfit / Inter 800), kontras tinggi (Putih `#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman.
+  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Task B1`, `Task C1`, `Exam A`, `Exam D`). Ditampilkan tebal (Inter 800), kontras tinggi (Putih `#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman.
   - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Shopping & Choosing Products`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan warna Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
 - **Formula Resolusi**: Menggunakan helper resmi `formatTestDisplay(test)` (`line1` untuk Baris 1, `line2` untuk Baris 2) dan `formatTestTitleHtml(test)`.
 - **Invarian Eliminasi Truncation**: Pembagian 2 baris ini menjamin judul tes dapat terbaca utuh 100% pada koridor mobile 350px–430px tanpa terpotong elipsis (`...`).

@@ -398,8 +398,33 @@ export async function openTestBuilder(testId = null, initialClassId = null, init
       subSel.addEventListener('change', () => {
         updatePrereqs();
         updateModuleOptions();
+        updateClassPassingThreshold();
       });
     }
+
+    const typeSel = document.getElementById('wiz-type');
+    if (typeSel) {
+      typeSel.addEventListener('change', () => {
+        updateClassPassingThreshold();
+      });
+    }
+
+    // Inherit class passing threshold from SSOT
+    const updateClassPassingThreshold = async () => {
+      const passInp = document.getElementById('wiz-pass-threshold');
+      if (!passInp || !subSel?.value || isEdit) return;
+      try {
+        const classRules = typeof window.fetchClassTestSettings === 'function'
+          ? await window.fetchClassTestSettings(subSel.value)
+          : null;
+        if (classRules) {
+          const isExam = (typeSel?.value || '').toLowerCase() === 'exam';
+          passInp.value = isExam ? (classRules.examMinScore || 60) : (classRules.taskMinScore || 60);
+        }
+      } catch (_) {}
+    };
+
+    updateClassPassingThreshold();
 
     // Populate Prerequisite dropdown
     const updatePrereqs = () => {

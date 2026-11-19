@@ -134,7 +134,7 @@
 }
 
 .welcome-name {
-  font-size: clamp(1.05rem, 3.5vw, 1.35rem);
+  font-size: 20px;
   font-weight: 800;
   margin-bottom: 2px;
   line-height: 1.25;
@@ -221,7 +221,7 @@
 
 /* Welcome banner — reduce vertical bulk */
 .welcome-name {
-  font-size: clamp(0.95rem, 3vw, 1.2rem);
+  font-size: 20px;
 }
 .welcome-meta {
   font-size: 12px;
@@ -391,7 +391,7 @@
 }
 
 .profile-modal-header h3 {
-  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-family: var(--font-display, 'Inter', sans-serif);
   font-size: 16px;
   font-weight: 800;
   text-transform: uppercase !important;
@@ -570,7 +570,7 @@
 }
 
 .profile-modal-header h3 {
-  font-family: var(--font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
@@ -609,7 +609,7 @@
 
 .profile-cv-top-name-wrap .profile-student-name,
 .profile-cv-hero-details .profile-student-name {
-  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-family: var(--font-display, 'Inter', sans-serif);
   font-size: 16px;
   font-weight: 800;
   color: #ffffff;
@@ -946,7 +946,7 @@
   text-align: right;
   font-weight: 700;
   white-space: nowrap;
-  font-family: var(--font-display, 'Outfit', sans-serif);
+  font-family: var(--font-display, 'Inter', sans-serif);
 }
 
 /* Section Title */
@@ -1258,7 +1258,7 @@
 }
 
 .change-pin-modal-header h3 {
-  font-family: var(--font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   letter-spacing: 0.02em !important;
@@ -1653,7 +1653,7 @@
 
 #stat-overall-grade-value,
 #bottom-stat-avg-score {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 30px !important;
   font-weight: 800 !important;
   line-height: 1 !important;
@@ -2133,7 +2133,7 @@ body.dashboard-page .dashboard-header {
 }
 
 body.dashboard-page .dashboard-header-brand {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 16px !important;
   font-weight: 800 !important;
   letter-spacing: 0.06em !important;
@@ -2228,7 +2228,7 @@ body.dashboard-page .classes-bar-icon {
 }
 
 body.dashboard-page .classes-bar-name {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
@@ -2253,7 +2253,7 @@ body.dashboard-page .classes-bar-right {
 }
 
 body.dashboard-page .classes-bar-pct {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   color: var(--tier-color) !important;
@@ -2330,7 +2330,7 @@ body.dashboard-page .next-asm-go-btn {
   min-height: 28px !important;
   max-height: 28px !important;
   padding: 0 !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   border-radius: 6px !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -2744,7 +2744,7 @@ body.dashboard-page .btn-retry-test:hover {
 }
 
 body.dashboard-page .class-deck-title {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
@@ -2775,7 +2775,7 @@ body.dashboard-page .class-deck-box.active .class-deck-title {
 }
 
 body.dashboard-page .class-deck-progress {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 12px !important;
   font-weight: 700 !important;
   color: #94a3b8 !important;
@@ -2854,7 +2854,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 }
 
 .classes-selector-title {
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   letter-spacing: 0.04em !important;
@@ -3092,7 +3092,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 }
 
 .component-selector-title {
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   letter-spacing: 0.04em !important;
@@ -3171,7 +3171,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 }
 
 .component-card-title {
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.06em !important;
@@ -3213,7 +3213,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   font-variant-numeric: tabular-nums !important;
@@ -3375,7 +3375,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 }
 
 .custom-confirm-title {
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
@@ -3418,7 +3418,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   background: #1E293B !important;
   border: 1px solid rgba(0, 192, 0, 0.4) !important;
   color: #86efac !important;
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 14px !important;
   font-weight: 700 !important;
   letter-spacing: 0.5px !important;
@@ -3450,7 +3450,7 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
   background: #1E293B !important;
   border: 1px solid rgba(255, 0, 0, 0.4) !important;
   color: #fca5a5 !important;
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
@@ -3804,7 +3804,7 @@ body.dashboard-page .completed-summary-val {
 
 .photo-modal-title,
 .setup-welcome-title {
-  font-family: var(--fm-font-display, 'Outfit', sans-serif) !important;
+  font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
   font-weight: 700 !important;
   letter-spacing: 0.04em !important;
@@ -4023,7 +4023,7 @@ body.dashboard-page .completed-summary-val {
 }
 
 .gender-card-emoji {
-  font-size: 64px !important;
+  font-size: 40px !important;
   line-height: 1 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -4856,7 +4856,7 @@ select option.select-divider {
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.02em;
-  font-family: 'Outfit', -apple-system, sans-serif;
+  font-family: 'Inter', sans-serif;
   text-transform: uppercase;
   transition: all 0.2s ease;
   white-space: nowrap;
@@ -4905,7 +4905,7 @@ select option.select-divider {
 .asm-forgiven-sup {
   color: var(--grade-c) !important;
   font-weight: 900 !important;
-  font-size: 1.0em !important;
+  font-size: 12px !important;
   vertical-align: super !important;
   cursor: help !important;
   margin-left: 1px !important;
@@ -4914,7 +4914,7 @@ select option.select-divider {
 .asm-manual-sup {
   color: #38bdf8 !important;
   font-weight: 900 !important;
-  font-size: 1.0em !important;
+  font-size: 12px !important;
   vertical-align: super !important;
   cursor: help !important;
   margin-left: 1px !important;
@@ -4966,7 +4966,7 @@ body.dashboard-page .header-door-btn:hover {
 
 /* Header Brand Class Name (Centered & Truncated) */
 body.dashboard-page .dashboard-header-brand {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 16px !important;
   font-weight: 800 !important;
   letter-spacing: 0.06em !important;
@@ -5062,7 +5062,7 @@ body.dashboard-page .next-test-title-wrap {
 }
 
 body.dashboard-page .next-test-title-wrap .next-asm-title {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 12px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
@@ -5364,15 +5364,15 @@ body.dashboard-page #bottom-ad-banner,
   left: auto !important;
   right: auto !important;
   bottom: auto !important;
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
   text-align: left !important;
   padding-left: 16px !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 14px !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
@@ -5481,7 +5481,7 @@ body.dashboard-page .dashboard-header-brand {
   flex: 1 1 auto !important;
   text-align: center !important;
   text-transform: uppercase !important;
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 16px !important;
   font-weight: 800 !important;
   letter-spacing: 0.05em !important;
@@ -5541,7 +5541,7 @@ body.dashboard-page .hero-identity-top {
 
 body.dashboard-page #welcome-name,
 body.dashboard-page .hero-student-name {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 16px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
@@ -5642,7 +5642,7 @@ body.dashboard-page #banner-avatar-img {
 }
 
 body.dashboard-page #banner-avatar-initial {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 30px !important;
   font-weight: 800 !important;
   color: var(--tier-color, #FFFF00) !important;
@@ -5801,7 +5801,7 @@ body.dashboard-page .perf-pillar-val-wrap {
 /* Pillar 1: GRADE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-grade .perf-pillar-val,
 body.dashboard-page #stat-overall-grade-value {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 30px !important;
   font-weight: 900 !important;
   color: var(--tier-color, #FFFF00) !important;
@@ -5813,7 +5813,7 @@ body.dashboard-page #stat-overall-grade-value {
 /* Pillar 2: DESCRIPTION (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-desc .perf-pillar-val,
 body.dashboard-page #dashboard-achievement-text {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 30px !important;
   font-weight: 900 !important;
   letter-spacing: -0.01em !important;
@@ -5828,7 +5828,7 @@ body.dashboard-page #dashboard-achievement-text {
 /* Pillar 3: RATE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-rate .perf-pillar-val,
 body.dashboard-page #bottom-stat-avg-score {
-  font-family: 'Outfit', sans-serif !important;
+  font-family: 'Inter', sans-serif !important;
   font-size: 30px !important;
   font-weight: 900 !important;
   font-variant-numeric: tabular-nums !important;
@@ -6166,9 +6166,9 @@ body.dashboard-page .topscore-locked-banner {
   left: auto !important;
   right: auto !important;
   bottom: auto !important;
-  height: 80px !important;
-  min-height: 80px !important;
-  max-height: 80px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
   width: 100% !important;
   max-width: 430px !important;
   margin: 0 auto !important;

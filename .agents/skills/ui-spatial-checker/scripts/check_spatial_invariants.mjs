@@ -30,12 +30,12 @@ assert.ok(
 );
 console.log('  ✔ Root 100vh lock & zero outer page scroll verified');
 
-// 80px banner deduction
+// Banner deduction (50px per TopsCore Banner SSOT)
 assert.ok(
-  adminCss.includes('height: calc(100vh - 80px) !important;'),
-  '[Rule 1.1 & 1.8] #admin-console must deduct 80px for #bottom-ad-banner'
+  adminCss.includes('height: calc(100vh - 50px) !important;'),
+  '[Rule 1.1 & 1.8] #admin-console must deduct 50px for #bottom-ad-banner'
 );
-console.log('  ✔ #admin-console 80px deduction verified');
+console.log('  ✔ #admin-console 50px banner deduction verified');
 
 // Universal Sub Panel (Lower Panel) 40px height
 assert.ok(

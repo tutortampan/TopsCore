@@ -16,15 +16,11 @@ function closeAllQuickModals() {
 }
 
 /**
- * 1. QUICK MANUAL SCORE MODAL (CYAN #38bdf8, GRADE M)
- * Single-step modal focused on the active class.
- */
-/**
  * openQuickManualScoreModal is DEPRECATED & PURGED.
- * Manual editing is now performed directly on the class table via the Sub Panel Manual button.
+ * Table editing is performed directly on the class table via the Sub Panel Edit Mode button.
  */
 export async function openQuickManualScoreModal() {
-  console.warn('openQuickManualScoreModal is deprecated. Manual editing is now inline on table.');
+  console.warn('openQuickManualScoreModal is deprecated. Table editing is now inline on table.');
 }
 
 export async function openQuickRemedialModal({ classId, classTests = [], students = [], allAttempts = [], onSaved }) {

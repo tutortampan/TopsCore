@@ -12,7 +12,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v160';
     import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
-import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
+import { formatTestDisplay, isExam, validateDescriptionSentence } from './grading.js?v=20261106_v160';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -72,7 +72,21 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
     let currentActiveSpeechSession = null;
     let _mcAutoAdvanceTimer = null;
 
+    // In-Browser Camera & Media State (Zero Supabase Storage Egress per DECISION-054)
+    window._activeCameraStream = null;
+    window._capturedPhotos = window._capturedPhotos || {};
+
+    function stopActiveCameraStream() {
+      if (window._activeCameraStream) {
+        try {
+          window._activeCameraStream.getTracks().forEach(t => t.stop());
+        } catch (_) {}
+        window._activeCameraStream = null;
+      }
+    }
+
     function abortActiveSpeechSession() {
+      stopActiveCameraStream();
       if (currentActiveSpeechSession) {
         try { currentActiveSpeechSession.abort(); } catch (_) {}
         currentActiveSpeechSession = null;
@@ -1160,8 +1174,11 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
           answerRows = allAnswerRows;
 
           if (attemptData) {
-            const isExamTest = isExam(testData);
-            const sectionDur = sectionKey === 'words' ? (isExamTest ? 40 : 10) : (isExamTest ? 14 : 5);
+            // Standar Pacing SSOT (DECISION-062): 10s per word & 20s per phrase (prioritizes tutor manual override if set)
+            const manualDur = Number(testData?.working_duration_minutes || testData?.payload?.working_duration_minutes || 0);
+            const pace = sectionKey === 'phrases' ? 20 : 10;
+            const autoCalcDur = Math.max(1, Math.ceil((allAnswerRows.length * pace) / 60));
+            const sectionDur = manualDur > 0 ? manualDur : autoCalcDur;
             const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
             attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
             _lastKnownServerExpMs = new Date(attemptData.expires_at).getTime();
@@ -1178,13 +1195,21 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             }
           }
 
-          const secTag = sectionKey === 'words' ? 'Words' : 'Phrases';
           const formatted = formatTestDisplay(testData);
-          let l1 = formatted.line1 || 'Test';
-          if (!l1.toLowerCase().includes(secTag.toLowerCase())) {
-            l1 += ` (${secTag})`;
-          }
+          const l1 = formatted.line1 || 'Test';
           testDisplayName = l1;
+          // Authoritative synchronization: lock testsections to single unified section to prevent ghost empty sections in matrix modal
+          testsections = [{ id: 'default', title: testDisplayName, section_order: 1 }];
+          allAnswerRows.forEach(row => {
+            let snap = row.question_snapshot;
+            if (typeof snap === 'string') {
+              try { snap = JSON.parse(snap); } catch(_) { snap = {}; }
+            }
+            if (snap && typeof snap === 'object') {
+              snap.section_id = 'default';
+              row.question_snapshot = snap;
+            }
+          });
           const mainTitleEl = document.getElementById('test-main-title');
           if (mainTitleEl) {
             mainTitleEl.textContent = l1;
@@ -1224,13 +1249,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
         // Populate TEST display name via authoritative formatTestDisplay (SSOT AGENTS.md § 2.6.2 / ui-invariants.md § 5.4)
         const formattedTest = formatTestDisplay(testData);
-        let line1Title = formattedTest.line1 || 'Test';
-        if (requestedSection) {
-          const secTag = requestedSection === 'words' ? 'Words' : 'Phrases';
-          if (!line1Title.toLowerCase().includes(secTag.toLowerCase())) {
-            line1Title += ` (${secTag})`;
-          }
-        }
+        const line1Title = formattedTest.line1 || 'Test';
         testDisplayName = line1Title;
 
         try {
@@ -1441,7 +1460,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             const f = formatTestDisplay(testData);
             if (modalTitleEl) {
               if (f.line2) {
-                modalTitleEl.innerHTML = `<span style="display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
+                modalTitleEl.innerHTML = `<span style="display:block;font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
               } else {
                 modalTitleEl.textContent = f.fullTitle || testData.title || 'Topic Test';
               }
@@ -1465,8 +1484,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             const startWithChoice = async () => {
               compModal.classList.add('hidden');
               requestedSection = chosenPart;
-              applySectionFilter(chosenPart);
-              testsections = [{ id: 'default', title: testDisplayName, section_order: 1 }];
+              await applySectionFilter(chosenPart);
               try {
                 const url = new URL(window.location.href);
                 url.searchParams.set('section', chosenPart);
@@ -1701,7 +1719,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
        const nameEl = document.getElementById('test-main-title') || document.getElementById('test-name');
        if (nameEl) {
-         nameEl.textContent = testDisplayName + (testsections.length > 1 ? ` · ${currentSection?.title || `Section ${index + 1}`}` : '');
+         nameEl.textContent = testDisplayName;
          nameEl.setAttribute('title', (formatTestDisplay(testData)?.fullTitle) || testDisplayName);
        }
        const subEl = document.getElementById('test-title-sub');
@@ -1853,10 +1871,29 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         barUnanswered.style.width = '100%';
       }
 
-      const isMultiSection = testsections && testsections.length > 1;
+      // Filter testsections to only those that actually have matching questions in allAnswerRows
+      const activeSections = (testsections || []).filter(sec => {
+        return allAnswerRows.some(row => {
+          let snap = row.question_snapshot;
+          if (typeof snap === 'string') {
+            try { snap = JSON.parse(snap); } catch { snap = {}; }
+          }
+          const secId = snap?.section_id || 'default';
+          return secId === sec.id || (sec.id === 'default' && (!secId || secId === 'default'));
+        });
+      });
+
+      if (activeSections.length > 0) {
+        testsections = activeSections;
+      } else {
+        testsections = [{ id: 'default', title: testDisplayName, section_order: 1 }];
+      }
+
+      const isMultiSection = testsections.length > 1;
 
       if (!isMultiSection) {
         // Single continuous 8-column sleek grid
+        grid.classList.remove('multi-section');
         grid.style.display = 'grid';
         grid.style.gridTemplateColumns = 'repeat(8, 1fr)';
         grid.style.gap = '6px';
@@ -1880,26 +1917,29 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         });
       } else {
         // Multi-section layout: Group by Section
+        grid.classList.add('multi-section');
         grid.style.display = 'flex';
         grid.style.flexDirection = 'column';
         grid.style.gap = '12px';
 
         let globalCounter = 0;
 
-        testsections.forEach((sec, secIdx) => {
+        activeSections.forEach((sec, secIdx) => {
           const secRows = allAnswerRows.filter(row => {
             let snap = row.question_snapshot;
             if (typeof snap === 'string') {
               try { snap = JSON.parse(snap); } catch { snap = {}; }
             }
-            return (snap?.section_id || 'default') === sec.id;
+            const secId = snap?.section_id || 'default';
+            return secId === sec.id || (sec.id === 'default' && (!secId || secId === 'default'));
           });
+          if (secRows.length === 0) return; // Strict safety: never render empty section card
 
           const secBlock = document.createElement('div');
           secBlock.className = 'matrix-sec-block';
           secBlock.style.cssText = (secIdx === currentSectionIndex)
-            ? 'background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.4); border-radius:10px; padding:8px 10px 10px 10px;'
-            : 'background:rgba(15, 23, 42, 0.6); border:1px solid rgba(255, 255, 255, 0.08); border-radius:10px; padding:8px 10px 10px 10px;';
+            ? 'background:rgba(56, 189, 248, 0.08); border:1px solid rgba(56, 189, 248, 0.4); border-radius:10px; padding:8px 10px 10px 10px; width:100%; box-sizing:border-box;'
+            : 'background:rgba(15, 23, 42, 0.6); border:1px solid rgba(255, 255, 255, 0.08); border-radius:10px; padding:8px 10px 10px 10px; width:100%; box-sizing:border-box;';
 
           const secHeader = document.createElement('div');
           secHeader.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid rgba(255, 255, 255, 0.08);';
@@ -2019,7 +2059,8 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             if (typeof snap === 'string') {
               try { snap = JSON.parse(snap); } catch { snap = {}; }
             }
-            return (snap?.section_id || 'default') === sec.id;
+            const secId = snap?.section_id || 'default';
+            return secId === sec.id || (sec.id === 'default' && (!secId || secId === 'default'));
           });
           const secAnswered = secRows.filter(r => !!(activeMap[r.id] && activeMap[r.id].trim())).length;
           const countEl = document.getElementById(`matrix-sec-count-${secIdx}`);
@@ -2188,6 +2229,9 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
       if (testData?.answer_type === 'written' || (testData?.shell_code && testData.shell_code.endsWith('-WORDS-EXAM')) || (testData?.title && testData.title.toUpperCase().includes('WORDS EXAM'))) {
         answerType = 'written';
       }
+      if (testData?.answer_type === 'description' || testData?.module === 'description' || testData?.module_type === 'POINT_AND_SPEAK' || snap?.module === 'description' || snap?.answer_type === 'description' || (testData?.title && testData.title.includes('Tell Me What You See'))) {
+        answerType = 'description';
+      }
       const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
       // Extract Theme (Name + Code), Topic, Category, and Type for 4 corners
       const THEME_NAMES = {
@@ -2335,7 +2379,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         questionBox.setAttribute('translate', 'no');
         questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; margin:0 auto !important;';
         questionBox.innerHTML = `
-          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#000000 !important; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:auto; display:flex; align-items:center; justify-content:center; text-shadow:none !important;">
+          <div class="speech-question-text notranslate" translate="no" style="font-size:20px; font-weight:800; color:#000000 !important; text-align:center; line-height:1.25; font-family:'Inter',sans-serif; width:100%; word-break:break-word; margin:auto; display:flex; align-items:center; justify-content:center; text-shadow:none !important;">
             ${escapeHtml(questionText)}
           </div>
         `;
@@ -2387,13 +2431,29 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         questionBox.setAttribute('translate', 'no');
         questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; margin:0 auto !important;';
         questionBox.innerHTML = `
-          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#000000 !important; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:auto; display:flex; align-items:center; justify-content:center; text-shadow:none !important;">
+          <div class="speech-question-text notranslate" translate="no" style="font-size:20px; font-weight:800; color:#000000 !important; text-align:center; line-height:1.25; font-family:'Inter',sans-serif; width:100%; word-break:break-word; margin:auto; display:flex; align-items:center; justify-content:center; text-shadow:none !important;">
             ${escapeHtml(questionText)}
           </div>
         `;
         main.appendChild(questionBox);
 
-        if (answerType === 'speech_to_text' || answerType === 'spoken') {
+        if (answerType === 'description') {
+          // 3. Description Answer Stage (In-Browser Camera & Photo Preview + Speech Transcript)
+          answerArea = document.createElement('div');
+          answerArea.id = 'description-answer-container';
+          answerArea.className = 'w-full flex flex-col justify-between';
+          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:4 1 0 !important; min-height:80px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 12px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; box-sizing:border-box; position:relative;';
+          main.appendChild(answerArea);
+
+          // 4. Description Control Panel (Camera + Mic + Grammar Validator)
+          controlArea = document.createElement('div');
+          controlArea.id = 'description-control-container';
+          controlArea.className = 'w-full flex flex-col items-center justify-center';
+          controlArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; margin:0 auto !important; padding:6px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 16, 30, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+          main.appendChild(controlArea);
+
+          renderDescription(answerArea, controlArea, row, savedAnswer, snap, idx);
+        } else if (answerType === 'speech_to_text' || answerType === 'spoken') {
           // 3. Speaking Answer Transcript Box (Flex 3: Matches questionBox 1:1)
           answerArea = document.createElement('div');
           answerArea.id = 'speech-answer-container';
@@ -2594,7 +2654,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:clamp(12.5px, 3.2vw, 14.5px); font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:12px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
 
         btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
 
@@ -2645,7 +2705,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         btn.className = `mc-option ${isSelected ? 'selected' : ''}`;
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:clamp(12.5px, 3.2vw, 14.5px); cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:12px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
         btn.innerHTML = `<div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25;">${optText}</div>`;
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -2690,7 +2750,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
       const ta = document.createElement('textarea');
       ta.className = 'written-input';
-      ta.style.cssText = 'width:100%; height:100%; min-height:0; background:transparent; border:none; color:#000000 !important; font-size:clamp(20px, 5vw, 28px); font-weight:800; text-align:center; resize:none; outline:none; font-family:\'Outfit\',sans-serif; padding:4px 0; margin:auto; line-height:1.25; display:flex; align-items:center; justify-content:center; box-sizing:border-box; text-shadow:none !important;';
+      ta.style.cssText = 'width:100%; height:100%; min-height:0; background:transparent; border:none; color:#000000 !important; font-size:20px; font-weight:800; text-align:center; resize:none; outline:none; font-family:\'Inter\',sans-serif; padding:4px 0; margin:auto; line-height:1.25; display:flex; align-items:center; justify-content:center; box-sizing:border-box; text-shadow:none !important;';
       ta.id = `written-${row.id}`;
       ta.placeholder = 'Type here...';
       ta.value = savedAnswer || '';
@@ -2779,6 +2839,273 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
       });
     }
 
+    function renderDescription(area, controlArea, row, savedAnswer, snap = {}, questionIdx = 0) {
+      stopActiveCameraStream();
+
+      // Determine Target Demonstrative:
+      // 1-5 (idx 0-4): this
+      // 6-10 (idx 5-9): that
+      // 11-15 (idx 10-14): these
+      // 16-20 (idx 15-19): those
+      let targetDemo = 'this';
+      if (snap?.target_demonstrative) {
+        targetDemo = String(snap.target_demonstrative).toLowerCase().trim();
+      } else if (snap?.correct_answer && ['this', 'that', 'these', 'those'].includes(String(snap.correct_answer).toLowerCase().trim())) {
+        targetDemo = String(snap.correct_answer).toLowerCase().trim();
+      } else if (questionIdx >= 15) {
+        targetDemo = 'those';
+      } else if (questionIdx >= 10) {
+        targetDemo = 'these';
+      } else if (questionIdx >= 5) {
+        targetDemo = 'that';
+      } else {
+        targetDemo = 'this';
+      }
+
+      const isSingular = (targetDemo === 'this' || targetDemo === 'that');
+      const targetLabel = targetDemo.toUpperCase();
+      const formulaPattern = isSingular ? `${targetLabel} IS A/AN [3 ADJECTIVES] [NOUN]` : `${targetLabel} ARE [3 ADJECTIVES] [NOUNS]`;
+
+      // 1. Photo Stage in answerArea (In-Browser Camera & Canvas)
+      const photoStage = document.createElement('div');
+      photoStage.id = `desc-photo-stage-${row.id}`;
+      photoStage.style.cssText = 'width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; flex:1; min-height:80px; box-sizing:border-box;';
+
+      const existingPhoto = window._capturedPhotos[row.id] || null;
+
+      // Hidden native file input for camera fallback
+      const fileInput = document.createElement('input');
+      fileInput.type = 'file';
+      fileInput.accept = 'image/*';
+      fileInput.capture = 'environment';
+      fileInput.style.display = 'none';
+
+      // Live Video & Preview elements
+      const videoEl = document.createElement('video');
+      videoEl.autoplay = true;
+      videoEl.playsInline = true;
+      videoEl.muted = true;
+      videoEl.style.cssText = 'width:100%; max-width:240px; max-height:110px; object-fit:cover; border-radius:10px; border:2px solid #38bdf8; display:none; background:#000; box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+
+      const previewImg = document.createElement('img');
+      previewImg.style.cssText = 'width:100%; max-width:220px; max-height:110px; object-fit:cover; border-radius:10px; border:2px solid var(--clr-success); display:none; box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+
+      const photoStatus = document.createElement('div');
+      photoStatus.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; display:flex; align-items:center; gap:6px;';
+
+      photoStage.appendChild(videoEl);
+      photoStage.appendChild(previewImg);
+      photoStage.appendChild(photoStatus);
+      photoStage.appendChild(fileInput);
+      area.appendChild(photoStage);
+
+      // 2. Transcript & Editable Text Display in answerArea
+      const transcriptInput = document.createElement('input');
+      transcriptInput.type = 'text';
+      transcriptInput.id = `desc-transcript-${row.id}`;
+      transcriptInput.placeholder = 'Snap a photo, then speak or type your description sentence...';
+      transcriptInput.value = savedAnswer || '';
+      transcriptInput.style.cssText = 'width:100%; font-size:15px; font-weight:700; color:#0f172a !important; text-align:center; padding:6px 10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px; font-family:"Inter",sans-serif; box-sizing:border-box; outline:none; background:#f8fafc;';
+      area.appendChild(transcriptInput);
+
+      // Helper to update photo view
+      const updatePhotoView = (dataUrl) => {
+        if (dataUrl) {
+          window._capturedPhotos[row.id] = dataUrl;
+          stopActiveCameraStream();
+          videoEl.style.display = 'none';
+          snapBtn.style.display = 'none';
+          previewImg.src = dataUrl;
+          previewImg.style.display = 'block';
+          photoStatus.innerHTML = `<span style="color:var(--clr-success);">● Photo Captured (100% In-Browser)</span>`;
+          camBtn.innerHTML = `${getSvgIcon('camera', 14)} Retake Photo`;
+          camBtn.style.background = 'rgba(255,255,255,0.1)';
+        } else {
+          previewImg.style.display = 'none';
+          photoStatus.innerHTML = `<span style="color:#f59e0b;">● No photo yet — please snap your object</span>`;
+          camBtn.innerHTML = `${getSvgIcon('camera', 14)} Open Camera`;
+          camBtn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
+        }
+      };
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            updatePhotoView(ev.target.result);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      // 3. Control Area: Target Pill + Buttons Row + Live Grammar Validator
+      const topBar = document.createElement('div');
+      topBar.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;';
+
+      const targetBadge = document.createElement('div');
+      targetBadge.style.cssText = 'padding:2px 8px; border-radius:6px; background:rgba(192, 132, 252, 0.15); border:1px solid #c084fc; color:#c084fc; font-size:11px; font-weight:800; letter-spacing:0.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
+      targetBadge.textContent = formulaPattern;
+      topBar.appendChild(targetBadge);
+
+      const langSelect = document.createElement('select');
+      langSelect.className = 'speech-lang-select';
+      langSelect.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:11px; font-weight:600; outline:none;';
+      langSelect.innerHTML = `<option value="en-US">EN-US</option><option value="en-GB">EN-UK</option>`;
+      topBar.appendChild(langSelect);
+      controlArea.appendChild(topBar);
+
+      // Buttons Row: Camera Button + Snap Button + Mic Button
+      const btnRow = document.createElement('div');
+      btnRow.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin:4px 0;';
+
+      const camBtn = document.createElement('button');
+      camBtn.type = 'button';
+      camBtn.className = 'btn-camera-trigger';
+      camBtn.style.cssText = 'padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;';
+      btnRow.appendChild(camBtn);
+
+      const snapBtn = document.createElement('button');
+      snapBtn.type = 'button';
+      snapBtn.style.cssText = 'padding:6px 12px; border-radius:8px; border:1px solid #38bdf8; background:#38bdf8; color:#0f172a; font-size:12px; font-weight:800; cursor:pointer; display:none; align-items:center; gap:6px;';
+      snapBtn.innerHTML = `${getSvgIcon('check-circle', 14)} Snap Frame`;
+      btnRow.appendChild(snapBtn);
+
+      const micBtn = document.createElement('button');
+      micBtn.type = 'button';
+      micBtn.className = 'speech-mic-btn-lg';
+      micBtn.style.cssText = 'width:40px; height:40px; border-radius:50%; border:2px solid rgba(var(--grade-a-rgb), 0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;';
+      micBtn.innerHTML = '<svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      btnRow.appendChild(micBtn);
+
+      controlArea.appendChild(btnRow);
+
+      // Grammar & Adjective Order Live Validator Card
+      const validatorCard = document.createElement('div');
+      validatorCard.id = `desc-validator-${row.id}`;
+      validatorCard.style.cssText = 'width:100%; border-radius:8px; padding:6px 10px; font-size:11px; line-height:1.35; box-sizing:border-box; transition:all 0.2s ease;';
+      controlArea.appendChild(validatorCard);
+
+      const runLiveValidation = (text) => {
+        answeredMap[row.id] = text;
+        const valRes = typeof validateDescriptionSentence === 'function' ? validateDescriptionSentence(text, targetDemo) : { valid: false, error: 'Loading validator...' };
+        if (valRes.valid) {
+          validatorCard.style.background = 'rgba(0, 192, 0, 0.15)';
+          validatorCard.style.border = '1px solid var(--grade-a)';
+          validatorCard.style.color = '#f8fafc';
+          validatorCard.innerHTML = `
+            <div style="font-weight:800; color:var(--grade-a); display:flex; align-items:center; gap:6px;">
+              ${getSvgIcon('check-circle', 14)} Sesuai: ${escapeHtml(valRes.formatted)}
+            </div>
+            <div style="font-size:10.5px; color:#cbd5e1; margin-top:2px;">
+              Urutan: ${valRes.adjectives.map(a => `<span style="color:#95ff00;font-weight:700;">${a.word}</span> <span style="color:#94a3b8;">(${a.category})</span>`).join(' → ')}
+            </div>
+          `;
+        } else if (text && text.trim().length > 0) {
+          validatorCard.style.background = 'rgba(255, 140, 0, 0.12)';
+          validatorCard.style.border = '1px solid #ea580c';
+          validatorCard.style.color = '#fed7aa';
+          validatorCard.innerHTML = `<span style="font-weight:700; color:#ea580c;">⚠ Evaluasi:</span> ${escapeHtml(valRes.error)}`;
+        } else {
+          validatorCard.style.background = 'rgba(56, 189, 248, 0.08)';
+          validatorCard.style.border = '1px solid rgba(56, 189, 248, 0.25)';
+          validatorCard.style.color = '#bae6fd';
+          validatorCard.innerHTML = `<span>Gunakan rumus: <strong>${formulaPattern}</strong></span>`;
+        }
+      };
+
+      transcriptInput.addEventListener('input', () => {
+        runLiveValidation(transcriptInput.value);
+        updateActiveChipOnly(row.id, transcriptInput.value);
+        scheduleDebouncedAutoSave(row.id, transcriptInput.value, 800);
+      });
+
+      transcriptInput.addEventListener('blur', () => {
+        persistLocalBuffer();
+        autoSave(row.id, transcriptInput.value);
+      });
+
+      // Camera click handler
+      camBtn.addEventListener('click', async () => {
+        if (videoEl.style.display === 'block') {
+          stopActiveCameraStream();
+          videoEl.style.display = 'none';
+          snapBtn.style.display = 'none';
+          updatePhotoView(window._capturedPhotos[row.id] || null);
+          return;
+        }
+
+        try {
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            const stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: 'environment' } },
+              audio: false
+            });
+            window._activeCameraStream = stream;
+            videoEl.srcObject = stream;
+            videoEl.style.display = 'block';
+            previewImg.style.display = 'none';
+            snapBtn.style.display = 'inline-flex';
+            camBtn.innerHTML = `${getSvgIcon('x', 14)} Cancel`;
+            photoStatus.innerHTML = `<span style="color:#38bdf8;">● Live Viewfinder Active</span>`;
+          } else {
+            fileInput.click();
+          }
+        } catch (err) {
+          console.warn('getUserMedia unavailable, falling back to camera input:', err);
+          fileInput.click();
+        }
+      });
+
+      snapBtn.addEventListener('click', () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = videoEl.videoWidth || 640;
+          canvas.height = videoEl.videoHeight || 480;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          stopActiveCameraStream();
+          snapBtn.style.display = 'none';
+          updatePhotoView(dataUrl);
+        } catch (err) {
+          console.error('Snapshot failed:', err);
+          showToast('Failed to snap photo, using file input', 'warning');
+          fileInput.click();
+        }
+      });
+
+      // Mic speech handler
+      micBtn.addEventListener('click', () => {
+        if (currentActiveSpeechSession?.isListening()) {
+          currentActiveSpeechSession.stop();
+          return;
+        }
+
+        abortActiveSpeechSession();
+
+        currentActiveSpeechSession = createSpeechSession({
+          lang: langSelect.value,
+          onResult: (transcript, isFinal) => {
+            transcriptInput.value = transcript;
+            runLiveValidation(transcript);
+            if (isFinal) {
+              autoSave(row.id, transcript);
+            }
+          },
+          onError: (err) => {
+            console.warn('Speech recognition error:', err);
+          }
+        });
+
+        currentActiveSpeechSession.start();
+      });
+
+      // Initial state
+      updatePhotoView(existingPhoto);
+      runLiveValidation(savedAnswer || '');
+    }
+
     function renderSpeech(area, controlArea, row, savedAnswer, snap = {}) {
       if (!isSpeechSupported()) {
         area.innerHTML = '<div style="color:var(--grade-c); text-align:center; font-size:12px; font-weight:700;">Speech Unavailable</div>';
@@ -2818,7 +3145,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
       const transcriptBox = document.createElement('div');
       transcriptBox.id = `speech-transcript-${row.id}`;
-      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#000000 !important; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:none !important; font-family:\'Outfit\',sans-serif; margin:auto;';
+      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:#000000 !important; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:none !important; font-family:\'Inter\',sans-serif; margin:auto;';
       if (savedAnswer) transcriptBox.textContent = savedAnswer;
       else transcriptBox.innerHTML = '<span style="color:#94a3b8; font-style:italic;">Listening...</span>';
       area.appendChild(transcriptBox);
@@ -2860,7 +3187,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
       const micHelp = document.createElement('div');
-      micHelp.style.cssText = 'margin-top:4px; font-size:clamp(11px, 2.5vw, 13px); color:#94a3b8; font-weight:700; letter-spacing:0.04em;';
+      micHelp.style.cssText = 'margin-top:4px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.04em;';
       micHelp.textContent = 'Tap to Speak';
 
       controlArea.appendChild(micBtn);

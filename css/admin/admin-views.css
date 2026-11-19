@@ -166,7 +166,7 @@
 }
 
 .section-tab-val {
-  font-family: var(--fm-font-display, 'Outfit', sans-serif);
+  font-family: var(--fm-font-display, 'Inter', sans-serif);
   font-size: 20px;
   font-weight: 800;
   color: var(--fm-text-primary);
@@ -1429,7 +1429,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 
 .student-reg-dropzone-icon {
-  font-size: 35px;
+  font-size: 30px;
   margin-bottom: 0.5rem;
   display: block;
 }

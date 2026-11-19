@@ -32,30 +32,14 @@ import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function renderRecycleBin(container) {
   container.innerHTML = `
-    <div class="section-header d-flex justify-between align-center flex-wrap gap-2 mb-4">
-      <div>
-        <h2 class="section-title text-gradient">Recycle Bin <span class="count-chip" id="recycle-total-chip">Loading...</span></h2>
-        <p class="section-subtitle">Centralized data recovery for soft-deleted Students, Classes, Tests, and Questions</p>
-      </div>
-      <div class="d-flex gap-2 align-center">
-        <button class="btn btn-secondary btn-sm" id="recycle-refresh-all-btn">&#x21bb; Refresh Bin</button>
-      </div>
+    <div class="section-header mb-3">
+      <h2 class="section-title text-gradient">Recycle Bin</h2>
+      <p class="section-subtitle">Centralized data recovery for soft-deleted Students, Classes, Tests, and Questions</p>
     </div>
 
-    <!-- Filter Tabs -->
-    <div class="d-flex gap-2 flex-wrap mb-3" id="recycle-type-tabs">
-      <button class="btn btn-primary btn-xs recycle-tab-btn" data-type="all">All Entities</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="students">Students</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="programs">Classes (Programs)</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="tests">Tests</button>
-      <button class="btn btn-secondary btn-xs recycle-tab-btn" data-type="vocabulary_vault">Vocabulary</button>
-    </div>
-
-    <!-- Aggregated Table -->
-    <div class="antigravity-card p-4">
-      <div class="table-wrap" id="recycle-results-wrap">
-        ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning Recycle Bin...')}
-      </div>
+    <!-- Aggregated Table (100vh workstation height lock, table-wrap scroll only) -->
+    <div class="table-wrap" id="recycle-results-wrap" style="flex:1 1 0 !important; min-height:0 !important; overflow-y:auto; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
+      ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning Recycle Bin...')}
     </div>
 
     <!-- Gated Hard Purge Modal Container -->
@@ -87,8 +71,55 @@ export async function renderRecycleBin(container) {
 
       items.sort((a, b) => new Date(b.deleted_at) - new Date(a.deleted_at));
       currentDeletedRecords = items;
-      if (chip) chip.textContent = `${items.length} Soft-Deleted`;
 
+      const syncRecycleSubPanel = () => {
+        if (typeof window.setBottomInfobar !== 'function') return;
+        const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+        const editBtnStyle = isEditOn
+          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+          : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+        const editBtnLabel = isEditOn
+          ? `${getSvgIcon('check-circle', 14)} Done Editing`
+          : `${getSvgIcon('edit', 14)} Edit Mode`;
+
+        const leftHtml = `
+          <div class="d-flex gap-1 align-center" id="recycle-type-tabs" style="flex-wrap:nowrap;">
+            <button type="button" class="btn ${currentFilterType === 'all' ? 'btn-primary' : 'btn-secondary'} btn-sm recycle-tab-btn" data-type="all" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:600;border-radius:4px;cursor:pointer;">All Entities</button>
+            <button type="button" class="btn ${currentFilterType === 'students' ? 'btn-primary' : 'btn-secondary'} btn-sm recycle-tab-btn" data-type="students" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:600;border-radius:4px;cursor:pointer;">Students</button>
+            <button type="button" class="btn ${currentFilterType === 'programs' ? 'btn-primary' : 'btn-secondary'} btn-sm recycle-tab-btn" data-type="programs" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:600;border-radius:4px;cursor:pointer;">Classes</button>
+            <button type="button" class="btn ${currentFilterType === 'tests' ? 'btn-primary' : 'btn-secondary'} btn-sm recycle-tab-btn" data-type="tests" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:600;border-radius:4px;cursor:pointer;">Tests</button>
+            <button type="button" class="btn ${currentFilterType === 'vocabulary_vault' ? 'btn-primary' : 'btn-secondary'} btn-sm recycle-tab-btn" data-type="vocabulary_vault" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:600;border-radius:4px;cursor:pointer;">Vocabulary</button>
+          </div>
+        `;
+        const rightHtml = `
+          <div style="display:flex;align-items:center;gap:10px;white-space:nowrap;">
+            <span class="badge badge-info" id="recycle-total-chip" style="font-size:12px;font-weight:700;">${items.length} Soft-Deleted</span>
+            <button type="button" class="btn btn-sm" id="recycle-toggle-edit-mode" style="${editBtnStyle}" title="Toggle Master Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="recycle-refresh-all-btn" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+              ${getSvgIcon('refresh', 14)} Refresh Vault
+            </button>
+          </div>
+        `;
+        window.setBottomInfobar(leftHtml, rightHtml);
+
+        document.querySelectorAll('#recycle-type-tabs .recycle-tab-btn').forEach(tab => {
+          tab.addEventListener('click', (e) => {
+            currentFilterType = e.currentTarget.dataset.type;
+            syncRecycleSubPanel();
+            renderTable();
+          });
+        });
+        document.getElementById('recycle-toggle-edit-mode')?.addEventListener('click', () => {
+          if (typeof window.toggleGlobalEditMode === 'function') {
+            const newState = window.toggleGlobalEditMode();
+            showToast(newState ? 'Master Edit Mode ON (Inline Excel Grid)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+            syncRecycleSubPanel();
+          }
+        });
+        document.getElementById('recycle-refresh-all-btn')?.addEventListener('click', fetchAllDeleted);
+      };
+
+      syncRecycleSubPanel();
       renderTable();
     } catch (err) {
       if (wrap) wrap.innerHTML = `<div class="p-4 text-center text-danger">Error loading recycle bin: ${escapeHtml(err.message)}</div>`;
@@ -132,15 +163,15 @@ export async function renderRecycleBin(container) {
         <tr>
           <td><span style="font-size: 12px; color:var(--clr-text-2); font-weight:500;">${item._entityType}</span></td>
           <td>
-            <div class="fw-600" style="color:var(--clr-text-1);">${escapeHtml(item._name)}</div>
-            <div class="text-xs text-muted" style="font-family:monospace;">ID: ${item.id}</div>
+            <div class="fw-600" style="color:var(--clr-text-1); font-size:12px;">${escapeHtml(item._name)}</div>
+            ${item._entityType === 'Student' ? '' : `<div class="text-xs text-muted" style="font-family:monospace; font-size:12px;">${escapeHtml(item._table || '')}</div>`}
           </td>
-          <td class="text-center text-sm text-muted">${item.deleted_at ? new Date(item.deleted_at).toLocaleString() : '&mdash;'}</td>
+          <td class="text-center text-sm text-muted" style="font-size:12px;">${item.deleted_at ? new Date(item.deleted_at).toLocaleString() : '&mdash;'}</td>
           <td class="text-right">
-            <button class="btn btn-secondary btn-xs btn-restore-item edit-mode-only" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Restore to active view">
+            <button class="btn btn-secondary btn-sm btn-restore-item" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Restore to active view" style="height:26px;font-size:12px;padding:0 8px;">
               Restore
             </button>
-            <button class="btn btn-danger btn-xs btn-purge-item edit-mode-only" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Permanently delete from database" style="margin-left:4px;">
+            <button class="btn btn-danger btn-sm btn-purge-item" data-table="${item._table}" data-id="${item.id}" data-name="${escapeHtml(item._name)}" title="Permanently delete from database" style="height:26px;font-size:12px;padding:0 8px;margin-left:4px;">
               Purge
             </button>
           </td>
@@ -193,21 +224,6 @@ export async function renderRecycleBin(container) {
     });
   };
 
-  // Tabs listener
-  document.querySelectorAll('.recycle-tab-btn').forEach(tab => {
-    tab.addEventListener('click', (e) => {
-      document.querySelectorAll('.recycle-tab-btn').forEach(b => {
-        b.classList.remove('btn-primary');
-        b.classList.add('btn-secondary');
-      });
-      e.currentTarget.classList.remove('btn-secondary');
-      e.currentTarget.classList.add('btn-primary');
-      currentFilterType = e.currentTarget.dataset.type;
-      renderTable();
-    });
-  });
-
-  document.getElementById('recycle-refresh-all-btn')?.addEventListener('click', fetchAllDeleted);
   fetchAllDeleted();
 }
 
@@ -309,42 +325,14 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
 
 export async function renderAuditLog(area) {
   area.innerHTML = `
-    <div class="section-header d-flex justify-between align-center flex-wrap gap-2 mb-4">
-      <div>
-        <h2 class="section-title text-gradient">Activity &amp; Audit Logs <span class="count-chip" id="audit-count-chip">Loading...</span></h2>
-        <p class="section-subtitle">Immutable security trail tracking administrative actions, logins, mutations, and anti-cheat triggers</p>
-      </div>
-      <button class="btn btn-secondary btn-sm" id="audit-refresh-btn">&#x21bb; Refresh Logs</button>
+    <div class="section-header mb-3">
+      <h2 class="section-title text-gradient">Activity &amp; Audit Logs</h2>
+      <p class="section-subtitle">Immutable security trail tracking administrative actions, logins, mutations, and anti-cheat triggers</p>
     </div>
 
-    <!-- Filter Toolbar -->
-    <div class="antigravity-card p-3 mb-4 d-flex gap-3 align-center flex-wrap" style="border:1px solid var(--clr-border);">
-      <div style="min-width:200px;">
-        <label class="text-xs text-muted d-block mb-1">Filter Action Category</label>
-        <select id="audit-filter-action" class="form-control" style="padding:6px 10px;font-size: 12px;">
-          <option value="">&mdash; All Event Categories &mdash;</option>
-          <option value="AUTH">Logins &amp; Authentication</option>
-          <option value="CRUD">CRUD Operations (Create/Delete/Update)</option>
-          <option value="CONFIG">Test &amp; Site Configurations</option>
-          <option value="SECURITY">Security &amp; Anti-Cheat Events</option>
-        </select>
-      </div>
-
-      <div style="flex:1;min-width:240px;">
-        <label class="text-xs text-muted d-block mb-1">Search Actor / Target / Context</label>
-        <input type="text" id="audit-search-input" class="form-control" placeholder="Search by actor, entity type, action..." style="padding:6px 10px;font-size: 12px;" />
-      </div>
-
-      <div class="d-flex align-end" style="padding-top:18px;">
-        <button class="btn btn-ghost btn-sm" id="audit-reset-btn" style="display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('refresh', 14)} Reset</button>
-      </div>
-    </div>
-
-    <!-- Audit Events Grid/Table -->
-    <div class="antigravity-card p-4">
-      <div class="table-wrap" id="audit-table-wrap">
-        ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching audit trail...')}
-      </div>
+    <!-- Audit Events Grid/Table (100vh workstation height lock, table-wrap scroll only) -->
+    <div class="table-wrap" id="audit-table-wrap" style="flex:1 1 0 !important; min-height:0 !important; overflow-y:auto; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
+      ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Fetching audit trail...')}
     </div>
   `;
 
@@ -357,7 +345,11 @@ export async function renderAuditLog(area) {
       label: 'TIMESTAMP',
       sortable: true,
       width: '170px',
-      render: (val) => `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); white-space:nowrap;">${val ? new Date(val).toLocaleString() : '—'}</span>`
+      render: (val, row) => {
+        const rawDate = (val && typeof val !== 'object') ? val : (row?.created_at || row?.timestamp);
+        const dateStr = rawDate && !isNaN(new Date(rawDate).getTime()) ? new Date(rawDate).toLocaleString() : '—';
+        return `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); white-space:nowrap;">${dateStr}</span>`;
+      }
     },
     {
       key: 'actor_role',
@@ -366,7 +358,7 @@ export async function renderAuditLog(area) {
       width: '130px',
       render: (val, row) => `
         <span class="badge badge-info" style="font-size: 12px; font-weight:600;">${escapeHtml(val || 'ADMIN')}</span>
-        ${row.actor_user_id ? `<div style="font-size: 12px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); margin-top:2px;" title="${escapeHtml(row.actor_user_id)}">${escapeHtml(String(row.actor_user_id).substring(0, 8))}…</div>` : ''}
+        ${row?.actor_user_id ? `<div style="font-size: 12px; color:var(--clr-text-3, #94a3b8); font-family:var(--font-mono, monospace); margin-top:2px;" title="${escapeHtml(row.actor_user_id)}">${escapeHtml(String(row.actor_user_id).substring(0, 8))}…</div>` : ''}
       `
     },
     {
@@ -374,13 +366,14 @@ export async function renderAuditLog(area) {
       label: 'ACTION',
       sortable: true,
       width: '180px',
-      render: (val) => {
-        const act = String(val || '').toLowerCase();
+      render: (val, row) => {
+        const rawAction = (typeof val === 'object' && val !== null ? (val.type || val.name || JSON.stringify(val)) : val) || row?.action || row?.event_type || 'UPDATE';
+        const act = String(rawAction || '').toLowerCase();
         const isSecurity = act.includes('cheat') || act.includes('security') || act.includes('purge');
         const isSuccess = act.includes('create') || act.includes('restore') || act.includes('insert');
         const isInfo = act.includes('login') || act.includes('auth');
         const badgeClass = isSecurity ? 'badge-danger' : (isSuccess ? 'badge-success' : (isInfo ? 'badge-info' : 'badge-neutral'));
-        return `<span class="badge ${badgeClass}" style="font-size: 12px; font-weight:700; white-space:nowrap;">${escapeHtml(val || '—')}</span>`;
+        return `<span class="badge ${badgeClass}" style="font-size: 12px; font-weight:700; white-space:nowrap;">${escapeHtml(String(rawAction || '—').toUpperCase())}</span>`;
       }
     },
     {
@@ -490,17 +483,71 @@ export async function renderAuditLog(area) {
     }
   };
 
-  document.getElementById('audit-filter-action')?.addEventListener('change', applyFilters);
-  document.getElementById('audit-search-input')?.addEventListener('input', applyFilters);
-  document.getElementById('audit-reset-btn')?.addEventListener('click', () => {
-    const filterEl = document.getElementById('audit-filter-action');
-    const searchEl = document.getElementById('audit-search-input');
-    if (filterEl) filterEl.value = '';
-    if (searchEl) searchEl.value = '';
-    applyFilters();
-  });
-  document.getElementById('audit-refresh-btn')?.addEventListener('click', loadLogs);
+  const syncAuditSubPanel = () => {
+    if (typeof window.setBottomInfobar !== 'function') return;
+    const currentCat = document.getElementById('audit-filter-action')?.value || '';
+    const currentSearch = document.getElementById('audit-search-input')?.value || '';
+    const count = auditGrid?.filteredData ? auditGrid.filteredData.length : allLogs.length;
 
+    const leftHtml = `
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:nowrap;">
+        <select id="audit-filter-action" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;font-size:12px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;padding:0 8px;outline:none;">
+          <option value="" ${currentCat === '' ? 'selected' : ''}>All Categories</option>
+          <option value="AUTH" ${currentCat === 'AUTH' ? 'selected' : ''}>Logins &amp; Auth</option>
+          <option value="CRUD" ${currentCat === 'CRUD' ? 'selected' : ''}>CRUD Actions</option>
+          <option value="CONFIG" ${currentCat === 'CONFIG' ? 'selected' : ''}>Configs &amp; Limits</option>
+          <option value="SECURITY" ${currentCat === 'SECURITY' ? 'selected' : ''}>Security &amp; Cheating</option>
+        </select>
+        <div style="position:relative;display:inline-flex;align-items:center;">
+          <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;display:inline-flex;align-items:center;pointer-events:none;">
+            ${getSvgIcon('search', 12)}
+          </span>
+          <input type="text" id="audit-search-input" placeholder="Search actor, entity, action..." value="${escapeHtml(currentSearch)}" style="padding:0 8px 0 26px;font-size:12px;height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;width:240px;outline:none;box-sizing:border-box;" />
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="audit-reset-btn" style="height:30px;font-size:12px;color:#94a3b8;padding:0 8px;">Reset</button>
+      </div>
+    `;
+
+    const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+    const editBtnStyle = isEditOn
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+      : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+    const editBtnLabel = isEditOn
+      ? `${getSvgIcon('check-circle', 14)} Done Editing`
+      : `${getSvgIcon('edit', 14)} Edit Mode`;
+
+    const rightHtml = `
+      <div style="display:flex;align-items:center;gap:10px;white-space:nowrap;">
+        <span class="badge badge-info" id="audit-count-chip" style="font-size:12px;font-weight:700;">${count} Events</span>
+        <button type="button" class="btn btn-sm" id="audit-toggle-edit-mode" style="${editBtnStyle}" title="Toggle Master Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="audit-refresh-btn" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+          ${getSvgIcon('refresh', 14)} Refresh Logs
+        </button>
+      </div>
+    `;
+
+    window.setBottomInfobar(leftHtml, rightHtml);
+
+    document.getElementById('audit-filter-action')?.addEventListener('change', applyFilters);
+    document.getElementById('audit-search-input')?.addEventListener('input', applyFilters);
+    document.getElementById('audit-toggle-edit-mode')?.addEventListener('click', () => {
+      if (typeof window.toggleGlobalEditMode === 'function') {
+        const newState = window.toggleGlobalEditMode();
+        showToast(newState ? 'Master Edit Mode ON (Inline Excel Grid)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+        syncAuditSubPanel();
+      }
+    });
+    document.getElementById('audit-reset-btn')?.addEventListener('click', () => {
+      const filterEl = document.getElementById('audit-filter-action');
+      const searchEl = document.getElementById('audit-search-input');
+      if (filterEl) filterEl.value = '';
+      if (searchEl) searchEl.value = '';
+      applyFilters();
+    });
+    document.getElementById('audit-refresh-btn')?.addEventListener('click', loadLogs);
+  };
+
+  syncAuditSubPanel();
   loadLogs();
 }
 
@@ -513,7 +560,7 @@ export async function renderDataHealth(container) {
   container.innerHTML = `
     <div class="section-header d-flex justify-between align-center flex-wrap gap-2 mb-4">
       <div>
-        <h2 class="section-title text-gradient">Data Health &amp; Connectivity (Pilar D)</h2>
+        <h2 class="section-title text-gradient">Data Health &amp; Connectivity (Pillar D)</h2>
         <p class="section-subtitle">Real-time database connectivity, WebSocket latency monitoring, storage metrics, and relational integrity diagnostics</p>
       </div>
       <div class="d-flex align-center gap-2" id="sync-heartbeat-badge">
@@ -553,61 +600,61 @@ export async function renderDataHealth(container) {
     </div>
 
     <!-- 3 Relational Diagnostic Panels -->
-    <div class="grid" style="grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:1.25rem;">
+    <div class="grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px;">
       
       <!-- Panel 1: Students Duplicate Engine -->
-      <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+      <div class="antigravity-card p-4" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;border-radius:8px;">
         <div>
-          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="background:rgba(59,130,246,0.12);color:#60a5fa;padding:0.6rem;border-radius:12px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('users', 28)}</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+            <div style="background:rgba(59,130,246,0.12);color:#60a5fa;padding:0.5rem;border-radius:8px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('users', 24)}</div>
             <div>
-              <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Student Profile Duplicates</h3>
+              <h3 style="font-weight:700;margin:0 0 2px 0;font-size: 16px;">Student Profile Duplicates</h3>
               <div class="text-xs text-muted">Identical names within the same batch</div>
             </div>
           </div>
-          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
+          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.4;margin:0 0 1rem 0;">
             Detect students registered under duplicate records. Safely merge duplicate profiles, transferring historical attempts to the authoritative ID.
           </p>
         </div>
-        <button class="btn btn-primary" id="btn-health-scan-students" style="width:100%;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        <button class="btn btn-primary btn-sm" id="btn-health-scan-students" style="width:100%;height:32px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
           ${getSvgIcon('search', 14)} Scan Students
         </button>
       </div>
 
       <!-- Panel 2: Question Duplicate Engine -->
-      <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+      <div class="antigravity-card p-4" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;border-radius:8px;">
         <div>
-          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="background:rgba(250,204,21,0.12);color:var(--grade-c);padding:0.6rem;border-radius:12px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('zap', 28)}</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+            <div style="background:rgba(250,204,21,0.12);color:var(--grade-c);padding:0.5rem;border-radius:8px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('zap', 24)}</div>
             <div>
-              <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Question Bank Duplicates</h3>
+              <h3 style="font-weight:700;margin:0 0 2px 0;font-size: 16px;">Question Bank Duplicates</h3>
               <div class="text-xs text-muted">Duplicate text or order conflicts</div>
             </div>
           </div>
-          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
+          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.4;margin:0 0 1rem 0;">
             Identify duplicate questions across the centralized question bank or within the same test to maintain question uniqueness.
           </p>
         </div>
-        <button class="btn btn-warning" id="btn-health-scan-questions" style="width:100%;font-weight:600;color:#000;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        <button class="btn btn-warning btn-sm" id="btn-health-scan-questions" style="width:100%;height:32px;font-size:12px;font-weight:700;color:#000;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
           ${getSvgIcon('search', 14)} Scan Questions
         </button>
       </div>
 
       <!-- Panel 3: Orphaned Records & Integrity Scanner -->
-      <div class="antigravity-card p-5" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;">
+      <div class="antigravity-card p-4" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;border-radius:8px;">
         <div>
-          <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
-            <div style="background:rgba(16,185,129,0.12);color:var(--grade-a);padding:0.6rem;border-radius:12px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('shield', 28)}</div>
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+            <div style="background:rgba(16,185,129,0.12);color:var(--grade-a);padding:0.5rem;border-radius:8px;display:flex;align-items:center;justify-content:center;">${getSvgIcon('shield', 24)}</div>
             <div>
-              <h3 style="font-weight:700;margin:0 0 4px 0;font-size: 16px;">Orphaned Records &amp; Integrity</h3>
+              <h3 style="font-weight:700;margin:0 0 2px 0;font-size: 16px;">Orphaned Records &amp; Integrity</h3>
               <div class="text-xs text-muted">Audits relational foreign keys &amp; integrity</div>
             </div>
           </div>
-          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.5;margin:0 0 1.25rem 0;">
+          <p style="font-size: 12px;color:var(--clr-text-2);line-height:1.4;margin:0 0 1rem 0;">
             Audit foreign key integrity. Identify unlinked attempt answers, progress records missing students, and Tests with dangling references.
           </p>
         </div>
-        <button class="btn btn-tactical" id="btn-health-scan-orphans" style="width:100%;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+        <button class="btn btn-tactical btn-sm" id="btn-health-scan-orphans" style="width:100%;height:32px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
           ${getSvgIcon('search', 14)} Scan Integrity
         </button>
       </div>
@@ -1062,6 +1109,25 @@ export async function renderDataHealth(container) {
       console.warn('Could not initialize Test Recalibrator in Data Health:', err);
     }
   })();
+
+  if (typeof window.setBottomInfobar === 'function') {
+    const leftHtml = `
+      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
+        <span><strong style="color:#f8fafc;">Domain D</strong> · Data Health &amp; Connectivity</span>
+        <span>·</span>
+        <span style="color:var(--grade-a);font-weight:700;">● Real-time Telemetry</span>
+      </div>
+    `;
+    const rightHtml = `
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-subpanel-ping-db" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:5px;">
+        ${getSvgIcon('activity', 14)} Ping Database
+      </button>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+    document.getElementById('btn-subpanel-ping-db')?.addEventListener('click', () => {
+      document.getElementById('btn-ping-db')?.click();
+    });
+  }
 }
 
 
@@ -1081,19 +1147,12 @@ export async function renderSettings(area) {
   const maxAudioSecs = settings.ai_max_audio_duration_seconds || localStorage.getItem('ai_max_audio_duration_seconds') || '180';
 
   area.innerHTML = `
-    <div class="section-header d-flex justify-between align-center flex-wrap gap-2 mb-4">
-      <div>
-        <h2 class="section-title text-gradient">Site Settings &amp; API Cost Guard (Pilar D)</h2>
-        <p class="section-subtitle">Platform configuration, API key vault, security credentials, and AI token bankruptcy prevention limits</p>
-      </div>
-      <div class="d-flex align-center gap-2">
-        <button class="btn btn-primary edit-mode-only" id="btn-save-all-settings" style="font-weight:700; display:inline-flex; align-items:center; gap:0.5rem; padding:0.55rem 1.25rem; box-shadow: 0 4px 14px rgba(37,99,235,0.35);">
-          ${getSvgIcon('save', 14)} Save All Settings
-        </button>
-      </div>
+    <div class="section-header mb-3">
+      <h2 class="section-title text-gradient">Site Settings &amp; API Cost Guard (Pillar D)</h2>
+      <p class="section-subtitle">Platform configuration, API key vault, security credentials, and AI token bankruptcy prevention limits</p>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:1.5rem;align-items:start;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:10px;align-items:start;">
 
       <!-- 1. The Cost Guard Engine Card (Crucial) -->
       <div class="antigravity-card p-5" style="border-color:rgba(255,0,0,0.3);box-shadow:0 20px 40px rgba(255,0,0,0.08);">
@@ -1120,7 +1179,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Hard ceiling for voice recordings before auto-stopping STT (Default: 180s).</div>
         </div>
 
-        <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-save-cost-guard" style="font-weight:700;">
+        <button class="btn btn-danger btn-sm w-100" id="btn-save-cost-guard" style="height:32px;font-size:12px;font-weight:700;">
           ${getSvgIcon('lock', 13)} Save Cost Guard Limits
         </button>
       </div>
@@ -1201,7 +1260,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Time allowed before auto-submit on cheating (Default: 10s).</div>
         </div>
 
-        <button class="btn btn-primary btn-sm w-100 edit-mode-only" id="btn-save-anti-cheat" style="font-weight:700;">
+        <button class="btn btn-primary btn-sm w-100" id="btn-save-anti-cheat" style="height:32px;font-size:12px;font-weight:700;background:#7c3aed;border:1px solid #a78bfa;color:#fff;">
           ${getSvgIcon('shield', 14)} Save Security Settings
         </button>
       </div>
@@ -1240,7 +1299,7 @@ export async function renderSettings(area) {
           </div>
         </div>
 
-        <button class="btn btn-primary btn-sm w-100 edit-mode-only" id="btn-save-vault">
+        <button class="btn btn-primary btn-sm w-100" id="btn-save-vault" style="height:32px;font-size:12px;font-weight:700;background:#7c3aed;border:1px solid #a78bfa;color:#fff;">
           Save API Key Vault
         </button>
       </div>
@@ -1255,8 +1314,9 @@ export async function renderSettings(area) {
         </div>
 
         <div class="form-group mb-3">
-          <label class="form-label text-sm">Passing Threshold (%)</label>
+          <label class="form-label text-sm">Default Passing Threshold (%)</label>
           <input class="form-control" type="number" id="setting-passing_threshold" value="${escapeHtml(settings.passing_threshold || '60')}" min="0" max="100" />
+          <small class="text-xs text-muted" style="display:block;margin-top:2px;">Default institutional fallback for new classes (Standard: 60% Grade C). Active class standards are managed centrally in Curriculum & Level Master.</small>
         </div>
 
         <div class="form-group mb-4">
@@ -1264,7 +1324,7 @@ export async function renderSettings(area) {
           <input class="form-control" id="setting-login_background_url" value="${escapeHtml(settings.login_background_url || '')}" placeholder="https://..." />
         </div>
 
-        <button class="btn btn-secondary btn-sm w-100 edit-mode-only" id="save-settings-btn">
+        <button class="btn btn-secondary btn-sm w-100" id="save-settings-btn" style="height:32px;font-size:12px;font-weight:700;">
           Save Site Settings
         </button>
       </div>
@@ -1288,7 +1348,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Leave blank to use default 'admin123' master key.</div>
         </div>
 
-        <button class="btn btn-secondary btn-sm w-100 edit-mode-only" id="btn-save-admin-password">
+        <button class="btn btn-secondary btn-sm w-100" id="btn-save-admin-password" style="height:32px;font-size:12px;font-weight:700;">
           Update Admin Credentials
         </button>
       </div>
@@ -1319,7 +1379,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Leave blank to use default 'tutor123' master key.</div>
         </div>
 
-        <button class="btn btn-secondary btn-sm w-100 edit-mode-only" id="btn-save-tutor-password">
+        <button class="btn btn-secondary btn-sm w-100" id="btn-save-tutor-password" style="height:32px;font-size:12px;font-weight:700;">
           Update Tutor Credentials
         </button>
       </div>
@@ -1348,7 +1408,7 @@ export async function renderSettings(area) {
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
           Permanently delete all words, phrases, and topic data from the Vocabulary Vault database. This action cannot be undone. To prevent accidental mispresses, you must type <strong style="color: var(--grade-e);">RESET</strong> to confirm.
         </p>
-        <button class="btn btn-danger btn-sm w-100 edit-mode-only" id="btn-danger-reset-vault" style="font-weight:700; height: 36px;">
+        <button class="btn btn-danger btn-sm w-100" id="btn-danger-reset-vault" style="font-weight:700; height: 32px; font-size:12px;">
           ${getSvgIcon('trash', 14)} Master Reset Vocabulary Vault
         </button>
       </div>
@@ -1690,11 +1750,12 @@ export async function renderSettings(area) {
   document.getElementById('btn-save-tutor-password')?.addEventListener('click', () => saveTutorPassword(false));
 
   // 7. Master Unified Save All Settings
-  document.getElementById('btn-save-all-settings')?.addEventListener('click', async (e) => {
-    const btn = e.currentTarget;
-    const origHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '⏳ Saving All...';
+  const saveAllSettings = async (btn) => {
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '⏳ Saving All...';
+    }
 
     try {
       await Promise.all([
@@ -1710,10 +1771,14 @@ export async function renderSettings(area) {
     } catch (err) {
       showToast('Error saving settings: ' + err.message, 'error');
     } finally {
-      btn.disabled = false;
-      btn.innerHTML = origHtml;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
     }
-  });
+  };
+
+  document.getElementById('btn-save-all-settings')?.addEventListener('click', (e) => saveAllSettings(e.currentTarget));
 
   // ---------------------------------------------------------
   // Workspace Scratchpad Persistence
@@ -1750,4 +1815,26 @@ export async function renderSettings(area) {
       showToast('Failed to reset Vocabulary Vault: ' + err.message, 'error');
     }
   });
+
+  // Synchronize 40px Sub Panel for Site Settings per ui-invariants.md §1.3
+  if (typeof window.setBottomInfobar === 'function') {
+    const leftHtml = `
+      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
+        <span><strong style="color:#f8fafc;">Domain D</strong> · Site Settings &amp; Cost Guard</span>
+        <span>·</span>
+        <span style="color:var(--grade-a);font-weight:700;">● Operational</span>
+      </div>
+    `;
+    const rightHtml = `
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-settings" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 14px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:6px;background:#7c3aed;border:1px solid #a78bfa;color:#ffffff;box-shadow:0 0 10px rgba(124,58,237,0.45);cursor:pointer;" title="Save All Platform Configurations">
+          ${getSvgIcon('save', 14)} Save Settings
+        </button>
+      </div>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+    document.getElementById('btn-subpanel-save-settings')?.addEventListener('click', (e) => {
+      saveAllSettings(e.currentTarget);
+    });
+  }
 }

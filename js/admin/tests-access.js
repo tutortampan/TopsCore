@@ -381,7 +381,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <!-- 1. Header (Standardized Title Area 60px Solid Navy Banner per Invariant 1.5.1, Centered ALL CAPS) -->
         <div class="modal-header title-area" style="height:60px; min-height:60px; max-height:60px; padding:0 20px; border-bottom:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
-          <h2 id="open-modal-title" style="margin:0; font-family:var(--fm-font-display, 'Outfit', sans-serif); font-size:16px; font-weight:800; color:#ffffff; line-height:1; letter-spacing:0.05em; text-transform:uppercase; text-align:center;">THEME A — WORKPLACE • EXAM SESSION</h2>
+          <h2 id="open-modal-title" style="margin:0; font-family:var(--fm-font-display, 'Inter', sans-serif); font-size:16px; font-weight:800; color:#ffffff; line-height:1; letter-spacing:0.05em; text-transform:uppercase; text-align:center;">THEME A — WORKPLACE • EXAM SESSION</h2>
         </div>
 
         <!-- 2. Modal Body: Streamlined Vertical Stack (Compact Settings Top, Full Student Table Bottom) -->
@@ -499,7 +499,7 @@ export async function renderClassTestSessions(container, context = {}) {
         <!-- Standardized 60px Solid Navy Title Area (§1.5.1 Centered Title & Stacked Subtitle Invariant) -->
         <div class="title-area dual-line" style="position:relative; padding:0 16px; height:60px; min-height:60px; max-height:60px; border-bottom:1.5px solid rgba(255,255,255,0.12); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0;">
           <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:calc(100% - 40px); overflow:hidden;">
-            <h3 id="late-modal-theme-title" style="margin:0; font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#ffffff; letter-spacing:0.04em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <h3 id="late-modal-theme-title" style="margin:0; font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Inter', sans-serif); color:#ffffff; letter-spacing:0.04em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               THEME G — GENERAL • LATE ARRIVAL
             </h3>
             <span id="late-modal-batch-name" style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#94a3b8; margin-top:2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -588,7 +588,7 @@ export async function renderClassTestSessions(container, context = {}) {
         <div class="title-area dual-line" style="position:relative; padding:0 16px; height:60px; min-height:60px; max-height:60px; border-bottom:1.5px solid rgba(255,255,255,0.12); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0;">
           <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; max-width:calc(100% - 40px); overflow:hidden;">
             <span id="live-modal-theme-badge" style="display:none;"></span>
-            <h3 id="live-modal-title" style="margin:0; font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Outfit', sans-serif); color:#ffffff; letter-spacing:0.04em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+            <h3 id="live-modal-title" style="margin:0; font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Inter', sans-serif); color:#ffffff; letter-spacing:0.04em; text-transform:uppercase; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               LIVE TEST SESSION MONITOR
             </h3>
             <span id="live-modal-subtitle" style="font-size:12px; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); color:#94a3b8; margin-top:2px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -669,7 +669,7 @@ export async function renderClassTestSessions(container, context = {}) {
             <div style="position:relative; display:inline-block;" id="live-modal-add-time-wrapper">
               <button type="button" class="btn btn-session-edit-time" id="btn-live-modal-add-time" style="height:40px; min-height:40px; line-height:38px; padding:0 16px; font-size:12px; font-weight:800; border-radius:6px; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.22); color:var(--grade-c); cursor:pointer; display:inline-flex; align-items:center; gap:8px; text-transform:uppercase; white-space:nowrap;" title="Adjust Remaining Exam Time (+ / -)">
                 <span>EDIT TIME</span>
-                <span style="font-size:10px;">▲</span>
+                <span style="font-size:12px;">▲</span>
               </button>
               <div id="live-modal-add-time-menu" class="hidden" style="position:absolute; right:0; bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:8px; box-shadow:0 16px 36px rgba(0,0,0,0.92); z-index:99999; width:220px; padding:8px; display:none; flex-direction:column; gap:6px;">
                 <!-- Yellow Header Banner -->
@@ -743,7 +743,7 @@ export async function renderClassTestSessions(container, context = {}) {
     <div id="modal-kick-student-confirm" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); display:flex; align-items:center; justify-content:center; z-index:10005; padding:16px;">
       <div class="modal-box card" style="background:#0f172a; border:2px solid var(--grade-e); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 20px 50px rgba(var(--grade-e-rgb),0.35);">
         <div style="height:60px; min-height:60px; max-height:60px; padding:0 20px; background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
-          <h4 style="margin:0; font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:var(--grade-e); text-transform:uppercase; letter-spacing:0.5px;">EXPEL STUDENT FROM EXAM</h4>
+          <h4 style="margin:0; font-family:'Inter',sans-serif; font-size:16px; font-weight:800; color:var(--grade-e); text-transform:uppercase; letter-spacing:0.5px;">EXPEL STUDENT FROM EXAM</h4>
           <div id="kick-confirm-student-name" style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Student Name</div>
         </div>
         <div style="padding:16px 20px; font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;">
@@ -776,7 +776,7 @@ export async function renderClassTestSessions(container, context = {}) {
     <div id="modal-student-alarm-detail" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.85); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:10010; padding:16px;">
       <div class="modal-box card" style="background:#0f172a; border:1.5px solid rgba(var(--grade-e-rgb),0.35); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
         <div style="height:60px; min-height:60px; max-height:60px; padding:0 20px; background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
-          <h4 id="alarm-detail-student-name" style="margin:0; font-family:'Outfit',sans-serif; font-size:16px; font-weight:800; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">STUDENT INTEGRITY &amp; TAB-SWITCH ALARMS</h4>
+          <h4 id="alarm-detail-student-name" style="margin:0; font-family:'Inter',sans-serif; font-size:16px; font-weight:800; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">STUDENT INTEGRITY &amp; TAB-SWITCH ALARMS</h4>
           <div id="alarm-detail-meta" style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Exam integrity warning history</div>
         </div>
         <div id="alarm-detail-logs-list" style="padding:10px 16px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;">
@@ -2623,7 +2623,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       const scoreColor = item.isEvaluated ? getGradeColorByScore(item.effectiveScore) : '#64748b';
       const isRemedialCap = theme.isRemedial;
       const scoreDisplay = item.isEvaluated
-        ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:0.65em; font-weight:900; color:inherit; margin-left:1px;">R</sup>' : ''}`
+        ? `${item.effectiveScore}%${isRemedialCap ? '<sup style="font-size:12px; font-weight:900; color:inherit; margin-left:1px;">R</sup>' : ''}`
         : '—';
 
       const isStar = item.isEvaluated && (item.grade === '★' || item.grade === 'Star' || item.grade === 'S' || item.effectiveScore === 100);

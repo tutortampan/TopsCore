@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery } from './grading.js?v=20261106_v160';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass } from './grading.js?v=20261106_v160';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -9,7 +9,7 @@ export function getGrade(pct) {
   return calculateGrade(pct);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -785,7 +785,7 @@ export async function fetchClassTestSettings(classId = null) {
   const sb = await getSupabase();
   const defaultSettings = {
     taskRepetitions: 7,
-    taskMinScore: 50,
+    taskMinScore: 60,
     examMinScore: 60
   };
 
@@ -804,65 +804,81 @@ export async function fetchClassTestSettings(classId = null) {
     } catch (_) {}
   };
 
-  try {
-    const keys = ['default_test_system_settings'];
-    if (classId) keys.push(`class_test_settings_${classId}`);
+  // 1. If classId is specified, check class-specific site_settings first
+  if (classId) {
+    try {
+      const { data, error } = await sb.from('site_settings')
+        .select('key, value')
+        .eq('key', `class_test_settings_${classId}`)
+        .maybeSingle();
 
-    const { data, error } = await sb.from('site_settings')
-      .select('key, value')
-      .in('key', keys);
-
-    if (!error && data && data.length > 0) {
-      const map = Object.fromEntries(data.map(r => [r.key, r.value]));
-      let raw = (classId && map[`class_test_settings_${classId}`]) || map['default_test_system_settings'];
-      if (raw) {
-        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      if (!error && data && data.value) {
+        const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
         const res = {
           taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
-          taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 50)),
+          taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 60)),
           examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
         };
-        if (classId) setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
+        setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
         return res;
       }
+    } catch (e) {
+      console.warn('[fetchClassTestSettings] class site_settings query error:', e);
     }
-  } catch (e) {
-    console.warn('[fetchClassTestSettings] site_settings query error, falling back:', e);
-  }
 
-  // Fallback 1: LocalStorage cache
-  if (classId) {
+    // 1b. Check class-specific LocalStorage
     const local = getLocal(`topscore_test_settings_${classId}`);
     if (local) {
       try { return { ...defaultSettings, ...JSON.parse(local) }; } catch (_) {}
     }
-  }
-  const globalLocal = getLocal('topscore_test_settings_global');
-  if (globalLocal) {
-    try { return { ...defaultSettings, ...JSON.parse(globalLocal) }; } catch (_) {}
-  }
 
-  // Fallback 2: Inspect existing class tests from DB
-  if (classId) {
+    // 1c. Inspect existing class tests from DB (Ground Truth for this class)
     try {
       const { data: sampleTests } = await sb.from('tests')
-        .select('payload, minimum_required_score, test_type, shell_code, title')
+        .select('payload, minimum_required_score, test_type, category, shell_code, title')
         .eq('class_id', classId)
         .is('deleted_at', null)
-        .limit(15);
+        .limit(30);
 
       if (sampleTests && sampleTests.length > 0) {
-        const sampleTask = sampleTests.find(t => !isWeeklyExam(t));
-        const sampleExam = sampleTests.find(t => isWeeklyExam(t));
+        const sampleTask = sampleTests.find(t => (t.category || t.test_type || '').toUpperCase() !== 'EXAM');
+        const sampleExam = sampleTests.find(t => (t.category || t.test_type || '').toUpperCase() === 'EXAM');
+        const taskScore = sampleTask ? (sampleTask.minimum_required_score ?? sampleTask.payload?.minimum_required_score ?? sampleTask.payload?.min_score) : null;
+        const examScore = sampleExam ? (sampleExam.minimum_required_score ?? sampleExam.payload?.minimum_required_score ?? sampleExam.payload?.min_score) : null;
+
         const derived = {
           taskRepetitions: Math.max(1, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
-          taskMinScore: Math.min(100, Math.max(1, parseInt(sampleTask?.minimum_required_score || sampleTask?.payload?.minimum_required_score, 10) || 50)),
-          examMinScore: Math.min(100, Math.max(1, parseInt(sampleExam?.minimum_required_score || sampleExam?.payload?.minimum_required_score, 10) || 60))
+          taskMinScore: taskScore !== null && !isNaN(parseInt(taskScore, 10)) ? Math.min(100, Math.max(1, parseInt(taskScore, 10))) : 60,
+          examMinScore: examScore !== null && !isNaN(parseInt(examScore, 10)) ? Math.min(100, Math.max(1, parseInt(examScore, 10))) : 60
         };
         setLocal(`topscore_test_settings_${classId}`, JSON.stringify(derived));
         return derived;
       }
     } catch (_) {}
+  }
+
+  // 2. Global fallback (when classId is null or class has no specific records)
+  try {
+    const { data, error } = await sb.from('site_settings')
+      .select('key, value')
+      .eq('key', 'default_test_system_settings')
+      .maybeSingle();
+
+    if (!error && data && data.value) {
+      const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      return {
+        taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
+        taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 60)),
+        examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
+      };
+    }
+  } catch (e) {
+    console.warn('[fetchClassTestSettings] default site_settings error:', e);
+  }
+
+  const globalLocal = getLocal('topscore_test_settings_global');
+  if (globalLocal) {
+    try { return { ...defaultSettings, ...JSON.parse(globalLocal) }; } catch (_) {}
   }
 
   return defaultSettings;
@@ -1506,7 +1522,7 @@ export async function startTest(studentId, testId) {
   // 1. Ambil detail test & existing in_progress attempt in parallel (Zero-Waterfall Fast Path)
   const [testRes, existingAttemptsRes] = await Promise.all([
     sb.from('tests')
-      .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order')
+      .select('id, title, shell_code, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order, classes(name), levels(name, level_number)')
       .eq('id', testId)
       .single(),
     sb.from('attempts')
@@ -2443,7 +2459,12 @@ export async function adminInsert(table, payload) {
   }
 
   const { data, error } = await sb.from(normTable).insert(payload).select().single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error(`Insert into '${normTable}' failed: row was not returned or insert permission was denied.`);
+    }
+    throw error;
+  }
   clearAdminCache(normTable);
   return data;
 }
@@ -2472,7 +2493,12 @@ export async function adminUpdate(table, id, payload) {
   }
 
   const { data, error } = await sb.from(normTable).update(payload).eq('id', id).select().single();
-  if (error) throw error;
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new Error(`Record in '${normTable}' (id: ${id}) was not found or update permission was denied by database security.`);
+    }
+    throw error;
+  }
   clearAdminCache(normTable);
   return data;
 }
@@ -4613,7 +4639,8 @@ export async function adminApplyForgiven({
       const totalQ = Number(meta?.payload?.total_questions || (isExamTest ? 120 : 40));
 
       if (action === 'forgive') {
-        const forgiveReasonText = `[${adminLabel}] ${(reason || 'Pacing Adjustment').trim()}`;
+        const itemReason = (ta.reason || reason || 'Pacing Adjustment').trim();
+        const forgiveReasonText = `[${adminLabel}] ${itemReason}`;
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
         );
@@ -4689,7 +4716,8 @@ export async function adminApplyForgiven({
           ? Number(inputScore)
           : Math.round(totalQ * (pct / 100) * 10) / 10;
         const grade = _gradeForScore(pct);
-        const manualReason = `MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${reason ? ': ' + reason.trim() : ''}`;
+        const itemReason = (ta.reason || reason || '').trim();
+        const manualReason = `MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${itemReason ? ': ' + itemReason : ''}`;
 
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
@@ -4917,31 +4945,19 @@ export const toOrdinal = (n) => {
  * @param {string} answerType - 'spoken', 'written', 'selection', 'mixed', etc.
  * @param {string} category - 'words' or 'phrases'
  * @param {number|null} customPace - Optional custom seconds per item override
- * @param {number} minMinutes - Minimum allowed minutes (default 5)
+ * @param {number} minMinutes - Minimum allowed minutes (default 1)
  * @returns {number} Duration in minutes
  */
-export function calculateAutoDurationMinutes(questionCount, answerType = 'spoken', category = 'words', customPace = null, minMinutes = 5) {
+export function calculateAutoDurationMinutes(questionCount, answerType = 'spoken', category = 'words', customPace = null, minMinutes = 1) {
   const count = Number(questionCount) || 0;
-  if (count <= 0) return Math.max(minMinutes, 5);
+  if (count <= 0) return Math.max(minMinutes, 1);
 
   const isPhrase = String(category).toLowerCase() === 'phrases' || String(answerType).toLowerCase().includes('phrase');
-  let rate = 20;
+  // Standar Pacing SSOT (DECISION-062): 10 detik per kata (words), 20 detik per frasa (phrases)
+  let rate = isPhrase ? 20 : 10;
 
   if (customPace && Number(customPace) > 0) {
     rate = Number(customPace);
-  } else {
-    const ans = String(answerType || '').toLowerCase().trim();
-    if (ans === 'spoken') {
-      rate = isPhrase ? 20 : 15;
-    } else if (ans === 'written') {
-      rate = 30;
-    } else if (ans === 'selection' || ans === 'multiple_choice' || ans === 'dropdown') {
-      rate = 20;
-    } else if (ans === 'mixed') {
-      rate = 25;
-    } else {
-      rate = isPhrase ? 20 : 15;
-    }
   }
 
   return Math.max(minMinutes, Math.ceil((count * rate) / 60));
@@ -5124,7 +5140,7 @@ export async function upsertDynamicTestShell(config) {
     : calculateAutoDurationMinutes(expectedQuestions, effectiveAnswerType, isPhrase ? 'phrases' : 'words');
   const effectiveMinScore = config.minimumRequiredScore !== undefined
     ? Number(config.minimumRequiredScore)
-    : 70;
+    : 60;
 
   // Cumulative theme determination for weekly milestone tests
   const allThemesList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
@@ -5344,32 +5360,29 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
     let targetClassId = config.explicitClassId || null;
     let targetClassName = null;
-    if (!targetClassId) {
+    if (targetClassId) {
+      const { data: clsData } = await sb.from('classes').select('name, code').eq('id', targetClassId).maybeSingle();
+      if (!clsData || !isVocabularyClass(clsData)) {
+        console.warn(`[autoGenerateTestsHierarchy] Target class ${targetClassId} is not a Vocabulary class. Skipping vocabulary generation.`);
+        continue;
+      }
+      targetClassName = clsData.name;
+    } else {
       // Prioritize active vocabulary class assigned to this exact level and program
       const { data: classDataList } = await sb.from('classes')
-        .select('id, name')
+        .select('id, name, code')
         .eq('program_id', programId)
         .eq('level_id', levelId)
         .eq('is_active', true)
-        .ilike('name', '%Vocab%')
         .is('deleted_at', null);
 
-      targetClassId = (classDataList && classDataList.length > 0) ? classDataList[0].id : null;
-      if (classDataList && classDataList.length > 0) targetClassName = classDataList[0].name;
-      if (!targetClassId) {
-        const { data: anyClasses } = await sb.from('classes')
-          .select('id, name')
-          .eq('program_id', programId)
-          .eq('level_id', levelId)
-          .eq('is_active', true)
-          .is('deleted_at', null)
-          .limit(1);
-        targetClassId = (anyClasses && anyClasses.length > 0) ? anyClasses[0].id : null;
-        if (anyClasses && anyClasses.length > 0) targetClassName = anyClasses[0].name;
+      const vocabClass = (classDataList || []).find(c => isVocabularyClass(c));
+      if (!vocabClass) {
+        console.warn(`[autoGenerateTestsHierarchy] No vocabulary class found for level ${levelNum}. Skipping.`);
+        continue;
       }
-    } else {
-      const { data: clsData } = await sb.from('classes').select('name').eq('id', targetClassId).maybeSingle();
-      if (clsData?.name) targetClassName = clsData.name;
+      targetClassId = vocabClass.id;
+      targetClassName = vocabClass.name;
     }
 
     const upsertShell = (shellCfg) => upsertDynamicTestShell({
@@ -5432,7 +5445,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       : (taskDur || calculateAutoDurationMinutes(40, wordsTaskAns, 'words', config.wordsTaskPaceSeconds));
     const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined && config.phrasesTaskDurationMinutes !== null
       ? Number(config.phrasesTaskDurationMinutes)
-      : (taskDur || calculateAutoDurationMinutes(10, phrasesTaskAns, 'phrases', config.phrasesTaskPaceSeconds, 5));
+      : (taskDur || calculateAutoDurationMinutes(10, phrasesTaskAns, 'phrases', config.phrasesTaskPaceSeconds, 1));
     const taskPass = config.taskPassingScore !== undefined ? Number(config.taskPassingScore) : 60;
     const wordsTestAns = config.wordsTestAnswerType || 'spoken';
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
@@ -5690,32 +5703,27 @@ export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) 
       return { synced: false, reason: 'program_not_found' };
     }
 
-    // 3. Resolve targetClassId
+    // 3. Resolve targetClassId strictly for Vocabulary classes
     let targetClassId = explicitClassId;
-    if (!targetClassId) {
+    if (targetClassId) {
+      const { data: targetCls } = await sb.from('classes').select('id, name, code').eq('id', targetClassId).maybeSingle();
+      if (!targetCls || !isVocabularyClass(targetCls)) {
+        return { synced: false, reason: 'not_a_vocabulary_class' };
+      }
+    } else {
       const { data: classList } = await sb.from('classes')
-        .select('id, name')
+        .select('id, name, code')
         .eq('program_id', programId)
         .eq('level_id', levelId)
         .eq('is_active', true)
-        .ilike('name', '%Vocab%')
         .is('deleted_at', null);
 
-      targetClassId = (classList && classList.length > 0) ? classList[0].id : null;
-      if (!targetClassId) {
-        const { data: anyClass } = await sb.from('classes')
-          .select('id')
-          .eq('program_id', programId)
-          .eq('level_id', levelId)
-          .eq('is_active', true)
-          .is('deleted_at', null)
-          .limit(1);
-        targetClassId = anyClass?.[0]?.id || null;
-      }
+      const vocabClass = (classList || []).find(c => isVocabularyClass(c));
+      targetClassId = vocabClass?.id || null;
     }
 
     if (!targetClassId) {
-      return { synced: false, reason: 'no_target_class_found' };
+      return { synced: false, reason: 'no_vocabulary_class_found' };
     }
 
     // 4. Check if vocabulary_vault has any words for this level
@@ -5779,13 +5787,18 @@ export async function syncAllCurriculumTests({ level = null, classId = null, for
   let levels = [];
   const targetClassId = classId || null;
 
-  // If a specific classId is provided, resolve its assigned level
+  // If a specific classId is provided, verify it is a Vocabulary class and resolve its assigned level
   if (targetClassId && (level === null || level === undefined || level === 'ALL')) {
     try {
       const { data: cls } = await sb.from('classes')
-        .select('id, level_id')
+        .select('id, name, code, level_id')
         .eq('id', targetClassId)
         .maybeSingle();
+
+      if (!cls || !isVocabularyClass(cls)) {
+        console.warn(`[syncAllCurriculumTests] Class ${targetClassId} is not a Vocabulary class. Sync cancelled.`);
+        return { synced: false, reason: 'not_a_vocabulary_class', createdCount: 0, updatedCount: 0, levels: [] };
+      }
 
       if (cls && cls.level_id) {
         const { data: lvl } = await sb.from('levels')

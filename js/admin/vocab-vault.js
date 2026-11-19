@@ -321,7 +321,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
     const isEditOn = document.body.classList.contains('global-edit-mode-on') || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#0f172a;box-shadow:0 0 10px rgba(56,189,248,0.4);'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -1521,7 +1521,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         // PLACEMENT / STANDALONE TRYOUT STEP 2
         sourceArea.innerHTML = `
           <div class="p-3 mb-3 rounded" style="background:rgba(56, 189, 248, 0.08);border:1px solid rgba(56, 189, 248, 0.25);">
-            <div class="d-flex align-center gap-2 mb-1" style="color:#38bdf8;font-weight:700;font-size:13px;">
+            <div class="d-flex align-center gap-2 mb-1" style="color:#38bdf8;font-weight:700;font-size:12px;">
               ${getSvgIcon('compass', 16) || getSvgIcon('target', 16)} Standalone Placement &amp; Try-Out Engine
             </div>
             <div class="text-xs" style="color:var(--clr-text-2);line-height:1.5;">
@@ -1541,8 +1541,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
               `).join('')}
             </div>
             <div class="d-flex gap-2">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-select-all-themes" style="font-size:11px;padding:2px 8px;">Select All Themes</button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-all-themes" style="font-size:11px;padding:2px 8px;">Clear</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-select-all-themes" style="font-size:12px;padding:2px 8px;">Select All Themes</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-clear-all-themes" style="font-size:12px;padding:2px 8px;">Clear</button>
             </div>
           </div>
 
@@ -1649,9 +1649,9 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <p class="text-muted text-xs mt-1">Words will be sampled proportionally across all source topics (stratified sampling).</p>
             ${state.tier === 'TRYOUT' ? `
               <div class="d-flex gap-2 mt-2 flex-wrap" id="tryout-quota-presets">
-                <button type="button" class="btn btn-secondary btn-sm" data-q="30" style="font-size:11px;padding:2px 8px;">30 Items (Quick Diagnostic)</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-q="50" style="font-size:11px;padding:2px 8px;">50 Items (Standard Placement)</button>
-                <button type="button" class="btn btn-secondary btn-sm" data-q="100" style="font-size:11px;padding:2px 8px;">100 Items (Comprehensive)</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-q="30" style="font-size:12px;padding:2px 8px;">30 Items (Quick Diagnostic)</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-q="50" style="font-size:12px;padding:2px 8px;">50 Items (Standard Placement)</button>
+                <button type="button" class="btn btn-secondary btn-sm" data-q="100" style="font-size:12px;padding:2px 8px;">100 Items (Comprehensive)</button>
               </div>
             ` : ''}
           </div>
@@ -2043,7 +2043,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
     const isEditOn = document.body.classList.contains('global-edit-mode-on') || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#0f172a;box-shadow:0 0 10px rgba(56,189,248,0.4);'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -2299,10 +2299,10 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               <!-- 19. ACT (Delete Topic or Delete Theme when Edit ON) -->
               <td class="edit-mode-only" style="padding: 4px 4px; text-align: center; width: 65px; border-left: 1px solid rgba(255, 255, 255, 0.1); white-space: nowrap;">
                 <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
-                  <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" data-level="${lvl}" data-theme-code="${thCode}" data-theme="${escapeHtml(th.name)}" data-item-count="${tp.totalCount}" title="Delete Topic '${escapeHtml(tp.name)}' (${tp.totalCount} items)" style="height:22px; font-size:10px; font-weight:800; padding:0 4px; background:rgba(255,0,0,0.18); border:1px solid rgba(255,0,0,0.45); color:var(--grade-e); border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; line-height:1;">
+                  <button type="button" class="btn-del-topic-mini" data-topic="${escapeHtml(tp.name)}" data-level="${lvl}" data-theme-code="${thCode}" data-theme="${escapeHtml(th.name)}" data-item-count="${tp.totalCount}" title="Delete Topic '${escapeHtml(tp.name)}' (${tp.totalCount} items)" style="height:22px; font-size:12px; font-weight:800; padding:0 4px; background:rgba(255,0,0,0.18); border:1px solid rgba(255,0,0,0.45); color:var(--grade-e); border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; line-height:1;">
                     ${getSvgIcon('trash', 11)} <span>TP</span>
                   </button>
-                  <button type="button" class="btn-del-theme-mini" data-theme="${escapeHtml(th.name)}" data-theme-code="${thCode}" data-level="${lvl}" data-topic-count="${thTopicCount}" data-word-count="${thTotalWords}" title="Delete entire Theme '${escapeHtml(th.name)}' (${thCode}) and all ${thTopicCount} topics" style="height:22px; font-size:10px; font-weight:800; padding:0 4px; background:rgba(255,140,0,0.18); border:1px solid rgba(255,140,0,0.45); color:var(--grade-d); border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; line-height:1;">
+                  <button type="button" class="btn-del-theme-mini" data-theme="${escapeHtml(th.name)}" data-theme-code="${thCode}" data-level="${lvl}" data-topic-count="${thTopicCount}" data-word-count="${thTotalWords}" title="Delete entire Theme '${escapeHtml(th.name)}' (${thCode}) and all ${thTopicCount} topics" style="height:22px; font-size:12px; font-weight:800; padding:0 4px; background:rgba(255,140,0,0.18); border:1px solid rgba(255,140,0,0.45); color:var(--grade-d); border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:2px; line-height:1;">
                     ${getSvgIcon('trash', 11)} <span>TH</span>
                   </button>
                 </div>
@@ -2329,7 +2329,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   const initialRender = buildTableBodyHtml(window._vaultTopicSearchQuery || '');
 
   let html = `
-    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
 
       <!-- Modernized Flat Data Table (Flush to top, only table container scrolls) -->
       <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden !important; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 0; margin: 0;">
@@ -3250,7 +3250,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   const initialRows = buildBlueprintTableRows('');
 
   let html = `
-    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', system-ui, sans-serif;">
+    <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
       <!-- Batch Configuration Grid (ONLY Container With Vertical Scroll) -->
       <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden !important; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 8px;">
         <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">

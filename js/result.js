@@ -34,6 +34,22 @@ if (!attemptId) {
   window.location.href = (isAdminParam || session?.is_admin) ? 'admin.html#class-hub' : 'dashboard.html';
 }
 
+// ─── Universal Netlify Badge & External Floating Injections Purge ───
+function purgeExternalBadges() {
+  try {
+    const netlifyEls = document.querySelectorAll('a[href*="netlify.com"], netlify-drawer, [data-netlify-badge], .netlify-badge, #netlify-badge');
+    netlifyEls.forEach(el => {
+      const container = el.closest('div') || el;
+      container.remove();
+    });
+  } catch (_) {}
+}
+purgeExternalBadges();
+try {
+  const badgeObserver = new MutationObserver(() => purgeExternalBadges());
+  badgeObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
+} catch (_) {}
+
     // escapeHtml / escHtml imported canonically
 
     function getEvalCategory(a) {
@@ -985,10 +1001,10 @@ if (!attemptId) {
         const canonicalGrade = typeof calculateGrade === 'function' ? calculateGrade(pct) : getGrade(pct);
         const grade = (!isAdminSession)
           ? canonicalGrade
-          : (isForgiven ? 'F' : (isRemedial ? 'R' : (attempt.grade === 'M' ? 'M' : canonicalGrade)));
+          : (isForgiven ? 'F' : (isRemedial ? 'R' : canonicalGrade));
         let gradeColor = (!isAdminSession)
           ? getGradeColorByScore(pct)
-          : (attempt.grade === 'M' ? '#38bdf8' : (isForgiven ? TOPSCORE_COLORS.E : (isRemedial ? TOPSCORE_COLORS.C : getGradeColorByScore(pct))));
+          : (isForgiven ? TOPSCORE_COLORS.E : (isRemedial ? TOPSCORE_COLORS.C : getGradeColorByScore(pct)));
         const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, !isAdminSession ? false : isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || (pct >= 100 && (!isAdminSession || (!isRemedial && !isForgiven))));
 
@@ -1319,7 +1335,7 @@ if (!attemptId) {
           scoreBox.style.boxShadow = '0 4px 14px rgba(0, 0, 0, 0.25)';
         }
 
-        pctEl.style.cssText = `font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-feature-settings:'tnum' on, 'lnum' on !important;letter-spacing:-0.01em !important;font-weight:900 !important;font-size:clamp(1.5rem, 3.8vw, 1.85rem) !important;line-height:1 !important;color:#F8FAFC !important;-webkit-text-fill-color:#F8FAFC !important;background:none !important;text-shadow:none !important;`;
+        pctEl.style.cssText = `font-family:'Inter', sans-serif !important;font-feature-settings:'tnum' on, 'lnum' on !important;letter-spacing:-0.01em !important;font-weight:900 !important;font-size:40px !important;line-height:1 !important;color:#F8FAFC !important;-webkit-text-fill-color:#F8FAFC !important;background:none !important;text-shadow:none !important;`;
 
         // 5. Grade Box & Value Accent (Neutral border during count-up, grade hidden)
         const gradeBox = document.getElementById('result-grade-box') || document.querySelector('.score-grade-box.grade-box');
@@ -1340,7 +1356,7 @@ if (!attemptId) {
             const glow1 = hexToRgba(gradeColor, 0.95);
             const glow2 = hexToRgba(gradeColor, 0.70);
             const vibrantTextGlow = `0 0 12px ${glow1}, 0 0 24px ${glow2}`;
-            gradeValEl.style.cssText = `font-family:'Outfit','Inter',-apple-system,BlinkMacSystemFont,sans-serif !important;font-weight:900 !important;font-size:clamp(1.5rem, 3.8vw, 1.85rem) !important;line-height:1 !important;color:${gradeColor} !important;-webkit-text-fill-color:${gradeColor} !important;text-shadow:${vibrantTextGlow} !important;`;
+            gradeValEl.style.cssText = `font-family:'Inter', sans-serif !important;font-weight:900 !important;font-size:40px !important;line-height:1 !important;color:${gradeColor} !important;-webkit-text-fill-color:${gradeColor} !important;text-shadow:${vibrantTextGlow} !important;`;
           }
           // Initial state: Delayed/Hidden until score animation completes
           gradeValEl.classList.add('grade-delayed');
@@ -1358,20 +1374,20 @@ if (!attemptId) {
         // 2. Test Title: 2-Line Format (Line 1: Test Title, Line 2: Topic / Theme) via SSOT formatTestDisplay (AGENTS.md § 2.6 / DECISION-056)
         const asmRawTitle = asmData?.title || asmData?.name || 'Test';
         const formattedAsm = formatTestDisplay(asmData);
-        let titleType = formattedAsm.line1 || 'TEST';
-        let titleTopic = formattedAsm.line2 || '';
-
-        if (activeSectionName && !titleType.toUpperCase().includes(activeSectionName.toUpperCase())) {
-          titleType += ` (${activeSectionName.toUpperCase()})`;
-        }
+        const titleType = formattedAsm.line1 || 'TEST';
+        const titleTopic = formattedAsm.line2 || '';
 
         const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
         const topicEl = document.getElementById('result-test-topic-row') || document.getElementById('result-asm-topic-row');
         const legacyNameEl = document.getElementById('result-Test-name');
-        if (typeEl) typeEl.textContent = titleType.toUpperCase();
+        if (typeEl) {
+          typeEl.textContent = titleType;
+          typeEl.setAttribute('title', formattedAsm.fullTitle || titleType);
+        }
         if (topicEl) {
           if (titleTopic) {
-            topicEl.textContent = titleTopic.toUpperCase();
+            topicEl.textContent = titleTopic;
+            topicEl.setAttribute('title', titleTopic);
             topicEl.style.display = 'block';
             topicEl.style.color = '#cbd5e1';
             topicEl.style.textShadow = 'none';

@@ -1,5 +1,5 @@
 // scripts/generate_pwa_icons.mjs
-// Generates official Option A (Outfit 900, identical font size, zero divider) PWA icons for TopsCore LMS
+// Generates official Option A (Inter 900, identical font size, zero divider) PWA icons for TopsCore LMS
 
 import fs from 'fs';
 import path from 'path';
@@ -18,7 +18,7 @@ const htmlTemplate = (size, badgeSize, fontSize, radius, letterSpacing = 3) => `
 <meta charset="utf-8">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -29,7 +29,7 @@ const htmlTemplate = (size, badgeSize, fontSize, radius, letterSpacing = 3) => `
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
   .badge {
     width: ${badgeSize}px;
@@ -70,7 +70,7 @@ const htmlTemplate = (size, badgeSize, fontSize, radius, letterSpacing = 3) => `
 </body>
 </html>`;
 
-// Standalone Vector SVG with embedded Outfit/system styling
+// Standalone Vector SVG with embedded Inter/system styling
 const standaloneSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <radialGradient id="bg" cx="50%" cy="25%" r="85%">
@@ -84,7 +84,7 @@ const standaloneSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 
   </defs>
   <rect width="512" height="512" rx="115" fill="url(#bg)"/>
   <rect x="76" y="76" width="360" height="360" rx="88" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(56, 189, 248, 0.48)" stroke-width="8"/>
-  <g font-family="'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" text-anchor="middle">
+  <g font-family="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" text-anchor="middle">
     <text x="256" y="235" font-size="92" fill="#ffffff" letter-spacing="6">TOPS</text>
     <text x="256" y="335" font-size="92" fill="#38bdf8" letter-spacing="6" filter="url(#glow-core)">CORE</text>
   </g>

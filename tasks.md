@@ -1,12 +1,26 @@
 # Active Task List — TopsCore LMS
 
 > **Current Focus:** Universal Visual Standardization & Normalization of TopsCore Modals, Tables, Forms & Data Taxonomies
-> **Current Phase:** Phase 617 (Complete) — Level Promotion Auto-Heal & Strict Level Isolation Engine
+> **Current Phase:** Phase 619 (Complete) — Purge Grade M & Systemwide Table Edit Button Harmonization (Tactical Cyan #38bdf8)
 > **Automated Verification:** 100% Passed Across All Test Suites & Preflight (< 1.5s Fast Loop, < 20s Full Parallel Run)
 
 ---
 
 ## 📋 SSOT Governance & Architecture Milestones (Complete)
+- [x] **Phase 619 (Purge Grade M & Systemwide Table Edit Button Harmonization — Tactical Cyan #38bdf8 SSOT)**:
+  - **Overhaul Tombol Manual ke Edit Mode**:
+    - Merombak tombol `Manual (M)` di Sub Panel Student Test and Grade matriks (`js/admin/app.js`) menjadi **`Edit Mode`** (saat OFF) dan **`Done Editing`** (saat ON).
+    - Mempertahankan warna resmi **Tactical Cyan `#38bdf8`** (`border: 1px solid #38bdf8; color: #38bdf8; background: transparent;` saat OFF, dan `background: #0284c7; border: 1px solid #38bdf8; color: #ffffff;` saat ON).
+  - **Pembersihan Bersih & Total Token Grade M (Manual)**:
+    - Menghapus total `Grade M` dari sistem:
+      - Di [js/grading.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/grading.js): `isManual` dan entry `M` dihapus dari `calculateGrade`, `GRADE_PALETTE`, `getGradeColor`, dan `getGradeSymbol`.
+      - Di [js/admin/app.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/app.js): seluruh mutasi/pengeditan nilai langsung menghasilkan nilai dan grade standar resmi TopsCore (`★`, `A`, `B`, `C`, `D`, `E`) sesuai formula persentase murni tanpa token semu 'M'. Menghapus override warna biru `#38bdf8` pada kolom RATE dan PTS, serta menghapus badge `M` pada kolom STS.
+      - Di [js/dashboard.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/dashboard.js) dan [js/result.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/result.js): membersihkan pengecekan `attempt.grade === 'M'` dan `isManual`.
+      - Di [AGENTS.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/AGENTS.md) dan [.agents/rules/ui-invariants.md](file:///d:/Drives/Tutor%20Tampan/TopsCore/.agents/rules/ui-invariants.md): merevisi SSOT aturan nilai dan tombol Sub Panel.
+  - **Penyeragaman Seluruh Tombol Edit Tabel di Seluruh Sistem**:
+    - Menyeragamkan seluruh tombol Sub Panel Edit Mode di seluruh modul tabel (`app.js`, `student-management.js`, `student-registration.js`, `classes-hub.js`, `vocab-vault.js`) ke palet Tactical Cyan (`#38bdf8` outline / `#0284c7` ON).
+    - Menambahkan aturan universal di [css/admin/admin-tables.css](file:///d:/Drives/Tutor%20Tampan/TopsCore/css/admin/admin-tables.css) untuk seluruh tombol Edit tabel (`.btn-edit`, `.btn-table-edit`, `.row-action-edit`, `button[data-edit-*]`) menggunakan Tactical Cyan `#38bdf8`.
+  - **Verification**: 100% lolos preflight AST 52 file JS, lolos test grading, lolos 11 pilar universal table standardization, lolos spatial invariant audit.
 - [x] **Phase 618 (Live Dialogue Room Integration — Module M7 Architecture & Context Routing Engine)**:
   - **Module M7 Detection & Smart URL Resolver**:
     - Di [js/dashboard.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/dashboard.js), fungsi `isDialogueTest()` mendeteksi 9 signature Module M7 (`c590c69f-44dc-4d26-9c19-263c6e7cbbec`, `-DIAL`, `-M7-`, `DIALOGUE`, `TURN_BASED_ROLEPLAY`, `m7`, `dialogue`).

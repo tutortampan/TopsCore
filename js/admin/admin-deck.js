@@ -20,7 +20,7 @@ export async function renderDashboard(container) {
   
   // Fetch metrics for the dashboard (Merged Board & Admin)
   const [students, classes, programs, batches, institutions] = await Promise.all([
-    adminFetchAll('students', 'id, is_active, deleted_at, created_at'),
+    adminFetchAll('students', 'id, name, is_active, deleted_at, created_at'),
     adminFetchAll('classes', 'id, name, is_active, program_id, deleted_at'),
     adminFetchAll('programs', 'id, name, is_active, institution_id'),
     adminFetchAll('batches', 'id, name, is_active, program_id'),
@@ -92,7 +92,6 @@ export async function renderDashboard(container) {
   container.innerHTML = `
     <div class="header-actions">
       <h2>Master Dashboard</h2>
-      <button class="btn btn-primary" id="btn-export-cv">${getSvgIcon('download', 14)} Export Executive CV (A4)</button>
     </div>
     
     <div style="display: flex; gap: 2rem; margin-top: 1.5rem; flex-wrap: wrap;">
@@ -129,18 +128,18 @@ export async function renderDashboard(container) {
             </h3>
             <span class="text-xs text-muted">Direct Single-Door Navigation</span>
           </div>
-          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem;">
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('curriculum')">
-              ${getSvgIcon('shield', 14)} <strong>Manage Batches</strong><br><span class="text-xs text-muted">Institutions, Programs & Batches</span>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px; display:inline-flex; align-items:center; gap:8px;" onclick="window.loadSection('curriculum')">
+              ${getSvgIcon('shield', 16)} <strong>Manage Batches</strong>
             </button>
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('classes-hub')">
-              ${getSvgIcon('clipboard', 14)} <strong>Class Directory</strong><br><span class="text-xs text-muted">Classes, Levels & Tests</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px; display:inline-flex; align-items:center; gap:8px;" onclick="window.loadSection('classes-hub')">
+              ${getSvgIcon('clipboard', 16)} <strong>Class Directory</strong>
             </button>
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('registration')">
-              ${getSvgIcon('user', 14)} <strong>Student Intake</strong><br><span class="text-xs text-muted">New Student Registration</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px; display:inline-flex; align-items:center; gap:8px;" onclick="window.loadSection('registration')">
+              ${getSvgIcon('user', 16)} <strong>Student Intake</strong>
             </button>
-            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px;" onclick="window.loadSection('students')">
-              ${getSvgIcon('bar-chart', 14)} <strong>Student Roster</strong><br><span class="text-xs text-muted">Attendance, Scores & Lifecycle</span>
+            <button class="btn btn-outline" style="justify-content:flex-start; text-align:left; padding:0.6rem 0.8rem; font-size: 12px; display:inline-flex; align-items:center; gap:8px;" onclick="window.loadSection('students')">
+              ${getSvgIcon('bar-chart', 16)} <strong>Student Roster</strong>
             </button>
           </div>
         </div>
@@ -231,7 +230,7 @@ export async function renderDashboard(container) {
               recentStudents.map(s =>
                 '<div style="display:flex;justify-content:space-between;align-items:center;padding:.4rem;background:rgba(255,255,255,0.02);border-radius:8px;border:1px solid var(--clr-border);">'
                 + '<div>'
-                + '<div class="fw-700 text-sm">' + escHtml(s.name) + '</div>'
+                + '<div class="fw-700 text-sm">' + escHtml(formatStudentName(s.name || 'Student')) + '</div>'
                 + '<div class="text-xs text-muted">' + new Date(s.created_at).toLocaleDateString() + '</div>'
                 + '</div>'
                 + '<span class="badge ' + (s.is_active !== false ? 'badge-success' : 'badge-neutral') + '">' + (s.is_active !== false ? 'Active' : 'Inactive') + '</span>'
@@ -243,6 +242,22 @@ export async function renderDashboard(container) {
       </div>
     </div>
   `;
+
+  if (typeof window.setBottomInfobar === 'function') {
+    const leftHtml = `
+      <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#94a3b8;font-weight:600;">
+        <span><strong style="color:#f8fafc;">Domain A</strong> · Executive Master Dashboard</span>
+        <span>·</span>
+        <span style="color:var(--grade-a);font-weight:700;">● Online</span>
+      </div>
+    `;
+    const rightHtml = `
+      <button type="button" class="btn btn-primary btn-sm" id="btn-export-cv" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 14px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:6px;background:var(--quad-a,#ff2d87);border:1px solid #ff2d87;color:#ffffff;box-shadow:0 0 10px rgba(255,45,135,0.4);cursor:pointer;" title="Generate and Download Executive CV">
+        ${getSvgIcon('download', 14)} Export Executive CV (A4)
+      </button>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+  }
 
   const btn = document.getElementById('btn-export-cv');
   if(btn) {
@@ -673,7 +688,7 @@ export async function renderCVGenerator(container) {
       <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2.5px solid #0f172a; padding-bottom: 0.75rem; margin-bottom: 1rem;">
         <div>
           <h1 style="font-size: 20px; font-weight: 800; margin: 0; color: #0f172a; letter-spacing: -0.02em;">${profile?.full_name || 'Executive Administrator'}</h1>
-          <div style="font-size: 9.5pt; font-weight: 700; color: #2563eb; margin-top: 0.2rem; text-transform: uppercase;">${profile?.title || 'Academic Director'}</div>
+          <div style="font-size: 14px; font-weight: 700; color: #2563eb; margin-top: 0.2rem; text-transform: uppercase;">${profile?.title || 'Academic Director'}</div>
           <div style="margin-top: 0.35rem; font-size: 12px; color: #64748b;">
             <span>${profile?.contact_email || profile?.email || 'admin@topscore.edu'}</span> &bull; 
             <span>${profile?.contact_phone || profile?.phone || '+62 812-3456-7890'}</span>
@@ -686,7 +701,7 @@ export async function renderCVGenerator(container) {
 
       <!-- Summary -->
       <div style="margin-bottom: 1rem;">
-        <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Executive Summary</h3>
+        <h3 style="font-size: 14px; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Executive Summary</h3>
         <p style="font-size: 12px; line-height: 1.35; color: #334155; margin: 0;">
           ${(profile?.bio && profile.bio.length > 350) ? profile.bio.substring(0, 347) + '...' : (profile?.bio || 'Experienced educational leader specializing in language pedagogy and test systems.')}
         </p>
@@ -694,7 +709,7 @@ export async function renderCVGenerator(container) {
 
       <!-- Experience -->
       <div style="margin-bottom: 1rem;">
-        <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Professional Experience</h3>
+        <h3 style="font-size: 14px; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Professional Experience</h3>
         ${pWork.length > 0 ? pWork.map(w => `
           <div style="margin-bottom: 0.45rem; font-size: 12px;">
             <div style="display: flex; justify-content: space-between;">
@@ -709,7 +724,7 @@ export async function renderCVGenerator(container) {
 
       <!-- Skills -->
       <div style="margin-bottom: 1.5rem;">
-        <h3 style="font-size: 9pt; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Key Competencies</h3>
+        <h3 style="font-size: 14px; font-weight: 800; text-transform: uppercase; color: #0f172a; border-bottom: 1px solid #cbd5e1; padding-bottom: 0.2rem; margin-bottom: 0.4rem;">Key Competencies</h3>
         <p style="font-size: 12px; color: #334155; margin: 0;">
           ${pSkills.map(s => s.skill_name).join(' &bull; ') || 'Curriculum Design &bull; Communicative Language Teaching &bull; Digital Testing'}
         </p>

@@ -204,7 +204,7 @@ export class DataGrid {
         </div>
       </div>
       `}
-      <div class="table-wrap" style="overflow-x:hidden;">
+      <div class="table-wrap">
         <table class="datagrid-table" id="${this.tableId || ''}" style="width:100%; position:relative; ${this.tableLayout ? `table-layout:${this.tableLayout};` : ''}">
           <colgroup class="datagrid-colgroup"></colgroup>
           <thead class="datagrid-thead">
@@ -417,7 +417,7 @@ export class DataGrid {
                   style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${borderLeftStyle} height:60px !important; line-height:60px !important; vertical-align:middle !important; font-size:12px !important; font-weight:700 !important; text-align:center !important; border-bottom:2px solid rgba(255,255,255,0.28) !important; ${sh.style || ''}">
                 <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
                   <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
-                  ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 10px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
+                  ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 12px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
                 </div>
               </th>
             `;
@@ -468,7 +468,7 @@ export class DataGrid {
             style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${subHdrWeight} text-align:center !important;">
           <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
             <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
-            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 10px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
+            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 12px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
           </div>
         </th>
       `;

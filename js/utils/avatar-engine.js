@@ -42,7 +42,7 @@ export function generateAvatarSvg(name = '', gender = '') {
   <rect width="240" height="320" rx="16" fill="url(#avatarGrad_${initial})" />
   <circle cx="120" cy="120" r="50" fill="rgba(255,255,255,0.2)" />
   <path d="M 36 288 C 36 210, 204 210, 204 288 Z" fill="rgba(255,255,255,0.2)" />
-  <text x="120" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="54" font-weight="800" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
+  <text x="120" y="138" font-family="'Inter', sans-serif" font-size="40" font-weight="800" fill="#ffffff" text-anchor="middle" dominant-baseline="middle">${initial}</text>
 </svg>`;
 }
 

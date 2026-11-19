@@ -128,7 +128,6 @@ const BROWSER_E2E_SCRIPTS = new Set([
   'scripts/test_smart.mjs',
   'scripts/run_all_tests_parallel.mjs',
   'scripts/test_live_ui_flows_e2e.mjs',
-  'scripts/test_evnikom_roster_isolation_e2e.mjs',
   'scripts/test_student_registration_institution_hierarchy.mjs',
   'scripts/test_unified_test_room_ratios.mjs',
   'scripts/test_admin_headers_footers_standardization.mjs',

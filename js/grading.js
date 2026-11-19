@@ -401,6 +401,203 @@ export const HOMOPHONE_MAP = {
 };
 
 /**
+ * Royal Order of Adjectives Categories (OSASCOMP):
+ * 1. Opinion / Quality
+ * 2. Size
+ * 3. Physical Quality / Texture / State
+ * 4. Shape
+ * 5. Age
+ * 6. Color
+ * 7. Origin
+ * 8. Material
+ * 9. Purpose / Qualifier
+ */
+export const ADJECTIVE_CATEGORIES = {
+  1: {
+    name: 'opinion',
+    words: new Set([
+      'beautiful', 'handsome', 'ugly', 'lovely', 'pretty', 'nice', 'cute', 'attractive',
+      'wonderful', 'great', 'excellent', 'fantastic', 'cool', 'good', 'bad', 'awful',
+      'terrible', 'horrible', 'dirty', 'clean', 'neat', 'tidy', 'messy', 'delicious',
+      'tasty', 'yummy', 'fresh', 'sweet', 'bitter', 'sour', 'spicy', 'rich', 'poor',
+      'comfortable', 'uncomfortable', 'cheap', 'expensive', 'precious', 'valuable',
+      'simple', 'complex', 'funny', 'boring', 'interesting', 'exciting',
+      'strange', 'weird', 'unique', 'perfect', 'normal', 'usual', 'unusual', 'favorite'
+    ])
+  },
+  2: {
+    name: 'size',
+    words: new Set([
+      'big', 'small', 'little', 'tiny', 'huge', 'giant', 'gigantic', 'massive', 'large',
+      'mini', 'tall', 'short', 'high', 'low', 'long', 'medium', 'slender', 'slim',
+      'thin', 'fat', 'thick', 'wide', 'broad', 'narrow', 'deep', 'shallow'
+    ])
+  },
+  3: {
+    name: 'physical',
+    words: new Set([
+      'hard', 'soft', 'rough', 'smooth', 'heavy', 'light', 'sharp', 'blunt', 'wet',
+      'dry', 'moist', 'hot', 'warm', 'cold', 'cool', 'freezing', 'boiling', 'sticky',
+      'slippery', 'greasy', 'oily', 'stiff', 'flexible', 'fragile', 'solid', 'hollow',
+      'fluffy', 'silky', 'shiny', 'dull', 'bright', 'dark'
+    ])
+  },
+  4: {
+    name: 'shape',
+    words: new Set([
+      'round', 'circular', 'square', 'rectangular', 'triangular', 'oval', 'cylindrical',
+      'conical', 'spherical', 'flat', 'curved', 'straight', 'crooked', 'bent', 'wavy'
+    ])
+  },
+  5: {
+    name: 'age',
+    words: new Set([
+      'new', 'old', 'young', 'antique', 'ancient', 'vintage', 'modern', 'contemporary',
+      'fresh', 'brand-new', 'elderly', 'mature'
+    ])
+  },
+  6: {
+    name: 'color',
+    words: new Set([
+      'red', 'blue', 'green', 'yellow', 'black', 'white', 'brown', 'grey', 'gray',
+      'purple', 'pink', 'orange', 'violet', 'indigo', 'golden', 'silver', 'bronze',
+      'navy', 'beige', 'cyan', 'magenta', 'maroon', 'blonde', 'turquoise'
+    ])
+  },
+  7: {
+    name: 'origin',
+    words: new Set([
+      'indonesian', 'english', 'american', 'japanese', 'chinese', 'korean', 'italian',
+      'french', 'german', 'spanish', 'australian', 'indian', 'asian', 'european',
+      'african', 'western', 'eastern', 'oriental', 'local', 'foreign', 'native', 'traditional'
+    ])
+  },
+  8: {
+    name: 'material',
+    words: new Set([
+      'wooden', 'plastic', 'metallic', 'metal', 'iron', 'steel', 'leather', 'paper',
+      'cotton', 'silk', 'woolen', 'wool', 'glass', 'ceramic', 'stone', 'marble',
+      'clay', 'rubber', 'cardboard', 'wax', 'diamond', 'concrete'
+    ])
+  },
+  9: {
+    name: 'purpose',
+    words: new Set([
+      'cooking', 'sleeping', 'reading', 'writing', 'swimming', 'running', 'walking',
+      'dining', 'coffee', 'tea', 'sports', 'racing', 'travel', 'school', 'office',
+      'work', 'shopping', 'wedding', 'winter', 'summer', 'water', 'storage', 'kitchen'
+    ])
+  }
+};
+
+const IRREGULAR_PLURALS = new Set(['people', 'men', 'women', 'children', 'teeth', 'feet', 'mice', 'geese', 'oxen']);
+
+export function isPluralNoun(noun) {
+  const n = String(noun || '').toLowerCase().trim();
+  if (IRREGULAR_PLURALS.has(n)) return true;
+  return n.endsWith('s') || n.endsWith('es') || n.endsWith('ies');
+}
+
+export function classifyAdjective(word) {
+  const w = String(word || '').toLowerCase().trim();
+  for (const [order, cat] of Object.entries(ADJECTIVE_CATEGORIES)) {
+    if (cat.words.has(w)) return { order: Number(order), category: cat.name };
+  }
+  return null;
+}
+
+/**
+ * Validate Description Sentence against:
+ * [This/That/These/Those] + [is/are] + (a/an) + [3 Adjectives in Royal Order] + [Noun]
+ */
+export function validateDescriptionSentence(sentence, targetDemonstrative = null) {
+  const clean = String(sentence || '').trim().replace(/[.,!?;:]+$/, '').toLowerCase();
+  const tokens = clean.split(/\s+/).filter(Boolean);
+  if (tokens.length < 5) {
+    return { valid: false, error: 'Kalimat terlalu pendek. Rumus: [This/That/These/Those] [is/are] (a/an) [3 Adjectives] [Noun]' };
+  }
+
+  // 1. Demonstrative
+  const demo = tokens[0];
+  if (!['this', 'that', 'these', 'those'].includes(demo)) {
+    return { valid: false, error: 'Harus diawali demonstrative pronoun (This, That, These, atau Those).' };
+  }
+
+  if (targetDemonstrative && demo !== targetDemonstrative.toLowerCase().trim()) {
+    return { valid: false, error: `Soal ini mewajibkan kata depan "${targetDemonstrative.toUpperCase()}" (Anda menggunakan "${demo}").` };
+  }
+
+  const isSingular = (demo === 'this' || demo === 'that');
+
+  // 2. To-Be
+  const tobe = tokens[1];
+  if (isSingular && tobe !== 'is') {
+    return { valid: false, error: `Demonstrative tunggal (${demo.toUpperCase()}) wajib berpasangan dengan "is" (bukan "${tobe}").` };
+  }
+  if (!isSingular && tobe !== 'are') {
+    return { valid: false, error: `Demonstrative jamak (${demo.toUpperCase()}) wajib berpasangan dengan "are" (bukan "${tobe}").` };
+  }
+
+  let idx = 2;
+  // 3. Article (a/an) for singular
+  if (isSingular) {
+    if (tokens[idx] === 'a' || tokens[idx] === 'an') {
+      idx++;
+    }
+  }
+
+  // Remaining tokens: adjectives + noun
+  const remaining = tokens.slice(idx);
+  if (remaining.length < 4) {
+    return { valid: false, error: 'Wajib menyertakan minimal 3 kata sifat (adjectives) dan 1 kata benda (noun).' };
+  }
+
+  const noun = remaining[remaining.length - 1];
+  const adjTokens = remaining.slice(0, remaining.length - 1);
+
+  if (adjTokens.length !== 3) {
+    return { valid: false, error: `Wajib tepat 3 kata sifat. Terdeteksi ${adjTokens.length}: "${adjTokens.join(', ')}".` };
+  }
+
+  // Check noun plurality agreement
+  const nounPlural = isPluralNoun(noun);
+  if (isSingular && nounPlural) {
+    return { valid: false, error: `Kata benda "${noun}" berbentuk jamak, tidak cocok dengan "${demo} is". Gunakan kata benda tunggal.` };
+  }
+  if (!isSingular && !nounPlural) {
+    return { valid: false, error: `Kata benda "${noun}" berbentuk tunggal, tidak cocok dengan "${demo} are". Gunakan kata benda jamak (tambahkan -s/-es).` };
+  }
+
+  const classified = [];
+  for (const adj of adjTokens) {
+    const c = classifyAdjective(adj);
+    if (!c) {
+      return { valid: false, error: `Kata sifat "${adj}" belum dikenali dalam kamus baku. Gunakan kata sifat umum (warna, ukuran, opini, bahan, dll).` };
+    }
+    classified.push({ word: adj, ...c });
+  }
+
+  // Check strict increasing order
+  for (let i = 0; i < classified.length - 1; i++) {
+    if (classified[i].order >= classified[i + 1].order) {
+      return {
+        valid: false,
+        error: `Pelanggaran urutan kata sifat: "${classified[i].word}" (${classified[i].category}) harus diletakkan sebelum "${classified[i + 1].word}" (${classified[i + 1].category}). Urutan baku: Opini -> Ukuran -> Fisik -> Bentuk -> Usia -> Warna -> Asal -> Bahan -> Tujuan.`
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    demonstrative: demo,
+    tobe,
+    adjectives: classified,
+    noun,
+    formatted: demo.charAt(0).toUpperCase() + demo.slice(1) + ' ' + tobe + ' ' + (isSingular ? (tokens[2] === 'an' ? 'an ' : 'a ') : '') + adjTokens.join(' ') + ' ' + noun
+  };
+}
+
+/**
  * Check if two answer strings match either directly or via acoustic homophones (per word).
  */
 export function isAcousticHomophoneMatch(studentText, targetText) {
@@ -438,6 +635,40 @@ export function isAcousticHomophoneMatch(studentText, targetText) {
  * @returns {{ result: 'correct'|'minor_spelling_error'|'minor_word_form_error'|'incorrect', score: number, matchedAnswer: string }}
  */
 export function evaluateAnswer(studentAnswer, rawCorrectAnswer, answerType = 'written') {
+  // Description Module (m1 / Point & Speak): Evaluates Demonstrative + To-Be + 3 Adjectives in Royal Order + Noun
+  if (answerType === 'description') {
+    const rawStr = Array.isArray(rawCorrectAnswer) ? (rawCorrectAnswer[0] || '') : String(rawCorrectAnswer || '');
+    let targetDemo = null;
+    const cleanRaw = rawStr.toLowerCase().trim();
+    if (['this', 'that', 'these', 'those'].includes(cleanRaw)) {
+      targetDemo = cleanRaw;
+    } else {
+      const matchDemo = cleanRaw.match(/\b(this|that|these|those)\b/);
+      if (matchDemo) targetDemo = matchDemo[1];
+    }
+
+    const vRes = validateDescriptionSentence(studentAnswer, targetDemo);
+    if (vRes.valid) {
+      return {
+        result: 'correct',
+        score: 1.0,
+        is_correct: true,
+        matchedAnswer: vRes.formatted,
+        similarity_score: 1.0,
+        feedback: 'Valid grammatical order'
+      };
+    } else {
+      return {
+        result: 'incorrect',
+        score: 0.0,
+        is_correct: false,
+        matchedAnswer: targetDemo ? `${targetDemo.toUpperCase()} + 3 Adjectives + Noun` : '',
+        similarity_score: 0.0,
+        error: vRes.error
+      };
+    }
+  }
+
   const normStudent = cleanPunctuationAndSymbols(studentAnswer);
   const compactStudent = stripAllPunctuationAndSpaces(studentAnswer);
   const possibleAnswers = parseCorrectAnswers(rawCorrectAnswer);
@@ -609,12 +840,10 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
  */
 export function calculateGrade(percentage, options = {}) {
   const isAlumni = Boolean(options?.isAlumni);
-  const isManual = Boolean(options?.isManual);
   const isForgiven = Boolean(options?.isForgiven);
   const isRem = typeof options === 'boolean' ? options : Boolean(options?.isRemedial);
 
   if (isAlumni) return 'X';
-  if (isManual) return 'M';
   if (isForgiven) return 'F';
   if (isRem) return 'R';
 
@@ -865,21 +1094,6 @@ export const GRADE_PALETTE = {
     maxScore: 0,
     sparkle: false,
   },
-  M: {
-    symbol: 'M',
-    label: 'Manual',
-    predicate: 'Manual Score',
-    color: '#38bdf8', // Cyan (#38bdf8 / Tactical Blue)
-    dark: '#0284c7',
-    light: '#bae6fd',
-    rgb: '56, 189, 248',
-    glow: 'rgba(56, 189, 248, 0.35)',
-    textColor: '#0F172A',
-    name: 'Manual Score',
-    minScore: 0,
-    maxScore: 100,
-    sparkle: false,
-  },
   X: {
     symbol: 'X',
     label: 'Alumni',
@@ -920,7 +1134,6 @@ export function getGradeColor(grade, isRemedial = false) {
   const g = String(grade || '').trim();
   if (g.toUpperCase() === 'R' || g.toUpperCase() === 'REMEDIAL') return TOPSCORE_COLORS.C;
   if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return TOPSCORE_COLORS.E;
-  if (g.toUpperCase() === 'M' || g.toUpperCase() === 'MANUAL') return '#38bdf8'; // Grade M is Cyan (#38bdf8)
   if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
   if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') return TOPSCORE_COLORS.X;
   if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') return TOPSCORE_COLORS.NEUTRAL;
@@ -981,7 +1194,6 @@ export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
   const g = String(grade || '').trim();
   if (g.toUpperCase() === 'R' || g.toUpperCase() === 'REMEDIAL') return 'R';
   if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return 'F';
-  if (g.toUpperCase() === 'M' || g.toUpperCase() === 'MANUAL') return 'M';
   if (g === '★' || g === '⭐' || g.toUpperCase() === 'S' || g.toUpperCase() === 'STAR') {
     return '★';
   }
@@ -1314,10 +1526,9 @@ export function recalculateAttempt(answers, passingThreshold = 60, options = {})
  */
 export function computeMilestoneExamMastery(examEntries = [], allClassExams = []) {
   // Exclude Forgiven 0% exam entries from academic points and mastery calculations.
-  // Manual override exam scores (e.g., from offline paper) are authentic scores and must be included.
   const cleanExamEntries = (Array.isArray(examEntries) ? examEntries : []).filter(e => {
     if (!e) return false;
-    const isPureForgivenZero = Boolean(e.isForgiven) && !e.isManual && Number(e.effPoints ?? e.points ?? 0) === 0;
+    const isPureForgivenZero = Boolean(e.isForgiven) && Number(e.effPoints ?? e.points ?? 0) === 0;
     if (isPureForgivenZero) return false;
     return true;
   });
@@ -1703,17 +1914,21 @@ export function formatTestDisplay(test) {
 
   const rawTitle = String(test.title || test.name || '').trim();
   const shell = String(test.shell_code || '').toUpperCase();
-  const isExam = test.test_type === 'exam' || test.category === 'EXAM' || shell.endsWith('-EXAM') || /Exam/i.test(rawTitle);
+  const isEx = (test.test_type || '').toLowerCase() === 'exam' ||
+               (test.category || '').toUpperCase() === 'EXAM' ||
+               shell.endsWith('-EXAM') ||
+               /\bExam\b/i.test(rawTitle);
 
-  // 2. Extract Topic or Theme from rawTitle
+  const typePart = isEx ? 'Exam' : 'Task';
+
+  // 1. Extract Topic / Theme (after dash)
   let topicOrTheme = '';
   const dashIdx = rawTitle.search(/\s+[-–:]\s+/);
   if (dashIdx !== -1) {
     topicOrTheme = rawTitle.substring(dashIdx).replace(/^[\s-–:]+/, '').trim();
   } else {
-    // If no dash, strip common class prefixes like "1st Vocabulary ", "2nd Vocabulary ", etc.
     topicOrTheme = rawTitle.replace(/^\d+(st|nd|rd|th)?\s+Vocabulary\s+/i, '')
-                           .replace(/^(Theme\s+[A-D]\s+)?(Words\s+|Phrases\s+)?(Task|Exam)\s*/i, '')
+                           .replace(/^(Theme\s+[A-Z0-9]+\s+)?(Words\s+|Phrases\s+)?(Task|Exam)\s*/i, '')
                            .trim();
   }
 
@@ -1724,86 +1939,119 @@ export function formatTestDisplay(test) {
       .join(' ');
   }
 
-  // 3. Extract Theme letter & Topic number
-  // Supports new format: CMP-3VCB-A1-TASK -> segments[2] = "A1", CMP-3VCB-D-EXAM -> segments[2] = "D"
-  // As well as legacy formats: 3A1-TASK, 2D-WORDS-EXAM, 1A1-PHRASES-TASK
-  let themeLetter = '';
-  let topicNum = '';
-
-  // Check 4-part format: PROGRAM-CLASS-CODE-TYPE
+  // 2. Extract Code (e.g. A1, B2, D4, D, G1, G, 0A1, 0A)
+  let codePart = '';
   const segments = shell.split('-');
   if (segments.length >= 4) {
-    const codePart = segments[2]; // e.g. "A1" or "D"
-    const m = codePart.match(/^([A-D])([0-9]?)$/);
-    if (m) {
-      themeLetter = m[1];
-      topicNum = m[2] || '';
+    codePart = segments[2]; // e.g. "A1", "D", "0A1", "G1"
+  } else if (shell) {
+    const mLegacy = shell.match(/^([0-9]?[A-Z]+[0-9]?)-/);
+    if (mLegacy) {
+      codePart = mLegacy[1].replace(/^[123]/, ''); // remove level prefix e.g. "3A1" -> "A1", "3D" -> "D"
     }
   }
 
-  // Fallback to legacy regex on shell: ^([0-9]?)([A-D])([0-9]?)-
-  if (!themeLetter) {
-    const legacyMatch = shell.match(/^([0-9]?)([A-D])([0-9]?)-/);
-    if (legacyMatch) {
-      themeLetter = legacyMatch[2];
-      topicNum = legacyMatch[3] || '';
+  if (!codePart && rawTitle) {
+    // Check "Task A1", "Exam D", "Task 0A1", "Exam 0A"
+    const mForward = rawTitle.match(/\b(?:Task|Exam)\s+([0-9]?[A-Z]+[0-9]?)\b/i);
+    if (mForward) {
+      codePart = mForward[1].toUpperCase();
+    } else {
+      // Check legacy "A1 Task", "D Exam", "A1 Words Task", "D Phrases Exam"
+      const mBackward = rawTitle.match(/\b([0-9]?[A-Z]+[0-9]?)\s+(?:Words\s+|Phrases\s+)?(?:Task|Exam)\b/i);
+      if (mBackward) {
+        codePart = mBackward[1].toUpperCase();
+      } else {
+        const mTheme = rawTitle.match(/\bTheme\s+([A-Z]+[0-9]?)\b/i);
+        if (mTheme) {
+          codePart = mTheme[1].toUpperCase();
+        }
+      }
     }
   }
 
-  // Fallback to rawTitle matching:
-  if (!themeLetter) {
-    const titleThemeMatch = rawTitle.match(/Theme\s+([A-D])/i) || rawTitle.match(/\b([A-D])([0-9]?)\b/);
-    if (titleThemeMatch) {
-      themeLetter = (titleThemeMatch[1] || '').toUpperCase();
-      topicNum = titleThemeMatch[2] || '';
-    }
+  // Fallback if codePart still empty
+  if (!codePart) {
+    codePart = isEx ? 'A' : 'A1';
   }
 
-  // 4. Construct Class & Level Context (e.g. "2nd Vocabulary" or "1st Basic English")
+  // 3. Determine Level and Class Name
+  const isLevel0 = test.levels?.level_number === 0 ||
+                   String(test.levels?.name || '').toLowerCase().includes('non-level') ||
+                   shell.startsWith('EVN-') || shell.startsWith('SHR-') || shell.startsWith('TMT-') ||
+                   /^(Evnikom|Sheraton|Tamata)/i.test(rawTitle) ||
+                   /^(Evnikom|Sheraton|Tamata)/i.test(test.classes?.name || '');
+
   let levelOrdinal = '';
   let className = 'Vocabulary';
 
-  if (test.levels?.level_number) {
-    const num = test.levels.level_number;
-    levelOrdinal = num === 1 ? '1st' : num === 2 ? '2nd' : num === 3 ? '3rd' : `${num}th`;
-  }
-  if (test.classes?.name) {
-    const cn = test.classes.name
-      .replace(/^(Camp|Evnikom|Sheraton|Tamata)\s+/i, '')
-      .replace(/^(\d+(st|nd|rd|th)?|Level\s*\d+)\s+/i, '')
-      .trim();
-    if (cn) className = cn;
-  }
-
-  // Fallback from rawTitle (e.g. "2nd Vocabulary" or "1st Basic English")
-  const lvlMatch = rawTitle.match(/^(\d+(st|nd|rd|th)?)\s+([A-Za-z\s]+?)(?=\s+[A-D0-9]|\s+Theme|\s+Words|\s+Phrases|\s+Task|\s+Exam)/i);
-  if (lvlMatch) {
-    if (!levelOrdinal) levelOrdinal = lvlMatch[1];
-    if (lvlMatch[3] && !test.classes?.name) className = lvlMatch[3].trim();
-  }
-
-  // Fallback from shell_code (e.g. "CMP-3VCB-...", "2B1-...", "3A-...")
-  if (!levelOrdinal) {
-    const shellLvl = shell.match(/(?:CMP-)?(\d)/);
-    if (shellLvl) {
-      const n = parseInt(shellLvl[1]);
-      levelOrdinal = n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
+  if (isLevel0) {
+    levelOrdinal = '';
+    if (test.classes?.name) {
+      className = test.classes.name.trim();
     } else {
-      levelOrdinal = '1st';
+      const instMatch = rawTitle.match(/^(Evnikom|Sheraton|Tamata)\s+([A-Za-z\s]+?)(?=\s+[0-9A-Z]|\s+Task|\s+Exam|\s+-|$)/i);
+      if (instMatch) {
+        className = `${instMatch[1]} ${instMatch[2]}`.trim();
+      } else {
+        className = 'Vocabulary';
+      }
+    }
+  } else {
+    // Regular levels 1, 2, 3
+    if (test.levels?.level_number != null && test.levels.level_number > 0) {
+      const num = test.levels.level_number;
+      levelOrdinal = num === 1 ? '1st' : num === 2 ? '2nd' : num === 3 ? '3rd' : `${num}th`;
+    }
+
+    if (test.classes?.name) {
+      const cn = test.classes.name
+        .replace(/^(Camp|Evnikom|Sheraton|Tamata)\s+/i, '')
+        .replace(/^(\d+(st|nd|rd|th)?|Level\s*\d+)\s+/i, '')
+        .trim();
+      if (cn) className = cn;
+    }
+
+    // Fallback from rawTitle (e.g. "Camp 2nd Vocabulary" or "2nd Vocabulary")
+    if (!levelOrdinal) {
+      const lvlMatch = rawTitle.match(/(?:Camp\s+)?(\d+)(st|nd|rd|th)?\s+([A-Za-z\s]+?)(?=\s+[A-D0-9]|\s+Theme|\s+Words|\s+Phrases|\s+Task|\s+Exam)/i);
+      if (lvlMatch) {
+        const n = parseInt(lvlMatch[1], 10);
+        levelOrdinal = n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
+        if (lvlMatch[3] && !test.classes?.name) className = lvlMatch[3].trim();
+      }
+    }
+
+    // Fallback from shell_code (e.g. "CMP-3VCB-...", "2B1-...", "3A-...")
+    if (!levelOrdinal) {
+      const shellLvl = shell.match(/(?:CMP-)?([123])/);
+      if (shellLvl) {
+        const n = parseInt(shellLvl[1], 10);
+        levelOrdinal = n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
+      } else {
+        levelOrdinal = '1st';
+      }
     }
   }
 
-  // 5. Construct SSOT Format:
+  // 4. Construct SSOT Format:
   // Task: "2nd Vocabulary Task A1 - Topic Name"
   // Exam: "2nd Vocabulary Exam A - Theme Name"
-  const codePart = isExam ? (themeLetter || 'A') : `${themeLetter || 'A'}${topicNum || '1'}`;
-  const typePart = isExam ? 'Exam' : 'Task';
-
   const classPrefix = `${levelOrdinal} ${className}`.trim();
   const typeLabel = `${classPrefix} ${typePart} ${codePart}`.trim();
-  const fullTitle = topicOrTheme ? `${typeLabel} - ${topicOrTheme}` : typeLabel;
-  const line1 = `${typePart} ${codePart}`; // Zero Class Redundancy for mobile 2-line rendering: "Task A1" / "Exam A"
+  let fullTitle = topicOrTheme ? `${typeLabel} - ${topicOrTheme}` : typeLabel;
+  let line1 = `${typePart} ${codePart}`; // Zero Class Redundancy for standard mobile 2-line rendering: "Task A1" / "Exam A"
   const line2 = topicOrTheme;
+
+  // If rawTitle explicitly starts with Program name and has dash (e.g. "Camp 1st Basic English Exam - Tell Me What You See"),
+  // preserve the user-determined title and line1 verbatim:
+  if (dashIdx !== -1 && /^(Camp|Evnikom|Sheraton|Tamata)/i.test(rawTitle)) {
+    const customLine1 = rawTitle.substring(0, dashIdx).trim();
+    if (customLine1) {
+      line1 = customLine1;
+      fullTitle = rawTitle;
+    }
+  }
 
   return {
     typeLabel,
@@ -1826,4 +2074,40 @@ export function formatTestTitleHtml(test) {
   }
   return `<span class="next-test-primary-name" title="${esc1}">${esc1}</span>`;
 }
+
+/**
+ * Authoritative Discipline / Subject Classifier for Classes.
+ * Guarantees strict separation between Vocabulary, Basic English, Speaking, Storytelling, etc.
+ * @param {Object|string} classObjOrName - Class object with { name, code } or class name string.
+ * @returns {'VOCABULARY'|'BASIC_ENGLISH'|'SPEAKING'|'STORYTELLING'|'GENERAL'}
+ */
+export function detectClassDiscipline(classObjOrName) {
+  if (!classObjOrName) return 'GENERAL';
+  const name = typeof classObjOrName === 'string' ? classObjOrName : (classObjOrName.name || '');
+  const code = typeof classObjOrName === 'object' ? (classObjOrName.code || '') : '';
+
+  if (/\b(vocab|vocabulary)\b/i.test(name) || /-(?:[0-9]*VCB|VOCAB)\b/i.test(code)) {
+    return 'VOCABULARY';
+  }
+  if (/\b(basic\s*english|basic)\b/i.test(name) || /-(?:[0-9]*BAS|BASIC)\b/i.test(code)) {
+    return 'BASIC_ENGLISH';
+  }
+  if (/\b(speaking|public\s*speaking)\b/i.test(name) || /-(?:[0-9]*SPK|SPEAK)\b/i.test(code)) {
+    return 'SPEAKING';
+  }
+  if (/\b(storytelling|story)\b/i.test(name) || /-(?:[0-9]*STY|STORY)\b/i.test(code)) {
+    return 'STORYTELLING';
+  }
+  return 'GENERAL';
+}
+
+/**
+ * Strict boolean guard: is this class exclusively for Vocabulary Vault?
+ * @param {Object|string} classObjOrName
+ * @returns {boolean}
+ */
+export function isVocabularyClass(classObjOrName) {
+  return detectClassDiscipline(classObjOrName) === 'VOCABULARY';
+}
+
 

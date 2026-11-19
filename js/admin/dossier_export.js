@@ -52,8 +52,8 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
     @page { size: A4 portrait; margin: 8mm 10mm; }
     * { box-sizing: border-box; }
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      font-size: 8.5pt;
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
       line-height: 1.45;
       color: #0f172a;
       background: #ffffff;
