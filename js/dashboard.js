@@ -1448,8 +1448,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const welcomeLevelEl = document.getElementById('welcome-level');
           if (welcomeLevelPanelEl && welcomeLevelEl) {
             const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
-            welcomeLevelEl.innerHTML = isAlumni ? `Alumni ${getSvgIcon('graduation-cap', 14)}` : (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level');
-            welcomeLevelPanelEl.classList.remove('hidden');
+            const isNonLevel = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'non-level' || (session.level_name || '').toLowerCase() === 'general' || session.level_name === '—' || session.level_name === '-';
+            if (isAlumni) {
+              welcomeLevelEl.innerHTML = `Alumni ${getSvgIcon('graduation-cap', 14)}`;
+              welcomeLevelPanelEl.classList.remove('hidden');
+            } else if (isNonLevel) {
+              welcomeLevelEl.textContent = '—';
+              welcomeLevelPanelEl.classList.add('hidden'); // Program tanpa jenjang dianggap kosong
+            } else {
+              welcomeLevelEl.innerHTML = session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level';
+              welcomeLevelPanelEl.classList.remove('hidden');
+            }
           }
         }
 
@@ -1484,14 +1493,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         );
 
         hideLoading();
+        window._cachedBatchStudents = null;
+        window._cachedBatchAttempts = null;
         renderClasses(Classes, progress, testsRaw, attempts);
-        await renderNextAssignmentHero(testsRaw, attempts, Classes);
-
-        const myClassIds = Classes.map(c => c.id);
-        const myTests = testsRaw.filter(a => myClassIds.includes(a.class_id) || myClassIds.includes(a.Class_id));
-        window._batchTests = myTests;
-        await computeOverallStats(attempts, myTests);
-        await loadBatchLeaderboard();
+        await renderSelectedClassDashboard();
         setupProfileModal(attempts);
       } catch(e) {
         hideLoading();
@@ -1979,20 +1984,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const completedClasses = [];
       const studentLevelNum = session.level_number != null ? session.level_number : 1;
       const studentLevelId = session.level_id;
-      const isAlumni = studentLevelNum === 0 || (session.level_name || '').toLowerCase() === 'alumni';
+      const isAlumni = studentLevelNum === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
+      const isNonLevel = studentLevelNum === 0 || (session.level_name || '').toLowerCase() === 'non-level';
 
       rawClasses.forEach(c => {
         const cLvlNum = c.levels?.level_number;
-        const isCurrentLevel = (studentLevelId && c.level_id === studentLevelId) || (studentLevelNum && cLvlNum === studentLevelNum);
+        const isCurrentLevel = (studentLevelId && c.level_id === studentLevelId) || (studentLevelNum != null && cLvlNum === studentLevelNum);
 
-        // Alumni receives universal access to all program classes
-        if (isAlumni) {
+        // Alumni & Non-Level receive universal access to all program classes
+        if (isAlumni || isNonLevel) {
           activeClasses.push(c);
-        } else if (isCurrentLevel || (cLvlNum == null && studentLevelNum === 0)) {
+        } else if (isCurrentLevel || (cLvlNum == null)) {
           activeClasses.push(c);
         } else if (studentLevelNum != null && cLvlNum != null && cLvlNum < studentLevelNum) {
-          // Previous level classes remain tracked in completedClasses for history/levels overview modal only
+          // Previous level classes remain accessible in Class Lobby for review/drill
           c._isRetroactive = true;
+          activeClasses.push(c);
           completedClasses.push(c);
         }
       });
@@ -2041,7 +2048,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             pct = Math.min(100, Math.round(subjProgress[0].highest_score));
           }
 
-          const isCompleted = dbCompleted || (classAssms.length > 0 && completedCount >= classAssms.length);
+          let isCompleted = dbCompleted || (classAssms.length > 0 && completedCount >= classAssms.length);
+          if (subj._isRetroactive && (pct === 0 || isCompleted)) {
+            // Retroactive class from passed level: mark completed
+            pct = 100;
+            isCompleted = true;
+          }
           if (isCompleted) pct = 100;
 
           const statusText = isCompleted ? "Completed" : (pct > 0 ? `${pct}%` : "In Progress");
@@ -2057,7 +2069,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!isValidSelected && activeClasses.length > 0) {
         const savedCid = localStorage.getItem('topscore_student_last_class_id');
         const found = savedCid && activeClasses.find(c => c.id === savedCid);
-        window._selectedClassId = found ? found.id : activeClasses[0].id;
+        const currentLvlClass = activeClasses.find(c =>
+          (studentLevelId && c.level_id === studentLevelId) ||
+          (studentLevelNum != null && c.levels?.level_number === studentLevelNum)
+        );
+        window._selectedClassId = found ? found.id : (currentLvlClass ? currentLvlClass.id : activeClasses[0].id);
       }
 
       updateClassesBarUI();
@@ -2094,17 +2110,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       container.innerHTML = html || `<div class="class-deck-box active"><div class="class-deck-title">${getClassSvgIcon('', 16, '#94a3b8')} <span class="class-deck-name">No Class Assigned</span></div><div class="class-deck-progress">0%</div></div>`;
 
       container.querySelectorAll('.class-deck-box').forEach(box => {
-        box.addEventListener('click', () => {
+        box.addEventListener('click', async () => {
           const cid = box.dataset.cid;
           if (!cid) return;
           window._selectedClassId = cid;
           try { localStorage.setItem('topscore_student_last_class_id', cid); } catch (_) {}
-          renderClassesBoxes(window._activeClasses);
-          updateClassesBarUI();
-          renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
+          await renderSelectedClassDashboard();
         });
       });
     }
+
+    async function renderSelectedClassDashboard() {
+      updateClassesBarUI();
+      renderClassesBoxes(window._activeClasses);
+      await renderNextAssignmentHero(window._allTests, window._allAttempts, window._activeClasses || window._loadedClasses);
+      await computeOverallStats(window._allAttempts, window._allTests);
+      await loadBatchLeaderboard();
+    }
+    window.renderSelectedClassDashboard = renderSelectedClassDashboard;
 
     function updateClassesBarUI() {
       const activeClass = (window._activeClasses || []).find(c => c.id === window._selectedClassId) || (window._activeClasses || [])[0];
@@ -2155,20 +2178,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
       listEl.innerHTML = html || '<div class="text-muted p-4 text-center">No active classes.</div>';
 
-      const commitClassSelection = () => {
+      const commitClassSelection = async () => {
         const cid = window._candidateClassId || window._selectedClassId;
         if (cid) {
           window._selectedClassId = cid;
           try { localStorage.setItem('topscore_student_last_class_id', cid); } catch (_) {}
           updateClassesBarUI();
           populateClassesSelectorModal(window._activeClasses);
-          renderNextAssignmentHero(window._allTests, window._allAttempts, window._loadedClasses);
-          if (typeof renderCompletedTests === 'function') {
-            renderCompletedTests(window._allTests, window._allAttempts);
-          }
-          if (typeof renderLeaderboard === 'function' && window._loadedStudents) {
-            renderLeaderboard(window._loadedStudents, window._allAttempts, window._allTests);
-          }
+          await renderSelectedClassDashboard();
         }
         closeSelectorModal();
       };
@@ -2950,18 +2967,28 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       renderNextAssignmentHero(myTests, attempts, window._loadedClasses);
     }
 
-    async function computeOverallStats(attempts, tests = []) {
-      // Rule 2.8 & Exam-Only Metric Rule:
-      // Academic Score %, Grade, and Points are evaluated EXCLUSIVELY from Exams.
-      // Tasks count strictly towards activity completion & badges, never inflating academic score.
-      const activeAsmMap = new Map((tests || []).map(a => [a.id, a]));
+    async function computeOverallStats(attempts = [], testsParam = null) {
+      // Scoped Strictly to the Selected Class (User Rule: Dashboard represents active class only)
+      const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id);
+      const allTests = (Array.isArray(testsParam) && testsParam.length > 0)
+        ? testsParam
+        : (window._allTests || []);
+
+      const classTests = allTests.filter(t => {
+        const cid = t.class_id || t.Class_id;
+        return (!activeClassId || cid === activeClassId) && !t.deleted_at && (t.status || '').toUpperCase() === 'PUBLISHED';
+      });
+      const classTestIds = new Set(classTests.map(t => t.id));
+      const activeAsmMap = new Map(classTests.map(a => [a.id, a]));
       const allBestMap = {};
       const examBestMap = {};
 
-      attempts.forEach(att => {
+      (attempts || []).forEach(att => {
         if (att.tests && att.tests.deleted_at) return;
         const uniqueKey = att.test_instance_id || att.test_id || att.Test_id;
         if (!uniqueKey) return;
+        if (!classTestIds.has(uniqueKey) && (!att.tests || !classTestIds.has(att.tests.id))) return;
+
         const asm = activeAsmMap.get(uniqueKey) || att.tests;
         if (asm?.deleted_at) return;
 
@@ -2997,21 +3024,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // Total completed activities (Tasks + Exams) for badges / progress
+      // Total completed activities (Tasks + Exams) for badges / progress in selected class
       const completedCount = Object.keys(allBestMap).filter(k => !k.endsWith('_locked')).length;
       const TestsCountEl = document.getElementById('stat-Tests-done');
       if (TestsCountEl) TestsCountEl.textContent = completedCount;
       const ovCountEl = document.getElementById('overview-Tests-count');
       if (ovCountEl) ovCountEl.textContent = completedCount;
 
-      // Academic Score & Grade: Calculated EXCLUSIVELY from Exams via Milestone Progression Engine
+      // Academic Score & Grade: Calculated EXCLUSIVELY from Exams of the selected class
       const examEntries = Object.entries(examBestMap)
         .filter(([k]) => !k.endsWith('_locked'))
         .map(([, v]) => v);
 
-      const allClassExams = (Array.isArray(window._allTests) && window._allTests.length > 0)
-        ? window._allTests.filter(isExam)
-        : (Array.isArray(tests) ? tests.filter(isExam) : []);
+      const allClassExams = classTests.filter(isExam);
 
       const mastery = (typeof computeMilestoneExamMastery === 'function')
         ? computeMilestoneExamMastery(examEntries, allClassExams)
@@ -3231,8 +3256,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         gradeCard.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.2)';
       }
 
-      renderCompletedTestsBottom(attempts, avgPct);
-      populateUpNext(attempts, tests);
+      renderCompletedTestsBottom(attempts, allTests);
+      populateUpNext(attempts, allTests);
     }
 
     // --- Render Completed Tests Section (Bottom of Dashboard - Dual Panel) ---
@@ -3288,21 +3313,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // EXAM-ONLY TRANSCRIPTS FILTER (SSOT Rule):
-      // Only official milestone Exams completed by the student appear in this transcript table.
-      // Formative Tasks (repetitive drills) are tracked in the Up Next card and excluded here.
+      // Display ALL completed tests belonging to this active class (both Tasks & Exams per user requirement)
       const completedOnlyTests = publishedClassTests.filter(t => {
         const best = bestByTest[t.id];
         if (!best) return false; // Must have an actual completed attempt record
 
-        const isEx = (t.test_type || '').toLowerCase() === 'exam' ||
-                     (t.category || '').toUpperCase() === 'EXAM' ||
-                     (t.title || '').toLowerCase().includes('exam');
-
-        if (!isEx) return false;
-
-        // Exam that has been taken with a valid score or grade MUST appear
-        return best.effPct > 0 || (best.grade && best.grade !== '—' && best.grade !== 'E');
+        // Test that has been taken with a valid score, grade, or forgiveness MUST appear
+        return best.effPct > 0 || (best.grade && best.grade !== '—' && best.grade !== 'E') || best.is_forgiven;
       });
 
       if (countBadge) {
@@ -3312,13 +3329,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!completedOnlyTests.length) {
         container.innerHTML = `
           <div class="empty-state p-4 text-center" style="padding: 24px 12px;">
-            <p style="color:var(--clr-text-3); font-size:12px; margin:0;">No completed exams yet.</p>
+            <p style="color:var(--clr-text-3); font-size:12px; margin:0;">No completed tests yet.</p>
           </div>
         `;
         return;
       }
 
-      // Order strictly from latest completed exam down to earliest
+      // Order strictly from latest completed test down to earliest
       const sortedAccessible = [...completedOnlyTests].reverse();
 
       window.handleCompletedExamClick = function(tId) {
@@ -3331,11 +3348,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (isUnified && typeof window.triggerComponentChoiceModal === 'function') {
             const formatted = formatTestDisplay(tObj);
             const bObj = bestByTest[tId];
+            const isEx = (tObj.test_type || '').toLowerCase() === 'exam' ||
+                         (tObj.category || '').toUpperCase() === 'EXAM' ||
+                         (tObj.title || '').toLowerCase().includes('exam');
+            const badgeLabel = isEx ? 'OFFICIAL EXAM' : 'TASK DRILL';
             const encoded = encodeURIComponent(JSON.stringify({
-              badge: 'OFFICIAL EXAM',
+              badge: badgeLabel,
               title: formatted.fullTitle || tObj.title,
               subtitle: 'Choose which part you want to work on:',
-              isExam: true,
+              isExam: isEx,
               isUnified: true,
               wordsTestId: tObj.id,
               phrasesTestId: tObj.id,
@@ -3356,39 +3377,99 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       sortedAccessible.forEach((t, idx) => {
         const num = idx + 1;
         const best = bestByTest[t.id];
-        const testTitle = t.title || t.name || 'Exam';
 
-        const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(best.effPct) : '#94a3b8';
+        // Format test title per SSOT standard (AGENTS.md § 2.6.2)
+        const formatted = typeof formatTestDisplay === 'function' ? formatTestDisplay(t) : null;
+        const testTitle = formatted?.fullTitle || t.title || t.name || 'Test';
+
+        // Distinguish Exam vs Task
+        const isEx = typeof isExam === 'function' ? isExam(t) : (
+          (t.test_type || '').toLowerCase() === 'exam' ||
+          (t.category || '').toUpperCase() === 'EXAM' ||
+          (t.title || '').toLowerCase().includes('exam') ||
+          (t.shell_code || '').toUpperCase().endsWith('-EXAM')
+        );
+
+        let taskSubRowHtml = '';
+        let displayScore = best.effPct;
+        let dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
+
+        if (!isEx) {
+          // Task: Extract attempts to compute Top-7 Highest Scores sub-row (7x7 Repetitive Mastery System)
+          const taskAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
+          const mappedAttempts = taskAttempts.map(a => {
+            const rawPct = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
+            const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+            const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+            const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
+            return { effPct, grade: gr, isRem };
+          });
+
+          // Sort descending to get Top 7 highest
+          mappedAttempts.sort((a, b) => b.effPct - a.effPct);
+          const top7 = mappedAttempts.slice(0, 7);
+
+          // Task final score and grade is the average of top 7 attempts per SSOT (AGENTS.md § 2.9 & ui-invariants.md § 5.1)
+          if (top7.length > 0 && !best.is_forgiven) {
+            const sumPct = top7.reduce((acc, curr) => acc + curr.effPct, 0);
+            displayScore = Math.round(sumPct / top7.length);
+            dispGrade = typeof calculateGrade === 'function' ? calculateGrade(displayScore) : 'E';
+          }
+
+          let chipsHtml = '';
+          for (let i = 0; i < 7; i++) {
+            const item = top7[i];
+            if (item) {
+              const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
+              const isSt = item.grade === '★' || item.grade === 'S';
+              const txt = isSt ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
+              chipsHtml += `<span class="task-mini-grade" style="background:${c}; color:${txt};" title="Attempt: ${Math.round(item.effPct)}% (${item.grade})">${item.grade}</span>`;
+            } else {
+              chipsHtml += `<span class="task-mini-grade is-empty" title="Unattempted slot">—</span>`;
+            }
+          }
+          taskSubRowHtml = `<div class="task-grades-subrow">${chipsHtml}</div>`;
+        }
+
+        if (best.is_forgiven) {
+          dispGrade = 'F';
+        }
+
+        const scoreColor = (dispGrade === 'F' && best.is_forgiven)
+          ? (TOPSCORE_COLORS.E || '#FF0000')
+          : (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(displayScore) : '#94a3b8');
         const scoreRgb = parseHexRgb(scoreColor);
 
-        // Premium Milestone Exam Styling:
-        // Title font & number are pure white (#ffffff) for maximum contrast
-        // Score, Grade circle, and Retry button retain their vibrant earned grade color
         const remSup = best.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:0.65em;font-weight:600;margin-left:1px;">R</sup>' : '';
-        const scoreHtml = `<span style="color:${scoreColor} !important; font-weight:400; font-family:'Inter', sans-serif;">${best.effPct.toFixed(0)}%${remSup}</span>`;
+        const scoreHtml = `<span style="color:${scoreColor} !important; font-weight:400; font-family:'Inter', sans-serif;">${displayScore.toFixed(0)}%${remSup}</span>`;
 
-        const dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
         const isStar = dispGrade === '★' || dispGrade === 'S';
         const textColor = isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-        const gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: 0 0 8px rgba(${scoreRgb}, 0.4) !important; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
+        // Zero Table Glow: No box-shadow on grade-circle
+        const gradeHtml = `<span class="grade-circle grade-circle-${String(dispGrade).toLowerCase()}" style="background:${scoreColor} !important; color:${textColor} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: none !important; font-family:'Inter', sans-serif;">${dispGrade}</span>`;
 
-        const rowStyle = `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.18) 0%, rgba(${scoreRgb}, 0.05) 75%, transparent 100%) !important; border-top: 1.5px solid ${scoreColor} !important; border-bottom: 1.5px solid ${scoreColor} !important; box-shadow: 0 1px 6px rgba(${scoreRgb}, 0.25) !important;`;
+        // Row styling without neon glow (Zero Table Glow Invariant)
+        const rowClass = isEx ? 'completed-row is-exam-row' : 'completed-row';
+        const rowStyle = isEx
+          ? `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.08) 0%, rgba(${scoreRgb}, 0.02) 60%, transparent 100%) !important; border-bottom: 1px solid rgba(${scoreRgb}, 0.35) !important; border-top: none !important; box-shadow: none !important;`
+          : `background: transparent !important; border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; border-top: none !important; box-shadow: none !important;`;
         const numHtml = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${num}</span>`;
 
         html += `
-          <div class="completed-row is-exam-row" style="${rowStyle}" onclick="window.handleCompletedExamClick('${t.id}')">
+          <div class="${rowClass}" style="${rowStyle}" onclick="window.handleCompletedExamClick('${t.id}')">
             <span class="completed-col-num">${numHtml}</span>
             <div class="completed-col-name-wrap">
               <span class="completed-col-name" style="color: #ffffff !important; font-weight: 400 !important;" title="${escapeHtml(testTitle)}">
                 ${escapeHtml(testTitle)}
               </span>
+              ${taskSubRowHtml}
             </div>
             <span class="completed-col-score">${scoreHtml}</span>
             <span class="completed-col-grade">${gradeHtml}</span>
             <span class="completed-col-action">
               <button type="button"
                       class="completed-retry-btn"
-                      style="border: 1.5px solid ${scoreColor} !important; background: rgba(${scoreRgb}, 0.15) !important; box-shadow: 0 0 10px rgba(${scoreRgb}, 0.35) !important;"
+                      style="border: 1px solid rgba(${scoreRgb}, 0.6) !important; background: rgba(${scoreRgb}, 0.12) !important; box-shadow: none !important;"
                       title="Play / Retry ${escapeHtml(testTitle)}"
                       onclick="event.stopPropagation(); window.handleCompletedExamClick('${t.id}')">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="${scoreColor}" stroke="none">
@@ -3403,6 +3484,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       container.innerHTML = html;
     }
     window.renderCompletedTestsBottom = renderCompletedTestsBottom;
+    window.renderCompletedTests = renderCompletedTestsBottom;
 
     // ============================================================
     // BATCH LEADERBOARD & DOCK TABS MODULE
@@ -3470,45 +3552,64 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+        let studentList = window._cachedBatchStudents;
+        let attempts = window._cachedBatchAttempts;
 
-        // 1. Fetch active students in the same batch
-        const { data: students, error: stuErr } = await sb
-          .from('students')
-          .select('id, name, gender, photo_url, is_active')
-          .eq('batch_id', batchId)
-          .eq('is_active', true)
-          .is('deleted_at', null);
+        if (!studentList || !attempts) {
+          const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
 
-        const studentList = Array.isArray(students) ? students : (students && typeof students === 'object' && students.id ? [students] : []);
+          // 1. Fetch active students in the same batch
+          const { data: students, error: stuErr } = await sb
+            .from('students')
+            .select('id, name, gender, photo_url, is_active')
+            .eq('batch_id', batchId)
+            .eq('is_active', true)
+            .is('deleted_at', null);
 
-        if (stuErr || studentList.length === 0) {
-          container.innerHTML = `
-            <div class="empty-state p-4 text-center">
-              <p style="color:#94a3b8; font-size:12px;">No active students found in this batch.</p>
-            </div>`;
-          return;
+          studentList = Array.isArray(students) ? students : (students && typeof students === 'object' && students.id ? [students] : []);
+
+          if (stuErr || studentList.length === 0) {
+            container.innerHTML = `
+              <div class="empty-state p-4 text-center">
+                <p style="color:#94a3b8; font-size:12px;">No active students found in this batch.</p>
+              </div>`;
+            return;
+          }
+
+          const studentIds = studentList.map(s => s.id);
+
+          // 2. Fetch all submitted attempts with complete test metadata
+          const { data: attData, error: attErr } = await sb
+            .from('attempts')
+            .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, class_id, deleted_at, status, payload)')
+            .in('student_id', studentIds)
+            .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
+
+          attempts = attData || [];
+          window._cachedBatchStudents = studentList;
+          window._cachedBatchAttempts = attempts;
         }
 
-        const studentIds = studentList.map(s => s.id);
+        // Active Selected Class scope (My Rank & Standings represent selected class only)
+        const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id);
+        const allTests = (Array.isArray(window._allTests) && window._allTests.length > 0)
+          ? window._allTests
+          : [];
 
-        // 2. Fetch all submitted attempts with complete test metadata
-        const { data: attempts, error: attErr } = await sb
-          .from('attempts')
-          .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, deleted_at, status, payload)')
-          .in('student_id', studentIds)
-          .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
+        const selectedClassTests = allTests.filter(t => {
+          const cid = t.class_id || t.Class_id;
+          return (!activeClassId || cid === activeClassId) && !t.deleted_at && (t.status || '').toUpperCase() === 'PUBLISHED';
+        });
+        const selectedClassTestIds = new Set(selectedClassTests.map(t => t.id));
+        const totalClassTests = selectedClassTests.length > 0 ? selectedClassTests.length : 40;
 
-        // PROG % denominator: use fixed curriculum test count (same source as Admin Class Hub)
-        // MUST NOT use dynamic PUBLISHED count — unpublishing a test would inflate PROG% in student view
-        // window._batchTests is set by the main load cycle from the same class test fetch
-        const totalClassTests = (Array.isArray(window._batchTests) && window._batchTests.length > 0)
-          ? window._batchTests.length
-          : 40; // Safe fallback — matches Class Hub classTests.length || 40 behaviour
-
-        // 3. Compute best scores, points & overall averages per student (Exam-Only Rule)
+        // 3. Compute best scores, points & overall averages per student for THIS SELECTED CLASS
         const studentStats = studentList.map(st => {
-          const stAtts = (attempts || []).filter(a => a.student_id === st.id && a.tests && !a.tests.deleted_at);
+          const stAtts = (attempts || []).filter(a => {
+            if (a.student_id !== st.id || !a.tests || a.tests.deleted_at) return false;
+            const tid = a.test_id || a.tests.id;
+            return selectedClassTestIds.has(tid) || (a.tests?.class_id && a.tests.class_id === activeClassId);
+          });
           const bestMap = {};
           let lastSubmittedAt = null;
 
@@ -3591,11 +3692,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // Exam-Only Items: Milestone exams only
           const examItems = bestItems.filter(item => item.isExam);
-          const allBatchExams = (Array.isArray(window._batchTests) && window._batchTests.length > 0)
-            ? window._batchTests.filter(isExam)
-            : (Array.isArray(window._allTests) && window._allTests.length > 0)
-              ? window._allTests.filter(isExam)
-              : [];
+          const allBatchExams = selectedClassTests.filter(isExam);
 
           const mastery = (typeof computeMilestoneExamMastery === 'function')
             ? computeMilestoneExamMastery(examItems, allBatchExams)
@@ -3608,7 +3705,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 completedWeeklyCount: examItems.length
               };
 
-          const totalPoints = mastery.totalPoints;
+          const totalPoints = Math.round(mastery.totalPoints || 0);
           const completedExamCount = mastery.completedExamCount ?? mastery.completedWeeklyCount ?? examItems.length;
 
           // Rule 2.8: overallScore = average percentage of COMPLETED valid exams (not curriculum denominator)
@@ -3794,6 +3891,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           </div>`;
       }
     }
+    window.loadBatchLeaderboard = loadBatchLeaderboard;
+    window.renderLeaderboard = loadBatchLeaderboard;
 
     // --- Profile Modal (Student Academic CV Architecture) ---
     let profileModalListenersInitialized = false;

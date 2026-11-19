@@ -5277,10 +5277,10 @@ body.dashboard-page .completed-col-num {
 }
 
 body.dashboard-page .completed-row.is-exam-row {
-  transition: background 0.2s ease, border-color 0.2s ease, filter 0.2s ease !important;
+  transition: background 0.2s ease, border-color 0.2s ease !important;
 }
 body.dashboard-page .completed-row.is-exam-row:hover {
-  filter: brightness(1.2) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
 }
 
 body.dashboard-page .exam-number-box {
@@ -5348,7 +5348,7 @@ body.dashboard-page .completed-retry-btn:hover {
   background: rgba(56, 189, 248, 0.25) !important;
   border-color: #38bdf8 !important;
   transform: none !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4) !important;
+  box-shadow: none !important;
 }
 
 /* TOPSCORE LOCKED BANNER (PROMINENT, BIGGER & BOLDER: "TopsCore by Mr. Top") */

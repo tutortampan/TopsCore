@@ -130,6 +130,10 @@ export function compareStudentsHierarchical(a, b) {
 }
 
 export async function renderStudents(area, options = {}) {
+  if (area && !area.innerHTML.trim()) {
+    const getLoading = typeof window.getLoadingStateHtml === 'function' ? window.getLoadingStateHtml : () => '<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">Loading students...</p></div>';
+    area.innerHTML = getLoading('Loading students...');
+  }
   const isAlumniPanel = Boolean(options?.isAlumniPanel || window._isAlumniMainPanel || window._currentSection === 'alumni' || (typeof window !== 'undefined' && window.location.hash.startsWith('#alumni')));
   if (isAlumniPanel) {
     window._isAlumniMainPanel = true;
@@ -442,10 +446,14 @@ export async function renderStudents(area, options = {}) {
     // Determine Student Level Number and Alumni status
     const studentLvlObj = levelsMap.get(studentLevelId);
     const studentLevelNum = studentLvlObj?.level_number != null ? studentLvlObj.level_number : 1;
-    const isLevelX = studentLevelNum === 0
+    const isLevelX = studentLevelNum === 99
       || (studentLvlObj?.name || '').toUpperCase() === 'X'
       || (studentLvlObj?.name || '').toLowerCase() === 'alumni'
       || (s.levelName && (s.levelName.toUpperCase() === 'X' || s.levelName.toLowerCase() === 'alumni'));
+
+    const isNonLevel = studentLevelNum === 0
+      || (studentLvlObj?.name || '').toLowerCase() === 'non-level'
+      || (studentLvlObj?.name || '').toLowerCase() === 'general';
 
     const isAlumni = isLevelX
       || (s.program_status || '').toUpperCase() === 'ALUMNI'
@@ -475,7 +483,7 @@ export async function renderStudents(area, options = {}) {
       if (!isPassed) allCurrentExamsPassed = false;
     });
 
-    const isEligibleNext = !isAlumni && currentLevelExams.length > 0 && allCurrentExamsPassed;
+    const isEligibleNext = !isAlumni && !isNonLevel && currentLevelExams.length > 0 && allCurrentExamsPassed;
 
     const allExamsList = Array.from(examMapById.values());
     const mastery = (typeof computeMilestoneExamMastery === 'function')
@@ -782,7 +790,7 @@ export async function renderStudents(area, options = {}) {
   // Interactive Status Filter Classifications
   const isStudentAlumni = s => Boolean(
     s.isAlumni
-    || s.studentLevelNum === 0
+    || s.studentLevelNum === 99
     || s.levelName === 'X'
     || (s.levelName && s.levelName.toLowerCase() === 'alumni')
     || (s.program_status || '').toUpperCase() === 'ALUMNI'
@@ -1026,7 +1034,7 @@ export async function renderStudents(area, options = {}) {
   function syncStudentRosterBottomInfobar() {
     if (typeof window.setBottomInfobar !== 'function') return;
     const count = filteredGridData.length;
-    const eligibleStudents = filteredGridData.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0);
+    const eligibleStudents = filteredGridData.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0 && s.studentLevelNum !== 99);
     const eligibleCount = eligibleStudents.length;
 
     const leftHtml = `<div style="display:inline-flex;align-items:center;gap:8px;font-size: 12px;color:#94a3b8;font-weight:600;">
@@ -1411,6 +1419,10 @@ export async function renderStudents(area, options = {}) {
     modal.querySelectorAll('.btn-prog-toggle-rem').forEach(btn => {
       btn.onclick = async (e) => {
         e.stopPropagation();
+        if (typeof isTutorRole === 'function' && isTutorRole()) {
+          showToast('Permission denied: Tutor accounts cannot alter remedial status.', 'warning');
+          return;
+        }
         const attId = btn.dataset.attId;
         const targetRemedial = btn.dataset.setRemedial === 'true';
         const msg = targetRemedial
@@ -1562,20 +1574,25 @@ export async function renderStudents(area, options = {}) {
     const nextId = hasNext ? list[currentIdx + 1].id : null;
     const positionText = list.length > 0 ? `${currentIdx + 1} of ${list.length}` : '';
 
-    // Remove existing if open
-    const existingP = document.getElementById('student-profile-modal');
-    if (existingP) existingP.remove();
-    const existingD = document.getElementById('student-dossier-modal');
-    if (existingD) existingD.remove();
+    // Purge all existing modals to avoid stacked backdrops
+    document.querySelectorAll('#student-dossier-modal, .student-modal-backdrop, #student-profile-modal').forEach(el => el.remove());
 
     if (window.location.hash && !window.location.hash.startsWith('#profile-') && !window.location.hash.startsWith('#dossier-')) {
       window._lastSectionBeforeProfile = window.location.hash.substring(1);
     }
-    try {
-      if (window.location.hash !== '#profile-' + studentId) {
-        window.location.hash = '#profile-' + studentId;
-      }
-    } catch (_) {}
+    if (window.history && window.history.replaceState) {
+      try {
+        const url = new URL(window.location.href);
+        url.hash = '#profile-' + studentId;
+        window.history.replaceState(null, '', url.toString());
+      } catch (_) {}
+    } else {
+      try {
+        if (window.location.hash !== '#profile-' + studentId) {
+          window.location.hash = '#profile-' + studentId;
+        }
+      } catch (_) {}
+    }
 
     const backdrop = document.createElement('div');
     backdrop.id = 'student-dossier-modal';
@@ -1584,6 +1601,10 @@ export async function renderStudents(area, options = {}) {
     document.body.style.overflow = 'hidden';
 
     const cleanBatch = (rec.batchName || '').replace(/^batch\s*/i, '').trim();
+    let rawBatch = (rec.batchName || '').trim();
+    rawBatch = rawBatch.replace(/^(camp|cec|top|batch)\s*/gi, '').replace(/^batch\s*/gi, '').trim();
+    const cleanBatchNum = rawBatch || cleanBatch || '134';
+    const courseDataText = `${(rec.instName || 'CEC').trim()} ${(rec.progName || 'Camp').trim()} ${cleanBatchNum}`.replace(/\s+/g, ' ').trim();
 
     // Helper: Address Formatter
     function formatFullStudentAddress(r) {
@@ -1648,12 +1669,13 @@ export async function renderStudents(area, options = {}) {
     // Official TopsCore Grade Colors (SSOT Rule 2.10)
     function getExamGradeColor(grade) {
       const g = String(grade || '').trim().toUpperCase();
-      if (g === '★' || g === 'S') return TOPSCORE_COLORS.STAR || '#ff2d87';
-      if (g === 'A') return TOPSCORE_COLORS.A || '#00c000';
-      if (g === 'B') return TOPSCORE_COLORS.B || '#95ff00';
-      if (g === 'C') return TOPSCORE_COLORS.C || '#FFFF00';
-      if (g === 'D') return TOPSCORE_COLORS.D || '#FF8C00';
-      return TOPSCORE_COLORS.E || '#FF0000';
+      if (typeof getGradeColor === 'function') return getGradeColor(g);
+      if (g === '★' || g === 'S') return TOPSCORE_COLORS.STAR;
+      if (g === 'A') return TOPSCORE_COLORS.A;
+      if (g === 'B') return TOPSCORE_COLORS.B;
+      if (g === 'C') return TOPSCORE_COLORS.C;
+      if (g === 'D') return TOPSCORE_COLORS.D;
+      return TOPSCORE_COLORS.E;
     }
 
     // Official TopsCore Predicate Descriptions (Rule 2.10)
@@ -1756,123 +1778,90 @@ export async function renderStudents(area, options = {}) {
 
     backdrop.innerHTML = `
       <div class="student-dossier-dialog" style="max-width: 860px; width: 94vw; max-height: 94vh;">
-        <!-- Control Toolbar: Header Controls with Prominent Top CLOSE Button -->
-        <div class="dossier-modal-toolbar">
-          <div class="d-flex align-center gap-2">
-            <span style="font-size: 20px; color: var(--primary-tactical, #38bdf8); display: flex; align-items: center;">${getSvgIcon('award', 20)}</span>
-            <div>
-              <div class="fw-800" style="font-size: 16px; color: var(--fm-text-primary, #f8fafc); font-family: var(--fm-font-display, 'Outfit', sans-serif); letter-spacing: 0.02em;">Student Academic Raport (Portrait)</div>
-              <div style="font-size: 14px; color: #94a3b8; font-family: var(--fm-font-sans, 'Inter', sans-serif);">Official Class Academic Transcript</div>
-            </div>
-          </div>
-          <div class="d-flex align-center gap-2">
-            ${list.length > 1 ? `
-              <div class="d-flex align-center gap-1" style="margin-right: 6px;">
-                <button class="btn btn-secondary btn-sm" id="btn-modal-prev-dossier" ${!hasPrev ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Previous Student (ArrowLeft)">←</button>
-                <span style="padding: 0 6px; font-weight: 700; color: #cbd5e1; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; font-variant-numeric: tabular-nums;">${positionText}</span>
-                <button class="btn btn-secondary btn-sm" id="btn-modal-next-dossier" ${!hasNext ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Next Student (ArrowRight)">→</button>
-              </div>
-            ` : ''}
-            <button class="btn btn-secondary btn-sm" id="btn-toggle-edit-raport" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px;">
-              ${getSvgIcon('edit', 16)} <span id="txt-edit-raport-btn">Edit Raport</span>
-            </button>
-            <button class="btn btn-primary btn-sm" id="btn-export-pdf-dossier" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px;">
-              ${getSvgIcon('download', 16)} Export PDF
-            </button>
-            <button class="btn btn-secondary btn-sm" id="btn-top-close-dossier" style="font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; margin-left: 4px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2);">
-              CLOSE
-            </button>
-          </div>
+        <!-- Standardized 60px Title Area (§1.5.1 Centered Title & Zero Subtitle Clutter Invariant) -->
+        <div class="modal-header title-area dossier-modal-toolbar" style="height: 60px !important; min-height: 60px !important; max-height: 60px !important; padding: 0 16px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; background: #1E293B !important; box-sizing: border-box !important; flex-shrink: 0 !important; margin: 0 !important;">
+          <h3 class="modal-title" style="margin: 0 !important; font-family: var(--fm-font-display, 'Outfit', sans-serif) !important; font-size: 16px !important; font-weight: 800 !important; color: #ffffff !important; line-height: 1 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; text-align: center !important;">
+            STUDENT ACADEMIC REPORT
+          </h3>
         </div>
 
         <!-- Scrollable Document Area -->
         <div class="dossier-modal-scroll" style="padding: 24px; background: #060911;">
           <div id="student-dossier-sheet" class="student-dossier-sheet student-raport-portrait" style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 36px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; font-family: var(--fm-font-sans, 'Inter', sans-serif);">
-            
-            <!-- 1. JUDUL HALAMAN: STUDENT RAPORT CARD (32px Outfit 900) -->
-            <div class="raport-header-title" style="text-align: center; border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 24px;">
+
+            <!-- 1. JUDUL HALAMAN: STUDENT REPORT CARD (32px Outfit 900) -->
+            <div class="raport-header-title" style="text-align: center; border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 22px;">
               <h1 style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 32px; font-weight: 900; color: #0f172a; margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-transform: uppercase;">
-                STUDENT RAPORT CARD
+                STUDENT REPORT CARD
               </h1>
             </div>
 
-            <!-- 2. PANEL UNTUK NAMA LENGKAP DENGAN METADATA DI BAWAHNYA -->
-            <div class="student-profile-panel" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 24px 26px; margin-bottom: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
-              <div style="display: flex; gap: 26px; align-items: flex-start;">
-                <!-- Foto Siswa (Besar 136px x 180px) -->
-                <div style="width: 136px; height: 180px; border-radius: 8px; overflow: hidden; border: 2.5px solid #cbd5e1; flex-shrink: 0; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-                  ${rec.photo_url
-                    ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">`
-                    : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
-                  }
+            <!-- 2. PANEL BIODATA BERBARIS ATAS KE BAWAH DENGAN FOTO PASFOTO (UKURAN FOTO MENGIKUTI TEKS) -->
+            <div class="student-profile-panel profile-cv-card profile-cv-hero" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; gap: 24px; align-items: flex-start;">
+              <!-- Foto Siswa: Ukuran Tinggi Mengikuti Kolom Teks Secara Dinamis (Rasio 3:4) -->
+              <div id="raport-student-photo-box" style="height: 220px; width: 165px; border-radius: 8px; overflow: hidden; border: 2.5px solid #cbd5e1; flex-shrink: 0; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; position: relative;">
+                ${rec.photo_url
+                  ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;">`
+                  : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;">`
+                }
+              </div>
+
+              <!-- Stacked Biodata Rows: Rapat, Rapi & Berbaris Atas ke Bawah (Zero Gap Buatan) -->
+              <div class="profile-hero-meta-table" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+
+                <!-- Row 1: Full Name -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Full Name</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 18px; font-weight: 800; color: #0f172a;">${escapeHtml(rec.displayName || rec.name)}</strong>
                 </div>
 
-                <!-- Nama Lengkap & Metadata di Bawahnya -->
-                <div style="flex: 1; min-width: 0;">
-                  <!-- Nama Lengkap Siswa: 26px Outfit 800 -->
-                  <div class="raport-view-field" id="view-student-name" style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 6px;">
-                    ${escapeHtml(rec.displayName || rec.name)}
-                  </div>
-                  <input type="text" class="raport-edit-field form-control" id="edit-student-name" value="${escapeHtml(rec.name || rec.displayName)}" style="display: none; width: 100%; max-width: 360px; padding: 6px 10px; font-size: 16px; font-weight: 700; margin-bottom: 10px; border: 1.5px solid #38bdf8; border-radius: 6px;">
-
-                  <!-- Context Badge (Institution, Program, Batch): 16px Inter Bold -->
-                  <div style="font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 16px; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
-                    <span>${escapeHtml(rec.instName || 'CEC')}</span>
-                    <span>&bull;</span>
-                    <span>${escapeHtml(rec.progName || 'Camp')}</span>
-                    <span>&bull;</span>
-                    <span>${escapeHtml(cleanBatch ? 'Batch ' + cleanBatch : 'Batch 134')}</span>
-                  </div>
-
-                  <!-- Metadata Grid di Bawah Nama: 16px Inter -->
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; font-size: 16px; color: #334155; font-family: var(--fm-font-sans, 'Inter', sans-serif); border-top: 1.5px solid #e2e8f0; padding-top: 14px;">
-                    <div class="d-flex align-center gap-1">
-                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Gender:</span>
-                      <strong class="raport-view-field" id="view-student-gender" style="color: #0f172a; text-transform: capitalize; font-weight: 600;">${escapeHtml(rec.gender || '—')}</strong>
-                      <select class="raport-edit-field form-control" id="edit-student-gender" style="display: none; padding: 2px 8px; font-size: 16px; border: 1.5px solid #38bdf8; border-radius: 4px;">
-                        <option value="male" ${(rec.gender || '').toLowerCase() === 'male' ? 'selected' : ''}>Male</option>
-                        <option value="female" ${(rec.gender || '').toLowerCase() === 'female' ? 'selected' : ''}>Female</option>
-                      </select>
-                    </div>
-
-                    <div class="d-flex align-center gap-1">
-                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Birth Date:</span>
-                      <strong class="raport-view-field" id="view-student-dob" style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;">${escapeHtml(rec.birth_date || '—')} (${escapeHtml(rec.ageDisplay || '—')} yo)</strong>
-                      <input type="date" class="raport-edit-field form-control" id="edit-student-dob" value="${escapeHtml(rec.birth_date || '')}" style="display: none; padding: 2px 8px; font-size: 16px; border: 1.5px solid #38bdf8; border-radius: 4px;">
-                    </div>
-
-                    <div class="d-flex align-center gap-1">
-                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Academic Level:</span>
-                      <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(rec.levelName || '—')}</strong>
-                    </div>
-
-                    <div class="d-flex align-center gap-1">
-                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Education:</span>
-                      <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(formatLastEducation(rec.education))}</strong>
-                    </div>
-
-                    <!-- Address Information (Full Width across 2 columns) -->
-                    <div style="grid-column: span 2; display: flex; align-items: baseline; gap: 8px; margin-top: 2px;">
-                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Address:</span>
-                      <strong class="raport-view-field" id="view-student-address" style="color: #0f172a; font-weight: 600; line-height: 1.35;">${escapeHtml(formatFullStudentAddress(rec))}</strong>
-                    </div>
-
-                    <!-- Editable Address row -->
-                    <div class="raport-edit-field" style="display: none; grid-column: span 2; margin-top: 4px;">
-                      <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 4px;">Edit Address (Village, District, Regency, Province):</div>
-                      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
-                        <input type="text" class="form-control" id="edit-student-village" placeholder="Village" value="${escapeHtml(rec.village || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
-                        <input type="text" class="form-control" id="edit-student-district" placeholder="District" value="${escapeHtml(rec.district || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
-                        <input type="text" class="form-control" id="edit-student-city" placeholder="Regency / City" value="${escapeHtml(rec.city || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
-                        <input type="text" class="form-control" id="edit-student-province" placeholder="Province" value="${escapeHtml(rec.province || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
-                      </div>
-                    </div>
-                  </div>
+                <!-- Row 2: Sex / Gender -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Gender</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="color: #0f172a; text-transform: capitalize; font-weight: 600;">${escapeHtml(rec.gender || '—')}</strong>
                 </div>
+
+                <!-- Row 3: Date of Birth -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Date of Birth</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.birth_date || '—')}</strong>
+                </div>
+
+                <!-- Row 4: Age -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Age</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.ageDisplay || '—')} yo</strong>
+                </div>
+
+                <!-- Row 5: Education -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Education</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(formatLastEducation(rec.education))}</strong>
+                </div>
+
+                <!-- Row 6: Address -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: baseline; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Address</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="color: #0f172a; font-weight: 600; line-height: 1.35;">${escapeHtml(formatFullStudentAddress(rec))}</strong>
+                </div>
+
+                <!-- Row 7: Course Data (Institusi Program Batch tanpa tanda pemisah strip/titik, font hitam) -->
+                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Course Data</span>
+                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                  <strong style="color: #0f172a; font-weight: 700; letter-spacing: 0.01em;">${escapeHtml(courseDataText)}</strong>
+                </div>
+
               </div>
             </div>
 
-            <!-- 3. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
+            <!-- 4. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
             <div class="level-transcript-block" style="margin-top: 10px;">
               <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
                 <thead>
@@ -1894,140 +1883,126 @@ export async function renderStudents(area, options = {}) {
           </div>
         </div>
 
-        <!-- Modal Footer CTA Area: Universal Left-Anchored CLOSE Button Standard (Zero 'Cancel' Invariant §1.5.4) -->
-        <div class="modal-footer" style="height: 56px; min-height: 56px; max-height: 56px; padding: 10px 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.3); flex-shrink: 0;">
-          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal" style="font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 6px 16px;">CLOSE</button>
-          <div class="d-flex align-center gap-2">
-            <button type="button" class="btn btn-success btn-sm raport-save-btn" id="btn-save-raport-changes" style="display: none; align-items: center; gap: 6px; font-weight: 700; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; padding: 6px 16px;">
-              ${getSvgIcon('check', 16)} Save Raport Changes
+        <!-- Modal Footer CTA Area: CLOSE (Left) | Student Pager (Center) | Export to PDF (Right) -->
+        <div class="modal-footer" style="height: 56px; min-height: 56px; max-height: 56px; padding: 10px 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.3); flex-shrink: 0; box-sizing: border-box;">
+          
+          <!-- Pojok Kiri Bawah: CLOSE Button -->
+          <div style="flex: 1; display: flex; justify-content: flex-start;">
+            <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal" style="display: inline-flex !important; align-items: center; justify-content: center; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 22px; border-radius: 6px; cursor: pointer;">
+              CLOSE
             </button>
           </div>
+
+          <!-- Tengah Area CTA: Tombol Panah Pindah Siswa (Carousel Pager) -->
+          <div style="flex: 1; display: flex; justify-content: center; align-items: center;">
+            ${list.length > 1 ? `
+              <div class="d-flex align-center gap-1" style="background: rgba(255, 255, 255, 0.05); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12);">
+                <button class="btn btn-secondary btn-sm" id="btn-modal-prev-dossier" ${!hasPrev ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : 'style="cursor:pointer;"'} title="Previous Student (ArrowLeft)">←</button>
+                <span style="padding: 0 10px; font-weight: 700; color: #f8fafc; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; font-variant-numeric: tabular-nums;">${positionText}</span>
+                <button class="btn btn-secondary btn-sm" id="btn-modal-next-dossier" ${!hasNext ? 'disabled style="opacity:0.3;cursor:not-allowed;"' : 'style="cursor:pointer;"'} title="Next Student (ArrowRight)">→</button>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Pojok Kanan Bawah: Export to PDF -->
+          <div style="flex: 1; display: flex; justify-content: flex-end;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-export-pdf-dossier" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; padding: 8px 18px; border-radius: 6px; cursor: pointer; color: #ffffff;">
+              ${getSvgIcon('download', 16)} Export to PDF
+            </button>
+          </div>
+
         </div>
       </div>
     `;
 
     document.body.appendChild(backdrop);
 
-    // Event wiring
+    // Dynamically synchronize photo box height and 3:4 width with exact text table height
+    const syncRaportPhotoHeight = () => {
+      const metaTable = backdrop.querySelector('.profile-hero-meta-table');
+      const photoBox = backdrop.querySelector('#raport-student-photo-box');
+      if (metaTable && photoBox) {
+        const h = metaTable.offsetHeight;
+        if (h > 60) {
+          photoBox.style.height = `${h}px`;
+          photoBox.style.width = `${Math.round(h * 3 / 4)}px`;
+        }
+      }
+    };
+    requestAnimationFrame(syncRaportPhotoHeight);
+    setTimeout(syncRaportPhotoHeight, 50);
+    setTimeout(syncRaportPhotoHeight, 250);
+    window.addEventListener('resize', syncRaportPhotoHeight);
+
+    const raportPhotoImg = backdrop.querySelector('#raport-student-photo-box img');
+    if (raportPhotoImg) {
+      if (raportPhotoImg.complete) {
+        syncRaportPhotoHeight();
+      } else {
+        raportPhotoImg.addEventListener('load', syncRaportPhotoHeight, { once: true });
+      }
+    }
+
+    // Event wiring & Instant Single-Click Modal Dismissal
     const cleanupDossier = (isReverting = true) => {
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', syncRaportPhotoHeight);
       document.body.style.overflow = '';
-      if (isReverting && (window.location.hash === `#profile-${studentId}` || window.location.hash === `#dossier-${studentId}`)) {
+      if (isReverting) {
         const fallback = window._lastSectionBeforeProfile || localStorage.getItem('topscore_admin_last_section') || 'students';
-        try { window.location.hash = '#' + fallback; } catch (_) {}
+        if (window.history && window.history.replaceState) {
+          try {
+            const url = new URL(window.location.href);
+            url.hash = '#' + fallback;
+            window.history.replaceState(null, '', url.toString());
+          } catch (_) {}
+        } else {
+          try { window.location.hash = '#' + fallback; } catch (_) {}
+        }
       }
     };
 
-    // Close actions (Both Top and Bottom buttons)
+    const closeAllDossierModals = () => {
+      document.querySelectorAll('#student-dossier-modal, .student-modal-backdrop, #student-profile-modal').forEach(el => el.remove());
+      cleanupDossier(true);
+    };
+
+    // Close action (Pojok Kanan Bawah button - Instant 1-Click Close)
     const closeBtn = backdrop.querySelector('#btn-close-dossier-modal');
-    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupDossier(true); };
+    if (closeBtn) closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeAllDossierModals();
+    };
 
-    const topCloseBtn = backdrop.querySelector('#btn-top-close-dossier');
-    if (topCloseBtn) topCloseBtn.onclick = () => { backdrop.remove(); cleanupDossier(true); };
+    backdrop.onclick = (e) => {
+      if (e.target === backdrop) {
+        closeAllDossierModals();
+      }
+    };
 
-    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupDossier(true); } };
-
-    // Carousel actions
+    // Carousel actions in Center of CTA
     const prevBtn = backdrop.querySelector('#btn-modal-prev-dossier');
     const nextBtn = backdrop.querySelector('#btn-modal-next-dossier');
     if (prevBtn && hasPrev) {
-      prevBtn.onclick = () => { backdrop.remove(); cleanupDossier(false); window.showStudentDossierModal(prevId); };
-    }
-    if (nextBtn && hasNext) {
-      nextBtn.onclick = () => { backdrop.remove(); cleanupDossier(false); window.showStudentDossierModal(nextId); };
-    }
-
-    // Editable Raport Controls
-    let isEditingRaport = false;
-    const toggleEditBtn = backdrop.querySelector('#btn-toggle-edit-raport');
-    const saveRaportBtn = backdrop.querySelector('#btn-save-raport-changes');
-    const editRaportText = backdrop.querySelector('#txt-edit-raport-btn');
-
-    const setEditMode = (editing) => {
-      isEditingRaport = editing;
-      backdrop.querySelectorAll('.raport-view-field').forEach(el => el.style.display = editing ? 'none' : '');
-      backdrop.querySelectorAll('.raport-edit-field').forEach(el => el.style.display = editing ? '' : 'none');
-      if (saveRaportBtn) saveRaportBtn.style.display = editing ? 'inline-flex' : 'none';
-      if (editRaportText) editRaportText.textContent = editing ? 'Cancel Edit' : 'Edit Raport';
-      if (toggleEditBtn) {
-        toggleEditBtn.className = editing ? 'btn btn-warning btn-sm' : 'btn btn-secondary btn-sm';
-      }
-    };
-
-    if (toggleEditBtn) {
-      toggleEditBtn.onclick = () => {
-        setEditMode(!isEditingRaport);
+      prevBtn.onclick = (e) => {
+        e.stopPropagation();
+        closeAllDossierModals();
+        window.showStudentDossierModal(prevId);
       };
     }
-
-    const saveChangesAction = async () => {
-      const newName = (backdrop.querySelector('#edit-student-name')?.value || '').trim();
-      const newGender = backdrop.querySelector('#edit-student-gender')?.value || rec.gender;
-      const newDob = backdrop.querySelector('#edit-student-dob')?.value || rec.birth_date;
-      const newVillage = (backdrop.querySelector('#edit-student-village')?.value || '').trim();
-      const newDistrict = (backdrop.querySelector('#edit-student-district')?.value || '').trim();
-      const newCity = (backdrop.querySelector('#edit-student-city')?.value || '').trim();
-      const newProvince = (backdrop.querySelector('#edit-student-province')?.value || '').trim();
-
-      if (!newName) {
-        showToast('Student name cannot be empty', 'error');
-        return;
-      }
-
-      // Save database mutations to Supabase
-      try {
-        const sb = await getSupabase();
-        const updatePayload = {
-          name: newName,
-          gender: newGender,
-          birth_date: newDob || null,
-          village: newVillage || null,
-          district: newDistrict || null,
-          city: newCity || null,
-          province: newProvince || null,
-          updated_at: new Date().toISOString()
-        };
-        const { error } = await sb.from('students').update(updatePayload).eq('id', studentId);
-        if (error) throw error;
-
-        // Update in-memory record
-        rec.name = newName;
-        rec.displayName = cleanStudentName(newName);
-        rec.gender = newGender;
-        rec.birth_date = newDob;
-        rec.ageDisplay = calculateAgeFromBirthDate(newDob);
-        rec.village = newVillage;
-        rec.district = newDistrict;
-        rec.city = newCity;
-        rec.province = newProvince;
-
-        // Update view fields
-        const vName = backdrop.querySelector('#view-student-name');
-        const vGender = backdrop.querySelector('#view-student-gender');
-        const vDob = backdrop.querySelector('#view-student-dob');
-        const vAddress = backdrop.querySelector('#view-student-address');
-        if (vName) vName.textContent = rec.displayName;
-        if (vGender) vGender.textContent = rec.gender;
-        if (vDob) vDob.textContent = `${rec.birth_date || '—'} (${rec.ageDisplay || '—'} yo)`;
-        if (vAddress) vAddress.textContent = formatFullStudentAddress(rec);
-
-        showToast('Student Raport updated & saved successfully!', 'success');
-        setEditMode(false);
-      } catch (err) {
-        console.error('Error saving student raport:', err);
-        showToast('Failed to save student changes: ' + (err.message || err), 'error');
-      }
-    };
-
-    if (saveRaportBtn) {
-      saveRaportBtn.onclick = saveChangesAction;
+    if (nextBtn && hasNext) {
+      nextBtn.onclick = (e) => {
+        e.stopPropagation();
+        closeAllDossierModals();
+        window.showStudentDossierModal(nextId);
+      };
     }
 
     // Export PDF (Portrait A4)
     const exportPdfBtn = backdrop.querySelector('#btn-export-pdf-dossier');
     if (exportPdfBtn) {
       exportPdfBtn.onclick = async () => {
-        if (isEditingRaport) setEditMode(false);
+        syncRaportPhotoHeight();
 
         if (typeof window.html2pdf !== 'function') {
           showToast('Loading PDF engine...', 'info');
@@ -2639,20 +2614,22 @@ export async function renderStudents(area, options = {}) {
         width: '46px',
         minWidth: '42px',
         render: (row) => {
-          const isLvlX = row.isAlumni || isAlumniPanel || row.studentLevelNum === 0 || (row.levelName && (row.levelName.toLowerCase() === 'alumni' || row.levelName.toUpperCase() === 'X'));
-          const shortLvl = isLvlX ? 'X' : (typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—'));
-          const lvlColor = isLvlX ? '#c084fc' : '#f8fafc';
+          const isLvlX = row.isAlumni || isAlumniPanel || row.studentLevelNum === 99 || (row.levelName && (row.levelName.toLowerCase() === 'alumni' || row.levelName.toUpperCase() === 'X'));
+          const isNonLvl = !isLvlX && (row.studentLevelNum === 0 || (row.levelName && (row.levelName.toLowerCase() === 'non-level' || row.levelName === '—' || row.levelName === '-')));
+          const shortLvl = isLvlX ? 'X' : (isNonLvl ? '—' : (typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—')));
+          const lvlColor = isLvlX ? '#c084fc' : (shortLvl === '—' ? '#94a3b8' : '#f8fafc');
 
           const sortedLevels = (allLevels || []).slice().sort((a, b) => {
-            const numA = (a.level_number === 0 || (a.name || '').toLowerCase() === 'alumni') ? 99 : (a.level_number ?? 1);
-            const numB = (b.level_number === 0 || (b.name || '').toLowerCase() === 'alumni') ? 99 : (b.level_number ?? 1);
+            const numA = (a.level_number === 99 || (a.name || '').toLowerCase() === 'alumni') ? 99 : (a.level_number ?? 1);
+            const numB = (b.level_number === 99 || (b.name || '').toLowerCase() === 'alumni') ? 99 : (b.level_number ?? 1);
             return numA - numB;
           });
 
           const levelOptionsHtml = sortedLevels.map(lvl => {
-            const isAlum = lvl.level_number === 0 || (lvl.name || '').toLowerCase() === 'alumni';
-            const optLabel = isAlum ? 'X' : (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number || lvl.name) : (lvl.name || lvl.level_number));
-            const isSel = (row.level_id === lvl.id) || (isAlum && isLvlX) || (!isLvlX && row.studentLevelNum === lvl.level_number);
+            const isAlum = lvl.level_number === 99 || (lvl.name || '').toLowerCase() === 'alumni';
+            const isNon = lvl.level_number === 0 || (lvl.name || '').toLowerCase() === 'non-level';
+            const optLabel = isAlum ? 'X' : (isNon ? '—' : (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number || lvl.name) : (lvl.name || lvl.level_number)));
+            const isSel = (row.level_id === lvl.id) || (isAlum && isLvlX) || (isNon && isNonLvl) || (!isLvlX && !isNonLvl && row.studentLevelNum === lvl.level_number);
             return `<option value="${lvl.id}" ${isSel ? 'selected' : ''}>${escapeHtml(optLabel)}</option>`;
           }).join('');
 
@@ -2660,6 +2637,16 @@ export async function renderStudents(area, options = {}) {
             return `
               <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
                 <span style="color:#c084fc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;" title="Alumni (Level X)">X</span>
+              </div>
+              <select class="student-inline-select student-level-select text-center" data-id="${row.id}" data-field="level_id" onclick="event.stopPropagation();">
+                ${levelOptionsHtml}
+              </select>
+            `;
+          }
+          if (shortLvl === '—') {
+            return `
+              <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+                <span style="color:#94a3b8;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;">—</span>
               </div>
               <select class="student-inline-select student-level-select text-center" data-id="${row.id}" data-field="level_id" onclick="event.stopPropagation();">
                 ${levelOptionsHtml}
@@ -3083,7 +3070,7 @@ export async function renderStudents(area, options = {}) {
         render: (row) => {
           const isInactive = ((row._raw || row).is_active === false) || ((row.program_status || '').toUpperCase() === 'INACTIVE') || ((row.program_status || '').toUpperCase() === 'HOLD');
           const rawStatus = (row.program_status || 'ACTIVE').toUpperCase();
-          const isLvlX = row.isAlumni || row.studentLevelNum === 0 || row.levelName === 'X' || (row.levelName && row.levelName.toLowerCase() === 'alumni') || isAlumniPanel;
+          const isLvlX = row.isAlumni || row.studentLevelNum === 99 || row.levelName === 'X' || (row.levelName && row.levelName.toLowerCase() === 'alumni') || isAlumniPanel;
           let currentStatus = 'active';
           let label = 'Active';
           let color = 'var(--grade-a)';
@@ -3118,7 +3105,7 @@ export async function renderStudents(area, options = {}) {
           }
 
           // Active and fully eligible for promotion: Render interactive LEVEL UP button
-          if (currentStatus === 'active' && row.isEligibleNext && !isLvlX) {
+          if (currentStatus === 'active' && row.isEligibleNext && !isLvlX && row.studentLevelNum !== 0) {
             const isGrad = curNum >= 3;
             const targetTitle = isGrad ? 'Graduate to ALUMNI (Level X)' : `Promote to Level ${curNum + 1}`;
             return `
@@ -3570,7 +3557,7 @@ window.promoteStudentNextLevel = async function(rowOrId) {
         level_id: st.level_id,
         program_id: st.program_id,
         batch_id: st.batch_id,
-        isAlumni: (st.program_status || '').toUpperCase() === 'ALUMNI' || st.levels?.level_number === 0
+        isAlumni: (st.program_status || '').toUpperCase() === 'ALUMNI' || st.levels?.level_number === 99
       };
     }
   }
@@ -3579,25 +3566,29 @@ window.promoteStudentNextLevel = async function(rowOrId) {
   const studentId = row.id;
   const currentLevelNum = parseInt(row.studentLevelNum != null ? row.studentLevelNum : 1, 10);
 
-  if (row.isAlumni || currentLevelNum === 0 || row.levelName === 'Alumni' || row.levelName === 'X') {
+  if (row.isAlumni || currentLevelNum === 99 || row.levelName === 'Alumni' || row.levelName === 'X') {
     showToast(`${row.displayName} is already an Alumni graduate.`, 'info');
     return;
   }
-
-  // Next level sequence: 1 -> 2, 2 -> 3, 3 -> 0 (Alumni)
-  let nextLevelNum = currentLevelNum + 1;
-  if (currentLevelNum >= 3) {
-    nextLevelNum = 0; // Alumni
-  }
-
-  const { data: levels } = await sb.from('levels').select('id, name, level_number').order('level_number');
-  const targetLevel = (levels || []).find(l => parseInt(l.level_number, 10) === nextLevelNum || (nextLevelNum === 0 && (l.name || '').toLowerCase() === 'alumni'));
-  if (!targetLevel) {
-    showToast(`Target Level ${nextLevelNum === 0 ? 'ALUMNI' : nextLevelNum} not found in database.`, 'error');
+  if (currentLevelNum === 0) {
+    showToast(`${row.displayName} is in a non-leveled program and cannot be promoted.`, 'info');
     return;
   }
 
-  const confirmMsg = nextLevelNum === 0
+  // Next level sequence: 1 -> 2, 2 -> 3, 3 -> 99 (Alumni / Level X)
+  let nextLevelNum = currentLevelNum + 1;
+  if (currentLevelNum >= 3) {
+    nextLevelNum = 99; // Alumni (Level X)
+  }
+
+  const { data: levels } = await sb.from('levels').select('id, name, level_number').order('level_number');
+  const targetLevel = (levels || []).find(l => parseInt(l.level_number, 10) === nextLevelNum || (nextLevelNum === 99 && (l.name || '').toLowerCase() === 'alumni'));
+  if (!targetLevel) {
+    showToast(`Target Level ${nextLevelNum === 99 ? 'ALUMNI' : nextLevelNum} not found in database.`, 'error');
+    return;
+  }
+
+  const confirmMsg = nextLevelNum === 99
     ? `Promote ${row.displayName} to ALUMNI (Level X)?\n\nStudent has successfully passed all level exams and is eligible for graduation.`
     : `Promote ${row.displayName} from ${row.levelName || 'Current Level'} to ${targetLevel.name}?\n\nStudent has met the passing criteria on all current level exams.`;
 
@@ -3605,7 +3596,7 @@ window.promoteStudentNextLevel = async function(rowOrId) {
 
   try {
     const promoUpdates = { level_id: targetLevel.id };
-    if (nextLevelNum === 0) {
+    if (nextLevelNum === 99) {
       promoUpdates.program_status = 'ALUMNI';
     }
     const { error: updErr } = await sb.from('students')
@@ -3723,7 +3714,7 @@ export function showPromotionRequirementsModal(students = []) {
 
 window.promoteAllEligibleStudents = async function() {
   const source = window._currentStudentsGridData || [];
-  const eligible = source.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0);
+  const eligible = source.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0 && s.studentLevelNum !== 99);
   if (eligible.length === 0) {
     showPromotionRequirementsModal(source);
     return;
@@ -3738,12 +3729,12 @@ window.promoteAllEligibleStudents = async function() {
   let promotedCount = 0;
   for (const s of eligible) {
     const curNum = parseInt(s.studentLevelNum != null ? s.studentLevelNum : 1, 10);
-    const nextNum = curNum >= 3 ? 0 : curNum + 1;
-    const targetLvl = (levels || []).find(l => parseInt(l.level_number, 10) === nextNum || (nextNum === 0 && (l.name || '').toLowerCase() === 'alumni'));
+    const nextNum = curNum >= 3 ? 99 : curNum + 1;
+    const targetLvl = (levels || []).find(l => parseInt(l.level_number, 10) === nextNum || (nextNum === 99 && (l.name || '').toLowerCase() === 'alumni'));
     if (!targetLvl) continue;
 
     const promoUpdates = { level_id: targetLvl.id };
-    if (nextNum === 0) {
+    if (nextNum === 99) {
       promoUpdates.program_status = 'ALUMNI';
     }
     const { error } = await sb.from('students').update(promoUpdates).eq('id', s.id);
@@ -3764,9 +3755,9 @@ window.promoteAllEligibleStudents = async function() {
   // Sync batch level and activate target level classes if promoting batch students
   if (window._filterBatchId && promotedCount > 0 && eligible[0]) {
     const curNum = parseInt(eligible[0].studentLevelNum != null ? eligible[0].studentLevelNum : 1, 10);
-    const nextNum = curNum >= 3 ? 0 : curNum + 1;
-    const targetLvl = (levels || []).find(l => parseInt(l.level_number, 10) === nextNum || (nextNum === 0 && (l.name || '').toLowerCase() === 'alumni'));
-    if (targetLvl && nextNum !== 0) {
+    const nextNum = curNum >= 3 ? 99 : curNum + 1;
+    const targetLvl = (levels || []).find(l => parseInt(l.level_number, 10) === nextNum || (nextNum === 99 && (l.name || '').toLowerCase() === 'alumni'));
+    if (targetLvl && nextNum !== 99) {
       await sb.from('batches').update({ current_level_id: targetLvl.id }).eq('id', window._filterBatchId);
       const progId = eligible[0].program_id || currentProgramId;
       if (progId) {

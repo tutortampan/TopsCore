@@ -33,7 +33,8 @@ import {
   updateVaultThemeCodeCascade,
   updateVaultTopicCascade,
   updateVaultTopicCodeCascade,
-  updateVaultTopicLevelCascade
+  updateVaultTopicLevelCascade,
+  updateVaultThemeLevelCascade
 } from '../api.js?v=20261118_v600';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -170,9 +171,9 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       <option value="Proverb">Proverb</option>
     `;
 
-  const uniqueLevels = Array.from(new Set(words.map(w => parseInt(w.target_level)).filter(n => !isNaN(n) && n > 0))).sort((a, b) => a - b);
-  if (uniqueLevels.length === 0) uniqueLevels.push(1, 2, 3);
-  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl)}</option>`).join('');
+  const uniqueLevels = Array.from(new Set(words.map(w => parseInt(w.target_level)).filter(n => !isNaN(n) && n >= 0))).sort((a, b) => a - b);
+  if (uniqueLevels.length === 0) uniqueLevels.push(0, 1, 2, 3);
+  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${lvl === 0 ? '— (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl))}</option>`).join('');
 
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
@@ -216,8 +217,10 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
   // Sort deterministically before indexing to guarantee stable Lexicon Code coordinates
   _allWords.sort((a, b) => {
-    const lvlA = parseInt(a.target_level, 10) || 1;
-    const lvlB = parseInt(b.target_level, 10) || 1;
+    const parsedA = parseInt(a.target_level, 10);
+    const lvlA = !isNaN(parsedA) ? parsedA : 1;
+    const parsedB = parseInt(b.target_level, 10);
+    const lvlB = !isNaN(parsedB) ? parsedB : 1;
     if (lvlA !== lvlB) return lvlA - lvlB;
     const codeA = `${a.theme_code || 'A'}${a.topic_code || '1'}`;
     const codeB = `${b.theme_code || 'A'}${b.topic_code || '1'}`;
@@ -229,11 +232,12 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   const topicWordIndexMap = new Map();
   const topicCounters = {};
   _allWords.forEach(w => {
-    const cleanLvl = parseInt(w.target_level, 10) || 1;
+    const parsedLvl = parseInt(w.target_level, 10);
+    const cleanLvl = !isNaN(parsedLvl) ? parsedLvl : 1;
     const cleanThCode = (w.theme_code || 'A').trim().toUpperCase();
     const rawTpCode = (w.topic_code || '1').trim();
     const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '') || rawTpCode || '1';
-    const compositeTopic = `${cleanLvl}${cleanThCode}${cleanTpCode}`;
+    const compositeTopic = cleanLvl === 0 ? `${cleanThCode}${cleanTpCode}` : `${cleanLvl}${cleanThCode}${cleanTpCode}`;
 
     if (!topicCounters[compositeTopic]) topicCounters[compositeTopic] = 0;
     topicCounters[compositeTopic]++;
@@ -267,7 +271,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
         <select id="vault-level-filter" style="width: 95px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
           <option value="">All Levels</option>
-          ${uniqueLevels.map(lvl => `<option value="${lvl}"${lvlVal === String(lvl) ? ' selected' : ''}>${typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl)}</option>`).join('')}
+          ${uniqueLevels.map(lvl => `<option value="${lvl}"${lvlVal === String(lvl) ? ' selected' : ''}>${lvl === 0 ? '— (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl))}</option>`).join('')}
         </select>
 
         <select id="vault-topic-filter" style="width: 135px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
@@ -504,7 +508,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
         default:         typeColor = '#38bdf8';
       }
 
-      const cleanLvl = parseInt(w.target_level, 10) || 1;
+      const parsedLvl = parseInt(w.target_level, 10);
+      const cleanLvl = !isNaN(parsedLvl) ? parsedLvl : 1;
       const cleanThCode = (w.theme_code || 'A').trim().toUpperCase();
       const rawTpCode = (w.topic_code || '1').trim();
       const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '') || rawTpCode || '1';
@@ -615,18 +620,22 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             payload.theme_code = matchFull[2];
             payload.topic_code = matchFull[3];
           } else if (matchNoLvl) {
-            payload.target_level = parseInt(word.target_level, 10) || 1;
+            const parsedLvl = parseInt(word.target_level, 10);
+            payload.target_level = !isNaN(parsedLvl) ? parsedLvl : 1;
             payload.theme_code = matchNoLvl[1];
             payload.topic_code = matchNoLvl[2];
           } else {
             payload.topic_code = cleanCode;
           }
 
-          if (payload.target_level) word.target_level = payload.target_level;
+          if (payload.target_level !== undefined) word.target_level = payload.target_level;
           if (payload.theme_code) word.theme_code = payload.theme_code;
           if (payload.topic_code) word.topic_code = payload.topic_code;
 
-          const canonicalCode = `${payload.target_level || word.target_level}${payload.theme_code || word.theme_code || 'A'}${payload.topic_code || '1'}`;
+          const effLvl = payload.target_level !== undefined ? payload.target_level : word.target_level;
+          const canonicalCode = effLvl === 0
+            ? `${payload.theme_code || word.theme_code || 'A'}${payload.topic_code || '1'}`
+            : `${effLvl}${payload.theme_code || word.theme_code || 'A'}${payload.topic_code || '1'}`;
           input.value = canonicalCode;
           if (viewSpan) viewSpan.textContent = canonicalCode;
 
@@ -642,11 +651,11 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
           }
         } else if (field === 'target_level') {
           const parsedLvl = parseInt(newVal, 10);
-          if (isNaN(parsedLvl) || parsedLvl < 1 || parsedLvl > 6) {
+          if (isNaN(parsedLvl) || parsedLvl < 0 || parsedLvl > 6) {
             input.value = word.target_level;
             input.classList.add('save-error');
             setTimeout(() => input.classList.remove('save-error'), 800);
-            showToast('Level must be between 1 and 6.', 'warning');
+            showToast('Level must be between 0 and 6 (0 for Non-Level).', 'warning');
             return;
           }
           payload.target_level = parsedLvl;
@@ -953,10 +962,14 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
           }
         }
 
+        const rawLevelVal = (normalized.LEVEL !== undefined && normalized.LEVEL !== '')
+          ? normalized.LEVEL
+          : ((normalized.TARGET_LEVEL !== undefined && normalized.TARGET_LEVEL !== '') ? normalized.TARGET_LEVEL : '1');
+
         return {
           institution_id: rowInstId,
           program_id: rowProgId,
-          level: normalized.LEVEL || normalized.TARGET_LEVEL || '1',
+          level: String(rawLevelVal).trim(),
           category: normalized.CATEGORY || '',
           theme_code: rawThemeCode.toUpperCase(),
           theme: rawTheme,
@@ -1129,7 +1142,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       onSuccess(newWords);
 
       // Auto-sync class tests for all imported levels in the background (Zero-Maintenance)
-      const importedLevels = Array.from(new Set((_parsedRows || []).map(r => r.target_level).filter(Boolean)));
+      const importedLevels = Array.from(new Set((_parsedRows || []).map(r => r.target_level ?? r.level).filter(v => v !== undefined && v !== null && v !== ''))).map(v => parseInt(v, 10)).filter(v => !isNaN(v));
       if (importedLevels.length > 0) {
         Promise.all(importedLevels.map(lvl => autoSyncClassTestsForLevel(lvl, { force: true }))).then(syncResults => {
           const totalNew = syncResults.reduce((acc, r) => acc + (r.tasks || 0) + (r.tests || 0), 0);
@@ -1828,7 +1841,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   const phraseTypes = ['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'];
 
   // 1. Group words by Level -> Theme Code -> Topic
-  const levelsSet = new Set([1, 2, 3]);
+  const levelsSet = new Set([0, 1, 2, 3]);
   (words || []).forEach(w => {
     const lvl = parseInt(w.target_level, 10);
     if (!isNaN(lvl)) levelsSet.add(lvl);
@@ -1840,7 +1853,8 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
   levels.forEach(lvl => levelGroups.set(lvl, new Map()));
 
   (words || []).forEach(w => {
-    const lvl = parseInt(w.target_level, 10) || 3;
+    const parsedLvl = parseInt(w.target_level, 10);
+    const lvl = !isNaN(parsedLvl) ? parsedLvl : 3;
     if (!levelGroups.has(lvl)) levelGroups.set(lvl, new Map());
     const themesMap = levelGroups.get(lvl);
 
@@ -1921,8 +1935,8 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     thMap.forEach(th => {
       count += th.topicsMap.size;
       th.topicsMap.forEach(tp => {
-        wCount += tp.totalWords;
-        pCount += tp.totalPhrases;
+        wCount += (tp.wordsCount || tp.totalWords || 0);
+        pCount += (tp.phrasesCount || tp.totalPhrases || 0);
       });
     });
     levelStats[lvl] = { themes: thMap.size, topics: count, words: wCount, phrases: pCount };
@@ -1995,7 +2009,8 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             const isActive = (String(activeLevel) === String(lvl));
             const count = levelStats[lvl]?.topics || 0;
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-            return `<button type="button" class="btn btn-tactical btn-sm btn-theme-curriculum-tab ${isActive ? 'active' : ''}" data-lvl="${lvl}" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px;">${shortLbl} (${count})</button>`;
+            const displayLbl = lvl === 0 ? '— (NON-LVL)' : shortLbl;
+            return `<button type="button" class="btn btn-tactical btn-sm btn-theme-curriculum-tab ${isActive ? 'active' : ''}" data-lvl="${lvl}" style="height: 28px; font-size: 12px; font-weight: 800; padding: 0 10px; border-radius: 4px;">${displayLbl} (${count})</button>`;
           }).join('')}
         </div>
 
@@ -2204,9 +2219,9 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           rowsHtml += `
             <tr class="blueprint-table-row" data-level="${lvl}" data-theme-code="${thCode}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
               <!-- 1. LVL -->
-              <td class="editable-cell" style="text-align: center; font-weight: 500; font-size: 12px; color: #38bdf8; border-right: 1px solid rgba(255,255,255,0.08);">
+              <td class="editable-cell" style="text-align: center; font-weight: 500; font-size: 12px; color: ${lvl === 0 ? '#94a3b8' : '#38bdf8'}; border-right: 1px solid rgba(255,255,255,0.08);">
                 <span class="vault-cell-view">${escapeHtml(lvlLabel)}</span>
-                <input type="number" min="1" max="6" class="vault-edit-input" data-action="edit-level" data-topic="${escapeHtml(tp.name)}" data-old-lvl="${lvl}" data-th-code="${thCode}" value="${lvl}" style="text-align:center;">
+                <input type="number" min="0" max="6" class="vault-edit-input" data-action="edit-level" data-topic="${escapeHtml(tp.name)}" data-old-lvl="${lvl}" data-th-code="${thCode}" value="${lvl}" style="text-align:center;">
               </td>
               <!-- 2. TH-CD -->
               <td class="editable-cell" style="text-align: center; color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#a5b4fc'}; font-family: monospace; font-weight: 700; font-size: 12px; border-right: 1px solid rgba(255,255,255,0.08);">
@@ -2591,6 +2606,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
               }
             });
             showToast(`Theme Code updated to "${cleanNewCode}"`, 'success');
+            autoSyncClassTestsForLevel(lvl, { force: true }).catch(err => console.warn('[ThemeManager] Auto-sync notice:', err));
 
           } else if (action === 'edit-topic-name') {
             const oldTopic = input.dataset.oldTopic;
@@ -2652,49 +2668,63 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
           } else if (action === 'edit-level') {
             const oldLvl = parseInt(input.dataset.oldLvl, 10);
             const newLvl = parseInt(newVal, 10);
-            if (isNaN(newLvl) || newLvl < 1 || newLvl > 6) {
+            if (isNaN(newLvl) || newLvl < 0 || newLvl > 6) {
               input.value = oldLvl;
               input.classList.add('save-error');
               setTimeout(() => input.classList.remove('save-error'), 800);
-              showToast('Level must be between 1 and 6.', 'warning');
+              showToast('Level must be between 0 and 6 (0 for Non-Level).', 'warning');
               return;
             }
             if (newLvl === oldLvl) return;
 
-            const topic = input.dataset.topic;
-            const thCode = input.dataset.thCode;
-            await updateVaultTopicLevelCascade(topic, oldLvl, newLvl, thCode);
-            input.dataset.oldLvl = newLvl;
-            if (tr) {
-              tr.setAttribute('data-level', newLvl);
-              const delTpBtn = tr.querySelector('.btn-del-topic-mini');
+            const thCode = String(input.dataset.thCode || '').trim().toUpperCase();
+
+            // Cascade theme level across vocabulary_vault and theme_program_assignments
+            await updateVaultThemeLevelCascade(thCode, oldLvl, newLvl);
+
+            // Synchronize all rows belonging to the same theme and level in the DOM
+            const allThemeRows = tbody.querySelectorAll(`tr[data-theme-code="${thCode}"][data-level="${oldLvl}"]`);
+            allThemeRows.forEach(row => {
+              row.setAttribute('data-level', newLvl);
+              const lvlInp = row.querySelector('[data-action="edit-level"]');
+              const lvlCell = lvlInp?.closest('td');
+              const lvlSpan = lvlCell?.querySelector('.vault-cell-view');
+              if (lvlInp) {
+                lvlInp.value = newLvl;
+                lvlInp.dataset.oldLvl = newLvl;
+                lvlInp.classList.add('save-success');
+                setTimeout(() => lvlInp.classList.remove('save-success'), 700);
+              }
+              if (lvlSpan) {
+                const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(newLvl) : (newLvl === 0 ? '—' : `${newLvl}ST`);
+                lvlSpan.textContent = shortLbl.toUpperCase();
+              }
+              if (lvlCell) {
+                lvlCell.style.color = newLvl === 0 ? '#94a3b8' : '#38bdf8';
+              }
+
+              const delTpBtn = row.querySelector('.btn-del-topic-mini');
               if (delTpBtn) delTpBtn.setAttribute('data-level', newLvl);
-              const delThBtn = tr.querySelector('.btn-del-theme-mini');
+              const delThBtn = row.querySelector('.btn-del-theme-mini');
               if (delThBtn) delThBtn.setAttribute('data-level', newLvl);
-              const assignBtn = tr.querySelector('.btn-assign-pill');
+              const assignBtn = row.querySelector('.btn-assign-pill');
               if (assignBtn) assignBtn.setAttribute('data-level', newLvl);
-            }
-            if (viewSpan) {
-              const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(newLvl) : `${newLvl}ST`;
-              viewSpan.textContent = shortLbl.toUpperCase();
-            }
 
-            // Recalculate column 6 CODE in this row
-            const currentTpCode = tr?.querySelector('[data-action="edit-topic-code"]')?.value.trim() || '1';
-            const newComp = `${newLvl}${thCode}${currentTpCode}`;
-            const compTd = tr?.querySelector('.col-theme-composite-code');
-            if (compTd) compTd.textContent = newComp;
-
-            input.classList.add('save-success');
-            setTimeout(() => input.classList.remove('save-success'), 700);
+              // Recalculate column 6 CODE in this row
+              const currentTpCode = row.querySelector('[data-action="edit-topic-code"]')?.value.trim() || '1';
+              const newComp = `${newLvl}${thCode}${currentTpCode}`;
+              const compTd = row.querySelector('.col-theme-composite-code');
+              if (compTd) compTd.textContent = newComp;
+            });
 
             // Update in-memory array
             words.forEach(w => {
-              if (w.topic === topic && parseInt(w.target_level, 10) === oldLvl) {
+              if (String(w.theme_code).toUpperCase() === thCode && parseInt(w.target_level, 10) === oldLvl) {
                 w.target_level = newLvl;
               }
             });
-            showToast(`Topic moved to Level ${newLvl}. Switch Level tab to view.`, 'success');
+            showToast(`Theme ${thCode} moved to Level ${newLvl === 0 ? '0 (Non-Level)' : newLvl}.`, 'success');
+            autoSyncClassTestsForLevel(newLvl, { force: true }).catch(err => console.warn('[ThemeManager] Auto-sync notice:', err));
           }
         } catch (err) {
           input.classList.add('save-error');
@@ -2819,7 +2849,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   if (window._vaultMeta) window._vaultMeta.themeAssignments = assignments;
 
   // Group words by Level -> Theme Code -> Topic
-  const levelsSet = new Set([1, 2, 3]);
+  const levelsSet = new Set([0, 1, 2, 3]);
   (words || []).forEach(w => {
     const lvl = parseInt(w.target_level, 10);
     if (!isNaN(lvl)) levelsSet.add(lvl);
@@ -2830,7 +2860,8 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   levels.forEach(lvl => levelGroups.set(lvl, new Map()));
 
   (words || []).forEach(w => {
-    const lvl = parseInt(w.target_level, 10) || 3;
+    const parsedLvl = parseInt(w.target_level, 10);
+    const lvl = !isNaN(parsedLvl) ? parsedLvl : 3;
     if (!levelGroups.has(lvl)) levelGroups.set(lvl, new Map());
     const themesMap = levelGroups.get(lvl);
 
@@ -2887,6 +2918,16 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     const progName = (prog?.name || '').toLowerCase();
     const shortLvl = (typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`).toLowerCase();
 
+    // 0. Non-level program match
+    if (lvl === 0) {
+      const nonLvlMatch = classes.find(c => c.program_id === selectedProgId &&
+        (c.level_id === '0e1c49fb-d8a8-4fd5-a239-a50466875c23' ||
+         (c.name && (c.name.toLowerCase().includes('non-level') || c.name.toLowerCase().includes(progName)))) &&
+        c.name && c.name.toLowerCase().includes('vocab')
+      );
+      if (nonLvlMatch) return nonLvlMatch;
+    }
+
     // 1. Best match: Program Name + Level (e.g. "Camp 2nd Vocabulary")
     let match = classes.find(c => c.program_id === selectedProgId &&
       c.name && c.name.toLowerCase().includes(progName) &&
@@ -2930,7 +2971,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
       const classTests = tests.filter(t => t.class_id === targetClassId);
       const hasTest = classTests.some(t => {
         const code = String(t.shell_code || '').toUpperCase();
-        return code.startsWith(`${lvl}${thCode}`);
+        return lvl === 0 ? code.includes(`-${thCode}`) : code.startsWith(`${lvl}${thCode}`);
       });
       if (hasTest) return true;
     }
@@ -2951,8 +2992,17 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     if (!classId) return null;
     const classTests = tests.filter(t => t.class_id === classId);
     const cleanNum = tpCode.replace(/^[A-Z]+/i, '');
+    const codeWithLvl = `${lvl}${thCode}${cleanNum}`;
+    const codeBare = `${thCode}${cleanNum}`;
     return classTests.find(t => (t.test_type === 'quiz' || (t.shell_code && t.shell_code.includes('TASK'))) &&
-      (t.shell_code && (t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-WORDS-TASK`) || t.shell_code.toUpperCase().includes(`${lvl}${thCode}${cleanNum}-PHRASES-TASK`)))) ||
+      (t.shell_code && (
+        t.shell_code.toUpperCase().includes(`${codeWithLvl}-TASK`) ||
+        t.shell_code.toUpperCase().includes(`${codeBare}-TASK`) ||
+        t.shell_code.toUpperCase().includes(`${codeWithLvl}-WORDS-TASK`) ||
+        t.shell_code.toUpperCase().includes(`${codeBare}-WORDS-TASK`) ||
+        t.shell_code.toUpperCase().includes(`${codeWithLvl}-PHRASES-TASK`) ||
+        t.shell_code.toUpperCase().includes(`${codeBare}-PHRASES-TASK`)
+      ))) ||
       classTests.find(t => t.title && t.title.toLowerCase().includes(tpName.toLowerCase()));
   };
 
@@ -2960,8 +3010,15 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   const findExamForTheme = (lvl, thCode, thName, classId) => {
     if (!classId) return null;
     const classTests = tests.filter(t => t.class_id === classId);
+    const codeWithLvl = `${lvl}${thCode}`;
+    const codeBare = `${thCode}`;
     return classTests.find(t => (t.test_type === 'exam' || (t.shell_code && t.shell_code.includes('EXAM'))) &&
-      (t.shell_code && t.shell_code.toUpperCase().includes(`${lvl}${thCode}-WORDS-EXAM`))) ||
+      (t.shell_code && (
+        t.shell_code.toUpperCase().includes(`${codeWithLvl}-EXAM`) ||
+        t.shell_code.toUpperCase().includes(`${codeBare}-EXAM`) ||
+        t.shell_code.toUpperCase().includes(`${codeWithLvl}-WORDS-EXAM`) ||
+        t.shell_code.toUpperCase().includes(`${codeBare}-WORDS-EXAM`)
+      ))) ||
       classTests.find(t => t.title && t.title.toLowerCase().includes(thName.toLowerCase()) && (t.test_type === 'exam' || (t.title.toUpperCase().includes('EXAM'))));
   };
 
@@ -3013,7 +3070,8 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           ${levels.map(lvl => {
             const isActive = (String(activeLevel) === String(lvl));
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
-            return `<button type="button" class="btn btn-tactical btn-sm btn-bp-level-tab ${isActive ? 'active' : ''}" data-lvl="${lvl}" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px;">${shortLbl}</button>`;
+            const displayLbl = lvl === 0 ? '— (NON-LVL)' : shortLbl;
+            return `<button type="button" class="btn btn-tactical btn-sm btn-bp-level-tab ${isActive ? 'active' : ''}" data-lvl="${lvl}" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px;">${displayLbl}</button>`;
           }).join('')}
         </div>
       </div>

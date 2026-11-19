@@ -175,7 +175,7 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 - Achievement metrics follow normal grade colors (`getGradeColorByScore()`).
 - Negative error metrics (Error Rate, Mistake Rate, Fail Rate, Timeout Rate) MUST invert scale via `getInvertedGradeColor()`: $\le 10\%$ (Green Grade A), $11-20\%$ (Lime Grade B), $21-40\%$ (Yellow Grade C), $41-70\%$ (Orange Grade D), $> 70\%$ (Red Grade E).
 
-### 3.3 Anti-Ambiguity Disambiguation Guard (10 System Truths)
+### 3.3 Anti-Ambiguity Disambiguation Guard (12 System Truths)
 1. **Grade Star (★) vs Theme A Pink**: `--grade-star: #ff2d87` (100% score) is strictly decoupled from `--quad-a: #ff2d87` (Theme A). Never swap or merge them.
 2. **Student Name Scope**: Standard authentic name (`studentName`) system-wide; `Mr.` / `Miss` strictly exclusive to Student Dashboard greeting (Rule 2.23).
 3. **Sub-Header Typography**: Super-header baris 1 bold (700); Sub-header baris 2 **REGULAR (400, strictly NOT bold)**; Spanning standalone header 60px (`rowspan="2"`).
@@ -186,6 +186,8 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 8. **Continuous Neutral Dividers**: Super-header boundary vertical dividers from row 1 to footer are strictly thick 2px neutral (`rgba(255, 255, 255, 0.22)`), never colored.
 9. **Zero Emojis**: Dilarang unicode emojis di UI/tabel; strictly vector SVG icons via `getClassSvgIcon()`.
 10. **Zero Table Capsule & Zero Table Glow**: Seluruh isi sel tabel bebas kapsul, pill, badge, border, dan background-fill (status semantik hanya melalui warna font teks); mutlak nol glow, text-shadow, atau box-shadow di seluruh sel tabel (`AGENTS.md` §2.31 & §4.9).
+11. **Level 0 (Non-Level `—`) vs Alumni (Level X)**: `Level 0` (`level_number = 0`) adalah program tanpa jenjang (single-tier, misal institusi TOP). Ditampilkan di tabel sebagai strip bersih **`—`** (slate netral `#94A3B8`), BUKAN angka "0". `Level X` (`level_number = 99`) adalah Alumni kelulusan puncak setelah Level 3, ditampilkan sebagai simbol **`X`** ungu neon (`#C084FC` / `var(--quad-d)`). Alumni mutlak dilarang menggunakan angka 0.
+12. **Zero-Level Omission Invariant**: Program tanpa jenjang (Level 0) wajib meniadakan seluruh segmen level pada nama kelas, kode kelas, judul tes, dan kode tes (`EVN-VOCAB`, `Evnikom Vocabulary G1 Task - Time Name`, `EVN-VCB-G1-TASK`).
 
 ### 3.4 Ghost-to-Solid-Glow Button Invariant (Aturan Baku Tombol TopsCore SSOT)
 Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem:
@@ -303,10 +305,12 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Teks di dalam tabel wajib terbaca tegas, bersih (*crisp, matte*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
 
 ### 4.10 Standar Formula Kode Kelas: PROGRAM-LEVELCLASS (SSOT)
-- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh: `CMP-3VOCAB`, `CMP-1BASIC`, `EVN-1VOCAB`, `SHR-1VOCAB`, `TMT-1VOCAB`).
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CMP-3VOCAB`, `CMP-1BASIC`, `CMP-2SPEAK`).
 - **Segmen 1 (PROGRAM)**: Singkatan program 3-huruf resmi (`CMP` = Camp, `EVN` = Evnikom, `SHR` = Sheraton, `TMT` = Tamata, `EXP` = English Explorer).
 - **Separator**: Tanda hubung (`-`).
 - **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (contoh: `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
+- **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**:
+  - Pada program yang tidak memiliki jenjang bertahap (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB`). Dilarang keras mencantumkan angka 1 (`EVN-1VOCAB`).
 - **Penegakan Sistemik**:
   - Kolom `classes.code` di database Supabase wajib mematuhi formula ini.
   - Tampilan pada tabel admin (`admin.html#classes-hub`) dan auto-generator/placeholder di `crud-modals.js` wajib menghasilkan format ini.
@@ -398,4 +402,30 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Kepatuhan Ambang Batas Resmi (Grade C >= 60%)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**) per [`AGENTS.md` §2.4.1](file:///AGENTS.md#241-level-promotion--passing-threshold-invariant-ssot-aturan-baku-promosi-level).
 - **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
 - **Aktivasi Tombol Aksi NEXT di Roster**: Tombol `NEXT` di Sub Panel atau toolbar roster otomatis aktif (*enabled*) hanya saat seluruh siswa aktif dalam batch telah memenuhi batas kelulusan (lulus, remedial tuntas, atau dispensasi Grade F). Jika masih ada siswa yang belum tuntas, tombol dinonaktifkan (*disabled*) dengan tooltip alasan.
+
+### 6.5 Arsitektur Tampilan Level: Level 0 (Non-Level `—`), Level 1–3, dan Alumni (Level X) SSOT
+- **Prinsip Identitas Level Resmi**:
+  1. **Level 0 (Non-Level Programs)**: Khusus untuk program yang sejak awal tidak memiliki jenjang bertahap (single-tier, misal seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata Persada). Pada seluruh tabel workstation admin (kolom `LVL`) dan dashboard siswa, Level 0 ditampilkan sebagai tanda strip bersih **`—`** (slate netral `#94a3b8`). Dilarang keras menampilkan angka 0 atau teks "L0" di layar agar tidak membingungkan siswa dan tutor.
+  2. **Level 1–3 (Jenjang Reguler)**: Ditampilkan sebagai `1st`, `2nd`, `3rd` dengan tabular numbers tebal (`color: #f8fafc; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;`).
+  3. **Level X (Alumni Graduation)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, `program_status = 'ALUMNI'`). Ditampilkan sebagai huruf **`X`** tebal berwarna ungu neon (`#c084fc` / `var(--quad-d)`). Alumni mutlak DILARANG menggunakan angka 0.
+- **In-Memory & Inline Master Edit Mode Select Control**:
+  - Kontainer dropdown select inline level (`.student-inline-select`) di tabel workstation menyajikan 5 opsi terstruktur:
+    - `value="0"`: `—` (Non-Level)
+    - `value="1"`: `1st` (1st Level)
+    - `value="2"`: `2nd` (2nd Level)
+    - `value="3"`: `3rd` (3rd Level)
+    - `value="99"`: `X` (Alumni)
+  - Memilih Level 0 (`value="0"`) mutlak tidak mengubah status siswa menjadi alumni. Status alumni eksklusif terikat pada `value="99"`.
+- **Aturan Promosi Level (Promotion & Level Up Gating)**:
+  - Siswa program Non-Level (Level 0) **tidak memiliki tombol promosi / LEVEL UP / NEXT** (`isEligibleNext = false`) karena kurikulum mereka adalah program tunggal selesai (*single-tier completion*).
+  - Siswa Level 3 yang telah lulus seluruh ujian dipromosikan langsung ke status Alumni / Level X (`level_number = 99`, `program_status = 'ALUMNI'`).
+- **Aturan Penamaan Kosong (Zero-Level Omission Invariant)**:
+  - Seluruh program tanpa jenjang meniadakan (menganggap kosong) segmen angka level pada:
+    - **Nama Kelas**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (dilarang menggunakan `1st`).
+    - **Kode Kelas**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).
+    - **Judul Tes**: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General` (dilarang menggunakan `1st`).
+    - **Kode Tes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM`, `EVN-VCB-G2-TASK` (dilarang menggunakan `EVN-1VCB-...`).
+- **Student Dashboard & Class Lobby Invariants**:
+  - **Non-Level**: Badge Level pada header dashboard disembunyikan/ditiadakan (dianggap kosong), dan seluruh kelas program dapat diakses langsung.
+  - **Alumni**: Mempertahankan *Lifetime Universal Access* ke seluruh kelas program di Class Lobby dan Dashboard, dengan badge bertuliskan **`ALUMNI`** / **`X`** dan aura ungu neon.
 

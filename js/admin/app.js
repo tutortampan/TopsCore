@@ -1268,7 +1268,7 @@ if (typeof window !== 'undefined') {
           const classLevelId = currentClass.level_id;
           const classLevelRec = classLevelId ? (allLevels || []).find(l => l.id === classLevelId) : null;
           const classLevelNum = classLevelRec?.level_number;
-          if (classLevelNum) {
+          if (classLevelNum !== null && classLevelNum !== undefined) {
             const hasVaultData = (allVault || []).some(v => Number(v.target_level) === Number(classLevelNum) && !v.deleted_at);
             if (hasVaultData) {
               try {
@@ -1405,8 +1405,9 @@ if (typeof window !== 'undefined') {
           const prereqTest = (prereqId && allTests.find(a => a.id === prereqId)) || null;
           const boardName = (r?.class_id && boardClassMap[r.class_id]?.name) || r?.classes?.name || '—';
           const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
-          const lvlNum = lvlObj?.level_number || 1;
-          const levelDisplay = window.toLevelLetter ? window.toLevelLetter(lvlNum) : 'LVL ' + lvlNum;
+          const lvlNum = lvlObj?.level_number != null ? lvlObj.level_number : (currentClass?.level_id && levelMap[currentClass.level_id]?.level_number != null ? levelMap[currentClass.level_id].level_number : 1);
+          const cleanLvlNum = lvlNum != null ? lvlNum : 1;
+          const levelDisplay = window.toLevelLetter ? window.toLevelLetter(cleanLvlNum) : (cleanLvlNum === 0 ? '—' : 'LVL ' + cleanLvlNum);
           const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
 
           const title = r?.title || r?.display_name || r?.name || 'Untitled';
@@ -1422,7 +1423,7 @@ if (typeof window !== 'undefined') {
 
           const minScore = r?.minimum_required_score || 60;
           const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
-          const _vaultQ = _isDyn ? vaultCountFor(r, lvlNum) : 0;
+          const _vaultQ = _isDyn ? vaultCountFor(r, cleanLvlNum) : 0;
           const qCount = r?.total_questions || r?.payload?.total_questions || (r?.test_type === 'exam' ? 120 : 40);
           const effectiveQCount = _isDyn ? _vaultQ : qCount;
 
@@ -1720,7 +1721,8 @@ if (typeof window !== 'undefined') {
             const asm = classTests.find(a => a.id === (la.test_id || la.Test_id));
             const code = asm?.shell_code || asm?.title || 'Task';
             const sc = la.score != null ? Number(la.score) : 0;
-            const totalQ = Number(la.total_questions || (asm?.is_dynamic_shell || asm?.payload?.is_dynamic_shell ? vaultCountFor(asm, (levelMap[asm?.level_id]?.level_number || 1)) : 50));
+            const asmLevelNum = levelMap[asm?.level_id]?.level_number != null ? levelMap[asm?.level_id].level_number : 1;
+            const totalQ = Number(la.total_questions || (asm?.is_dynamic_shell || asm?.payload?.is_dynamic_shell ? vaultCountFor(asm, asmLevelNum) : 50));
             const pct = Math.round(la.percentage != null ? Number(la.percentage) : (totalQ > 0 ? (sc / totalQ) * 100 : 0));
             const g = la.grade || (typeof getGrade === 'function' ? getGrade(pct) : (pct >= 90 ? 'S' : pct >= 70 ? 'B' : pct >= 50 ? 'C' : 'D'));
             latestScore = sc;

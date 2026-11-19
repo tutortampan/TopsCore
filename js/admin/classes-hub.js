@@ -489,13 +489,13 @@ export async function renderClassesHub(area) {
             }
           }
         }
-        const levelHtml = lvl
+        const levelHtml = (lvl && lvl.level_number > 0 && lvl.level_number < 99)
           ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">L${lvl.level_number}</span><span class="text-xs text-muted" style="margin-left:4px;">· ${escapeHtml(lvl.name || 'Level ' + lvl.level_number)}</span>`
-          : '<span class="text-xs text-muted">-</span>';
+          : '<span class="text-xs text-muted">—</span>';
 
-        // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CMP-3VOCAB, CMP-1BASIC, EVN-1VOCAB)
+        // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CMP-3VOCAB, CMP-1BASIC, EVN-VOCAB)
         const getStandardClassCode = (c, levelObj, progObj) => {
-          if (c.code && /^[A-Z0-9]{2,4}-\d+[A-Z0-9]{3,6}$/.test(c.code)) return c.code;
+          if (c.code) return c.code;
           const rawName = (c.name || '').toUpperCase();
           let progAbbr = 'CMP';
           if (rawName.includes('CAMP') || (progObj && (progObj.name || '').toUpperCase().includes('CAMP'))) {
@@ -511,11 +511,13 @@ export async function renderClassesHub(area) {
           }
 
           let lvlNum = levelObj?.level_number;
-          if (!lvlNum) {
+          if (lvlNum === 0 || (levelObj?.name || '').toLowerCase() === 'non-level') {
+            lvlNum = ''; // Level 0 dianggap kosong!
+          } else if (!lvlNum) {
             if (rawName.includes('1ST')) lvlNum = 1;
             else if (rawName.includes('2ND')) lvlNum = 2;
             else if (rawName.includes('3RD')) lvlNum = 3;
-            else lvlNum = 1;
+            else lvlNum = '';
           }
 
           let classAbbr = 'VOCAB';

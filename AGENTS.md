@@ -115,15 +115,32 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
 - **Mutlak Nol Angka Ambang Batas Arbitrer**: DILARANG KERAS menggunakan angka ambang batas arbitrer atau hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah resmi lulus (*Enough*) dan mutlak berhak dipromosikan bersamaan tanpa ada yang tertahan.
 - **Keselarasan Roster & Batch**: Seluruh siswa dalam batch yang telah menyelesaikan ujian levelnya dengan status lulus/forgiven berhak dipromosikan bersamaan ke level berikutnya agar tidak terjadi ketimpangan level antar-siswa dalam satu rombongan belajar.
 
+### 2.4.2 Non-Level Programs (Level 0 / Tampilan `—`) & Alumni (Level X) Architecture (SSOT)
+- **Program Tanpa Jenjang (Non-Level Programs / Level 0)**: Program yang sejak awal tidak memiliki jenjang bertahap (seperti seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata) menggunakan entitas Level 0 di database (`level_number = 0`, nama `'Non-Level'`).
+- **Tampilan Visual Kolom Level (`—`)**: Pada seluruh tabel workstation admin (kolom `LVL`) dan dashboard, Level 0 ditampilkan sebagai tanda strip bersih **`—`** (slate netral `#94a3b8`). Meniadakan kemunculan angka 0 di layar agar siswa dan tutor tidak mengira ada "Level Nol".
+- **Aturan Penamaan Kosong (Zero-Level Omission Invariant)**: Pada program tanpa jenjang, segmen level pada nama kelas, kode kelas, judul tes, dan kode tes **wajib ditiadakan (dianggap kosong)**:
+  - **Nama Kelas**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (dilarang menggunakan `1st`).
+  - **Kode Kelas**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).
+  - **Judul Tes**: `Evnikom Vocabulary G1 Task - Time Name` (dilarang menggunakan `1st`).
+  - **Kode Tes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM` (dilarang menggunakan `EVN-1VCB-...`).
+- **Peniadaan Tombol Promosi**: Siswa pada program Non-Level tidak memiliki tombol `LEVEL UP` karena kurikulum mereka adalah program tunggal selesai (*single-tier completion*).
+- **Alumni Resmi Menjadi Level X (Grade X / Simbol `X`)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, badge ungu neon `#c084fc` bertuliskan **`X`**, `program_status = 'ALUMNI'`). Alumni mutlak TIDAK menggunakan angka level 0.
+
 ## 2.5 Test Auto-Assignment (Level-Centric)
 Tests (Tasks & Exams) are created within a Class. Because that Class belongs to a Level, the system automatically assigns the test to any Batch/Student that has unlocked that Level. Batches inherit tests automatically based on their current Level.
 
 ### 2.5.1 Class Code Standard Formula (PROGRAM-LEVELCLASS SSOT)
-- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh: `CMP-3VOCAB`, `CMP-1BASIC`, `EVN-1VOCAB`, `SHR-1VOCAB`, `TMT-1VOCAB`).
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CMP-3VOCAB`, `CMP-1BASIC`, `CMP-2SPEAK`).
 - **Segmen 1 (PROGRAM)**: Singkatan 3-huruf resmi program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
 - **Separator**: Tanda hubung (`-`).
 - **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (misal `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
+- **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Pada program yang tidak memiliki jenjang (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB`). Dilarang mencantumkan angka 1 (`EVN-1VOCAB`).
 - **Invarian Format**: Disimpan di database `classes.code` dan ditampilkan seragam pada tabel workstation, modal, dan export.
+
+### 2.5.2 Class Lobby Cumulative Access & Dashboard Class-Scoped Architecture (SSOT)
+- **Class Lobby Cumulative Access**: Siswa memiliki akses kumulatif ke seluruh kelas dari level yang telah dibuka (`cLvlNum <= studentLevelNum`). Kelas level sebelumnya ditampilkan di Class Lobby dengan status Completed (100% ★). Landing default saat login memprioritaskan kelas level aktif saat ini (`cLvlNum === studentLevelNum`).
+- **Dashboard Class-Scoped Architecture**: Seluruh metrik di Dashboard Siswa (Grade Card [GRADE, GRADE DESCRIPTION, RATE], Hero Card tier aura/score, My Rank / Standings, Completed Tests table, dan Next Assignment) merepresentasikan **hanya kelas yang sedang dipilih (`window._selectedClassId`)**.
+- **Completed Tests Table Invariant**: Tabel Completed Tests menampilkan seluruh tes yang telah diselesaikan pada kelas terpilih, baik formative Task maupun milestone Exam. Total count badge mencerminkan jumlah seluruh tes selesai di kelas tersebut.
 
 ## 2.6 Test Naming & Code Standard Formula (SSOT)
 Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku: **Test Code (`shell_code`)** dan **Test Name (`title`)**. Istilah `display_name` ditiadakan secara permanen agar tidak menimbulkan ambiguitas dan tumpang tindih.
@@ -131,10 +148,10 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
 ### 2.6.1 Test Code Formula (`shell_code` — Machine & Admin SKU)
 - **Formula Baku 4-Blok Simetris**: `PROGRAM-LEVEL_CLASS-CODE-TYPE`
 - **Segmen 1 (PROGRAM)**: Singkatan resmi 3-huruf program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
-- **Segmen 2 (LEVEL_CLASS)**: Angka level belajar langsung digabung dengan 3-huruf singkatan kelas **tanpa huruf 'L'** (misal `3VCB` untuk Level 3 Vocabulary, `2VCB` untuk Level 2 Vocabulary, `2SPK` untuk Speaking, `1STY` untuk Storytelling). Meniadakan huruf 'L' mencegah kerancuan tipografi font (seperti `L1` vs `11` vs `I1`).
+- **Segmen 2 (LEVEL_CLASS)**: Angka level belajar langsung digabung dengan 3-huruf singkatan kelas **tanpa huruf 'L'** (misal `3VCB` untuk Level 3 Vocabulary, `2VCB` untuk Level 2 Vocabulary, `2SPK` untuk Speaking, `1STY` untuk Storytelling). Meniadakan huruf 'L' mencegah kerancuan tipografi font (seperti `L1` vs `11` vs `I1`). Pada program Non-Level (Level 0), angka level **wajib ditiadakan** per Zero-Level Omission Invariant sehingga murni 3-huruf singkatan kelas (`VCB`, `SPK`).
 - **Segmen 3 (CODE)**:
-  - Untuk Task: Kode tema dan nomor topik (misal `A1`, `A2`, `B1`, ..., `D4`).
-  - Untuk Exam: Huruf tema tunggal (misal `A`, `B`, `C`, `D`).
+  - Untuk Task: Kode tema dan nomor topik (misal `A1`, `A2`, `B1`, ..., `D4`, atau `G1`, `G2` untuk General).
+  - Untuk Exam: Huruf tema tunggal (misal `A`, `B`, `C`, `D`, atau `G` untuk General).
 - **Segmen 4 (TYPE)**: Strictly `TASK` atau `EXAM`.
 - **Contoh Resmi**:
   - `CMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
@@ -142,7 +159,8 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
   - `CMP-3VCB-D-EXAM` (Camp Level 3 Vocabulary Theme D Exam)
   - `CMP-2VCB-B2-TASK` (Camp Level 2 Vocabulary Topic B2 Task)
   - `CMP-2SPK-A1-TASK` (Camp Level 2 Speaking Topic A1 Task)
-  - `EVN-1VCB-A1-TASK` (Evnikom Level 1 Vocabulary Topic A1 Task)
+  - `EVN-VCB-G1-TASK` (Evnikom Non-Level Vocabulary Topic G1 Task — segmen level ditiadakan)
+  - `EVN-VCB-G-EXAM` (Evnikom Non-Level Vocabulary General Exam — segmen level ditiadakan)
 
 ### 2.6.2 Test Name Formula (`title` SSOT)
 - **Formula Baku Terpadu (Natural English Flow)**:
@@ -152,6 +170,7 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
   - **Bebas Simbol Asing**: Tidak menggunakan kurung siku `[ ]` ataupun titik tengah `·`. Mengalir alami sesuai standar bahasa Inggris akademik.
   - **Task Standar**: `2nd Vocabulary Task A1 - Greetings & Basics`, `2nd Vocabulary Task B1 - Podcast Hosting & Introduction`, `3rd Vocabulary Task A1 - Job Hunting & Application`, `2nd Public Speaking Task A1 - Introduction & Delivery`.
   - **Exam Standar**: `2nd Vocabulary Exam D - Cooking Class`, `3rd Vocabulary Exam A - World of Work`, `1st Vocabulary Exam A - Foundational Communication`.
+  - **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Segmen `[LEVEL_ORDINAL]` ditiadakan (dianggap kosong) sehingga judul tes mengalir alami: `[CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]` (contoh: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General`, `Sheraton Vocabulary A1 Task - Greetings`). Dilarang mencantumkan kata `1st` atau angka level pada judul tes program tanpa jenjang.
 - **Universal 2-Line Test Title Architecture (SSOT Tampilan Card Dashboard & Header)**:
   Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian dirender menjadi **2 Baris Terpisah** via pemisah ` - `:
   - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`). Ditampilkan tebal (Outfit / Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman (`CAMP 3RD VOCABULARY`).
@@ -202,7 +221,7 @@ Centralized authoritative grading (Official Grading Scale):
   - **Grade R (Remedial)**: Pure Yellow / Kuning (`#FFFF00` / `var(--grade-c)`), skor hasil perbaikan capped maksimal 60%.
   - **Grade F (Forgiven / Waiver)**: Pure Red / Merah (`#FF0000` / `var(--grade-e)`), dispensasi kelulusan untuk membuka progression.
   - **Grade M (Manual Score)**: Tactical Cyan (`#38bdf8`), skor hasil input atau override manual oleh Admin.
-  - **Grade X (Alumni Graduation)**: Vibrant Purple / Ungu (`#8b5cf6` / `#C084FC`), penanda kelulusan batch/siswa ke status alumni.
+  - **Grade X (Alumni Graduation)**: Vibrant Purple / Ungu (`#C084FC` / `var(--quad-d)`), penanda resmi kelulusan siswa/batch ke status alumni (`level_number = 99`, `program_status = 'ALUMNI'`, simbol `X`). Alumni mutlak dilarang menggunakan angka 0.
 - **Proteksi Kolom Nilai (Score Column Lockdown Invariant)**:
   - Kolom nilai (PROGRESS, RATE, POINT, GRADE) terkunci dari Master Edit Mode inline text inputs.
   - Kolom nilai HANYA dapat diakses dan dimutasi melalui 3 tombol aksi resmi di Sub Panel Student Test and Grade: **Manual (Cyan)**, **Remedi (Kuning)**, dan **Forgive (Merah)**.

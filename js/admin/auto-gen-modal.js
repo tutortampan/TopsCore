@@ -1,23 +1,23 @@
 export async function openAutoGenerateModal(options = {}) {
-  const { 
-    fetchInstitutions, 
-    fetchPrograms, 
-    autoGenerateTestsHierarchy, 
+  const {
+    fetchInstitutions,
+    fetchPrograms,
+    autoGenerateTestsHierarchy,
     updateClassTestsConfig,
     calculateAutoDurationMinutes,
-    adminFetchAll, 
+    adminFetchAll,
     toShortLevel,
-    escapeHtml, 
-    escHtml 
+    escapeHtml,
+    escHtml
   } = await import('../api.js?v=20261114_v517');
   const { getSupabase } = await import('../supabase.js?v=20261027c');
   const { getSvgIcon } = await import('../svg-icons.js?v=20261114_v487');
 
-  const { 
-    availableLevels = [], 
-    preSelectedLevels = [], 
-    explicitClassId = null, 
-    onComplete = null 
+  const {
+    availableLevels = [],
+    preSelectedLevels = [],
+    explicitClassId = null,
+    onComplete = null
   } = options;
 
   // Show canonical centered loading indicator while preparing modal data
@@ -80,11 +80,11 @@ export async function openAutoGenerateModal(options = {}) {
         if (existingAsms && existingAsms.length > 0) {
           for (const a of existingAsms) {
             const isTest = String(a.category || a.test_type).toUpperCase() === 'EXAM'
-              || String(a.category || a.test_type).toUpperCase() === 'TEST' 
-              || String(a.test_type).toLowerCase() === 'exam' 
+              || String(a.category || a.test_type).toUpperCase() === 'TEST'
+              || String(a.test_type).toLowerCase() === 'exam'
               || (a.shell_code && (a.shell_code.endsWith('-EXAM') || a.shell_code.endsWith('-TEST')));
-            const isPhrase = a.category === 'phrases' 
-              || (a.payload && a.payload.category === 'phrases') 
+            const isPhrase = a.category === 'phrases'
+              || (a.payload && a.payload.category === 'phrases')
               || (a.shell_code && a.shell_code.toUpperCase().includes('PHRASE'))
               || (a.title && a.title.toUpperCase().includes('PHRASE'));
 
@@ -123,11 +123,11 @@ export async function openAutoGenerateModal(options = {}) {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;';
 
     // Fallback to basic levels if none provided
-    const displayLevels = availableLevels.length ? availableLevels : [1, 2, 3];
+    const displayLevels = availableLevels.length ? availableLevels : [0, 1, 2, 3];
 
     overlay.innerHTML = `
       <div class="card" style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:12px; width:540px; max-width:96%; color:#f8fafc; box-shadow:0 20px 40px rgba(0,0,0,0.7); max-height:92vh; display:flex; flex-direction:column; overflow:hidden;">
-        
+
         <!-- Modal Header -->
         <div style="padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:#1e293b;">
           <div>
@@ -143,7 +143,7 @@ export async function openAutoGenerateModal(options = {}) {
 
         <!-- Modal Body (Scrollable) -->
         <div style="padding:1.1rem 1.25rem; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:14px;">
-          
+
           <!-- Locked Class Context Banner -->
           <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center; gap:8px;">
@@ -163,7 +163,7 @@ export async function openAutoGenerateModal(options = {}) {
               <div style="display:flex; flex-wrap:wrap; gap:8px; background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
                 ${displayLevels.map(lvl => `
                   <label style="display:inline-flex; align-items:center; gap:4px; font-size: 12px; cursor:pointer; color:#e2e8f0;">
-                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> ${typeof toShortLevel === 'function' ? toShortLevel(lvl) : lvl}
+                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> ${lvl === 0 ? '— (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : lvl)}
                   </label>
                 `).join('')}
               </div>
@@ -318,7 +318,7 @@ export async function openAutoGenerateModal(options = {}) {
         <!-- Modal Footer: Action Buttons -->
         <div style="padding:0.85rem 1.25rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:#1e293b; gap:8px; flex-wrap:wrap;">
           <button type="button" class="btn btn-ghost btn-sm btn-modal-close-left" id="wizard-cancel-btn" style="color:#94a3b8; font-size: 12px;">Cancel</button>
-          
+
           <div style="display:flex; gap:8px;">
             <!-- Action 1: Update Existing Only -->
             <button type="button" class="btn btn-secondary btn-sm" id="wizard-update-only-btn" style="font-size: 12px; font-weight:700; color:#38bdf8; border-color:rgba(56,189,248,0.4); display:inline-flex; align-items:center; gap:5px;">

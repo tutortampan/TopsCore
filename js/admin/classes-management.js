@@ -752,7 +752,7 @@ export async function loadClassLearningPath(classId) {
         shellCode: r.shell_code || '',
         prereq: r.prerequisite_test_id ? (r.prerequisite_test_id.shell_code || r.prerequisite_test_id.title || r.prerequisite_test_id.name || 'Yes') : '',
         type: r.test_type || 'STANDARD',
-        level: r.levels?.name || '—',
+        level: (r.levels?.level_number != null && typeof toShortLevel === 'function') ? toShortLevel(r.levels.level_number) : (r.levels?.name || '—'),
         access: r.question_order === 'fixed' ? 'Fixed' : 'Rand',
         answerType: formatAnswerType(r.payload?.answer_type || r.answer_type),
         timeLimit: r.time_limit || 60,

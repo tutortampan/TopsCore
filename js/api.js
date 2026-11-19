@@ -587,8 +587,20 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
       return data;
     }
 
-    // Level 0 (Non-Level) receives all classes for that program
+    // Level 0 (Non-Level) receives all classes for that program (with auto-heal)
     if (isNonLevel) {
+      if (data.length > 0) return data;
+      const { data: progClasses } = await sb.from('classes')
+        .select('id, name, code, description, level_id, is_active, levels!classes_level_id_fkey(level_number, name)')
+        .is('deleted_at', null)
+        .eq('program_id', programId);
+      if (progClasses && progClasses.length > 0) {
+        const inactiveIds = progClasses.filter(c => !c.is_active).map(c => c.id);
+        if (inactiveIds.length > 0) {
+          await sb.from('classes').update({ is_active: true }).in('id', inactiveIds);
+        }
+        return progClasses.map(c => ({ ...c, is_active: true }));
+      }
       return data;
     }
 
@@ -1034,7 +1046,7 @@ export async function generateTestQuestions(sb, test) {
     let levelNum = 1;
     if (test.level_id) {
       const { data: levelRec } = await sb.from('levels').select('level_number').eq('id', test.level_id).single();
-      if (levelRec?.level_number) levelNum = levelRec.level_number;
+      if (levelRec && levelRec.level_number != null) levelNum = levelRec.level_number;
     }
 
     const isThemeTest = (test.category === 'EXAM' || test.category === 'TEST' || String(test.test_type).toLowerCase() === 'exam' || (test.shell_code && (test.shell_code.includes('-EXAM') || test.shell_code.includes('-TEST'))) || test.test_subtype === 'VOCAB_EXAM' || test.test_subtype === 'PHRASE_EXAM' || test.test_subtype === 'VOCAB_TEST' || test.test_subtype === 'PHRASE_TEST') && !topicCode;
@@ -1065,13 +1077,17 @@ export async function generateTestQuestions(sb, test) {
         } else if (themes && Array.isArray(themes) && themes.length > 0) {
           filtered = filtered.filter(w => themes.includes(w.theme_code));
         } else if (isThemeTest && themeCode) {
-          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-          const idx = allThemes.indexOf(String(themeCode).toUpperCase());
-          if (idx !== -1) {
-            const targetThemes = allThemes.slice(0, idx + 1);
-            filtered = filtered.filter(w => targetThemes.includes(String(w.theme_code || '').toUpperCase()));
-          } else {
+          if (levelNum === 0) {
             filtered = filtered.filter(w => String(w.theme_code || '').toUpperCase() === String(themeCode).toUpperCase());
+          } else {
+            const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+            const idx = allThemes.indexOf(String(themeCode).toUpperCase());
+            if (idx !== -1) {
+              const targetThemes = allThemes.slice(0, idx + 1);
+              filtered = filtered.filter(w => targetThemes.includes(String(w.theme_code || '').toUpperCase()));
+            } else {
+              filtered = filtered.filter(w => String(w.theme_code || '').toUpperCase() === String(themeCode).toUpperCase());
+            }
           }
         } else if (themeCode) {
           filtered = filtered.filter(w => String(w.theme_code || '').toUpperCase() === String(themeCode).toUpperCase());
@@ -1103,13 +1119,17 @@ export async function generateTestQuestions(sb, test) {
       } else if (themes && Array.isArray(themes) && themes.length > 0) {
         query = query.in('theme_code', themes);
       } else if (isThemeTest && themeCode) {
-        const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-        const idx = allThemes.indexOf(String(themeCode).toUpperCase());
-        if (idx !== -1) {
-          const targetThemes = allThemes.slice(0, idx + 1);
-          query = query.in('theme_code', targetThemes);
-        } else {
+        if (levelNum === 0) {
           query = query.eq('theme_code', themeCode);
+        } else {
+          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+          const idx = allThemes.indexOf(String(themeCode).toUpperCase());
+          if (idx !== -1) {
+            const targetThemes = allThemes.slice(0, idx + 1);
+            query = query.in('theme_code', targetThemes);
+          } else {
+            query = query.eq('theme_code', themeCode);
+          }
         }
       } else if (themeCode) {
         query = query.eq('theme_code', themeCode);
@@ -1141,12 +1161,16 @@ export async function generateTestQuestions(sb, test) {
       } else if (themes && Array.isArray(themes) && themes.length > 0) {
         queryNoCat = queryNoCat.in('theme_code', themes);
       } else if (isThemeTest && themeCode) {
-        const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-        const idx = allThemes.indexOf(String(themeCode).toUpperCase());
-        if (idx !== -1) {
-          queryNoCat = queryNoCat.in('theme_code', allThemes.slice(0, idx + 1));
-        } else {
+        if (levelNum === 0) {
           queryNoCat = queryNoCat.eq('theme_code', themeCode);
+        } else {
+          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+          const idx = allThemes.indexOf(String(themeCode).toUpperCase());
+          if (idx !== -1) {
+            queryNoCat = queryNoCat.in('theme_code', allThemes.slice(0, idx + 1));
+          } else {
+            queryNoCat = queryNoCat.eq('theme_code', themeCode);
+          }
         }
       } else if (themeCode) {
         queryNoCat = queryNoCat.eq('theme_code', themeCode);
@@ -3111,7 +3135,13 @@ function sanitizeVaultRow(row) {
     indonesian: String(row.indonesian || '').trim().replace(/\s+/g, ' '),
     english:    canonicalEng,
     word_type:  wType,
-    target_level: parseInt(row.level || row.target_level || 1, 10) || 1,
+    target_level: (() => {
+      const rawLvl = (row.level !== undefined && row.level !== null && row.level !== '')
+        ? row.level
+        : ((row.target_level !== undefined && row.target_level !== null && row.target_level !== '') ? row.target_level : 1);
+      const parsedLvl = parseInt(rawLvl, 10);
+      return !isNaN(parsedLvl) ? parsedLvl : 1;
+    })(),
     category:   determinedCategory
   };
 }
@@ -3188,8 +3218,12 @@ export async function importVaultWords(rows, resolutionMap = {}, onProgress = nu
 
     const progId = row.program_id || row.programId;
     const thCode = String(row.theme_code || (row.topic_code ? row.topic_code[0] : 'A')).trim().toUpperCase();
-    const tgtLvl = parseInt(row.level || row.target_level || 1, 10) || 1;
-    if (thCode && tgtLvl && progId) {
+    const rawTgt = (row.level !== undefined && row.level !== null && row.level !== '')
+      ? row.level
+      : ((row.target_level !== undefined && row.target_level !== null && row.target_level !== '') ? row.target_level : 1);
+    const parsedTgt = parseInt(rawTgt, 10);
+    const tgtLvl = !isNaN(parsedTgt) ? parsedTgt : 1;
+    if (thCode && tgtLvl !== null && tgtLvl !== undefined && progId) {
       const key = `${thCode}_${tgtLvl}_${progId}`;
       if (!uniqueAssignments.has(key)) {
         uniqueAssignments.set(key, {
@@ -3292,11 +3326,11 @@ export async function updateVaultThemeCascade(oldTheme, newTheme, targetLevel = 
     .update({ theme: newTheme, updated_at: new Date().toISOString() })
     .is('deleted_at', null);
 
-  if (themeCode && targetLevel) {
+  if (themeCode && (targetLevel !== null && targetLevel !== undefined)) {
     // Definitive composite key matching: guarantees update even if old theme was NULL, empty, or 'Unassigned'
     query = query.eq('theme_code', themeCode).eq('target_level', targetLevel);
   } else {
-    if (targetLevel) query = query.eq('target_level', targetLevel);
+    if (targetLevel !== null && targetLevel !== undefined) query = query.eq('target_level', targetLevel);
     if (!oldTheme || oldTheme.trim().toLowerCase() === 'unassigned') {
       query = query.or('theme.is.null,theme.eq.,theme.eq.Unassigned');
     } else {
@@ -3320,7 +3354,7 @@ export async function updateVaultThemeCodeCascade(oldCode, newCode, targetLevel 
     .update({ theme_code: cleanNew, updated_at: new Date().toISOString() })
     .eq('theme_code', cleanOld)
     .is('deleted_at', null);
-  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (targetLevel !== null && targetLevel !== undefined) query = query.eq('target_level', targetLevel);
   const { error } = await query;
   if (error) throw error;
 
@@ -3329,7 +3363,7 @@ export async function updateVaultThemeCodeCascade(oldCode, newCode, targetLevel 
     let assignQuery = sb.from('theme_program_assignments')
       .update({ theme_code: cleanNew, updated_at: new Date().toISOString() })
       .eq('theme_code', cleanOld);
-    if (targetLevel) assignQuery = assignQuery.eq('target_level', targetLevel);
+    if (targetLevel !== null && targetLevel !== undefined) assignQuery = assignQuery.eq('target_level', targetLevel);
     await assignQuery;
   } catch (err) {
     console.warn('[updateVaultThemeCodeCascade] assign cascade notice:', err);
@@ -3341,7 +3375,7 @@ export async function updateVaultThemeCodeCascade(oldCode, newCode, targetLevel 
       .select('id, topic_code')
       .eq('theme_code', cleanNew)
       .is('deleted_at', null);
-    if (targetLevel) topicCodeQuery = topicCodeQuery.eq('target_level', targetLevel);
+    if (targetLevel !== null && targetLevel !== undefined) topicCodeQuery = topicCodeQuery.eq('target_level', targetLevel);
     const { data: tpRows } = await topicCodeQuery;
     if (tpRows && tpRows.length > 0) {
       for (const row of tpRows) {
@@ -3357,13 +3391,44 @@ export async function updateVaultThemeCodeCascade(oldCode, newCode, targetLevel 
   return true;
 }
 
+export async function updateVaultThemeLevelCascade(themeCode, oldLevel, newLevel) {
+  const sb = await getSupabase();
+  const cleanCode = String(themeCode || '').trim().toUpperCase();
+  const parsedOld = (oldLevel !== null && oldLevel !== undefined) ? Number(oldLevel) : null;
+  const parsedNew = (newLevel !== null && newLevel !== undefined) ? Number(newLevel) : null;
+  if (parsedNew === null || isNaN(parsedNew)) throw new Error('Invalid new level');
+
+  // 1. Update vocabulary_vault
+  let query = sb.from('vocabulary_vault')
+    .update({ target_level: parsedNew, updated_at: new Date().toISOString() })
+    .eq('theme_code', cleanCode)
+    .is('deleted_at', null);
+  if (parsedOld !== null && !isNaN(parsedOld)) query = query.eq('target_level', parsedOld);
+  const { error } = await query;
+  if (error) throw error;
+
+  // 2. Cascade theme_program_assignments
+  try {
+    let assignQuery = sb.from('theme_program_assignments')
+      .update({ target_level: parsedNew, updated_at: new Date().toISOString() })
+      .eq('theme_code', cleanCode);
+    if (parsedOld !== null && !isNaN(parsedOld)) assignQuery = assignQuery.eq('target_level', parsedOld);
+    await assignQuery;
+  } catch (err) {
+    console.warn('[updateVaultThemeLevelCascade] assign cascade notice:', err);
+  }
+
+  clearApiCache('vault');
+  return true;
+}
+
 export async function updateVaultTopicCascade(oldTopic, newTopic, targetLevel = null, themeCode = null) {
   const sb = await getSupabase();
   let query = sb.from('vocabulary_vault')
     .update({ topic: newTopic, updated_at: new Date().toISOString() })
     .ilike('topic', String(oldTopic || '').trim())
     .is('deleted_at', null);
-  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (targetLevel !== null && targetLevel !== undefined) query = query.eq('target_level', targetLevel);
   if (themeCode) query = query.eq('theme_code', themeCode);
   const { error } = await query;
   if (error) throw error;
@@ -3378,7 +3443,7 @@ export async function updateVaultTopicCodeCascade(oldCode, newCode, targetLevel 
     .is('deleted_at', null);
   if (topic) query = query.ilike('topic', String(topic || '').trim());
   else if (oldCode) query = query.eq('topic_code', oldCode);
-  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (targetLevel !== null && targetLevel !== undefined) query = query.eq('target_level', targetLevel);
   if (themeCode) query = query.eq('theme_code', themeCode);
   const { error } = await query;
   if (error) throw error;
@@ -3388,11 +3453,13 @@ export async function updateVaultTopicCodeCascade(oldCode, newCode, targetLevel 
 
 export async function updateVaultTopicLevelCascade(topic, oldLevel, newLevel, themeCode = null) {
   const sb = await getSupabase();
+  const parsedOld = (oldLevel !== null && oldLevel !== undefined) ? Number(oldLevel) : null;
+  const parsedNew = (newLevel !== null && newLevel !== undefined) ? Number(newLevel) : null;
   let query = sb.from('vocabulary_vault')
-    .update({ target_level: newLevel, updated_at: new Date().toISOString() })
+    .update({ target_level: parsedNew, updated_at: new Date().toISOString() })
     .ilike('topic', String(topic || '').trim())
     .is('deleted_at', null);
-  if (oldLevel) query = query.eq('target_level', oldLevel);
+  if (parsedOld !== null && !isNaN(parsedOld)) query = query.eq('target_level', parsedOld);
   if (themeCode) query = query.eq('theme_code', themeCode);
   const { error } = await query;
   if (error) throw error;
@@ -3406,7 +3473,7 @@ export async function deleteVaultTopic(topic, targetLevel = null, themeCode = nu
     .update({ deleted_at: new Date().toISOString() })
     .ilike('topic', String(topic || '').trim())
     .is('deleted_at', null);
-  if (targetLevel) query = query.eq('target_level', targetLevel);
+  if (targetLevel !== null && targetLevel !== undefined) query = query.eq('target_level', targetLevel);
   if (themeCode) query = query.eq('theme_code', themeCode);
   const { error } = await query;
   if (error) throw error;
@@ -3419,18 +3486,18 @@ export async function deleteVaultTheme(theme, targetLevel = null, themeCode = nu
   let query = sb.from('vocabulary_vault')
     .update({ deleted_at: new Date().toISOString() })
     .is('deleted_at', null);
-  if (themeCode && targetLevel) {
+  if (themeCode && (targetLevel !== null && targetLevel !== undefined)) {
     query = query.eq('theme_code', themeCode).eq('target_level', targetLevel);
   } else {
     query = query.ilike('theme', String(theme || '').trim());
-    if (targetLevel) query = query.eq('target_level', targetLevel);
+    if (targetLevel !== null && targetLevel !== undefined) query = query.eq('target_level', targetLevel);
   }
   const { error } = await query;
   if (error) throw error;
   if (themeCode) {
     try {
       let assignQuery = sb.from('theme_program_assignments').delete().eq('theme_code', themeCode);
-      if (targetLevel) assignQuery = assignQuery.eq('target_level', targetLevel);
+      if (targetLevel !== null && targetLevel !== undefined) assignQuery = assignQuery.eq('target_level', targetLevel);
       await assignQuery;
     } catch (_) {}
   }
@@ -4796,6 +4863,7 @@ export async function adminRevokeForgiven({ classId, studentIds = [], testIds = 
 }
 
 export const toOrdinal = (n) => {
+  if (n === 0 || n === '0' || n == null) return '';
   const s = ["th", "st", "nd", "rd"];
   const v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
@@ -4871,54 +4939,66 @@ export async function upsertDynamicTestShell(config) {
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
 
   const progCode = (config.programCode || 'CMP').toUpperCase();
-  const classShort = (config.classShort || `${levelNum}VCB`).toUpperCase();
+  const classShort = (config.classShort || (levelNum === 0 ? 'VCB' : `${levelNum}VCB`)).toUpperCase();
+
+  const codeThemeTopic = levelNum === 0 ? `0${themeCode}${cleanTopCode}` : `${themeCode}${cleanTopCode}`;
+  const codeThemeExam = levelNum === 0 ? `0${themeCode}` : `${themeCode}`;
 
   const code = isUnified
-    ? (isTest ? `${progCode}-${classShort}-${themeCode}-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-TASK`)
+    ? (isTest ? `${progCode}-${classShort}-${codeThemeExam}-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-TASK`)
     : (isPhrase
-        ? (isTest ? `${progCode}-${classShort}-${themeCode}-PHRASES-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-PHRASES-TASK`)
-        : (isTest ? `${progCode}-${classShort}-${themeCode}-WORDS-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-WORDS-TASK`));
+        ? (isTest ? `${progCode}-${classShort}-${codeThemeExam}-PHRASES-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-PHRASES-TASK`)
+        : (isTest ? `${progCode}-${classShort}-${codeThemeExam}-WORDS-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-WORDS-TASK`));
 
   // Standardized Test Name (SSOT AGENTS.md § 2.6 / DECISION-056):
   // Formula: [LEVEL_ORDINAL] [CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]
+  // On Level 0 (non-leveled), [LEVEL_ORDINAL] is omitted per Zero-Level Omission Invariant
   const ordinal = toOrdinal(levelNum);
+  const prefix = ordinal ? `${ordinal} ` : '';
+  const classTitlePart = (levelNum === 0 && config.className) ? config.className : 'Vocabulary';
   const generatedTitle = isUnified
     ? (isTest
-        ? `${ordinal} Vocabulary Exam ${themeCode}${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary Task ${themeCode}${cleanTopCode}${cleanTitle ? ' - ' + cleanTitle : ''}`)
+        ? `${prefix}${classTitlePart} Exam ${codeThemeExam}${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${prefix}${classTitlePart} Task ${codeThemeTopic}${cleanTitle ? ' - ' + cleanTitle : ''}`)
     : (isPhrase
         ? (isTest
-            ? `${ordinal} Vocabulary Phrases Exam ${themeCode}${cleanTitle ? ' - ' + cleanTitle : ''}`
-            : `${ordinal} Vocabulary Phrases Task ${themeCode}${cleanTopCode}${cleanTitle ? ' - ' + cleanTitle : ''}`)
+            ? `${prefix}${classTitlePart} Phrases Exam ${codeThemeExam}${cleanTitle ? ' - ' + cleanTitle : ''}`
+            : `${prefix}${classTitlePart} Phrases Task ${codeThemeTopic}${cleanTitle ? ' - ' + cleanTitle : ''}`)
         : (isTest
-            ? `${ordinal} Vocabulary Words Exam ${themeCode}${cleanTitle ? ' - ' + cleanTitle : ''}`
-            : `${ordinal} Vocabulary Words Task ${themeCode}${cleanTopCode}${cleanTitle ? ' - ' + cleanTitle : ''}`));
+            ? `${prefix}${classTitlePart} Words Exam ${codeThemeExam}${cleanTitle ? ' - ' + cleanTitle : ''}`
+            : `${prefix}${classTitlePart} Words Task ${codeThemeTopic}${cleanTitle ? ' - ' + cleanTitle : ''}`));
 
   // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
   const defaultAnswerType = isTest ? (isPhrase ? 'selection' : (isUnified ? 'spoken' : 'written')) : 'spoken';
 
   // Expected question counts (Cumulative per theme for exams)
-  let expectedQuestions = 40;
-  if (isUnified) {
-    if (!isTest) {
-      expectedQuestions = 50;
+  let expectedQuestions = (config.totalQuestions !== undefined && config.totalQuestions !== null && Number(config.totalQuestions) > 0)
+    ? Number(config.totalQuestions)
+    : 40;
+  if (!config.totalQuestions) {
+    if (levelNum === 0) {
+      expectedQuestions = isUnified ? 50 : 40;
+    } else if (isUnified) {
+      if (!isTest) {
+        expectedQuestions = 50;
+      } else {
+        const th = (themeCode || '').toUpperCase();
+        if (th === 'A') expectedQuestions = 200;
+        else if (th === 'B') expectedQuestions = 350;
+        else if (th === 'C') expectedQuestions = 550;
+        else if (th === 'D') expectedQuestions = 750;
+        else expectedQuestions = 200;
+      }
+    } else if (!isTest) {
+      expectedQuestions = isPhrase ? 10 : 40;
     } else {
       const th = (themeCode || '').toUpperCase();
-      if (th === 'A') expectedQuestions = 200;
-      else if (th === 'B') expectedQuestions = 350;
-      else if (th === 'C') expectedQuestions = 550;
-      else if (th === 'D') expectedQuestions = 750;
-      else expectedQuestions = 200;
+      if (th === 'A') expectedQuestions = isPhrase ? 30 : 120;
+      else if (th === 'B') expectedQuestions = isPhrase ? 70 : 280;
+      else if (th === 'C') expectedQuestions = isPhrase ? 110 : 440;
+      else if (th === 'D') expectedQuestions = isPhrase ? 150 : 600;
+      else expectedQuestions = isPhrase ? 30 : 120;
     }
-  } else if (!isTest) {
-    expectedQuestions = isPhrase ? 10 : 40;
-  } else {
-    const th = (themeCode || '').toUpperCase();
-    if (th === 'A') expectedQuestions = isPhrase ? 30 : 120;
-    else if (th === 'B') expectedQuestions = isPhrase ? 70 : 280;
-    else if (th === 'C') expectedQuestions = isPhrase ? 110 : 440;
-    else if (th === 'D') expectedQuestions = isPhrase ? 150 : 600;
-    else expectedQuestions = isPhrase ? 30 : 120;
   }
 
   // Dedup: check by new standardized shell_code first
@@ -5197,12 +5277,22 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
   if (!programId) throw new Error("programId is required for auto-generation");
 
   const { data: progData, error: progErr } = await sb.from('programs')
-    .select('id, institution_id, name, institutions(name)')
+    .select('id, institution_id, name, code, institutions(name)')
     .eq('id', programId).single();
 
   if (!progData || progErr) throw new Error(`Program not found.`);
 
   const institutionId = progData.institution_id;
+  const PROG_CODE_MAP = {
+    'camp': 'CMP',
+    'evnikom': 'EVN',
+    'tamata': 'TMT',
+    'tamata persada': 'TMT',
+    'sheraton': 'SHR',
+    'english explorer': 'EXP'
+  };
+  const progNormName = (progData.name || '').toLowerCase();
+  const resolvedProgCode = PROG_CODE_MAP[progNormName] || (progData.code || 'CMP').toUpperCase().slice(0, 3);
 
   // Pre-fetch Module IDs
   const { data: vocabModule } = await sb.from('modules').select('id').ilike('name', '%Vocabulary Mastery%').limit(1).maybeSingle();
@@ -5220,6 +5310,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const levelId = lvlData.id;
 
     let targetClassId = config.explicitClassId || null;
+    let targetClassName = null;
     if (!targetClassId) {
       // Prioritize active vocabulary class assigned to this exact level and program
       const { data: classDataList } = await sb.from('classes')
@@ -5231,17 +5322,28 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         .is('deleted_at', null);
 
       targetClassId = (classDataList && classDataList.length > 0) ? classDataList[0].id : null;
+      if (classDataList && classDataList.length > 0) targetClassName = classDataList[0].name;
       if (!targetClassId) {
         const { data: anyClasses } = await sb.from('classes')
-          .select('id')
+          .select('id, name')
           .eq('program_id', programId)
           .eq('level_id', levelId)
           .eq('is_active', true)
           .is('deleted_at', null)
           .limit(1);
         targetClassId = (anyClasses && anyClasses.length > 0) ? anyClasses[0].id : null;
+        if (anyClasses && anyClasses.length > 0) targetClassName = anyClasses[0].name;
       }
+    } else {
+      const { data: clsData } = await sb.from('classes').select('name').eq('id', targetClassId).maybeSingle();
+      if (clsData?.name) targetClassName = clsData.name;
     }
+
+    const upsertShell = (shellCfg) => upsertDynamicTestShell({
+      programCode: resolvedProgCode,
+      className: targetClassName,
+      ...shellCfg
+    });
 
     // 1. Fetch Words for Level to know what themes and topics exist (Chunked Pagination Protected)
     let words = [];
@@ -5270,13 +5372,15 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       const category = isPhrase ? 'phrases' : 'vocab';
 
       if (!themeMap.has(w.theme_code)) {
-         themeMap.set(w.theme_code, { name: w.theme, topics: new Map() });
+         themeMap.set(w.theme_code, { name: w.theme, topics: new Map(), wordCount: 0 });
       }
+      themeMap.get(w.theme_code).wordCount++;
 
       const topicsMap = themeMap.get(w.theme_code).topics;
       if (!topicsMap.has(w.topic_code)) {
-        topicsMap.set(w.topic_code, { name: w.topic, hasVocab: false, hasPhrases: false });
+        topicsMap.set(w.topic_code, { name: w.topic, hasVocab: false, hasPhrases: false, wordCount: 0 });
       }
+      topicsMap.get(w.topic_code).wordCount++;
 
       if (category === 'phrases') topicsMap.get(w.topic_code).hasPhrases = true;
       if (category === 'vocab') topicsMap.get(w.topic_code).hasVocab = true;
@@ -5321,7 +5425,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
         if (isUnifiedMode) {
           hasAnyVocab = true;
           hasAnyPhrases = true;
-          const { testId, action } = await upsertDynamicTestShell({
+          const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'TASK', themeName: themeData.name, topicName: topicName,
             description: `Theme: ${themeData.name} | Topic: ${topicName} (Unified Words & Phrases)`,
@@ -5341,7 +5445,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           // 1. Words Task (First in topic pair)
           if (topicObj.hasVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
             hasAnyVocab = true;
-            const { testId, action } = await upsertDynamicTestShell({
+            const { testId, action } = await upsertShell({
               institutionId, programId, levelId, classId: targetClassId, levelNum,
               tier: 'TASK', themeName: themeData.name, topicName: topicName,
               description: `Theme: ${themeData.name} | Topic: ${topicName}`,
@@ -5362,7 +5466,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId)
           if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
             hasAnyPhrases = true;
-            const { testId, action } = await upsertDynamicTestShell({
+            const { testId, action } = await upsertShell({
               institutionId, programId, levelId, classId: targetClassId, levelNum,
               tier: 'TASK', themeName: themeData.name, topicName: topicName,
               description: `Theme: ${themeData.name} | Topic: ${topicName}`,
@@ -5391,7 +5495,11 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       let lastThemeExamId = null;
 
       if (isUnifiedMode) {
-        const { testId, action } = await upsertDynamicTestShell({
+        const examQCount = (levelNum === 0 && themeData.wordCount) ? themeData.wordCount : null;
+        const examDuration = (levelNum === 0 && examQCount)
+          ? calculateAutoDurationMinutes(examQCount, wordsTestAns, 'words')
+          : ((config.wordsExamDurationMinutes || 40) + (config.phrasesExamDurationMinutes || 14));
+        const { testId, action } = await upsertShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'EXAM', themeName: themeData.name, topicName: null,
           description: `Exam: ${themeData.name} (Unified Words & Phrases)`,
@@ -5399,7 +5507,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           modulePrefix: 'UNIFIED', category: 'unified',
           moduleId: vocabModuleId,
           answerType: wordsTestAns,
-          durationMinutes: (config.wordsExamDurationMinutes || 40) + (config.phrasesExamDurationMinutes || 14),
+          totalQuestions: examQCount,
+          durationMinutes: examDuration,
           minimumRequiredScore: testPass,
           prerequisiteId: lastThemeTaskId,
           displayOrder: displayOrder++
@@ -5410,7 +5519,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       } else {
         // 3. Words Exam (First in exam pair)
         if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
-          const { testId, action } = await upsertDynamicTestShell({
+          const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'EXAM', themeName: themeData.name, topicName: null,
             description: `Exam: ${themeData.name}`,
@@ -5430,7 +5539,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
         // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId)
         if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
-          const { testId, action } = await upsertDynamicTestShell({
+          const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'EXAM', themeName: themeData.name, topicName: null,
             description: `Exam: ${themeData.name}`,
@@ -5523,7 +5632,7 @@ export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) 
       levelNum = lvl?.level_number != null ? Number(lvl.level_number) : null;
     }
 
-    if (!levelNum || !levelId) {
+    if (levelNum === null || levelNum === undefined || !levelId) {
       return { synced: false, reason: 'level_not_found' };
     }
 
@@ -5534,8 +5643,14 @@ export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) 
       programId = cls?.program_id;
     }
     if (!programId) {
-      const { data: progs } = await sb.from('programs').select('id').order('created_at').limit(1);
-      programId = progs?.[0]?.id || null;
+      if (levelNum === 0) {
+        const { data: clsWithLvl } = await sb.from('classes').select('program_id').eq('level_id', levelId).is('deleted_at', null).limit(1).maybeSingle();
+        if (clsWithLvl?.program_id) programId = clsWithLvl.program_id;
+      }
+      if (!programId) {
+        const { data: progs } = await sb.from('programs').select('id').order('created_at').limit(1);
+        programId = progs?.[0]?.id || null;
+      }
     }
 
     if (!programId) {
@@ -5662,7 +5777,7 @@ export async function syncAllCurriculumTests({ level = null, classId = null, for
         const { data: vLevels } = await sb.from('vocabulary_vault')
           .select('target_level')
           .is('deleted_at', null);
-        levels = Array.from(new Set((vLevels || []).map(r => Number(r.target_level)).filter(n => !isNaN(n) && n > 0))).sort();
+        levels = Array.from(new Set((vLevels || []).map(r => Number(r.target_level)).filter(n => !isNaN(n) && n >= 0))).sort();
       } catch (_) {}
       if (levels.length === 0) levels = [1, 2, 3];
     }

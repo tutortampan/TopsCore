@@ -1677,3 +1677,162 @@ Status: ACCEPTED (Refined per User Directive: Eradicate `display_name`)
    - Zero brackets `[ ]` and zero middle dots `·` — natural, flowing academic English.
    - Strictly excludes "Words" and "Phrases" from display labels per DECISION-034.
 
+
+
+---
+
+## DECISION-057 — Student Dashboard Class-Scoped Architecture & Class Lobby Cumulative Access
+
+Date: 2026-11-19  
+Status: ACCEPTED
+
+### Context
+1. In earlier iterations, when students progressed to higher levels (e.g. 3rd Level), previous level classes (Level 1 and Level 2) were filtered out in `fetchStudentClasses()` by an overly strict isolation clause (`cLvlNum === studentLevelNum`), which prevented students from reviewing, practicing drills, or checking past exam scores in the Class Lobby modal.
+2. The Completed Tests table at the bottom of the Student Dashboard had an artificial filter restricting visible rows exclusively to milestone Exams (`if (!isEx) return false;`), suppressing completed formative Tasks.
+3. The dashboard metrics (Hero card aura/score, Grade Card [GRADE, GRADE DESCRIPTION, RATE], and Batch Standings / "MY RANK") were previously evaluated across all attempts across the entire program rather than strictly reflecting the active selected class.
+
+### Decision
+1. **Cumulative Unlocked Classes in Class Lobby (Modal 🚪)**:
+   - `fetchStudentClasses()` in `js/api.js` returns all classes belonging to the student's program up to their current level (`cLvlNum <= studentLevelNum`).
+   - Higher levels (`cLvlNum > studentLevelNum`) remain locked.
+   - Classes from passed levels (`_isRetroactive`) render with `Completed` status (100% ★).
+   - Default selected class on fresh login strictly prioritizes the student's current active level class (`cLvlNum === studentLevelNum` or `level_id === studentLevelId`) to ensure 3rd Level students always land directly in their 3rd Level class.
+2. **Dashboard Class-Scoped Architecture**:
+   - The entire student dashboard represents the **currently selected class exclusively**:
+     - **Grade Card (`GRADE | GRADE DESCRIPTION | RATE`)**: Evaluates academic performance, grade, and rate percentage strictly from tests/attempts in the selected class.
+     - **My Rank & Standings**: Computes points, scores, progress, and classmate rankings strictly within the selected class. Active student's rank badge (`#dock-my-rank-number`) represents their standing in the selected class.
+     - **Hero Card**: Aura, border tier color, and score indicators strictly reflect the selected class.
+     - **Next Assignment Hero Card**: Renders the next incomplete test in the selected class.
+3. **Completed Tests Table Restoration (Tasks + Exams)**:
+   - The Completed Tests table displays all submitted/completed tests in the selected class, encompassing both formative Tasks and milestone Exams.
+   - Total count badge (`#dock-completed-count-badge`) reflects the complete count of finished tests in that class.
+   - Rows remain interactive with retry and component chooser modal support for unified topic packages.
+
+---
+
+## DECISION-058 — Non-Level Programs Architecture (Level 0 / Tampilan '—') and Alumni Promotion to Level X
+
+Date: 2026-11-19  
+Status: ACCEPTED
+
+### Context
+1. Previously, the database assigned `level_number = 0` to "Alumni". However, calling Alumni (the ultimate graduation milestone after Level 3) "Level 0" created cognitive dissonance and violated educational domain logic: 0 intuitively implies "entry-level", "pre-school", or "unleveled", while Alumni is the highest achievement.
+2. In reality, multiple institutions and standalone programs (e.g. all programs under institution **TOP**: **Evnikom**, **Sheraton**, **Tamata Persada**) operate without a multi-tiered level hierarchy (no 1st, 2nd, 3rd Level progression). They are single-tier, standalone training programs.
+3. Assigning active students in TOP programs to Level 0 caused them to be mistakenly treated as Alumni (displaying badge 'X') or required convoluted null checks in SQL/PostgREST.
+4. User explicitly directed to overhaul this: Alumni becomes **Level X**, while **Level 0** is permanently dedicated to non-leveled programs (displayed as a clean dash **`—`** in UI tables), and in all naming conventions (classes, tests, codes) for non-leveled programs, the level component is completely omitted (considered empty).
+
+### Decision
+1. **Alumni Overhaul to Level X**:
+   - In `levels` table, Alumni is updated to `level_number: 99` (Level X), name: `'Alumni'`.
+   - UI formatters (`toShortLevel`, `toOrdinalLevel`) map `99` / `'Alumni'` / `'X'` to symbol **`X`** with purple tier glow (`#c084fc` / `var(--quad-d)`).
+   - In `students` table, graduated students maintain `program_status: 'ALUMNI'`.
+   - Level 0 is eradicated from Alumni logic.
+
+2. **Level 0 Dedicated to Non-Level Programs**:
+   - A dedicated entry is maintained in `levels` with `level_number: 0`, name: `'Non-Level'`, description: `'Program / Kelas tanpa jenjang (Unleveled)'`.
+   - All classes, batches, and students in non-leveled programs (institution TOP) reference this Level 0 foreign key UUID.
+   - **Visual Display (`—`)**: In the UI table column `LVL` across all admin tables and student views, Level 0 renders as a clean dash **`—`** (`toShortLevel(0)` returns `'—'`). No numeric "0" is displayed to prevent tutor/student confusion.
+   - **Promotion Gating**: Students in Non-Level programs have no `LEVEL UP` button because there are no subsequent levels to advance to.
+
+3. **Zero-Level Naming Omission Invariant (Dianggap Kosong)**:
+   - For all classes, tests, and SKU codes under non-leveled programs, the level ordinal segment is completely omitted:
+     - **Class Names**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (omits `1st`).
+     - **Class Codes**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (omits `1` from `EVN-1VOCAB`).
+     - **Test Titles**: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General` (omits `1st`).
+     - **Test Codes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM`, `EVN-VCB-G2-TASK` (omits `1` from `EVN-1VCB-...`).
+
+---
+
+## DECISION-059 — Student Academic Raport (Portrait) Modal Layout & CTA 3-Pillar Architecture
+
+Date: 2026-11-19  
+Status: ACCEPTED
+
+### Context
+1. User identified layout and interaction issues on the Student Academic Raport modal (`showStudentDossierModal`) in `admin.html#students`:
+   - The close button was inappropriately placed at the top-right corner of the modal header, while the desired UI hierarchy requires action controls inside the bottom CTA footer.
+   - The carousel pager arrows (`← 1 of 12 →`) were placed in the top header rather than centered within the CTA footer.
+   - The close button required 3 successive clicks to dismiss the modal due to nested/stacked backdrops triggered by `window.location.hash = '#profile-' + studentId` triggering `hashchange` listeners in `app.js`.
+   - The raport sheet was cluttered with legacy edit buttons (`Edit Raport`, `Save Raport Changes`) when all student edits should be conducted via primary database forms.
+   - Student info required clean vertical stacked rows (Full Name, Gender, Date of Birth, Age, Education, Address, and Course Data) with a 3:4 portrait photo whose height dynamically matches the exact text height.
+
+### Decision
+1. **Standardized 60px Title Area (§1.5.1 Centered Title & Zero Subtitle Clutter Invariant)**:
+   - The top header toolbar (`.modal-header.title-area`) strictly enforces a 60px height (`height: 60px !important; min-height: 60px !important; max-height: 60px !important;`), a prominent bottom border (`1.5px solid rgba(255, 255, 255, 0.16)`), and solid Navy background (`#1E293B`).
+   - Title text is mathematically centered (**Centered Title Invariant**), 16px Outfit 800 **ALL CAPS (`STUDENT ACADEMIC REPORT`)** with letter-spacing `0.05em`.
+   - Strictly ZERO subtitle and ZERO description clutter (*Zero Subtitle Clutter SSOT*).
+   - All side ribbon icons, parenthetical notes `(Portrait)`, and close buttons are completely eradicated from the Title Area.
+2. **CTA 3-Pillar Architecture (`.modal-footer`)**:
+   - **Bottom-Left Corner (`flex: 1; justify-content: flex-start;`)**: `CLOSE` button (`#btn-close-dossier-modal`).
+   - **Center (`flex: 1; justify-content: center;`)**: Student carousel pager (`#btn-modal-prev-dossier`, `1 of X`, `#btn-modal-next-dossier`).
+   - **Bottom-Right Corner (`flex: 1; justify-content: flex-end;`)**: `Export to PDF` button (`#btn-export-pdf-dossier`).
+   - **Eradication of CSS Suppression**: Removed `#btn-close-dossier-modal` from the global `display: none !important;` rule in `css/style.css` so the CTA close button renders cleanly with `display: inline-flex !important;`.
+3. **Instant Single-Click Dismissal Fix**:
+   - Replaced direct hash assignment with `history.replaceState(null, '', url.toString())` to prevent triggering `hashchange` in `app.js`, eliminating duplicate modal instantiations.
+   - Implemented `closeAllDossierModals()` which purges all matching backdrop nodes (`#student-dossier-modal, .student-modal-backdrop, #student-profile-modal`) and clears event listeners cleanly on 1 click.
+4. **Raport Biodata & Course Data Standards**:
+   - Stacked rows: Full Name, Gender, Date of Birth, Age (`X yo`), Education, Address, and Course Data.
+   - Course Data renders without separators or bullets in solid black bold font (`#0f172a`, e.g. `CEC Camp 134`).
+   - Photo box dynamically syncs its height and 3:4 proportional width to the exact height of the stacked meta rows (`syncRaportPhotoHeight`).
+
+---
+
+## DECISION-060 — Organization Hub Unified Datagrid Table Transformation & Sub Panel Edit Mode Architecture
+
+Date: 2026-11-19  
+Status: ACCEPTED
+
+### Context
+1. User identified that batch Sheraton 26 (`SH-26`) was inactive (`is_active: false`) and past due (`actual_final_date: '2026-10-02'`), preventing it from displaying as an ongoing batch and hiding it from the `B — BOARD` sidebar.
+2. The Organization Hub page (`admin.html#organization`) previously rendered nested, fragmented accordion cards (`.curriculum-tree-node`) with sub-grids for each program, lacking a unified workstation datagrid table and single-screen 100vh viewport lock.
+3. The page had no Sub Panel action controls (`#admin-bottom-infobar`), making it impossible to rename items inline or adjust class/batch statuses directly.
+
+### Decision
+1. **Sheraton SH-26 Activation & Period Extension**:
+   - Updated `batches` in Supabase where `id = '67108e07-e262-4707-b07e-970627061b54'` to `is_active: true` and `actual_final_date: '2026-12-30'`.
+   - Batch status is now officially `Ongoing` (green) and `Sheraton SH-26` renders dynamically under `B — BOARD` in the sidebar.
+2. **Unified Desktop Workstation Datagrid Table Architecture**:
+   - Replaced fragmented tree accordion nodes with a single authoritative desktop workstation table (`table.datagrid-table` inside `.table-wrap.sticky-first` with 100vh viewport lock).
+   - Standardized 13-column geometry: `NO (36px) | PROGRAM (135px) | BATCH NAME (110px) | CLASS (150px) | LEVEL (55px) | STUDENTS (65px) | START (95px) | FINISH (95px) | DURATION (100px) | REMAINING (90px) | STATUS (85px) | ACTIVE (70px) | ACTIONS (84px)`.
+   - Columns are fully sortable via interactive header clicks with active `▲`/`▼` indicators in Tactical Blue (`#38bdf8`) per Rule 2.38 Pillar 6.
+3. **Sub Panel (40px) & Master Edit Mode Integration**:
+   - Docked lower Sub Panel (`#admin-bottom-infobar`) with live statistical summary on the left (`X Batches · Y ACTIVE · Z INACTIVE · N Programs · M Enrolled Students`) and 30px action buttons on the right (`Edit Mode`, `+ Add Batch`, `+ Add Program`).
+   - The `Edit Mode` button adheres to the Ghost-to-Solid-Glow invariant (§3.4): Ghost Cyan in standby, Solid Cyan `#0284c7` with glowing neon ring in active mode.
+   - In Master Edit Mode, users can inline rename Batch Name, Program Name, and Class Name, adjust dates, and toggle or select Active/Inactive status for both Classes and Batches directly, persisting instantly via `adminUpdate` with toast notifications and sidebar synchronizations.
+
+---
+
+## DECISION-061 — Level 0 Theme Manager Support & Uniform Level-Prefixed Test Code Architecture (`0G1`, `0G2`, `0A1`)
+
+Date: 2026-11-19  
+Status: ACCEPTED
+
+### Context
+1. In `admin.html#vocab-vault` (Theme Manager & Vault Items), changing level to `0` (Level 0 / Non-Level `—`) was blocked by frontend validation checks (`newLvl < 1` and `parsedLvl < 1`) rejecting input with *"Level must be between 1 and 6."*.
+2. Furthermore, in `js/api.js`, level filter queries checked `if (oldLevel)` and `if (targetLevel)`, causing integer `0` to evaluate to *falsy* (`Boolean(0) === false`), skipping database updates on Level 0 records.
+3. Moving a theme's level in vocabulary tables did not cascade to `theme_program_assignments`, severing program associations for the moved theme.
+4. User requested that for Level 0, test codes should explicitly include the level number `0` in front (e.g., `G1` becomes `0G1`, `G2` becomes `0G2`, and `A1` becomes `0A1`) to guarantee 100% uniformity across all curriculum levels (`0...`, `1...`, `2...`, `3...`).
+
+### Decision
+1. **Frontend Level 0 Permissibility**:
+   - Updated `js/admin/vocab-vault.js` input validation in both Vault Items and Theme Manager tables to accept `0` (`newLvl < 0 || newLvl > 6`), permitting Level 0 (Non-Level `—`).
+   - Standardized toast message to: `"Level must be between 0 and 6 (0 for Non-Level)."`.
+2. **Theme Level Cascade (`updateVaultThemeLevelCascade`)**:
+   - Implemented `updateVaultThemeLevelCascade(themeCode, oldLevel, newLevel)` in `js/api.js`.
+   - Safely checks `targetLevel !== null && targetLevel !== undefined` to prevent JavaScript *falsy* coercion of `0`.
+   - Moving a theme's level automatically updates all associated `vocabulary_vault` items and synchronously cascades `theme_program_assignments.target_level`.
+   - Editing `LVL` on a row in Theme Manager moves the entire theme and synchronizes all DOM rows, code labels, and in-memory caches.
+3. **Uniform Level-Prefixed Test Code (`0G1`, `0G2`, `0A1`)**:
+   - Column `CODE` in Theme Manager, Test Blueprint, and Vault tables uniformly displays `${lvl}${cleanThemeCode}${cleanTopicCode}` (producing `0G1`, `0G2`, `0A1` for Level 0).
+   - In `js/api.js` (`upsertDynamicTestShell`), test shell codes and titles on Level 0 now include the `0` prefix:
+     * Task shell codes: `EVN-VCB-0G1-TASK`, `EVN-VCB-0G2-TASK`, `SHR-VCB-0A1-TASK`.
+     * Task titles: `Evnikom Vocabulary Task 0G1 - Time Name`, `Evnikom Vocabulary Task 0G2 - Family Member`, `Sheraton Vocabulary Task 0A1 - Pre-Test`.
+     * Exam shell codes: `EVN-VCB-0G-EXAM`, `SHR-VCB-0A-EXAM`.
+     * Exam titles: `Evnikom Vocabulary Exam 0G - General`, `Sheraton Vocabulary Exam 0A - Hospitality`.
+   - In `findTaskForTopic` and `findExamForTheme`, tests match both prefixed (`0G1`) and legacy bare codes (`G1`) for resilient backwards-compatibility.
+4. **Evnikom & Sheraton Live Data Migration**:
+   - Migrated all 90 vocabulary items of Theme `G` (`Time Name` & `Family Member`) in `vocabulary_vault` to `target_level = 0`.
+   - Updated `theme_program_assignments` for Theme `G` to `target_level = 0` for Evnikom (`EEC`).
+   - Cleaned up duplicate Theme `A` assignment from Evnikom, ensuring Theme `A` Level 1 is cleanly assigned to Camp.
+   - Updated database test records in `tests` for Evnikom (`EVN-VCB-0G1-TASK`, `EVN-VCB-0G2-TASK`, `EVN-VCB-0G-EXAM`) and Sheraton (`SHR-VCB-0A1-TASK`, `SHR-VCB-0A-EXAM`).
+
