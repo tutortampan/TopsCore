@@ -8,7 +8,7 @@ description: >-
 # UI Spatial & Visual Invariant Checker
 
 This skill provides an automated audit runner to verify that TopsCore LMS screens strictly comply with spatial layout rules from [`.agents/rules/ui-invariants.md`](file:///.agents/rules/ui-invariants.md):
-- **§1.1**: 100vh Viewport Lock & `calc(100vh - 60px)` Banner Deduction (`AGENTS.md` §2.28).
+- **§1.1 & §1.8**: 100vh Viewport Lock & `calc(100vh - 80px)` Banner Deduction (`AGENTS.md` §2.28 & §2.32).
 - **§1.2 & §1.3**: Universal Sub Panel (Lower Panel 40px height) & 10px Container Gap.
 - **§1.4**: Centered Loading States & Pure English Messaging.
 - **§1.5**: Floating Window Architecture (60px Title Area, 40px Toolbar Area, 60px CTA Area, and 80vh max-height).
@@ -39,7 +39,7 @@ npm run check:spatial
 
 The audit verifies:
 - [x] Root `html` and `body` locked to `100vh` without outer page scroll.
-- [x] `#admin-console` set to `calc(100vh - 60px)`.
+- [x] `#admin-console` set to `calc(100vh - 80px)`.
 - [x] Floating window Title Area (60px) titles strictly enforce 16px Outfit, ALL CAPS (`text-transform: uppercase !important`), centered alignment, and zero subtitle clutter.
 - [x] Floating window heights standardized to 75vh – 80vh maximum.
 - [x] Sub Panel (lower panel) and summary footers standardized to 40px height.

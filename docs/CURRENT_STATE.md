@@ -1,13 +1,43 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-19 15:00 UTC+8
-> **Current Phase:** Phase 632 [COMPLETE] — Level 0 Theme Manager Support & Uniform Level-Prefixed Test Code (`0G1`, `0G2`, `0A1`)
+> **Last Updated:** 2026-11-19 19:55 UTC+8
+> **Current Phase:** Phase 634 [COMPLETE] — Standardized 80px Bottom Banner Invariant & Result Page Revamp
 > **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TEST SUITES 100% GREEN)
 
 ---
 
 ## 1. Active System Architecture & Invariants
+
+- **Standardized 80px Bottom Banner Invariant & Result Page Revamp (Phase 634 — SSOT §2.28, §2.32, ui-invariants.md §1.1, §1.8)**:
+  - **Standardized 80px Bottom Banner (`#bottom-ad-banner` / `.topscore-locked-banner`)**:
+    - **Strict 80px Height Lock**: Bottom banner locked to strictly **`80px`** across all application views (`height: 80px !important; min-height: 80px !important; max-height: 80px !important; box-sizing: border-box !important;`).
+    - **Dual-Viewport Execution**:
+      * On Student Realm (mobile corridor 430px), banner sits docked at the bottom and centered (`max-width: 430px !important; margin: 0 auto !important; position: fixed !important;`).
+      * On Admin Desktop Realm (100vh workstation), `#admin-console` deducts exactly 80px (`height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;`) ensuring zero outer page scroll.
+    - **Clearance & Padding**: Scrollable pages allocate `body { padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important; }`. Zero-scroll pages (`result.html`, `test.html`) maintain an exact 10px vertical gap between the lowest action button (`#back-dashboard-btn`) and the bottom banner.
+    - **Codification & Tooling**: Formally codified in `AGENTS.md` §2.32, `.agents/rules/ui-invariants.md` §1.1 & §1.8, `.agents/skills/ui-spatial-checker/SKILL.md`, and test suites (`check_spatial_invariants.mjs`, `test_viewport_lock_and_table_normalization.mjs`, `test_bottom_banner_universal.mjs`).
+  - **Result Page Revamp (`result.html`, `css/result.css`, `js/result.js`)**:
+    - **Header Integration**: Test Title panel (`#result-Test-name-container`) moved into the top banner (`#result-page-header`), featuring 2-line title architecture (Line 1: 14px Outfit 800, Line 2: 12px Inter 700) with dynamic tier glow.
+    - **Breakdown Ghost Button Removal**: Removed standalone `VIEW ANSWER BREAKDOWN` button (`#toggle-answers-btn`). Answer breakdown modal is triggered directly by clicking any metric row (`CORRECT`, `PARTIAL`, `INCORRECT`, `POINTS`).
+    - **Standardized 50px Lower Panels**: All 4 lower panels locked to **`50px`** height (`#result-score-grade-card`, `#result-motivation-msg`, `#smart-next-action-container`, `#back-dashboard-btn`).
+    - **Dual-Scale Typography Calibration**: Calibrated typography to strict scale (12px, 14px, 16px, 20px, 30px); eradicated arbitrary rem clamps and sub-12px text.
+    - **Mobile Viewport Zero-Scroll**: Fits standard mobile viewports (390×800) with zero outer page scroll and full button visibility.
+
+- **Unified Test Words & Phrases Independent Scoring & Pip Isolation (Phase 633 — SSOT §2.6, §2.9, §2.10, DECISION-034)**:
+  - **Bug 1: Component Selector Modal Pip Dots Isolation**:
+    - **Separate Pass Tracking**: In [js/dashboard.js](file:///d:/Tutor%20Tampan/TopsCore/js/dashboard.js) (`renderNextAssignmentHero`, `renderAssignedTests`, and `renderCompletedTestsBottom`), introduced `wordsPassCountByTest`, `phrasesPassCountByTest`, `wordsBestByTest`, and `phrasesBestByTest` for unified test shells (`category === 'unified'` / `test_subtype.startsWith('UNIFIED')`).
+    - **Section Detection via Attempt Metadata**: Created `getAttemptSection` which inspects `total_questions` (40 vs 10 in tasks; 80% vs 20% in exams) and question scores to accurately attribute attempts to either Words or Phrases.
+    - **Isolated Pip Display**: Completing a Words attempt now increments only `wordsPasses` (`wordsPassCountByTest`). `phrasesPasses` remains at 0 until Phrases is practiced. The Phrases card pips in `#component-selector-modal` remain unlit (0/7) instead of falsely mirroring the Words count.
+    - **In-Test Modal Pip Population**: In [js/test.js](file:///d:/Tutor%20Tampan/TopsCore/js/test.js), dynamically populated `#component-words-pips` and `#component-phrases-pips` from past student attempts so that opening the modal directly inside `test.html` also displays strictly isolated pip counts.
+  - **Bug 2: Server-Authoritative & Client Fallback Scoring Denominator Fix**:
+    - **Section-Aware Denominator in Edge Function**: In [supabase/functions/submit-test/index.ts](file:///d:/Tutor%20Tampan/TopsCore/supabase/functions/submit-test/index.ts), identified `isPartialSubmit` when student submits only Words (40 rows) or Phrases (10 rows). Scored rows and denominator are now strictly bounded to the submitted rows (`totalQuestions = scoredRows.length`), avoiding penalizing unanswered questions from other sections. Non-submitted rows are skipped from DB update to prevent overwriting.
+    - **Client Fallback & Tolerance Sync Hardening**: In [js/api.js](file:///d:/Tutor%20Tampan/TopsCore/js/api.js), updated client fallback evaluation and Post-submit Answer Tolerance & Spelling Sync to use the exact same section-aware denominator. If a student gets 40/40 words correct, score is recorded as 40/40 (100% / Grade ★) and `total_questions: 40`, rather than being divided by 50 (80%).
+    - **`fetchAllStudentAttempts` Query Sync**: Added `total_questions, correct_count` to the `.select(...)` queries in `fetchAllStudentAttempts` in [js/api.js](file:///d:/Tutor%20Tampan/TopsCore/js/api.js) so all dashboard views have authoritative access to section bounds.
+  - **Result Page Section-Aware Filtering**:
+    - In [js/result.js](file:///d:/Tutor%20Tampan/TopsCore/js/result.js), if the attempt was a section submission of a unified test, `answers` is filtered to only include rows from the active section.
+    - Correct, partial, and wrong stats, accuracy bar percentages, and the answer breakdown review table only evaluate and display questions belonging to the submitted section. Unanswered phrases are no longer counted as wrong answers.
+    - Updated result page header title row to display section tags (`TASK A1 (WORDS)` or `TASK A1 (PHRASES)`).
 
 - **Level 0 Theme Manager Support & Uniform Level-Prefixed Test Code (Phase 632 — SSOT §2.4.2, §2.6, DECISION-061)**:
   - **Frontend Permissibility for Level 0 (`min="0"`)**:

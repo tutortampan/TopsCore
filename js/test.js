@@ -66,6 +66,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
     let timerController = null;
     let answeredMap = {}; // attempt_answer_id -> student_answer
     window.answeredMap = answeredMap;
+    let requestedSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
 
     // —— Global Speech Session & Auto-Advance Controllers ——
     let currentActiveSpeechSession = null;
@@ -1144,11 +1145,11 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         }
 
         // Section / Component Filter for Unified Tests (Option B: Words or Phrases selection)
-        let requestedSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+        requestedSection = (urlParams.get('section') || urlParams.get('part') || requestedSection || '').toLowerCase();
         const hasTwoSections = allAnswerRows.some(r => r.question_snapshot?.test_section === 'words') &&
                               allAnswerRows.some(r => r.question_snapshot?.test_section === 'phrases');
 
-        const applySectionFilter = (sectionKey) => {
+        const applySectionFilter = async (sectionKey) => {
           if (sectionKey === 'words') {
             allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
           } else if (sectionKey === 'phrases') {
@@ -1162,6 +1163,18 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             const sectionDur = sectionKey === 'words' ? (isExamTest ? 40 : 10) : (isExamTest ? 14 : 5);
             const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
             attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
+            _lastKnownServerExpMs = new Date(attemptData.expires_at).getTime();
+
+            // Sync authoritative section expiration and count to database attempt record
+            if (attemptData.id) {
+              try {
+                const sb = await getSupabase();
+                await sb.from('attempts').update({
+                  expires_at: attemptData.expires_at,
+                  total_questions: allAnswerRows.length
+                }).eq('id', attemptData.id);
+              } catch (_) {}
+            }
           }
 
           const secTag = sectionKey === 'words' ? 'Words' : 'Phrases';
@@ -1179,7 +1192,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         };
 
         if (requestedSection === 'words' || requestedSection === 'phrases') {
-          applySectionFilter(requestedSection);
+          await applySectionFilter(requestedSection);
         }
 
         // Prefill any existing answers (resume from server)
@@ -1495,6 +1508,41 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
               };
             }
 
+            try {
+              const sb = await getSupabase();
+              const { data: pastAtts } = await sb.from('attempts')
+                .select('id, score, correct_count, total_questions, percentage, effective_score, status, is_forgiven')
+                .eq('student_id', session.student_id)
+                .eq('test_id', testData.id)
+                .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
+              let wPasses = 0;
+              let pPasses = 0;
+              const minReq = Number(testData.minimum_required_score || testData.payload?.min_score || 60);
+              (pastAtts || []).forEach(pa => {
+                const pct = parseFloat(pa.effective_score ?? pa.percentage ?? 0);
+                const isPass = pa.is_forgiven || pct >= minReq;
+                if (isPass) {
+                  const tQ = Number(pa.total_questions || 0);
+                  const cC = Number(pa.correct_count || pa.score || 0);
+                  if (tQ > 0 && tQ <= 20) pPasses++;
+                  else if (tQ > 20 && tQ <= 45) wPasses++;
+                  else if (cC > 15) wPasses++;
+                  else if (cC > 0 && cC <= 10) pPasses++;
+                  else wPasses++;
+                }
+              });
+              const renderPips = (elId, cnt) => {
+                const el = document.getElementById(elId);
+                if (el) el.querySelectorAll('.pip-box').forEach((pip, i) => pip.classList.toggle('active', i < cnt));
+              };
+              renderPips('component-words-pips', wPasses);
+              renderPips('component-phrases-pips', pPasses);
+              const wStat = document.getElementById('component-words-status');
+              const pStat = document.getElementById('component-phrases-status');
+              if (wStat) wStat.textContent = `${wPasses}/7`;
+              if (pStat) pStat.textContent = `${pPasses}/7`;
+            } catch (_) {}
+
             updateModalSelection();
             compModal.classList.remove('hidden');
             return;
@@ -1555,8 +1603,12 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
     }
 
     let _sessionHeartbeatTimer = null;
+    let _lastKnownServerExpMs = 0;
     function startSessionHeartbeatGuard() {
       if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
+      if (attemptData?.expires_at) {
+        _lastKnownServerExpMs = new Date(attemptData.expires_at).getTime();
+      }
       _sessionHeartbeatTimer = setInterval(async () => {
         if (!isTestActive || !attemptData?.id) return;
         try {
@@ -1585,11 +1637,14 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             }
 
             // Real-time time extension detection from Tutor Live Controller
+            // Compares against _lastKnownServerExpMs to prevent false alarms on test startup
             if (att.expires_at) {
               const serverExp = new Date(att.expires_at).getTime();
-              const localExp = attemptData.expires_at ? new Date(attemptData.expires_at).getTime() : 0;
-              if (serverExp > localExp + 30000) {
-                const addedMinutes = Math.round((serverExp - localExp) / 60000);
+              if (!_lastKnownServerExpMs) {
+                _lastKnownServerExpMs = serverExp;
+              } else if (serverExp > _lastKnownServerExpMs + 45000) {
+                const addedMinutes = Math.round((serverExp - _lastKnownServerExpMs) / 60000);
+                _lastKnownServerExpMs = serverExp;
                 attemptData.expires_at = att.expires_at;
                 const currentSec = (testsections && testsections[currentSectionIndex]) || null;
                 startTimer(currentSec);
@@ -2277,9 +2332,9 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         questionBox.id = 'question-box-prompt';
         questionBox.className = 'w-full flex flex-col question-box-prompt notranslate';
         questionBox.setAttribute('translate', 'no');
-        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; margin:0 auto !important;';
         questionBox.innerHTML = `
-          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#000000 !important; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:auto; display:flex; align-items:center; justify-content:center; text-shadow:none !important;">
             ${escapeHtml(questionText)}
           </div>
         `;
@@ -2290,13 +2345,13 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         answerArea.id = 'answer-container-written';
         answerArea.className = 'w-full flex flex-col justify-center items-center notranslate';
         answerArea.setAttribute('translate', 'no');
-        answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:6px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:12px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); position:relative; margin:0 auto !important;';
+        answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:6px 12px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:12px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; position:relative; margin:0 auto !important;';
         main.appendChild(answerArea);
 
         // 4. Virtual Keyboard Container (Flex 3: Matches questionBox & answerArea 1:1)
         if (vk) {
           vk.style.display = 'flex';
-          vk.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:140px !important; max-height:220px !important; margin:0 auto !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
+          vk.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:110px !important; max-height:220px !important; margin:0 auto !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
           main.appendChild(vk);
           controlArea = vk;
         }
@@ -2329,9 +2384,9 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         questionBox.id = 'question-box-prompt';
         questionBox.className = 'w-full flex flex-col question-box-prompt notranslate';
         questionBox.setAttribute('translate', 'no');
-        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:linear-gradient(180deg, rgba(26, 41, 74, 0.8) 0%, rgba(15, 23, 42, 0.95) 100%); border:1px solid rgba(255, 255, 255, 0.14); border-radius:14px; box-shadow:0 8px 32px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.15); backdrop-filter:blur(16px); margin:0 auto !important;';
+        questionBox.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; overflow:hidden; box-sizing:border-box; padding:6px 14px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; margin:0 auto !important;';
         questionBox.innerHTML = `
-          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#f8fafc; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:0; text-shadow:0 2px 10px rgba(0,0,0,0.5);">
+          <div class="speech-question-text notranslate" translate="no" style="font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#000000 !important; text-align:center; line-height:1.25; font-family:'Outfit',sans-serif; width:100%; word-break:break-word; margin:auto; display:flex; align-items:center; justify-content:center; text-shadow:none !important;">
             ${escapeHtml(questionText)}
           </div>
         `;
@@ -2342,14 +2397,14 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
           answerArea = document.createElement('div');
           answerArea.id = 'speech-answer-container';
           answerArea.className = 'w-full flex flex-col justify-between';
-          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:space-between; padding:6px 12px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(56, 189, 248, 0.2); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 12px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; box-sizing:border-box; position:relative;';
           main.appendChild(answerArea);
 
           // 4. Speaking Mic Control Panel (Flex 3: Matches questionBox & answerArea 1:1)
           controlArea = document.createElement('div');
           controlArea.id = 'speech-control-container';
           controlArea.className = 'w-full flex flex-col items-center justify-center speech-mic-panel';
-          controlArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; margin:0 auto !important; padding:6px 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
+          controlArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:70px !important; margin:0 auto !important; padding:6px 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(180deg, rgba(15, 23, 42, 0.65) 0%, rgba(10, 16, 30, 0.85) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
           main.appendChild(controlArea);
 
           renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
@@ -2634,7 +2689,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
       const ta = document.createElement('textarea');
       ta.className = 'written-input';
-      ta.style.cssText = 'width:100%; height:100%; min-height:0; background:transparent; border:none; color:#ffffff; font-size:clamp(20px, 5vw, 28px); font-weight:800; text-align:center; resize:none; outline:none; font-family:\'Outfit\',sans-serif; padding:4px 0; margin:auto; line-height:1.25; display:flex; align-items:center; justify-content:center; box-sizing:border-box; text-shadow:0 2px 10px rgba(56,189,248,0.3);';
+      ta.style.cssText = 'width:100%; height:100%; min-height:0; background:transparent; border:none; color:#000000 !important; font-size:clamp(20px, 5vw, 28px); font-weight:800; text-align:center; resize:none; outline:none; font-family:\'Outfit\',sans-serif; padding:4px 0; margin:auto; line-height:1.25; display:flex; align-items:center; justify-content:center; box-sizing:border-box; text-shadow:none !important;';
       ta.id = `written-${row.id}`;
       ta.placeholder = 'Type here...';
       ta.value = savedAnswer || '';
@@ -2659,11 +2714,11 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
       if (targetPhraseWords >= 2) {
         wordCounter = document.createElement('div');
         wordCounter.className = 'phrase-word-counter';
-        wordCounter.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; margin-top:2px; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:4px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08);';
+        wordCounter.style.cssText = 'font-size:12px; font-weight:700; color:#475569; margin-top:2px; display:inline-flex; align-items:center; gap:5px; padding:2px 8px; border-radius:6px; background:#f1f5f9; border:1px solid #cbd5e1;';
         updateWordCount = (val) => {
           const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
           const isDone = words >= targetPhraseWords;
-          wordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : '#38bdf8'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
+          wordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : '#0284c7'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
         };
         updateWordCount(ta.value);
         area.appendChild(wordCounter);
@@ -2679,10 +2734,10 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         hintBtn.className = 'task-hint-btn';
         hintBtn.innerHTML = 'Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
-        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:var(--grade-c); background:rgba(var(--grade-c-rgb),0.12); border:1px solid rgba(var(--grade-c-rgb),0.3); border-radius:4px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:#fef08a; border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
 
         const hintDisplay = document.createElement('div');
-        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:var(--grade-c); margin-top:3px; display:none;';
+        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#854d0e; margin-top:3px; display:none;';
         const mask = primaryTarget.split(' ').map(w => {
           if (w.length <= 2) return w;
           return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
@@ -2762,9 +2817,9 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
       const transcriptBox = document.createElement('div');
       transcriptBox.id = `speech-transcript-${row.id}`;
-      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:800; color:#38bdf8; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:0 2px 10px rgba(56,189,248,0.35); font-family:\'Outfit\',sans-serif;';
+      transcriptBox.style.cssText = 'flex:1; display:flex; align-items:center; justify-content:center; font-size:clamp(18px, 4.5vw, 24px); font-weight:800; color:#000000 !important; text-align:center; width:100%; word-break:break-word; min-height:48px; text-shadow:none !important; font-family:\'Outfit\',sans-serif; margin:auto;';
       if (savedAnswer) transcriptBox.textContent = savedAnswer;
-      else transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.35); font-style:italic;">Listening...</span>';
+      else transcriptBox.innerHTML = '<span style="color:#94a3b8; font-style:italic;">Listening...</span>';
       area.appendChild(transcriptBox);
 
       // Task Practice Scaffolding: First-Letter Clue (Tasks only, strictly disabled for Exams)
@@ -2778,10 +2833,10 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
         hintBtn.className = 'task-hint-btn';
         hintBtn.innerHTML = 'Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
-        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:var(--grade-c); background:rgba(var(--grade-c-rgb),0.12); border:1px solid rgba(var(--grade-c-rgb),0.3); border-radius:4px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:#fef08a; border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
 
         const hintDisplay = document.createElement('div');
-        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:var(--grade-c); margin-top:3px; display:none;';
+        hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#854d0e; margin-top:3px; display:none;';
         const mask = primaryTarget.split(' ').map(w => {
           if (w.length <= 2) return w;
           return w[0].toUpperCase() + ' ' + '_ '.repeat(w.length - 1).trim();
@@ -2809,27 +2864,6 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
       controlArea.appendChild(micBtn);
       controlArea.appendChild(micHelp);
-
-      // Emergency Typing Fallback Option (Zero-Stuck Guarantee)
-      const switchTypingBtn = document.createElement('button');
-      switchTypingBtn.type = 'button';
-      switchTypingBtn.className = 'switch-typing-btn';
-      switchTypingBtn.innerHTML = `${getSvgIcon('keyboard', 14)} Type Instead`;
-      switchTypingBtn.title = 'Switch to typing mode if microphone is having issues';
-      switchTypingBtn.style.cssText = 'font-size:12px; font-weight:700; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); border-radius:12px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s; touch-action:manipulation;';
-      switchTypingBtn.addEventListener('click', () => {
-        abortActiveSpeechSession();
-        area.innerHTML = '';
-        controlArea.innerHTML = '';
-        const vk = getVirtualKeyboard();
-        if (vk) {
-          vk.style.display = 'flex';
-          vk.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:140px !important; max-height:220px !important; margin:0 auto !important; box-sizing:border-box !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; padding:6px 4px !important; gap:4px !important; overflow:hidden !important;';
-          controlArea.appendChild(vk);
-        }
-        renderWritten(area, vk || controlArea, row, answeredMap[row.id] || savedAnswer, snap, vk);
-      });
-      controlArea.appendChild(switchTypingBtn);
 
       micBtn.addEventListener('click', () => {
         if (currentActiveSpeechSession?.isListening()) {
@@ -2868,7 +2902,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             if (speechWordCounter) statusEl.appendChild(speechWordCounter);
             statusEl.style.color = 'var(--grade-e)';
             micHelp.textContent = 'Listening... (Tap to stop)';
-            transcriptBox.innerHTML = '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Listening...</span>';
+            transcriptBox.innerHTML = '<span style="color:#94a3b8; font-style:italic;">Listening...</span>';
           },
           onResult(interim) {
             transcriptBox.textContent = interim;
@@ -3325,7 +3359,8 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
       try {
         const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
-        const result = await submitTest(attemptData.id, payload, { status: targetStatus });
+        const activeSec = (typeof requestedSection !== 'undefined' ? requestedSection : '') || (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+        const result = await submitTest(attemptData.id, payload, { status: targetStatus, section: activeSec });
 
         if (String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category)) {
           try {
@@ -3357,10 +3392,12 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
         hideLoading();
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
-        window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}`;
+        const secParam = activeSec ? `&section=${encodeURIComponent(activeSec)}` : '';
+        window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}${secParam}`;
       } catch(e) {
         console.error('Submit error:', e);
         hideLoading();
+        const secParam = activeSec ? `&section=${encodeURIComponent(activeSec)}` : '';
         if (isAuto) {
           // 1. First fallback: Call server-authoritative emergency_submit_attempt RPC to score answers in PostgreSQL
           try {
@@ -3381,7 +3418,7 @@ import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
             });
             if (rpcRes.ok) {
               sessionStorage.setItem('topscore_attempt_id', attemptData.id);
-              window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}`;
+              window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}${secParam}`;
               return;
             }
           } catch (rpcErr) {

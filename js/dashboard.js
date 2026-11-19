@@ -1645,6 +1645,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const passCountByTest = {};
       const isForgivenByTest = {};
       const isRemedialByTest = {};
+      const wordsPassCountByTest = {};
+      const phrasesPassCountByTest = {};
+      const wordsBestByTest = {};
+      const phrasesBestByTest = {};
+
+      const getAttemptSection = (att) => {
+        const totalQ = Number(att.total_questions || 0);
+        const correctCount = Number(att.correct_count || att.score || 0);
+        if (totalQ > 0 && totalQ <= 20) return 'phrases';
+        if (totalQ > 20 && totalQ <= 45) return 'words';
+        if (correctCount > 15) return 'words';
+        if (correctCount > 0 && correctCount <= 10) return 'phrases';
+        return 'words';
+      };
 
       (attempts || []).forEach(a => {
         const aid = a.test_id || a.Test_id;
@@ -1655,17 +1669,33 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
         if (a.is_forgiven) {
           isForgivenByTest[aid] = true;
+          wordsPassCountByTest[aid] = Math.max(wordsPassCountByTest[aid] || 0, targetReps);
+          phrasesPassCountByTest[aid] = Math.max(phrasesPassCountByTest[aid] || 0, targetReps);
         }
         if (a.is_remedial_unlocked || a.is_remedial) {
           isRemedialByTest[aid] = true;
         }
         const st = (a.status || '').toLowerCase();
         if (st === 'submitted' || st === 'auto_submitted' || st === 'evaluated' || st === 'graded') {
-          if (a.is_forgiven) {
-            passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, targetReps);
+          const tObj = allTestsMap[aid];
+          const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+          const tMin = Number(tObj?.minimum_required_score) || Number(tObj?.payload?.min_score) || minScore;
+          const isPassing = a.is_forgiven || pct >= tMin || (isRemedialByTest[aid] && pct >= 60);
+
+          if (isUni) {
+            const sec = getAttemptSection(a);
+            if (sec === 'phrases') {
+              if (phrasesBestByTest[aid] == null || pct > phrasesBestByTest[aid]) phrasesBestByTest[aid] = pct;
+              if (isPassing) phrasesPassCountByTest[aid] = (phrasesPassCountByTest[aid] || 0) + 1;
+            } else {
+              if (wordsBestByTest[aid] == null || pct > wordsBestByTest[aid]) wordsBestByTest[aid] = pct;
+              if (isPassing) wordsPassCountByTest[aid] = (wordsPassCountByTest[aid] || 0) + 1;
+            }
+            passCountByTest[aid] = Math.min(wordsPassCountByTest[aid] || 0, phrasesPassCountByTest[aid] || 0);
           } else {
-            const tMin = Number(allTestsMap[aid]?.minimum_required_score) || Number(allTestsMap[aid]?.payload?.min_score) || minScore;
-            if (pct >= tMin || (isRemedialByTest[aid] && pct >= 60)) {
+            if (a.is_forgiven) {
+              passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, targetReps);
+            } else if (isPassing) {
               passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
             }
           }
@@ -1690,13 +1720,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isTestPassed = (t) => {
         if (!t) return true;
         if (isForgivenByTest[t.id]) return true;
+        const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
         if (isExam(t)) {
+          const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
+          if (isUni) {
+            const wScore = wordsBestByTest[t.id];
+            const pScore = phrasesBestByTest[t.id];
+            if (wScore == null || pScore == null) return false;
+            return (wScore >= req && pScore >= req) || (isRemedialByTest[t.id] && wScore >= 60 && pScore >= 60);
+          }
           const score = bestMap[t.id];
           if (score == null) return false;
-          const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
           return score >= req || (isRemedialByTest[t.id] && score >= 60);
         } else {
           // Task: Strictly requires targetReps (7 passes >= minScore)
+          if (isUni) {
+            return (wordsPassCountByTest[t.id] || 0) >= targetReps && (phrasesPassCountByTest[t.id] || 0) >= targetReps;
+          }
           return (passCountByTest[t.id] || 0) >= targetReps;
         }
       };
@@ -1761,8 +1801,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (pair && pair.isPair) {
           visitedPairIds.add(pair.wordsTest.id);
           if (pair.phrasesTest) visitedPairIds.add(pair.phrasesTest.id);
-          const wordsPassed = isTestPassed(pair.wordsTest);
-          const phrasesPassed = pair.isUnified ? wordsPassed : isTestPassed(pair.phrasesTest);
+          const wordsPassed = pair.isUnified
+            ? (pair.isExam ? ((wordsBestByTest[pair.wordsTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.wordsTest.id])) : ((wordsPassCountByTest[pair.wordsTest.id] || 0) >= targetReps || Boolean(isForgivenByTest[pair.wordsTest.id])))
+            : isTestPassed(pair.wordsTest);
+          const phrasesPassed = pair.isUnified
+            ? (pair.isExam ? ((phrasesBestByTest[pair.phrasesTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.phrasesTest.id])) : ((phrasesPassCountByTest[pair.phrasesTest.id] || 0) >= targetReps || Boolean(isForgivenByTest[pair.phrasesTest.id])))
+            : isTestPassed(pair.phrasesTest);
           if (!wordsPassed || !phrasesPassed) {
             nextAssignment = {
               isPair: true,
@@ -1843,8 +1887,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!isTest) {
         let currentPasses = passCountByTest[activeTestItem.id] || 0;
         if (nextAssignment.isPair) {
-          const wordsP = passCountByTest[nextAssignment.wordsTest.id] || 0;
-          const phrasesP = passCountByTest[nextAssignment.phrasesTest.id] || 0;
+          const wordsP = nextAssignment.isUnified
+            ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0)
+            : (passCountByTest[nextAssignment.wordsTest.id] || 0);
+          const phrasesP = nextAssignment.isUnified
+            ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0)
+            : (passCountByTest[nextAssignment.phrasesTest.id] || 0);
           currentPasses = Math.min(wordsP, phrasesP);
         }
 
@@ -1870,8 +1918,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         `;
 
         if (nextAssignment.isPair) {
-          const wordsP = passCountByTest[nextAssignment.wordsTest.id] || 0;
-          const phrasesP = passCountByTest[nextAssignment.phrasesTest.id] || 0;
+          const wordsP = nextAssignment.isUnified
+            ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0)
+            : (passCountByTest[nextAssignment.wordsTest.id] || 0);
+          const phrasesP = nextAssignment.isUnified
+            ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0)
+            : (passCountByTest[nextAssignment.phrasesTest.id] || 0);
           const encoded = encodeURIComponent(JSON.stringify({
             badge: 'TOPIC TASK',
             title: displayTitle,
@@ -1927,6 +1979,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           `;
 
           if (nextAssignment.isPair) {
+            const wBest = nextAssignment.isUnified
+              ? (wordsBestByTest[nextAssignment.wordsTest.id] != null ? { percentage: wordsBestByTest[nextAssignment.wordsTest.id] } : null)
+              : (bestMap[nextAssignment.wordsTest.id] != null ? { percentage: bestMap[nextAssignment.wordsTest.id] } : null);
+            const pBest = nextAssignment.isUnified
+              ? (phrasesBestByTest[nextAssignment.phrasesTest.id] != null ? { percentage: phrasesBestByTest[nextAssignment.phrasesTest.id] } : null)
+              : (bestMap[nextAssignment.phrasesTest.id] != null ? { percentage: bestMap[nextAssignment.phrasesTest.id] } : null);
             const encoded = encodeURIComponent(JSON.stringify({
               badge: 'OFFICIAL EXAM',
               title: displayTitle,
@@ -1935,8 +1993,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               isUnified: Boolean(nextAssignment.isUnified),
               wordsTestId: nextAssignment.wordsTest.id,
               phrasesTestId: nextAssignment.phrasesTest.id,
-              wordsBest: bestMap[nextAssignment.wordsTest.id] != null ? { percentage: bestMap[nextAssignment.wordsTest.id] } : null,
-              phrasesBest: bestMap[nextAssignment.phrasesTest.id] != null ? { percentage: bestMap[nextAssignment.phrasesTest.id] } : null
+              wordsBest: wBest,
+              phrasesBest: pBest
             }));
             container.onclick = () => {
               if (typeof window.triggerComponentChoiceModal === 'function') {
@@ -2518,23 +2576,56 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const passCountByTest = {};
       const hasForgivenByTest = {};
       const hasRemedialByTest = {};
+      const wordsPassCountByTest = {};
+      const phrasesPassCountByTest = {};
+      const wordsBestByTest = {};
+      const phrasesBestByTest = {};
+
+      const getAttemptSection = (att) => {
+        const totalQ = Number(att.total_questions || 0);
+        const correctCount = Number(att.correct_count || att.score || 0);
+        if (totalQ > 0 && totalQ <= 20) return 'phrases';
+        if (totalQ > 20 && totalQ <= 45) return 'words';
+        if (correctCount > 15) return 'words';
+        if (correctCount > 0 && correctCount <= 10) return 'phrases';
+        return 'words';
+      };
+
       allAttempts.forEach(att => {
         const aid = att.test_id || att.Test_id;
         if (!aid) return;
         const pct = parseFloat(att.effective_score ?? att.percentage ?? 0);
         const st = (att.status || '').toUpperCase();
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-        if (att.is_forgiven) hasForgivenByTest[aid] = true;
+        if (att.is_forgiven) {
+          hasForgivenByTest[aid] = true;
+          wordsPassCountByTest[aid] = Math.max(wordsPassCountByTest[aid] || 0, 7);
+          phrasesPassCountByTest[aid] = Math.max(phrasesPassCountByTest[aid] || 0, 7);
+        }
         if (isRem) hasRemedialByTest[aid] = true;
 
         if (st === 'IN_PROGRESS') {
           inProgressByTest[aid] = att;
         } else if (st === 'SUBMITTED' || st === 'AUTO_SUBMITTED' || st === 'EVALUATED') {
-          if (att.is_forgiven) {
-            passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, 7);
+          const tObj = tests.find(t => t.id === aid);
+          const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+          const asmMin = Number(tObj?.minimum_required_score) || Number(tObj?.payload?.min_score) || 60;
+          const isPassing = att.is_forgiven || pct >= asmMin || (isRem && pct >= 60);
+
+          if (isUni) {
+            const sec = getAttemptSection(att);
+            if (sec === 'phrases') {
+              if (phrasesBestByTest[aid] == null || pct > phrasesBestByTest[aid]) phrasesBestByTest[aid] = pct;
+              if (isPassing) phrasesPassCountByTest[aid] = (phrasesPassCountByTest[aid] || 0) + 1;
+            } else {
+              if (wordsBestByTest[aid] == null || pct > wordsBestByTest[aid]) wordsBestByTest[aid] = pct;
+              if (isPassing) wordsPassCountByTest[aid] = (wordsPassCountByTest[aid] || 0) + 1;
+            }
+            passCountByTest[aid] = Math.min(wordsPassCountByTest[aid] || 0, phrasesPassCountByTest[aid] || 0);
           } else {
-            const asmMin = Number(tests.find(t => t.id === aid)?.minimum_required_score) || Number(tests.find(t => t.id === aid)?.payload?.min_score) || 60;
-            if (pct >= asmMin || (isRem && pct >= 60)) {
+            if (att.is_forgiven) {
+              passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, 7);
+            } else if (isPassing) {
               passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
             }
           }
@@ -2938,11 +3029,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               isUnified: true,
               wordsTestId: matchedTest.id,
               phrasesTestId: matchedTest.id,
-              wordsPasses: passCountByTest[matchedTest.id] || 0,
-              phrasesPasses: passCountByTest[matchedTest.id] || 0,
+              wordsPasses: wordsPassCountByTest[matchedTest.id] || 0,
+              phrasesPasses: phrasesPassCountByTest[matchedTest.id] || 0,
               targetReps: 7,
-              wordsBest: bestByTest[matchedTest.id] != null ? { percentage: bestByTest[matchedTest.id].effective_score ?? bestByTest[matchedTest.id].percentage } : null,
-              phrasesBest: bestByTest[matchedTest.id] != null ? { percentage: bestByTest[matchedTest.id].effective_score ?? bestByTest[matchedTest.id].percentage } : null
+              wordsBest: wordsBestByTest[matchedTest.id] != null ? { percentage: wordsBestByTest[matchedTest.id] } : (bestByTest[matchedTest.id] != null ? { percentage: bestByTest[matchedTest.id].effective_score ?? bestByTest[matchedTest.id].percentage } : null),
+              phrasesBest: phrasesBestByTest[matchedTest.id] != null ? { percentage: phrasesBestByTest[matchedTest.id] } : null
             }));
             window.triggerComponentChoiceModal(encoded);
             return;
@@ -3297,6 +3388,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Map best score & best grade per test
       const bestByTest = {};
       const passCountByTest = {};
+      const wordsPassCountByTest = {};
+      const phrasesPassCountByTest = {};
+      const wordsBestByTest = {};
+      const phrasesBestByTest = {};
+
+      const getAttemptSection = (att) => {
+        const totalQ = Number(att.total_questions || 0);
+        const correctCount = Number(att.correct_count || att.score || 0);
+        if (totalQ > 0 && totalQ <= 20) return 'phrases';
+        if (totalQ > 20 && totalQ <= 45) return 'words';
+        if (correctCount > 15) return 'words';
+        if (correctCount > 0 && correctCount <= 10) return 'phrases';
+        return 'words';
+      };
+
       validAttempts.forEach(att => {
         const tid = att.test_id || att.tests?.id;
         if (!tid) return;
@@ -3308,8 +3414,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (!prev || effPct > prev.effPct) {
           bestByTest[tid] = { effPct, grade, isRem, rawPct, is_forgiven: Boolean(att.is_forgiven) };
         }
-        if (att.is_forgiven || effPct >= 50.0) {
-          passCountByTest[tid] = (passCountByTest[tid] || 0) + 1;
+
+        const tObj = (allClassTests || []).find(x => x.id === tid);
+        const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+        const isPassing = att.is_forgiven || effPct >= 50.0;
+
+        if (isUni) {
+          const sec = getAttemptSection(att);
+          if (sec === 'phrases') {
+            if (phrasesBestByTest[tid] == null || effPct > (phrasesBestByTest[tid]?.effPct ?? 0)) phrasesBestByTest[tid] = { effPct, grade };
+            if (isPassing) phrasesPassCountByTest[tid] = (phrasesPassCountByTest[tid] || 0) + 1;
+          } else {
+            if (wordsBestByTest[tid] == null || effPct > (wordsBestByTest[tid]?.effPct ?? 0)) wordsBestByTest[tid] = { effPct, grade };
+            if (isPassing) wordsPassCountByTest[tid] = (wordsPassCountByTest[tid] || 0) + 1;
+          }
+          passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
+        } else {
+          if (isPassing) {
+            passCountByTest[tid] = (passCountByTest[tid] || 0) + 1;
+          }
         }
       });
 
@@ -3360,11 +3483,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               isUnified: true,
               wordsTestId: tObj.id,
               phrasesTestId: tObj.id,
-              wordsPasses: passCountByTest[tObj.id] || 0,
-              phrasesPasses: passCountByTest[tObj.id] || 0,
+              wordsPasses: wordsPassCountByTest[tObj.id] || 0,
+              phrasesPasses: phrasesPassCountByTest[tObj.id] || 0,
               targetReps: 7,
-              wordsBest: bObj != null ? { percentage: bObj.effPct } : null,
-              phrasesBest: bObj != null ? { percentage: bObj.effPct } : null
+              wordsBest: wordsBestByTest[tObj.id] != null ? { percentage: wordsBestByTest[tObj.id].effPct } : (bObj != null ? { percentage: bObj.effPct } : null),
+              phrasesBest: phrasesBestByTest[tObj.id] != null ? { percentage: phrasesBestByTest[tObj.id].effPct } : null
             }));
             window.triggerComponentChoiceModal(encoded);
             return;

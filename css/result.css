@@ -31,7 +31,7 @@
       padding: 0 14px !important;
       display: flex !important;
       align-items: center !important;
-      justify-content: space-between !important;
+      justify-content: center !important;
       flex-shrink: 0 !important;
       background: rgba(9, 13, 22, 0.95) !important;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
@@ -43,35 +43,13 @@
       box-sizing: border-box !important;
     }
 
-    .result-page .result-header-left {
-      width: 36px;
-      height: 36px;
-      flex-shrink: 0;
-    }
-
+    .result-page .result-header-left,
     .result-page .result-header-right {
-      width: 36px;
-      height: 36px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
+      display: none !important;
     }
 
     .result-page .dashboard-header-brand {
-      position: static !important;
-      font-family: 'Outfit', sans-serif !important;
-      font-size: 16px !important;
-      font-weight: 800 !important;
-      letter-spacing: 0.1em !important;
-      text-transform: uppercase !important;
-      color: #F8FAFC !important;
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      text-align: center !important;
-      margin: 0 auto !important;
-      white-space: nowrap !important;
+      display: none !important;
     }
 
     .result-page #result-header-actions {
@@ -175,49 +153,55 @@
       margin-bottom: 0.3rem !important;
     }
 
-    #result-Test-name-container {
+    #result-Test-name-container,
+    .result-test-title-wrap {
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
-      gap: 2px !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
-      background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb, 56, 189, 248), 0.12), transparent 75%), #0f172a !important;
-      border: 1px solid rgba(255, 255, 255, 0.12) !important;
-      border-radius: 12px !important;
-      padding: 0 12px !important;
+      gap: 1px !important;
+      height: 100% !important;
+      max-height: 50px !important;
+      background: transparent !important;
+      border: none !important;
+      border-radius: 0 !important;
+      padding: 0 !important;
       margin: 0 auto !important;
       width: 100% !important;
       max-width: 100% !important;
       box-sizing: border-box !important;
-      -webkit-backdrop-filter: blur(8px) !important;
-      backdrop-filter: blur(8px) !important;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+      box-shadow: none !important;
       flex-shrink: 0 !important;
       transition: all 0.3s ease !important;
     }
     .result-title-row-type {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 12px !important;
-      font-weight: 700 !important;
+      font-family: 'Outfit', sans-serif !important;
+      font-size: 14px !important;
+      font-weight: 800 !important;
       letter-spacing: 0.06em !important;
       text-transform: uppercase !important;
-      color: #94A3B8 !important;
+      color: #F8FAFC !important;
       line-height: 1.2 !important;
       text-align: center !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 100% !important;
     }
     .result-title-row-topic {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+      font-family: 'Inter', sans-serif !important;
       font-size: 12px !important;
-      font-weight: 800 !important;
-      letter-spacing: 0.03em !important;
+      font-weight: 700 !important;
+      letter-spacing: 0.04em !important;
       text-transform: uppercase !important;
-      color: var(--tier-color, #cbd5e1) !important;
-      line-height: 1.25 !important;
+      color: var(--tier-color, #38bdf8) !important;
+      line-height: 1.2 !important;
       text-align: center !important;
-      text-shadow: 0 0 12px rgba(var(--tier-rgb, 203, 213, 225), 0.3) !important;
+      text-shadow: 0 0 12px rgba(var(--tier-rgb, 56, 189, 248), 0.35) !important;
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      max-width: 100% !important;
     }
     .result-curriculum-crumb {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -420,7 +404,7 @@
       background: rgba(15, 23, 42, 0.95) !important;
     }
 
-    /* ===== SMART NEXT MILESTONE CTA (EQUAL HEIGHT WITH SCORE/GRADE ROW = 50px) ===== */
+    /* ===== SMART NEXT MILESTONE CTA (STRICT 50px HEIGHT) ===== */
     .btn-next-milestone {
       display: flex !important;
       flex-direction: column !important;
@@ -429,10 +413,10 @@
       width: 100% !important;
       box-sizing: border-box !important;
       padding: 4px 12px !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
-      border-radius: 12px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
+      border-radius: 10px !important;
       text-align: center !important;
       cursor: pointer !important;
       transition: all 0.2s ease !important;
@@ -471,13 +455,13 @@
     }
     .btn-next-milestone .next-btn-title {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-size: 12px !important;
+      font-size: 14px !important;
       font-weight: 800 !important;
       letter-spacing: 0.02em !important;
       text-transform: uppercase !important;
       color: #ffffff !important;
       display: block !important;
-      line-height: 1.2 !important;
+      line-height: 1.15 !important;
     }
 
     /* ===== TUTOR CONTROLS: 3-COLUMN EQUAL SEGMENTED CONTROL ([ NORMAL ] [ REMIDI ] [ FORGIVE ]) ===== */
@@ -487,17 +471,17 @@
       gap: 8px !important;
       width: 100% !important;
       box-sizing: border-box !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       flex-shrink: 0 !important;
     }
     .remedial-segment-btn {
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       padding: 0 4px !important;
-      border-radius: 12px !important;
+      border-radius: 8px !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-size: 12px !important;
       font-weight: 800 !important;
@@ -1064,7 +1048,7 @@
       display: flex !important;
       flex-direction: column !important;
       flex: 1 1 0px !important; /* Dynamic in remaining screen */
-      min-height: 140px !important;
+      min-height: 120px !important;
       transition: all 0.3s ease !important;
     }
 
@@ -1128,7 +1112,7 @@
     .metric-stacked-val {
       font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
       font-feature-settings: 'tnum' on, 'lnum' on !important;
-      font-size: clamp(14px, 2.2vh, 16px) !important;
+      font-size: 16px !important;
       font-weight: 900 !important;
       line-height: 1 !important;
       letter-spacing: -0.01em !important;
@@ -1175,9 +1159,9 @@
       display: grid !important;
       grid-template-columns: 1fr 1fr !important;
       gap: 8px !important;
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       width: 100% !important;
       margin: 0 !important;
       box-sizing: border-box !important;
@@ -1191,9 +1175,9 @@
 
     .result-score-grade-row .score-grade-box,
     .result-score-grade-card .score-grade-box {
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
@@ -1209,7 +1193,7 @@
     .result-score-grade-row #result-percentage,
     .result-score-grade-card #result-percentage {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.2rem, 3.5vw, 1.55rem) !important;
+      font-size: 30px !important;
       font-weight: 900 !important;
       letter-spacing: -0.02em !important;
       line-height: 1 !important;
@@ -1220,7 +1204,7 @@
     .result-score-grade-row #result-grade-val,
     .result-score-grade-card #result-grade-val {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.2rem, 3.5vw, 1.6rem) !important;
+      font-size: 30px !important;
       font-weight: 900 !important;
       line-height: 1 !important;
       color: var(--tier-color, var(--grade-star)) !important;
@@ -1258,7 +1242,7 @@
 
     .grade-predicate-text {
       font-family: 'Outfit', sans-serif !important;
-      font-size: clamp(1.2rem, 4vw, 1.55rem) !important;
+      font-size: 20px !important;
       font-weight: 900 !important;
       letter-spacing: 0.08em !important;
       text-transform: uppercase !important;
@@ -1279,21 +1263,24 @@
       display: none !important;
     }
 
-    /* ===== 5. EVALUATION WORD CARD (EXACT 50px - FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT) ===== */
+    /* ===== 5. EVALUATION WORD CARD (CALIBRATED 50px - FAIL / LESS / ENOUGH / GOOD / VERY GOOD / EXCELLENT) ===== */
     .result-evaluation-card {
       width: 100% !important;
       max-width: 100% !important;
       height: 50px !important;
       min-height: 50px !important;
       max-height: 50px !important;
+      min-height: 40px !important;
+      max-height: 40px !important;
       margin: 0 auto !important;
-      border-radius: 12px !important;
+      border-radius: 10px !important;
       padding: 0 14px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
       box-sizing: border-box !important;
       flex-shrink: 0 !important;
+      font-size: 16px !important;
       background: #0f172a !important;
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
@@ -1330,17 +1317,17 @@
       box-sizing: border-box !important;
     }
 
-    /* ===== BUTTONS (EXACT 30px HEIGHT FOR BACK & BREAKDOWN) ===== */
+    /* ===== BUTTONS (STRICT 50px HEIGHT FOR BACK TO CLASS) ===== */
     .btn-dashboard-primary {
-      height: 40px !important;
-      min-height: 40px !important;
-      max-height: 40px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       border-radius: 8px !important;
       background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
       color: #ffffff !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-weight: 700 !important;
-      font-size: 12px !important;
+      font-weight: 800 !important;
+      font-size: 14px !important;
       letter-spacing: 0.04em !important;
       text-transform: uppercase !important;
       display: flex !important;
@@ -1370,8 +1357,8 @@
       border: 1px solid rgba(255, 255, 255, 0.12) !important;
       color: #cbd5e1 !important;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
-      font-weight: 700 !important;
-      font-size: 12px !important;
+      font-weight: 800 !important;
+      font-size: 14px !important;
       letter-spacing: 0.04em !important;
       text-transform: uppercase !important;
       display: flex !important;
@@ -2005,9 +1992,9 @@
     .result-action-slot {
       width: 100% !important;
       max-width: 100% !important;
-      height: 60px !important;
-      min-height: 60px !important;
-      max-height: 60px !important;
+      height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       flex-shrink: 0 !important;
       margin: 0 auto !important;
       display: flex !important;
@@ -2025,8 +2012,6 @@
 /* Initial Neutral State: Clean Slate before Evaluation reveals */
 body.result-page:not(.tier-glow-active) #result-identity-card,
 body.result-page:not(.tier-glow-active) .result-identity-card,
-body.result-page:not(.tier-glow-active) #result-Test-name-container,
-body.result-page:not(.tier-glow-active) .result-test-title-wrap,
 body.result-page:not(.tier-glow-active) #result-metrics-composite-card,
 body.result-page:not(.tier-glow-active) .result-metrics-composite-card,
 body.result-page:not(.tier-glow-active) #result-score-grade-card,
@@ -2097,13 +2082,6 @@ body.result-page.tier-glow-active .result-identity-card {
 body.result-page.tier-glow-active #result-avatar-container {
   border-color: var(--tier-color) !important;
   box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.75), 0 4px 14px rgba(0, 0, 0, 0.35) !important;
-}
-
-body.result-page.tier-glow-active #result-Test-name-container,
-body.result-page.tier-glow-active .result-test-title-wrap {
-  border: 1.5px solid rgba(var(--tier-rgb), 0.75) !important;
-  box-shadow: 0 0 22px rgba(var(--tier-rgb), 0.35) !important;
-  background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.16), transparent 75%), #0f172a !important;
 }
 
 body.result-page.tier-glow-active #result-test-topic-row {
@@ -2220,15 +2198,15 @@ body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-forgive
 }
 
 .btn-dashboard-primary {
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
   border-radius: 8px !important;
   background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%) !important;
   color: #ffffff !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: 'Outfit', sans-serif !important;
   font-weight: 800 !important;
-  font-size: 12px !important;
+  font-size: 14px !important;
   letter-spacing: 0.05em !important;
   text-transform: uppercase !important;
   display: flex !important;
@@ -2249,25 +2227,18 @@ body.result-page .tutor-remedial-segmented .remedial-segment-btn.segment-forgive
   transform: none !important;
 }
 
-/* Explicit 60px Banner & 50px Action Buttons per Image 2 Specification */
+/* Explicit 80px Banner & 50px Action Buttons per Specification */
 body.result-page .topscore-locked-banner,
 body.result-page #bottom-ad-banner {
-  height: 60px !important;
-  min-height: 60px !important;
-  max-height: 60px !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
   width: 100% !important;
   max-width: 430px !important;
   margin: 0 auto !important;
   justify-content: flex-start !important;
   text-align: left !important;
   padding-left: clamp(16px, 4vw, 24px) !important;
-}
-
-body.result-page .btn-breakdown-ghost,
-body.result-page #toggle-answers-btn {
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
 }
 
 body.result-page .btn-dashboard-primary,
@@ -2282,16 +2253,16 @@ body.result-page #smart-next-action-container,
 body.result-page .btn-next-milestone,
 body.result-page .tutor-remedial-segmented,
 body.result-page .remedial-segment-btn {
-  height: 60px !important;
-  min-height: 60px !important;
-  max-height: 60px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
 }
 
 body.result-page .result-score-grade-row,
 body.result-page #result-score-grade-card {
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
 }
 
 body.result-page .result-grade-desc-card,
@@ -2308,16 +2279,15 @@ body.result-page #result-motivation-msg {
    ========================================================================== */
 .topscore-locked-banner,
 #bottom-ad-banner {
-  height: 60px !important;
-  min-height: 60px !important;
-  max-height: 60px !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
   display: flex !important;
   align-items: center !important;
   justify-content: flex-start !important;
   text-align: left !important;
   padding-left: clamp(16px, 4vw, 24px) !important;
   font-family: 'Outfit', sans-serif !important;
-  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
   box-sizing: border-box !important;
@@ -2325,7 +2295,7 @@ body.result-page #result-motivation-msg {
 
 .topscore-locked-banner .banner-brand,
 #bottom-ad-banner .banner-brand {
-  font-size: clamp(1.05rem, 3vw, 1.25rem) !important;
+  font-size: 16px !important;
   font-weight: 900 !important;
   color: #38bdf8 !important;
   letter-spacing: 0.05em !important;
@@ -2334,7 +2304,7 @@ body.result-page #result-motivation-msg {
 
 .topscore-locked-banner .banner-author,
 #bottom-ad-banner .banner-author {
-  font-size: clamp(1rem, 2.8vw, 1.15rem) !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
   color: #f8fafc !important;
   letter-spacing: 0.02em !important;
@@ -2358,12 +2328,10 @@ body.result-page.tier-glow-active {
 
 /* Ensure all cards have margin: 0 so gap: 10px is exact */
 .result-identity-card,
-#result-Test-name-container,
 #result-metrics-composite-card,
 #result-score-grade-card,
 #result-motivation-msg,
 .result-action-slot,
-#toggle-answers-btn,
 #back-dashboard-btn {
   margin: 0 !important;
 }
@@ -2377,7 +2345,6 @@ body.result-page .topscore-locked-banner {
 
 /* Result Page Enhanced Uniform Glow & 1.5px Border */
 body.result-page.tier-glow-active #result-identity-card,
-body.result-page.tier-glow-active #result-Test-name-container,
 body.result-page.tier-glow-active #result-metrics-composite-card,
 body.result-page.tier-glow-active #result-score-box,
 body.result-page.tier-glow-active #result-grade-box,

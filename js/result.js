@@ -785,14 +785,17 @@ if (!attemptId) {
         }
       }
 
-      // 3. Test Full Title Panel
+      // 3. Test Full Title Panel in Top Header
       const titleCard = document.getElementById('result-Test-name-container');
       if (titleCard) {
         titleCard.dataset.tier = currentTier;
         titleCard.style.setProperty('--tier-color', gradeColor);
         titleCard.style.setProperty('--tier-rgb', rgbColor);
-        titleCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
-        titleCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.35)`;
+      }
+      const pageHeader = document.getElementById('result-page-header');
+      if (pageHeader) {
+        pageHeader.style.setProperty('--tier-color', gradeColor);
+        pageHeader.style.setProperty('--tier-rgb', rgbColor);
       }
 
       // Topic Row inside Title Panel
@@ -922,6 +925,46 @@ if (!attemptId) {
 
         const asmData = attempt.tests || attempt.Tests;
         const testId = attempt.test_id || attempt.Test_id;
+
+        // Section-Aware Filter for Unified Tests (Words vs Phrases separation on Result Page)
+        const isUnified = asmData?.payload?.is_unified || asmData?.category === 'unified' || (asmData?.test_subtype && asmData.test_subtype.startsWith('UNIFIED'));
+        const attTotalQ = Number(attempt.total_questions || 0);
+        const urlSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+        let activeSectionName = null;
+
+        if (urlSection === 'words') activeSectionName = 'Words';
+        else if (urlSection === 'phrases') activeSectionName = 'Phrases';
+        else if (isUnified) {
+          if (attTotalQ > 0 && attTotalQ <= 20) activeSectionName = 'Phrases';
+          else if (attTotalQ > 20 && attTotalQ <= 45) activeSectionName = 'Words';
+        }
+
+        if (isUnified && Array.isArray(answers) && answers.length > 0) {
+          const answeredRows = answers.filter(a => a.student_answer != null && a.student_answer !== '');
+          const hasWords = answeredRows.some(a => a.question_snapshot?.test_section === 'words');
+          const hasPhrases = answeredRows.some(a => a.question_snapshot?.test_section === 'phrases');
+
+          if (!activeSectionName) {
+            if (hasWords && !hasPhrases) activeSectionName = 'Words';
+            else if (hasPhrases && !hasWords) activeSectionName = 'Phrases';
+          }
+
+          if (activeSectionName === 'Words') {
+            answers = answers.filter(a => a.question_snapshot?.test_section !== 'phrases');
+          } else if (activeSectionName === 'Phrases') {
+            answers = answers.filter(a => a.question_snapshot?.test_section === 'phrases');
+          } else if (attTotalQ > 0 && attTotalQ < answers.length) {
+            const wordsRows = answers.filter(a => a.question_snapshot?.test_section !== 'phrases');
+            const phrasesRows = answers.filter(a => a.question_snapshot?.test_section === 'phrases');
+            if (wordsRows.length === attTotalQ) {
+              activeSectionName = 'Words';
+              answers = wordsRows;
+            } else if (phrasesRows.length === attTotalQ) {
+              activeSectionName = 'Phrases';
+              answers = phrasesRows;
+            }
+          }
+        }
         const rawPct = Math.min(100.0, Math.max(0.0, parseFloat(attempt.percentage || 0)));
         const isRemedial = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
         const isForgiven = Boolean(attempt.is_forgiven);
@@ -1315,8 +1358,12 @@ if (!attemptId) {
         // 2. Test Title: 2-Line Format (Line 1: Test Title, Line 2: Topic / Theme) via SSOT formatTestDisplay (AGENTS.md § 2.6 / DECISION-056)
         const asmRawTitle = asmData?.title || asmData?.name || 'Test';
         const formattedAsm = formatTestDisplay(asmData);
-        const titleType = formattedAsm.line1 || 'TEST';
-        const titleTopic = formattedAsm.line2 || '';
+        let titleType = formattedAsm.line1 || 'TEST';
+        let titleTopic = formattedAsm.line2 || '';
+
+        if (activeSectionName && !titleType.toUpperCase().includes(activeSectionName.toUpperCase())) {
+          titleType += ` (${activeSectionName.toUpperCase()})`;
+        }
 
         const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
         const topicEl = document.getElementById('result-test-topic-row') || document.getElementById('result-asm-topic-row');
@@ -1342,12 +1389,15 @@ if (!attemptId) {
         }
 
         // Stats & Points (Linear / Apple Pill Row with Muted 0-Values)
-        const correct = answers.filter(a => getEvalCategory(a) === 'correct').length;
-        const partial = answers.filter(a => getEvalCategory(a) === 'minor_spelling_error').length;
-        const wrong   = answers.filter(a => getEvalCategory(a) === 'incorrect').length;
+        const attemptTotalQ = Number(attempt.total_questions || (answers.length > 0 ? answers.length : (activeSectionName === 'Phrases' ? 10 : 40)));
+        const dbScore = Number(attempt.score ?? 0);
+        const dbCorrect = Number(attempt.correct_count ?? (dbScore >= 1 ? Math.floor(dbScore) : 0));
 
-        const rawTotalPoints = answers.reduce((sum, a) => sum + Number(a.score ?? 0), 0);
-        const attemptTotalQ = Number(attempt.total_questions || answers.length || 50);
+        const correct = answers.length > 0 ? answers.filter(a => getEvalCategory(a) === 'correct').length : dbCorrect;
+        const partial = answers.length > 0 ? answers.filter(a => getEvalCategory(a) === 'minor_spelling_error').length : 0;
+        const wrong   = answers.length > 0 ? answers.filter(a => getEvalCategory(a) === 'incorrect').length : Math.max(0, attemptTotalQ - correct - partial);
+
+        const rawTotalPoints = answers.length > 0 ? answers.reduce((sum, a) => sum + Number(a.score ?? 0), 0) : dbScore;
         const maxRemedialPts = attemptTotalQ * 0.6;
         const totalPoints = isRemedial ? Math.min(rawTotalPoints, maxRemedialPts) : rawTotalPoints;
         // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
@@ -1453,6 +1503,7 @@ if (!attemptId) {
         document.getElementById('card-filter-correct')?.addEventListener('click', () => openBreakdownWithFilter('correct'));
         document.getElementById('card-filter-partial')?.addEventListener('click', () => openBreakdownWithFilter('partial'));
         document.getElementById('card-filter-wrong')?.addEventListener('click', () => openBreakdownWithFilter('incorrect'));
+        document.getElementById('result-points-box')?.addEventListener('click', () => openBreakdownWithFilter('all'));
         document.getElementById('done-answers-modal-btn')?.addEventListener('click', closeAnswersModal);
         const answersModalEl = document.getElementById('answers-section');
         if (answersModalEl) {
@@ -1818,10 +1869,6 @@ if (!attemptId) {
 
       const smartNext = document.getElementById('smart-next-action-container');
       if (smartNext) smartNext.classList.add('cascade-revealed');
-      await sleep(120);
-
-      const breakdownBtn = document.getElementById('toggle-answers-btn');
-      if (breakdownBtn) breakdownBtn.classList.add('cascade-revealed');
       await sleep(120);
 
       const backBtn = document.getElementById('back-dashboard-btn');

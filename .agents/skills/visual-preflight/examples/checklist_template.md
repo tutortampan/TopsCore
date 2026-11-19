@@ -6,7 +6,7 @@ When crafting an implementation plan (`/plan`) for any task that involves modify
 ### 📐 Visual Pre-Flight Verification Checklist
 - [ ] **Current State Screenshot (Before)**: Embedded baseline visual showing existing appearance (per `AGENTS.md` §0.2.1, §5.2 & `ui-invariants.md` §1.7).
 - [ ] **Proposed Visual Mockup (After)**: Interactive generative UI widget or high-fidelity mockup showing the new layout.
-- [ ] **Zero Outer Page Scroll**: Verified root `100vh` lock with `calc(100vh - 60px)` console sizing.
+- [ ] **Zero Outer Page Scroll**: Verified root `100vh` lock with `calc(100vh - 80px)` console sizing.
 - [ ] **Container Spacing**: Verified strict 10px gap between all cards, tables, and top/lower panels.
 - [ ] **Lower Panel Alignment**: Verified 40px fixed Sub Panel height aligned with `.sidebar-footer` (Sub Corner).
 - [ ] **Dynamic Columns & Nowrap**: Verified `white-space: nowrap !important;` on table cells with zero clipped text.

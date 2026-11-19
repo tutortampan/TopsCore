@@ -735,7 +735,7 @@ export async function fetchAllStudentAttempts(studentId) {
     await sb.rpc('auto_close_expired_attempts');
   } catch (_) {}
   const { data, error } = await sb.from('attempts')
-    .select('id, test_id, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
@@ -744,7 +744,7 @@ export async function fetchAllStudentAttempts(studentId) {
 
   // Fallback 2-step jika foreign key cache Supabase belum sinkron
   const { data: attempts, error: attErr } = await sb.from('attempts')
-    .select('id, test_id, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
@@ -2017,14 +2017,23 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       const { data: attempt } = await sb.from('attempts').select('id, is_remedial_unlocked').eq('id', attemptId).single();
       const { data: attemptAnswers } = await sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot').eq('attempt_id', attemptId);
 
-      let totalPoints = 0;
-      let correctCount = 0;
-      const totalQuestions = (attemptAnswers && attemptAnswers.length) || 0;
-
       const answersList = Array.isArray(answersMap) ? answersMap : [];
       const answersDict = new Map(answersList.map(a => [a.attempt_answer_id, a.student_answer || '']));
+      const submittedIds = new Set(answersList.map(a => a.attempt_answer_id).filter(Boolean));
+      const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < (attemptAnswers?.length || 0);
+
+      const scoredRows = isPartialSubmit
+        ? (attemptAnswers || []).filter(r => submittedIds.has(r.id))
+        : (attemptAnswers || []);
+
+      let totalPoints = 0;
+      let correctCount = 0;
+      const totalQuestions = scoredRows.length || 0;
 
       for (const row of (attemptAnswers || [])) {
+        const isInSubmit = !isPartialSubmit || submittedIds.has(row.id);
+        if (!isInSubmit) continue; // Skip non-submitted rows (e.g. other section) to avoid overwriting or penalizing
+
         const studentAns = answersDict.has(row.id) ? answersDict.get(row.id) : (row.student_answer || '');
         const qType = row.question_snapshot?.answer_type || row.question_type_snapshot || 'written';
         const evalRes = evaluateAnswer(studentAns, row.accepted_answers_snapshot || row.correct_answer_snapshot, qType);
@@ -2061,7 +2070,7 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       }).eq('id', attemptId).select().single();
 
       if (updAttErr) throw updAttErr;
-      result = updAttempt || { id: attemptId, status: targetStatus, percentage: pct, grade: grade };
+      result = updAttempt || { id: attemptId, status: targetStatus, percentage: pct, grade: grade, total_questions: totalQuestions, score: totalPoints, correct_count: correctCount };
     }
   }
 
@@ -2073,12 +2082,40 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       .select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot, score, is_correct, evaluation_result')
       .eq('attempt_id', attemptId);
 
-    let needsRescore = false;
+    const answersList = Array.isArray(answersMap) ? answersMap : [];
+    const submittedIds = new Set(answersList.map(a => a.attempt_answer_id).filter(Boolean));
+    const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < (attAnsList?.length || 0);
+
+    const scoredList = isPartialSubmit
+      ? (attAnsList || []).filter(r => submittedIds.has(r.id))
+      : (attAnsList || []);
+
+    const totalQ = scoredList.length || 0;
+
+    // In partial submissions (e.g. Words vs Phrases component tests), ensure unsubmitted sibling questions
+    // are not penalized or marked as incorrect by server fallback
+    if (isPartialSubmit && attAnsList && attAnsList.length > 0) {
+      const unsubmittedRows = attAnsList.filter(r => !submittedIds.has(r.id));
+      for (const unRow of unsubmittedRows) {
+        if (unRow.evaluation_result != null || unRow.score != null) {
+          await sb.from('attempt_answers').update({
+            student_answer: null,
+            score: null,
+            is_correct: null,
+            evaluation_result: null,
+            updated_at: new Date().toISOString()
+          }).eq('id', unRow.id);
+        }
+      }
+    }
+
+    // Check if previous attempt record had wrong denominator (e.g. 50 instead of 40)
+    const { data: currentAtt } = await sb.from('attempts').select('total_questions, is_remedial_unlocked').eq('id', attemptId).maybeSingle();
+    let needsRescore = Boolean(isPartialSubmit && currentAtt && currentAtt.total_questions !== totalQ);
     let newScore = 0;
     let newCorrect = 0;
-    const totalQ = attAnsList?.length || 0;
 
-    for (const r of (attAnsList || [])) {
+    for (const r of scoredList) {
       const qType = r.question_snapshot?.answer_type || r.question_type_snapshot || 'written';
       const ev = evaluateAnswer(r.student_answer, r.accepted_answers_snapshot || r.correct_answer_snapshot, qType);
       const trueScore = ev.score || 0;
@@ -2100,12 +2137,12 @@ export async function submitTest(attemptId, answersMap, options = {}) {
 
     if (needsRescore && totalQ > 0) {
       const pct = Math.round((newScore / totalQ) * 10000) / 100;
-      const { data: attData } = await sb.from('attempts').select('is_remedial_unlocked').eq('id', attemptId).single();
-      const effScore = attData?.is_remedial_unlocked ? Math.min(pct, 60.0) : pct;
+      const effScore = currentAtt?.is_remedial_unlocked ? Math.min(pct, 60.0) : pct;
       const grade = getGrade(effScore);
       const { data: fixedAtt } = await sb.from('attempts').update({
         score: newScore,
         correct_count: newCorrect,
+        total_questions: totalQ,
         percentage: pct,
         effective_score: effScore,
         grade: grade,
@@ -2177,14 +2214,10 @@ export async function submitTest(attemptId, answersMap, options = {}) {
           const lowerIds = siblingAttempts.map(s => s.id);
           // Demote siblings
           await sb.from('attempts').update({ is_best_score: false, updated_at: new Date().toISOString() }).in('id', lowerIds);
-          // Purge detailed attempt_answers of superseded lower attempts to prevent database bloat
-          await sb.from('attempt_answers').delete().in('attempt_id', lowerIds);
         }
       } else {
         // Current attempt is a lower-scoring retake; mark as not best
         await sb.from('attempts').update({ is_best_score: false, updated_at: new Date().toISOString() }).eq('id', attemptId);
-        // Purge non-best detailed answers since official report card only preserves the best score
-        await sb.from('attempt_answers').delete().eq('attempt_id', attemptId);
       }
     }
   } catch (purgeErr) {

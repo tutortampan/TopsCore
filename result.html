@@ -45,9 +45,11 @@
   <div id="toast-container"></div>
 
   <header class="dashboard-header" id="result-page-header">
-    <div class="result-header-left"></div>
-    <div class="dashboard-header-brand" id="result-header-brand">RESULT PAGE</div>
-    <div class="result-header-right"></div>
+    <div class="result-test-title-wrap" id="result-Test-name-container">
+      <div class="result-title-row-type" id="result-test-type-row">RESULT PAGE</div>
+      <div class="result-title-row-topic" id="result-test-topic-row"></div>
+      <span id="result-Test-name" class="hidden"></span>
+    </div>
   </header>
 
   <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
@@ -122,14 +124,7 @@
         </div>
       </div>
 
-      <!-- 2. Test Full Title (2-Line: Type/Name & Topic/Theme - 50px / 15%) -->
-      <div class="result-test-title-wrap cascade-item" id="result-Test-name-container">
-        <div class="result-title-row-type" id="result-test-type-row">TEST FULL TITLE</div>
-        <div class="result-title-row-topic" id="result-test-topic-row">TOPIC / THEME</div>
-        <span id="result-Test-name" class="hidden"></span>
-      </div>
-
-      <!-- 3. Dynamic Vertical Metrics Table (Dinamis di sisa layar) -->
+      <!-- 2. Dynamic Vertical Metrics Table (Dinamis di sisa layar) -->
       <div class="result-metrics-composite-card cascade-item" id="result-metrics-composite-card">
         <div class="result-metrics-table-inner" id="result-metrics-bar">
           <!-- Row 1: CORRECT -->
@@ -151,15 +146,15 @@
             <span class="metric-stacked-val" id="res-wrong">0</span>
           </div>
           <!-- Row 4: POINTS -->
-          <div class="metric-stacked-row metric-row-points cascade-metric-row" id="result-points-box"
-            title="Total Points Earned">
+          <div class="metric-stacked-row metric-row-points summary-clickable cascade-metric-row" id="result-points-box"
+            title="Total Points Earned — Click to view all answers">
             <span class="metric-stacked-lbl">POINTS</span>
             <span class="metric-stacked-val" id="res-points">0</span>
           </div>
         </div>
       </div>
 
-      <!-- 4. Dual Score & Grade Row (Strict 40px - 2 Symmetrical Columns: Score % | Grade Symbol) -->
+      <!-- 3. Dual Score & Grade Row (Strict 50px - 2 Symmetrical Columns: Score % | Grade Symbol) -->
       <div class="result-score-grade-row cascade-item" id="result-score-grade-card">
         <!-- Col 1: Score (Percentage) -->
         <div class="score-grade-box score-box" id="result-score-box">
@@ -172,14 +167,13 @@
         </div>
       </div>
 
-      <!-- 5. Grade Description Card (Strict 50px - Muncul setelah animasi grade muncul) -->
+      <!-- 4. Grade Description Card (Strict 50px - Muncul setelah animasi grade muncul) -->
       <div class="result-grade-desc-card cascade-item" id="result-motivation-msg">
         <span class="grade-predicate-text" id="result-predicate-text">&mdash;</span>
       </div>
 
-      <!-- 6. Actions (Strict 60px Action Row, 50px Breakdown, 50px Back) -->
+      <!-- 5. Actions (Strict 50px Smart Next Action & Strict 50px Back to Class / Room) -->
       <div class="result-action-slot cascade-item" id="smart-next-action-container"></div>
-      <button class="btn btn-breakdown-ghost cascade-item" id="toggle-answers-btn" type="button">VIEW ANSWER BREAKDOWN</button>
       <a href="dashboard.html" class="btn btn-dashboard-primary cascade-item" id="back-dashboard-btn">BACK TO CLASS</a>
 
       <!-- Hidden compatibility elements -->

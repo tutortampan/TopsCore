@@ -2,7 +2,7 @@
  * test_viewport_lock_and_table_normalization.mjs
  * 
  * Automated Verification Suite for:
- * 1. Rule 15 & AGENTS.md 2.23: 100vh Root Viewport Lock, calc(100vh - 60px) Banner Compensation, Zero Outer Scroll.
+ * 1. Rule 15 & AGENTS.md 2.28 & 2.32: 100vh Root Viewport Lock, calc(100vh - 80px) Banner Compensation, Zero Outer Scroll.
  * 2. Rule 15: Universal Sticky Header (thead th top 0, z-index 10) & Sticky Footer (tfoot bottom 0, z-index 10) & tfoot:empty collapse.
  * 3. Rule 18 & AGENTS.md 2.31: No-Capsule View Mode, Flat Tabular-Nums Text, and Edit-Mode-Only Input Capsules.
  * 4. Rule 16 & AGENTS.md 2.30: Pure Direct English UI Standard across toolbars, tabs, modals, and tables.
@@ -36,13 +36,13 @@ assert.ok(
 );
 console.log('  ✔ html & body strictly locked to 100vh viewport without outer scrolling');
 
-// 1.2 #admin-console 60px banner deduction
+// 1.2 #admin-console 80px banner deduction
 assert.ok(
-  adminCss.includes('height: calc(100vh - 60px) !important;') &&
-  adminCss.includes('max-height: calc(100vh - 60px) !important;'),
-  '#admin-console MUST deduct exactly 60px for #bottom-ad-banner'
+  adminCss.includes('height: calc(100vh - 80px) !important;') &&
+  adminCss.includes('max-height: calc(100vh - 80px) !important;'),
+  '#admin-console MUST deduct exactly 80px for #bottom-ad-banner'
 );
-console.log('  ✔ #admin-console dynamically set to calc(100vh - 60px) to compensate locked bottom ad banner');
+console.log('  ✔ #admin-console dynamically set to calc(100vh - 80px) to compensate locked bottom ad banner');
 
 // 1.3 .admin-main & .admin-content containment
 assert.ok(

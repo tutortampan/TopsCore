@@ -4241,7 +4241,7 @@ if (typeof window !== 'undefined') {
             if (!grid) return;
             const rect = grid.getBoundingClientRect();
             const banner = document.getElementById('bottom-ad-banner');
-            const bannerHeight = banner ? banner.offsetHeight : 60;
+            const bannerHeight = banner ? banner.offsetHeight : 80;
             const lowerPanel = document.querySelector('.attendance-matrix-toolbar.workspace-lower-panel');
             const isEditOn = Boolean(window._classManualScoreEditMode);
             const lowerPanelHeight = (isEditOn && lowerPanel && lowerPanel.offsetHeight > 0) ? (lowerPanel.offsetHeight + 10) : 0;

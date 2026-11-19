@@ -465,15 +465,30 @@ Deno.serve(async (req) => {
     }
 
     // 4. Server-Authoritative Scoring
+    // Section-aware denominator: If only a subset of questions is submitted (e.g. Words-only section of a
+    // Unified test), count only the submitted questions in the denominator so Phrases (not sent yet)
+    // do NOT drag down the score. This prevents "always wrong" scoring when students take Words or Phrases
+    // separately from a single Unified test shell.
+    const submittedIds = new Set<string>(answersMap.keys());
+    const isPartialSubmit = submittedIds.size > 0 && submittedIds.size < attemptAnswers.length;
+    // Determine which questions count in the denominator:
+    // - Full submit (all questions sent): use all attempt_answers
+    // - Partial/section submit (only subset sent): only count the rows that were sent
+    const scoredRows = isPartialSubmit
+      ? attemptAnswers.filter((r: any) => submittedIds.has(r.id))
+      : attemptAnswers;
+
     let totalScore = 0;
     let correctCount = 0;
-    const totalQuestions = attemptAnswers.length;
+    const totalQuestions = scoredRows.length;
     const updates: any[] = [];
 
     for (const row of attemptAnswers) {
+      // For section-based submission, skip scoring rows not in the submitted set
+      const isInSubmit = !isPartialSubmit || submittedIds.has(row.id);
       const studentAns = answersMap.has(row.id)
         ? answersMap.get(row.id)!
-        : (row.student_answer ?? "");
+        : (isInSubmit ? (row.student_answer ?? "") : "");
 
       const validAnswers = parseValidAnswers(row);
       const isSpeech = row.question_snapshot?.answer_type === "spoken" ||
@@ -482,8 +497,11 @@ Deno.serve(async (req) => {
 
       const evalResult = evaluateStudentAnswer(studentAns, validAnswers, isSpeech);
 
-      totalScore += evalResult.score;
-      if (evalResult.is_correct) correctCount++;
+      // Only accumulate score for rows that are part of this submission
+      if (isInSubmit) {
+        totalScore += evalResult.score;
+        if (evalResult.is_correct) correctCount++;
+      }
 
       updates.push({
         id: row.id,
@@ -498,6 +516,9 @@ Deno.serve(async (req) => {
     }
 
     for (const u of updates) {
+      // On partial (section-based) submit, only update rows that were actually submitted.
+      // Skip rows from other sections to avoid overwriting their answers with empty strings.
+      if (isPartialSubmit && !submittedIds.has(u.id)) continue;
       await supabase
         .from("attempt_answers")
         .update({

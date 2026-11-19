@@ -172,6 +172,14 @@ async function run() {
       const overlay = document.querySelector('.loading-overlay');
       return !overlay || overlay.style.display === 'none';
     }, { timeout: 20000 }).catch(() => {});
+    if (targetPageArg.includes('result.html')) {
+      await page.waitForFunction(() => {
+        const loading = document.getElementById('result-loading');
+        const content = document.getElementById('result-content');
+        return (!loading || loading.classList.contains('hidden')) && content && !content.classList.contains('hidden');
+      }, { timeout: 20000 }).catch(() => {});
+      await page.waitForTimeout(3500);
+    }
     await page.waitForSelector('#batch-leaderboard-container .leaderboard-row', { timeout: 10000 }).catch(() => {});
     await page.waitForTimeout(1500);
     if (targetPageArg === 'index.html') {

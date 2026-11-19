@@ -337,6 +337,13 @@ When Master Edit Mode is active (`body.global-edit-mode-on`), every table render
 - **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel**: Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, modal tables) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`). Status hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
 - **Mutlak Nol Glow di Seluruh Sistem**: Dilarang keras menggunakan efek glow, text-shadow, atau box-shadow pada teks maupun sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur per [`.agents/rules/ui-invariants.md` §4.9](file:///.agents/rules/ui-invariants.md#49-zero-table-capsule--zero-table-glow-invariant-ssot).
 
+## 2.32 Standardized 80px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`)
+- **Strict 80px Height Lock**: Tinggi banner bawah di seluruh antarmuka aplikasi terkunci mati tepat **`80px`** (`height: 80px !important; min-height: 80px !important; max-height: 80px !important; box-sizing: border-box !important;`).
+- **Dual-Viewport Execution**:
+  - Pada Student Realm (koridor mobile 430px), banner terkunci di dasar layar terpusat (`max-width: 430px; margin: 0 auto;`).
+  - Pada Admin Desktop Realm (100vh workstation), konsol kerja `#admin-console` memotong tepat 80px (`height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;`) untuk menjamin zero outer page scroll.
+- **Strict 10px Clearance**: Elemen/tombol aksi di atas banner (seperti tombol `#back-dashboard-btn` pada `result.html`) berjarak tepat 10px dari tepi atas banner. Aturan detail diatur dalam [`.agents/rules/ui-invariants.md` §1.8](file:///.agents/rules/ui-invariants.md#18-standardized-80px-bottom-banner-invariant-bottom-ad-banner--topscore-locked-banner-ssot).
+
 ---
 
 # 3. TARGET ARCHITECTURE

@@ -28,7 +28,7 @@
 The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` viewport lock with ZERO outer scrolling:
 - **Table-Only Vertical Scroll**: Vertical scrolling is strictly permitted inside `.table-wrap` only (`overflow-y: auto !important; overflow-x: hidden !important;`).
 - **Root Containment**: `html` and `body` strictly enforce `height: 100vh !important; max-height: 100vh !important; width: 100vw !important; max-width: 100vw !important; overflow: hidden !important; margin: 0 !important; padding: 0 !important;`.
-- **Locked Base Banner Compensation**: Fixed height of `60px` (`#bottom-ad-banner`). `#admin-console` strictly uses `height: calc(100vh - 60px) !important; max-height: calc(100vh - 60px) !important;` for exact 100vh zero-overflow containment.
+- **Locked Base Banner Compensation**: Fixed height of `80px` (`#bottom-ad-banner` / `.topscore-locked-banner`). `#admin-console` strictly uses `height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;` for exact 100vh zero-overflow containment.
 - **Flexbox Toolbar Non-Expansion**: Toolbars (`.student-roster-toolbar`, `.attendance-matrix-toolbar`, `.datagrid-toolbar`, `.admin-toolbar`) are `flex: 0 0 auto !important;`. Grid containers get `flex: 1 1 0 !important; min-height: 0 !important;`.
 - **Empty Toolbar Collapse in Edit Mode OFF**: In Edit Mode OFF, action toolbars with only hidden `.edit-mode-only` buttons collapse completely (`display: none !important;`).
 
@@ -105,6 +105,20 @@ Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara 
 5. **Color SSOT & Semantic Precision**: Menggunakan token resmi (`#38bdf8` Tactical Blue), dilarang menggunakan warna hijau Grade A pada status input belum terverifikasi.
 6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
 7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
+
+### 1.8 Standardized 80px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`) (SSOT)
+Seluruh halaman sistem TopsCore LMS (Student Realm & Admin Realm) menerapkan banner bawah permanen terkunci (**Locked Base Banner**) dengan aturan baku mutlak:
+1. **Strict 80px Height Lock**: Tinggi banner bawah terkunci mati tepat **`80px`** (`height: 80px !important; min-height: 80px !important; max-height: 80px !important; box-sizing: border-box !important;`).
+2. **Dual-Viewport Invariant Execution**:
+   - **Student Realm (Mobile Corridor 430px)**: Banner terkunci terpusat pada koridor mobile dengan `max-width: 430px !important; margin: 0 auto !important; left: 0; right: 0; bottom: 0; position: fixed !important;`.
+   - **Admin Desktop Realm (100vh Workstation)**: Banner menempel di dasar layar monitor (`width: 100vw; bottom: 0; left: 0; position: fixed !important;`). Konsol kerja `#admin-console` memotong tepat 80px (`height: calc(100vh - 80px) !important; max-height: calc(100vh - 80px) !important;`) untuk menjamin zero outer page scroll (100vh lock sempurna).
+3. **Internal Spacing & Clearance**:
+   - Pada halaman dengan scrollable content, body mengalokasikan padding bawah `padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;`.
+   - Pada halaman hasil (`result.html`) dan ruang ujian (`test.html`) yang menerapkan *Zero-Scroll Single Screen Architecture*, jarak vertikal dari elemen/tombol terbawah (misal `#back-dashboard-btn`) ke banner terkunci tepat **10px** (`padding-bottom: 10px; gap: 10px;`).
+4. **Authoritative Brand Typography & Colors**:
+   - **Brand**: `TopsCore` berukuran **16px** (Level 2), font `Outfit`, weight `900`, warna Tactical Blue (`#38bdf8`), letter-spacing `0.05em`, soft glow `text-shadow: 0 0 14px rgba(56, 189, 248, 0.45)`.
+   - **Author**: `by Mr. Top` berukuran **14px** (Level 3), font `Outfit`, weight `800`, warna White Slate (`#f8fafc`), letter-spacing `0.02em`.
+   - **Background & Border**: Background `#030a12` (atau radial glow dinamis sesuai tier), border atas `1px solid rgba(56, 189, 248, 0.25)` (atau `1.5px solid rgba(var(--tier-rgb), 0.40)` saat tier glow aktif).
 
 ---
 
