@@ -1701,30 +1701,6 @@ if (typeof window !== 'undefined') {
 export function formatTestDisplay(test) {
   if (!test) return { typeLabel: 'Task', topicOrTheme: '', fullTitle: 'Task', line1: 'Task', line2: '' };
 
-  // 1. If explicit display_name exists in database and is not empty, respect it
-  if (test.display_name && String(test.display_name).trim()) {
-    const dName = String(test.display_name).trim();
-    const parts = dName.split(/\s*[-–]\s*/);
-    if (parts.length > 1) {
-      const typeLabel = parts[0].trim();
-      const topicOrTheme = parts.slice(1).join(' - ').trim();
-      return {
-        typeLabel,
-        topicOrTheme,
-        fullTitle: `${typeLabel} - ${topicOrTheme}`,
-        line1: typeLabel,
-        line2: topicOrTheme
-      };
-    }
-    return {
-      typeLabel: dName,
-      topicOrTheme: '',
-      fullTitle: dName,
-      line1: dName,
-      line2: ''
-    };
-  }
-
   const rawTitle = String(test.title || test.name || '').trim();
   const shell = String(test.shell_code || '').toUpperCase();
   const isExam = test.test_type === 'exam' || test.category === 'EXAM' || shell.endsWith('-EXAM') || /Exam/i.test(rawTitle);
@@ -1818,21 +1794,23 @@ export function formatTestDisplay(test) {
   }
 
   // 5. Construct SSOT Format:
-  // "2nd Vocabulary A1 Task - Topic Name"
-  // "2nd Vocabulary D Exam - Theme Name"
+  // Task: "2nd Vocabulary Task A1 - Topic Name"
+  // Exam: "2nd Vocabulary Exam A - Theme Name"
   const codePart = isExam ? (themeLetter || 'A') : `${themeLetter || 'A'}${topicNum || '1'}`;
   const typePart = isExam ? 'Exam' : 'Task';
 
   const classPrefix = `${levelOrdinal} ${className}`.trim();
-  const typeLabel = `${classPrefix} ${codePart} ${typePart}`.trim();
+  const typeLabel = `${classPrefix} ${typePart} ${codePart}`.trim();
   const fullTitle = topicOrTheme ? `${typeLabel} - ${topicOrTheme}` : typeLabel;
+  const line1 = `${typePart} ${codePart}`; // Zero Class Redundancy for mobile 2-line rendering: "Task A1" / "Exam A"
+  const line2 = topicOrTheme;
 
   return {
     typeLabel,
     topicOrTheme,
     fullTitle,
-    line1: typeLabel,
-    line2: topicOrTheme
+    line1,
+    line2
   };
 }
 

@@ -4137,8 +4137,8 @@ if (typeof window !== 'undefined') {
                       : origName;
                     return `
                       <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; display:flex; align-items:center; gap:2px; cursor:pointer;"
-                           onclick="event.stopPropagation(); if (typeof window.showStudentProfileModal === 'function') window.showStudentProfileModal('${row.id}');"
-                           title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;[Remedial] Student has remedial score' : ''}&#10;Click to view profile">
+                           onclick="event.stopPropagation(); if (typeof window.showStudentDossierModal === 'function') window.showStudentDossierModal('${row.id}');"
+                           title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;[Remedial] Student has remedial score' : ''}&#10;Click to view official academic report">
                         <span style="color:var(--clr-text-1); font-size:12px; font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                           ${escapeHtml(matrixName)}
                         </span>
@@ -5821,14 +5821,14 @@ if (typeof window !== 'undefined') {
 
 
     // ──── INDIVIDUAL STUDENT PROFILE (Detailed Progress, Correct/Incorrect Counts, Batch Navigation) ────
-    // ─── INDIVIDUAL STUDENT PROFILE (Consolidated Modal Delegator) ───
+    // ─── INDIVIDUAL STUDENT REPORT (A4 Printable Dossier Delegator) ───
     async function openStudentProfile(studentId, batchStudentIds = [], skipHistory = false) {
-      if (typeof window.showStudentProfileModal === 'function') {
-        return window.showStudentProfileModal(studentId);
+      if (typeof window.showStudentDossierModal === 'function') {
+        return window.showStudentDossierModal(studentId);
       }
       const sm = await import('./student-management.js?v=20261114_v496');
-      if (typeof sm.showStudentProfileModal === 'function') {
-        return sm.showStudentProfileModal(studentId);
+      if (typeof sm.showStudentDossierModal === 'function') {
+        return sm.showStudentDossierModal(studentId);
       }
     }
     window.openStudentProfile = openStudentProfile;

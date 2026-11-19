@@ -393,8 +393,8 @@ export async function renderStudents(area, options = {}) {
       }
     });
 
-    const completedTestsCount = Math.max(bestByAsm.size, completedAssignedCount);
-    const completionPct = totalAssigned > 0 ? Math.round((completedTestsCount / totalAssigned) * 100) : 0;
+    const completedTestsCount = completedAssignedCount;
+    const completionPct = totalAssigned > 0 ? Math.min(100, Math.round((completedTestsCount / totalAssigned) * 100)) : 0;
     const latestAttempt = studentAttempts.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
 
     // Authoritative Milestone Progression Engine (Rule 2.7, 2.8 & 2.10)
@@ -1496,525 +1496,12 @@ export async function renderStudents(area, options = {}) {
   };
 
   // ─────────────────────────────────────────────────────────────
-  // MODAL 1: INTERACTIVE STUDENT PROFILE MODAL (TACTICAL FM WORKSTATION)
+  // STUDENT PROFILE (RETIRED PER USER DIRECTIVE -> OFFICIAL A4 DOSSIER)
+  // Per user directive: The dark tactical profile popup is retired;
+  // the single authoritative report is the A4 printable Dossier.
   // ─────────────────────────────────────────────────────────────
   window.showStudentProfileModal = async function(studentId) {
-    const list = filteredGridData || gridData || [];
-    let rec = list.find(d => d.id === studentId);
-
-    // Fallback query if called outside current filtered table
-    if (!rec) {
-      try {
-        const sb = await getSupabase();
-        let st = null;
-        try {
-          const res = await sb.from('students')
-            .select('id, name, gender, birth_date, education, province, city, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
-            .eq('id', studentId)
-            .single();
-          st = res.data;
-        } catch (_) {}
-        if (st) {
-          rec = {
-            id: st.id,
-            name: st.name,
-            displayName: cleanStudentName(st.name),
-            gender: st.gender,
-            birth_date: st.birth_date,
-            education: st.education,
-            province: st.province || (st.is_active !== false ? 'Nusa Tenggara Barat' : ''),
-            city: st.city || (st.is_active !== false ? 'Kota Mataram' : ''),
-            ageDisplay: calculateAgeFromBirthDate(st.birth_date),
-            is_active: st.is_active,
-            photo_url: st.photo_url,
-            instName: st.institutions?.name || '—',
-            progName: st.programs?.name || '—',
-            batchName: st.batches?.name || '—',
-            levelName: st.levels?.name || '—',
-            overallScoreStr: '—',
-            globalGrade: '—',
-            completedTests: 0,
-            totalAssigned: 40,
-            completionPct: 0,
-            details: []
-          };
-        }
-      } catch (err) {
-        console.warn('Fallback student fetch failed:', err);
-      }
-    }
-    if (!rec) return;
-
-    // Carousel navigation indices
-    const currentIdx = list.findIndex(d => d.id === studentId);
-    const hasPrev = currentIdx > 0;
-    const hasNext = currentIdx >= 0 && currentIdx < list.length - 1;
-    const prevId = hasPrev ? list[currentIdx - 1].id : null;
-    const nextId = hasNext ? list[currentIdx + 1].id : null;
-    const positionText = list.length > 0 ? `${currentIdx + 1} of ${list.length}` : '';
-
-    // Remove existing profile/dossier modals if any
-    const existingP = document.getElementById('student-profile-modal');
-    if (existingP) existingP.remove();
-    const existingD = document.getElementById('student-dossier-modal');
-    if (existingD) existingD.remove();
-
-    if (window.location.hash && !window.location.hash.startsWith('#profile-') && !window.location.hash.startsWith('#dossier-')) {
-      window._lastSectionBeforeProfile = window.location.hash.substring(1);
-    }
-    try {
-      if (window.location.hash !== '#profile-' + studentId) {
-        window.location.hash = '#profile-' + studentId;
-      }
-    } catch (_) {}
-
-    const backdrop = document.createElement('div');
-    backdrop.id = 'student-profile-modal';
-    backdrop.className = 'student-modal-backdrop animate-fade-in';
-    backdrop.style.cssText = 'position:fixed !important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(9,13,22,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;box-sizing:border-box;margin:0;';
-    document.body.style.overflow = 'hidden';
-
-    const photoContent = rec.photo_url
-      ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" alt="Student Photo" style="width:100%;height:100%;object-fit:cover;">`
-      : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`;
-
-    backdrop.innerHTML = `
-      <div class="student-profile-dialog">
-        <!-- Header -->
-        <div style="padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); gap: 12px; flex-wrap: wrap;">
-          <div class="d-flex align-center gap-3">
-            <div style="width: 56px; height: 56px; border-radius: 14px; overflow: hidden; border: 2px solid var(--fm-accent-tactical, #6366f1); box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0; background: #1e293b; display: flex; align-items: center; justify-content: center;">
-              ${photoContent}
-            </div>
-            <div>
-              <div class="d-flex align-center gap-2 flex-wrap">
-                <h3 style="margin: 0; font-size: 16px; color: var(--fm-text-primary, #f8fafc); font-weight: 800;">${escapeHtml(rec.displayName || rec.name)}</h3>
-                ${(rec.isAlumni || rec.levelName === 'X' || (rec.program_status || '').toUpperCase() === 'ALUMNI')
-                  ? `<span class="badge" style="background:rgba(192,132,252,0.15);color:var(--quad-d);border:1px solid rgba(192,132,252,0.3);font-size: 12px;">Alumni</span>`
-                  : (rec.is_active === false || (rec.program_status || '').toUpperCase() === 'INACTIVE')
-                    ? `<span class="badge badge-danger" style="background:rgba(255,0,0,0.15);color:var(--grade-e);border:1px solid rgba(255,0,0,0.3);font-size: 12px;">Inactive</span>`
-                    : (rec.program_status || '').toUpperCase() === 'HOLD'
-                      ? `<span class="badge badge-warning" style="font-size: 12px;">Hold</span>`
-                      : `<span class="badge badge-success" style="font-size: 12px;">Active</span>`
-                }
-                <span class="badge badge-info" style="font-size: 12px;">${escapeHtml(rec.gender || '—')}</span>
-              </div>
-              <div class="text-xs text-muted" style="margin-top: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                <span>${getSvgIcon('building', 12)} ${escapeHtml(rec.instName)}</span> &bull;
-                <span>${getSvgIcon('users', 12)} ${escapeHtml(rec.progName)}</span> &bull;
-                <span>${getSvgIcon('tag', 12)} Batch ${escapeHtml(rec.batchName)}</span> &bull;
-                <span>${getSvgIcon('award', 12)} ${escapeHtml(rec.levelName)}</span> &bull;
-                <span>${getSvgIcon('calendar', 12)} ${escapeHtml(rec.ageDisplay || '—')}</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Carousel & Actions -->
-          <div class="d-flex align-center gap-2">
-            ${list.length > 1 ? `
-              <div class="d-flex align-center gap-1" style="margin-right: 6px;">
-                <button class="btn btn-secondary btn-sm" id="btn-modal-prev-student" ${!hasPrev ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Previous Student (ArrowLeft)">←</button>
-                <span class="text-xs text-muted" style="padding: 0 4px; font-weight: 700;">${positionText}</span>
-                <button class="btn btn-secondary btn-sm" id="btn-modal-next-student" ${!hasNext ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Next Student (ArrowRight)">→</button>
-              </div>
-            ` : ''}
-            <button class="btn btn-secondary btn-sm" id="btn-profile-open-dossier" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Open Official Academic Dossier">
-              ${getSvgIcon('printer', 14)} Dossier
-            </button>
-            ${isTutorRole() ? '' : `
-            <button class="btn btn-secondary btn-sm edit-mode-only" id="btn-profile-edit-student" style="display:inline-flex;align-items:center;gap:5px;font-weight:600;" title="Edit Student">
-              ${getSvgIcon('edit', 14)} Edit
-            </button>
-            `}
-          </div>
-        </div>
-
-        <!-- 6 Tactical KPI Cards -->
-        <div style="padding: 0.9rem 1.5rem; display: flex; gap: 10px; flex-wrap: wrap; background: rgba(0,0,0,0.15);">
-          <div class="profile-kpi-card" style="border-left: 3px solid var(--fm-accent-tactical, #6366f1);">
-            <div class="profile-kpi-label">Global Grade</div>
-            <div class="profile-kpi-val" style="color: ${rec.overallColor || '#38bdf8'};">${rec.globalGrade || '—'}</div>
-          </div>
-          <div class="profile-kpi-card">
-            <div class="profile-kpi-label">Overall Score</div>
-            <div class="profile-kpi-val" style="color: ${rec.overallColor || 'var(--fm-text-primary, #f8fafc)'}; ${(rec.globalGrade === 'S' || rec.globalGrade === '★') ? `filter:drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6)); font-weight:900;` : ''}">${rec.overallScoreStr || '—'}</div>
-          </div>
-          <div class="profile-kpi-card">
-            <div class="profile-kpi-label">Curriculum Done</div>
-            <div class="profile-kpi-val" style="color: #38bdf8; font-size: 16px;">
-              ${rec.completedTests || 0} / ${rec.totalAssigned || 40}
-              <span style="font-size: 12px; color: var(--fm-text-muted); font-weight: 600;">(${rec.completionPct || 0}%)</span>
-            </div>
-          </div>
-          <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-correct);">
-            <div class="profile-kpi-label" style="color: var(--eval-correct);">Correct Answers</div>
-            <div class="profile-kpi-val" id="profile-stat-correct" style="color: var(--eval-correct);">...</div>
-          </div>
-          <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-partial);">
-            <div class="profile-kpi-label" style="color: var(--eval-partial);">Minor Errors</div>
-            <div class="profile-kpi-val" id="profile-stat-minor" style="color: var(--eval-partial);">...</div>
-          </div>
-          <div class="profile-kpi-card" style="border-left: 3px solid var(--eval-incorrect);">
-            <div class="profile-kpi-label" style="color: var(--eval-incorrect);">Incorrect</div>
-            <div class="profile-kpi-val" id="profile-stat-wrong" style="color: var(--eval-incorrect);">...</div>
-          </div>
-        </div>
-
-        <!-- Navigation Tabs -->
-        <div style="display: flex; gap: 4px; padding: 0 1.5rem; border-bottom: 1px solid var(--fm-border-subtle, rgba(255,255,255,0.08)); background: rgba(0,0,0,0.08);">
-          <button class="student-profile-tab-btn active" data-tab="tests">${getSvgIcon('clipboard', 14)} Test Breakdown (${(rec.details || []).length || 40})</button>
-          <button class="student-profile-tab-btn" data-tab="remediation">${getSvgIcon('shield', 14)} Remediation & Progression</button>
-          <button class="student-profile-tab-btn" data-tab="account">${getSvgIcon('lock', 14)} Account & Enrollment</button>
-        </div>
-
-        <!-- Tab Body -->
-        <div style="padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1;" id="profile-tab-body">
-          ${(window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Loading test history...')}
-        </div>
-
-        <!-- Modal Footer CTA Area -->
-        <div class="modal-footer" style="height:60px;min-height:60px;max-height:60px;padding:10px 1.5rem;display:flex;align-items:center;justify-content:flex-start;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);flex-shrink:0;">
-          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-profile-modal">CLOSE</button>
-        </div>
-      </div>
-    `;
-
-    document.body.appendChild(backdrop);
-
-    // Fetch attempts asynchronously for question-level inspection
-    let studentAttempts = [];
-    try {
-      const sb = await getSupabase();
-      const { data: atts } = await sb.from('attempts')
-        .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial_unlocked, tests(id, title, test_type, classes(id, name)), attempt_answers(id, is_correct, evaluation_result, score, question_snapshot, student_answer, correct_answer_snapshot)')
-        .eq('student_id', studentId)
-        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
-        .order('submitted_at', { ascending: false });
-      studentAttempts = atts || [];
-    } catch (err) {
-      console.warn('Error fetching attempts for profile modal:', err);
-    }
-
-    // Accuracy calculations
-    let totalCorrect = 0;
-    let totalMinor = 0;
-    let totalIncorrect = 0;
-    studentAttempts.forEach(att => {
-      (att.attempt_answers || []).forEach(ans => {
-        const res = (ans.evaluation_result || '').toLowerCase();
-        if (res === 'correct' || ans.is_correct || ans.score >= 1) totalCorrect++;
-        else if (res.includes('minor') || (ans.score > 0 && ans.score < 1)) totalMinor++;
-        else totalIncorrect++;
-      });
-    });
-
-    const statCorrectEl = backdrop.querySelector('#profile-stat-correct');
-    const statMinorEl = backdrop.querySelector('#profile-stat-minor');
-    const statWrongEl = backdrop.querySelector('#profile-stat-wrong');
-    if (statCorrectEl) statCorrectEl.textContent = totalCorrect;
-    if (statMinorEl) statMinorEl.textContent = totalMinor;
-    if (statWrongEl) statWrongEl.textContent = totalIncorrect;
-
-    // Render Tab Function
-    const renderTab = (tabName) => {
-      const tabBody = backdrop.querySelector('#profile-tab-body');
-      if (!tabBody) return;
-
-      if (tabName === 'tests') {
-        const details = rec.details || [];
-        const rows = details.map(d => {
-          const matchingAttempts = studentAttempts.filter(a => a.test_id === d.test_id);
-          const latestAtt = matchingAttempts[0];
-          const hasAnswers = latestAtt && latestAtt.attempt_answers && latestAtt.attempt_answers.length > 0;
-          const attId = latestAtt ? latestAtt.id : null;
-
-          return `
-            <tr class="${hasAnswers ? 'clickable-attempt-row' : ''}" data-att-id="${attId || ''}" style="${hasAnswers ? 'cursor:pointer;' : ''}">
-              <td class="fw-600">
-                <div class="d-flex align-center gap-2">
-                  ${hasAnswers ? `<span class="toggle-arrow" id="modal-arrow-${attId}" style="font-size: 12px; color:var(--clr-text-muted); transition:transform 0.2s;">▶</span>` : '<span style="display:inline-block;width:12px;"></span>'}
-                  <span>${escapeHtml(d.testTitle || '—')}</span>
-                </div>
-              </td>
-              <td class="text-center">
-                <span style="color:#cbd5e1;font-weight:600;font-size:12px;white-space:nowrap;text-shadow:none;">
-                  ${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(d.levelNumber || d.levelName) : (d.levelName || `Level ${d.levelNumber || '3'}`))}
-                </span>
-              </td>
-              <td class="text-center">
-                <span style="font-size:12px;font-weight:600;color:${d.is_completed ? 'var(--grade-a)' : d.is_in_progress ? 'var(--grade-c)' : 'var(--clr-text-3)'};display:inline-flex;align-items:center;gap:4px;text-shadow:none;">
-                  ${d.is_completed ? `${getSvgIcon('check-circle', 12)} Completed` : d.is_in_progress ? `${getSvgIcon('clock', 12)} In Progress` : 'Not Started'}
-                </span>
-              </td>
-              <td class="text-center">
-                <span class="fw-700 text-sm" style="color:${d.bestPct != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(d.bestPct) : TOPSCORE_COLORS.STAR) : 'var(--clr-text-3)'};">
-                  ${d.bestPct != null ? `${d.bestPct}%` : '—'}
-                </span>
-              </td>
-              <td class="text-center text-xs text-muted">
-                ${matchingAttempts.length > 0 ? `${matchingAttempts.length} attempt${matchingAttempts.length > 1 ? 's' : ''}` : '—'}
-              </td>
-            </tr>
-            ${hasAnswers ? `
-              <tr id="modal-detail-${attId}" class="hidden" style="background:rgba(0,0,0,0.3);">
-                <td colspan="5" style="padding:12px 16px;">
-                  <div style="border-left:3px solid var(--fm-accent-tactical, #6366f1); padding-left:12px;">
-                    <div class="d-flex align-center justify-between mb-2">
-                      <div class="fw-700 text-xs" style="color:var(--fm-text-primary, #f8fafc); text-transform:uppercase;">
-                        Questions &amp; Answers Review (${latestAtt.attempt_answers.length} items)
-                      </div>
-                      <div class="d-flex align-center gap-2">
-                        ${latestAtt ? `
-                          ${latestAtt.is_remedial_unlocked ? `
-                            <button class="btn btn-secondary btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="false" style="padding:2px 8px;font-size: 12px;background:rgba(var(--grade-c-rgb),0.15);border:1px solid var(--grade-c);color:var(--grade-c);display:inline-flex;align-items:center;gap:4px;" title="Revert status to Normal">
-                              ${getSvgIcon('refresh', 12)} Normal
-                            </button>
-                            <span class="badge badge-success" style="font-size: 12px;display:inline-flex;align-items:center;gap:4px;">${getSvgIcon('check-circle', 12)} Remedial Authorized</span>
-                          ` : `
-                            <button class="btn btn-warning btn-sm btn-modal-toggle-rem edit-mode-only" data-att-id="${attId}" data-set-remedial="true" style="padding:2px 8px;font-size: 12px;display:inline-flex;align-items:center;gap:4px;" title="Mark this exam score as Remedial">
-                              ${getSvgIcon('target', 12)} Remedial
-                            </button>
-                          `}
-                        ` : ''}
-                      </div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:6px; max-height:220px; overflow-y:auto; padding-right:4px;">
-                      ${latestAtt.attempt_answers.map((ans, qIdx) => {
-                        const evalRes = (ans.evaluation_result || '').toLowerCase();
-                        const sc = parseFloat(ans.score || 0);
-                        let badge = '<span class="badge badge-danger" style="font-size: 12px;">Incorrect (0 pt)</span>';
-                        if (evalRes === 'correct' || ans.is_correct || sc >= 1) {
-                          badge = `<span class="badge badge-success" style="font-size: 12px;display:inline-flex;align-items:center;gap:3px;">${getSvgIcon('check-circle', 12)} Correct (+1 pt)</span>`;
-                        } else if (evalRes.includes('minor') || (sc > 0 && sc < 1)) {
-                          badge = `<span class="badge badge-warning" style="font-size: 12px;display:inline-flex;align-items:center;gap:3px;">${getSvgIcon('alert-triangle', 12)} Minor (+0.5 pt)</span>`;
-                        }
-                        const qPrompt = ans.question_snapshot || `Question #${qIdx + 1}`;
-                        const sAns = ans.student_answer || '(No Answer)';
-                        const cAns = ans.correct_answer_snapshot || '—';
-
-                        return `
-                          <div style="padding:6px 10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px; font-size: 12px;">
-                            <div class="d-flex align-center justify-between gap-2 mb-1">
-                              <div><strong>Q${qIdx + 1}.</strong> ${escapeHtml(qPrompt)}</div>
-                              <div>${badge}</div>
-                            </div>
-                            <div class="text-xs" style="color:var(--fm-text-secondary, #94a3b8);">
-                              <span>Given: <code style="color:#f8fafc;">${escapeHtml(sAns)}</code></span>
-                              <span style="margin-left:12px;">Accepted: <code style="color:${TOPSCORE_COLORS.CORRECT};">${escapeHtml(cAns)}</code></span>
-                            </div>
-                          </div>
-                        `;
-                      }).join('')}
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            ` : ''}
-          `;
-        }).join('');
-
-        tabBody.innerHTML = `
-          <table class="table-wrap" style="width:100%;">
-            <thead>
-              <tr>
-                <th class="text-left" style="padding:8px 12px;">TEST TITLE</th>
-                <th class="text-center" style="padding:8px 12px;width:120px;">LEVEL</th>
-                <th class="text-center" style="padding:8px 12px;width:120px;">STATUS</th>
-                <th class="text-center" style="padding:8px 12px;width:90px;">BEST SCORE</th>
-                <th class="text-center" style="padding:8px 12px;width:90px;">ATTEMPTS</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows || '<tr><td colspan="5" class="text-center text-muted p-4">No tests assigned.</td></tr>'}
-            </tbody>
-          </table>
-        `;
-
-        // Bind Accordion clicks
-        tabBody.querySelectorAll('.clickable-attempt-row').forEach(tr => {
-          tr.onclick = () => {
-            const attId = tr.dataset.attId;
-            const detailRow = tabBody.querySelector(`#modal-detail-${attId}`);
-            const arrow = tabBody.querySelector(`#modal-arrow-${attId}`);
-            if (detailRow) {
-              const isHidden = detailRow.classList.toggle('hidden');
-              if (arrow) arrow.textContent = isHidden ? '▶' : '▼';
-            }
-          };
-        });
-
-        // Bind Remedial Toggle clicks
-        tabBody.querySelectorAll('.btn-modal-toggle-rem, .btn-modal-remedial').forEach(btn => {
-          btn.onclick = async (e) => {
-            e.stopPropagation();
-            if (isTutorRole()) {
-              showToast('Permission denied: Tutor accounts cannot alter remedial status.', 'warning');
-              return;
-            }
-            const attId = btn.dataset.attId;
-            const targetRemedial = btn.dataset.setRemedial !== 'false';
-            const msg = targetRemedial
-              ? 'Mark this score as REMEDIAL (Grade R)?'
-              : 'Revert this score to NORMAL?';
-            if (!confirm(msg)) return;
-            try {
-              await labelAttemptRemedial(attId, targetRemedial, 60);
-              showToast(targetRemedial ? 'Score successfully labeled as Remedial (Grade R).' : 'Remedial status reverted to Normal.', 'success');
-              window.showStudentProfileModal(studentId);
-            } catch(err) {
-              showToast('Failed to update status: ' + err.message, 'error');
-            }
-          };
-        });
-
-      } else if (tabName === 'remediation') {
-        const failedTests = (rec.details || []).filter(d => d.bestPct != null && d.bestPct < 60);
-        tabBody.innerHTML = `
-          <div style="display:flex; flex-direction:column; gap:16px;">
-            <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
-              <div class="fw-700 text-sm mb-1" style="color:var(--fm-text-primary, #f8fafc);">Curriculum Progression Status</div>
-              <p class="text-xs text-muted" style="margin:0;">
-                Current Level: <strong>${escapeHtml(rec.levelName)}</strong> &bull; Completed: <strong>${rec.completedTests} of ${rec.totalAssigned}</strong> (${rec.completionPct}%)
-              </p>
-            </div>
-
-            ${failedTests.length > 0 ? `
-              <div style="padding:14px 18px; border-radius:10px; background:rgba(${TOPSCORE_COLORS.D_RGB},0.08); border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);">
-                <div class="fw-700 text-sm mb-2" style="color:${TOPSCORE_COLORS.D};">${getSvgIcon('alert-triangle', 13)} Remediation Alerts (${failedTests.length} Modules Below KKM 60%)</div>
-                <div style="display:flex; flex-direction:column; gap:8px;">
-                  ${failedTests.map(fa => `
-                    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:rgba(0,0,0,0.2); border-radius:6px;">
-                      <div>
-                        <div class="fw-600 text-sm" style="color:#f8fafc;">${escapeHtml(fa.testTitle)}</div>
-                        <div class="text-xs text-muted">Current Best: <strong style="color:${getGradeColorByScore(fa.bestPct)};">${fa.bestPct}%</strong> (KKM Passing: 60%)</div>
-                      </div>
-                      <button class="btn btn-warning btn-sm" onclick="(window.showToast || showToast)('Remedial retake permitted for ${escapeHtml(fa.testTitle)}', 'info')">
-                        Authorize Retake
-                      </button>
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : `
-              <div style="padding:24px; text-align:center; background:rgba(${TOPSCORE_COLORS.A_RGB},0.08); border:1px solid rgba(${TOPSCORE_COLORS.A_RGB},0.25); border-radius:10px;">
-                <div style="margin-bottom:4px; color:${TOPSCORE_COLORS.A};">${getSvgIcon('check-circle', 30)}</div>
-                <div class="fw-700" style="color:${TOPSCORE_COLORS.A};">No Remediation Required</div>
-                <div class="text-xs text-muted" style="margin-top:4px;">All attempted tests meet or exceed academic passing criteria.</div>
-              </div>
-            `}
-          </div>
-        `;
-      } else if (tabName === 'account') {
-        tabBody.innerHTML = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-            <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
-              <div class="fw-700 text-xs text-muted uppercase mb-2">Student Authentication</div>
-              <div style="margin-bottom:8px;">
-                <div class="text-xs text-muted">PIN Security Status:</div>
-                <div class="fw-700 text-sm" style="color:${TOPSCORE_COLORS.A};">${getSvgIcon('check-circle', 12)} Configured (4-digit PIN)</div>
-              </div>
-              <div>
-                <div class="text-xs text-muted">Account Status:</div>
-                <div class="fw-700 text-sm">${rec.is_active !== false ? 'Active Academic Access' : 'Suspended / Inactive'}</div>
-              </div>
-            </div>
-
-            <div style="padding:14px 18px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid var(--fm-border-subtle, rgba(255,255,255,0.08));">
-              <div class="fw-700 text-xs text-muted uppercase mb-2">Academy Enrollment</div>
-              <div style="margin-bottom:8px;">
-                <div class="text-xs text-muted">Institution &amp; Program:</div>
-                <div class="fw-600 text-sm">${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)}</div>
-              </div>
-              <div style="margin-bottom:8px;">
-                <div class="text-xs text-muted">Batch:</div>
-                <div class="fw-600 text-sm">Batch ${escapeHtml(rec.batchName)} (${escapeHtml(rec.levelName)})</div>
-              </div>
-              <div style="margin-bottom:8px;">
-                <div class="text-xs text-muted">Domicile / Address:</div>
-                <div class="fw-600 text-sm">${[formatVillageName(rec.village), formatDistrictName(rec.district), formatCityDistrict(rec.city), formatProvinceName(rec.province)].filter(v => v && v !== '—').map(escapeHtml).join(', ') || '—'}</div>
-              </div>
-              <div>
-                <div class="text-xs text-muted">Enrolled Date:</div>
-                <div class="fw-600 text-sm">${escapeHtml(rec.joinDate || '—')}</div>
-              </div>
-            </div>
-          </div>
-        `;
-      }
-    };
-
-    renderTab('tests');
-
-    // Tab buttons event listeners
-    backdrop.querySelectorAll('.student-profile-tab-btn').forEach(btn => {
-      btn.onclick = () => {
-        backdrop.querySelectorAll('.student-profile-tab-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        renderTab(btn.dataset.tab);
-      };
-    });
-
-    // Close button
-    const cleanupKeys = (isReverting = true) => {
-      window.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-      if (isReverting && window.location.hash === `#profile-${studentId}`) {
-        const fallback = window._lastSectionBeforeProfile || localStorage.getItem('topscore_admin_last_section') || 'students';
-        try { window.location.hash = '#' + fallback; } catch (_) {}
-      }
-    };
-    const closeBtn = backdrop.querySelector('#btn-close-profile-modal');
-    if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupKeys(true); };
-    backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupKeys(true); } };
-
-    // Keyboard navigation
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        backdrop.remove();
-        cleanupKeys(true);
-      } else if (e.key === 'ArrowLeft' && hasPrev) {
-        e.preventDefault();
-        backdrop.remove();
-        cleanupKeys(false);
-        window.showStudentProfileModal(prevId);
-      } else if (e.key === 'ArrowRight' && hasNext) {
-        e.preventDefault();
-        backdrop.remove();
-        cleanupKeys(false);
-        window.showStudentProfileModal(nextId);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-
-    // Carousel buttons
-    const prevBtn = backdrop.querySelector('#btn-modal-prev-student');
-    if (prevBtn && hasPrev) {
-      prevBtn.onclick = () => { backdrop.remove(); cleanupKeys(false); window.showStudentProfileModal(prevId); };
-    }
-    const nextBtn = backdrop.querySelector('#btn-modal-next-student');
-    if (nextBtn && hasNext) {
-      nextBtn.onclick = () => { backdrop.remove(); cleanupKeys(false); window.showStudentProfileModal(nextId); };
-    }
-
-    // Switch to Dossier button
-    const openDossierBtn = backdrop.querySelector('#btn-profile-open-dossier');
-    if (openDossierBtn) {
-      openDossierBtn.onclick = () => {
-        backdrop.remove();
-        cleanupKeys(false);
-        window.showStudentDossierModal(studentId);
-      };
-    }
-
-    // Edit Student button
-    const editStudentBtn = backdrop.querySelector('#btn-profile-edit-student');
-    if (editStudentBtn) {
-      editStudentBtn.onclick = () => {
-        if (typeof window.openStudentFullEdit === 'function') {
-          window.openStudentFullEdit(rec._raw || rec, () => renderStudents(area));
-        }
-      };
-    }
+    return window.showStudentDossierModal(studentId);
   };
 
   // ─────────────────────────────────────────────────────────────
@@ -2029,7 +1516,7 @@ export async function renderStudents(area, options = {}) {
         let st = null;
         try {
           const res = await sb.from('students')
-            .select('id, name, gender, birth_date, education, province, city, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
+            .select('id, name, gender, birth_date, education, province, city, district, village, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
             .eq('id', studentId)
             .single();
           st = res.data;
@@ -2044,6 +1531,8 @@ export async function renderStudents(area, options = {}) {
             education: st.education,
             province: st.province || (st.is_active !== false ? 'Nusa Tenggara Barat' : ''),
             city: st.city || (st.is_active !== false ? 'Kota Mataram' : ''),
+            district: st.district || '',
+            village: st.village || '',
             ageDisplay: calculateAgeFromBirthDate(st.birth_date),
             is_active: st.is_active,
             photo_url: st.photo_url,
@@ -2065,6 +1554,14 @@ export async function renderStudents(area, options = {}) {
     }
     if (!rec) return;
 
+    // Carousel navigation indices across cohort list
+    const currentIdx = list.findIndex(d => d.id === studentId);
+    const hasPrev = currentIdx > 0;
+    const hasNext = currentIdx >= 0 && currentIdx < list.length - 1;
+    const prevId = hasPrev ? list[currentIdx - 1].id : null;
+    const nextId = hasNext ? list[currentIdx + 1].id : null;
+    const positionText = list.length > 0 ? `${currentIdx + 1} of ${list.length}` : '';
+
     // Remove existing if open
     const existingP = document.getElementById('student-profile-modal');
     if (existingP) existingP.remove();
@@ -2083,15 +1580,34 @@ export async function renderStudents(area, options = {}) {
     const backdrop = document.createElement('div');
     backdrop.id = 'student-dossier-modal';
     backdrop.className = 'student-modal-backdrop animate-fade-in';
-    backdrop.style.cssText = 'position:fixed !important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(9,13,22,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto;box-sizing:border-box;margin:0;';
+    backdrop.style.cssText = 'position:fixed !important;top:0;left:0;right:0;bottom:0;width:100vw;height:100vh;background:rgba(9,13,22,0.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto;box-sizing:border-box;margin:0;';
     document.body.style.overflow = 'hidden';
 
-    // Fetch attempts for transcript table (stateless & low-egress)
+    const cleanBatch = (rec.batchName || '').replace(/^batch\s*/i, '').trim();
+
+    // Helper: Address Formatter
+    function formatFullStudentAddress(r) {
+      if (!r) return '—';
+      const parts = [];
+      const v = (r.village || '').trim();
+      const d = (r.district || '').trim();
+      const c = (r.city || '').trim();
+      const p = (r.province || '').trim();
+
+      if (v && v !== '—') parts.push(typeof formatVillageName === 'function' ? formatVillageName(v) : v);
+      if (d && d !== '—') parts.push(typeof formatDistrictName === 'function' ? formatDistrictName(d) : d);
+      if (c && c !== '—') parts.push(typeof formatCityDistrict === 'function' ? formatCityDistrict(c) : c);
+      if (p && p !== '—') parts.push(typeof formatProvinceName === 'function' ? formatProvinceName(p) : p);
+
+      return parts.length > 0 ? parts.join(', ') : '—';
+    }
+
+    // Fetch attempts joining classes and levels for transcript table (stateless & low-egress)
     let studentAttempts = [];
     try {
       const sb = await getSupabase();
       const { data: atts } = await sb.from('attempts')
-        .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, tests(id, title, test_type)')
+        .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial, is_remedial_unlocked, tests(id, title, test_type, shell_code, class_id, level_id, classes(id, name, code), levels(id, name, level_number))')
         .eq('student_id', studentId)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
         .order('submitted_at', { ascending: true });
@@ -2100,211 +1616,292 @@ export async function renderStudents(area, options = {}) {
       console.warn('Error fetching attempts for dossier:', err);
     }
 
+    // Helper: isExam check (strictly exams only, no tasks/quizzes)
+    function isExamAttempt(att) {
+      const t = att?.tests;
+      if (!t) return false;
+      const type = (t.test_type || '').toLowerCase();
+      if (type === 'exam') return true;
+      if (type === 'quiz' || type === 'task') return false;
+      const shell = (t.shell_code || '').toUpperCase();
+      if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
+      if (shell.endsWith('-TASK') || shell.includes('-TASK-') || shell.endsWith('-QUIZ')) return false;
+      const title = (t.title || '').toLowerCase();
+      if (title.includes(' exam ') || title.includes(' exam -') || title.endsWith(' exam')) return true;
+      return false;
+    }
+
+    const examAttempts = studentAttempts.filter(isExamAttempt);
+    const targetAttempts = examAttempts.length > 0 ? examAttempts : studentAttempts;
+
     // Best attempt per test
-    const bestByAsm = new Map();
-    studentAttempts.forEach(att => {
+    const bestByTest = new Map();
+    targetAttempts.forEach(att => {
       const pct = parseFloat(att.percentage || att.score || 0);
-      const prev = bestByAsm.get(att.test_id);
+      const prev = bestByTest.get(att.test_id);
       if (!prev || pct > parseFloat(prev.percentage || prev.score || 0)) {
-        bestByAsm.set(att.test_id, att);
+        bestByTest.set(att.test_id, att);
       }
     });
-    const completedRecords = Array.from(bestByAsm.values());
-    const totalCorrect = completedRecords.reduce((sum, att) => sum + (Number(att.score) || 0), 0);
+    const uniqueEvaluations = Array.from(bestByTest.values());
 
-    const docRef = `TC-DOS-${studentId.substring(0, 8).toUpperCase()}`;
-    const generationDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    // Official TopsCore Grade Colors (SSOT Rule 2.10)
+    function getExamGradeColor(grade) {
+      const g = String(grade || '').trim().toUpperCase();
+      if (g === '★' || g === 'S') return TOPSCORE_COLORS.STAR || '#ff2d87';
+      if (g === 'A') return TOPSCORE_COLORS.A || '#00c000';
+      if (g === 'B') return TOPSCORE_COLORS.B || '#95ff00';
+      if (g === 'C') return TOPSCORE_COLORS.C || '#FFFF00';
+      if (g === 'D') return TOPSCORE_COLORS.D || '#FF8C00';
+      return TOPSCORE_COLORS.E || '#FF0000';
+    }
 
-    const transcriptRows = completedRecords.map((att, idx) => {
-      const title = att.tests?.title || 'Curriculum Test';
-      const type = att.tests?.test_type || 'TASK';
+    // Official TopsCore Predicate Descriptions (Rule 2.10)
+    function getExamGradeDescription(grade, pct) {
+      const p = Math.round(Number(pct) || 0);
+      const g = String(grade || '').trim().toUpperCase();
+      if (g === '★' || g === 'S' || p >= 100) return `Excellent (${p}%)`;
+      if (g === 'A' || p >= 90) return `Very Good (${p}%)`;
+      if (g === 'B' || p >= 80) return `Good (${p}%)`;
+      if (g === 'C' || p >= 60) return `Enough (${p}%)`;
+      if (g === 'D' || p >= 30) return `Less (${p}%)`;
+      return `Fail (${p}%)`;
+    }
+
+    // Group evaluations by CLASS (Overall score per class)
+    const byClass = new Map();
+    uniqueEvaluations.forEach(att => {
+      const clsId = att.tests?.class_id || att.tests?.classes?.id || 'default_class';
+      const clsName = att.tests?.classes?.name || (att.tests?.title?.split(' ')[0] ? att.tests.title.split(' ')[0] + ' Class' : 'Class');
+      const lvlName = att.tests?.levels?.name || rec.levelName || '—';
+      const lvlNum = att.tests?.levels?.level_number || 1;
+
+      if (!byClass.has(clsId)) {
+        byClass.set(clsId, {
+          id: clsId,
+          name: clsName,
+          levelName: lvlName,
+          levelNumber: lvlNum,
+          exams: []
+        });
+      }
+
       const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
-      const maxQ = Math.round(Number(att.total_questions || att.max_score || att.tests?.total_questions || 40));
+      const maxQ = Math.round(Number(att.total_questions || att.max_score || 40));
       const pts = Math.round(Number(isRem ? Math.min(att.score || 0, maxQ * 0.6) : (att.score || 0)));
       const rawPct = att.percentage != null ? Number(att.percentage) : (maxQ > 0 ? (pts / maxQ) * 100 : 0);
       const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
-      const pct = Math.round(effPct);
-      const grade = att.grade || ((typeof getGrade === 'function') ? getGrade(effPct) : '—');
+
+      byClass.get(clsId).exams.push({
+        pts,
+        maxQ,
+        effPct
+      });
+    });
+
+    const classList = Array.from(byClass.values());
+    // Sort classes by Level Number ascending, then Class Name
+    classList.sort((a, b) => {
+      if (a.levelNumber !== b.levelNumber) return a.levelNumber - b.levelNumber;
+      return a.name.localeCompare(b.name);
+    });
+
+    // Render 6-Column Table: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION
+    const rowsHtml = classList.length > 0 ? classList.map(c => {
+      let totalPts = 0;
+      let totalMaxQ = 0;
+      let totalPctSum = 0;
+
+      c.exams.forEach(ex => {
+        totalPts += ex.pts;
+        totalMaxQ += ex.maxQ;
+        totalPctSum += ex.effPct;
+      });
+
+      const avgPct = c.exams.length > 0 ? Math.round(totalPctSum / c.exams.length) : 0;
+      const grade = (typeof getGrade === 'function') ? getGrade(avgPct) : '—';
       const displayGrade = grade === 'S' || grade === '★' ? '★' : grade;
-      const remTag = isRem ? '<sup style="font-size:0.65em;vertical-align:super;">R</sup>' : '';
-      const dateStr = att.submitted_at ? new Date(att.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-      const itemPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#0f172a';
+      const color = getExamGradeColor(displayGrade);
+      const desc = getExamGradeDescription(displayGrade, avgPct);
+      const rateColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : color;
+      const ptsDisplay = totalMaxQ > 0 ? `${totalPts} <span style="font-size: 14px; color: #64748b; font-weight: 400;">/ ${totalMaxQ}</span>` : `${totalPts}`;
 
       return `
-        <tr>
-          <td style="text-align:center;font-weight:600;color:#64748b;">${idx + 1}</td>
-          <td style="font-weight:600;">${escapeHtml(title)}</td>
-          <td style="text-align:center;"><span style="font-size: 12px;font-weight:400;color:var(--clr-text-2);text-shadow:none;">${escapeHtml(type)}</span></td>
-          <td style="text-align:center;color:#475569;font-size: 12px;">${dateStr}</td>
-          <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pts} / ${maxQ}</td>
-          <td style="text-align:center;font-weight:700;color:${itemPtsColor};">${pct}%${remTag}</td>
-          <td style="text-align:center;"><strong style="font-size:12px;color:${itemPtsColor};">${displayGrade}</strong></td>
+        <tr style="border-bottom: 1px solid #e2e8f0;">
+          <td style="padding: 14px 16px; font-weight: 600; color: #0f172a; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35;">${escapeHtml(c.levelName)}</td>
+          <td style="padding: 14px 16px; font-weight: 500; color: #0f172a; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35;">${escapeHtml(c.name)}</td>
+          <td style="padding: 14px 12px; text-align: center; font-size: 16px; font-weight: 600; color: #0f172a; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+            ${ptsDisplay}
+          </td>
+          <td style="padding: 14px 12px; text-align: center; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+            <span style="font-weight: 700; color: ${rateColor};">${avgPct}%</span>
+          </td>
+          <td style="padding: 12px 10px; text-align: center;">
+            <span class="grade-circle" style="display: inline-flex; width: 34px; height: 34px; border-radius: 50%; align-items: center; justify-content: center; font-family: var(--fm-font-display, 'Outfit', sans-serif); font-weight: 900; font-size: 18px; color: #0f172a; background: ${color}; box-shadow: 0 1px 4px rgba(0,0,0,0.14);">
+              ${displayGrade}
+            </span>
+          </td>
+          <td style="padding: 14px 16px; font-weight: 500; color: #1e293b; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif); line-height: 1.35; font-variant-numeric: tabular-nums;">
+            ${escapeHtml(desc)}
+          </td>
         </tr>
       `;
-    }).join('');
+    }).join('') : `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 28px; color: #94a3b8; font-style: italic; font-size: 16px; font-family: var(--fm-font-sans, 'Inter', sans-serif);">
+          No official class evaluations recorded for this student yet.
+        </td>
+      </tr>
+    `;
 
     backdrop.innerHTML = `
-      <div class="student-dossier-dialog">
-        <!-- Control Toolbar -->
+      <div class="student-dossier-dialog" style="max-width: 860px; width: 94vw; max-height: 94vh;">
+        <!-- Control Toolbar: Header Controls with Prominent Top CLOSE Button -->
         <div class="dossier-modal-toolbar">
           <div class="d-flex align-center gap-2">
-            <span style="font-size: 16px;">${getSvgIcon('printer', 16)}</span>
+            <span style="font-size: 20px; color: var(--primary-tactical, #38bdf8); display: flex; align-items: center;">${getSvgIcon('award', 20)}</span>
             <div>
-              <div class="fw-700 text-sm" style="color:var(--fm-text-primary, #f8fafc);">Official Student Dossier</div>
-              <div class="text-xs text-muted">Certified Academic Transcript &amp; Verification Document</div>
+              <div class="fw-800" style="font-size: 16px; color: var(--fm-text-primary, #f8fafc); font-family: var(--fm-font-display, 'Outfit', sans-serif); letter-spacing: 0.02em;">Student Academic Raport (Portrait)</div>
+              <div style="font-size: 14px; color: #94a3b8; font-family: var(--fm-font-sans, 'Inter', sans-serif);">Official Class Academic Transcript</div>
             </div>
           </div>
           <div class="d-flex align-center gap-2">
-            <button class="btn btn-primary btn-sm" id="btn-print-dossier-sheet" style="display:inline-flex;align-items:center;gap:6px;font-weight:700;">
-              ${getSvgIcon('printer', 14)} Print / Save as PDF
+            ${list.length > 1 ? `
+              <div class="d-flex align-center gap-1" style="margin-right: 6px;">
+                <button class="btn btn-secondary btn-sm" id="btn-modal-prev-dossier" ${!hasPrev ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Previous Student (ArrowLeft)">←</button>
+                <span style="padding: 0 6px; font-weight: 700; color: #cbd5e1; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; font-variant-numeric: tabular-nums;">${positionText}</span>
+                <button class="btn btn-secondary btn-sm" id="btn-modal-next-dossier" ${!hasNext ? 'disabled style="opacity:0.4;cursor:not-allowed;"' : ''} title="Next Student (ArrowRight)">→</button>
+              </div>
+            ` : ''}
+            <button class="btn btn-secondary btn-sm" id="btn-toggle-edit-raport" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px;">
+              ${getSvgIcon('edit', 16)} <span id="txt-edit-raport-btn">Edit Raport</span>
             </button>
-            <button class="btn btn-secondary btn-sm" id="btn-dossier-to-profile" style="display:inline-flex;align-items:center;gap:6px;">
-              ${getSvgIcon('user', 14)} View Profile
+            <button class="btn btn-primary btn-sm" id="btn-export-pdf-dossier" style="display: inline-flex; align-items: center; gap: 6px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px;">
+              ${getSvgIcon('download', 16)} Export PDF
+            </button>
+            <button class="btn btn-secondary btn-sm" id="btn-top-close-dossier" style="font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; margin-left: 4px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2);">
+              CLOSE
             </button>
           </div>
         </div>
 
         <!-- Scrollable Document Area -->
-        <div class="dossier-modal-scroll">
-          <div id="student-dossier-sheet" class="student-dossier-sheet">
-            <!-- Academy Official Header -->
-            <div style="text-align:center;border-bottom:2px solid #0f172a;padding-bottom:12px;margin-bottom:18px;">
-              <div style="font-size: 16px;font-weight:900;letter-spacing:0.04em;color:#0f172a;text-transform:uppercase;">
-                ${getSvgIcon('shield', 14)} TOPS CORE ACADEMIC ADMINISTRATION
-              </div>
-              <div style="font-size: 12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;">
-                CENTRAL ENGLISH TEST &amp; CERTIFICATION BOARD
-              </div>
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;font-size: 12px;color:#64748b;font-weight:600;border-top:1px solid #e2e8f0;padding-top:6px;">
-                <span>DOCUMENT REF: <strong>${docRef}</strong></span>
-                <span>STATUS: <strong style="color:#059669;">OFFICIAL &amp; CERTIFIED</strong></span>
-                <span>ISSUED: <strong>${generationDate}</strong></span>
-              </div>
+        <div class="dossier-modal-scroll" style="padding: 24px; background: #060911;">
+          <div id="student-dossier-sheet" class="student-dossier-sheet student-raport-portrait" style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 36px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; font-family: var(--fm-font-sans, 'Inter', sans-serif);">
+            
+            <!-- 1. JUDUL HALAMAN: STUDENT RAPORT CARD (32px Outfit 900) -->
+            <div class="raport-header-title" style="text-align: center; border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 24px;">
+              <h1 style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 32px; font-weight: 900; color: #0f172a; margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-transform: uppercase;">
+                STUDENT RAPORT CARD
+              </h1>
             </div>
 
-            <!-- Student Identity & Photo Grid -->
-            <div style="display:grid;grid-template-columns:1fr 130px;gap:20px;align-items:start;margin-bottom:20px;">
-              <div>
-                <table style="width:100%;font-size: 12px;line-height:1.65;">
-                  <tr>
-                    <td style="width:130px;color:#64748b;font-weight:600;">Student Full Name:</td>
-                    <td style="font-weight:800;font-size: 16px;color:#0f172a;">${escapeHtml(rec.displayName || rec.name)}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;font-weight:600;">Date of Birth / Age:</td>
-                    <td style="font-weight:600;">${escapeHtml(rec.birth_date || '—')} (${escapeHtml(rec.ageDisplay || '—')}) &bull; ${escapeHtml(rec.gender || '—')}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;font-weight:600;">Institution:</td>
-                    <td style="font-weight:600;">${escapeHtml(rec.instName)}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;font-weight:600;">Academic Program:</td>
-                    <td style="font-weight:600;">${escapeHtml(rec.progName)}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;font-weight:600;">Batch &amp; Level:</td>
-                    <td style="font-weight:600;">Batch ${escapeHtml(rec.batchName)} &bull; ${escapeHtml(rec.levelName)}</td>
-                  </tr>
-                  <tr>
-                    <td style="color:#64748b;font-weight:600;">Enrollment Date:</td>
-                    <td style="font-weight:600;">${escapeHtml(rec.joinDate || '—')}</td>
-                  </tr>
-                </table>
-              </div>
+            <!-- 2. PANEL UNTUK NAMA LENGKAP DENGAN METADATA DI BAWAHNYA -->
+            <div class="student-profile-panel" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 24px 26px; margin-bottom: 26px; box-shadow: 0 2px 6px rgba(0,0,0,0.03);">
+              <div style="display: flex; gap: 26px; align-items: flex-start;">
+                <!-- Foto Siswa (Besar 136px x 180px) -->
+                <div style="width: 136px; height: 180px; border-radius: 8px; overflow: hidden; border: 2.5px solid #cbd5e1; flex-shrink: 0; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                  ${rec.photo_url
+                    ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">`
+                    : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
+                  }
+                </div>
 
-              <!-- 3:4 Student Photo Box -->
-              <div style="width:125px;height:166px;border:2px solid #cbd5e1;border-radius:6px;overflow:hidden;background:#f8fafc;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 6px rgba(0,0,0,0.05);position:relative;">
-                ${rec.photo_url
-                  ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="width:100%;height:100%;object-fit:cover;">`
-                  : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="width:100%;height:100%;object-fit:cover;">`
-                }
-                <div style="position:absolute;bottom:0;inset-inline:0;background:rgba(15,23,42,0.8);color:#fff;font-size: 12px;text-align:center;padding:2px 0;font-weight:700;letter-spacing:0.04em;">
-                  OFFICIAL
+                <!-- Nama Lengkap & Metadata di Bawahnya -->
+                <div style="flex: 1; min-width: 0;">
+                  <!-- Nama Lengkap Siswa: 26px Outfit 800 -->
+                  <div class="raport-view-field" id="view-student-name" style="font-family: var(--fm-font-display, 'Outfit', sans-serif); font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.2; margin-bottom: 6px;">
+                    ${escapeHtml(rec.displayName || rec.name)}
+                  </div>
+                  <input type="text" class="raport-edit-field form-control" id="edit-student-name" value="${escapeHtml(rec.name || rec.displayName)}" style="display: none; width: 100%; max-width: 360px; padding: 6px 10px; font-size: 16px; font-weight: 700; margin-bottom: 10px; border: 1.5px solid #38bdf8; border-radius: 6px;">
+
+                  <!-- Context Badge (Institution, Program, Batch): 16px Inter Bold -->
+                  <div style="font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 16px; font-weight: 700; color: #0284c7; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 14px; display: flex; align-items: center; gap: 8px;">
+                    <span>${escapeHtml(rec.instName || 'CEC')}</span>
+                    <span>&bull;</span>
+                    <span>${escapeHtml(rec.progName || 'Camp')}</span>
+                    <span>&bull;</span>
+                    <span>${escapeHtml(cleanBatch ? 'Batch ' + cleanBatch : 'Batch 134')}</span>
+                  </div>
+
+                  <!-- Metadata Grid di Bawah Nama: 16px Inter -->
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; font-size: 16px; color: #334155; font-family: var(--fm-font-sans, 'Inter', sans-serif); border-top: 1.5px solid #e2e8f0; padding-top: 14px;">
+                    <div class="d-flex align-center gap-1">
+                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Gender:</span>
+                      <strong class="raport-view-field" id="view-student-gender" style="color: #0f172a; text-transform: capitalize; font-weight: 600;">${escapeHtml(rec.gender || '—')}</strong>
+                      <select class="raport-edit-field form-control" id="edit-student-gender" style="display: none; padding: 2px 8px; font-size: 16px; border: 1.5px solid #38bdf8; border-radius: 4px;">
+                        <option value="male" ${(rec.gender || '').toLowerCase() === 'male' ? 'selected' : ''}>Male</option>
+                        <option value="female" ${(rec.gender || '').toLowerCase() === 'female' ? 'selected' : ''}>Female</option>
+                      </select>
+                    </div>
+
+                    <div class="d-flex align-center gap-1">
+                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Birth Date:</span>
+                      <strong class="raport-view-field" id="view-student-dob" style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;">${escapeHtml(rec.birth_date || '—')} (${escapeHtml(rec.ageDisplay || '—')} yo)</strong>
+                      <input type="date" class="raport-edit-field form-control" id="edit-student-dob" value="${escapeHtml(rec.birth_date || '')}" style="display: none; padding: 2px 8px; font-size: 16px; border: 1.5px solid #38bdf8; border-radius: 4px;">
+                    </div>
+
+                    <div class="d-flex align-center gap-1">
+                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Academic Level:</span>
+                      <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(rec.levelName || '—')}</strong>
+                    </div>
+
+                    <div class="d-flex align-center gap-1">
+                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Education:</span>
+                      <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(formatLastEducation(rec.education))}</strong>
+                    </div>
+
+                    <!-- Address Information (Full Width across 2 columns) -->
+                    <div style="grid-column: span 2; display: flex; align-items: baseline; gap: 8px; margin-top: 2px;">
+                      <span style="color: #64748b; font-weight: 600; white-space: nowrap;">Address:</span>
+                      <strong class="raport-view-field" id="view-student-address" style="color: #0f172a; font-weight: 600; line-height: 1.35;">${escapeHtml(formatFullStudentAddress(rec))}</strong>
+                    </div>
+
+                    <!-- Editable Address row -->
+                    <div class="raport-edit-field" style="display: none; grid-column: span 2; margin-top: 4px;">
+                      <div style="font-size: 13px; font-weight: 600; color: #64748b; margin-bottom: 4px;">Edit Address (Village, District, Regency, Province):</div>
+                      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
+                        <input type="text" class="form-control" id="edit-student-village" placeholder="Village" value="${escapeHtml(rec.village || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
+                        <input type="text" class="form-control" id="edit-student-district" placeholder="District" value="${escapeHtml(rec.district || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
+                        <input type="text" class="form-control" id="edit-student-city" placeholder="Regency / City" value="${escapeHtml(rec.city || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
+                        <input type="text" class="form-control" id="edit-student-province" placeholder="Province" value="${escapeHtml(rec.province || '')}" style="padding: 4px 8px; font-size: 14px; border: 1.5px solid #38bdf8; border-radius: 4px;">
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Certified Summary Box -->
-            <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;padding:12px 16px;margin-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:12px;text-align:center;">
-              <div>
-                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Overall Grade</div>
-                <div style="font-size: 20px;font-weight:900;color:#0f172a;line-height:1.1;">${rec.globalGrade || '—'}</div>
-              </div>
-              <div>
-                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Mastery Score</div>
-                <div style="font-size: 16px;font-weight:900;color:#0f172a;line-height:1.2;">${rec.overallScoreStr || '—'}</div>
-              </div>
-              <div>
-                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Curriculum Pace</div>
-                <div style="font-size: 16px;font-weight:800;color:#0f172a;line-height:1.3;">
-                  ${rec.completedTests || 0} / ${rec.totalAssigned || 40}
-                  <span style="font-size: 12px;color:#64748b;font-weight:600;">(${rec.completionPct || 0}%)</span>
-                </div>
-              </div>
-              <div>
-                <div style="font-size: 12px;font-weight:700;color:#64748b;text-transform:uppercase;">Total Points</div>
-                <div style="font-size: 16px;font-weight:800;color:${rec.overallColor || 'var(--clr-text-1)'};line-height:1.3;">
-                  ${rec.totalEarnedScore ?? totalCorrect} <span style="font-size: 12px;color:${rec.overallColor || '#64748b'};opacity:0.85;font-weight:600;">pts</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Test Transcript Section -->
-            <div style="margin-bottom:20px;">
-              <div style="font-size: 12px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;border-left:4px solid #0f172a;padding-left:8px;margin-bottom:8px;">
-                Official Test Transcript &amp; Module History
-              </div>
-              <table class="dossier-table">
+            <!-- 3. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
+            <div class="level-transcript-block" style="margin-top: 10px;">
+              <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
                 <thead>
-                  <tr>
-                    <th style="width:30px;text-align:center;">#</th>
-                    <th>TEST TITLE</th>
-                    <th style="width:70px;text-align:center;">TYPE</th>
-                    <th style="width:95px;text-align:center;">DATE</th>
-                    <th style="width:75px;text-align:center;">PTS</th>
-                    <th style="width:65px;text-align:center;">SCORE</th>
-                    <th style="width:55px;text-align:center;">GRADE</th>
+                  <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                    <th style="width: 16%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">LEVEL</th>
+                    <th style="width: 32%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">CLASS NAME</th>
+                    <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">POINT</th>
+                    <th style="width: 10%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">RATE</th>
+                    <th style="width: 10%; text-align: center; padding: 12px 10px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE</th>
+                    <th style="width: 18%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE DESCRIPTION</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${transcriptRows || '<tr><td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">No completed tests recorded.</td></tr>'}
+                  ${rowsHtml}
                 </tbody>
               </table>
             </div>
 
-            <!-- Signatures & Authentication Stamp Block -->
-            <div style="display:grid;grid-template-columns:1fr 140px 1fr;gap:20px;align-items:center;padding-top:16px;border-top:1px dashed #cbd5e1;margin-top:16px;">
-              <div style="text-align:center;">
-                <div style="font-size: 12px;color:#64748b;margin-bottom:40px;">Lead Academic Instructor:</div>
-                <div style="border-bottom:1px solid #0f172a;width:80%;margin:0 auto 4px;"></div>
-                <div style="font-size: 12px;font-weight:700;">Academic Operations Officer</div>
-              </div>
-
-              <!-- Official Seal Stamp -->
-              <div style="border:2px dashed #94a3b8;border-radius:50%;width:84px;height:84px;margin:0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px;color:#64748b;">
-                <span style="font-size: 16px;">${getSvgIcon('shield', 18)}</span>
-                <span style="font-size: 12px;font-weight:800;letter-spacing:0.05em;line-height:1.1;">TOP OFFICE<br>ACADEMIC<br>SEAL</span>
-              </div>
-
-              <div style="text-align:center;">
-                <div style="font-size: 12px;color:#64748b;margin-bottom:40px;">Director of Academic Board:</div>
-                <div style="border-bottom:1px solid #0f172a;width:80%;margin:0 auto 4px;"></div>
-                <div style="font-size: 12px;font-weight:700;">Head of Academic Board</div>
-              </div>
-            </div>
-
-            <!-- Official Footer Notice -->
-            <div style="text-align:center;margin-top:16px;font-size: 12px;color:#94a3b8;line-height:1.4;">
-              This dossier is an authoritative evaluation record generated by TopsCore LMS.<br>
-              Valid without wet signature if verification code matches the central registry.
-            </div>
           </div>
         </div>
 
-        <!-- Modal Footer CTA Area -->
-        <div class="modal-footer" style="height:60px;min-height:60px;max-height:60px;padding:10px 1.5rem;display:flex;align-items:center;justify-content:flex-start;border-top:1px solid rgba(255,255,255,0.08);background:rgba(0,0,0,0.25);flex-shrink:0;">
-          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal">CLOSE</button>
+        <!-- Modal Footer CTA Area: Universal Left-Anchored CLOSE Button Standard (Zero 'Cancel' Invariant §1.5.4) -->
+        <div class="modal-footer" style="height: 56px; min-height: 56px; max-height: 56px; padding: 10px 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.3); flex-shrink: 0;">
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal" style="font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 6px 16px;">CLOSE</button>
+          <div class="d-flex align-center gap-2">
+            <button type="button" class="btn btn-success btn-sm raport-save-btn" id="btn-save-raport-changes" style="display: none; align-items: center; gap: 6px; font-weight: 700; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; padding: 6px 16px;">
+              ${getSvgIcon('check', 16)} Save Raport Changes
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -2321,23 +1918,167 @@ export async function renderStudents(area, options = {}) {
       }
     };
 
+    // Close actions (Both Top and Bottom buttons)
     const closeBtn = backdrop.querySelector('#btn-close-dossier-modal');
     if (closeBtn) closeBtn.onclick = () => { backdrop.remove(); cleanupDossier(true); };
+
+    const topCloseBtn = backdrop.querySelector('#btn-top-close-dossier');
+    if (topCloseBtn) topCloseBtn.onclick = () => { backdrop.remove(); cleanupDossier(true); };
+
     backdrop.onclick = (e) => { if (e.target === backdrop) { backdrop.remove(); cleanupDossier(true); } };
 
-    const toProfileBtn = backdrop.querySelector('#btn-dossier-to-profile');
-    if (toProfileBtn) {
-      toProfileBtn.onclick = () => {
-        backdrop.remove();
-        cleanupDossier(false);
-        window.showStudentProfileModal(studentId);
+    // Carousel actions
+    const prevBtn = backdrop.querySelector('#btn-modal-prev-dossier');
+    const nextBtn = backdrop.querySelector('#btn-modal-next-dossier');
+    if (prevBtn && hasPrev) {
+      prevBtn.onclick = () => { backdrop.remove(); cleanupDossier(false); window.showStudentDossierModal(prevId); };
+    }
+    if (nextBtn && hasNext) {
+      nextBtn.onclick = () => { backdrop.remove(); cleanupDossier(false); window.showStudentDossierModal(nextId); };
+    }
+
+    // Editable Raport Controls
+    let isEditingRaport = false;
+    const toggleEditBtn = backdrop.querySelector('#btn-toggle-edit-raport');
+    const saveRaportBtn = backdrop.querySelector('#btn-save-raport-changes');
+    const editRaportText = backdrop.querySelector('#txt-edit-raport-btn');
+
+    const setEditMode = (editing) => {
+      isEditingRaport = editing;
+      backdrop.querySelectorAll('.raport-view-field').forEach(el => el.style.display = editing ? 'none' : '');
+      backdrop.querySelectorAll('.raport-edit-field').forEach(el => el.style.display = editing ? '' : 'none');
+      if (saveRaportBtn) saveRaportBtn.style.display = editing ? 'inline-flex' : 'none';
+      if (editRaportText) editRaportText.textContent = editing ? 'Cancel Edit' : 'Edit Raport';
+      if (toggleEditBtn) {
+        toggleEditBtn.className = editing ? 'btn btn-warning btn-sm' : 'btn btn-secondary btn-sm';
+      }
+    };
+
+    if (toggleEditBtn) {
+      toggleEditBtn.onclick = () => {
+        setEditMode(!isEditingRaport);
       };
     }
 
-    const printBtn = backdrop.querySelector('#btn-print-dossier-sheet');
-    if (printBtn) {
-      printBtn.onclick = () => {
-        window.print();
+    const saveChangesAction = async () => {
+      const newName = (backdrop.querySelector('#edit-student-name')?.value || '').trim();
+      const newGender = backdrop.querySelector('#edit-student-gender')?.value || rec.gender;
+      const newDob = backdrop.querySelector('#edit-student-dob')?.value || rec.birth_date;
+      const newVillage = (backdrop.querySelector('#edit-student-village')?.value || '').trim();
+      const newDistrict = (backdrop.querySelector('#edit-student-district')?.value || '').trim();
+      const newCity = (backdrop.querySelector('#edit-student-city')?.value || '').trim();
+      const newProvince = (backdrop.querySelector('#edit-student-province')?.value || '').trim();
+
+      if (!newName) {
+        showToast('Student name cannot be empty', 'error');
+        return;
+      }
+
+      // Save database mutations to Supabase
+      try {
+        const sb = await getSupabase();
+        const updatePayload = {
+          name: newName,
+          gender: newGender,
+          birth_date: newDob || null,
+          village: newVillage || null,
+          district: newDistrict || null,
+          city: newCity || null,
+          province: newProvince || null,
+          updated_at: new Date().toISOString()
+        };
+        const { error } = await sb.from('students').update(updatePayload).eq('id', studentId);
+        if (error) throw error;
+
+        // Update in-memory record
+        rec.name = newName;
+        rec.displayName = cleanStudentName(newName);
+        rec.gender = newGender;
+        rec.birth_date = newDob;
+        rec.ageDisplay = calculateAgeFromBirthDate(newDob);
+        rec.village = newVillage;
+        rec.district = newDistrict;
+        rec.city = newCity;
+        rec.province = newProvince;
+
+        // Update view fields
+        const vName = backdrop.querySelector('#view-student-name');
+        const vGender = backdrop.querySelector('#view-student-gender');
+        const vDob = backdrop.querySelector('#view-student-dob');
+        const vAddress = backdrop.querySelector('#view-student-address');
+        if (vName) vName.textContent = rec.displayName;
+        if (vGender) vGender.textContent = rec.gender;
+        if (vDob) vDob.textContent = `${rec.birth_date || '—'} (${rec.ageDisplay || '—'} yo)`;
+        if (vAddress) vAddress.textContent = formatFullStudentAddress(rec);
+
+        showToast('Student Raport updated & saved successfully!', 'success');
+        setEditMode(false);
+      } catch (err) {
+        console.error('Error saving student raport:', err);
+        showToast('Failed to save student changes: ' + (err.message || err), 'error');
+      }
+    };
+
+    if (saveRaportBtn) {
+      saveRaportBtn.onclick = saveChangesAction;
+    }
+
+    // Export PDF (Portrait A4)
+    const exportPdfBtn = backdrop.querySelector('#btn-export-pdf-dossier');
+    if (exportPdfBtn) {
+      exportPdfBtn.onclick = async () => {
+        if (isEditingRaport) setEditMode(false);
+
+        if (typeof window.html2pdf !== 'function') {
+          showToast('Loading PDF engine...', 'info');
+          try {
+            await new Promise((resolve, reject) => {
+              const script = document.createElement('script');
+              script.src = './js/vendor/html2pdf.bundle.min.js?v=20261119_v1';
+              script.onload = resolve;
+              script.onerror = () => {
+                const cdnScript = document.createElement('script');
+                cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                cdnScript.onload = resolve;
+                cdnScript.onerror = reject;
+                document.head.appendChild(cdnScript);
+              };
+              document.head.appendChild(script);
+            });
+          } catch (e) {
+            showToast('Failed to load PDF engine. Check connection or vendor files.', 'error');
+            return;
+          }
+        }
+
+        const sheetEl = backdrop.querySelector('#student-dossier-sheet');
+        if (!sheetEl) return;
+
+        const safeStudentName = (rec.displayName || rec.name || 'Student').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const filename = `TopsCore_Raport_${safeStudentName}_${cleanBatch || 'General'}.pdf`;
+
+        showToast('Exporting Portrait PDF Raport...', 'info');
+        exportPdfBtn.disabled = true;
+        exportPdfBtn.style.opacity = '0.6';
+
+        try {
+          const opt = {
+            margin: [8, 10, 8, 10],
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          };
+
+          await window.html2pdf().set(opt).from(sheetEl).save();
+          showToast('Portrait PDF Raport downloaded!', 'success');
+        } catch (err) {
+          console.error('PDF Export Error:', err);
+          showToast('Failed to export PDF: ' + (err.message || err), 'error');
+        } finally {
+          exportPdfBtn.disabled = false;
+          exportPdfBtn.style.opacity = '1';
+        }
       };
     }
 
@@ -2345,6 +2086,14 @@ export async function renderStudents(area, options = {}) {
       if (e.key === 'Escape') {
         backdrop.remove();
         cleanupDossier(true);
+      } else if (e.key === 'ArrowLeft' && hasPrev && !isEditingRaport) {
+        backdrop.remove();
+        cleanupDossier(false);
+        window.showStudentDossierModal(prevId);
+      } else if (e.key === 'ArrowRight' && hasNext && !isEditingRaport) {
+        backdrop.remove();
+        cleanupDossier(false);
+        window.showStudentDossierModal(nextId);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -2874,13 +2623,8 @@ export async function renderStudents(area, options = {}) {
         renderStudents(area);
       };
     },
-    onRowClick: (row) => {
-      if (typeof window.showStudentProfileModal === 'function') {
-        window.showStudentProfileModal(row.id);
-      } else if (typeof window.openStudentProfile === 'function') {
-        window.openStudentProfile(row.id);
-      }
-    },
+    // User directive: Do not open modals on general row clicks. Only clicking photo or name opens the report.
+    onRowClick: null,
     columns: [
       // 1. Level (Inline Editable in Edit Mode)
       {
@@ -2948,8 +2692,8 @@ export async function renderStudents(area, options = {}) {
           const avatarUri = row.photo_url || generateAvatarDataUri(row.displayName || row.name, row.gender);
           return `
             <div style="display:flex;align-items:center;justify-content:center;cursor:pointer;"
-                 onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
-                 title="Click to view student profile">
+                 onclick="event.stopPropagation();if(typeof window.showStudentDossierModal==='function')window.showStudentDossierModal('${row.id}');"
+                 title="Click to view official academic report (A4 Dossier)">
               <img src="${avatarUri}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(row.displayName || row.name, row.gender)}';"
                    style="width:30px;height:30px;border-radius:50%;object-fit:cover;border:1px solid var(--clr-border);">
             </div>
@@ -2996,8 +2740,8 @@ export async function renderStudents(area, options = {}) {
         render: (row) => {
           return `
             <div class="student-cell-view" style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
-                 onclick="event.stopPropagation();if(typeof window.showStudentProfileModal==='function')window.showStudentProfileModal('${row.id}');"
-                 title="${escapeHtml(row.displayName)}&#10;Click to view student profile">
+                 onclick="event.stopPropagation();if(typeof window.showStudentDossierModal==='function')window.showStudentDossierModal('${row.id}');"
+                 title="${escapeHtml(row.displayName)}&#10;Click to view official academic report (A4 Dossier)">
               <span style="color:var(--clr-text-1);font-weight:400;font-size: 12px;">${escapeHtml(row.displayName)}</span>
               ${!isAlumniPanel && row.isOrphaned ? `<span style="margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-e);text-shadow:none;">(Disconnected)</span>` : ''}
               ${row.remediationPending ? `<span style="white-space:nowrap;margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-c);text-shadow:none;">(Remediation)</span>` : ''}
@@ -4790,9 +4534,7 @@ export async function openStudentFullEdit(student, onSaved) {
 window.openStudentFullEdit = openStudentFullEdit;
 
 export async function showStudentProfileModal(studentId) {
-  if (typeof window.showStudentProfileModal === 'function') {
-    return window.showStudentProfileModal(studentId);
-  }
+  return showStudentDossierModal(studentId);
 }
 
 export async function showStudentDossierModal(studentId) {

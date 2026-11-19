@@ -173,8 +173,66 @@
     </div>
   </div>
 
-  <!-- Pre-Exam Focus & Fullscreen Modal (Pop-up 08 Standard) -->
-  <div id="pre-exam-focus-modal" class="pre-exam-modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="pre-exam-focus-title">
+  <!-- Component Selector Modal (Pop-up 04 Golden Standard: Words vs Phrases Selection) -->
+  <div class="modal-backdrop hidden" id="component-selector-modal" role="dialog" aria-modal="true" aria-labelledby="component-modal-title">
+    <div class="modal-box component-selector-modal-box">
+      <div class="modal-header component-selector-modal-header" style="position:relative;">
+        <h2 id="component-modal-title" class="component-selector-title">TOPIC TEST</h2>
+        <button type="button" class="modal-close" id="close-component-modal" aria-label="Close modal">✕</button>
+      </div>
+      <div class="component-selector-modal-body">
+        <div id="component-modal-options" class="component-selector-options-list">
+          <!-- Card Option A: Words -->
+          <div id="component-opt-words" role="button" tabindex="0" class="component-choice-card component-card-words selected" aria-pressed="true">
+            <div class="component-card-header">
+              <span class="component-card-icon" id="component-words-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+              <span id="component-words-title" class="component-card-title">WORDS</span>
+              <span id="component-words-status" class="component-card-status" style="margin-left:auto;font-family:var(--fm-font-display,'Outfit',sans-serif);font-size:12px;font-weight:800;color:var(--primary-tactical);"></span>
+            </div>
+            <div class="component-card-divider"></div>
+            <div class="component-card-pips" id="component-words-pips">
+              <div class="pip-box" data-pip="1">1</div>
+              <div class="pip-box" data-pip="2">2</div>
+              <div class="pip-box" data-pip="3">3</div>
+              <div class="pip-box" data-pip="4">4</div>
+              <div class="pip-box" data-pip="5">5</div>
+              <div class="pip-box" data-pip="6">6</div>
+              <div class="pip-box" data-pip="7">7</div>
+            </div>
+            <div class="component-card-exam-view" id="component-words-exam-view" style="display:none;align-items:center;justify-content:center;height:32px;font-family:var(--fm-font-display,'Outfit',sans-serif);font-size:13px;font-weight:700;"></div>
+          </div>
+
+          <!-- Card Option B: Phrases -->
+          <div id="component-opt-phrases" role="button" tabindex="0" class="component-choice-card component-card-phrases" aria-pressed="false">
+            <div class="component-card-header">
+              <span class="component-card-icon" id="component-phrases-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span>
+              <span id="component-phrases-title" class="component-card-title">PHRASES</span>
+              <span id="component-phrases-status" class="component-card-status" style="margin-left:auto;font-family:var(--fm-font-display,'Outfit',sans-serif);font-size:12px;font-weight:800;color:var(--primary-tactical);"></span>
+            </div>
+            <div class="component-card-divider"></div>
+            <div class="component-card-pips" id="component-phrases-pips">
+              <div class="pip-box" data-pip="1">1</div>
+              <div class="pip-box" data-pip="2">2</div>
+              <div class="pip-box" data-pip="3">3</div>
+              <div class="pip-box" data-pip="4">4</div>
+              <div class="pip-box" data-pip="5">5</div>
+              <div class="pip-box" data-pip="6">6</div>
+              <div class="pip-box" data-pip="7">7</div>
+            </div>
+            <div class="component-card-exam-view" id="component-phrases-exam-view" style="display:none;align-items:center;justify-content:center;height:32px;font-family:var(--fm-font-display,'Outfit',sans-serif);font-size:13px;font-weight:700;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dedicated 60px Modal Footer Invariant -->
+      <div class="modal-footer component-selector-modal-footer">
+        <button type="button" class="btn btn-primary component-selector-btn-confirm" id="btn-confirm-component-selection">START WORDS &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pre-Exam Focus & Fullscreen Modal (Suppressed: direct start without blocking modal prompt) -->
+  <div id="pre-exam-focus-modal" class="pre-exam-modal-backdrop hidden" style="display:none !important;" role="dialog" aria-modal="true" aria-labelledby="pre-exam-focus-title">
     <div class="pre-exam-focus-box">
       <!-- 3-Tier Modal Architecture: Header (Badge Area + Title Area + 1.5px Perimeter Divider) -->
       <div class="focus-modal-header">

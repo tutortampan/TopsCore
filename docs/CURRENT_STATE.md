@@ -1,13 +1,19 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-19 07:00 UTC+8
-> **Current Phase:** Phase 623 [COMPLETE] — Zero Table Capsule & Zero Table Glow Invariant (System-Wide)
+> **Last Updated:** 2026-11-19 11:05 UTC+8
+> **Current Phase:** Phase 625 [COMPLETE] — Full Student Academic Journey Simulation (Asik in Batch 123: 1st Level → Alumni) & Multi-Level Gating Engine Bug Resolution
 > **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TEST SUITES 100% GREEN)
 
 ---
 
 ## 1. Active System Architecture & Invariants
+
+- **Full Multi-Level Academic Journey Engine (Phase 625 — SSOT §1.4, §2.4, §2.5, §2.27)**:
+  - **Repetitive Mastery & Sibling Task Gating Resolution**: Memperbaiki query gating `siblingTasks` pada `startTest` di [js/api.js](file:///d:/Tutor%20Tampan/TopsCore/js/api.js#L1558) agar hanya memfilter tugas berstatus `.eq('status', 'PUBLISHED')`, mencegah tugas bertaraf `DRAFT` memblokir akses siswa ke ujian tema.
+  - **Vocabulary Vault Integrity Restoration**: Memulihkan 21 kosakata Level 1 Theme A di tabel `vocabulary_vault` yang sebelumnya berstatus soft-deleted (`deleted_at` terisi pada 2026-11-09), menjamin 100% dari 23 tes terpublikasi di Level 1, 2, dan 3 menghasilkan soal secara lengkap melalui `generateTestQuestions`.
+  - **Authoritative Passing Threshold Realignment**: Menghilangkan angka liar `|| 70` pada gating mastery di [js/dashboard.js](file:///d:/Tutor%20Tampan/TopsCore/js/dashboard.js#L2510) dan menyelaraskannya ke batas kelulusan resmi TopsCore Grade C ($\ge 60\%$) sesuai AGENTS.md §2.4.1.
+  - **Multi-Level Simulation Verified**: Berhasil mensimulasikan siswa Asik di rombel Batch 123 menyelesaikan 96 tes bertahap melewati 1st Level $\rightarrow$ 2nd Level $\rightarrow$ 3rd Level $\rightarrow$ Alumni, tervalidasi via E2E Playwright dengan 5 tangkapan layar antarmuka siswa.
 
 - **Level Promotion Auto-Heal & Strict Level Isolation Engine (Phase 617 — SSOT §1.4, §2.4, §2.5, §2.27)**:
   - **Auto-Heal Target Level Classes**: `fetchStudentClasses()` di [js/api.js](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/api.js) secara otomatis mendeteksi dan mengaktifkan (`is_active = true`) kelas level tujuan jika siswa telah dipromosikan (misal ke Level 3) tetapi kelas di level tersebut belum diaktifkan di database.
@@ -60,11 +66,12 @@
 
 ## 2. Recent Active Milestones (Latest Rolling Window)
 
+- **Phase 625**: Full Student Academic Journey Simulation (Asik in Batch 123: 1st Level → Alumni) & Multi-Level Gating Engine Bug Resolution.
+- **Phase 624**: Test Boot Latency Optimization, Fullscreen Modal Prompt Eradication & In-Test Component Selector (Words vs Phrases).
 - **Phase 623**: Zero Table Capsule & Zero Table Glow Invariant across all tables & grids (`AGENTS.md` §2.31, `ui-invariants.md` §4.9).
 - **Phase 622**: Unified Hero Card Architecture (Option A SSOT: Sex Above DoB, aligned colons, 64x84px portrait).
 - **Phase 619**: RPC Error Elimination & Dashboard Address SSOT Formatting.
 - **Phase 618**: NTB Comprehensive Administrative Hierarchy & Village Autocomplete Overhaul.
-- **Phase 617**: Level Promotion Auto-Heal & Strict Level Isolation Engine.
 
 ---
 

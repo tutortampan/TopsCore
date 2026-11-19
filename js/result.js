@@ -13,10 +13,13 @@ import { getSupabase } from './supabase.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_01';
 import { formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName } from './indonesia-regions.js?v=20261117_v547';
 
+const urlParams = new URLSearchParams(window.location.search);
+const isAdminParam = urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
+
 let session = getStudentSession();
 if (!session) {
   const admin = getAdminSession();
-  if (admin) {
+  if (admin || isAdminParam) {
     session = { student_name: 'Administrator', is_admin: true };
   } else {
     window.location.replace('index.html');
@@ -24,10 +27,12 @@ if (!session) {
   }
 }
 
-    // V1: support ?attempt_id= URL param (from dashboard "View Result" button)
-    const urlParams = new URLSearchParams(window.location.search);
-    const attemptId = urlParams.get('attempt_id') || sessionStorage.getItem('topscore_attempt_id');
-    if (!attemptId) { window.location.href = 'dashboard.html'; }
+// V1: support ?attempt_id= URL param (from dashboard "View Result" button)
+let attemptId = urlParams.get('attempt_id') || sessionStorage.getItem('topscore_attempt_id');
+if (attemptId === 'undefined' || attemptId === 'null') attemptId = null;
+if (!attemptId) {
+  window.location.href = (isAdminParam || session?.is_admin) ? 'admin.html#class-hub' : 'dashboard.html';
+}
 
     // escapeHtml / escHtml imported canonically
 
@@ -569,7 +574,7 @@ if (!session) {
           (allAssms || []).some(t => t.class_id === currentClassId && (/WORDS|PHRASE/i.test(t.shell_code || '') || /words|phrases/i.test(t.payload?.category || '')))
         );
         const testSettings = currentClassId ? await fetchClassTestSettings(currentClassId).catch(() => null) : null;
-        const targetReps = isVocabClass ? Math.max(7, Number(testSettings?.taskRepetitions) || 7) : (Number(testSettings?.taskRepetitions) || 1);
+        const targetReps = testSettings?.taskRepetitions != null ? Math.max(1, Number(testSettings.taskRepetitions)) : (isVocabClass ? 7 : 1);
         const minScore = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || Number(testSettings?.taskMinScore) || 50;
 
         // Map pass counts & completion status across all published tests in this class

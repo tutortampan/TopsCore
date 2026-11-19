@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261115_v541';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261119_v630';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
@@ -332,7 +332,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       }
 
-      const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
+      const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
       const crownEl = document.getElementById('banner-avatar-crown');
       if (crownEl) {
         if (isAlumni) {
@@ -1447,7 +1447,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const welcomeLevelPanelEl = document.getElementById('welcome-level-panel');
           const welcomeLevelEl = document.getElementById('welcome-level');
           if (welcomeLevelPanelEl && welcomeLevelEl) {
-            const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
+            const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
             welcomeLevelEl.innerHTML = isAlumni ? `Alumni ${getSvgIcon('graduation-cap', 14)}` : (session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level');
             welcomeLevelPanelEl.classList.remove('hidden');
           }
@@ -1523,7 +1523,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         try {
           if (typeof fetchClassTestSettings === 'function' && activeClassId) {
             const settings = await fetchClassTestSettings(activeClassId).catch(() => null);
-            if (settings?.taskRepetitions) targetReps = Math.max(7, Number(settings.taskRepetitions) || 7);
+            if (settings?.taskRepetitions) targetReps = Math.max(1, Number(settings.taskRepetitions) || 7);
             if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 50;
           }
         } catch (_) {}
@@ -1630,7 +1630,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       try {
         if (typeof fetchClassTestSettings === 'function' && activeClassId) {
           const settings = await fetchClassTestSettings(activeClassId).catch(() => null);
-          if (settings?.taskRepetitions) targetReps = Math.max(7, Number(settings.taskRepetitions) || 7);
+          if (settings?.taskRepetitions) targetReps = Math.max(1, Number(settings.taskRepetitions) || 7);
           if (settings?.taskMinScore) minScore = Number(settings.taskMinScore) || 50;
         }
       } catch (_) {}
@@ -1785,9 +1785,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       if (!published || published.length === 0) {
+        container.onclick = null;
+        container.style.cursor = 'default';
+        container.classList.add('is-banner-card');
         container.innerHTML = `
           <div class="next-test-left next-asm-left">
-            <span class="next-test-icon next-asm-icon">${getSvgIcon('alert-circle', 16)}</span>
+            <span class="next-test-icon next-asm-icon">${getSvgIcon('alert-circle', 18)}</span>
             <span class="next-test-title next-asm-title">No active tests scheduled in this class.</span>
           </div>
         `;
@@ -1795,15 +1798,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       if (!nextAssignment) {
+        container.onclick = null;
+        container.style.cursor = 'default';
+        container.classList.add('is-banner-card');
         container.innerHTML = `
           <div class="next-test-left next-asm-left">
-            <span class="next-test-icon next-asm-icon">${getSvgIcon('award', 16)}</span>
+            <span class="next-test-icon next-asm-icon">${getSvgIcon('award', 18)}</span>
             <span class="next-test-title next-asm-title">All tests in this class completed!</span>
           </div>
-          <span style="font-size:12px; font-weight:800; color:${TOPSCORE_COLORS.STAR}; padding:2px 8px; border-radius:4px; background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.15);">✓ 100%</span>
+          <span class="next-test-completed-badge">✓ 100%</span>
         `;
         return;
       }
+
+      container.classList.remove('is-banner-card');
+      container.style.cursor = '';
 
       const activeTestItem = nextAssignment.primaryTest;
       const isTest = nextAssignment.isExam;
@@ -2507,7 +2516,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (att.is_forgiven) {
             passCountByTest[aid] = Math.max(passCountByTest[aid] || 0, 7);
           } else {
-            const asmMin = Number(tests.find(t => t.id === aid)?.minimum_required_score) || Number(tests.find(t => t.id === aid)?.payload?.min_score) || 70;
+            const asmMin = Number(tests.find(t => t.id === aid)?.minimum_required_score) || Number(tests.find(t => t.id === aid)?.payload?.min_score) || 60;
             if (pct >= asmMin || (isRem && pct >= 60)) {
               passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
             }
@@ -2791,17 +2800,31 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const retakeBtnBg = isRemedialAction ? 'var(--grade-c)' : '#0284c7';
             const retakeBtnBorder = isRemedialAction ? 'var(--grade-c)' : '#0284c7';
             const retakeTextColor = isRemedialAction ? '#0F172A' : '#ffffff';
-            actionBtn = `<div style="display:flex;gap:6px;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><button class="btn btn-sm btn-primary" style="padding:4px 8px;background:${retakeBtnBg};border-color:${retakeBtnBorder};color:${retakeTextColor};font-weight:700;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
+            const hasResultId = Boolean(bestAtt?.id);
+            const viewBtn = hasResultId
+              ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt.id}">View</button>`
+              : '';
+            actionBtn = `<div style="display:flex;gap:6px;">${viewBtn}<button class="btn btn-sm btn-primary" style="padding:4px 8px;background:${retakeBtnBg};border-color:${retakeBtnBorder};color:${retakeTextColor};font-weight:700;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
           } else if (isAsmTest && !passed && !isSessionUnlocked) {
-            actionBtn = `<div style="display:flex;gap:6px;align-items:center;"><button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button><span style="font-size:12px;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span></div>`;
+            const hasResultId = Boolean(bestAtt?.id);
+            const viewBtn = hasResultId
+              ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt.id}">View</button>`
+              : '';
+            actionBtn = `<div style="display:flex;gap:6px;align-items:center;">${viewBtn}<span style="font-size:12px;color:${TOPSCORE_COLORS.D};font-weight:700;padding:3px 6px;border-radius:4px;background:rgba(${TOPSCORE_COLORS.D_RGB},0.1);border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.25);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span></div>`;
           } else {
-            actionBtn = `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt?.id}">View Result</button>`;
+            actionBtn = bestAtt?.id
+              ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid-result="${bestAtt.id}">View Result</button>`
+              : `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);" data-aid="${asm.id}">Start</button>`;
           }
 
           if (isTaskItem && !inProgAtt) {
             const drillLabel = (taskVisual && taskVisual.count >= 7) ? 'Retake Drill' : ((taskVisual && taskVisual.count > 0) ? 'Drill Again' : 'Start Drill');
+            const hasResultId = Boolean(bestAtt?.id);
+            const viewBtn = hasResultId
+              ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt.id}">View</button>`
+              : '';
             actionBtn = `<div style="display:flex;gap:6px;align-items:center;">
-              <button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt?.id}">View</button>
+              ${viewBtn}
               <button class="btn btn-sm btn-primary" style="padding:4px 8px;" data-aid="${asm.id}">${drillLabel}</button>
             </div>`;
           }
@@ -2879,14 +2902,44 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (matchedTest && isDialogueTest(matchedTest)) {
             const activeSession = await fetchActiveTestSession(testId, session?.batch_id).catch(() => null);
             window.location.href = getTestLaunchUrl(matchedTest, activeSession);
-          } else {
-            window.location.href = 'test.html';
+            return;
           }
+
+          const isUnified = matchedTest?.payload?.is_unified === true ||
+                            matchedTest?.payload?.category === 'unified' ||
+                            matchedTest?.category === 'unified' ||
+                            (matchedTest?.test_subtype && matchedTest.test_subtype.startsWith('UNIFIED'));
+
+          if (isUnified && typeof window.triggerComponentChoiceModal === 'function') {
+            const isEx = isExam(matchedTest);
+            const formatted = formatTestDisplay(matchedTest);
+            const encoded = encodeURIComponent(JSON.stringify({
+              badge: isEx ? 'OFFICIAL EXAM' : 'TOPIC TASK',
+              title: formatted.fullTitle || matchedTest.title,
+              subtitle: 'Choose which part you want to work on:',
+              isExam: isEx,
+              isUnified: true,
+              wordsTestId: matchedTest.id,
+              phrasesTestId: matchedTest.id,
+              wordsPasses: passCountByTest[matchedTest.id] || 0,
+              phrasesPasses: passCountByTest[matchedTest.id] || 0,
+              targetReps: 7,
+              wordsBest: bestByTest[matchedTest.id] != null ? { percentage: bestByTest[matchedTest.id].effective_score ?? bestByTest[matchedTest.id].percentage } : null,
+              phrasesBest: bestByTest[matchedTest.id] != null ? { percentage: bestByTest[matchedTest.id].effective_score ?? bestByTest[matchedTest.id].percentage } : null
+            }));
+            window.triggerComponentChoiceModal(encoded);
+            return;
+          }
+
+          window.location.href = 'test.html';
         });
       });
       section.querySelectorAll('[data-aid-result]').forEach(btn => {
         btn.addEventListener('click', () => {
-          window.location.href = `result.html?attempt_id=${btn.dataset.aidResult}`;
+          const aid = btn.dataset.aidResult;
+          if (aid && aid !== 'undefined' && aid !== 'null') {
+            window.location.href = `result.html?attempt_id=${encodeURIComponent(aid)}`;
+          }
         });
       });
     }
@@ -3030,7 +3083,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const achievementTextEl = document.getElementById('dashboard-achievement-text');
       const avgScoreDisplay = document.getElementById('bottom-stat-avg-score');
-      const isAlumni = session.level_number === 0 || (session.level_name || '').toLowerCase() === 'alumni';
+      const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
 
       if (isAlumni) {
         overallGrade = 'X';
@@ -3268,6 +3321,37 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Order strictly from latest completed exam down to earliest
       const sortedAccessible = [...completedOnlyTests].reverse();
 
+      window.handleCompletedExamClick = function(tId) {
+        const tObj = (completedOnlyTests || []).find(item => item.id === tId);
+        if (tObj) {
+          const isUnified = tObj.payload?.is_unified === true ||
+                            tObj.payload?.category === 'unified' ||
+                            tObj.category === 'unified' ||
+                            (tObj.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+          if (isUnified && typeof window.triggerComponentChoiceModal === 'function') {
+            const formatted = formatTestDisplay(tObj);
+            const bObj = bestByTest[tId];
+            const encoded = encodeURIComponent(JSON.stringify({
+              badge: 'OFFICIAL EXAM',
+              title: formatted.fullTitle || tObj.title,
+              subtitle: 'Choose which part you want to work on:',
+              isExam: true,
+              isUnified: true,
+              wordsTestId: tObj.id,
+              phrasesTestId: tObj.id,
+              wordsPasses: passCountByTest[tObj.id] || 0,
+              phrasesPasses: passCountByTest[tObj.id] || 0,
+              targetReps: 7,
+              wordsBest: bObj != null ? { percentage: bObj.effPct } : null,
+              phrasesBest: bObj != null ? { percentage: bObj.effPct } : null
+            }));
+            window.triggerComponentChoiceModal(encoded);
+            return;
+          }
+        }
+        window.location.href = `test.html?id=${tId}`;
+      };
+
       let html = '';
       sortedAccessible.forEach((t, idx) => {
         const num = idx + 1;
@@ -3292,7 +3376,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const numHtml = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${num}</span>`;
 
         html += `
-          <div class="completed-row is-exam-row" style="${rowStyle}" onclick="window.location.href='test.html?id=${t.id}'">
+          <div class="completed-row is-exam-row" style="${rowStyle}" onclick="window.handleCompletedExamClick('${t.id}')">
             <span class="completed-col-num">${numHtml}</span>
             <div class="completed-col-name-wrap">
               <span class="completed-col-name" style="color: #ffffff !important; font-weight: 400 !important;" title="${escapeHtml(testTitle)}">
@@ -3306,7 +3390,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                       class="completed-retry-btn"
                       style="border: 1.5px solid ${scoreColor} !important; background: rgba(${scoreRgb}, 0.15) !important; box-shadow: 0 0 10px rgba(${scoreRgb}, 0.35) !important;"
                       title="Play / Retry ${escapeHtml(testTitle)}"
-                      onclick="event.stopPropagation(); window.location.href='test.html?id=${t.id}'">
+                      onclick="event.stopPropagation(); window.handleCompletedExamClick('${t.id}')">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="${scoreColor}" stroke="none">
                   <polygon points="6 3 20 12 6 21 6 3"></polygon>
                 </svg>
@@ -4212,7 +4296,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const openChangePinModal = () => {
         if (changePinForm) changePinForm.reset();
-        if (changePinModal) changePinModal.classList.remove('hidden');
+        if (changePinModal) {
+          changePinModal.classList.remove('hidden');
+          const oldPinEl = document.getElementById('pin-old');
+          if (oldPinEl) setTimeout(() => oldPinEl.focus(), 60);
+        }
       };
 
       const closeChangePinModal = () => {
@@ -4230,8 +4318,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (typeof changePinForm.requestSubmit === 'function') {
               changePinForm.requestSubmit();
             } else {
-              const saveBtn = document.getElementById('save-pin-btn');
-              if (saveBtn) saveBtn.click();
+              changePinForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
             }
           }
         });
@@ -4244,18 +4331,46 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const newPin = document.getElementById('pin-new').value.trim();
           const confirmPin = document.getElementById('pin-confirm').value.trim();
 
-          if (newPin.length < 4) {
-            showToast('New PIN must be at least 4 digits.', 'warning');
+          if (!oldPin) {
+            showToast('Please enter your current PIN.', 'warning');
+            const el = document.getElementById('pin-old');
+            if (el) el.focus();
+            return;
+          }
+          if (!newPin) {
+            showToast('Please enter your new PIN.', 'warning');
+            const el = document.getElementById('pin-new');
+            if (el) el.focus();
+            return;
+          }
+          if (newPin.length < 4 || newPin.length > 6) {
+            showToast('New PIN must be 4 to 6 digits.', 'warning');
+            const el = document.getElementById('pin-new');
+            if (el) el.focus();
+            return;
+          }
+          if (!/^\d+$/.test(newPin)) {
+            showToast('PIN must contain only numbers.', 'warning');
+            const el = document.getElementById('pin-new');
+            if (el) el.focus();
+            return;
+          }
+          if (!confirmPin) {
+            showToast('Please confirm your new PIN.', 'warning');
+            const el = document.getElementById('pin-confirm');
+            if (el) el.focus();
             return;
           }
           if (newPin !== confirmPin) {
             showToast('PIN confirmation does not match.', 'warning');
+            const el = document.getElementById('pin-confirm');
+            if (el) el.focus();
             return;
           }
 
           showLoading('Updating PIN...');
           try {
-            await changePin(session.student_id, oldPin, newPin);
+            await updateStudentPin(session.student_id, oldPin, newPin);
             session.login_pin = newPin;
             session.pin = newPin;
             setStudentSession(session);

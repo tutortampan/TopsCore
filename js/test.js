@@ -12,7 +12,7 @@ import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita,
     import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v160';
     import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
-import { formatTestDisplay } from './grading.js?v=20261106_v160';
+import { formatTestDisplay, isExam } from './grading.js?v=20261106_v160';
 
     // Arm wake lock gestures on first interaction
     bindWakeLockGestures();
@@ -1047,10 +1047,11 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
       window.bootTest = bootTest;
       showLoading('Starting TEST…');
       try {
-        const fetchedConfig = await getSecuritySettings();
+        const [fetchedConfig, result] = await Promise.all([
+          getSecuritySettings().catch(() => null),
+          startTest(session.student_id, testId)
+        ]);
         if (fetchedConfig) securityConfig = fetchedConfig;
-
-        const result = await startTest(session.student_id, testId);
         attemptData = result.attempt;
         // Restore tab-switch counter from previous session (attempt resume)
         try {
@@ -1143,20 +1144,42 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
         }
 
         // Section / Component Filter for Unified Tests (Option B: Words or Phrases selection)
-        const requestedSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
-        if (requestedSection === 'words') {
-          allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
-          window.allAnswerRows = allAnswerRows;
-        } else if (requestedSection === 'phrases') {
-          allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
-          window.allAnswerRows = allAnswerRows;
-        }
+        let requestedSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+        const hasTwoSections = allAnswerRows.some(r => r.question_snapshot?.test_section === 'words') &&
+                              allAnswerRows.some(r => r.question_snapshot?.test_section === 'phrases');
 
-        if (requestedSection && attemptData) {
-          const isExamTest = isExam(testData);
-          const sectionDur = requestedSection === 'words' ? (isExamTest ? 40 : 10) : (isExamTest ? 14 : 5);
-          const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
-          attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
+        const applySectionFilter = (sectionKey) => {
+          if (sectionKey === 'words') {
+            allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
+          } else if (sectionKey === 'phrases') {
+            allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
+          }
+          window.allAnswerRows = allAnswerRows;
+          answerRows = allAnswerRows;
+
+          if (attemptData) {
+            const isExamTest = isExam(testData);
+            const sectionDur = sectionKey === 'words' ? (isExamTest ? 40 : 10) : (isExamTest ? 14 : 5);
+            const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
+            attemptData.expires_at = new Date(startedAt.getTime() + sectionDur * 60000).toISOString();
+          }
+
+          const secTag = sectionKey === 'words' ? 'Words' : 'Phrases';
+          const formatted = formatTestDisplay(testData);
+          let l1 = formatted.line1 || 'Test';
+          if (!l1.toLowerCase().includes(secTag.toLowerCase())) {
+            l1 += ` (${secTag})`;
+          }
+          testDisplayName = l1;
+          const mainTitleEl = document.getElementById('test-main-title');
+          if (mainTitleEl) {
+            mainTitleEl.textContent = l1;
+            mainTitleEl.setAttribute('title', formatted.fullTitle || l1);
+          }
+        };
+
+        if (requestedSection === 'words' || requestedSection === 'phrases') {
+          applySectionFilter(requestedSection);
         }
 
         // Prefill any existing answers (resume from server)
@@ -1373,6 +1396,8 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
         hideLoading();
 
         const preExamModal = document.getElementById('pre-exam-focus-modal');
+        if (preExamModal) preExamModal.classList.add('hidden');
+
         const proceedStartExam = async () => {
           if (preExamModal) preExamModal.classList.add('hidden');
           startSection(currentSectionIndex);
@@ -1388,27 +1413,99 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
           }
         };
 
-        const isPWAStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                                window.navigator.standalone === true ||
-                                (document.referrer && document.referrer.includes('android-app://'));
+        // Option B: Words vs Phrases Selection for Unified Tests
+        if (hasTwoSections && !requestedSection) {
+          const compModal = document.getElementById('component-selector-modal');
+          if (compModal) {
+            let chosenPart = 'words';
+            const modalTitleEl = document.getElementById('component-modal-title');
+            const wordsCard = document.getElementById('component-opt-words');
+            const phrasesCard = document.getElementById('component-opt-phrases');
+            const confirmBtn = document.getElementById('btn-confirm-component-selection');
+            const closeBtn = document.getElementById('close-component-modal');
 
-        // Bypass preExamModal if already running inside installed PWA standalone mode
-        if (preExamModal && !isFullscreenActive() && !isPWAStandalone) {
-          preExamModal.classList.remove('hidden');
-          document.getElementById('btn-enter-fullscreen-start')?.addEventListener('click', async () => {
-            try {
-              await requestFullscreenMode();
-            } catch (_) {}
-            await proceedStartExam();
-          }, { once: true });
-        } else {
-          if (isPWAStandalone && isFullscreenSupported()) {
-            try {
-              await requestFullscreenMode();
-            } catch (_) {}
+            const f = formatTestDisplay(testData);
+            if (modalTitleEl) {
+              if (f.line2) {
+                modalTitleEl.innerHTML = `<span style="display:block;font-size:15px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
+              } else {
+                modalTitleEl.textContent = f.fullTitle || testData.title || 'Topic Test';
+              }
+            }
+
+            const updateModalSelection = () => {
+              if (wordsCard) {
+                wordsCard.classList.toggle('selected', chosenPart === 'words');
+                wordsCard.setAttribute('aria-pressed', chosenPart === 'words' ? 'true' : 'false');
+              }
+              if (phrasesCard) {
+                phrasesCard.classList.toggle('selected', chosenPart === 'phrases');
+                phrasesCard.setAttribute('aria-pressed', chosenPart === 'phrases' ? 'true' : 'false');
+              }
+              if (confirmBtn) {
+                const isEx = isExam(testData);
+                confirmBtn.innerHTML = `START ${chosenPart === 'words' ? (isEx ? 'WORDS EXAM' : 'WORDS') : (isEx ? 'PHRASES EXAM' : 'PHRASES')} &rarr;`;
+              }
+            };
+
+            const startWithChoice = async () => {
+              compModal.classList.add('hidden');
+              requestedSection = chosenPart;
+              applySectionFilter(chosenPart);
+              testsections = [{ id: 'default', title: testDisplayName, section_order: 1 }];
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('section', chosenPart);
+                window.history.replaceState(null, '', url.toString());
+              } catch (_) {}
+              if (isFullscreenSupported() && !isFullscreenActive()) {
+                try { await requestFullscreenMode(); } catch (_) {}
+              }
+              await proceedStartExam();
+            };
+
+            if (wordsCard) {
+              wordsCard.onclick = () => {
+                if (chosenPart === 'words') {
+                  startWithChoice();
+                } else {
+                  chosenPart = 'words';
+                  updateModalSelection();
+                }
+              };
+            }
+            if (phrasesCard) {
+              phrasesCard.onclick = () => {
+                if (chosenPart === 'phrases') {
+                  startWithChoice();
+                } else {
+                  chosenPart = 'phrases';
+                  updateModalSelection();
+                }
+              };
+            }
+
+            if (confirmBtn) {
+              confirmBtn.onclick = () => startWithChoice();
+            }
+
+            if (closeBtn) {
+              closeBtn.onclick = () => {
+                window.location.href = 'dashboard.html';
+              };
+            }
+
+            updateModalSelection();
+            compModal.classList.remove('hidden');
+            return;
           }
-          await proceedStartExam();
         }
+
+        // Direct exam start without blocking fullscreen modal prompt
+        if (isFullscreenSupported() && !isFullscreenActive()) {
+          try { await requestFullscreenMode(); } catch (_) {}
+        }
+        await proceedStartExam();
       } catch(e) {
         hideLoading();
         // Clear cached IDs in sessionStorage so invalid or blocked tests don't poison subsequent sessions
@@ -3260,7 +3357,7 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
 
         hideLoading();
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
-        window.location.href = 'result.html';
+        window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}`;
       } catch(e) {
         console.error('Submit error:', e);
         hideLoading();
@@ -3284,7 +3381,7 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
             });
             if (rpcRes.ok) {
               sessionStorage.setItem('topscore_attempt_id', attemptData.id);
-              window.location.href = 'result.html';
+              window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}`;
               return;
             }
           } catch (rpcErr) {
@@ -3306,7 +3403,7 @@ import { formatTestDisplay } from './grading.js?v=20261106_v160';
             });
             if (rpcRes.ok) {
               sessionStorage.setItem('topscore_attempt_id', attemptData.id);
-              window.location.href = 'result.html';
+              window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}`;
               return;
             }
           } catch (rpcErr) {

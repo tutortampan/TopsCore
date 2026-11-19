@@ -150,14 +150,24 @@ export function formatMatrixStudentName(name, maxChars = 19) {
 /**
  * Konversi nomor level menjadi teks ordinal baku:
  * 1 -> 1st Level, 2 -> 2nd Level, 3 -> 3rd Level, 4 -> 4th Level, dst.
- * 0 -> Alumni
- * Jika short === true, memanggil toShortLevel: '1st', '2nd', '3rd', 'Alumni'
+ * 0, 'Non-Level', 'General' -> '—'
+ * 99, 'Alumni', 'X' -> 'Alumni'
+ * Jika short === true, memanggil toShortLevel: '1st', '2nd', '3rd', 'X', '—'
  */
 export function toOrdinalLevel(num, short = false) {
   if (short) return toShortLevel(num);
+  if (num == null) return '—';
+  const str = String(num).trim().toLowerCase();
+  if (str === '0' || str === 'non-level' || str === 'general' || str === '—' || str === '-') {
+    return '—';
+  }
+  if (str === 'alumni' || str === 'ex' || str === 'alumnus' || str === '99' || str === 'x') {
+    return 'Alumni';
+  }
   const n = parseInt(num, 10);
   if (isNaN(n)) return '1st Level';
-  if (n === 0) return 'Alumni';
+  if (n === 0) return '—';
+  if (n === 99) return 'Alumni';
   if (n < 0) return '1st Level';
   const j = n % 10;
   const k = n % 100;
@@ -171,7 +181,8 @@ export function toOrdinalLevel(num, short = false) {
 /**
  * Format teks level ringkas khusus untuk tabel & badge di seluruh panel admin:
  * 1 -> '1st', 2 -> '2nd', 3 -> '3rd', 4 -> '4th'
- * 0, 'Alumni', 'Ex' -> 'Alumni'
+ * 99, 'Alumni', 'Ex', 'X' -> 'X'
+ * 0, '0', 'Non-Level', 'General', 'None' -> '—'
  * Menormalisasi string seperti '1st Level', '2nd Level', 'Level 3', 'LVL 2' menjadi '1st', '2nd', '3rd'.
  */
 export function toShortLevel(val) {
@@ -180,8 +191,11 @@ export function toShortLevel(val) {
   if (!str || str === '—' || str === '-') return '—';
 
   const lower = str.toLowerCase();
-  if (lower === 'alumni' || lower === 'ex' || lower === 'alumnus' || str === '0' || lower === 'x') {
+  if (lower === 'alumni' || lower === 'ex' || lower === 'alumnus' || str === '99' || lower === 'x') {
     return 'X';
+  }
+  if (str === '0' || lower === 'non-level' || lower === 'general' || lower === 'none' || lower === 'no level') {
+    return '—';
   }
 
   let n = parseInt(str, 10);
@@ -190,7 +204,10 @@ export function toShortLevel(val) {
     if (match) n = parseInt(match[0], 10);
   }
 
-  if (isNaN(n) || n < 1) return str;
+  if (isNaN(n)) return str;
+  if (n === 0) return '—';
+  if (n === 99) return 'X';
+  if (n < 1) return '—';
 
   const j = n % 10;
   const k = n % 100;
@@ -461,24 +478,39 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
 }
 
 export async function updateStudentPin(studentId, oldPin, newPin) {
-  if (!newPin || newPin.length < 4) throw new Error('PIN baru minimal harus 4 digit.');
-  const sb = await getSupabase();
-  const { data: student, error } = await sb.from('students').select('pin_hash').eq('id', studentId).single();
-  if (error || !student) throw new Error('Student data not found.');
+  if (!newPin || String(newPin).length < 4) throw new Error('New PIN must be at least 4 digits.');
+  if (isPlaceholderUrl()) {
+    const student = MOCK_STUDENTS.find(s => s.id === studentId);
+    if (!student) throw new Error('Student data not found.');
+    const oldPinHash = await sha256(String(oldPin));
+    if (student.pin_hash && student.pin_hash !== oldPinHash && student.pin_hash !== String(oldPin)) {
+      throw new Error('The old PIN you entered is incorrect.');
+    }
+    const newPinHash = await sha256(String(newPin));
+    student.pin_hash = newPinHash;
+    return { success: true };
+  }
 
-  const oldPinHash = await sha256(oldPin);
-  if (student.pin_hash && student.pin_hash !== oldPinHash) {
+  const sb = await getSupabase();
+  const { data: student, error } = await sb.from('students').select('pin_hash').eq('id', studentId).maybeSingle();
+  if (error) throw new Error(error.message || 'Database error occurred.');
+  if (!student) throw new Error('Student data not found.');
+
+  const oldPinHash = await sha256(String(oldPin));
+  if (student.pin_hash && student.pin_hash !== oldPinHash && student.pin_hash !== String(oldPin)) {
     throw new Error('The old PIN you entered is incorrect.');
   }
 
-  const newPinHash = await sha256(newPin);
+  const newPinHash = await sha256(String(newPin));
   const { error: updateErr } = await sb.from('students')
     .update({ pin_hash: newPinHash, updated_at: new Date().toISOString() })
     .eq('id', studentId);
 
-  if (updateErr) throw updateErr;
+  if (updateErr) throw new Error(updateErr.message || 'Failed to update PIN.');
   return { success: true };
 }
+
+export const changePin = updateStudentPin;
 
 export async function updateStudentGender(studentId, gender) {
   const g = (gender || '').toLowerCase().trim();
@@ -541,30 +573,38 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
     if (!levelId) return data;
 
     // Determine student level number
-    const { data: lvlData } = await sb.from('levels').select('level_number').eq('id', levelId).single();
+    const { data: lvlData } = await sb.from('levels').select('level_number, name').eq('id', levelId).single();
     if (!lvlData || typeof lvlData.level_number !== 'number') {
       return data;
     }
 
     const studentLevelNum = lvlData.level_number;
-    // Level 0 (Alumni) receives Lifetime Universal Access across all program classes
-    if (studentLevelNum === 0) {
+    const isAlumni = studentLevelNum === 99 || (lvlData.name || '').toLowerCase() === 'alumni';
+    const isNonLevel = studentLevelNum === 0 || (lvlData.name || '').toLowerCase() === 'non-level';
+
+    // Level 99 (Alumni) receives Lifetime Universal Access across all program classes
+    if (isAlumni) {
       return data;
     }
 
-    // Strict Level Isolation: Only return classes assigned to the student's current level
+    // Level 0 (Non-Level) receives all classes for that program
+    if (isNonLevel) {
+      return data;
+    }
+
+    // Cumulative Unlocked Classes: Return classes assigned to student's current and previous unlocked levels
     const matched = data.filter(c => {
       if (c.level_id === levelId) return true;
       const cLvlNum = c.levels?.level_number;
       if (cLvlNum != null && studentLevelNum != null) {
-        return cLvlNum === studentLevelNum;
+        return cLvlNum <= studentLevelNum;
       }
       return false;
     });
-    if (matched.length > 0) return matched;
 
-    // Resilient Level Check: Check if classes exist for this level that need to be active
-    if (studentLevelNum != null && studentLevelNum > 0) {
+    // Resilient Level Check: Check if classes exist for the current level that need to be active
+    const hasCurrentLvl = matched.some(c => c.level_id === levelId || c.levels?.level_number === studentLevelNum);
+    if (!hasCurrentLvl && studentLevelNum != null && studentLevelNum > 0 && studentLevelNum < 99) {
       const { data: levelClasses } = await sb.from('classes')
         .select('id, name, code, description, level_id, is_active, levels!classes_level_id_fkey(level_number, name)')
         .is('deleted_at', null)
@@ -572,16 +612,17 @@ export async function fetchStudentClasses(programId, institutionId, levelId = nu
 
       const foundLevelCls = (levelClasses || []).filter(c => c.level_id === levelId || c.levels?.level_number === studentLevelNum);
       if (foundLevelCls.length > 0) {
-        // Auto-heal: Ensure class is active so student can progress
+        // Auto-heal: Ensure current level class is active so student can progress
         const inactiveIds = foundLevelCls.filter(c => !c.is_active).map(c => c.id);
         if (inactiveIds.length > 0) {
           await sb.from('classes').update({ is_active: true }).in('id', inactiveIds);
         }
-        return foundLevelCls.map(c => ({ ...c, is_active: true }));
+        matched.push(...foundLevelCls.map(c => ({ ...c, is_active: true })));
       }
     }
 
-    // Do not fall back to other levels to preserve Strict Level Isolation
+    if (matched.length > 0) return matched;
+
     return [];
   } catch (e) {
     console.warn('Classes query note:', e.message);
@@ -1438,12 +1479,22 @@ export async function startTest(studentId, testId) {
 
   const sb = await getSupabase();
 
-  // 1. Ambil detail test
-  const { data: asmData, error: asmErr } = await sb.from('tests')
-    .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order')
-    .eq('id', testId)
-    .single();
-  if (asmErr || !asmData) throw new Error('Test not found.');
+  // 1. Ambil detail test & existing in_progress attempt in parallel (Zero-Waterfall Fast Path)
+  const [testRes, existingAttemptsRes] = await Promise.all([
+    sb.from('tests')
+      .select('id, title, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order')
+      .eq('id', testId)
+      .single(),
+    sb.from('attempts')
+      .select('id, student_id, test_id, status, started_at, expires_at, attempt_number, is_remedial_unlocked, created_at')
+      .eq('student_id', studentId)
+      .eq('test_id', testId)
+      .in('status', ['in_progress'])
+      .order('created_at', { ascending: false })
+  ]);
+
+  const asmData = testRes.data;
+  if (testRes.error || !asmData) throw new Error('Test not found.');
 
   // Guard: Strict status and soft-delete check in client DB fallback (never allow soft-deleted or DRAFT attempts)
   const currentStatus = String(asmData.status || '').toUpperCase();
@@ -1454,10 +1505,17 @@ export async function startTest(studentId, testId) {
     throw pubErr;
   }
 
-  // Guard: Prerequisite check in client DB fallback
-  const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true;
-  const prereqId = asmData.prerequisite_test_id || asmData.prerequisite_id;
-  if (prereqId && !isStandaloneTryout) {
+  const existingAttempts = existingAttemptsRes.data || [];
+  let attempt = existingAttempts[0];
+  const isResumed = !!attempt;
+  let activeSession = null;
+
+  // Prerequisite & Whitelist gates only apply when initiating a NEW attempt (Skip if attempt is already in_progress)
+  if (!attempt) {
+    // Guard: Prerequisite check in client DB fallback
+    const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true;
+    const prereqId = asmData.prerequisite_test_id || asmData.prerequisite_id;
+    if (prereqId && !isStandaloneTryout) {
     const [prereqAttRes, prereqTestRes] = await Promise.all([
       sb.from('attempts')
         .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked, is_remedial')
@@ -1522,6 +1580,7 @@ export async function startTest(studentId, testId) {
         .select('id, title, payload, shell_code, test_subtype, test_type, category')
         .eq('class_id', asmData.class_id)
         .eq('level_id', asmData.level_id)
+        .eq('status', 'PUBLISHED')
         .neq('id', asmData.id)
         .is('deleted_at', null);
 
@@ -1713,6 +1772,7 @@ export async function startTest(studentId, testId) {
     }
     activeSession = accessCheck.session;
   }
+  } // End if (!attempt)
 
   const test = {
     ...asmData,
@@ -1720,16 +1780,6 @@ export async function startTest(studentId, testId) {
     question_order: asmData.question_order || asmData.payload?.question_order || 'random',
     time_limit_minutes: asmData.working_duration_minutes || asmData.time_limit_minutes || 60
   };
-
-  // 2. Cek apakah ada attempt in_progress yang sedang berjalan (tanpa kueri ganda)
-  const { data: existingAttempts } = await sb.from('attempts')
-    .select('id, student_id, test_id, status, started_at, expires_at, attempt_number, is_remedial_unlocked, created_at')
-    .eq('student_id', studentId)
-    .eq('test_id', testId)
-    .in('status', ['in_progress'])
-    .order('created_at', { ascending: false });
-
-  let attempt = existingAttempts?.[0];
 
   if (!attempt) {
     let timeLimit = test.time_limit_minutes || 60;
@@ -1821,14 +1871,13 @@ export async function startTest(studentId, testId) {
         student_answer: null,
         score: 0
       }));
-      const { error: ansInsertErr } = await sb.from('attempt_answers').insert(answerRows);
+      const { data: insertedAns, error: ansInsertErr } = await sb.from('attempt_answers')
+        .insert(answerRows)
+        .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score');
       if (ansInsertErr) {
         console.error('Failed to insert attempt answers:', ansInsertErr);
       } else {
-        const { data: refetched } = await sb.from('attempt_answers')
-          .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score')
-          .eq('attempt_id', attempt.id);
-        answers = refetched || [];
+        answers = insertedAns || [];
 
         // Authoritative: Update total_questions on attempt in database and memory
         if (answers.length > 0) {
@@ -1899,7 +1948,7 @@ export async function startTest(studentId, testId) {
     TEST: test,
     sections: sections,
     answers: sanitizedAnswers,
-    resumed: !!existingAttempts?.[0]
+    resumed: isResumed
   });
 }
 
@@ -2132,7 +2181,7 @@ export async function fetchAttemptResult(attemptId) {
     .select(`
       id, student_id, status, score, total_questions, percentage, effective_score, is_remedial_unlocked, grade, submitted_at, started_at,
       expires_at, test_id, is_best_score,
-      tests:test_id(id, title, shell_code, status, test_subtype, test_type, class_id, classes(name), levels(name))
+      tests:test_id(id, title, display_name, shell_code, status, test_subtype, test_type, class_id, classes(name), levels(name, level_number))
     `)
     .eq('id', attemptId)
     .single();
@@ -3814,10 +3863,14 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
   const allPassed = examIds.every(id => (bestScoreMap[id] || 0) >= 60);
   if (!allPassed) return { levelUp: false, newLevel: null, status: 'NOT_ALL_PASSED' };
 
-  const currentLevelNum = levelData.level_number || 1;
+  const currentLevelNum = levelData.level_number != null ? levelData.level_number : 1;
+  if (currentLevelNum === 0 || currentLevelNum === 99) {
+    return { levelUp: false, newLevel: null, status: 'NO_NEXT_LEVEL' };
+  }
   if (currentLevelNum >= 3) {
-    await sb.from('students').update({ program_status: 'ALUMNI' }).eq('id', studentId);
-    return { levelUp: true, newLevel: null, status: 'ALUMNI' };
+    const { data: alumniLvl } = await sb.from('levels').select('id, name').eq('level_number', 99).single();
+    await sb.from('students').update({ program_status: 'ALUMNI', level_id: alumniLvl?.id || null }).eq('id', studentId);
+    return { levelUp: true, newLevel: 'Alumni', status: 'ALUMNI' };
   }
 
   const nextLevelNum = currentLevelNum + 1;
@@ -3866,8 +3919,8 @@ export async function fetchStudentLevel(studentId) {
   }
 
   const lvlId = data.level_id || data.batches?.current_level_id || null;
-  const lvlNum = data.levels?.level_number || data.batches?.levels?.level_number || 1;
-  const lvlName = data.levels?.name || data.batches?.levels?.name || '1st Level';
+  const lvlNum = data.levels?.level_number != null ? data.levels.level_number : (data.batches?.levels?.level_number != null ? data.batches.levels.level_number : 1);
+  const lvlName = data.levels?.name || data.batches?.levels?.name || (lvlNum === 0 ? 'Non-Level' : (lvlNum === 99 ? 'Alumni' : '1st Level'));
   return { level_id: lvlId, level_number: lvlNum, level_name: lvlName };
 }
 
@@ -4826,24 +4879,20 @@ export async function upsertDynamicTestShell(config) {
         ? (isTest ? `${progCode}-${classShort}-${themeCode}-PHRASES-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-PHRASES-TASK`)
         : (isTest ? `${progCode}-${classShort}-${themeCode}-WORDS-EXAM` : `${progCode}-${classShort}-${themeCode}${cleanTopCode}-WORDS-TASK`));
 
-  // Standardized Student Display Name (SSOT AGENTS.md § 2.6): e.g. "A1 Task - Greetings & Basics" / "D Exam - Cooking Class"
-  const studentDisplayName = isTest
-    ? `${themeCode} Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-    : `${themeCode}${cleanTopCode} Task${cleanTitle ? ' - ' + cleanTitle : ''}`;
-
-  // Standardized Title: e.g. "3rd Vocabulary A1 Task - Professional Identity"
+  // Standardized Test Name (SSOT AGENTS.md § 2.6 / DECISION-056):
+  // Formula: [LEVEL_ORDINAL] [CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]
   const ordinal = toOrdinal(levelNum);
   const generatedTitle = isUnified
     ? (isTest
-        ? `${ordinal} Vocabulary ${themeCode} Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-        : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+        ? `${ordinal} Vocabulary Exam ${themeCode}${cleanTitle ? ' - ' + cleanTitle : ''}`
+        : `${ordinal} Vocabulary Task ${themeCode}${cleanTopCode}${cleanTitle ? ' - ' + cleanTitle : ''}`)
     : (isPhrase
         ? (isTest
-            ? `${ordinal} Vocabulary ${themeCode} Phrases Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-            : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Phrases Task${cleanTitle ? ' - ' + cleanTitle : ''}`)
+            ? `${ordinal} Vocabulary Phrases Exam ${themeCode}${cleanTitle ? ' - ' + cleanTitle : ''}`
+            : `${ordinal} Vocabulary Phrases Task ${themeCode}${cleanTopCode}${cleanTitle ? ' - ' + cleanTitle : ''}`)
         : (isTest
-            ? `${ordinal} Vocabulary ${themeCode} Words Exam${cleanTitle ? ' - ' + cleanTitle : ''}`
-            : `${ordinal} Vocabulary ${themeCode}${cleanTopCode} Words Task${cleanTitle ? ' - ' + cleanTitle : ''}`));
+            ? `${ordinal} Vocabulary Words Exam ${themeCode}${cleanTitle ? ' - ' + cleanTitle : ''}`
+            : `${ordinal} Vocabulary Words Task ${themeCode}${cleanTopCode}${cleanTitle ? ' - ' + cleanTitle : ''}`));
 
   // Default answer types: Spoken for Tasks (Words & Phrases), Spoken for Words Exam, Selection for Phrases Exam
   const defaultAnswerType = isTest ? (isPhrase ? 'selection' : (isUnified ? 'spoken' : 'written')) : 'spoken';
@@ -4982,7 +5031,7 @@ export async function upsertDynamicTestShell(config) {
     category:                   isTest ? 'EXAM' : 'TASK',
     shell_code:                 code,
     title:                      generatedTitle,
-    display_name:               studentDisplayName,
+    display_name:               null,
     description:                description || `${isTest ? 'Exam' : 'Task'}: ${themeCode}/${topicCode || 'ALL'} (${isUnified ? 'Words & Phrases' : (isPhrase ? 'Phrases' : 'Words')})`,
     status:                     'PUBLISHED',
     working_duration_minutes:   effectiveDurationMinutes,

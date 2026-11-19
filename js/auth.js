@@ -424,6 +424,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
           studentId: state.studentId,
           pin,
         });
+        console.log('[AUTH] verifyStudentLogin succeeded:', result);
 
         setStudentSession({
           student_id: state.studentId,
@@ -444,8 +445,10 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
 
         saveLogin();
         hideLoading();
+        console.log('[AUTH] Session saved to sessionStorage. Navigating to dashboard.html...');
         window.location.href = 'dashboard.html';
       } catch (e) {
+        console.error('[AUTH] Login FAILED with error:', e);
         hideLoading();
         showToast(e.message || 'Invalid PIN. Please try again.', 'error');
         const pinRow = document.querySelector('.pin-row');

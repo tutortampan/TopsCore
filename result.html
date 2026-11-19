@@ -7,9 +7,11 @@
   <script>
     (function () {
       try {
-        var raw = sessionStorage.getItem('topscore_session');
+        var params = new URLSearchParams(window.location.search);
+        var fromAdmin = params.get('admin') === '1' || params.get('is_admin') === 'true' || params.get('from') === 'admin' || params.get('mode') === 'tutor';
         var adminRaw = sessionStorage.getItem('topscore_admin_session') || localStorage.getItem('topscore_admin_session');
-        if (adminRaw) return;
+        if (fromAdmin || adminRaw) return;
+        var raw = sessionStorage.getItem('topscore_session');
         var sess = raw ? JSON.parse(raw) : null;
         if (!sess || !sess.student_id) { window.location.replace('index.html'); }
       } catch (_) { window.location.replace('index.html'); }

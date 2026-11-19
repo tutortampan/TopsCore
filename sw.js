@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v151';
+const CACHE_NAME = 'topscore-cache-option-a-v152';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -18,9 +18,9 @@ const ASSETS_TO_CACHE = [
   './css/result.css?v=20261118_v628',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
-  './js/api.js?v=20261115_v541',
+  './js/api.js?v=20261119_v630',
   './js/auth.js?v=20261108_v162',
-  './js/dashboard.js?v=20261118_v629',
+  './js/dashboard.js?v=20261119_v630',
   './js/test.js?v=20261117_v549',
   './js/result.js?v=20261118_v628',
   './js/session.js?v=20261108_v162',
@@ -29,6 +29,7 @@ const ASSETS_TO_CACHE = [
   './js/grading.js?v=20261115_v545',
   './js/vendor/supabase.js',
   './js/vendor/xlsx.full.min.js?v=20261027d',
+  './js/vendor/html2pdf.bundle.min.js?v=20261119_v1',
   './js/wake-lock.js?v=20261027d',
   './js/pwa.js?v=20261116_v548'
 ];

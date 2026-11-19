@@ -25,7 +25,7 @@ const ADMIN_SESSION_KEY = 'topscore_admin_session';
   }
 })();
 
-// Rule 2.21 Invariant Sanitization: Ensure any cached test settings enforce at least 7 task repetitions
+// Dynamic Test Settings Sanitization: Ensure any cached test settings enforce at least 1 repetition
 (function sanitizeRepetitionSettings() {
   try {
     if (typeof localStorage === 'undefined') return;
@@ -35,8 +35,8 @@ const ADMIN_SESSION_KEY = 'topscore_admin_session';
         const raw = localStorage.getItem(key);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed && typeof parsed === 'object' && parsed.taskRepetitions && Number(parsed.taskRepetitions) < 7) {
-            parsed.taskRepetitions = 7;
+          if (parsed && typeof parsed === 'object' && parsed.taskRepetitions && Number(parsed.taskRepetitions) < 1) {
+            parsed.taskRepetitions = 1;
             localStorage.setItem(key, JSON.stringify(parsed));
           }
         }

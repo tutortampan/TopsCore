@@ -7,8 +7,10 @@
     (function() {
       try {
         var raw = sessionStorage.getItem('topscore_session');
+        console.log('[DASHBOARD PRE-PAINT] raw session:', raw ? 'present (' + raw.length + ' chars)' : 'MISSING');
         var sess = raw ? JSON.parse(raw) : null;
         if (!sess || !sess.student_id) {
+          console.warn('[DASHBOARD PRE-PAINT] No student_id, redirecting to index.html');
           window.location.replace('index.html');
           return;
         }
@@ -21,7 +23,8 @@
             document.documentElement.style.setProperty('--tier-rgb', cached.rgb);
           }
         }
-      } catch (_) {
+      } catch (err) {
+        console.error('[DASHBOARD PRE-PAINT] Exception in pre-paint script:', err);
         window.location.replace('index.html');
       }
     })();
@@ -716,7 +719,7 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261118_v629"></script>
+  <script type="module" src="./js/dashboard.js?v=20261119_v630"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 

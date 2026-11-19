@@ -126,6 +126,7 @@ Tests (Tasks & Exams) are created within a Class. Because that Class belongs to 
 - **Invarian Format**: Disimpan di database `classes.code` dan ditampilkan seragam pada tabel workstation, modal, dan export.
 
 ## 2.6 Test Naming & Code Standard Formula (SSOT)
+Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku: **Test Code (`shell_code`)** dan **Test Name (`title`)**. Istilah `display_name` ditiadakan secara permanen agar tidak menimbulkan ambiguitas dan tumpang tindih.
 
 ### 2.6.1 Test Code Formula (`shell_code` — Machine & Admin SKU)
 - **Formula Baku 4-Blok Simetris**: `PROGRAM-LEVEL_CLASS-CODE-TYPE`
@@ -137,31 +138,26 @@ Tests (Tasks & Exams) are created within a Class. Because that Class belongs to 
 - **Segmen 4 (TYPE)**: Strictly `TASK` atau `EXAM`.
 - **Contoh Resmi**:
   - `CMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
+  - `CMP-3VCB-A-EXAM` (Camp Level 3 Vocabulary Theme A Exam)
   - `CMP-3VCB-D-EXAM` (Camp Level 3 Vocabulary Theme D Exam)
   - `CMP-2VCB-B2-TASK` (Camp Level 2 Vocabulary Topic B2 Task)
   - `CMP-2SPK-A1-TASK` (Camp Level 2 Speaking Topic A1 Task)
   - `EVN-1VCB-A1-TASK` (Evnikom Level 1 Vocabulary Topic A1 Task)
 
-### 2.6.2 Test Name & Display Name Formula (`title` & `display_name` SSOT)
+### 2.6.2 Test Name Formula (`title` SSOT)
 - **Formula Baku Terpadu (Natural English Flow)**:
   ```text
-  [LEVEL_ORDINAL] [CLASS_NAME] [CODE] [TASK/EXAM] - [TOPIC/THEME_NAME]
+  [LEVEL_ORDINAL] [CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]
   ```
   - **Bebas Simbol Asing**: Tidak menggunakan kurung siku `[ ]` ataupun titik tengah `·`. Mengalir alami sesuai standar bahasa Inggris akademik.
-  - **Task Standar**: `2nd Vocabulary A1 Task - Greetings & Basics`, `2nd Vocabulary B1 Task - Podcast Hosting & Introduction`, `3rd Vocabulary A1 Task - Job Hunting & Application`, `2nd Public Speaking A1 Task - Introduction & Delivery`.
-  - **Exam Standar**: `2nd Vocabulary D Exam - Cooking Class`, `3rd Vocabulary A Exam - World of Work`, `1st Vocabulary A Exam - Foundational Communication`.
+  - **Task Standar**: `2nd Vocabulary Task A1 - Greetings & Basics`, `2nd Vocabulary Task B1 - Podcast Hosting & Introduction`, `3rd Vocabulary Task A1 - Job Hunting & Application`, `2nd Public Speaking Task A1 - Introduction & Delivery`.
+  - **Exam Standar**: `2nd Vocabulary Exam D - Cooking Class`, `3rd Vocabulary Exam A - World of Work`, `1st Vocabulary Exam A - Foundational Communication`.
 - **Universal 2-Line Test Title Architecture (SSOT Tampilan Card Dashboard & Header)**:
-  Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian menggunakan format **2 Baris Terpisah** via pemisah ` - `:
-  - **Baris 1 (Konteks Kelas, Level & Jenis Tes)**: `[LEVEL] [CLASS] [CODE] [TASK/EXAM]` (misal `2nd Vocabulary A1 Task`, `2nd Vocabulary D Exam`, `3rd Vocabulary A1 Task`). Ditampilkan tebal (Outfit / Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`).
-  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Podcast Hosting & Introduction`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan aksen Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
-- **Unifikasi Mutlak**: Tidak boleh mencantumkan kata `Words` atau `Phrases` di judul/display name karena materi sudah disatukan (*Unified Topic Package* per DECISION-034).
-- **Sinergi 100%**: Formula ini berlaku identik baik untuk `title` (nama resmi) maupun `display_name` (nama tampilan), sehingga zero-mismatch di seluruh dropdown admin, report card, dan tampilan siswa.
-
-### 2.6.3 Canonical Administrative Title (`title` — Relational Audit & Export)
-```text
-INSTITUTION + PROGRAM + CLASS + LEVEL + TEST TYPE + TEST TITLE
-```
-Store structured fields separately in database (`institution_id`, `program_id`, `class_id`, `level_id`) and generate/display the student name dynamically via `formatTestDisplay()` SSOT.
+  Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian dirender menjadi **2 Baris Terpisah** via pemisah ` - `:
+  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`). Ditampilkan tebal (Outfit / Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman (`CAMP 3RD VOCABULARY`).
+  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Job Hunting & Application`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan aksen Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
+- **Unifikasi Mutlak**: Tidak boleh mencantumkan kata `Words` atau `Phrases` di judul karena materi sudah disatukan (*Unified Topic Package* per DECISION-034).
+- **Peniadaan `display_name`**: Seluruh referensi display name dihilangkan. Database dan sistem hanya mengenal `title` sebagai nama tes dan `shell_code` sebagai kode tes.
 
 ## 2.7 Module Progression & Prerequisites
 Dynamic prerequisites supporting 0 to N parent modules with minimum score thresholds. Report cards store HIGHEST score. Global average counts unattempted available modules as 0.
