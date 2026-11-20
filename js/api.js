@@ -1550,8 +1550,14 @@ export async function startTest(studentId, testId) {
   const isResumed = !!attempt;
   let activeSession = null;
 
-  // Prerequisite & Whitelist gates only apply when initiating a NEW attempt (Skip if attempt is already in_progress)
-  if (!attempt) {
+  const { data: currentStudentInfo } = await sb.from('students')
+    .select('program_status, levels(level_number)')
+    .eq('id', studentId)
+    .single();
+  const isAlumniStudent = (currentStudentInfo?.program_status || '').toUpperCase() === 'ALUMNI' || currentStudentInfo?.levels?.level_number === 99;
+
+  // Prerequisite & Whitelist gates only apply when initiating a NEW attempt for non-alumni (Alumni has Universal Lifetime Access)
+  if (!attempt && !isAlumniStudent) {
     // Guard: Prerequisite check in client DB fallback
     const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true;
     const prereqId = asmData.prerequisite_test_id || asmData.prerequisite_id;
@@ -6243,11 +6249,16 @@ export async function checkStudentTestAccess(studentId, testId) {
   const sb = await getSupabase();
 
   const { data: student, error: studErr } = await sb.from('students')
-    .select('id, name, batch_id')
+    .select('id, name, batch_id, program_status, levels(level_number)')
     .eq('id', studentId)
     .single();
   if (studErr || !student) {
     return { allowed: false, reason: 'STUDENT_NOT_FOUND', message: 'Student record not found.' };
+  }
+
+  const isAlumni = (student.program_status || '').toUpperCase() === 'ALUMNI' || student.levels?.level_number === 99;
+  if (isAlumni) {
+    return { allowed: true, is_test: true, is_alumni: true };
   }
 
   const { data: asm, error: asmErr } = await sb.from('tests')

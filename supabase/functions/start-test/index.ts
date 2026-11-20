@@ -439,9 +439,10 @@ Deno.serve(async (req) => {
 
     const attemptCount = pastAttemptsData?.length || 0;
 
-    // Self-paced retake eligibility: student has previously passed (>= 60%), was forgiven by tutor (is_forgiven: true), or has remedial unlocked
+    // Self-paced retake eligibility: student is Alumni, has previously passed (>= 60%), was forgiven by tutor (is_forgiven: true), or has remedial unlocked
+    const isAlumni = (student.program_status || '').toUpperCase() === 'ALUMNI';
     const hasPastRemedialUnlocked = (pastAttemptsData || []).some((a: any) => Boolean(a.is_remedial_unlocked || a.is_remedial));
-    const isEligibleForSelfPaced = (pastAttemptsData || []).some((a: any) => {
+    const isEligibleForSelfPaced = isAlumni || (pastAttemptsData || []).some((a: any) => {
       const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
       return pct >= 60 || Boolean(a.is_forgiven) || Boolean(a.is_remedial_unlocked || a.is_remedial);
     });
@@ -483,10 +484,10 @@ Deno.serve(async (req) => {
       }
 
       // Check level gating:
-      // Level 0 (Alumni) has universal lifetime access across all levels.
+      // Level 0 and Level 99 (Alumni) have universal lifetime access across all levels.
       // Active students (Level >= 1) have Cumulative Retroactive Access: they can take any test where testLevelNum <= studentLevelNum.
       if (!isStandaloneTryout && studentLevelNum !== null && testLevelNum !== null) {
-        if (studentLevelNum !== 0 && testLevelNum > studentLevelNum) {
+        if (studentLevelNum !== 0 && studentLevelNum !== 99 && !isAlumni && testLevelNum > studentLevelNum) {
           return new Response(JSON.stringify({ error: `Level mismatch. You do not have access to Level ${testLevelNum} tests.` }), {
             status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
           });

@@ -28,7 +28,7 @@ import {
   getGrade
 } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js';
-import { getGradeColorByScore, getInvertedGradeColor, GRADE_PALETTE } from '../grading.js?v=20261106_v160';
+import { getGradeColorByScore, getInvertedGradeColor, GRADE_PALETTE, detectClassDiscipline, isVocabularyClass } from '../grading.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 
 const THEME_PALETTES = {
@@ -89,13 +89,18 @@ export async function renderClassTestSessions(container, context = {}) {
     (!classProgramId || b.program_id === classProgramId)
   );
 
-  if (!_selectedBatchId || !activeBatches.some(b => b.id === _selectedBatchId)) {
+  // Batches belonging to this specific class (Class-Enrolled Batches)
+  const enrolledBatchIds = new Set((classStudents || []).map(s => s.batch_id).filter(Boolean));
+  const classBatches = activeBatches.filter(b => enrolledBatchIds.has(b.id));
+  const effectiveBatches = classBatches.length > 0 ? classBatches : activeBatches;
+
+  if (!_selectedBatchId || !effectiveBatches.some(b => b.id === _selectedBatchId)) {
     // Default to the first active batch with students or active batch in storage
     const saved = localStorage.getItem('topscore_active_test_batch');
-    if (saved && activeBatches.some(b => b.id === saved)) {
+    if (saved && effectiveBatches.some(b => b.id === saved)) {
       _selectedBatchId = saved;
     } else {
-      _selectedBatchId = activeBatches[0]?.id || '';
+      _selectedBatchId = effectiveBatches[0]?.id || '';
     }
   }
 
@@ -106,216 +111,333 @@ export async function renderClassTestSessions(container, context = {}) {
     s.is_active !== false
   );
 
-  // Discover distinct theme codes present in this class's tests
-  const discoveredCodes = [...new Set(classTests.map(t => {
-    const pl = t.payload || {};
-    return (pl.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-  }).filter(Boolean))].sort();
+  const isSingleBatch = effectiveBatches.length <= 1;
 
-  const themeCodes = discoveredCodes.length > 0 ? discoveredCodes : ['A', 'B', 'C', 'D'];
-  if (!_selectedMatrixTheme || !themeCodes.includes(_selectedMatrixTheme)) {
-    _selectedMatrixTheme = themeCodes[0];
+  // Strict Discipline Isolation SSOT
+  const discipline = detectClassDiscipline(currentClass || className);
+  const isVocab = discipline === 'VOCABULARY';
+
+  let themesData = [];
+
+  if (isVocab) {
+    // Discover distinct theme codes present in this class's tests
+    const discoveredCodes = [...new Set(classTests.map(t => {
+      const pl = t.payload || {};
+      return (pl.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+    }).filter(Boolean))].sort();
+
+    const themeCodes = discoveredCodes.length > 0 ? discoveredCodes : ['A', 'B', 'C', 'D'];
+    if (!_selectedMatrixTheme || !themeCodes.includes(_selectedMatrixTheme)) {
+      _selectedMatrixTheme = themeCodes[0];
+    }
+
+    // Group class tests into Themes dynamically
+    themesData = themeCodes.map(code => {
+      const palette = THEME_PALETTES[code] || DEFAULT_THEME_PALETTE;
+
+      const wordsTest = classTests.find(a => {
+        const pl = a.payload || {};
+        const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+        const cat = (pl.category || '').toLowerCase();
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+
+        const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        if (isTask) return false;
+
+        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+        return tc === code && isExam && (cat === 'words' || subtype === 'VOCAB_EXAM' || subtype === 'VOCAB_TEST' || shell.includes('WORDS-EXAM') || shell.includes('WORDS-TEST') || title.includes('words exam') || title.includes('words test'));
+      });
+
+      const phrasesTest = classTests.find(a => {
+        const pl = a.payload || {};
+        const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+        const cat = (pl.category || '').toLowerCase();
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+
+        const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        if (isTask) return false;
+
+        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+        return tc === code && isExam && (cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('PHRASES-EXAM') || shell.includes('PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test'));
+      });
+
+      const tasks = classTests.filter(a => {
+        const pl = a.payload || {};
+        const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+        const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        return tc === code && isTask;
+      }).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+
+      // Dynamic Topic Name
+      let topicName = '';
+      const directTopicName = wordsTest?.topics?.name || phrasesTest?.topics?.name || tasks[0]?.topics?.name || wordsTest?.payload?.topic_name;
+      if (directTopicName) {
+        topicName = directTopicName.trim();
+      } else if (wordsTest?.title) {
+        const m = wordsTest.title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : wordsTest.title;
+      } else if (phrasesTest?.title) {
+        const m = phrasesTest.title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : phrasesTest.title;
+      } else if (tasks.length > 0 && tasks[0].title) {
+        const m = tasks[0].title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : `Theme ${code}`;
+      } else {
+        topicName = `Theme ${code} Curriculum`;
+      }
+
+      // Check live state
+      const now = Date.now();
+      const sessW = wordsTest?.payload?.test_session;
+      const sessP = phrasesTest?.payload?.test_session;
+
+      const _sessIsLive = (s) => {
+        if (!s || s.status !== 'UNLOCKED') return false;
+        const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
+        return ac > now;
+      };
+
+      if (wordsTest && sessW && sessW.status === 'UNLOCKED') {
+        const ac = sessW.auto_close_at ? new Date(sessW.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(wordsTest.id).catch(err => console.warn('[Auto-sync] Close expired wordsTest notice:', err?.message || err));
+          sessW.status = 'LOCKED';
+        }
+      }
+      if (phrasesTest && sessP && sessP.status === 'UNLOCKED') {
+        const ac = sessP.auto_close_at ? new Date(sessP.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(phrasesTest.id).catch(err => console.warn('[Auto-sync] Close expired phrasesTest notice:', err?.message || err));
+          sessP.status = 'LOCKED';
+        }
+      }
+
+      const wLive = _sessIsLive(sessW);
+      const pLive = _sessIsLive(sessP);
+
+      let sess = null;
+      if (wLive && pLive) {
+        const wEnd = new Date(sessW.auto_close_at).getTime();
+        const pEnd = new Date(sessP.auto_close_at).getTime();
+        sess = wEnd >= pEnd ? sessW : sessP;
+      } else if (wLive) {
+        sess = sessW;
+      } else if (pLive) {
+        sess = sessP;
+      }
+
+      let isLive = false;
+      let remainingMinutes = 0;
+      let liveBatchId = null;
+      let liveBatchName = '';
+      let allowedStudentIds = [];
+      let isRemedial = false;
+
+      if (sess) {
+        const autoClose = new Date(sess.auto_close_at).getTime();
+        isLive = true;
+        remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
+        liveBatchId = sess.batch_id;
+        liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
+        const wIds = (wLive ? (sessW.allowed_student_ids || []) : []);
+        const pIds = (pLive ? (sessP.allowed_student_ids || []) : []);
+        allowedStudentIds = [...new Set([...wIds, ...pIds])];
+        isRemedial = Boolean(sess.is_remedial);
+      }
+
+      // Evaluate Batch Readiness
+      const themeObj = { code, name: topicName, wordsTest, phrasesTest, tasks, isNonVocab: false };
+      const normalEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest,
+        phrasesTest,
+        classTests,
+        allAttempts,
+        mode: 'normal'
+      });
+      const eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
+
+      const remedialEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest,
+        phrasesTest,
+        classTests,
+        allAttempts,
+        mode: 'remedial'
+      });
+      const eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
+
+      return {
+        code,
+        name: topicName,
+        color: palette.color,
+        bgRgba: palette.bgRgba,
+        borderRgba: palette.borderRgba,
+        wordsTest,
+        phrasesTest,
+        tasks,
+        isNonVocab: false,
+        isLive,
+        remainingMinutes,
+        liveBatchId,
+        liveBatchName,
+        allowedStudentIds,
+        isRemedial,
+        unlockedAt: sess?.unlocked_at || null,
+        eligibleNormalCount,
+        eligibleRemedialCount,
+        batchTotalStudents: activeBatchStudents.length
+      };
+    });
+  } else {
+    // Non-vocabulary classes (Basic English, Speaking, Storytelling, etc.):
+    // Operational units are the actual Tests/Exams of this class, not Vocabulary Themes!
+    const classExams = classTests.filter(t => {
+      const st = String(t.shell_code || '').toUpperCase();
+      const tt = String(t.test_type || '').toLowerCase();
+      return tt === 'exam' || st.endsWith('-EXAM') || st.includes('-EXAM-');
+    });
+    const candidateTests = classExams.length > 0 ? classExams : classTests;
+
+    themesData = candidateTests.map((t, idx) => {
+      const shell = String(t.shell_code || '').toUpperCase();
+      const codeMatch = shell.match(/-([A-Z0-9]+)-(?:EXAM|TASK|QUIZ)/);
+      const code = codeMatch ? codeMatch[1] : (String.fromCharCode(65 + idx));
+      const palette = THEME_PALETTES[code] || THEME_PALETTES['A'];
+
+      const now = Date.now();
+      const sess = t.payload?.test_session;
+      const isLive = Boolean(sess && sess.status === 'UNLOCKED' && new Date(sess.auto_close_at).getTime() > now);
+
+      if (sess && sess.status === 'UNLOCKED') {
+        const ac = sess.auto_close_at ? new Date(sess.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(t.id).catch(err => console.warn('[Auto-sync] Close expired test notice:', err?.message || err));
+          sess.status = 'LOCKED';
+        }
+      }
+
+      const remainingMinutes = isLive ? Math.max(1, Math.ceil((new Date(sess.auto_close_at).getTime() - now) / 60000)) : 0;
+      const liveBatchId = sess?.batch_id;
+      const liveBatchName = liveBatchId ? (batchMap[liveBatchId]?.name || 'Batch ' + liveBatchId) : '';
+      const allowedStudentIds = isLive ? (sess.allowed_student_ids || []) : [];
+      const isRemedial = isLive ? Boolean(sess.is_remedial) : false;
+
+      const tasks = classTests.filter(a => {
+        if (a.id === t.id) return false;
+        const aType = (a.test_type || '').toLowerCase();
+        const aShell = (a.shell_code || '').toUpperCase();
+        return aType === 'quiz' || aType === 'task' || aShell.includes('-TASK') || aShell.includes('-QUIZ');
+      });
+
+      const moduleName = t.payload?.module_name || (discipline === 'BASIC_ENGLISH' ? 'Description (Photo & Grammar)' : (t.test_type || 'Exam'));
+      const totalQuestions = t.payload?.questions?.length || t.total_questions || 20;
+      const duration = t.working_duration_minutes || 40;
+
+      const themeObj = {
+        code,
+        name: t.title,
+        examTest: t,
+        wordsTest: null,
+        phrasesTest: null,
+        tasks,
+        isNonVocab: true,
+        discipline,
+        moduleName,
+        totalQuestions,
+        duration,
+        color: palette.color,
+        bgRgba: palette.bgRgba,
+        borderRgba: palette.borderRgba,
+        isLive,
+        remainingMinutes,
+        liveBatchId,
+        liveBatchName,
+        allowedStudentIds,
+        isRemedial,
+        unlockedAt: sess?.unlocked_at || null
+      };
+
+      const normalEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest: null,
+        phrasesTest: null,
+        examTest: t,
+        classTests,
+        allAttempts,
+        mode: 'normal'
+      });
+      themeObj.eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
+
+      const remedialEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest: null,
+        phrasesTest: null,
+        examTest: t,
+        classTests,
+        allAttempts,
+        mode: 'remedial'
+      });
+      themeObj.eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
+      themeObj.batchTotalStudents = activeBatchStudents.length;
+
+      return themeObj;
+    });
   }
-
-  // Group class tests into Themes dynamically
-  const themesData = themeCodes.map(code => {
-    const palette = THEME_PALETTES[code] || DEFAULT_THEME_PALETTE;
-
-    const wordsTest = classTests.find(a => {
-      const pl = a.payload || {};
-      const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-      const cat = (pl.category || '').toLowerCase();
-      const type = (a.test_type || '').toLowerCase();
-      const subtype = (a.test_subtype || '').toUpperCase();
-      const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-      const title = (a.title || '').toLowerCase();
-
-      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-      if (isTask) return false;
-
-      const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-      return tc === code && isExam && (cat === 'words' || subtype === 'VOCAB_EXAM' || subtype === 'VOCAB_TEST' || shell.includes('WORDS-EXAM') || shell.includes('WORDS-TEST') || title.includes('words exam') || title.includes('words test'));
-    });
-
-    const phrasesTest = classTests.find(a => {
-      const pl = a.payload || {};
-      const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-      const cat = (pl.category || '').toLowerCase();
-      const type = (a.test_type || '').toLowerCase();
-      const subtype = (a.test_subtype || '').toUpperCase();
-      const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-      const title = (a.title || '').toLowerCase();
-
-      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-      if (isTask) return false;
-
-      const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-      return tc === code && isExam && (cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('PHRASES-EXAM') || shell.includes('PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test'));
-    });
-
-    const tasks = classTests.filter(a => {
-      const pl = a.payload || {};
-      const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-      const type = (a.test_type || '').toLowerCase();
-      const subtype = (a.test_subtype || '').toUpperCase();
-      const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-      const title = (a.title || '').toLowerCase();
-      const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-      return tc === code && isTask;
-    }).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-
-    // Dynamic Topic Name
-    let topicName = '';
-    const directTopicName = wordsTest?.topics?.name || phrasesTest?.topics?.name || tasks[0]?.topics?.name || wordsTest?.payload?.topic_name;
-    if (directTopicName) {
-      topicName = directTopicName.trim();
-    } else if (wordsTest?.title) {
-      const m = wordsTest.title.match(/-\s*([^-\n]+)$/);
-      topicName = m ? m[1].trim() : wordsTest.title;
-    } else if (phrasesTest?.title) {
-      const m = phrasesTest.title.match(/-\s*([^-\n]+)$/);
-      topicName = m ? m[1].trim() : phrasesTest.title;
-    } else if (tasks.length > 0 && tasks[0].title) {
-      const m = tasks[0].title.match(/-\s*([^-\n]+)$/);
-      topicName = m ? m[1].trim() : `Theme ${code}`;
-    } else {
-      topicName = `Theme ${code} Curriculum`;
-    }
-
-    // Check live state — evaluate BOTH Words and Phrases sessions independently,
-    // then merge: the theme is LIVE if either session is still within its window.
-    const now = Date.now();
-    const sessW = wordsTest?.payload?.test_session;
-    const sessP = phrasesTest?.payload?.test_session;
-
-    // Helper: check if a raw session object is currently live
-    const _sessIsLive = (s) => {
-      if (!s || s.status !== 'UNLOCKED') return false;
-      const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
-      return ac > now;
-    };
-
-    // Auto-sync: Cleanly lock expired sessions in DB if tutor left them running
-    if (wordsTest && sessW && sessW.status === 'UNLOCKED') {
-      const ac = sessW.auto_close_at ? new Date(sessW.auto_close_at).getTime() : 0;
-      if (ac && ac <= now) {
-        closeTestSession(wordsTest.id).catch(err => console.warn('[Auto-sync] Close expired wordsTest notice:', err?.message || err));
-        sessW.status = 'LOCKED';
-      }
-    }
-    if (phrasesTest && sessP && sessP.status === 'UNLOCKED') {
-      const ac = sessP.auto_close_at ? new Date(sessP.auto_close_at).getTime() : 0;
-      if (ac && ac <= now) {
-        closeTestSession(phrasesTest.id).catch(err => console.warn('[Auto-sync] Close expired phrasesTest notice:', err?.message || err));
-        sessP.status = 'LOCKED';
-      }
-    }
-
-    const wLive = _sessIsLive(sessW);
-    const pLive = _sessIsLive(sessP);
-
-    // Prefer whichever has the longer remaining time; fall back to any live session
-    let sess = null;
-    if (wLive && pLive) {
-      const wEnd = new Date(sessW.auto_close_at).getTime();
-      const pEnd = new Date(sessP.auto_close_at).getTime();
-      sess = wEnd >= pEnd ? sessW : sessP; // pick the one closing last
-    } else if (wLive) {
-      sess = sessW;
-    } else if (pLive) {
-      sess = sessP;
-    }
-
-    let isLive = false;
-    let remainingMinutes = 0;
-    let liveBatchId = null;
-    let liveBatchName = '';
-    let allowedStudentIds = [];
-    let isRemedial = false;
-
-    if (sess) {
-      const autoClose = new Date(sess.auto_close_at).getTime();
-      isLive = true;
-      remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
-      liveBatchId = sess.batch_id;
-      liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
-      // Merge allowed student IDs from both active sessions so monitor shows everyone
-      const wIds = (wLive ? (sessW.allowed_student_ids || []) : []);
-      const pIds = (pLive ? (sessP.allowed_student_ids || []) : []);
-      allowedStudentIds = [...new Set([...wIds, ...pIds])];
-      isRemedial = Boolean(sess.is_remedial);
-    }
-
-    // Evaluate Batch Readiness
-    const themeObj = { code, name: topicName, wordsTest, phrasesTest, tasks };
-    const normalEvals = evaluateStudentsEligibility({
-      students: activeBatchStudents,
-      theme: themeObj,
-      themeTasks: tasks,
-      wordsTest,
-      phrasesTest,
-      classTests,
-      allAttempts,
-      mode: 'normal'
-    });
-    const eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
-
-    const remedialEvals = evaluateStudentsEligibility({
-      students: activeBatchStudents,
-      theme: themeObj,
-      themeTasks: tasks,
-      wordsTest,
-      phrasesTest,
-      classTests,
-      allAttempts,
-      mode: 'remedial'
-    });
-    const eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
-
-    return {
-      code,
-      name: topicName,
-      color: palette.color,
-      bgRgba: palette.bgRgba,
-      borderRgba: palette.borderRgba,
-      wordsTest,
-      phrasesTest,
-      tasks,
-      isLive,
-      remainingMinutes,
-      liveBatchId,
-      liveBatchName,
-      allowedStudentIds,
-      isRemedial,
-      unlockedAt: sess?.unlocked_at || null,
-      eligibleNormalCount,
-      eligibleRemedialCount,
-      batchTotalStudents: activeBatchStudents.length
-    };
-  });
 
   // Count active sessions
   const liveCount = themesData.filter(t => t.isLive).length;
 
   // Update Lower Infobar Metadata (50px Lower Sub-Panel)
   if (typeof window.setBottomInfobar === 'function') {
-    const totalExamsCount = themesData.reduce((acc, t) => acc + (t.wordsTest ? 1 : 0) + (t.phrasesTest ? 1 : 0), 0);
-    const selectedBatch = activeBatches.find(b => b.id === _selectedBatchId);
+    const totalExamsCount = isVocab
+      ? themesData.reduce((acc, t) => acc + (t.wordsTest ? 1 : 0) + (t.phrasesTest ? 1 : 0), 0)
+      : themesData.length;
+    const selectedBatch = effectiveBatches.find(b => b.id === _selectedBatchId) || effectiveBatches[0];
     const selTheme = themesData.find(t => t.code === _selectedMatrixTheme) || themesData[0];
     const readyRatio = selTheme ? `${selTheme.eligibleNormalCount}/${selTheme.batchTotalStudents}` : '0/0';
     const readyPct = selTheme && selTheme.batchTotalStudents > 0 ? Math.round((selTheme.eligibleNormalCount / selTheme.batchTotalStudents) * 100) : 0;
 
-    const leftHtml = `
+    const leftHtml = isVocab ? `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
         <span>Scope: <strong style="color:#ffffff;">${themesData.length} Themes (${totalExamsCount} Exams)</strong></span>
         <span>&bull;</span>
         <span>${classTests.length} Total Modules</span>
       </div>
+    ` : `
+      <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
+        <span>Class: <strong style="color:#ffffff;">${escapeHtml(className || 'Basic English')}</strong></span>
+        <span>&bull;</span>
+        <span>${classTests.length} Total Tests</span>
+      </div>
     `;
-    const centerHtml = `
+    const centerHtml = isVocab ? `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
         <span style="color:#cbd5e1; font-weight:700;">Batch ${escapeHtml(selectedBatch?.name || '')} (${activeBatchStudents.length} Students):</span>
         <span style="color:${getGradeColorByScore(readyPct)}; font-weight:800;">Theme ${selTheme?.code || 'A'}: ${readyRatio} Ready (${readyPct}%)</span>
+      </div>
+    ` : `
+      <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
+        <span style="color:#cbd5e1; font-weight:700;">Batch ${escapeHtml(selectedBatch?.name || '')} (${activeBatchStudents.length} Students):</span>
+        <span style="color:${getGradeColorByScore(readyPct)}; font-weight:800;">Ready: ${readyRatio} (${readyPct}%)</span>
       </div>
     `;
     const rightHtml = `
@@ -341,22 +463,30 @@ export async function renderClassTestSessions(container, context = {}) {
           </span>
           <span style="color:rgba(255,255,255,0.2);">|</span>
           <span style="font-size: 16px; font-weight:800; color:#ffffff;">
-            ${escapeHtml(className || 'Vocabulary')}
+            ${escapeHtml(className || 'Class Hub')}
           </span>
           ${classProgramName ? `<span style="font-size: 12px; padding:2px 7px; border-radius:4px; background:rgba(var(--quad-c-rgb, 149, 255, 0),0.12); color:var(--quad-c, #95ff00); border:1px solid rgba(var(--quad-c-rgb, 149, 255, 0),0.25); font-weight:700;">Program: ${escapeHtml(classProgramName)}</span>` : ''}
         </div>
 
         <div style="display:flex; align-items:center; gap:10px;">
-          <label for="test-session-batch-select" style="font-size: 12px; font-weight:700; color:#cbd5e1; margin:0; white-space:nowrap;">
-            Target Batch:
-          </label>
-          <select id="test-session-batch-select" class="form-control" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3); color:#ffffff; padding:5px 10px; border-radius:6px; font-weight:700; font-size: 12px; min-width:180px; cursor:pointer;">
-            ${activeBatches.map(b => {
-              const bStuds = (allStudents || []).filter(s => s.batch_id === b.id && !s.deleted_at && s.is_active !== false).length;
-              const isSel = b.id === _selectedBatchId;
-              return `<option value="${b.id}" ${isSel ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)} (${bStuds} Students)</option>`;
-            }).join('')}
-          </select>
+          ${isSingleBatch ? `
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:12px; font-weight:700; color:#cbd5e1;">Target Batch:</span>
+              <span class="badge" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3); color:#38bdf8; font-size:12px; font-weight:800; padding:4px 10px; border-radius:6px;">Batch ${escapeHtml(effectiveBatches[0]?.name || _selectedBatchId || '—')} (${activeBatchStudents.length} Students)</span>
+              <input type="hidden" id="test-session-batch-select" value="${_selectedBatchId}">
+            </div>
+          ` : `
+            <label for="test-session-batch-select" style="font-size: 12px; font-weight:700; color:#cbd5e1; margin:0; white-space:nowrap;">
+              Target Batch:
+            </label>
+            <select id="test-session-batch-select" class="form-control" style="background:#1e293b; border:1px solid rgba(56,189,248,0.3); color:#ffffff; padding:5px 10px; border-radius:6px; font-weight:700; font-size: 12px; min-width:180px; cursor:pointer;">
+              ${effectiveBatches.map(b => {
+                const bStuds = (classStudents || []).filter(s => s.batch_id === b.id).length;
+                const isSel = b.id === _selectedBatchId;
+                return `<option value="${b.id}" ${isSel ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)} (${bStuds} Students)</option>`;
+              }).join('')}
+            </select>
+          `}
 
           <button type="button" class="btn btn-secondary btn-sm" id="btn-refresh-test-sessions" style="padding:5px 10px; font-size: 12px; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
             Refresh
@@ -394,9 +524,18 @@ export async function renderClassTestSessions(container, context = {}) {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:flex-end;">
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Target Batch</label>
-                <select id="open-modal-batch-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
-                  ${activeBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
-                </select>
+                ${isSingleBatch ? `
+                  <div style="height:30px; background:#1e293b; border:1px solid rgba(56,189,248,0.3); border-radius:5px; padding:0 10px; display:flex; align-items:center; color:#38bdf8; font-weight:800; font-size:12px;">
+                    Batch ${escapeHtml(effectiveBatches[0]?.name || _selectedBatchId || '—')}
+                  </div>
+                  <select id="open-modal-batch-select" class="form-control" style="display:none;">
+                    <option value="${_selectedBatchId}" selected>Batch ${escapeHtml(effectiveBatches[0]?.name || _selectedBatchId || '—')}</option>
+                  </select>
+                ` : `
+                  <select id="open-modal-batch-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
+                    ${effectiveBatches.map(b => `<option value="${b.id}" ${b.id === _selectedBatchId ? 'selected' : ''}>Batch ${escapeHtml(b.name || b.id)}</option>`).join('')}
+                  </select>
+                `}
               </div>
 
               <!-- Enrolled Students Counter Badge -->
@@ -406,8 +545,8 @@ export async function renderClassTestSessions(container, context = {}) {
               </div>
             </div>
 
-            <!-- Row 2: Words Module & Phrases Module (Official Rule 2.11 Dropdown System) -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+            <!-- Row 2A: Words Module & Phrases Module (Strictly for Vocabulary Classes) -->
+            <div id="open-modal-vocab-modules-row" style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:var(--primary-tactical); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Words Module</label>
                 <select id="open-modal-words-module-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
@@ -424,6 +563,18 @@ export async function renderClassTestSessions(container, context = {}) {
                   <option value="multiple_choice">Selection (M2)</option>
                   <option value="spoken">Spoken (M4)</option>
                 </select>
+              </div>
+            </div>
+
+            <!-- Row 2B: Non-Vocab Class Exam Details (Dedicated for Basic English, Speaking, Storytelling, etc.) -->
+            <div id="open-modal-nonvocab-details-row" class="hidden" style="background:rgba(15,23,42,0.7); border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:8px 12px; display:none; flex-direction:column; gap:4px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                <span style="color:#94a3b8; font-weight:700; text-transform:uppercase;">Exam:</span>
+                <span id="open-modal-nonvocab-exam-title" style="color:#ffffff; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:320px;">—</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px;">
+                <span style="color:#94a3b8; font-weight:700; text-transform:uppercase;">Engine / Questions:</span>
+                <span id="open-modal-nonvocab-engine-info" style="color:#38bdf8; font-weight:800;">—</span>
               </div>
             </div>
 
@@ -836,6 +987,10 @@ async function loadThemeExamAnalyticsData(themesData, context = {}) {
 
     // Map theme exams and tasks from themesData
     (themesData || []).forEach(t => {
+      if (t.examTest?.id) {
+        testIds.push(t.examTest.id);
+        testIdToTheme[t.examTest.id] = t.code;
+      }
       if (t.wordsTest?.id) {
         testIds.push(t.wordsTest.id);
         testIdToTheme[t.wordsTest.id] = t.code;
@@ -1092,19 +1247,26 @@ function renderThemeCard(theme, context) {
     batchTotalStudents = 0
   } = theme;
 
+  const isNonVocab = Boolean(theme.isNonVocab);
   const wordsQ = wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0);
   const phrasesQ = phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0);
-  const totalQ = wordsQ + phrasesQ;
-  const autoDur = totalQ > 0 ? Math.max(10, Math.ceil(totalQ * 1.5)) : (wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60);
+  const totalQ = isNonVocab ? (theme.totalQuestions || 20) : (wordsQ + phrasesQ);
+  const autoDur = isNonVocab ? (theme.duration || 40) : (totalQ > 0 ? Math.max(10, Math.ceil(totalQ * 1.5)) : (wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60));
 
   const enrolledCount = (allowedStudentIds && allowedStudentIds.length) ? allowedStudentIds.length : 0;
   const hasWords = Boolean(wordsTest);
   const hasPhrases = Boolean(phrasesTest);
   const readinessPct = batchTotalStudents > 0 ? Math.round((eligibleNormalCount / batchTotalStudents) * 100) : 0;
 
-  const examTitleStr = hasWords && hasPhrases
-    ? 'Words Exam & Phrases Exam'
-    : (hasWords ? 'Words Exam' : (hasPhrases ? 'Phrases Exam' : 'Tasks Only'));
+  const examTitleStr = isNonVocab
+    ? escapeHtml(theme.name)
+    : (hasWords && hasPhrases
+        ? 'Words Exam & Phrases Exam'
+        : (hasWords ? 'Words Exam' : (hasPhrases ? 'Phrases Exam' : 'Tasks Only')));
+
+  const questionCountStr = isNonVocab
+    ? `${theme.totalQuestions || 20} Questions &bull; ${escapeHtml(theme.moduleName || 'Exam Engine')}`
+    : `Words: ${wordsQ}, Phrases: ${phrasesQ}`;
 
   // Top Group: Header Line, Exam Title Line, Standard 12px Metadata Box
   const topBlock = `
@@ -1112,7 +1274,7 @@ function renderThemeCard(theme, context) {
       <!-- Line 1: Theme Code + Name + Readiness / Live Badge -->
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 2px; line-height: 1.4;">
         <span style="font-size: 12px; font-weight: 800; color: ${color}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
-          <span style="color: ${color};">${code}</span> - ${escapeHtml(name)}
+          ${isNonVocab ? `<span style="color: ${color};">[EXAM]</span> ${escapeHtml(name)}` : `<span style="color: ${color};">${code}</span> - ${escapeHtml(name)}`}
         </span>
         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           ${isLive ? `
@@ -1140,7 +1302,7 @@ function renderThemeCard(theme, context) {
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: #94a3b8; font-weight: 500;">Question Count:</span>
-          <span style="color: #ffffff; font-weight: 700;">Words: ${wordsQ}, Phrases: ${phrasesQ}</span>
+          <span style="color: #ffffff; font-weight: 700;">${questionCountStr}</span>
         </div>
       </div>
     </div>
@@ -1353,11 +1515,13 @@ function bindTestSessionsEvents(container, themesData, context) {
       showLoading();
       try {
         const promises = [];
+        if (theme.isNonVocab && theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
         if (theme.wordsTest) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
+        const targetName = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+        showToast(`Exam timer for ${targetName} successfully ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
@@ -1382,8 +1546,9 @@ function bindTestSessionsEvents(container, themesData, context) {
       const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
       if (menu) menu.style.display = 'none';
 
+      const targetLabel = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
       const input = prompt(
-        `Adjust exam time for Theme ${theme.code}:\n` +
+        `Adjust exam time for ${targetLabel}:\n` +
         `• Enter a positive number to extend (e.g. 15 or +15)\n` +
         `• Enter a negative number to reduce (e.g. -10)\n` +
         `Allowed range: -180 to +180 minutes (cannot be 0).`,
@@ -1401,11 +1566,12 @@ function bindTestSessionsEvents(container, themesData, context) {
       showLoading();
       try {
         const promises = [];
+        if (theme.isNonVocab && theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
         if (theme.wordsTest) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
         if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
-        showToast(`Exam timer for Theme ${theme.code} successfully ${actionText}!`, 'success');
+        showToast(`Exam timer for ${targetLabel} successfully ${actionText}!`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
@@ -1425,17 +1591,19 @@ function bindTestSessionsEvents(container, themesData, context) {
       const theme = themesData.find(t => t.code === themeCode);
       if (!theme) return;
 
-      const confirmed = confirm(`Close test session for THEME ${theme.code} (${theme.name}) for ${theme.liveBatchName}?\nStudents will no longer be able to access the test once closed.`);
+      const targetSessionLabel = theme.isNonVocab ? theme.name : `THEME ${theme.code} (${theme.name})`;
+      const confirmed = confirm(`Close test session for ${targetSessionLabel} for ${theme.liveBatchName}?\nStudents will no longer be able to access the test once closed.`);
       if (!confirmed) return;
 
       showLoading();
       try {
         const promises = [];
+        if (theme.isNonVocab && theme.examTest) promises.push(closeTestSession(theme.examTest.id));
         if (theme.wordsTest) promises.push(closeTestSession(theme.wordsTest.id));
         if (theme.phrasesTest) promises.push(closeTestSession(theme.phrasesTest.id));
         await Promise.all(promises);
 
-        showToast(`Test session Theme ${theme.code} closed successfully.`, 'success');
+        showToast(`Test session "${theme.name}" closed successfully.`, 'success');
         if (window.renderClassHub) {
           window.renderClassHub(document.getElementById('admin-content-area'));
         }
@@ -1484,27 +1652,53 @@ function openThemeSessionModal(container, theme, mode, context) {
     };
   }
 
-  // ── Auto-duration calculation ────────────────────────
-  const _wordsQ = theme.wordsTest?.total_questions || 0;
-  const _phrasesQ = theme.phrasesTest?.total_questions || 0;
-  const _totalQ = _wordsQ + _phrasesQ;
-  const _autoDur = _totalQ > 0 ? Math.max(10, Math.ceil(_totalQ * 1.5)) : (theme.wordsTest?.working_duration_minutes || theme.phrasesTest?.working_duration_minutes || 60);
-  const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
-  if (_suggEl) {
-    _suggEl.textContent = _totalQ > 0
-      ? 'Auto: ' + _autoDur + ' min (' + _totalQ + ' questions × 1.5)'
-      : 'Default: ' + _autoDur + ' min';
+  const isNonVocab = Boolean(theme.isNonVocab);
+  const vocabModulesRow = modal.querySelector('#open-modal-vocab-modules-row');
+  const nonVocabDetailsRow = modal.querySelector('#open-modal-nonvocab-details-row');
+
+  if (isNonVocab) {
+    if (vocabModulesRow) vocabModulesRow.style.display = 'none';
+    if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'flex';
+    const nonVocabTitleEl = modal.querySelector('#open-modal-nonvocab-exam-title');
+    const nonVocabInfoEl = modal.querySelector('#open-modal-nonvocab-engine-info');
+    if (nonVocabTitleEl) nonVocabTitleEl.textContent = theme.name;
+    if (nonVocabInfoEl) nonVocabInfoEl.textContent = `${theme.moduleName || 'Exam Engine'} • ${theme.totalQuestions || 20} Questions`;
+
+    const autoDur = theme.duration || 40;
+    const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
+    if (_suggEl) _suggEl.textContent = `Default: ${autoDur} min`;
+    const durationInput = modal.querySelector('#open-modal-duration-input');
+    if (durationInput && !durationInput.dataset.userSet) durationInput.value = autoDur;
+  } else {
+    if (vocabModulesRow) vocabModulesRow.style.display = 'grid';
+    if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'none';
+
+    // ── Auto-duration calculation ────────────────────────
+    const _wordsQ = theme.wordsTest?.total_questions || 0;
+    const _phrasesQ = theme.phrasesTest?.total_questions || 0;
+    const _totalQ = _wordsQ + _phrasesQ;
+    const _autoDur = _totalQ > 0 ? Math.max(10, Math.ceil(_totalQ * 1.5)) : (theme.wordsTest?.working_duration_minutes || theme.phrasesTest?.working_duration_minutes || 60);
+    const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
+    if (_suggEl) {
+      _suggEl.textContent = _totalQ > 0
+        ? 'Auto: ' + _autoDur + ' min (' + _totalQ + ' questions × 1.5)'
+        : 'Default: ' + _autoDur + ' min';
+    }
+
+    const durationInput = modal.querySelector('#open-modal-duration-input');
+    if (durationInput && !durationInput.dataset.userSet) durationInput.value = _autoDur;
   }
 
   const durationInput = modal.querySelector('#open-modal-duration-input');
-  if (durationInput && !durationInput.dataset.userSet) durationInput.value = _autoDur;
   if (durationInput) durationInput.addEventListener('change', () => { durationInput.dataset.userSet = '1'; });
 
   const confirmBtn = modal.querySelector('#btn-confirm-open-session');
 
   const sessionTypeLabel = mode === 'normal' ? 'EXAM SESSION' : 'REMEDIAL SESSION';
   if (titleEl) {
-    titleEl.textContent = `THEME ${theme.code || 'A'} — ${theme.name || 'WORKPLACE'} • ${sessionTypeLabel}`.toUpperCase();
+    titleEl.textContent = isNonVocab
+      ? `${theme.name} • ${sessionTypeLabel}`.toUpperCase()
+      : `THEME ${theme.code || 'A'} — ${theme.name || 'WORKPLACE'} • ${sessionTypeLabel}`.toUpperCase();
   }
   if (badgeEl) {
     badgeEl.style.display = 'none';
@@ -1544,6 +1738,7 @@ function openThemeSessionModal(container, theme, mode, context) {
       themeTasks: theme.tasks,
       wordsTest: theme.wordsTest,
       phrasesTest: theme.phrasesTest,
+      examTest: theme.examTest,
       classTests: context.classTests || [],
       allAttempts: context.allAttempts || [],
       mode
@@ -1809,40 +2004,53 @@ function openThemeSessionModal(container, theme, mode, context) {
     showLoading();
     try {
       const promises = [];
-      if (theme.wordsTest) {
+      if (theme.isNonVocab && theme.examTest) {
         promises.push(openTestSession({
-          testId: theme.wordsTest.id,
+          testId: theme.examTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
           isRemedial: isRemedial,
           remedialStudentIds: isRemedial ? allowedStudentIds : [],
-          answeringMode: _selectedAnswerModeWords
+          answeringMode: theme.examTest.payload?.answering_mode || 'description'
         }));
-      }
-      if (theme.phrasesTest) {
-        // Unify Theme Test Access: Whitelist all selected students for both Words and Phrases.
-        // Sequential prerequisite (Phrases requires Words Exam >= 60%) is dynamically enforced
-        // on the student dashboard at test attempt time, so students can seamlessly take Phrases
-        // as soon as they finish Words within this active session.
-        promises.push(openTestSession({
-          testId: theme.phrasesTest.id,
-          batchId: targetBatchId,
-          allocatedMinutes: duration,
-          allowedStudentIds: allowedStudentIds,
-          isRemedial: isRemedial,
-          remedialStudentIds: isRemedial ? allowedStudentIds : [],
-          answeringMode: _selectedAnswerModePhrases
-        }));
+      } else {
+        if (theme.wordsTest) {
+          promises.push(openTestSession({
+            testId: theme.wordsTest.id,
+            batchId: targetBatchId,
+            allocatedMinutes: duration,
+            allowedStudentIds: allowedStudentIds,
+            isRemedial: isRemedial,
+            remedialStudentIds: isRemedial ? allowedStudentIds : [],
+            answeringMode: _selectedAnswerModeWords
+          }));
+        }
+        if (theme.phrasesTest) {
+          // Unify Theme Test Access: Whitelist all selected students for both Words and Phrases.
+          // Sequential prerequisite (Phrases requires Words Exam >= 60%) is dynamically enforced
+          // on the student dashboard at test attempt time, so students can seamlessly take Phrases
+          // as soon as they finish Words within this active session.
+          promises.push(openTestSession({
+            testId: theme.phrasesTest.id,
+            batchId: targetBatchId,
+            allocatedMinutes: duration,
+            allowedStudentIds: allowedStudentIds,
+            isRemedial: isRemedial,
+            remedialStudentIds: isRemedial ? allowedStudentIds : [],
+            answeringMode: _selectedAnswerModePhrases
+          }));
+        }
       }
 
       if (promises.length === 0) {
-        throw new Error(`No Words or Phrases test modules found for Theme ${theme.code}.`);
+        throw new Error(`No test modules found for ${theme.name || theme.code}.`);
       }
 
       await Promise.all(promises);
 
-      showToast(`Test session Theme ${theme.code} (${mode.toUpperCase()}) successfully opened for ${allowedStudentIds.length} students (${duration} mins)!`, 'success');
+      const targetTitle = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+      showToast(`Test session "${targetTitle}" (${mode.toUpperCase()}) successfully opened for ${allowedStudentIds.length} students (${duration} mins)!`, 'success');
       closeModal();
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
@@ -1873,7 +2081,10 @@ function openThemeLateModal(container, theme, context) {
   const modeBadgeEl = modal.querySelector('#late-modal-mode-badge');
   const confirmBtn = modal.querySelector('#btn-confirm-add-late');
 
-  titleEl.textContent = `THEME ${theme.code || 'G'} — ${(theme.name || 'GENERAL').toUpperCase()} • LATE ARRIVAL`;
+  const isNonVocab = Boolean(theme.isNonVocab);
+  titleEl.textContent = isNonVocab
+    ? `${(theme.name || 'EXAM').toUpperCase()} • LATE ARRIVAL`
+    : `THEME ${theme.code || 'G'} — ${(theme.name || 'GENERAL').toUpperCase()} • LATE ARRIVAL`;
   batchNameEl.textContent = `${theme.liveBatchName || 'Batch'} • ${(theme.allowedStudentIds?.length || 0)} Enrolled`;
   remainingEl.textContent = `${theme.remainingMinutes || 0} Mins`;
 
@@ -1905,6 +2116,7 @@ function openThemeLateModal(container, theme, context) {
     themeTasks: theme.tasks,
     wordsTest: theme.wordsTest,
     phrasesTest: theme.phrasesTest,
+    examTest: theme.examTest,
     classTests: context.classTests || [],
     allAttempts: context.allAttempts || [],
     mode
@@ -2036,24 +2248,33 @@ function openThemeLateModal(container, theme, context) {
     showLoading();
     try {
       const promises = [];
-      if (theme.wordsTest) {
+      if (theme.isNonVocab && theme.examTest) {
         promises.push(addLateStudentsToSession({
-          testId: theme.wordsTest.id,
+          testId: theme.examTest.id,
           studentIds: studentIds,
           remedialStudentIds: isRem ? studentIds : []
         }));
-      }
-      if (theme.phrasesTest) {
-        promises.push(addLateStudentsToSession({
-          testId: theme.phrasesTest.id,
-          studentIds: studentIds,
-          remedialStudentIds: isRem ? studentIds : []
-        }));
+      } else {
+        if (theme.wordsTest) {
+          promises.push(addLateStudentsToSession({
+            testId: theme.wordsTest.id,
+            studentIds: studentIds,
+            remedialStudentIds: isRem ? studentIds : []
+          }));
+        }
+        if (theme.phrasesTest) {
+          promises.push(addLateStudentsToSession({
+            testId: theme.phrasesTest.id,
+            studentIds: studentIds,
+            remedialStudentIds: isRem ? studentIds : []
+          }));
+        }
       }
 
       await Promise.all(promises);
 
-      showToast(`Successfully added ${studentIds.length} late student(s) to Theme ${theme.code}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
+      const targetTitle = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+      showToast(`Successfully added ${studentIds.length} late student(s) to ${targetTitle}! (${isRem ? 'Status: REMEDIAL' : 'Status: NORMAL'})`, 'success');
       closeModal();
       if (window.renderClassHub) {
         window.renderClassHub(document.getElementById('admin-content-area'));
@@ -2108,11 +2329,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   const footerInfoEl = modal.querySelector('#live-modal-footer-info');
 
   if (themeBadgeEl) {
-    themeBadgeEl.textContent = `Theme ${theme.code}`;
+    themeBadgeEl.textContent = theme.isNonVocab ? 'Exam' : `Theme ${theme.code}`;
   }
 
-  titleEl.innerHTML = `THEME ${theme.code || 'G'} — ${(theme.name || 'EXAM').toUpperCase()} • LIVE MONITOR`;
-  const modLabel = (theme.wordsTest && theme.phrasesTest) ? 'Words & Phrases Modules' : (theme.wordsTest ? 'Words Module' : (theme.phrasesTest ? 'Phrases Module' : 'Tasks Module'));
+  titleEl.innerHTML = theme.isNonVocab
+    ? `${(theme.name || 'EXAM').toUpperCase()} • LIVE MONITOR`
+    : `THEME ${theme.code || 'G'} — ${(theme.name || 'EXAM').toUpperCase()} • LIVE MONITOR`;
+  const modLabel = theme.isNonVocab
+    ? (theme.moduleName || 'Exam Engine')
+    : ((theme.wordsTest && theme.phrasesTest) ? 'Words & Phrases Modules' : (theme.wordsTest ? 'Words Module' : (theme.phrasesTest ? 'Phrases Module' : 'Tasks Module')));
   subtitleEl.textContent = `${theme.name} Test • ${theme.liveBatchName || 'Batch'} • ${modLabel}`;
 
   if (modeBadgeEl) {
@@ -2132,8 +2357,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   }
 
   // 1-Second Live Countdown Ticker
-  const targetEndMs = (theme.wordsTest?.payload?.test_session?.auto_close_at || theme.phrasesTest?.payload?.test_session?.auto_close_at)
-    ? new Date(theme.wordsTest?.payload?.test_session?.auto_close_at || theme.phrasesTest?.payload?.test_session?.auto_close_at).getTime()
+  const nonVocabAutoClose = theme.examTest?.payload?.test_session?.auto_close_at;
+  const targetEndMs = (nonVocabAutoClose || theme.wordsTest?.payload?.test_session?.auto_close_at || theme.phrasesTest?.payload?.test_session?.auto_close_at)
+    ? new Date(nonVocabAutoClose || theme.wordsTest?.payload?.test_session?.auto_close_at || theme.phrasesTest?.payload?.test_session?.auto_close_at).getTime()
     : Date.now() + (theme.remainingMinutes || 60) * 60000;
 
   const updateRemainingDisplay = () => {
@@ -2219,7 +2445,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     }
 
     try {
-      const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = theme.isNonVocab
+        ? [theme.examTest?.id].filter(Boolean)
+        : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       const studentIds = theme.allowedStudentIds || [];
       const sessionData = await fetchLiveTestSessionData({
         testIds,
@@ -2252,13 +2480,20 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         const studAttempts = (sessionData.attempts || []).filter(a => a.student_id === student.id);
         const wAtt = getActiveOrLatestAttempt(studAttempts, theme.wordsTest?.id);
         const pAtt = getActiveOrLatestAttempt(studAttempts, theme.phrasesTest?.id);
+        const exAtt = theme.isNonVocab ? getActiveOrLatestAttempt(studAttempts, theme.examTest?.id) : null;
 
         const totalAttemptCount = studAttempts.length;
         const isRetake = totalAttemptCount > 1;
 
-        const inProgressAtt = [wAtt, pAtt].find(a => a && a.status === 'in_progress');
-        const hasSubmitted = [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
-        const hasCancelled = [wAtt, pAtt].some(a => a && a.status === 'cancelled');
+        const inProgressAtt = theme.isNonVocab
+          ? (exAtt && exAtt.status === 'in_progress' ? exAtt : null)
+          : [wAtt, pAtt].find(a => a && a.status === 'in_progress');
+        const hasSubmitted = theme.isNonVocab
+          ? (exAtt && ['submitted', 'auto_submitted', 'evaluated'].includes(exAtt.status))
+          : [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
+        const hasCancelled = theme.isNonVocab
+          ? (exAtt && exAtt.status === 'cancelled')
+          : [wAtt, pAtt].some(a => a && a.status === 'cancelled');
 
         let status = 'not_started';
         let statusText = 'Not Started';
@@ -2281,7 +2516,10 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         // Active module identification
         let activeModule = 'None';
         let targetAtt = null;
-        if (inProgressAtt) {
+        if (theme.isNonVocab) {
+          targetAtt = inProgressAtt || exAtt;
+          activeModule = theme.moduleName || 'Exam';
+        } else if (inProgressAtt) {
           targetAtt = inProgressAtt;
           activeModule = (inProgressAtt.test_id === theme.wordsTest?.id) ? 'Words Exam' : 'Phrases Exam';
         } else if (hasSubmitted) {
@@ -2882,7 +3120,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   }
 
   async function doExtendTime(mins) {
-    const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+    const testIds = theme.isNonVocab
+      ? [theme.examTest?.id].filter(Boolean)
+      : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
     if (!testIds.length) {
       showToast('No active tests available to adjust time.', 'error');
       return;
@@ -2924,7 +3164,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     try {
       const sb = await getSupabase();
       if (!sb || typeof sb.channel !== 'function') return;
-      const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = theme.isNonVocab
+        ? [theme.examTest?.id].filter(Boolean)
+        : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       if (!testIds.length) return;
 
       const channelId = `live-monitor-${theme.code}-${Date.now()}`;
@@ -3019,7 +3261,7 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
 
   const studentName = String(student.name || 'Student').replace(/^(mr\.?|miss|mrs\.?|ms\.?)\s+/i, '').trim();
   if (nameEl) nameEl.textContent = 'STUDENT INTEGRITY & TAB-SWITCH ALARMS';
-  if (metaEl) metaEl.textContent = `${studentName} • ${alarmsList.length} Alarm${alarmsList.length === 1 ? '' : 's'} Recorded • Theme ${theme.code}`;
+  if (metaEl) metaEl.textContent = `${studentName} • ${alarmsList.length} Alarm${alarmsList.length === 1 ? '' : 's'} Recorded • ${theme.isNonVocab ? theme.name : `Theme ${theme.code}`}`;
 
   if (listEl) {
     if (alarmsList.length === 0) {
@@ -3057,7 +3299,9 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   const resetBtn = alarmModal.querySelector('#btn-clear-student-alarms');
   if (resetBtn) {
     resetBtn.onclick = async () => {
-      const testIds = [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = theme.isNonVocab
+        ? [theme.examTest?.id].filter(Boolean)
+        : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       if (!confirm(`Reset all exam integrity alarms for ${student.name}? This will treat previous warnings as false alarms.`)) return;
 
       try {
@@ -3083,7 +3327,7 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
 
   const nameEl = kickModal.querySelector('#kick-confirm-student-name');
   if (nameEl) {
-    nameEl.textContent = `${studentName} • Theme ${theme.code} (${theme.name})`;
+    nameEl.textContent = `${studentName} • ${theme.isNonVocab ? theme.name : `Theme ${theme.code} (${theme.name})`}`;
   }
 
   const cancelBtn = kickModal.querySelector('#btn-cancel-kick');
@@ -3103,19 +3347,27 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
     showLoading();
     try {
       const promises = [];
-      if (theme.wordsTest) {
+      if (theme.isNonVocab && theme.examTest) {
         promises.push(removeStudentFromTestSession({
-          testId: theme.wordsTest.id,
+          testId: theme.examTest.id,
           studentId: studentId,
           action: chosenAction
         }));
-      }
-      if (theme.phrasesTest) {
-        promises.push(removeStudentFromTestSession({
-          testId: theme.phrasesTest.id,
-          studentId: studentId,
-          action: chosenAction
-        }));
+      } else {
+        if (theme.wordsTest) {
+          promises.push(removeStudentFromTestSession({
+            testId: theme.wordsTest.id,
+            studentId: studentId,
+            action: chosenAction
+          }));
+        }
+        if (theme.phrasesTest) {
+          promises.push(removeStudentFromTestSession({
+            testId: theme.phrasesTest.id,
+            studentId: studentId,
+            action: chosenAction
+          }));
+        }
       }
 
       await Promise.all(promises);
@@ -3150,6 +3402,7 @@ function evaluateStudentEligibility(themeOrObj, students, allAttempts, mode = 'n
     themeTasks: themeOrObj?.tasks || [],
     wordsTest: themeOrObj?.wordsTest,
     phrasesTest: themeOrObj?.phrasesTest,
+    examTest: themeOrObj?.examTest,
     classTests,
     allAttempts,
     mode
@@ -3160,7 +3413,9 @@ function evaluateStudentEligibility(themeOrObj, students, allAttempts, mode = 'n
  * Smart Eligibility Engine:
  * Evaluates whether students meet prerequisite tasks and prior exam status.
  */
-function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, classTests = [], allAttempts = [], mode }) {
+function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, examTest, classTests = [], allAttempts = [], mode }) {
+  const targetExam = examTest || theme?.examTest;
+  const isNonVocab = Boolean(theme?.isNonVocab || targetExam);
   const testMap = Object.fromEntries((classTests || []).map(t => [t.id, t]));
   const results = [];
   const activeTasks = themeTasks || themeQuizzes || theme?.tasks || theme?.quizzes || [];
@@ -3197,7 +3452,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     let priorThemePassed = true;
     let priorThemeCode = null;
 
-    if (curThemeIdx > 0) {
+    if (curThemeIdx > 0 && !isNonVocab) {
       priorThemeCode = themeSeq[curThemeIdx - 1];
       const priorExamAtts = studAtts.filter(a => {
         const t = a.tests || a.test || testMap[a.test_id] || testMap[a.Test_id] || {};
@@ -3242,37 +3497,68 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       }
     }
 
-    // 2. Prior exam attempts on words & phrases:
+    // 2. Prior exam attempts:
     let wBestPct = null;
     let pBestPct = null;
-    if (wordsTest) {
-      const wAtts = studAtts.filter(a => (a.test_id || a.Test_id) === wordsTest.id);
-      const subW = wAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
-      if (subW.length > 0) {
-        wBestPct = Math.max(...subW.map(a => parseFloat(a.percentage ?? 0)));
+    let examBestPct = null;
+
+    if (isNonVocab && targetExam) {
+      const eAtts = studAtts.filter(a => (a.test_id || a.Test_id) === targetExam.id);
+      const subE = eAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
+      if (subE.length > 0) {
+        examBestPct = Math.max(...subE.map(a => parseFloat(a.percentage ?? 0)));
+      }
+    } else {
+      if (wordsTest) {
+        const wAtts = studAtts.filter(a => (a.test_id || a.Test_id) === wordsTest.id);
+        const subW = wAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
+        if (subW.length > 0) {
+          wBestPct = Math.max(...subW.map(a => parseFloat(a.percentage ?? 0)));
+        }
+      }
+      if (phrasesTest) {
+        const pAtts = studAtts.filter(a => (a.test_id || a.Test_id) === phrasesTest.id);
+        const subP = pAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
+        if (subP.length > 0) {
+          pBestPct = Math.max(...subP.map(a => parseFloat(a.percentage ?? 0)));
+        }
       }
     }
-    if (phrasesTest) {
-      const pAtts = studAtts.filter(a => (a.test_id || a.Test_id) === phrasesTest.id);
-      const subP = pAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
-      if (subP.length > 0) {
-        pBestPct = Math.max(...subP.map(a => parseFloat(a.percentage ?? 0)));
-      }
-    }
 
-    const hasTakenWords = wBestPct !== null;
-    const hasTakenPhrases = pBestPct !== null;
-    const wordsPassed = !wordsTest || (hasTakenWords && wBestPct >= 60);
-    const phrasesPassed = !phrasesTest || (hasTakenPhrases && pBestPct >= 60);
-
-    const hasAttempted = (Boolean(wordsTest) && hasTakenWords) || (Boolean(phrasesTest) && hasTakenPhrases);
-    const isAlreadyPassed = hasAttempted && wordsPassed && phrasesPassed;
-    const isFailed = hasAttempted && !isAlreadyPassed;
-
+    let hasAttempted = false;
+    let isAlreadyPassed = false;
+    let isFailed = false;
     let avgScore = null;
-    if (hasTakenWords && hasTakenPhrases) avgScore = Math.round((wBestPct + pBestPct) / 2);
-    else if (hasTakenWords) avgScore = Math.round(wBestPct);
-    else if (hasTakenPhrases) avgScore = Math.round(pBestPct);
+    let hasTakenWords = false;
+    let hasTakenPhrases = false;
+    let wordsPassed = false;
+    let phrasesPassed = false;
+
+    if (isNonVocab && targetExam) {
+      const hasTakenExam = examBestPct !== null;
+      const examPassed = hasTakenExam && examBestPct >= 60;
+      hasAttempted = hasTakenExam;
+      isAlreadyPassed = hasAttempted && examPassed;
+      isFailed = hasAttempted && !isAlreadyPassed;
+      if (hasTakenExam) avgScore = Math.round(examBestPct);
+      wordsPassed = examPassed;
+      phrasesPassed = examPassed;
+      hasTakenWords = hasTakenExam;
+      hasTakenPhrases = hasTakenExam;
+    } else {
+      hasTakenWords = wBestPct !== null;
+      hasTakenPhrases = pBestPct !== null;
+      wordsPassed = !wordsTest || (hasTakenWords && wBestPct >= 60);
+      phrasesPassed = !phrasesTest || (hasTakenPhrases && pBestPct >= 60);
+
+      hasAttempted = (Boolean(wordsTest) && hasTakenWords) || (Boolean(phrasesTest) && hasTakenPhrases);
+      isAlreadyPassed = hasAttempted && wordsPassed && phrasesPassed;
+      isFailed = hasAttempted && !isAlreadyPassed;
+
+      if (hasTakenWords && hasTakenPhrases) avgScore = Math.round((wBestPct + pBestPct) / 2);
+      else if (hasTakenWords) avgScore = Math.round(wBestPct);
+      else if (hasTakenPhrases) avgScore = Math.round(pBestPct);
+    }
 
     let isEligible = false;
     let statusLabel = '';
@@ -3307,8 +3593,8 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       } else {
         isEligible = true;
         statusType = 'success';
-        statusLabel = `Tasks Completed (Exam Ready)`;
-        reason = `All ${activeTasks.length} prerequisite tasks passed >= 60%. Eligible for normal exam.`;
+        statusLabel = isNonVocab ? 'Exam Ready' : `Tasks Completed (Exam Ready)`;
+        reason = isNonVocab ? 'All prerequisite requirements met. Eligible for normal exam.' : `All ${activeTasks.length} prerequisite tasks passed >= 60%. Eligible for normal exam.`;
       }
     } else {
       // Remedial Mode:

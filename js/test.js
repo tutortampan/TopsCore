@@ -1107,7 +1107,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
 
         // Server time gate: Enforce WITA window check for schedule_mode === 'fixed'
-        if (testData?.schedule_mode === 'manual' && testData?.is_unlocked === false) {
+        const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI';
+        if (!isAlumni && testData?.schedule_mode === 'manual' && testData?.is_unlocked === false) {
           const main = document.getElementById('test-main');
           if (main) {
             main.innerHTML = `

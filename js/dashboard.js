@@ -1945,14 +1945,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           container.onclick = () => { window.location.href = getTestLaunchUrl(activeTestItem); };
         }
       } else {
+        const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI';
         const testIdToCheck = nextAssignment.isPair ? nextAssignment.wordsTest.id : activeTestItem.id;
         let activeSession = await fetchActiveTestSession(testIdToCheck, session.batch_id).catch(() => null);
         if (!activeSession && nextAssignment.isPair) {
           activeSession = await fetchActiveTestSession(nextAssignment.phrasesTest.id, session.batch_id).catch(() => null);
         }
 
-        const isUnlocked = activeSession?.is_unlocked === true;
-        const isWhitelisted = !activeSession?.allowed_student_ids ||
+        const isUnlocked = isAlumni || activeSession?.is_unlocked === true;
+        const isWhitelisted = isAlumni ||
+                              !activeSession?.allowed_student_ids ||
                               activeSession.allowed_student_ids.length === 0 ||
                               activeSession.allowed_student_ids.includes(session.student_id);
 
@@ -1963,7 +1965,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         rainbowHtml += '</div>';
 
         if (isUnlocked && isWhitelisted) {
-          const remMin = activeSession.remaining_minutes || 30;
+          const remMin = activeSession?.remaining_minutes || 40;
+          const playTitle = isAlumni ? 'Start Exam (Alumni Universal Access)' : `Start Exam (${remMin}m left)`;
           container.innerHTML = `
             <div class="next-test-col-left">
               <div class="next-test-title-wrap">
@@ -1971,7 +1974,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               </div>
               ${rainbowHtml}
             </div>
-            <div class="next-test-col-right" title="Start Exam (${remMin}m left)">
+            <div class="next-test-col-right" title="${playTitle}">
               <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play">
                 ${ICON_3C_GREEN_PLAY}
               </button>
@@ -2837,9 +2840,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         // Live test session state
+        const isAlumni = studentLevelNum === 99 || (session?.program_status || '').toUpperCase() === 'ALUMNI';
         const liveSession = asm.payload?.test_session;
-        const isSessionUnlocked = liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date());
-        const isWhitelisted = isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(session?.student_id || session?.id));
+        const isSessionUnlocked = isAlumni || (liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date()));
+        const isWhitelisted = isAlumni || (isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(session?.student_id || session?.id)));
 
         // Availability window
         const now = new Date();
@@ -2852,7 +2856,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let actionBtn = '';
         const isCompleted = bestAtt && ['SUBMITTED', 'AUTO_SUBMITTED'].includes((bestAtt.status || '').toUpperCase());
 
-        const isLocked = !prereqMet;
+        const isLocked = !isAlumni && !prereqMet;
 
         if (isLocked) {
           statusBadge = `<span class="badge" style="background:rgba(255,255,255,0.1);color:#a1a1aa;border:1px solid rgba(255,255,255,0.2);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Locked</span>`;
@@ -2875,11 +2879,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                             (asm.test_type || '').toLowerCase() !== 'quiz';
 
           const session = asm.payload?.test_session;
-          const isSessionUnlocked = session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date());
+          const isSessionUnlocked = isAlumni || (session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date()));
 
-          let retakesAllowed = asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
+          let retakesAllowed = isAlumni || asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
 
-          const isEligibleForSelfPacedExam = Boolean(passed || bestAtt?.is_forgiven || hasForgivenByTest[asm.id] || isStudentRemedialUnlocked || isRemedialSession);
+          const isEligibleForSelfPacedExam = Boolean(isAlumni || passed || bestAtt?.is_forgiven || hasForgivenByTest[asm.id] || isStudentRemedialUnlocked || isRemedialSession);
 
           if (isAsmTest) {
             // For formal Tests: Students who passed (>=60%), are forgiven, OR have remedial unlocked can take 24/7 independently!
@@ -2913,7 +2917,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt.id}">View</button>`
               : '';
             actionBtn = `<div style="display:flex;gap:6px;">${viewBtn}<button class="btn btn-sm btn-primary" style="padding:4px 8px;background:${retakeBtnBg};border-color:${retakeBtnBorder};color:${retakeTextColor};font-weight:700;" data-aid="${asm.id}">${retakeBtnLabel}</button></div>`;
-          } else if (isAsmTest && !passed && !isSessionUnlocked) {
+          } else if (isAsmTest && !passed && !isSessionUnlocked && !isAlumni) {
             const hasResultId = Boolean(bestAtt?.id);
             const viewBtn = hasResultId
               ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt.id}">View</button>`
