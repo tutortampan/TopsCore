@@ -139,9 +139,9 @@
       background: none !important;
       -webkit-background-clip: initial !important;
       background-clip: initial !important;
-      -webkit-text-fill-color: #F8FAFC !important;
-      color: #F8FAFC !important;
-      text-shadow: 0 0 24px rgba(250, 204, 21, 0.35) !important;
+      color: var(--tier-color, #F8FAFC) !important;
+      -webkit-text-fill-color: var(--tier-color, #F8FAFC) !important;
+      text-shadow: 0 0 16px rgba(var(--tier-rgb, 56, 189, 248), 0.5) !important;
       font-size: 40px !important;
       line-height: 1 !important;
       margin-bottom: 2px !important;
@@ -346,7 +346,7 @@
       display: flex !important;
       align-items: center !important;
       justify-content: center !important;
-      background: linear-gradient(135deg, var(--grade-star) 0%, #be185d 100%) !important;
+      background: linear-gradient(135deg, var(--grade-star) 0%, #7e22ce 100%) !important;
       border: 3px solid rgba(255, 255, 255, 0.5) !important;
       box-shadow: 0 0 16px var(--grade-star-glow) !important;
       line-height: 1 !important;
@@ -1200,6 +1200,7 @@
       letter-spacing: -0.02em !important;
       line-height: 1 !important;
       color: var(--tier-color, var(--grade-star)) !important;
+      -webkit-text-fill-color: var(--tier-color, var(--grade-star)) !important;
       text-shadow: 0 0 16px rgba(var(--tier-rgb, var(--grade-star-rgb)), 0.5) !important;
     }
 
@@ -1544,11 +1545,11 @@
     }
 
     .answers-modal-card {
-      width: 92% !important;
-      max-width: 380px !important;
+      width: 94% !important;
+      max-width: 440px !important;
       height: auto !important;
-      max-height: 80vh !important;
-      max-height: 80dvh !important;
+      max-height: 82vh !important;
+      max-height: 82dvh !important;
       background: #0D1424 !important;
       border: 1.5px solid rgba(255, 255, 255, 0.16) !important;
       border-radius: 16px !important;
@@ -1603,8 +1604,71 @@
     .answers-modal-scroll-body {
       flex: 1 1 auto !important;
       overflow-y: auto !important;
-      padding: 14px 16px !important;
+      padding: 12px 14px !important;
       box-sizing: border-box !important;
+    }
+
+    /* Interactive Filter Tabs inside Breakdown Modal */
+    .ans-filter-bar {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      scrollbar-width: none;
+    }
+    .ans-filter-bar::-webkit-scrollbar {
+      display: none;
+    }
+    .ans-filter-btn {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: #94a3b8;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .ans-filter-btn:hover {
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .ans-filter-btn.active {
+      color: #ffffff !important;
+      border-color: var(--primary-tactical, #38bdf8) !important;
+      background: rgba(56, 189, 248, 0.18) !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.25) !important;
+    }
+
+    /* Description Review Cards */
+    .desc-review-card {
+      background: rgba(15, 23, 42, 0.7);
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      box-sizing: border-box;
+      transition: border-color 0.15s ease;
+    }
+    .desc-photo-thumb {
+      width: 72px;
+      height: 72px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .desc-photo-thumb:hover {
+      transform: scale(1.03);
+      border-color: var(--primary-tactical, #38bdf8);
     }
 
     /* 3. CTA Area / Modal Footer (Strict 60px Panel + Centered Single Button per Invariant 1.5.2 & 1.5.4) */
@@ -2106,6 +2170,7 @@ body.result-page.tier-glow-active .result-metrics-composite-card {
 
 body.result-page.tier-glow-active #result-percentage {
   color: var(--tier-color) !important;
+  -webkit-text-fill-color: var(--tier-color) !important;
   text-shadow: 0 0 16px rgba(var(--tier-rgb), 0.65) !important;
 }
 
@@ -2277,6 +2342,37 @@ body.result-page .remedial-segment-btn {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
+}
+
+body.result-page .result-action-slot > div,
+body.result-page #smart-next-action-container > div,
+body.result-page .result-complete-banner,
+body.result-page .result-waiting-banner {
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 50px !important;
+  min-height: 50px !important;
+  max-height: 50px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 4px 12px !important;
+  margin: 0 !important;
+  border-radius: 10px !important;
+}
+
+body.result-page .result-complete-banner {
+  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.12) !important;
+  border: 1.5px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.45) !important;
+  box-shadow: 0 4px 14px rgba(var(--grade-a-rgb, 0, 192, 0), 0.20) !important;
+}
+
+body.result-page .result-waiting-banner {
+  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.10) !important;
+  border: 1.5px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.35) !important;
 }
 
 body.result-page .result-score-grade-row,

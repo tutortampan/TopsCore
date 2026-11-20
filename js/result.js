@@ -6,7 +6,7 @@
  */
 
 import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName } from './api.js?v=20261115_v541';
-import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay } from './grading.js?v=20261106_v160';
+import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay, validateDescriptionSentence } from './grading.js?v=20261106_v160';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
@@ -117,8 +117,8 @@ try {
       const dColor = TOPSCORE_COLORS.D;
       const eColor = TOPSCORE_COLORS.E;
       const palettes = {
-        '★': [starColor, '#f472b6', '#be185d', '#fda4af'],
-        S: [starColor, '#f472b6', '#be185d', '#fda4af'],
+        '★': [starColor, '#d8b4fe', '#7e22ce', '#e9d5ff'],
+        S: [starColor, '#d8b4fe', '#7e22ce', '#e9d5ff'],
         A: [aColor, aColor, aColor, aColor],
         B: [bColor, '#d9f99d', TOPSCORE_COLORS.B, '#bef264'],
         C: [cColor, '#ffff99', TOPSCORE_COLORS.C, '#fef08a'],
@@ -289,8 +289,35 @@ try {
       requestAnimationFrame(animate);
     }
 
-    // ─── 3-Column Answer Breakdown Renderer (Question | Your Answer | Point) ───
-    function renderAnswers(answers) {
+    // ─── Universal Lightbox Modal for Photo Review (Ide A) ───
+    window.previewPhotoInModal = (photoUrl) => {
+      let lightbox = document.getElementById('photo-lightbox-modal');
+      if (!lightbox) {
+        lightbox = document.createElement('div');
+        lightbox.id = 'photo-lightbox-modal';
+        lightbox.style.cssText = 'position:fixed; inset:0; background:rgba(2,6,23,0.92); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); z-index:100000; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; animation:modal-pop-in 0.2s ease forwards;';
+        lightbox.innerHTML = `
+          <div style="position:relative; max-width:92vw; max-height:86vh; display:flex; flex-direction:column; align-items:center;">
+            <img id="photo-lightbox-img" src="" alt="Enlarged Photo Review" style="max-width:100%; max-height:76vh; border-radius:12px; border:1.5px solid rgba(255,255,255,0.25); box-shadow:0 10px 40px rgba(0,0,0,0.85); object-fit:contain;" />
+            <button type="button" id="photo-lightbox-close" style="margin-top:14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:#fff; font-size:13px; font-weight:800; padding:8px 24px; cursor:pointer;">CLOSE PREVIEW</button>
+          </div>
+        `;
+        document.body.appendChild(lightbox);
+        lightbox.addEventListener('click', (e) => {
+          if (e.target === lightbox || e.target.id === 'photo-lightbox-close') {
+            lightbox.style.display = 'none';
+          }
+        });
+      }
+      const img = document.getElementById('photo-lightbox-img');
+      if (img) img.src = photoUrl;
+      lightbox.style.display = 'flex';
+    };
+
+    let currentFilterCallback = null;
+
+    // ─── Answer Breakdown Renderer with Filter Tabs & Description Review Cards (Ide A) ───
+    function renderAnswers(answers, asmData = null, activeFilter = 'all') {
       const container = document.getElementById('answers-list-container');
       if (!container) return;
       container.innerHTML = '';
@@ -303,6 +330,10 @@ try {
         `;
         return;
       }
+
+      window._allAttemptAnswers = answers;
+      if (asmData) window._currentAsmData = asmData;
+      const effectiveAsmData = asmData || window._currentAsmData;
 
       // Check if this is a P2P Conversation / Dialogue attempt
       const isDialogue = answers.some(a => a.question_type_snapshot === 'P2P_CONVERSATION');
@@ -361,64 +392,221 @@ try {
         return;
       }
 
-      // Generate 3-column table: Question | Your Answer | Point
-      const rowsHtml = answers.map((a, idx) => {
+      // Check if this attempt belongs to a Description test
+      const isDescriptionTest = answers.some(a => {
         const snap = typeof a.question_snapshot === 'string'
           ? (() => { try { return JSON.parse(a.question_snapshot); } catch { return {}; } })()
           : (a.question_snapshot || {});
+        return a.question_type_snapshot === 'Description' || snap.answer_type === 'description' || snap.module === 'description';
+      }) || Boolean(effectiveAsmData?.title && (effectiveAsmData.title.includes('Tell Me What You See') || effectiveAsmData.title.includes('Basic English')));
 
-        const cat = getEvalCategory(a);
-        const isCorrect = cat === 'correct';
-        const isPartial = cat === 'minor_spelling_error';
-        const isIncorrect = !isCorrect && !isPartial;
+      // Calculate category counts
+      const totalCount = answers.length;
+      const correctCount = answers.filter(a => getEvalCategory(a) === 'correct').length;
+      const partialCount = answers.filter(a => getEvalCategory(a) === 'minor_spelling_error').length;
+      const wrongCount = answers.filter(a => getEvalCategory(a) === 'incorrect').length;
 
-        // Font color rules: Green for correct, Yellow for partial (0.5), Red for incorrect
-        const fontColor = isCorrect
-          ? 'var(--grade-a, #00c000)'
-          : isPartial
-            ? 'var(--grade-c, #FFFF00)'
-            : 'var(--grade-e, #FF0000)';
+      // Filter answers
+      let filteredAnswers = answers;
+      if (activeFilter === 'correct') {
+        filteredAnswers = answers.filter(a => getEvalCategory(a) === 'correct');
+      } else if (activeFilter === 'partial') {
+        filteredAnswers = answers.filter(a => getEvalCategory(a) === 'minor_spelling_error');
+      } else if (activeFilter === 'incorrect') {
+        filteredAnswers = answers.filter(a => getEvalCategory(a) === 'incorrect');
+      }
 
-        const qNum = a.question_index !== undefined ? (a.question_index + 1) : (idx + 1);
-        const qText = snap.question_text || snap.question || snap.indonesian || snap.english || `Question ${qNum}`;
-        const studentAns = a.student_answer || '—';
-        const rawScore = Number(a.score ?? 0);
-        const pointStr = rawScore % 1 === 0 ? String(rawScore) : rawScore.toFixed(1);
-
-        return `
-          <tr class="answer-row" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
-            <td class="ans-col-q" style="padding: 10px 8px; font-size: 12px; color: #F8FAFC; font-weight: 600; text-align: left; vertical-align: middle;">
-              <span style="color: #94A3B8; margin-right: 4px;">${qNum}.</span> ${escapeHtml(qText)}
-            </td>
-            <td class="ans-col-ans" style="padding: 10px 8px; font-size: 12px; font-weight: 700; color: ${fontColor}; text-align: left; vertical-align: middle; word-break: break-word;">
-              ${escapeHtml(studentAns)}
-            </td>
-            <td class="ans-col-pts" style="padding: 10px 8px; font-size: 12px; font-weight: 800; color: ${fontColor}; text-align: center; vertical-align: middle; white-space: nowrap;">
-              ${pointStr}
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      const tableHtml = `
-        <div class="answers-table-wrap" style="width: 100%; overflow-x: auto;">
-          <table class="answers-table" style="width: 100%; border-collapse: collapse; text-align: left;">
-            <thead>
-              <tr style="border-bottom: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(15, 23, 42, 0.6);">
-                <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 50%;">QUESTION</th>
-                <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 35%;">YOUR ANSWER</th>
-                <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 15%;">POINT</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rowsHtml}
-            </tbody>
-          </table>
+      // Build Top Filter Tabs Bar
+      const filterBarHtml = `
+        <div class="ans-filter-bar">
+          <button type="button" class="ans-filter-btn ${activeFilter === 'all' ? 'active' : ''}" data-filter="all">ALL (${totalCount})</button>
+          <button type="button" class="ans-filter-btn ${activeFilter === 'correct' ? 'active' : ''}" data-filter="correct" style="color:${activeFilter === 'correct' ? '#fff' : 'var(--grade-a)'};">CORRECT (${correctCount})</button>
+          ${partialCount > 0 ? `<button type="button" class="ans-filter-btn ${activeFilter === 'partial' ? 'active' : ''}" data-filter="partial" style="color:${activeFilter === 'partial' ? '#fff' : 'var(--grade-c)'};">PARTIAL (${partialCount})</button>` : ''}
+          <button type="button" class="ans-filter-btn ${activeFilter === 'incorrect' ? 'active' : ''}" data-filter="incorrect" style="color:${activeFilter === 'incorrect' ? '#fff' : 'var(--grade-e)'};">INCORRECT (${wrongCount})</button>
         </div>
       `;
 
-      container.innerHTML = tableHtml;
+      let contentHtml = '';
+
+      if (filteredAnswers.length === 0) {
+        contentHtml = `
+          <div style="text-align:center; padding:2rem 1rem; color:#94a3b8; font-size:12px;">
+            No ${escapeHtml(activeFilter)} answers recorded.
+          </div>
+        `;
+      } else if (isDescriptionTest) {
+        // Render Description Review Cards (Ide A)
+        const cardsHtml = filteredAnswers.map((a, idx) => {
+          const snap = typeof a.question_snapshot === 'string'
+            ? (() => { try { return JSON.parse(a.question_snapshot); } catch { return {}; } })()
+            : (a.question_snapshot || {});
+
+          const qNum = a.question_index !== undefined ? (a.question_index + 1) : (idx + 1);
+          let targetDemo = 'this';
+          if (snap.target_demonstrative) {
+            targetDemo = String(snap.target_demonstrative).toLowerCase().trim();
+          } else if (snap.correct_answer && ['this', 'that', 'these', 'those'].includes(String(snap.correct_answer).toLowerCase().trim())) {
+            targetDemo = String(snap.correct_answer).toLowerCase().trim();
+          } else if (qNum > 15) {
+            targetDemo = 'those';
+          } else if (qNum > 10) {
+            targetDemo = 'these';
+          } else if (qNum > 5) {
+            targetDemo = 'that';
+          }
+
+          const studentAns = (a.student_answer || '').trim();
+          const cat = getEvalCategory(a);
+          const isCorrect = cat === 'correct';
+          const isPartial = cat === 'minor_spelling_error';
+          const statusColor = isCorrect ? 'var(--grade-a, #00c000)' : isPartial ? 'var(--grade-c, #FFFF00)' : 'var(--grade-e, #FF0000)';
+          const statusBg = isCorrect ? 'rgba(0, 192, 0, 0.12)' : isPartial ? 'rgba(255, 255, 0, 0.12)' : 'rgba(255, 0, 0, 0.12)';
+          const statusBorder = isCorrect ? 'rgba(0, 192, 0, 0.35)' : isPartial ? 'rgba(255, 255, 0, 0.35)' : 'rgba(255, 0, 0, 0.35)';
+          const rawScore = Number(a.score ?? 0);
+          const pointStr = rawScore % 1 === 0 ? String(rawScore) : rawScore.toFixed(1);
+
+          // Retrieve captured photo from localStorage / sessionStorage / snap
+          const currAttId = attemptId || urlParams.get('attempt_id') || sessionStorage.getItem('topscore_attempt_id');
+          let photoUrl = null;
+          try {
+            photoUrl = localStorage.getItem(`topscore_photo_${currAttId}_${a.id}`) ||
+              sessionStorage.getItem(`topscore_photo_${a.id}`) ||
+              (a.question_id ? localStorage.getItem(`topscore_photo_${currAttId}_${a.question_id}`) : null) ||
+              (a.question_id ? sessionStorage.getItem(`topscore_photo_${a.question_id}`) : null) ||
+              snap.photo_url || null;
+          } catch (_) {}
+
+          // Run Grammatical Diagnostics (Ide A)
+          const valRes = typeof validateDescriptionSentence === 'function'
+            ? validateDescriptionSentence(studentAns, targetDemo)
+            : { valid: false, error: 'Validator unavailable' };
+
+          const isSingular = (targetDemo === 'this' || targetDemo === 'that');
+          const targetFormula = isSingular
+            ? `${targetDemo.toUpperCase()} IS A/AN [3 ADJECTIVES] [NOUN]`
+            : `${targetDemo.toUpperCase()} ARE [3 ADJECTIVES] [NOUNS]`;
+
+          return `
+            <div class="desc-review-card" style="border:1.5px solid ${statusBorder};">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:6px;">
+                  <span style="font-weight:800; font-size:12px; color:#F8FAFC;">Object #${qNum}</span>
+                  <span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192, 132, 252, 0.15); border:1px solid #c084fc; border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
+                </div>
+                <span style="font-size:11px; font-weight:800; color:${statusColor}; background:${statusBg}; border:1px solid ${statusBorder}; border-radius:6px; padding:2px 8px;">
+                  ${pointStr} PTS
+                </span>
+              </div>
+
+              <div style="display:flex; gap:10px; align-items:flex-start;">
+                ${photoUrl ? `
+                  <div style="position:relative; width:72px; height:72px; flex-shrink:0;">
+                    <img src="${escapeHtml(photoUrl)}" alt="Object #${qNum}" class="desc-photo-thumb" onclick="window.previewPhotoInModal('${escapeHtml(photoUrl)}')" title="Click to enlarge" />
+                    <div style="position:absolute; bottom:3px; right:3px; background:rgba(15,23,42,0.85); border-radius:3px; padding:1px 4px; font-size:8px; font-weight:800; color:#38bdf8; pointer-events:none;">ZOOM</div>
+                  </div>
+                ` : `
+                  <div class="desc-photo-placeholder" style="width:72px; height:72px; flex-shrink:0; border-radius:8px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b; font-size:9px; text-align:center; padding:2px;">
+                    ${getSvgIcon('camera', 16)}
+                    <span style="margin-top:2px;">No Photo</span>
+                  </div>
+                `}
+
+                <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">
+                  <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">Spoken Sentence:</div>
+                  <div style="font-size:12.5px; font-weight:700; color:${studentAns ? '#FFFFFF' : '#64748b'}; font-style:${studentAns ? 'normal' : 'italic'}; line-height:1.35; word-break:break-word;">
+                    ${studentAns ? `"${escapeHtml(studentAns)}"` : 'No sentence recorded'}
+                  </div>
+
+                  ${valRes.valid ? `
+                    <div style="background:rgba(0, 192, 0, 0.12); border:1px solid var(--grade-a); border-radius:6px; padding:4px 6px; font-size:11px; color:#f8fafc; margin-top:2px; line-height:1.3;">
+                      <span style="font-weight:800; color:var(--grade-a);">✔ Royal Order:</span> ${valRes.adjectives.map(adj => `<span style="color:#95ff00; font-weight:700;">${escapeHtml(adj.word)}</span> <span style="color:#94a3b8; font-size:10px;">(${escapeHtml(adj.category)})</span>`).join(' <span style="color:#64748b;">→</span> ')}
+                    </div>
+                  ` : studentAns ? `
+                    <div style="background:rgba(255, 140, 0, 0.1); border:1px solid #ea580c; border-radius:6px; padding:4px 6px; font-size:11px; color:#fed7aa; margin-top:2px; line-height:1.3;">
+                      <span style="font-weight:800; color:#ea580c;">⚠ Grammar:</span> ${escapeHtml(valRes.error)}
+                    </div>
+                  ` : `
+                    <div style="background:rgba(56, 189, 248, 0.06); border:1px solid rgba(56, 189, 248, 0.2); border-radius:6px; padding:4px 6px; font-size:10.5px; color:#94a3b8; margin-top:2px;">
+                      Pattern: <span style="color:#38bdf8; font-weight:700;">${targetFormula}</span>
+                    </div>
+                  `}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        contentHtml = `<div class="desc-review-list" style="display:flex; flex-direction:column; gap:2px;">${cardsHtml}</div>`;
+      } else {
+        // Standard 3-Column Table
+        const rowsHtml = filteredAnswers.map((a, idx) => {
+          const snap = typeof a.question_snapshot === 'string'
+            ? (() => { try { return JSON.parse(a.question_snapshot); } catch { return {}; } })()
+            : (a.question_snapshot || {});
+
+          const cat = getEvalCategory(a);
+          const isCorrect = cat === 'correct';
+          const isPartial = cat === 'minor_spelling_error';
+          const fontColor = isCorrect
+            ? 'var(--grade-a, #00c000)'
+            : isPartial
+              ? 'var(--grade-c, #FFFF00)'
+              : 'var(--grade-e, #FF0000)';
+
+          const qNum = a.question_index !== undefined ? (a.question_index + 1) : (idx + 1);
+          const qText = snap.question_text || snap.question || snap.indonesian || snap.english || `Question ${qNum}`;
+          const studentAns = a.student_answer || '—';
+          const rawScore = Number(a.score ?? 0);
+          const pointStr = rawScore % 1 === 0 ? String(rawScore) : rawScore.toFixed(1);
+
+          return `
+            <tr class="answer-row" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+              <td class="ans-col-q" style="padding: 10px 8px; font-size: 12px; color: #F8FAFC; font-weight: 600; text-align: left; vertical-align: middle;">
+                <span style="color: #94A3B8; margin-right: 4px;">${qNum}.</span> ${escapeHtml(qText)}
+              </td>
+              <td class="ans-col-ans" style="padding: 10px 8px; font-size: 12px; font-weight: 700; color: ${fontColor}; text-align: left; vertical-align: middle; word-break: break-word;">
+                ${escapeHtml(studentAns)}
+              </td>
+              <td class="ans-col-pts" style="padding: 10px 8px; font-size: 12px; font-weight: 800; color: ${fontColor}; text-align: center; vertical-align: middle; white-space: nowrap;">
+                ${pointStr}
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+        contentHtml = `
+          <div class="answers-table-wrap" style="width: 100%; overflow-x: auto;">
+            <table class="answers-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead>
+                <tr style="border-bottom: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(15, 23, 42, 0.6);">
+                  <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 50%;">QUESTION</th>
+                  <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 35%;">YOUR ANSWER</th>
+                  <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 15%;">POINT</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+
+      container.innerHTML = filterBarHtml + contentHtml;
+
+      // Attach filter tab click handlers
+      const filterBtns = container.querySelectorAll('.ans-filter-btn');
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetF = btn.getAttribute('data-filter') || 'all';
+          renderAnswers(answers, effectiveAsmData, targetF);
+        });
+      });
     }
+
+    currentFilterCallback = (filterType) => {
+      renderAnswers(window._allAttemptAnswers || [], window._currentAsmData || null, filterType);
+    };
 
     function openAnswersModal(filterType = 'all') {
       const modal = document.getElementById('answers-section');
@@ -687,9 +875,9 @@ try {
         }
         if (!nextTest) {
           container.innerHTML = `
-            <div style="background:rgba(var(--grade-a-rgb),0.08); border:1px solid rgba(var(--grade-a-rgb),0.22); border-radius:10px; padding:6px 12px; text-align:center; margin-bottom:4px;">
-              <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.08em; color:var(--grade-a); font-weight:700;">Level Curriculum Complete</div>
-              <div style="font-size:12px; font-weight:600; color:#E2E8F0; margin-top:2px;">All tests completed!</div>
+            <div class="result-complete-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.12) !important; border:1.5px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.45) !important; border-radius:10px !important; padding:4px 12px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important; box-shadow:0 4px 14px rgba(var(--grade-a-rgb, 0, 192, 0),0.20) !important;">
+              <div style="font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.08em !important; color:var(--grade-a) !important; font-weight:800 !important; line-height:1.2 !important;">Level Curriculum Complete</div>
+              <div style="font-size:12px !important; font-weight:600 !important; color:#E2E8F0 !important; margin-top:2px !important; line-height:1.2 !important;">All tests completed!</div>
             </div>
           `;
           return;
@@ -738,11 +926,11 @@ try {
             };
           } else {
             container.innerHTML = `
-              <div style="background:rgba(var(--grade-c-rgb),0.1); border:1px solid rgba(var(--grade-c-rgb),0.35); border-radius:10px; padding:10px 14px; text-align:center;">
-                <div style="font-size:12px; text-transform:uppercase; letter-spacing:0.06em; color:var(--grade-c); font-weight:800;">
+              <div class="result-waiting-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.10) !important; border:1.5px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35) !important; border-radius:10px !important; padding:4px 12px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important;">
+                <div style="font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.06em !important; color:var(--grade-c) !important; font-weight:800 !important; line-height:1.2 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; max-width:100% !important;">
                   Next Milestone: ${escapeHtml(cleanTitle(nextName))}
                 </div>
-                <div style="font-size:12px; color:#cbd5e1; margin-top:2px;">
+                <div style="font-size:12px !important; color:#cbd5e1 !important; margin-top:2px !important; line-height:1.2 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; max-width:100% !important;">
                   Waiting for Tutor to unlock this test session during class.
                 </div>
               </div>
@@ -791,7 +979,7 @@ try {
       if (avatarCont) {
         avatarCont.style.setProperty('--tier-color', gradeColor);
         if (isGradeSOr100) {
-          avatarCont.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
+          avatarCont.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #7e22ce 100%)`;
           avatarCont.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
           avatarCont.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
         } else {
@@ -852,14 +1040,16 @@ try {
       // Score % and Points inside composite card
       const pctEl = document.getElementById('result-percentage');
       if (pctEl) {
-        pctEl.style.color = gradeColor;
-        pctEl.style.setProperty('-webkit-text-fill-color', gradeColor);
-        pctEl.style.textShadow = `0 0 16px rgba(${rgbColor}, 0.65), 0 0 32px rgba(${rgbColor}, 0.35)`;
+        pctEl.style.setProperty('color', gradeColor, 'important');
+        pctEl.style.setProperty('-webkit-text-fill-color', gradeColor, 'important');
+        pctEl.style.setProperty('text-shadow', `0 0 16px rgba(${rgbColor}, 0.65), 0 0 32px rgba(${rgbColor}, 0.35)`, 'important');
       }
       const ptsEl = document.getElementById('res-points');
       if (ptsEl) {
-        ptsEl.style.color = gradeColor;
-        ptsEl.style.textShadow = `0 0 10px rgba(${rgbColor}, 0.45)`;
+        pctEl.style.setProperty('color', gradeColor, 'important');
+        ptsEl.style.setProperty('color', gradeColor, 'important');
+        ptsEl.style.setProperty('-webkit-text-fill-color', gradeColor, 'important');
+        ptsEl.style.setProperty('text-shadow', `0 0 10px rgba(${rgbColor}, 0.45)`, 'important');
       }
 
       // 5. Evaluation Word Card (Row 6 - 50px: EXCELLENT, GOOD, ENOUGH, etc.)
@@ -1278,7 +1468,7 @@ try {
               <defs>
                 <linearGradient id="starHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                  <stop offset="100%" stop-color="#be185d" />
+                  <stop offset="100%" stop-color="#7e22ce" />
                 </linearGradient>
               </defs>
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starHeroGrad)" />
@@ -1303,7 +1493,7 @@ try {
                   <defs>
                     <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                      <stop offset="100%" stop-color="#be185d" />
+                      <stop offset="100%" stop-color="#7e22ce" />
                     </linearGradient>
                   </defs>
                   <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGrad)" />
@@ -1543,7 +1733,7 @@ try {
         }
 
         // Render answer breakdown
-        renderAnswers(answers);
+        renderAnswers(answers, asmData);
         
 
         // Attempt history (all attempts for this test)

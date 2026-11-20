@@ -5745,12 +5745,13 @@ body.dashboard-page .meta-sep {
 body.dashboard-page #dashboard-grade-legend,
 body.dashboard-page .dashboard-grade-legend,
 body.dashboard-page .grade-card {
-  height: auto !important;
-  min-height: 60px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
   width: 100% !important;
   flex-shrink: 0 !important;
   display: grid !important;
-  grid-template-columns: 0.8fr 1.55fr 0.95fr !important;
+  grid-template-columns: 70px 1fr 70px !important;
   gap: 10px !important; /* Strict 10px Gap Lock */
   align-items: stretch !important;
   justify-content: center !important;
@@ -5774,9 +5775,11 @@ body.dashboard-page .perf-pillar {
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
-  height: 100% !important;
-  padding: 8px 4px !important;
-  border-radius: 12px !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  padding: 2px 4px !important;
+  border-radius: 8px !important;
   min-width: 0 !important;
   box-sizing: border-box !important;
   background: #0F1524 !important;
@@ -5798,11 +5801,11 @@ body.dashboard-page .perf-pillar-val-wrap {
   max-height: none !important;
 }
 
-/* Pillar 1: GRADE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
+/* Pillar 1: GRADE (Level 0 Hero Metric: 20px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-grade .perf-pillar-val,
 body.dashboard-page #stat-overall-grade-value {
   font-family: 'Inter', sans-serif !important;
-  font-size: 30px !important;
+  font-size: 20px !important;
   font-weight: 900 !important;
   color: var(--tier-color, #FFFF00) !important;
   text-shadow: 0 0 14px rgba(var(--tier-rgb), 0.4) !important;
@@ -5810,11 +5813,11 @@ body.dashboard-page #stat-overall-grade-value {
   filter: none !important;
 }
 
-/* Pillar 2: DESCRIPTION (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
+/* Pillar 2: DESCRIPTION (Level 0 Hero Metric: 20px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-desc .perf-pillar-val,
 body.dashboard-page #dashboard-achievement-text {
   font-family: 'Inter', sans-serif !important;
-  font-size: 30px !important;
+  font-size: 20px !important;
   font-weight: 900 !important;
   letter-spacing: -0.01em !important;
   text-transform: uppercase !important;
@@ -5825,11 +5828,11 @@ body.dashboard-page #dashboard-achievement-text {
   white-space: nowrap !important;
 }
 
-/* Pillar 3: RATE (Level 0 Hero Metric: 30px, Font Sesuai Warna Grade) */
+/* Pillar 3: RATE (Level 0 Hero Metric: 20px, Font Sesuai Warna Grade) */
 body.dashboard-page .perf-pillar-rate .perf-pillar-val,
 body.dashboard-page #bottom-stat-avg-score {
   font-family: 'Inter', sans-serif !important;
-  font-size: 30px !important;
+  font-size: 20px !important;
   font-weight: 900 !important;
   font-variant-numeric: tabular-nums !important;
   color: var(--tier-color, #FFFF00) !important;
@@ -5935,10 +5938,10 @@ body.dashboard-page .next-test-completed-badge {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
   font-weight: 800 !important;
-  color: var(--grade-star, #ff2d87) !important;
+  color: var(--grade-star, #c084fc) !important;
   padding: 3px 8px !important;
   border-radius: 4px !important;
-  background: rgba(255, 45, 135, 0.15) !important;
+  background: rgba(192, 132, 252, 0.15) !important;
   line-height: 1 !important;
   display: inline-flex !important;
   align-items: center !important;

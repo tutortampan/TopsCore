@@ -11,7 +11,7 @@ console.log('🧪 Starting Universal Single-Source Color Governance & SSOT Verif
 console.log('▶ Pillar 1: Checking Master Vault Wiring in css/style.css...');
 const styleCss = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
 
-assert(styleCss.includes('--grade-star: #ff2d87;'), 'css/style.css must declare --grade-star (#ff2d87)');
+assert(styleCss.includes('--grade-star: #c084fc;'), 'css/style.css must declare --grade-star (#c084fc)');
 assert(styleCss.includes('--grade-a: #00c000ff;'), 'css/style.css must declare --grade-a (#00c000ff)');
 assert(styleCss.includes('--grade-c: #ffff00;'), 'css/style.css must declare --grade-c (#ffff00)');
 assert(styleCss.includes('--grade-e: #ff0000;'), 'css/style.css must declare --grade-e (#ff0000)');
@@ -88,7 +88,7 @@ console.log('  ✅ Pillar 5 Passed: Zero unwrapped raw hexes detected across all
 console.log('\n▶ Pillar 6: Simulating One-Touch Color Propagation Property Inheritance...');
 // Simulate CSS Custom Property cascaded computation
 const mockComputedRoot = {
-  '--grade-star': '#ff2d87',
+  '--grade-star': '#c084fc',
   '--grade-a': '#00c000ff',
   '--grade-c': '#ffff00',
   '--grade-e': '#e11d48' // User modified Grade E from #ff0000 to #e11d48!

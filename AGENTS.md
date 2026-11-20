@@ -124,7 +124,7 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
   - **Judul Tes**: `Evnikom Vocabulary G1 Task - Time Name` (dilarang menggunakan `1st`).
   - **Kode Tes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM` (dilarang menggunakan `EVN-1VCB-...`).
 - **Peniadaan Tombol Promosi**: Siswa pada program Non-Level tidak memiliki tombol `LEVEL UP` karena kurikulum mereka adalah program tunggal selesai (*single-tier completion*).
-- **Alumni Resmi Menjadi Level X (Grade X / Simbol `X`)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, badge ungu neon `#c084fc` bertuliskan **`X`**, `program_status = 'ALUMNI'`). Alumni mutlak TIDAK menggunakan angka level 0.
+- **Alumni Resmi Menjadi Level X (Grade X / Simbol `X`)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, badge bertuliskan **`X`**, `program_status = 'ALUMNI'`). Warna badge Level X di tabel workstation dan dashboard secara dinamis mengikuti nilai kelulusan akhir siswa (Grade Color SSOT), membebaskan warna ungu (`#c084fc`) secara eksklusif untuk Nilai 100% (Grade Star ★). Alumni mutlak TIDAK menggunakan angka level 0.
 
 ## 2.5 Test Auto-Assignment (Level-Centric)
 Tests (Tasks & Exams) are created within a Class. Because that Class belongs to a Level, the system automatically assigns the test to any Batch/Student that has unlocked that Level. Batches inherit tests automatically based on their current Level.
@@ -196,7 +196,7 @@ Centralized authoritative grading (Official Grading Scale):
 
 | Symbol | Predicate (Label) | Score Range | Main Color & Gradient | Hex Code |
 |:---:|:---:|:---:|:---:|:---:|
-| ★ | Excellent | 100% | Electric Pink | `#ff2d87` (`#ff2d87ff`) |
+| ★ | Excellent | 100% | Vibrant Purple | `#c084fc` (`#c084fcff`) |
 | A | Very Good | 90% – 99% | Pure Green | `#00c000ff` (`#00c000`) |
 | B | Good | 80% – 89% | Electric Lime | `#95ff00ff` (`#95ff00`) |
 | C | Enough | 60% – 79% | Pure Yellow | `#FFFF00` |
@@ -210,7 +210,7 @@ Centralized authoritative grading (Official Grading Scale):
   - **Semua Hijau Ikut Grade A**: Seluruh elemen hijau (sukses, kelulusan, online, published) WAJIB merujuk ke Grade A (`--grade-a`, `var(--grade-a)`, `TOPSCORE_COLORS.A`, `.text-success`).
   - **Strict No-Hardcoding**: DILARANG mengetik hex mentah (`#ff0000`, `#ffff00`, `#00c000`) lepas. Semua styling wajib memanggil variabel CSS atau `TOPSCORE_COLORS`.
   - **System Chrome Canvas**: Elemen non-semantik (kanvas `#090D16`, sidebar `#0F172A`, border `rgba(255,255,255,0.08)`, metadata slate `#94A3B8`, tactical blue `#38BDF8`, indigo `#6366F1`) menggunakan token palet sistem.
-- **Star (★) Independence & Exclusivity**: Nilai 100% (★ / Excellent) menggunakan token mandiri `--grade-star: #ff2d87` / `TOPSCORE_COLORS.STAR: '#ff2d87'`.
+- **Star (★) Independence & Exclusivity**: Nilai 100% (★ / Excellent) menggunakan token mandiri `--grade-star: #c084fc` / `TOPSCORE_COLORS.STAR: '#c084fc'`.
 - **Green Color Policy**: Green elements reference **Grade A (`#00c000ff`)**, never Star.
 - **Universal Dark Badge Text**: Round grade badges (`.grade-circle`) render dark slate (`#0F172A`) for ALL grade symbols (★, A, B, C, D, E).
 - **Dynamic Points**: Points (PTS) dynamically follow `getGradeColorByScore()`.
@@ -220,7 +220,7 @@ Centralized authoritative grading (Official Grading Scale):
 - **Special Grades & Action Tokens**:
   - **Grade R (Remedial)**: Pure Yellow / Kuning (`#FFFF00` / `var(--grade-c)`), skor hasil perbaikan capped maksimal 60%.
   - **Grade F (Forgiven / Waiver)**: Pure Red / Merah (`#FF0000` / `var(--grade-e)`), dispensasi kelulusan untuk membuka progression.
-  - **Grade X (Alumni Graduation)**: Vibrant Purple / Ungu (`#C084FC` / `var(--quad-d)`), penanda resmi kelulusan siswa/batch ke status alumni (`level_number = 99`, `program_status = 'ALUMNI'`, simbol `X`). Alumni mutlak dilarang menggunakan angka 0.
+  - **Grade X / Level X (Alumni Graduation)**: Penanda resmi kelulusan siswa/batch ke status alumni (`level_number = 99`, `program_status = 'ALUMNI'`, simbol `X`). Warna badge `X` di tabel workstation dan dashboard secara dinamis mengikuti nilai kelulusan akhir siswa (Grade Color SSOT). Alumni mutlak dilarang menggunakan angka 0.
 - **Proteksi Kolom Nilai (Score Column Lockdown Invariant)**:
   - Kolom nilai (PROGRESS, RATE, POINT, GRADE) terkunci dari Master Edit Mode inline text inputs default.
   - Kolom nilai HANYA dapat diakses dan dimutasi melalui 3 tombol aksi resmi di Sub Panel Student Test and Grade: **Edit Mode (Cyan `#38bdf8`)**, **Remedi (Kuning)**, dan **Forgive (Merah)**. Hasil pengeditan nilai mendapatkan grade dan warna standar sistem (★, A, B, C, D, E) tanpa token Grade M. Seluruh tombol Edit untuk tabel di seluruh sistem berformat seragam menggunakan warna Tactical Cyan `#38bdf8`.

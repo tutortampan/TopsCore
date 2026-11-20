@@ -504,10 +504,13 @@ export async function renderStudents(area, options = {}) {
     let totalEarnedScore = (mastery.cumulativePoints != null ? mastery.cumulativePoints : mastery.totalPoints) || 0;
 
     if (isAlumni) {
-      globalGrade = 'X';
-      overallColor = TOPSCORE_COLORS?.X || '#8B5CF6';
       if (completedExamCount > 0) {
         overallScoreStr = `${mastery.overallScore}%`;
+        globalGrade = mastery.grade;
+        overallColor = (typeof getGradeColorByScore === 'function') ? getGradeColorByScore(mastery.overallScore) : (TOPSCORE_COLORS?.A || 'var(--grade-a)');
+      } else {
+        globalGrade = 'X';
+        overallColor = TOPSCORE_COLORS?.D || 'var(--grade-d)';
       }
     } else if (completedExamCount > 0) {
       overallPct = mastery.overallScore;
@@ -2910,7 +2913,11 @@ export async function renderStudents(area, options = {}) {
           const isLvlX = row.isAlumni || isAlumniPanel || row.studentLevelNum === 99 || (row.levelName && (row.levelName.toLowerCase() === 'alumni' || row.levelName.toUpperCase() === 'X'));
           const isNonLvl = !isLvlX && (row.studentLevelNum === 0 || (row.levelName && (row.levelName.toLowerCase() === 'non-level' || row.levelName === '—' || row.levelName === '-')));
           const shortLvl = isLvlX ? 'X' : (isNonLvl ? '—' : (typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—')));
-          const lvlColor = isLvlX ? '#c084fc' : (shortLvl === '—' ? '#94a3b8' : '#f8fafc');
+          const alumniExitPct = (row.overallScore != null && row.overallScore !== '—') ? parseFloat(row.overallScore) : NaN;
+          const alumniScoreColor = !isNaN(alumniExitPct)
+            ? ((typeof getGradeColorByScore === 'function') ? getGradeColorByScore(alumniExitPct) : (TOPSCORE_COLORS?.A || 'var(--grade-a)'))
+            : (row.overallColor || (TOPSCORE_COLORS?.D || 'var(--grade-d)'));
+          const lvlColor = isLvlX ? alumniScoreColor : (shortLvl === '—' ? 'var(--clr-text-3)' : 'var(--clr-text-1)');
 
           const sortedLevels = (allLevels || []).slice().sort((a, b) => {
             const numA = (a.level_number === 99 || (a.name || '').toLowerCase() === 'alumni') ? 99 : (a.level_number ?? 1);
@@ -2929,7 +2936,7 @@ export async function renderStudents(area, options = {}) {
           if (isLvlX) {
             return `
               <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-                <span style="color:#c084fc;font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;" title="Alumni (Level X)">X</span>
+                <span style="color:${lvlColor};font-weight:700;font-size: 12px;white-space:nowrap;font-variant-numeric:tabular-nums;" title="Alumni (Level X) • Final Grade">${escapeHtml(shortLvl)}</span>
               </div>
               <select class="student-inline-select student-level-select text-center" data-id="${row.id}" data-field="level_id" onclick="event.stopPropagation();">
                 ${levelOptionsHtml}

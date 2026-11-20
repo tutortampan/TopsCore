@@ -2588,5 +2588,47 @@ div:has(> a[href*="netlify.com"]) {
   pointer-events: none !important;
 }
 
+/* ==========================================================================
+   DESCRIPTION MODE: 3 EQUAL-SIZED CARDS (CAMERA -> ANSWER DISPLAY -> MIC)
+   ========================================================================== */
+.desc-card {
+  box-sizing: border-box !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.desc-card-camera {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important;
+  border: 1.5px solid rgba(56, 189, 248, 0.3) !important;
+}
+
+.desc-card-camera:hover {
+  border-color: rgba(56, 189, 248, 0.5) !important;
+}
+
+.desc-card-answer {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+.desc-card-answer:focus-within {
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.25), 0 4px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.desc-card-mic {
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important;
+  border: 1.5px solid rgba(0, 192, 0, 0.25) !important;
+}
+
+.desc-card-mic .speech-mic-btn-lg:hover {
+  transform: scale(1.05) !important;
+  box-shadow: 0 0 20px rgba(0, 192, 0, 0.5) !important;
+}
+
+.desc-card-mic .speech-mic-btn-lg:active {
+  transform: scale(0.96) !important;
+}
+
+
 
 

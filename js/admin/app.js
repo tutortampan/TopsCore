@@ -1265,6 +1265,7 @@ if (typeof window !== 'undefined') {
 
         let classTests = (allTests || []).filter(a => {
           if (a.class_id !== classId) return false;
+          if (a.deleted_at) return false;
           // Discipline Gating: Vocabulary tests must not appear in non-vocabulary classes
           if (!isVocab) {
             const shell = String(a.shell_code || '').toUpperCase();
@@ -1275,6 +1276,12 @@ if (typeof window !== 'undefined') {
           }
           return true;
         });
+
+        // Filter to published tests when present so obsolete draft/legacy test rows do not pollute the matrix
+        const publishedClassTests = classTests.filter(a => String(a.status || '').toLowerCase() === 'published');
+        if (publishedClassTests.length > 0) {
+          classTests = publishedClassTests;
+        }
 
         // Self-Healing / Auto-Provisioning: Strictly for Vocabulary classes only!
         if (classTests.length === 0 && currentClass && isVocab) {
@@ -1320,6 +1327,20 @@ if (typeof window !== 'undefined') {
           return false;
         };
         const isExam = isWeeklyExam;
+
+        // Authoritative helper to distinguish Words vs Phrases attempts (Rule 2.10.2 "Berbeda tapi satu")
+        const getAttemptSection = (att) => {
+          if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
+          if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
+          if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+          const totalQ = Number(att?.total_questions || 0);
+          const correctCount = Number(att?.correct_count || att?.score || 0);
+          if (totalQ > 0 && totalQ <= 20) return 'phrases';
+          if (totalQ > 20 && totalQ <= 45) return 'words';
+          if (correctCount > 15) return 'words';
+          if (correctCount > 0 && correctCount <= 10) return 'phrases';
+          return 'words';
+        };
         const allClassExams = classTests.filter(isWeeklyExam);
         const totalClassExams = allClassExams.length || 8;
         // Find students that have access to this class's program AND level
@@ -1561,6 +1582,8 @@ if (typeof window !== 'undefined') {
           const asmScores = {};
           const rowScoreSortVals = {};
           const asmPassCounts = {};
+          const asmWordsPassCounts = {};
+          const asmPhrasesPassCounts = {};
 
           let completedCount = 0;         // ALL activities (tasks + exams)
           const studentExamEntries = [];
@@ -1607,20 +1630,50 @@ if (typeof window !== 'undefined') {
               return ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
             });
             const maxQForPass = getAsmExpectedMax(asm);
-            let passCount = submittedAttsForPass.filter(a => {
-              if (a.is_forgiven) return true;
+            let wordsPasses = 0;
+            let phrasesPasses = 0;
+            let manualRepsW = null;
+            let manualRepsP = null;
+            let hasForgiven = false;
+
+            submittedAttsForPass.forEach(a => {
+              if (a.is_forgiven) hasForgiven = true;
+              const fr = String(a.forgiven_reason || '');
+              const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+              if (mMatch) {
+                const reps = Math.min(targetReps, parseInt(mMatch[1], 10));
+                const comp = (mMatch[3] || '').toUpperCase();
+                if (comp === 'PHRASES') {
+                  manualRepsP = Math.max(manualRepsP || 0, reps);
+                } else if (comp === 'WORDS') {
+                  manualRepsW = Math.max(manualRepsW || 0, reps);
+                } else {
+                  manualRepsW = Math.max(manualRepsW || 0, reps);
+                  manualRepsP = Math.max(manualRepsP || 0, reps);
+                }
+              }
+
               const tq = Number(a.total_questions || maxQForPass);
               const sc = a.score != null ? Math.min(Number(a.score), tq) : 0;
               const pct = tq > 0 ? (sc / tq) * 100 : 0;
-              return pct >= taskMinScore;
-            }).length;
-            const mRepsMatch = bestAtt?.forgiven_reason && String(bestAtt.forgiven_reason).match(/MANUAL_REPS:?\s*(\d+)/i);
-            if (mRepsMatch) {
-              passCount = Math.min(targetReps, parseInt(mRepsMatch[1], 10));
-            } else if (bestAtt?.is_forgiven) {
-              passCount = Math.max(passCount, targetReps);
+              const passes = pct >= taskMinScore || a.is_forgiven;
+              if (passes) {
+                const sec = typeof getAttemptSection === 'function' ? getAttemptSection(a) : 'words';
+                if (sec === 'phrases') phrasesPasses++;
+                else wordsPasses++;
+              }
+            });
+
+            if (manualRepsW != null) wordsPasses = manualRepsW;
+            if (manualRepsP != null) phrasesPasses = manualRepsP;
+            if (hasForgiven) {
+              wordsPasses = Math.max(wordsPasses, targetReps);
+              phrasesPasses = Math.max(phrasesPasses, targetReps);
             }
-            asmPassCounts[asm.id] = passCount;
+
+            asmWordsPassCounts[asm.id] = Math.min(targetReps, wordsPasses);
+            asmPhrasesPassCounts[asm.id] = Math.min(targetReps, phrasesPasses);
+            asmPassCounts[asm.id] = Math.min(targetReps, Math.min(wordsPasses, phrasesPasses));
           });
 
           // Step 2: Rule 2.10 Paired Theme Exam Remedial Synchronization ("Satu Paket")
@@ -1796,6 +1849,8 @@ if (typeof window !== 'undefined') {
             lastSubmittedAt,
             asmScores,
             asmPassCounts,
+            asmWordsPassCounts,
+            asmPhrasesPassCounts,
             allAttempts: studentAttempts,
             activeThemeCode: mastery.activeThemeCode || null,
             includedThemeCodes: mastery.includedThemeCodes || [],
@@ -2580,17 +2635,18 @@ if (typeof window !== 'undefined') {
             };
           };
 
-          window.onMatrixTopicTaskChange = (studentId, themeCode, topicCode, targetReps, valStr) => {
+          window.onMatrixTopicTaskChange = (studentId, themeCode, topicCode, targetReps, valStr, component = 'words') => {
             if (!window._manualInputState.drafts[studentId]) {
               window._manualInputState.drafts[studentId] = {};
             }
-            const taskKey = `task_${themeCode}_${topicCode}`;
-            const input = document.querySelector(`.input-matrix-topic-reps-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}`);
+            const taskKey = `task_${themeCode}_${topicCode}_${component}`;
+            const input = document.querySelector(`.input-matrix-topic-reps-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}-${component}`) ||
+                          document.querySelector(`.input-matrix-topic-reps-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}`);
             const origRepsStr = input?.dataset?.originalReps ?? '';
 
             if (!valStr || valStr.trim() === '') {
               const isDirty = origRepsStr !== '' && origRepsStr !== '0';
-              window._manualInputState.drafts[studentId][taskKey] = { reps: null, targetReps, themeCode, topicCode, isDirty };
+              window._manualInputState.drafts[studentId][taskKey] = { reps: null, targetReps, themeCode, topicCode, component, isDirty };
               return;
             }
             const valNum = parseInt(valStr, 10);
@@ -2601,6 +2657,7 @@ if (typeof window !== 'undefined') {
               targetReps,
               themeCode,
               topicCode,
+              component,
               isDirty
             };
           };
@@ -2670,19 +2727,20 @@ if (typeof window !== 'undefined') {
             }
           };
 
-          window.saveRowManualTopicTaskInput = async (studentId, themeCode, topicCode, targetReps) => {
+          window.saveRowManualTopicTaskInput = async (studentId, themeCode, topicCode, targetReps, component = 'words') => {
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify student tasks.', 'warning');
               return;
             }
-            const taskKey = `task_${themeCode}_${topicCode}`;
+            const taskKey = `task_${themeCode}_${topicCode}_${component}`;
             const studentDraft = window._manualInputState.drafts[studentId] || {};
-            let draft = studentDraft[taskKey];
+            let draft = studentDraft[taskKey] || studentDraft[`task_${themeCode}_${topicCode}`];
 
             if (!draft) {
-              const inputEl = document.querySelector(`.input-matrix-topic-reps-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}`);
+              const inputEl = document.querySelector(`.input-matrix-topic-reps-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}-${component}`) ||
+                              document.querySelector(`.input-matrix-topic-reps-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}`);
               if (inputEl && inputEl.value !== '') {
-                window.onMatrixTopicTaskChange(studentId, themeCode, topicCode, targetReps, inputEl.value);
+                window.onMatrixTopicTaskChange(studentId, themeCode, topicCode, targetReps, inputEl.value, component);
                 draft = window._manualInputState.drafts[studentId]?.[taskKey];
               }
             }
@@ -2695,32 +2753,31 @@ if (typeof window !== 'undefined') {
               const tasksToUpdate = targetTasks.length > 0 ? targetTasks : taskAsmsInTheme;
 
               if (tasksToUpdate.length > 0) {
-                if (typeof showLoading === 'function') showLoading(`Saving Topic ${topicCode} repetitions (${reps}/${maxReps})...`);
+                const compLabel = component === 'phrases' ? 'Phrases' : 'Words';
+                if (typeof showLoading === 'function') showLoading(`Saving Topic ${topicCode} ${compLabel} repetitions (${reps}/${maxReps})...`);
                 try {
-                  const isComplete = reps >= maxReps;
-                  const pct = isComplete ? 100 : Math.round((reps / maxReps) * 100);
-                  const testActions = tasksToUpdate.map(t => {
-                    const maxQ = getAsmExpectedMax(t) || 40;
-                    const score = isComplete ? maxQ : Math.round(maxQ * (pct / 100) * 10) / 10;
-                    return {
-                      testId: t.id,
-                      action: isComplete ? 'forgive' : 'manual',
-                      percentage: pct,
-                      score,
-                      reason: `MANUAL_REPS: ${reps}/${maxReps}`
-                    };
-                  });
+                  const compUpper = (component || 'words').toUpperCase();
+                  const mReason = `MANUAL_REPS: ${reps}/${maxReps} ${compUpper}`;
+                  const testActions = tasksToUpdate.map(t => ({
+                    testId: t.id,
+                    action: 'manual_reps',
+                    reps,
+                    maxReps,
+                    section: component,
+                    percentage: 70, // SSOT minimal passing 70% per process
+                    reason: mReason
+                  }));
 
                   await adminApplyForgiven({
                     classId: window._selectedClassId || classId || cid,
                     studentIds: [studentId],
                     testActions,
                     forgivenBy: 'Mr. Top',
-                    reason: `MANUAL_REPS: ${reps}/${maxReps}`
+                    reason: mReason
                   });
 
                   if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
-                  if (typeof showToast === 'function') showToast(`✓ Topic ${topicCode} repetitions (${reps}/${maxReps}) saved successfully!`, 'success');
+                  if (typeof showToast === 'function') showToast(`✓ Topic ${topicCode} ${compLabel} repetitions (${reps}/${maxReps}) saved successfully!`, 'success');
                 } catch (err) {
                   console.error('Save manual topic repetitions error:', err);
                   if (typeof showToast === 'function') showToast('Failed to save topic repetitions: ' + (err.message || err), 'error');
@@ -2860,8 +2917,6 @@ if (typeof window !== 'undefined') {
                     const topCode = d?.topicCode || (parts.length > 1 ? parts.slice(1).join('_') : null);
                     const reps = Number(d?.reps != null ? d.reps : (d?.earned != null ? d.earned : 0));
                     const maxReps = Number(d?.targetReps || d?.maxTasks || targetReps || 7);
-                    const isComplete = reps >= maxReps;
-                    const pct = isComplete ? 100 : Math.round((reps / maxReps) * 100);
 
                     const taskAsmsInTheme = window._themeTaskAsmsMap?.[tc] || [];
                     let targetTasks = [];
@@ -2873,13 +2928,12 @@ if (typeof window !== 'undefined') {
                     }
 
                     targetTasks.forEach(t => {
-                      const maxQ = getAsmExpectedMax(t) || 40;
-                      const score = isComplete ? maxQ : Math.round(maxQ * (pct / 100) * 10) / 10;
                       testActions.push({
                         testId: t.id,
-                        action: isComplete ? 'forgive' : 'manual',
-                        percentage: pct,
-                        score,
+                        action: 'manual_reps',
+                        reps,
+                        maxReps,
+                        percentage: 70, // SSOT minimal passing 70% per process
                         reason: `MANUAL_REPS: ${reps}/${maxReps}`
                       });
                     });
@@ -2987,8 +3041,6 @@ if (typeof window !== 'undefined') {
                   const topCode = d?.topicCode || (parts.length > 1 ? parts.slice(1).join('_') : null);
                   const reps = Number(d?.reps != null ? d.reps : (d?.earned != null ? d.earned : 0));
                   const maxReps = Number(d?.targetReps || d?.maxTasks || 7);
-                  const isComplete = reps >= maxReps;
-                  const pct = isComplete ? 100 : Math.round((reps / maxReps) * 100);
 
                   const taskAsmsInTheme = window._themeTaskAsmsMap?.[tc] || [];
                   let targetTasks = [];
@@ -3000,13 +3052,12 @@ if (typeof window !== 'undefined') {
                   }
 
                   targetTasks.forEach(t => {
-                    const maxQ = getAsmExpectedMax(t) || 40;
-                    const score = isComplete ? maxQ : Math.round(maxQ * (pct / 100) * 10) / 10;
                     testActions.push({
                       testId: t.id,
-                      action: isComplete ? 'forgive' : 'manual',
-                      percentage: pct,
-                      score,
+                      action: 'manual_reps',
+                      reps,
+                      maxReps,
+                      percentage: 70, // SSOT minimal passing 70% per process
                       reason: `MANUAL_REPS: ${reps}/${maxReps}`
                     });
                   });
@@ -3378,16 +3429,16 @@ if (typeof window !== 'undefined') {
               const targetAsms = examAsmsInTheme.length > 0 ? examAsmsInTheme : asmsInTheme;
 
               // Determine number of topics in theme
-              const hasPhrasesInTheme = taskAsmsInTheme.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+              const hasPhrasesInTheme = isVocab || taskAsmsInTheme.some(a => a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
               let topicCodes = [];
               if (hasPhrasesInTheme) {
-                topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || '1'))));
+                topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || '1'))));
               } else {
                 topicCodes = taskAsmsInTheme.map((a, idx) => String(a.payload?.topic_code || (idx + 1)));
               }
               topicCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
               const numTopics = topicCodes.length;
-              const maxThemeTasks = numTopics * targetReps;
+              const maxThemeTasks = numTopics * targetReps * (hasPhrasesInTheme ? 2 : 1);
 
               studentsGridData.forEach(row => {
                 // 1. Exam Points & Score Calculation
@@ -3426,26 +3477,42 @@ if (typeof window !== 'undefined') {
 
                 topicCodes.forEach((topCode, idx) => {
                   let topicLevel = 0;
+                  let wPass = 0;
+                  let pPass = 0;
+
                   if (hasPhrasesInTheme) {
-                    const wTask = taskAsmsInTheme.find(a => String(a.payload?.topic_code || '1') === topCode && !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
-                    const pTask = taskAsmsInTheme.find(a => String(a.payload?.topic_code || '1') === topCode && (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
-                    const wPass = wTask ? (row.asmPassCounts?.[wTask.id] || 0) : 0;
-                    const pPass = pTask ? (row.asmPassCounts?.[pTask.id] || 0) : 0;
-                    topicLevel = typeof computeTopicPassLevel === 'function'
-                      ? computeTopicPassLevel(wPass, pPass, true, targetReps)
-                      : Math.min(wPass, pPass);
+                    const matchingTasks = taskAsmsInTheme.filter(a => String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() || (a.shell_code && a.shell_code.includes(topCode)));
+                    const wTask = matchingTasks.find(a => !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''))) || matchingTasks[0];
+                    const pTask = matchingTasks.find(a => (a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''))) || matchingTasks[0];
+
+                    if (wTask && pTask && wTask.id !== pTask.id) {
+                      wPass = row.asmWordsPassCounts?.[wTask.id] ?? row.asmPassCounts?.[wTask.id] ?? 0;
+                      pPass = row.asmPhrasesPassCounts?.[pTask.id] ?? row.asmPassCounts?.[pTask.id] ?? 0;
+                    } else if (wTask) {
+                      wPass = row.asmWordsPassCounts?.[wTask.id] ?? 0;
+                      pPass = row.asmPhrasesPassCounts?.[wTask.id] ?? 0;
+                    }
+
+                    wPass = Math.min(Math.max(0, wPass), targetReps);
+                    pPass = Math.min(Math.max(0, pPass), targetReps);
+                    topicLevel = Math.min(wPass, pPass);
+
+                    row[`theme_${tc}_topic_${topCode}_words_reps`] = wPass;
+                    row[`theme_${tc}_topic_${topCode}_phrases_reps`] = pPass;
+                    row[`theme_${tc}_topic_${topCode}_reps`] = topicLevel;
+                    earnedTasks += (wPass + pPass);
+                    if (wPass >= targetReps && pPass >= targetReps) topicsPassedCount++;
                   } else {
                     const asm = taskAsmsInTheme.find(a => String(a.payload?.topic_code || (idx + 1)) === topCode) || taskAsmsInTheme[idx];
                     topicLevel = asm ? (row.asmPassCounts?.[asm.id] || 0) : 0;
+                    const repsEarned = Math.min(Math.max(0, topicLevel), targetReps);
+                    row[`theme_${tc}_topic_${topCode}_reps`] = repsEarned;
+                    earnedTasks += repsEarned;
+                    if (repsEarned >= targetReps) topicsPassedCount++;
                   }
-
-                  const repsEarned = Math.min(Math.max(0, topicLevel), targetReps);
-                  row[`theme_${tc}_topic_${topCode}_reps`] = repsEarned;
-                  earnedTasks += repsEarned;
-                  if (repsEarned >= targetReps) topicsPassedCount++;
                 });
 
-                const isTaskCompleted = maxThemeTasks > 0 ? (earnedTasks >= maxThemeTasks) : true;
+                const isTaskCompleted = maxThemeTasks > 0 ? (topicsPassedCount >= numTopics && earnedTasks >= maxThemeTasks) : true;
                 row[`theme_${tc}_task`] = earnedTasks;
                 row[`theme_${tc}_task_progress`] = earnedTasks;
                 row[`theme_${tc}_task_max`] = maxThemeTasks;
@@ -3478,14 +3545,15 @@ if (typeof window !== 'undefined') {
               const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
               const asmsInTheme = themeGroups[tc] || [];
               const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
-              const hasPhrasesInTheme = taskAsmsInTheme.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+              const hasPhrasesInTheme = isVocab || taskAsmsInTheme.some(a => a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
               let tCodes = [];
               if (hasPhrasesInTheme) {
-                tCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || '1'))));
+                tCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || '1'))));
               } else {
                 tCodes = taskAsmsInTheme.map((a, idx) => String(a.payload?.topic_code || (idx + 1)));
               }
-              const colSpan = Math.max(1, tCodes.length) + 4;
+              const numTaskCols = hasPhrasesInTheme ? (tCodes.length * 2) : Math.max(1, tCodes.length);
+              const colSpan = numTaskCols + 4;
               dynamicSuperHeaders.push({
                 label: `THEME ${tc}${tName}`,
                 colSpan,
@@ -3507,86 +3575,232 @@ if (typeof window !== 'undefined') {
               const examAsm = examAsms[0];
               const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
 
-              const hasPhrasesInTheme = taskAsmsInTheme.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+              const hasPhrasesInTheme = isVocab || taskAsmsInTheme.some(a => a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
               let topicCodes = [];
               if (hasPhrasesInTheme) {
-                topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || '1'))));
+                topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || '1'))));
               } else {
                 topicCodes = taskAsmsInTheme.map((a, idx) => String(a.payload?.topic_code || (idx + 1)));
               }
               topicCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-              // 1. Theme Formative TASK Columns (One Column per Topic: 1, 2, 3, 4, etc. in 7x7 system)
+              // 1. Theme Formative TASK Columns
               if (topicCodes.length > 0) {
-                topicCodes.forEach((topCode, topIdx) => {
-                  const topicNum = topCode.replace(/^[A-Za-z]+/, '') || String(topIdx + 1);
-                  dynamicAsmCols.push({
-                    key: `theme_${tc}_topic_${topCode}_task`,
-                    className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}`,
-                    width: '28px',
-                    minWidth: '22px',
-                    headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Repetitions (0–${targetReps})`,
-                    title: `Topic ${topicNum}`,
-                    label: topicNum,
-                    shortLabel: topicNum,
-                    microLabel: topicNum,
-                    sortable: true,
-                    align: 'center',
-                    render: (val, row) => {
-                      const isManualMode = Boolean(window._classManualScoreEditMode);
-                      const reps = row[`theme_${tc}_topic_${topCode}_reps`] || 0;
+                if (hasPhrasesInTheme) {
+                  // Dual columns: Words (W) and Phrases (P) per topic (1W, 1P, 2W, 2P, 3W, 3P, 4W, 4P)
+                  topicCodes.forEach((topCode, topIdx) => {
+                    const topicNum = topCode.replace(/^[A-Za-z]+/, '') || String(topIdx + 1);
 
-                      if (isManualMode) {
-                        const taskDraftKey = `task_${tc}_${topCode}`;
-                        const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
-                        const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
+                    // Words Column (e.g. 1W, 2W, 3W, 4W)
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_words_task`,
+                      className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}-words`,
+                      width: '28px',
+                      minWidth: '22px',
+                      headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Words Repetitions (0–${targetReps})`,
+                      title: `Topic ${topicNum} Words`,
+                      label: `${topicNum}W`,
+                      shortLabel: `${topicNum}W`,
+                      microLabel: `${topicNum}W`,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const isManualMode = Boolean(window._classManualScoreEditMode);
+                        const reps = row[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
+
+                        if (isManualMode) {
+                          const taskDraftKey = `task_${tc}_${topCode}_words`;
+                          const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
+                          const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
+                          return `
+                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                              <input type="number" min="0" max="${targetReps}" step="1"
+                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-words"
+                                     data-student-id="${row.id}"
+                                     data-theme-code="${tc}"
+                                     data-topic-code="${topCode}"
+                                     data-component="words"
+                                     data-target-reps="${targetReps}"
+                                     data-original-reps="${reps}"
+                                     value="${displayReps}"
+                                     placeholder="0"
+                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value, 'words')"
+                                     onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps}, 'words');}}"
+                                     onclick="event.stopPropagation();"
+                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
+                            </div>
+                          `;
+                        }
+
+                        if (reps >= targetReps) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Words: ${reps}/${targetReps} Repetitions Completed">
+                              <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
+                                ${reps}
+                              </span>
+                            </div>
+                          `;
+                        }
+
+                        if (reps > 0) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Words: ${reps}/${targetReps} Repetitions in Progress">
+                              <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
+                                ${reps}
+                              </span>
+                            </div>
+                          `;
+                        }
+
                         return `
-                          <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                            <input type="number" min="0" max="${targetReps}" step="1"
-                                   class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}"
-                                   data-student-id="${row.id}"
-                                   data-theme-code="${tc}"
-                                   data-topic-code="${topCode}"
-                                   data-target-reps="${targetReps}"
-                                   data-original-reps="${reps}"
-                                   value="${displayReps}"
-                                   placeholder="0"
-                                   oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value)"
-                                   onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps});}}"
-                                   onclick="event.stopPropagation();"
-                                   style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
+                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Words: 0/${targetReps} Repetitions">
+                            <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
                           </div>
                         `;
                       }
+                    });
 
-                      if (reps >= targetReps) {
+                    // Phrases Column (e.g. 1P, 2P, 3P, 4P)
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_phrases_task`,
+                      className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}-phrases`,
+                      width: '28px',
+                      minWidth: '22px',
+                      headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Phrases Repetitions (0–${targetReps})`,
+                      title: `Topic ${topicNum} Phrases`,
+                      label: `${topicNum}P`,
+                      shortLabel: `${topicNum}P`,
+                      microLabel: `${topicNum}P`,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const isManualMode = Boolean(window._classManualScoreEditMode);
+                        const reps = row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
+
+                        if (isManualMode) {
+                          const taskDraftKey = `task_${tc}_${topCode}_phrases`;
+                          const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
+                          const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
+                          return `
+                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                              <input type="number" min="0" max="${targetReps}" step="1"
+                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-phrases"
+                                     data-student-id="${row.id}"
+                                     data-theme-code="${tc}"
+                                     data-topic-code="${topCode}"
+                                     data-component="phrases"
+                                     data-target-reps="${targetReps}"
+                                     data-original-reps="${reps}"
+                                     value="${displayReps}"
+                                     placeholder="0"
+                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value, 'phrases')"
+                                     onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps}, 'phrases');}}"
+                                     onclick="event.stopPropagation();"
+                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
+                            </div>
+                          `;
+                        }
+
+                        if (reps >= targetReps) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Phrases: ${reps}/${targetReps} Repetitions Completed">
+                              <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
+                                ${reps}
+                              </span>
+                            </div>
+                          `;
+                        }
+
+                        if (reps > 0) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Phrases: ${reps}/${targetReps} Repetitions in Progress">
+                              <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
+                                ${reps}
+                              </span>
+                            </div>
+                          `;
+                        }
+
                         return `
-                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): ${reps}/${targetReps} Repetitions Completed">
-                            <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
-                              ${reps}
-                            </span>
+                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Phrases: 0/${targetReps} Repetitions">
+                            <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
                           </div>
                         `;
                       }
-
-                      if (reps > 0) {
-                        return `
-                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): ${reps}/${targetReps} Repetitions in Progress">
-                            <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
-                              ${reps}
-                            </span>
-                          </div>
-                        `;
-                      }
-
-                      return `
-                        <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): 0/${targetReps} Repetitions">
-                          <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
-                        </div>
-                      `;
-                    }
+                    });
                   });
-                });
+                } else {
+                  // Standard single topic column (1, 2, 3, 4...) for non-vocabulary classes
+                  topicCodes.forEach((topCode, topIdx) => {
+                    const topicNum = topCode.replace(/^[A-Za-z]+/, '') || String(topIdx + 1);
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_task`,
+                      className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}`,
+                      width: '28px',
+                      minWidth: '22px',
+                      headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Repetitions (0–${targetReps})`,
+                      title: `Topic ${topicNum}`,
+                      label: topicNum,
+                      shortLabel: topicNum,
+                      microLabel: topicNum,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const isManualMode = Boolean(window._classManualScoreEditMode);
+                        const reps = row[`theme_${tc}_topic_${topCode}_reps`] || 0;
+
+                        if (isManualMode) {
+                          const taskDraftKey = `task_${tc}_${topCode}`;
+                          const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
+                          const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
+                          return `
+                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                              <input type="number" min="0" max="${targetReps}" step="1"
+                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}"
+                                     data-student-id="${row.id}"
+                                     data-theme-code="${tc}"
+                                     data-topic-code="${topCode}"
+                                     data-target-reps="${targetReps}"
+                                     data-original-reps="${reps}"
+                                     value="${displayReps}"
+                                     placeholder="0"
+                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value)"
+                                     onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps});}}"
+                                     onclick="event.stopPropagation();"
+                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
+                            </div>
+                          `;
+                        }
+
+                        if (reps >= targetReps) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): ${reps}/${targetReps} Repetitions Completed">
+                              <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
+                                ${reps}
+                              </span>
+                            </div>
+                          `;
+                        }
+
+                        if (reps > 0) {
+                          return `
+                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): ${reps}/${targetReps} Repetitions in Progress">
+                              <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
+                                ${reps}
+                              </span>
+                            </div>
+                          `;
+                        }
+
+                        return `
+                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): 0/${targetReps} Repetitions">
+                            <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
+                          </div>
+                        `;
+                      }
+                    });
+                  });
+                }
               } else {
                 dynamicAsmCols.push({
                   key: `theme_${tc}_task`,
@@ -4113,32 +4327,35 @@ if (typeof window !== 'undefined') {
                         </td>
                       `;
                     }
-                  } else if (col.key && col.key.startsWith('theme_') && col.key.includes('_topic_') && col.key.endsWith('_task')) {
-                    const match = col.key.match(/^theme_([^_]+)_topic_(.+)_task$/);
-                    if (match) {
-                      const tc = match[1];
-                      const topCode = match[2];
-                      const repsKey = `theme_${tc}_topic_${topCode}_reps`;
-                      let repsSum = 0;
-                      filteredData.forEach(s => {
-                        repsSum += (s[repsKey] || 0);
-                      });
-                      if (totalStudents > 0 && repsSum > 0) {
-                        const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
-                        const avgRepsNum = repsSum / totalStudents;
-                        const avgColor = avgRepsNum >= targetReps ? 'var(--grade-a)' : (avgRepsNum >= 4 ? '#38bdf8' : 'var(--grade-c)');
-                        cellsHtml += `
-                          <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Topic ${topCode} Repetitions: ${avgReps}/${targetReps}">${avgReps}</span>
-                          </td>
-                        `;
-                      } else {
-                        cellsHtml += `
-                          <td class="text-center ${col.className || ''}">
-                            <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="0 Repetitions">&middot;</span>
-                          </td>
-                        `;
-                      }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.includes('_topic_') && (col.key.endsWith('_task') || col.key.endsWith('_words_task') || col.key.endsWith('_phrases_task'))) {
+                    let repsKey = '';
+                    let label = col.label || 'Topic';
+                    if (col.key.endsWith('_words_task')) {
+                      repsKey = col.key.replace('_words_task', '_words_reps');
+                    } else if (col.key.endsWith('_phrases_task')) {
+                      repsKey = col.key.replace('_phrases_task', '_phrases_reps');
+                    } else {
+                      repsKey = col.key.replace('_task', '_reps');
+                    }
+                    let repsSum = 0;
+                    filteredData.forEach(s => {
+                      repsSum += (s[repsKey] || 0);
+                    });
+                    if (totalStudents > 0 && repsSum > 0) {
+                      const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
+                      const avgRepsNum = repsSum / totalStudents;
+                      const avgColor = avgRepsNum >= targetReps ? 'var(--grade-a)' : (avgRepsNum >= 4 ? '#38bdf8' : 'var(--grade-c)');
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg ${label} Repetitions: ${avgReps}/${targetReps}">${avgReps}</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="0 Repetitions">&middot;</span>
+                        </td>
+                      `;
                     }
                   } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_task')) {
                     const tc = col.key.replace('theme_', '').replace('_task', '');

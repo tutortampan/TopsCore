@@ -1,13 +1,63 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-19 19:55 UTC+8
-> **Current Phase:** Phase 634 [COMPLETE] — Standardized 80px Bottom Banner Invariant & Result Page Revamp
+> **Last Updated:** 2026-11-20 21:30 UTC+8
+> **Current Phase:** Phase 637 [COMPLETE] — Unified Vocabulary Component Architecture ("Berbeda Tapi Satu" Words & Phrases Dual Matrix & Prerequisite Gating Enforcement)
 > **Status:** READY FOR USER CONFIRMATION & REVIEW (ALL TEST SUITES 100% GREEN)
 
 ---
 
 ## 1. Active System Architecture & Invariants
+
+- **Unified Vocabulary Component Architecture & Prerequisite Gating (Phase 637 — SSOT §2.6, §2.7, §2.10.2)**:
+  - **Root Cause Resolution (Why Sri/Sari Hikmah unlocked Task A4 while Task A3 was incomplete)**:
+    - In class `Camp 3rd Vocabulary` (`ab33498a-90e6-44b7-83f4-5765f964543e`), `site_settings` had `taskRepetitions: 1` and test payloads had `task_repetitions: 1`. Thus, 1 pass satisfied the prerequisite, allowing her to skip to Task A4.
+    - Repetitions were repaired to `7` in `site_settings` and across all 104 test payloads in the class.
+    - In `js/api.js` and Edge Function `supabase/functions/start-test/index.ts`, prerequisite gating was updated: for unified tasks, advancing to the next task requires BOTH `wordsPasses >= targetReps` AND `phrasesPasses >= targetReps`.
+  - **"Berbeda Tapi Satu" Unified Component Representation**:
+    - **Student Dashboard Completed Tests Table (Image 1)**: For unified tasks, attempts are split by section (`getAttemptSection`). Renders **TWO distinct sub-rows of 7 mini-grade chips** (`WORDS` and `PHRASES`) under the test title, with an authoritative combined composite score.
+    - **Next Assignment Hero Card (Image 2)**: Test title formatted as a **clean single line** (`Task A1 — Job Hunting & Application` / `Exam A — World of Work`), and below it renders **TWO separate rows of 7 rainbow pass boxes** (Row 1: `WORDS`, Row 2: `PHRASES`).
+    - **Admin Workstation Students Grade & Score Matrix (Image 3)**:
+      - Instead of a single column per topic (`1`, `2`, `3`, `4`), renders **TWO distinct columns per topic**: `1W`, `1P`, `2W`, `2P`, `3W`, `3P`, `4W`, `4P`.
+      - Super-header `colSpan` dynamically calculated as `(topics * 2) + 4` (`RATE`, `PTS`, `GRD`, `STS`).
+      - Summary Row (`CLASS AVERAGE`) computes and displays separate class averages for each words and phrases repetition column.
+      - Inline edit handlers support independent updates via `saveRowManualTopicTaskInput(studentId, themeCode, topicCode, targetReps, 'words'|'phrases')`.
+    - **Student Data Integrity & Preservation**:
+      - Student Isnantika Salsabila (`b0fce8b7-37c4-41c0-93b9-f3bab8142c83`), who genuinely completed 100% ★ attempts, now shows her exact authentic passes in both `WORDS` and `PHRASES`.
+      - Manual passing repetitions (7/7) granted by admin in Topics 1 and 2 are preserved with 100% integrity across all students.
+    - **Dashboard Synchronization for Manual Pass Repetitions (`MANUAL_REPS: 7/7`)**:
+      - Propagated `MANUAL_REPS` parsing across all student dashboard renderers (`renderNextAssignmentHero`, `renderRepetitionMasteryRow`, `renderCompletedTestsBottom`).
+      - Both `WORDS` and `PHRASES` sub-rows in Completed Tests now fill 7/7 passing chips (`C C C C C C C`), eliminating the empty dash chips (`— — — — — — —`) on the student portal.
+      - Next Assignment Hero Card correctly recognizes Topic 1 and Topic 2 as fully passed (7/7 Words, 7/7 Phrases), advancing the next assignment pointer to Topic A3.
+
+- **Basic English Exam Engine Gating & Dashboard Flexible Mode Alignment (Phase 636)**:
+  - **UUID Foreign Key Guard in Attempt Answers**:
+    - `attempt_answers.question_id` requires a valid PostgreSQL UUID. When payload questions have text item codes (e.g. `CMP-1BAS-Q1`), `start-test` and `api.js` now validate UUID syntax, storing `null` in the relation column while strictly preserving `item_code` and full question metadata in `question_snapshot`.
+  - **Dashboard Flexible Exam Unlock & Anti-Gated Alignment**:
+    - In `js/dashboard.js`, exams configured with `schedule_mode: 'flexible'` now dynamically unlock the Green Play button (`ICON_3C_GREEN_PLAY`) without requiring a tutor-managed live session or whitelist lock.
+  - **Class-Discipline Visual Invariant**:
+    - Suppressed the 7-step repetition rainbow bar (`.rainbow-pass-bar`) for non-vocabulary classes and exams in `js/dashboard.js`, replacing it with clean official exam indicators (`Official Exam • Passing: X%`).
+  - **Student Attempt Cleanup & State Recovery**:
+    - Purged empty/auto-submitted zero-score test attempts for student Asik, resetting the dashboard state to pristine neutral (`LET'S GO` / `—`).
+
+- **Vocab Test Room UI Normalization & Banner Clearance Invariant (Phase 635 — SSOT §2.28, §2.32, ui-invariants.md §1.1, §1.8)**:
+  - **White Question & Answer Panels with Centered Black Typography**:
+    - Question Box (`.question-box-prompt`) and Answer Containers (`#answer-container-written`, `#speech-answer-container`) updated to pure white background (`#ffffff !important; border: 1.5px solid #e2e8f0;`) with black text (`#000000 !important; text-shadow: none !important;`).
+    - Centered layout across all modes: `display: flex; align-items: center; justify-content: center; text-align: center; margin: auto;`.
+    - Transcript box, listening placeholder, and hint buttons in `js/test.js` calibrated for high contrast on white background.
+  - **Strict 10px Banner Clearance & Inter-Zone Spacing Invariant**:
+    - Fixed bottom area margin-bottom calibrated to `calc(80px + 10px + env(safe-area-inset-bottom, 0px))` to maintain an exact **10px gap** above the 80px locked base banner (`#bottom-ad-banner`).
+    - Work zone to navigation area gap locked at **10px** via `margin-top: 10px !important;` on `#fixed-bottom-area`.
+    - Internal row gap locked at **10px** between navigation buttons (Prev/Next) and Question Counter.
+  - **Eradication of Unsolicited Typing Fallback**:
+    - Completely removed `.switch-typing-btn` ("Type Instead") creation, event listener, and DOM attachment from `js/test.js`.
+    - CSS suppression and hiding in `css/test.css`. Spoken tests remain strictly speech-to-text; typing is exclusive to Written mode per user requirement.
+  - **100dvh Multi-Viewport Lock**:
+    - Replaced broken overflow-scroll rule with compact proportional scaling under `@media (max-height: 680px)` preserving strict 100dvh lock and zero outer scroll across mobile heights (360x640, 375x667, 390x844, 412x915).
+  - **Verification Status**:
+    - `npm.cmd run test:ratios`: PASS 100% (1:1 Question-to-Answer vertical parity, 2.0x MCQ/Chips ratio).
+    - `npm.cmd run test:fast`: PASS 100% (52/52 JS files syntax valid, CSS minified).
+    - `check_spatial_invariants.mjs` and mobile verification scripts PASS 100%.
 
 - **Master Project: Tutor Ecosystem & Dual-Mode Attendance Architecture (`docs/MASTER_PROJECT_TUTOR_ECOSYSTEM.md`, `docs/mockup_tutor_student_ecosystem.html`)**:
   - **Tri-Role Ecosystem & Multi-Tenancy**: Architecture spanning Admin Workstation, dedicated Mobile Tutor App (`tutor.html`), and Student Dashboard. Dual subdomains (`top.tops-core.com` vs `cec.tops-core.com`) bypass manual institution selection.
@@ -208,6 +258,12 @@
 
 ## 2. Recent Active Milestones (Latest Rolling Window)
 
+- **Phase 637**: Words & Phrases Dual-Column Matrix Alignment, Strict Prerequisite Completion Gating (7/7 Words AND 7/7 Phrases), Dashboard Completed Tests Strict Completion Filter & Manual Reps Synchronization.
+- **Phase 636**: Basic English Exam Engine Gating, UUID Foreign Key Guard, Dashboard Flexible Mode Alignment & Class-Discipline Visual Invariant.
+- **Phase 635**: Vocab Test Room UI Normalization, White Panels with Centered Black Typography, Type Instead Fallback Eradication, and 10px Banner Clearance Invariant.
+- **Phase 634**: Standardized 80px Bottom Banner Invariant (`#bottom-ad-banner`) & Result Page Revamp (`result.html`).
+- **Phase 633**: Unified Test Words & Phrases Independent Scoring & Pip Isolation.
+- **Phase 632**: Level 0 Theme Manager Support & Uniform Level-Prefixed Test Code (`0G1`, `0A1`).
 - **Phase 626**: Non-Level Programs Architecture (Level 0 / Tampilan '—'), TOP Institution Overhaul & Alumni Graduation to Level X.
 - **Phase 625**: Full Student Academic Journey Simulation (Asik in Batch 123: 1st Level → Alumni) & Multi-Level Gating Engine Bug Resolution.
 - **Phase 624**: Test Boot Latency Optimization, Fullscreen Modal Prompt Eradication & In-Test Component Selector (Words vs Phrases).

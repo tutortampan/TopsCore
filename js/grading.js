@@ -422,7 +422,8 @@ export const ADJECTIVE_CATEGORIES = {
       'tasty', 'yummy', 'fresh', 'sweet', 'bitter', 'sour', 'spicy', 'rich', 'poor',
       'comfortable', 'uncomfortable', 'cheap', 'expensive', 'precious', 'valuable',
       'simple', 'complex', 'funny', 'boring', 'interesting', 'exciting',
-      'strange', 'weird', 'unique', 'perfect', 'normal', 'usual', 'unusual', 'favorite'
+      'strange', 'weird', 'unique', 'perfect', 'normal', 'usual', 'unusual', 'favorite',
+      'wild', 'calm', 'smart', 'clever', 'brave', 'strong', 'weak'
     ])
   },
   2: {
@@ -439,7 +440,7 @@ export const ADJECTIVE_CATEGORIES = {
       'hard', 'soft', 'rough', 'smooth', 'heavy', 'light', 'sharp', 'blunt', 'wet',
       'dry', 'moist', 'hot', 'warm', 'cold', 'cool', 'freezing', 'boiling', 'sticky',
       'slippery', 'greasy', 'oily', 'stiff', 'flexible', 'fragile', 'solid', 'hollow',
-      'fluffy', 'silky', 'shiny', 'dull', 'bright', 'dark'
+      'fluffy', 'silky', 'shiny', 'dull', 'bright', 'dark', 'fast', 'slow', 'snowy', 'loud', 'quiet'
     ])
   },
   4: {
@@ -514,17 +515,17 @@ export function validateDescriptionSentence(sentence, targetDemonstrative = null
   const clean = String(sentence || '').trim().replace(/[.,!?;:]+$/, '').toLowerCase();
   const tokens = clean.split(/\s+/).filter(Boolean);
   if (tokens.length < 5) {
-    return { valid: false, error: 'Kalimat terlalu pendek. Rumus: [This/That/These/Those] [is/are] (a/an) [3 Adjectives] [Noun]' };
+    return { valid: false, error: 'Sentence too short. Formula: [This/That/These/Those] [is/are] (a/an) [3 Adjectives] [Noun]' };
   }
 
   // 1. Demonstrative
   const demo = tokens[0];
   if (!['this', 'that', 'these', 'those'].includes(demo)) {
-    return { valid: false, error: 'Harus diawali demonstrative pronoun (This, That, These, atau Those).' };
+    return { valid: false, error: 'Must begin with a demonstrative pronoun (This, That, These, or Those).' };
   }
 
   if (targetDemonstrative && demo !== targetDemonstrative.toLowerCase().trim()) {
-    return { valid: false, error: `Soal ini mewajibkan kata depan "${targetDemonstrative.toUpperCase()}" (Anda menggunakan "${demo}").` };
+    return { valid: false, error: `This item requires demonstrative "${targetDemonstrative.toUpperCase()}" (you used "${demo}").` };
   }
 
   const isSingular = (demo === 'this' || demo === 'that');
@@ -532,10 +533,10 @@ export function validateDescriptionSentence(sentence, targetDemonstrative = null
   // 2. To-Be
   const tobe = tokens[1];
   if (isSingular && tobe !== 'is') {
-    return { valid: false, error: `Demonstrative tunggal (${demo.toUpperCase()}) wajib berpasangan dengan "is" (bukan "${tobe}").` };
+    return { valid: false, error: `Singular demonstrative (${demo.toUpperCase()}) requires "is" (not "${tobe}").` };
   }
   if (!isSingular && tobe !== 'are') {
-    return { valid: false, error: `Demonstrative jamak (${demo.toUpperCase()}) wajib berpasangan dengan "are" (bukan "${tobe}").` };
+    return { valid: false, error: `Plural demonstrative (${demo.toUpperCase()}) requires "are" (not "${tobe}").` };
   }
 
   let idx = 2;
@@ -549,30 +550,30 @@ export function validateDescriptionSentence(sentence, targetDemonstrative = null
   // Remaining tokens: adjectives + noun
   const remaining = tokens.slice(idx);
   if (remaining.length < 4) {
-    return { valid: false, error: 'Wajib menyertakan minimal 3 kata sifat (adjectives) dan 1 kata benda (noun).' };
+    return { valid: false, error: 'Must include exactly 3 adjectives and 1 noun.' };
   }
 
   const noun = remaining[remaining.length - 1];
   const adjTokens = remaining.slice(0, remaining.length - 1);
 
   if (adjTokens.length !== 3) {
-    return { valid: false, error: `Wajib tepat 3 kata sifat. Terdeteksi ${adjTokens.length}: "${adjTokens.join(', ')}".` };
+    return { valid: false, error: `Must include exactly 3 adjectives. Detected ${adjTokens.length}: "${adjTokens.join(', ')}".` };
   }
 
   // Check noun plurality agreement
   const nounPlural = isPluralNoun(noun);
   if (isSingular && nounPlural) {
-    return { valid: false, error: `Kata benda "${noun}" berbentuk jamak, tidak cocok dengan "${demo} is". Gunakan kata benda tunggal.` };
+    return { valid: false, error: `Noun "${noun}" is plural, which conflicts with "${demo} is". Use a singular noun.` };
   }
   if (!isSingular && !nounPlural) {
-    return { valid: false, error: `Kata benda "${noun}" berbentuk tunggal, tidak cocok dengan "${demo} are". Gunakan kata benda jamak (tambahkan -s/-es).` };
+    return { valid: false, error: `Noun "${noun}" is singular, which conflicts with "${demo} are". Use a plural noun (add -s/-es).` };
   }
 
   const classified = [];
   for (const adj of adjTokens) {
     const c = classifyAdjective(adj);
     if (!c) {
-      return { valid: false, error: `Kata sifat "${adj}" belum dikenali dalam kamus baku. Gunakan kata sifat umum (warna, ukuran, opini, bahan, dll).` };
+      return { valid: false, error: `Adjective "${adj}" is not recognized in standard dictionary. Use common adjectives (opinion, size, age, shape, color, origin, material).` };
     }
     classified.push({ word: adj, ...c });
   }
@@ -582,7 +583,7 @@ export function validateDescriptionSentence(sentence, targetDemonstrative = null
     if (classified[i].order >= classified[i + 1].order) {
       return {
         valid: false,
-        error: `Pelanggaran urutan kata sifat: "${classified[i].word}" (${classified[i].category}) harus diletakkan sebelum "${classified[i + 1].word}" (${classified[i + 1].category}). Urutan baku: Opini -> Ukuran -> Fisik -> Bentuk -> Usia -> Warna -> Asal -> Bahan -> Tujuan.`
+        error: `Adjective order violation: "${classified[i].word}" (${classified[i].category}) cannot precede "${classified[i + 1].word}" (${classified[i + 1].category}). Royal Order: Opinion → Size → Physical → Shape → Age → Color → Origin → Material → Purpose.`
       };
     }
   }
@@ -911,8 +912,8 @@ export const isWeeklyExam = isExam; // Backward compatibility alias
  */
 export const TOPSCORE_COLORS = Object.freeze({
   // 1. Grade & Score Tiers (Nilai Ujian & Persentase)
-  STAR: '#ff2d87', // 100% Star ★ (Electric Pink - #ff2d87)
-  STAR_8HEX: '#ff2d87ff', // 8-digit hex alias with alpha
+  STAR: '#c084fc', // 100% Star ★ (Vibrant Purple - #c084fc)
+  STAR_8HEX: '#c084fcff', // 8-digit hex alias with alpha
   A: '#00c000ff', // 90–99% Grade A (Pure Green - Identical to Star)
   A_8HEX: '#00c000ff', // 8-digit hex alias with alpha
   B: '#95ff00ff', // 80–89% Grade B (Electric Lime - #95ff00ff)
@@ -923,11 +924,11 @@ export const TOPSCORE_COLORS = Object.freeze({
   FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override Grade F (Pure Red #FF0000 - identical to Grade E)
   X: '#8B5CF6', // Special Grade X for Alumni (Purple)
   PURPLE: '#8B5CF6',
-  NEUTRAL: '#94a3b8', // Neutral Slate Gray for Cold Start / LET'S GO / Placeholder
+  NEUTRAL: '#94a3b8', // Neutral Slate Gray for Cold Start / START / Placeholder
   NEUTRAL_RGB: '148, 163, 184',
 
   // 2. RGB Equivalents for Opacities, Shadows, & Glows
-  STAR_RGB: '255, 45, 135',
+  STAR_RGB: '192, 132, 252',
   A_RGB: '0, 192, 0',
   B_RGB: '149, 255, 0',
   C_RGB: '255, 255, 0',
@@ -975,10 +976,10 @@ const STAR_THEME = {
   label: 'Excellent',
   predicate: 'Excellent',
   color: TOPSCORE_COLORS.STAR,
-  dark: '#be185d',
-  light: '#f472b6',
+  dark: '#7e22ce',
+  light: '#d8b4fe',
   rgb: TOPSCORE_COLORS.STAR_RGB,
-  glow: 'rgba(255, 45, 135, 0.5)',
+  glow: 'rgba(192, 132, 252, 0.5)',
   textColor: TOPSCORE_COLORS.TEXT_STAR,
   name: 'Excellent (100%)',
   minScore: 100,
@@ -1136,7 +1137,7 @@ export function getGradeColor(grade, isRemedial = false) {
   if (g.toUpperCase() === 'F' || g.toUpperCase() === 'FORGIVEN') return TOPSCORE_COLORS.E;
   if (g === '★' || g.toUpperCase() === 'S') return TOPSCORE_COLORS.STAR;
   if (g.toUpperCase() === 'X' || g.toUpperCase() === 'ALUMNI') return TOPSCORE_COLORS.X;
-  if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-') return TOPSCORE_COLORS.NEUTRAL;
+  if (g.toUpperCase() === "LET'S GO" || g.toUpperCase() === 'LETS GO' || g === '—' || g === '-' || g.toUpperCase() === 'START') return TOPSCORE_COLORS.NEUTRAL;
   return GRADE_PALETTE[g.toUpperCase()]?.color || TOPSCORE_COLORS.NEUTRAL;
 }
 
@@ -1224,10 +1225,10 @@ export function getGradeTheme(grade, isRemedial = false) {
   const theme = GRADE_PALETTE[effectiveKey] || {
     symbol: isStar ? '★' : g || '—',
     color: isStar ? TOPSCORE_COLORS.STAR : '#94a3b8',
-    dark: isStar ? '#be185d' : '#64748b',
-    light: isStar ? '#f472b6' : '#cbd5e1',
+    dark: isStar ? '#7e22ce' : '#64748b',
+    light: isStar ? '#d8b4fe' : '#cbd5e1',
     rgb: isStar ? TOPSCORE_COLORS.STAR_RGB : '148, 163, 184',
-    glow: isStar ? 'rgba(255, 45, 135, 0.5)' : 'rgba(148, 163, 184, 0.25)',
+    glow: isStar ? 'rgba(192, 132, 252, 0.5)' : 'rgba(148, 163, 184, 0.25)',
     textColor: isStar ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK,
     name: isStar ? 'Excellent (100%)' : 'Standard',
     sparkle: isStar,
@@ -1260,8 +1261,8 @@ export function getAchievementStatus(grade, percentage = null) {
   if (g === 'F' || g === 'FORGIVEN') {
     return 'FORGIVEN';
   }
-  if (g === "LET'S GO" || g === 'LETS GO' || g === '—' || g === '-') {
-    return "LET'S GO";
+  if (g === "LET'S GO" || g === 'LETS GO' || g === '—' || g === '-' || g === 'START') {
+    return 'START';
   }
   let effGrade = g;
   if (!['A', 'B', 'C', 'D', 'E', 'R', 'F'].includes(effGrade)) {
@@ -1282,7 +1283,7 @@ export function getAchievementStatus(grade, percentage = null) {
     R: 'REMEDIAL',
     F: 'FORGIVEN',
   };
-  return map[effGrade] || "LET'S GO";
+  return map[effGrade] || 'START';
 }
 
 /**
@@ -1931,6 +1932,8 @@ export function formatTestDisplay(test) {
                            .replace(/^(Theme\s+[A-Z0-9]+\s+)?(Words\s+|Phrases\s+)?(Task|Exam)\s*/i, '')
                            .trim();
   }
+  // Sanitize common typos in topic/theme names
+  topicOrTheme = topicOrTheme.replace(/\bDialy\b/gi, 'Daily');
 
   // Capitalize nicely if all uppercase (e.g. "COOKING CLASS" -> "Cooking Class")
   if (topicOrTheme && topicOrTheme === topicOrTheme.toUpperCase() && topicOrTheme.length > 3) {

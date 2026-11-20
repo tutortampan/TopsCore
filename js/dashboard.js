@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml } from './grading.js?v=20261106_v160';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass } from './grading.js?v=20261106_v160';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
@@ -1649,10 +1649,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const phrasesPassCountByTest = {};
       const wordsBestByTest = {};
       const phrasesBestByTest = {};
+      const manualRepsWByTest = {};
+      const manualRepsPByTest = {};
 
       const getAttemptSection = (att) => {
-        const totalQ = Number(att.total_questions || 0);
-        const correctCount = Number(att.correct_count || att.score || 0);
+        if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
+        if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
+        if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+        const totalQ = Number(att?.total_questions || 0);
+        const correctCount = Number(att?.correct_count || att?.score || 0);
         if (totalQ > 0 && totalQ <= 20) return 'phrases';
         if (totalQ > 20 && totalQ <= 45) return 'words';
         if (correctCount > 15) return 'words';
@@ -1667,6 +1672,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (bestMap[aid] == null || pct > bestMap[aid]) {
           bestMap[aid] = pct;
         }
+
+        const fr = String(a.forgiven_reason || '');
+        const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+        if (mMatch) {
+          const reps = Math.min(targetReps, parseInt(mMatch[1], 10));
+          const comp = (mMatch[3] || '').toUpperCase();
+          if (comp === 'PHRASES') {
+            manualRepsPByTest[aid] = Math.max(manualRepsPByTest[aid] || 0, reps);
+          } else if (comp === 'WORDS') {
+            manualRepsWByTest[aid] = Math.max(manualRepsWByTest[aid] || 0, reps);
+          } else {
+            manualRepsWByTest[aid] = Math.max(manualRepsWByTest[aid] || 0, reps);
+            manualRepsPByTest[aid] = Math.max(manualRepsPByTest[aid] || 0, reps);
+          }
+        }
+
         if (a.is_forgiven) {
           isForgivenByTest[aid] = true;
           wordsPassCountByTest[aid] = Math.max(wordsPassCountByTest[aid] || 0, targetReps);
@@ -1699,6 +1720,28 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               passCountByTest[aid] = (passCountByTest[aid] || 0) + 1;
             }
           }
+        }
+      });
+
+      // Synchronize manual repetition overrides into pass count tracking across all class tests
+      Object.keys(allTestsMap).forEach(tid => {
+        if (manualRepsWByTest[tid] != null) {
+          wordsPassCountByTest[tid] = Math.max(wordsPassCountByTest[tid] || 0, manualRepsWByTest[tid]);
+          if (wordsBestByTest[tid] == null) wordsBestByTest[tid] = 70.0;
+        }
+        if (manualRepsPByTest[tid] != null) {
+          phrasesPassCountByTest[tid] = Math.max(phrasesPassCountByTest[tid] || 0, manualRepsPByTest[tid]);
+          if (phrasesBestByTest[tid] == null) phrasesBestByTest[tid] = 70.0;
+        }
+        const tObj = allTestsMap[tid];
+        const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+        if (isUni) {
+          passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
+        } else if (manualRepsWByTest[tid] != null) {
+          passCountByTest[tid] = Math.max(passCountByTest[tid] || 0, manualRepsWByTest[tid]);
+        }
+        if (passCountByTest[tid] >= targetReps && bestMap[tid] == null) {
+          bestMap[tid] = 70.0;
         }
       });
 
@@ -1878,37 +1921,66 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const displayTitle = formattedTitleObj.fullTitle;
 
       function formatNextTestTitleHtml(target) {
-        if (target && typeof target === 'object') {
-          return formatTestTitleHtml(target);
+        const item = (target && typeof target === 'object') ? target : displayItem;
+        const formatted = formatTestDisplay(item);
+        const esc1 = escapeHtml(formatted.line1 || displayTitle);
+        const esc2 = escapeHtml(formatted.line2 || '');
+        if (esc2) {
+          return `<div class="next-test-title-single-line" style="display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">
+            <span class="next-test-primary-name" style="color:#ffffff; font-weight:800; font-size:15px;" title="${esc1} - ${esc2}">${esc1}</span>
+            <span style="color:#64748b; font-weight:600; font-size:13px;">—</span>
+            <span class="next-test-topic-name" style="color:#38bdf8; font-weight:700; font-size:13px; text-transform:uppercase;" title="${esc2}">${esc2}</span>
+          </div>`;
         }
-        return formatTestTitleHtml(displayItem);
+        return `<span class="next-test-primary-name" style="color:#ffffff; font-weight:800; font-size:15px;" title="${esc1}">${esc1}</span>`;
       }
 
-      if (!isTest) {
-        let currentPasses = passCountByTest[activeTestItem.id] || 0;
-        if (nextAssignment.isPair) {
-          const wordsP = nextAssignment.isUnified
-            ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0)
-            : (passCountByTest[nextAssignment.wordsTest.id] || 0);
-          const phrasesP = nextAssignment.isUnified
-            ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0)
-            : (passCountByTest[nextAssignment.phrasesTest.id] || 0);
-          currentPasses = Math.min(wordsP, phrasesP);
-        }
+      const isVocabClass = isVocabularyClass(validClass || activeTestItem);
 
-        let rainbowHtml = '<div class="rainbow-pass-bar">';
-        for (let s = 1; s <= 7; s++) {
-          const isLit = s <= currentPasses;
-          rainbowHtml += `<span class="rainbow-box ${isLit ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+      if (!isTest) {
+        let subIndicatorHtml = '';
+        if (isVocabClass) {
+          const wordsP = nextAssignment.isPair
+            ? (nextAssignment.isUnified ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0) : (passCountByTest[nextAssignment.wordsTest.id] || 0))
+            : (passCountByTest[activeTestItem.id] || 0);
+          const phrasesP = nextAssignment.isPair
+            ? (nextAssignment.isUnified ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0) : (passCountByTest[nextAssignment.phrasesTest.id] || 0))
+            : (passCountByTest[activeTestItem.id] || 0);
+
+          let wordsBoxesHtml = '';
+          let phrasesBoxesHtml = '';
+          for (let s = 1; s <= 7; s++) {
+            wordsBoxesHtml += `<span class="rainbow-box ${s <= wordsP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+            phrasesBoxesHtml += `<span class="rainbow-box ${s <= phrasesP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+          }
+
+          subIndicatorHtml = `
+            <div class="rainbow-pass-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
+              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
+                <div class="rainbow-pass-bar">
+                  ${wordsBoxesHtml}
+                </div>
+              </div>
+              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
+                <div class="rainbow-pass-bar">
+                  ${phrasesBoxesHtml}
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 50;
+          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:#38bdf8; letter-spacing:0.04em; margin-top:4px;">Passing: ${reqMin}%</div>`;
         }
-        rainbowHtml += '</div>';
 
         container.innerHTML = `
           <div class="next-test-col-left">
             <div class="next-test-title-wrap">
               ${formatNextTestTitleHtml(displayTitle)}
             </div>
-            ${rainbowHtml}
+            ${subIndicatorHtml}
           </div>
           <div class="next-test-col-right" title="Start Task - Click to practice">
             <button type="button" class="next-test-go-btn next-asm-go-btn is-start" aria-label="Start Task">
@@ -1952,27 +2024,62 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           activeSession = await fetchActiveTestSession(nextAssignment.phrasesTest.id, session.batch_id).catch(() => null);
         }
 
-        const isUnlocked = isAlumni || activeSession?.is_unlocked === true;
+        const isFlexible = (activeTestItem.schedule_mode || activeTestItem.payload?.schedule_mode) === 'flexible';
+        const isUnlocked = isAlumni || isFlexible || activeSession?.is_unlocked === true;
         const isWhitelisted = isAlumni ||
+                              isFlexible ||
                               !activeSession?.allowed_student_ids ||
                               activeSession.allowed_student_ids.length === 0 ||
                               activeSession.allowed_student_ids.includes(session.student_id);
 
-        let rainbowHtml = '<div class="rainbow-pass-bar is-full-glow">';
-        for (let s = 1; s <= 7; s++) {
-          rainbowHtml += `<span class="rainbow-box is-lit" data-step="${s}">${s}</span>`;
+        let subIndicatorHtml = '';
+        if (isVocabClass) {
+          const wBestPct = nextAssignment.isUnified
+            ? (wordsBestByTest[nextAssignment.wordsTest?.id] ?? bestMap[nextAssignment.wordsTest?.id] ?? 0)
+            : (bestMap[nextAssignment.wordsTest?.id] ?? 0);
+          const pBestPct = nextAssignment.isUnified
+            ? (phrasesBestByTest[nextAssignment.phrasesTest?.id] ?? bestMap[nextAssignment.phrasesTest?.id] ?? 0)
+            : (bestMap[nextAssignment.phrasesTest?.id] ?? 0);
+          const wordsLitCount = wBestPct >= 60 ? 7 : 0;
+          const phrasesLitCount = pBestPct >= 60 ? 7 : 0;
+
+          let wordsBoxesHtml = '';
+          let phrasesBoxesHtml = '';
+          for (let s = 1; s <= 7; s++) {
+            wordsBoxesHtml += `<span class="rainbow-box ${s <= wordsLitCount ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+            phrasesBoxesHtml += `<span class="rainbow-box ${s <= phrasesLitCount ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+          }
+
+          subIndicatorHtml = `
+            <div class="rainbow-pass-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
+              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
+                <div class="rainbow-pass-bar ${wordsLitCount >= 7 ? 'is-full-glow' : ''}">
+                  ${wordsBoxesHtml}
+                </div>
+              </div>
+              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
+                <div class="rainbow-pass-bar ${phrasesLitCount >= 7 ? 'is-full-glow' : ''}">
+                  ${phrasesBoxesHtml}
+                </div>
+              </div>
+            </div>
+          `;
+        } else {
+          const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 60;
+          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:var(--quad-a); letter-spacing:0.04em; margin-top:4px;">Official Exam • Passing: ${reqMin}%</div>`;
         }
-        rainbowHtml += '</div>';
 
         if (isUnlocked && isWhitelisted) {
           const remMin = activeSession?.remaining_minutes || 40;
-          const playTitle = isAlumni ? 'Start Exam (Alumni Universal Access)' : `Start Exam (${remMin}m left)`;
+          const playTitle = isAlumni ? 'Start Exam (Alumni Universal Access)' : (isFlexible ? 'Start Exam' : `Start Exam (${remMin}m left)`);
           container.innerHTML = `
             <div class="next-test-col-left">
               <div class="next-test-title-wrap">
                 ${formatNextTestTitleHtml(displayTitle)}
               </div>
-              ${rainbowHtml}
+              ${subIndicatorHtml}
             </div>
             <div class="next-test-col-right" title="${playTitle}">
               <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play">
@@ -2013,7 +2120,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               <div class="next-test-title-wrap">
                 ${formatNextTestTitleHtml(displayTitle)}
               </div>
-              ${rainbowHtml}
+              ${subIndicatorHtml}
             </div>
             <div class="next-test-col-right" title="Waiting for Tutor to unlock Exam">
               <span class="next-test-status-icon next-asm-status-icon is-exam-lock">
@@ -2065,9 +2172,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // Strict alphabetical sorting (A to Z)
-      activeClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-      completedClasses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // Sort classes: highest level first (descending), then alphabetical
+      activeClasses.sort((a, b) => {
+        const lvlA = a.levels?.level_number != null ? a.levels.level_number : 0;
+        const lvlB = b.levels?.level_number != null ? b.levels.level_number : 0;
+        if (lvlB !== lvlA) return lvlB - lvlA;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+      completedClasses.sort((a, b) => {
+        const lvlA = a.levels?.level_number != null ? a.levels.level_number : 0;
+        const lvlB = b.levels?.level_number != null ? b.levels.level_number : 0;
+        if (lvlB !== lvlA) return lvlB - lvlA;
+        return (a.name || '').localeCompare(b.name || '');
+      });
 
       if (activeClasses.length > 0) {
         activeClasses.forEach((subj, idx) => {
@@ -2213,14 +2330,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         window._candidateClassId = window._selectedClassId;
       }
 
+      // Sort classes in modal: highest level first (descending), then alphabetical
+      const sortedClasses = [...(activeClasses || [])].sort((a, b) => {
+        const lvlA = a.levels?.level_number != null ? a.levels.level_number : 0;
+        const lvlB = b.levels?.level_number != null ? b.levels.level_number : 0;
+        if (lvlB !== lvlA) return lvlB - lvlA;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      const CHECKMARK_ICON = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg>';
+
       let html = '';
-      (activeClasses || []).forEach(c => {
+      sortedClasses.forEach(c => {
         const isSelected = c.id === (window._candidateClassId || window._selectedClassId);
         const iconSvg = getClassSvgIcon(c.name, 18, isSelected ? '#38bdf8' : '#94a3b8');
         const pct = c._pct != null ? c._pct : 0;
-        const status = c._statusText || (pct > 0 ? `${pct}% Progress` : 'In Progress');
-        const scoreColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#38bdf8';
-        const scoreText = pct === 100 ? '100% ★' : `${pct}%`;
+        const isCompletedClass = Boolean(c._isCompleted || pct === 100);
+        const status = c._statusText || (isCompletedClass ? 'Completed' : (pct > 0 ? `${pct}% Progress` : 'In Progress'));
+        const scoreColor = isCompletedClass ? '#94a3b8' : (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#38bdf8');
+        const scoreText = isCompletedClass ? CHECKMARK_ICON : `${pct}%`;
 
         html += `
           <div class="classes-selector-item ${isSelected ? 'selected' : ''}" data-cid="${c.id}" role="button" tabindex="0">
@@ -2583,10 +2711,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const phrasesPassCountByTest = {};
       const wordsBestByTest = {};
       const phrasesBestByTest = {};
+      const manualRepsWByTest = {};
+      const manualRepsPByTest = {};
 
       const getAttemptSection = (att) => {
-        const totalQ = Number(att.total_questions || 0);
-        const correctCount = Number(att.correct_count || att.score || 0);
+        if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
+        if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
+        if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+        const totalQ = Number(att?.total_questions || 0);
+        const correctCount = Number(att?.correct_count || att?.score || 0);
         if (totalQ > 0 && totalQ <= 20) return 'phrases';
         if (totalQ > 20 && totalQ <= 45) return 'words';
         if (correctCount > 15) return 'words';
@@ -2600,6 +2733,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const pct = parseFloat(att.effective_score ?? att.percentage ?? 0);
         const st = (att.status || '').toUpperCase();
         const isRem = Boolean(att.is_remedial_unlocked || att.is_remedial);
+
+        const fr = String(att.forgiven_reason || '');
+        const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+        if (mMatch) {
+          const reps = Math.min(7, parseInt(mMatch[1], 10));
+          const comp = (mMatch[3] || '').toUpperCase();
+          if (comp === 'PHRASES') {
+            manualRepsPByTest[aid] = Math.max(manualRepsPByTest[aid] || 0, reps);
+          } else if (comp === 'WORDS') {
+            manualRepsWByTest[aid] = Math.max(manualRepsWByTest[aid] || 0, reps);
+          } else {
+            manualRepsWByTest[aid] = Math.max(manualRepsWByTest[aid] || 0, reps);
+            manualRepsPByTest[aid] = Math.max(manualRepsPByTest[aid] || 0, reps);
+          }
+        }
+
         if (att.is_forgiven) {
           hasForgivenByTest[aid] = true;
           wordsPassCountByTest[aid] = Math.max(wordsPassCountByTest[aid] || 0, 7);
@@ -2633,6 +2782,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             }
           }
         }
+
         // AGENTS.md §2.7: Report card stores strictly HIGHEST score across attempts
         // Forgiven waiver qualifies the module; authentic passing attempts (>=60%) can still outrank it.
         const currentBest = bestByTest[aid];
@@ -2652,6 +2802,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           } else if (pct === curPct && new Date(att.submitted_at || att.created_at || 0) > new Date(currentBest.submitted_at || currentBest.created_at || 0)) {
             bestByTest[aid] = att;
           }
+        }
+      });
+
+      // Synchronize manual repetition overrides into repetition mastery tracking
+      tests.forEach(asm => {
+        const tid = asm.id;
+        if (manualRepsWByTest[tid] != null) {
+          wordsPassCountByTest[tid] = Math.max(wordsPassCountByTest[tid] || 0, manualRepsWByTest[tid]);
+        }
+        if (manualRepsPByTest[tid] != null) {
+          phrasesPassCountByTest[tid] = Math.max(phrasesPassCountByTest[tid] || 0, manualRepsPByTest[tid]);
+        }
+        const isUni = asm?.payload?.is_unified === true || asm?.category === 'unified' || (asm?.test_subtype && asm.test_subtype.startsWith('UNIFIED'));
+        if (isUni) {
+          passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
+        } else if (manualRepsWByTest[tid] != null) {
+          passCountByTest[tid] = Math.max(passCountByTest[tid] || 0, manualRepsWByTest[tid]);
         }
       });
 
@@ -3155,14 +3322,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         : (hasExam ? mastery.overallScore : 0);
       let overallGrade = validExamEntriesForCard.length > 0
         ? (typeof calculateGrade === 'function' ? calculateGrade(avgPct) : mastery.grade)
-        : (hasExam ? mastery.grade : '—');
+        : (hasExam ? mastery.grade : '-');
       let isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
       let targetColor = '#94a3b8';
       let rgbColor = '148, 163, 184';
 
       if (hasExam) {
         const theme = (GRADE_PALETTE && GRADE_PALETTE[overallGrade]) ? GRADE_PALETTE[overallGrade] : (GRADE_PALETTE['★'] || {
-          color: TOPSCORE_COLORS.STAR, dark: '#be185d', light: '#f472b6', rgb: TOPSCORE_COLORS.STAR_RGB, glow: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`
+          color: TOPSCORE_COLORS.STAR, dark: '#7e22ce', light: '#d8b4fe', rgb: TOPSCORE_COLORS.STAR_RGB, glow: `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`
         });
         targetColor = theme.color;
         rgbColor = theme.rgb || TOPSCORE_COLORS.STAR_RGB;
@@ -3182,14 +3349,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const gradeBadgeValue = document.getElementById('stat-overall-grade-value');
       if (gradeBadgeValue) {
         if (!hasExam) {
-          gradeBadgeValue.textContent = '—';
+          gradeBadgeValue.textContent = '-';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
-            <svg class="pure-star-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)); display:inline-block; vertical-align:middle;">
               <defs>
                 <linearGradient id="starDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                  <stop offset="100%" stop-color="#be185d" />
+                  <stop offset="100%" stop-color="#7e22ce" />
                 </linearGradient>
               </defs>
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starDashGrad)" />
@@ -3205,22 +3372,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
 
       if (isAlumni) {
-        overallGrade = 'X';
-        targetColor = '#8B5CF6';
-        rgbColor = '139, 92, 246';
-        if (gradeBadgeValue) gradeBadgeValue.textContent = 'X';
-        if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
-        if (achievementTextEl) {
-          achievementTextEl.textContent = 'ALUMNI';
+        if (hasExam) {
+          const statusWord = getAchievementStatus(overallGrade, avgPct);
+          if (achievementTextEl) {
+            achievementTextEl.textContent = statusWord || 'ALUMNI';
+          }
+          if (avgScoreDisplay) avgScoreDisplay.textContent = `${avgPct}%`;
+        } else {
+          overallGrade = 'X';
+          targetColor = '#f59e0b';
+          rgbColor = '245, 158, 11';
+          if (gradeBadgeValue) gradeBadgeValue.textContent = 'X';
+          if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
+          if (achievementTextEl) {
+            achievementTextEl.textContent = 'ALUMNI';
+          }
         }
       } else if (!hasExam) {
-        overallGrade = "LET'S GO";
+        overallGrade = '-';
         targetColor = '#94a3b8';
         rgbColor = '148, 163, 184';
-        if (gradeBadgeValue) gradeBadgeValue.textContent = '—';
-        if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
+        if (gradeBadgeValue) gradeBadgeValue.textContent = '-';
+        if (avgScoreDisplay) avgScoreDisplay.textContent = '-';
         if (achievementTextEl) {
-          achievementTextEl.textContent = "LET'S GO";
+          achievementTextEl.textContent = 'START';
         }
       } else {
         const statusWord = getAchievementStatus(overallGrade, avgPct);
@@ -3230,12 +3405,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       if (achievementTextEl) {
-        const txtLen = (achievementTextEl.textContent || '').trim().length;
-        if (txtLen > 8) {
-          achievementTextEl.style.setProperty('font-size', '24px', 'important');
-        } else {
-          achievementTextEl.style.setProperty('font-size', '30px', 'important');
-        }
+        achievementTextEl.style.setProperty('font-size', '20px', 'important');
       }
 
       // Set globally on documentElement and body so all components inherit seamlessly
@@ -3302,7 +3472,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const avatarBox = document.getElementById('banner-avatar-container');
       if (avatarBox) {
         if (isGradeS) {
-          avatarBox.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #be185d 100%)`;
+          avatarBox.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #7e22ce 100%)`;
           avatarBox.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.4)';
           avatarBox.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
           avatarBox.classList.add('grade-star');
@@ -3317,7 +3487,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // 3. Score Value Display (Inside Grade Card)
       const scoreVal = document.getElementById('bottom-stat-avg-score');
       if (scoreVal) {
-        scoreVal.textContent = hasExam ? `${avgPct}%` : '—';
+        scoreVal.textContent = hasExam ? `${avgPct}%` : '-';
         scoreVal.style.setProperty('color', targetColor, 'important');
         scoreVal.style.setProperty('filter', 'none', 'important');
         scoreVal.classList.remove('text-grade-star');
@@ -3326,7 +3496,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // 4. Grade Value Display (Inside Grade Card)
       const gradeVal = document.getElementById('stat-overall-grade-value');
       if (gradeVal) {
-        gradeVal.textContent = overallGrade;
+        gradeVal.textContent = hasExam ? overallGrade : '-';
         gradeVal.style.setProperty('color', targetColor, 'important');
         gradeVal.style.setProperty('filter', 'none', 'important');
         gradeVal.classList.remove('text-grade-star');
@@ -3395,10 +3565,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const phrasesPassCountByTest = {};
       const wordsBestByTest = {};
       const phrasesBestByTest = {};
+      const manualRepsWByTest = {};
+      const manualRepsPByTest = {};
 
       const getAttemptSection = (att) => {
-        const totalQ = Number(att.total_questions || 0);
-        const correctCount = Number(att.correct_count || att.score || 0);
+        if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
+        if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
+        if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+        const totalQ = Number(att?.total_questions || 0);
+        const correctCount = Number(att?.correct_count || att?.score || 0);
         if (totalQ > 0 && totalQ <= 20) return 'phrases';
         if (totalQ > 20 && totalQ <= 45) return 'words';
         if (correctCount > 15) return 'words';
@@ -3415,7 +3590,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const grade = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
         const prev = bestByTest[tid];
         if (!prev || effPct > prev.effPct) {
-          bestByTest[tid] = { effPct, grade, isRem, rawPct, is_forgiven: Boolean(att.is_forgiven) };
+          bestByTest[tid] = { effPct, grade, isRem, rawPct, is_forgiven: Boolean(att.is_forgiven), forgiven_reason: att.forgiven_reason };
+        }
+
+        const fr = String(att.forgiven_reason || '');
+        const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+        if (mMatch) {
+          const reps = Math.min(7, parseInt(mMatch[1], 10));
+          const comp = (mMatch[3] || '').toUpperCase();
+          if (comp === 'PHRASES') {
+            manualRepsPByTest[tid] = Math.max(manualRepsPByTest[tid] || 0, reps);
+          } else if (comp === 'WORDS') {
+            manualRepsWByTest[tid] = Math.max(manualRepsWByTest[tid] || 0, reps);
+          } else {
+            manualRepsWByTest[tid] = Math.max(manualRepsWByTest[tid] || 0, reps);
+            manualRepsPByTest[tid] = Math.max(manualRepsPByTest[tid] || 0, reps);
+          }
         }
 
         const tObj = (allClassTests || []).find(x => x.id === tid);
@@ -3439,13 +3629,53 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       });
 
-      // Display ALL completed tests belonging to this active class (both Tasks & Exams per user requirement)
+      // Synchronize manual repetition overrides into completed tests mapping
+      publishedClassTests.forEach(t => {
+        const tid = t.id;
+        if (manualRepsWByTest[tid] != null) {
+          wordsPassCountByTest[tid] = Math.max(wordsPassCountByTest[tid] || 0, manualRepsWByTest[tid]);
+          if (!wordsBestByTest[tid]) wordsBestByTest[tid] = { effPct: 70.0, grade: 'C' };
+        }
+        if (manualRepsPByTest[tid] != null) {
+          phrasesPassCountByTest[tid] = Math.max(phrasesPassCountByTest[tid] || 0, manualRepsPByTest[tid]);
+          if (!phrasesBestByTest[tid]) phrasesBestByTest[tid] = { effPct: 70.0, grade: 'C' };
+        }
+        if (manualRepsWByTest[tid] != null || manualRepsPByTest[tid] != null) {
+          const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+          if (isUni) {
+            passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
+          } else {
+            passCountByTest[tid] = Math.max(passCountByTest[tid] || 0, manualRepsWByTest[tid] || 0);
+          }
+          if (!bestByTest[tid]) {
+            bestByTest[tid] = { effPct: 70.0, grade: 'C', isRem: false, rawPct: 70.0, is_forgiven: false, forgiven_reason: '[Mr. Top] MANUAL_REPS: 7/7' };
+          }
+        }
+      });
+
+      const targetReps = Number(window._classTestSettings?.taskRepetitions) || 7;
+      const isExamItem = (t) => (t.test_type || '').toLowerCase() === 'exam' || /exam/i.test(t.title || '') || /exam/i.test(t.shell_code || '');
+
+      // Display ALL genuinely completed tests belonging to this active class (strictly requiring full task mastery / exam passing)
       const completedOnlyTests = publishedClassTests.filter(t => {
         const best = bestByTest[t.id];
-        if (!best) return false; // Must have an actual completed attempt record
+        if (!best) return false;
+        if (best.is_forgiven) return true;
 
-        // Test that has been taken with a valid score, grade, or forgiveness MUST appear
-        return best.effPct > 0 || (best.grade && best.grade !== '—' && best.grade !== 'E') || best.is_forgiven;
+        const isEx = isExamItem(t);
+        const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+
+        if (isEx) {
+          if (isUni) {
+            return (wordsBestByTest[t.id]?.effPct >= 60 && phrasesBestByTest[t.id]?.effPct >= 60);
+          }
+          return best.effPct >= 60;
+        } else {
+          if (isUni) {
+            return (wordsPassCountByTest[t.id] || 0) >= targetReps && (phrasesPassCountByTest[t.id] || 0) >= targetReps;
+          }
+          return (passCountByTest[t.id] || 0) >= targetReps;
+        }
       });
 
       if (countBadge) {
@@ -3520,44 +3750,132 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let displayScore = best.effPct;
         let dispGrade = typeof calculateGrade === 'function' ? calculateGrade(best.effPct) : (typeof getGrade === 'function' ? getGrade(best.effPct) : (best.grade || 'E'));
 
+        const isManualReps = Boolean(best.forgiven_reason && String(best.forgiven_reason).includes('MANUAL_REPS'));
+        const mRepsMatch = best.forgiven_reason && String(best.forgiven_reason).match(/MANUAL_REPS:?\s*(\d+)/i);
+        const manualRepsCount = mRepsMatch ? parseInt(mRepsMatch[1], 10) : 0;
+
         if (!isEx) {
           // Task: Extract attempts to compute Top-7 Highest Scores sub-row (7x7 Repetitive Mastery System)
           const taskAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
-          const mappedAttempts = taskAttempts.map(a => {
+          const isUniTask = Boolean(t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED')) || isVocab);
+
+          const mapAtt = (a) => {
             const rawPct = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
             const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
             const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
             const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
             return { effPct, grade: gr, isRem };
-          });
+          };
 
-          // Sort descending to get Top 7 highest
-          mappedAttempts.sort((a, b) => b.effPct - a.effPct);
-          const top7 = mappedAttempts.slice(0, 7);
+          if (isUniTask) {
+            const wordsAtts = taskAttempts.filter(a => getAttemptSection(a) !== 'phrases');
+            const phrasesAtts = taskAttempts.filter(a => getAttemptSection(a) === 'phrases');
 
-          // Task final score and grade is the average of top 7 attempts per SSOT (AGENTS.md § 2.9 & ui-invariants.md § 5.1)
-          if (top7.length > 0 && !best.is_forgiven) {
-            const sumPct = top7.reduce((acc, curr) => acc + curr.effPct, 0);
-            displayScore = Math.round(sumPct / top7.length);
-            dispGrade = typeof calculateGrade === 'function' ? calculateGrade(displayScore) : 'E';
-          }
+            const mappedWords = wordsAtts.map(mapAtt);
+            const mappedPhrases = phrasesAtts.map(mapAtt);
 
-          let chipsHtml = '';
-          for (let i = 0; i < 7; i++) {
-            const item = top7[i];
-            if (item) {
-              const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
-              const isSt = item.grade === '★' || item.grade === 'S';
-              const txt = isSt ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
-              chipsHtml += `<span class="task-mini-grade" style="background:${c}; color:${txt};" title="Attempt: ${Math.round(item.effPct)}% (${item.grade})">${item.grade}</span>`;
-            } else {
-              chipsHtml += `<span class="task-mini-grade is-empty" title="Unattempted slot">—</span>`;
+            const mRepsW = manualRepsWByTest[t.id] ?? manualRepsCount ?? 0;
+            const mRepsP = manualRepsPByTest[t.id] ?? manualRepsCount ?? 0;
+
+            if (mRepsW > 0 && mappedWords.length < mRepsW) {
+              const needed = mRepsW - mappedWords.length;
+              for (let k = 0; k < needed; k++) {
+                mappedWords.push({ effPct: 70.0, grade: 'C', isRem: false });
+              }
             }
+
+            if (mRepsP > 0 && mappedPhrases.length < mRepsP) {
+              const needed = mRepsP - mappedPhrases.length;
+              for (let k = 0; k < needed; k++) {
+                mappedPhrases.push({ effPct: 70.0, grade: 'C', isRem: false });
+              }
+            }
+
+            mappedWords.sort((a, b) => b.effPct - a.effPct);
+            mappedPhrases.sort((a, b) => b.effPct - a.effPct);
+
+            const top7Words = mappedWords.slice(0, 7);
+            const top7Phrases = mappedPhrases.slice(0, 7);
+
+            const buildChips = (list, label) => {
+              let chips = '';
+              for (let i = 0; i < 7; i++) {
+                const item = list[i];
+                if (item) {
+                  const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
+                  const isSt = item.grade === '★' || item.grade === 'S';
+                  const txt = isSt ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
+                  chips += `<span class="task-mini-grade" style="background:${c}; color:${txt};" title="${label} Attempt: ${Math.round(item.effPct)}% (${item.grade})">${item.grade}</span>`;
+                } else {
+                  chips += `<span class="task-mini-grade is-empty" title="Unattempted ${label} slot">—</span>`;
+                }
+              }
+              return chips;
+            };
+
+            const wordsChipsHtml = buildChips(top7Words, 'Words');
+            const phrasesChipsHtml = buildChips(top7Phrases, 'Phrases');
+
+            taskSubRowHtml = `
+              <div class="task-grades-subrow task-grades-words-subrow" style="display:flex; align-items:center; gap:5px; margin-top:3px;">
+                <span class="comp-label comp-label-words" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:44px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
+                <div style="display:flex; align-items:center; gap:3px;">${wordsChipsHtml}</div>
+              </div>
+              <div class="task-grades-subrow task-grades-phrases-subrow" style="display:flex; align-items:center; gap:5px; margin-top:2px;">
+                <span class="comp-label comp-label-phrases" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:44px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
+                <div style="display:flex; align-items:center; gap:3px;">${phrasesChipsHtml}</div>
+              </div>
+            `;
+
+            const avgW = top7Words.length > 0 ? (top7Words.reduce((s, c) => s + c.effPct, 0) / top7Words.length) : null;
+            const avgP = top7Phrases.length > 0 ? (top7Phrases.reduce((s, c) => s + c.effPct, 0) / top7Phrases.length) : null;
+            if (avgW !== null && avgP !== null) {
+              displayScore = Math.round((avgW + avgP) / 2);
+            } else if (avgW !== null) {
+              displayScore = Math.round(avgW);
+            } else if (avgP !== null) {
+              displayScore = Math.round(avgP);
+            }
+            dispGrade = typeof calculateGrade === 'function' ? calculateGrade(displayScore) : 'C';
+          } else {
+            const mappedAttempts = taskAttempts.map(mapAtt);
+
+            // Fill in 70% minimal passing attempts for manual reps if database has fewer recorded
+            if (manualRepsCount > 0 && mappedAttempts.length < manualRepsCount) {
+              const needed = manualRepsCount - mappedAttempts.length;
+              for (let k = 0; k < needed; k++) {
+                mappedAttempts.push({ effPct: 70.0, grade: 'C', isRem: false });
+              }
+            }
+
+            // Sort descending to get Top 7 highest
+            mappedAttempts.sort((a, b) => b.effPct - a.effPct);
+            const top7 = mappedAttempts.slice(0, 7);
+
+            // Task final score and grade is the average of top 7 attempts per SSOT (AGENTS.md § 2.9 & ui-invariants.md § 5.1)
+            if (top7.length > 0 && (!best.is_forgiven || isManualReps)) {
+              const sumPct = top7.reduce((acc, curr) => acc + curr.effPct, 0);
+              displayScore = Math.round(sumPct / top7.length);
+              dispGrade = typeof calculateGrade === 'function' ? calculateGrade(displayScore) : 'C';
+            }
+
+            let chipsHtml = '';
+            for (let i = 0; i < 7; i++) {
+              const item = top7[i];
+              if (item) {
+                const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
+                const isSt = item.grade === '★' || item.grade === 'S';
+                const txt = isSt ? TOPSCORE_COLORS.TEXT_STAR : TOPSCORE_COLORS.TEXT_DARK;
+                chipsHtml += `<span class="task-mini-grade" style="background:${c}; color:${txt};" title="Attempt: ${Math.round(item.effPct)}% (${item.grade})">${item.grade}</span>`;
+              } else {
+                chipsHtml += `<span class="task-mini-grade is-empty" title="Unattempted slot">—</span>`;
+              }
+            }
+            taskSubRowHtml = `<div class="task-grades-subrow">${chipsHtml}</div>`;
           }
-          taskSubRowHtml = `<div class="task-grades-subrow">${chipsHtml}</div>`;
         }
 
-        if (best.is_forgiven) {
+        if (best.is_forgiven && !isManualReps) {
           dispGrade = 'F';
         }
 

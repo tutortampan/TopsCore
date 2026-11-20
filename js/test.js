@@ -415,6 +415,66 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       } catch (_) {}
     }
 
+    function playSuccessChime() {
+      try {
+        const ctx = _getCtx();
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const osc2 = ctx.createOscillator();
+        const g = ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(659.25, now); // E5
+        osc1.frequency.exponentialRampToValueAtTime(830.61, now + 0.12); // G#5
+
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(1318.5, now + 0.08); // E6 sparkle overtone
+
+        g.gain.setValueAtTime(0.01, now);
+        g.gain.linearRampToValueAtTime(0.18, now + 0.04);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+        osc1.connect(g);
+        osc2.connect(g);
+        g.connect(ctx.destination);
+
+        osc1.start(now);
+        osc2.start(now + 0.08);
+        osc1.stop(now + 0.45);
+        osc2.stop(now + 0.45);
+      } catch (_) {}
+    }
+
+    function playCameraShutterSound() {
+      try {
+        const ctx = _getCtx();
+        const now = ctx.currentTime;
+        const click = (time, freq) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, time);
+          osc.frequency.exponentialRampToValueAtTime(120, time + 0.03);
+          g.gain.setValueAtTime(0.2, time);
+          g.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
+          osc.connect(g);
+          g.connect(ctx.destination);
+          osc.start(time);
+          osc.stop(time + 0.04);
+        };
+        click(now, 1400);
+        click(now + 0.06, 800);
+      } catch (_) {}
+    }
+
+    function triggerHapticFeedback(pattern = [35]) {
+      try {
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          navigator.vibrate(pattern);
+        }
+      } catch (_) {}
+    }
+
     // Intercept Back / Return Button
     function lockHistory() {
       for (let i = 0; i < 5; i++) {
@@ -1238,7 +1298,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             let restoredCount = 0;
             for (const [ansId, ansVal] of Object.entries(localBuffer)) {
               if (ansVal && !answeredMap[ansId]) {
-                answeredMap[ansId] = ansVal;
+                const cleanAns = typeof ansVal === 'string'
+                  ? ansVal
+                  : (ansVal?.text || ansVal?.student_answer || ansVal?.answer || (typeof ansVal === 'object' ? JSON.stringify(ansVal) : String(ansVal)));
+                answeredMap[ansId] = cleanAns;
                 restoredCount++;
               }
             }
@@ -1996,10 +2059,21 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       updateNavGrid();
     }
 
+    function hasAnswer(val) {
+      if (val == null) return false;
+      if (typeof val === 'string') return val.trim().length > 0;
+      if (typeof val === 'number') return true;
+      if (typeof val === 'object') {
+        const str = (val.text || val.student_answer || val.answer || '');
+        return typeof str === 'string' && str.trim().length > 0;
+      }
+      return false;
+    }
+
     let _navProgressTimer = null;
     function updateProgressMetrics() {
       const activeMap = window.answeredMap || answeredMap;
-      const answered = Object.values(activeMap).filter(v => v?.trim()).length;
+      const answered = Object.values(activeMap).filter(hasAnswer).length;
       const pct = allAnswerRows.length > 0 ? (answered / allAnswerRows.length) * 100 : 0;
       const fillEl = document.getElementById('test-progress-fill');
       if (fillEl) fillEl.style.width = pct + '%';
@@ -2019,7 +2093,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       activeMap[rowId] = val;
       const btn = document.getElementById(`qnav-row-${rowId}`) || document.getElementById(`qnav-${currentIndex}`);
       if (btn) {
-        btn.classList.toggle('answered', !!(val && val.trim()));
+        btn.classList.toggle('answered', hasAnswer(val));
       }
       if (_navProgressTimer) clearTimeout(_navProgressTimer);
       _navProgressTimer = setTimeout(() => {
@@ -2037,7 +2111,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         allButtons.forEach(btn => {
           const rowId = btn.dataset.rowId;
           if (!rowId) return;
-          const isAnswered = !!(activeMap[rowId] && activeMap[rowId].trim());
+          const isAnswered = hasAnswer(activeMap[rowId]);
           btn.classList.toggle('answered', isAnswered);
 
           const isCurrent = (rowId === answerRows[currentIndex]?.id);
@@ -2047,7 +2121,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         answerRows.forEach((row, idx) => {
           const btn = document.getElementById(`qnav-${idx}`);
           if (!btn) return;
-          btn.classList.toggle('answered', !!(activeMap[row.id] && activeMap[row.id].trim()));
+          btn.classList.toggle('answered', hasAnswer(activeMap[row.id]));
           btn.classList.toggle('current', idx === currentIndex);
         });
       }
@@ -2063,7 +2137,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             const secId = snap?.section_id || 'default';
             return secId === sec.id || (sec.id === 'default' && (!secId || secId === 'default'));
           });
-          const secAnswered = secRows.filter(r => !!(activeMap[r.id] && activeMap[r.id].trim())).length;
+          const secAnswered = secRows.filter(r => hasAnswer(activeMap[r.id])).length;
           const countEl = document.getElementById(`matrix-sec-count-${secIdx}`);
           if (countEl) {
             countEl.textContent = `${secAnswered}/${secRows.length} answered`;
@@ -2072,7 +2146,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }
 
       // Update Question Matrix header counts and progress bar
-      const totalAnswered = Object.values(activeMap).filter(v => v && typeof v === 'string' && v.trim()).length;
+      const totalAnswered = Object.values(activeMap).filter(hasAnswer).length;
       const totalQuestions = allAnswerRows.length;
       const totalUnanswered = Math.max(0, totalQuestions - totalAnswered);
 
@@ -2213,10 +2287,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       // Pacing Assistance (Anti-Timeout Guard):
       // If student remains stuck on an unanswered question for > 45s, gently advise skipping.
       if (window._questionPacingTimer) clearTimeout(window._questionPacingTimer);
-      const isCurrentlyUnanswered = !answeredMap[row.id] || !answeredMap[row.id].trim();
+      const isCurrentlyUnanswered = !hasAnswer(answeredMap[row.id]);
       if (isCurrentlyUnanswered && isTestActive) {
         window._questionPacingTimer = setTimeout(() => {
-          if (currentIndex === idx && (!answeredMap[row.id] || !answeredMap[row.id].trim()) && isTestActive) {
+          if (currentIndex === idx && !hasAnswer(answeredMap[row.id]) && isTestActive) {
             showToast('Stuck? Tap Next to skip and return later before time runs out!', 'info', 6000);
           }
         }, 45000);
@@ -2342,11 +2416,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         handleTranslationDetected(activeTrans);
       }
 
-      const isWritten = (answerType === 'written');
-
-      let answerArea, controlArea;
-
-      if (isWritten) {
+      if (answerType === 'description') {
+        // Description Mode: Strict 3 Equal-Sized Cards (Camera -> Answer Display -> Speech/Mic)
+        main.style.cssText = 'flex:1; display:flex; flex-direction:column; justify-content:space-between; align-items:center; min-height:100%; height:100%; max-height:100%; overflow:hidden; width:100% !important; max-width:440px !important; margin:0 auto !important; padding:0; box-sizing:border-box; gap:10px;';
+        renderDescription(main, row, savedAnswer, snap, idx);
+      } else if (isWritten) {
         // 1. Metadata Grid (Unified height: Flex 1) — rendered ABOVE question box for context-first reading
 
         const metadataTable = document.createElement('div');
@@ -2438,23 +2512,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         `;
         main.appendChild(questionBox);
 
-        if (answerType === 'description') {
-          // 3. Description Answer Stage (In-Browser Camera & Photo Preview + Speech Transcript)
-          answerArea = document.createElement('div');
-          answerArea.id = 'description-answer-container';
-          answerArea.className = 'w-full flex flex-col justify-between';
-          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:4 1 0 !important; min-height:80px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 12px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; box-sizing:border-box; position:relative;';
-          main.appendChild(answerArea);
-
-          // 4. Description Control Panel (Camera + Mic + Grammar Validator)
-          controlArea = document.createElement('div');
-          controlArea.id = 'description-control-container';
-          controlArea.className = 'w-full flex flex-col items-center justify-center';
-          controlArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:80px !important; margin:0 auto !important; padding:6px 12px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; background:linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(10, 16, 30, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.08); border-radius:14px; box-shadow:0 8px 24px rgba(0, 0, 0, 0.35); backdrop-filter:blur(14px); box-sizing:border-box; position:relative;';
-          main.appendChild(controlArea);
-
-          renderDescription(answerArea, controlArea, row, savedAnswer, snap, idx);
-        } else if (answerType === 'speech_to_text' || answerType === 'spoken') {
+        if (answerType === 'speech_to_text' || answerType === 'spoken') {
           // 3. Speaking Answer Transcript Box (Flex 3: Matches questionBox 1:1)
           answerArea = document.createElement('div');
           answerArea.id = 'speech-answer-container';
@@ -2598,7 +2656,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
     function renderUnansweredPanel(container, currentIdx) {
       container.innerHTML = '';
-      const unanswered = answerRows.map((r, i) => ({ r, i })).filter(({ r }) => !answeredMap[r.id] || !answeredMap[r.id].trim());
+      const unanswered = answerRows.map((r, i) => ({ r, i })).filter(({ r }) => !hasAnswer(answeredMap[r.id]));
       if (unanswered.length === 0) {
         container.innerHTML = `<div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);"><div class="speech-all-answered-msg">All ${answerRows.length} questions answered!</div></div>`;
         return;
@@ -2840,7 +2898,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       });
     }
 
-    function renderDescription(area, controlArea, row, savedAnswer, snap = {}, questionIdx = 0) {
+    function renderDescription(main, row, savedAnswer, snap = {}, questionIdx = 0) {
       stopActiveCameraStream();
 
       // Determine Target Demonstrative:
@@ -2866,176 +2924,134 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const isSingular = (targetDemo === 'this' || targetDemo === 'that');
       const targetLabel = targetDemo.toUpperCase();
       const formulaPattern = isSingular ? `${targetLabel} IS A/AN [3 ADJECTIVES] [NOUN]` : `${targetLabel} ARE [3 ADJECTIVES] [NOUNS]`;
-
-      // 1. Photo Stage in answerArea (In-Browser Camera & Canvas)
-      const photoStage = document.createElement('div');
-      photoStage.id = `desc-photo-stage-${row.id}`;
-      photoStage.style.cssText = 'width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; flex:1; min-height:80px; box-sizing:border-box;';
-
+      const placeholderExample = isSingular ? `${targetDemo} is a small shiny red car` : `${targetDemo} are small shiny red cars`;
       const existingPhoto = window._capturedPhotos[row.id] || null;
 
-      // Hidden native file input for camera fallback
+      // =========================================================================
+      // CARD 1: CAMERA & PHOTO CARD (Icon Camera -> Snap/Upload -> Photo Appears Here)
+      // =========================================================================
+      const card1 = document.createElement('div');
+      card1.id = `desc-camera-card-${row.id}`;
+      card1.className = 'desc-card desc-card-camera notranslate';
+      card1.setAttribute('translate', 'no');
+      card1.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:0 !important; margin:0 auto !important; box-sizing:border-box !important; background:linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important; border:1.5px solid rgba(56, 189, 248, 0.3) !important; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; overflow:hidden; padding:6px; box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+
+      // Header Tag: Object number & target demonstrative
+      const objBadge = document.createElement('div');
+      objBadge.style.cssText = 'position:absolute; top:6px; left:8px; z-index:10; font-size:11px; font-weight:800; color:#38bdf8; background:rgba(15, 23, 42, 0.85); border:1px solid rgba(56, 189, 248, 0.4); border-radius:6px; padding:2px 8px; pointer-events:none;';
+      objBadge.textContent = `Object #${snap?.display_order || questionIdx + 1} (${targetLabel})`;
+      card1.appendChild(objBadge);
+
+      // Hidden file input for camera/file fallback
       const fileInput = document.createElement('input');
       fileInput.type = 'file';
       fileInput.accept = 'image/*';
       fileInput.capture = 'environment';
       fileInput.style.display = 'none';
+      card1.appendChild(fileInput);
 
-      // Live Video & Preview elements
+      // Live Video element
       const videoEl = document.createElement('video');
       videoEl.autoplay = true;
       videoEl.playsInline = true;
       videoEl.muted = true;
-      videoEl.style.cssText = 'width:100%; max-width:240px; max-height:110px; object-fit:cover; border-radius:10px; border:2px solid #38bdf8; display:none; background:#000; box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+      videoEl.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:8px; display:none; background:#000;';
+      card1.appendChild(videoEl);
 
+      // Captured Image Preview element
       const previewImg = document.createElement('img');
-      previewImg.style.cssText = 'width:100%; max-width:220px; max-height:110px; object-fit:cover; border-radius:10px; border:2px solid var(--clr-success); display:none; box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+      previewImg.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:8px; display:none; border:2px solid var(--grade-a);';
+      previewImg.alt = 'Captured Object';
+      card1.appendChild(previewImg);
 
-      const photoStatus = document.createElement('div');
-      photoStatus.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; display:flex; align-items:center; gap:6px;';
+      // Idle State Container (Centered Icon Camera & Action Buttons)
+      const idleState = document.createElement('div');
+      idleState.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; width:100%; height:100%; cursor:pointer;';
+      idleState.innerHTML = `
+        <div style="width:42px; height:42px; border-radius:50%; background:rgba(56, 189, 248, 0.15); border:1.5px solid #38bdf8; display:flex; align-items:center; justify-content:center; color:#38bdf8;">
+          ${getSvgIcon('camera', 22)}
+        </div>
+        <div style="font-size:12.5px; font-weight:700; color:#f8fafc; text-align:center;">
+          Tap to Open Camera
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
+          <button type="button" class="btn-cam-open-trigger" style="padding:4px 12px; border-radius:6px; border:1px solid #38bdf8; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#fff; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
+            ${getSvgIcon('camera', 13)} Take Photo
+          </button>
+          <button type="button" class="btn-cam-upload-trigger" style="padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:11px; font-weight:600; cursor:pointer;">
+            Upload
+          </button>
+        </div>
+      `;
+      card1.appendChild(idleState);
 
-      photoStage.appendChild(videoEl);
-      photoStage.appendChild(previewImg);
-      photoStage.appendChild(photoStatus);
-      photoStage.appendChild(fileInput);
-      area.appendChild(photoStage);
-
-      // 2. Transcript & Editable Text Display in answerArea
-      const transcriptInput = document.createElement('input');
-      transcriptInput.type = 'text';
-      transcriptInput.id = `desc-transcript-${row.id}`;
-      transcriptInput.placeholder = 'Snap a photo, then speak or type your description sentence...';
-      transcriptInput.value = savedAnswer || '';
-      transcriptInput.style.cssText = 'width:100%; font-size:15px; font-weight:700; color:#0f172a !important; text-align:center; padding:6px 10px; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px; font-family:"Inter",sans-serif; box-sizing:border-box; outline:none; background:#f8fafc;';
-      area.appendChild(transcriptInput);
-
-      // Helper to update photo view
-      const updatePhotoView = (dataUrl) => {
-        if (dataUrl) {
-          window._capturedPhotos[row.id] = dataUrl;
-          stopActiveCameraStream();
-          videoEl.style.display = 'none';
-          snapBtn.style.display = 'none';
-          previewImg.src = dataUrl;
-          previewImg.style.display = 'block';
-          photoStatus.innerHTML = `<span style="color:var(--clr-success);">● Photo Captured (100% In-Browser)</span>`;
-          camBtn.innerHTML = `${getSvgIcon('camera', 14)} Retake Photo`;
-          camBtn.style.background = 'rgba(255,255,255,0.1)';
-        } else {
-          previewImg.style.display = 'none';
-          photoStatus.innerHTML = `<span style="color:#f59e0b;">● No photo yet — please snap your object</span>`;
-          camBtn.innerHTML = `${getSvgIcon('camera', 14)} Open Camera`;
-          camBtn.style.background = 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)';
-        }
-      };
-
-      fileInput.addEventListener('change', (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (file) {
-          const reader = new FileReader();
-          reader.onload = (ev) => {
-            updatePhotoView(ev.target.result);
-          };
-          reader.readAsDataURL(file);
-        }
-      });
-
-      // 3. Control Area: Target Pill + Buttons Row + Live Grammar Validator
-      const topBar = document.createElement('div');
-      topBar.style.cssText = 'display:flex; justify-content:space-between; align-items:center; width:100%; gap:8px;';
-
-      const targetBadge = document.createElement('div');
-      targetBadge.style.cssText = 'padding:2px 8px; border-radius:6px; background:rgba(192, 132, 252, 0.15); border:1px solid #c084fc; color:#c084fc; font-size:11px; font-weight:800; letter-spacing:0.04em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;';
-      targetBadge.textContent = formulaPattern;
-      topBar.appendChild(targetBadge);
-
-      const langSelect = document.createElement('select');
-      langSelect.className = 'speech-lang-select';
-      langSelect.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:11px; font-weight:600; outline:none;';
-      langSelect.innerHTML = `<option value="en-US">EN-US</option><option value="en-GB">EN-UK</option>`;
-      topBar.appendChild(langSelect);
-      controlArea.appendChild(topBar);
-
-      // Buttons Row: Camera Button + Snap Button + Mic Button
-      const btnRow = document.createElement('div');
-      btnRow.style.cssText = 'display:flex; align-items:center; justify-content:center; gap:8px; width:100%; margin:4px 0;';
-
-      const camBtn = document.createElement('button');
-      camBtn.type = 'button';
-      camBtn.className = 'btn-camera-trigger';
-      camBtn.style.cssText = 'padding:6px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px;';
-      btnRow.appendChild(camBtn);
-
+      // Live Viewfinder Controls Bar (shown when camera is streaming)
+      const liveControls = document.createElement('div');
+      liveControls.style.cssText = 'position:absolute; bottom:8px; left:0; width:100%; display:none; align-items:center; justify-content:center; gap:8px; z-index:10;';
       const snapBtn = document.createElement('button');
       snapBtn.type = 'button';
-      snapBtn.style.cssText = 'padding:6px 12px; border-radius:8px; border:1px solid #38bdf8; background:#38bdf8; color:#0f172a; font-size:12px; font-weight:800; cursor:pointer; display:none; align-items:center; gap:6px;';
+      snapBtn.style.cssText = 'padding:6px 14px; border-radius:6px; border:1px solid var(--grade-a); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0f172a; font-size:12px; font-weight:800; cursor:pointer; display:flex; align-items:center; gap:6px; box-shadow:0 4px 12px rgba(0,0,0,0.4);';
       snapBtn.innerHTML = `${getSvgIcon('check-circle', 14)} Snap Frame`;
-      btnRow.appendChild(snapBtn);
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.style.cssText = 'padding:6px 10px; border-radius:6px; border:1px solid rgba(255,255,255,0.25); background:rgba(15, 23, 42, 0.85); color:#cbd5e1; font-size:12px; font-weight:600; cursor:pointer;';
+      cancelBtn.textContent = 'Cancel';
+      liveControls.appendChild(snapBtn);
+      liveControls.appendChild(cancelBtn);
+      card1.appendChild(liveControls);
 
-      const micBtn = document.createElement('button');
-      micBtn.type = 'button';
-      micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:40px; height:40px; border-radius:50%; border:2px solid rgba(var(--grade-a-rgb), 0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;';
-      micBtn.innerHTML = '<svg style="width:18px; height:18px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
-      btnRow.appendChild(micBtn);
+      // Captured State Overlay (Badge & Retake button)
+      const capturedBadge = document.createElement('div');
+      capturedBadge.style.cssText = 'position:absolute; top:6px; right:8px; z-index:10; font-size:10.5px; font-weight:800; color:var(--grade-a); background:rgba(15, 23, 42, 0.85); border:1px solid var(--grade-a); border-radius:6px; padding:2px 8px; display:none; pointer-events:none;';
+      capturedBadge.textContent = '✓ Captured';
+      card1.appendChild(capturedBadge);
 
-      controlArea.appendChild(btnRow);
+      const retakeBtn = document.createElement('button');
+      retakeBtn.type = 'button';
+      retakeBtn.style.cssText = 'position:absolute; bottom:6px; right:8px; z-index:10; font-size:11px; font-weight:700; color:#fff; background:rgba(15, 23, 42, 0.85); border:1px solid rgba(255,255,255,0.25); border-radius:6px; padding:3px 8px; cursor:pointer; display:none; align-items:center; gap:4px;';
+      retakeBtn.innerHTML = `${getSvgIcon('camera', 12)} Retake`;
+      card1.appendChild(retakeBtn);
 
-      // Grammar & Adjective Order Live Validator Card
-      const validatorCard = document.createElement('div');
-      validatorCard.id = `desc-validator-${row.id}`;
-      validatorCard.style.cssText = 'width:100%; border-radius:8px; padding:6px 10px; font-size:11px; line-height:1.35; box-sizing:border-box; transition:all 0.2s ease;';
-      controlArea.appendChild(validatorCard);
+      main.appendChild(card1);
 
-      const runLiveValidation = (text) => {
-        answeredMap[row.id] = text;
-        const valRes = typeof validateDescriptionSentence === 'function' ? validateDescriptionSentence(text, targetDemo) : { valid: false, error: 'Loading validator...' };
-        if (valRes.valid) {
-          validatorCard.style.background = 'rgba(0, 192, 0, 0.15)';
-          validatorCard.style.border = '1px solid var(--grade-a)';
-          validatorCard.style.color = '#f8fafc';
-          validatorCard.innerHTML = `
-            <div style="font-weight:800; color:var(--grade-a); display:flex; align-items:center; gap:6px;">
-              ${getSvgIcon('check-circle', 14)} Sesuai: ${escapeHtml(valRes.formatted)}
-            </div>
-            <div style="font-size:10.5px; color:#cbd5e1; margin-top:2px;">
-              Urutan: ${valRes.adjectives.map(a => `<span style="color:#95ff00;font-weight:700;">${a.word}</span> <span style="color:#94a3b8;">(${a.category})</span>`).join(' → ')}
-            </div>
-          `;
-        } else if (text && text.trim().length > 0) {
-          validatorCard.style.background = 'rgba(255, 140, 0, 0.12)';
-          validatorCard.style.border = '1px solid #ea580c';
-          validatorCard.style.color = '#fed7aa';
-          validatorCard.innerHTML = `<span style="font-weight:700; color:#ea580c;">⚠ Evaluasi:</span> ${escapeHtml(valRes.error)}`;
+      // Helper to toggle photo states in Card 1
+      const updatePhotoView = (dataUrl, isInitial = false) => {
+        if (dataUrl) {
+          window._capturedPhotos[row.id] = dataUrl;
+          if (typeof attemptData !== 'undefined' && attemptData?.id) {
+            try {
+              localStorage.setItem(`topscore_photo_${attemptData.id}_${row.id}`, dataUrl);
+              sessionStorage.setItem(`topscore_photo_${row.id}`, dataUrl);
+            } catch (_) {}
+          }
+          stopActiveCameraStream();
+          videoEl.style.display = 'none';
+          liveControls.style.display = 'none';
+          idleState.style.display = 'none';
+          previewImg.src = dataUrl;
+          previewImg.style.display = 'block';
+          capturedBadge.style.display = 'block';
+          retakeBtn.style.display = 'flex';
+          card1.style.borderColor = 'var(--grade-a)';
+          card1.style.boxShadow = '0 0 16px rgba(0, 192, 0, 0.35)';
+          if (!isInitial) {
+            playCameraShutterSound();
+            triggerHapticFeedback([40]);
+          }
         } else {
-          validatorCard.style.background = 'rgba(56, 189, 248, 0.08)';
-          validatorCard.style.border = '1px solid rgba(56, 189, 248, 0.25)';
-          validatorCard.style.color = '#bae6fd';
-          validatorCard.innerHTML = `<span>Gunakan rumus: <strong>${formulaPattern}</strong></span>`;
+          stopActiveCameraStream();
+          videoEl.style.display = 'none';
+          liveControls.style.display = 'none';
+          previewImg.style.display = 'none';
+          capturedBadge.style.display = 'none';
+          retakeBtn.style.display = 'none';
+          idleState.style.display = 'flex';
+          card1.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+          card1.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)';
         }
       };
 
-      transcriptInput.addEventListener('input', () => {
-        runLiveValidation(transcriptInput.value);
-        updateActiveChipOnly(row.id, transcriptInput.value);
-        scheduleDebouncedAutoSave(row.id, transcriptInput.value, 800);
-      });
-
-      transcriptInput.addEventListener('blur', () => {
-        persistLocalBuffer();
-        autoSave(row.id, transcriptInput.value);
-      });
-
-      // Camera click handler
-      camBtn.addEventListener('click', async () => {
-        if (videoEl.style.display === 'block') {
-          stopActiveCameraStream();
-          videoEl.style.display = 'none';
-          snapBtn.style.display = 'none';
-          updatePhotoView(window._capturedPhotos[row.id] || null);
-          return;
-        }
-
+      const startCamera = async () => {
         try {
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             const stream = await navigator.mediaDevices.getUserMedia({
@@ -3044,11 +3060,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             });
             window._activeCameraStream = stream;
             videoEl.srcObject = stream;
-            videoEl.style.display = 'block';
+            idleState.style.display = 'none';
             previewImg.style.display = 'none';
-            snapBtn.style.display = 'inline-flex';
-            camBtn.innerHTML = `${getSvgIcon('x', 14)} Cancel`;
-            photoStatus.innerHTML = `<span style="color:#38bdf8;">● Live Viewfinder Active</span>`;
+            capturedBadge.style.display = 'none';
+            retakeBtn.style.display = 'none';
+            videoEl.style.display = 'block';
+            liveControls.style.display = 'flex';
           } else {
             fileInput.click();
           }
@@ -3056,8 +3073,19 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           console.warn('getUserMedia unavailable, falling back to camera input:', err);
           fileInput.click();
         }
-      });
+      };
 
+      idleState.addEventListener('click', (e) => {
+        if (e.target.closest('.btn-cam-upload-trigger')) {
+          fileInput.click();
+        } else {
+          startCamera();
+        }
+      });
+      retakeBtn.addEventListener('click', () => startCamera());
+      cancelBtn.addEventListener('click', () => {
+        updatePhotoView(window._capturedPhotos[row.id] || null);
+      });
       snapBtn.addEventListener('click', () => {
         try {
           const canvas = document.createElement('canvas');
@@ -3066,45 +3094,180 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           const ctx = canvas.getContext('2d');
           ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          stopActiveCameraStream();
-          snapBtn.style.display = 'none';
           updatePhotoView(dataUrl);
         } catch (err) {
           console.error('Snapshot failed:', err);
-          showToast('Failed to snap photo, using file input', 'warning');
           fileInput.click();
         }
       });
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => updatePhotoView(ev.target.result);
+          reader.readAsDataURL(file);
+        }
+      });
 
-      // Mic speech handler
+      // =========================================================================
+      // CARD 2: ANSWER DISPLAY CARD (Formula Pattern + Answer Box + Validator)
+      // =========================================================================
+      const card2 = document.createElement('div');
+      card2.id = `desc-answer-card-${row.id}`;
+      card2.className = 'desc-card desc-card-answer notranslate';
+      card2.setAttribute('translate', 'no');
+      card2.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:0 !important; margin:0 auto !important; box-sizing:border-box !important; background:linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important; border:1.5px solid rgba(255, 255, 255, 0.12) !important; border-radius:12px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; position:relative; overflow:hidden; padding:8px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+
+      // Header: Formula Pattern Pill
+      const formulaPill = document.createElement('div');
+      formulaPill.style.cssText = 'font-size:11px; font-weight:800; color:#c084fc; letter-spacing:0.04em; background:rgba(192, 132, 252, 0.14); border:1px solid #c084fc; border-radius:6px; padding:2px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%; text-align:center;';
+      formulaPill.textContent = `Formula: ${formulaPattern}`;
+      card2.appendChild(formulaPill);
+
+      // Main Answer Input / Display (Clickable & Editable directly or via speech)
+      const transcriptInput = document.createElement('textarea');
+      transcriptInput.id = `desc-transcript-${row.id}`;
+      transcriptInput.placeholder = `Your answer will appear here... (e.g. ${placeholderExample})`;
+      transcriptInput.value = savedAnswer || '';
+      transcriptInput.style.cssText = 'width:100%; flex:1; min-height:36px; border:none; outline:none; background:transparent; color:#ffffff !important; font-size:14.5px; font-weight:700; text-align:center; font-family:"Inter",sans-serif; resize:none; padding:4px 6px; box-sizing:border-box; line-height:1.35; margin:2px 0;';
+      card2.appendChild(transcriptInput);
+
+      // Bottom Live Validator Strip
+      const validatorCard = document.createElement('div');
+      validatorCard.id = `desc-validator-${row.id}`;
+      validatorCard.style.cssText = 'width:100%; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.25; box-sizing:border-box; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+      card2.appendChild(validatorCard);
+
+      main.appendChild(card2);
+
+      let hasTriggeredSuccess = false;
+      const runLiveValidation = (text, isInitial = false) => {
+        answeredMap[row.id] = text;
+        const valRes = typeof validateDescriptionSentence === 'function' ? validateDescriptionSentence(text, targetDemo) : { valid: false, error: 'Loading validator...' };
+        if (valRes.valid) {
+          card2.style.borderColor = 'var(--grade-a)';
+          card2.style.boxShadow = '0 0 20px rgba(0, 192, 0, 0.45)';
+          validatorCard.style.background = 'rgba(0, 192, 0, 0.15)';
+          validatorCard.style.border = '1px solid var(--grade-a)';
+          validatorCard.style.color = '#f8fafc';
+          validatorCard.innerHTML = `<span style="font-weight:800; color:var(--grade-a);">${getSvgIcon('check-circle', 13)} Perfect:</span> ${valRes.adjectives.map(a => `<span style="color:#95ff00;font-weight:700;">${a.word}</span> <span style="color:#94a3b8;">(${a.category})</span>`).join(' → ')}`;
+          if (!hasTriggeredSuccess && !isInitial) {
+            hasTriggeredSuccess = true;
+            playSuccessChime();
+            triggerHapticFeedback([40, 30, 60]);
+          }
+        } else if (text && text.trim().length > 0) {
+          hasTriggeredSuccess = false;
+          card2.style.borderColor = '#ea580c';
+          card2.style.boxShadow = '0 0 16px rgba(234, 88, 12, 0.25)';
+          validatorCard.style.background = 'rgba(255, 140, 0, 0.12)';
+          validatorCard.style.border = '1px solid #ea580c';
+          validatorCard.style.color = '#fed7aa';
+          validatorCard.innerHTML = `<span style="font-weight:700; color:#ea580c;">⚠ Notice:</span> ${escapeHtml(valRes.error)}`;
+        } else {
+          hasTriggeredSuccess = false;
+          card2.style.borderColor = 'rgba(255, 255, 255, 0.12)';
+          card2.style.boxShadow = '0 4px 16px rgba(0,0,0,0.3)';
+          validatorCard.style.background = 'rgba(56, 189, 248, 0.08)';
+          validatorCard.style.border = '1px solid rgba(56, 189, 248, 0.25)';
+          validatorCard.style.color = '#bae6fd';
+          validatorCard.innerHTML = `<span>Pattern: <strong>${formulaPattern}</strong></span>`;
+        }
+      };
+
+      transcriptInput.addEventListener('input', () => {
+        runLiveValidation(transcriptInput.value);
+        updateActiveChipOnly(row.id, transcriptInput.value);
+        scheduleDebouncedAutoSave(row.id, transcriptInput.value, 800);
+      });
+      transcriptInput.addEventListener('blur', () => {
+        answeredMap[row.id] = transcriptInput.value.trim();
+        persistLocalBuffer();
+        autoSave(row.id, transcriptInput.value.trim());
+      });
+
+      // =========================================================================
+      // CARD 3: SPEECH INPUT / MIC CARD (Language Select + Big Mic Button + Live Speech)
+      // =========================================================================
+      const card3 = document.createElement('div');
+      card3.id = `desc-mic-card-${row.id}`;
+      card3.className = 'desc-card desc-card-mic notranslate';
+      card3.setAttribute('translate', 'no');
+      card3.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:0 !important; margin:0 auto !important; box-sizing:border-box !important; background:linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important; border:1.5px solid rgba(0, 192, 0, 0.25) !important; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; gap:6px; padding:8px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+
+      // Language Select pill in top-right of Card 3
+      const langSelect = document.createElement('select');
+      langSelect.className = 'speech-lang-select';
+      langSelect.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:11px; font-weight:700; outline:none; height:24px; cursor:pointer;';
+      langSelect.innerHTML = `<option value="en-US">EN-US</option><option value="en-GB">EN-UK</option>`;
+      card3.appendChild(langSelect);
+
+      // Large Prominent Microphone Button
+      const micBtn = document.createElement('button');
+      micBtn.type = 'button';
+      micBtn.className = 'speech-mic-btn-lg';
+      micBtn.title = 'Speak your description sentence';
+      micBtn.style.cssText = 'width:52px; height:52px; border-radius:50%; border:3px solid rgba(0,192,0,0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.2s ease; box-shadow:0 4px 16px rgba(0,192,0,0.3);';
+      micBtn.innerHTML = '<svg style="width:24px; height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      card3.appendChild(micBtn);
+
+      // Mic Status Text
+      const micStatus = document.createElement('div');
+      micStatus.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; text-align:center;';
+      micStatus.textContent = 'Tap to Speak (Speech-to-Text)';
+      card3.appendChild(micStatus);
+
+      main.appendChild(card3);
+
+      // Mic Speech Recognition Handler
       micBtn.addEventListener('click', () => {
         if (currentActiveSpeechSession?.isListening()) {
           currentActiveSpeechSession.stop();
+          micBtn.style.transform = 'scale(1)';
+          micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
+          micStatus.innerHTML = '<span style="color:#94a3b8;">Tap to Speak (Speech-to-Text)</span>';
           return;
         }
 
         abortActiveSpeechSession();
+        micBtn.style.transform = 'scale(1.1)';
+        micBtn.style.boxShadow = '0 0 20px rgba(0,255,0,0.6)';
+        micStatus.innerHTML = '<span style="color:var(--grade-a);font-weight:800;">● Listening... Speak your description</span>';
 
         currentActiveSpeechSession = createSpeechSession({
           lang: langSelect.value,
           onResult: (transcript, isFinal) => {
             transcriptInput.value = transcript;
+            answeredMap[row.id] = transcript;
+            updateActiveChipOnly(row.id, transcript);
             runLiveValidation(transcript);
             if (isFinal) {
               autoSave(row.id, transcript);
             }
           },
+          onEnd: () => {
+            micBtn.style.transform = 'scale(1)';
+            micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
+            if (transcriptInput.value && transcriptInput.value.trim().length > 0) {
+              micStatus.innerHTML = '<span style="color:var(--grade-a);font-weight:700;">● Speech Captured</span>';
+            } else {
+              micStatus.innerHTML = '<span style="color:#94a3b8;">Tap to Speak (Speech-to-Text)</span>';
+            }
+          },
           onError: (err) => {
             console.warn('Speech recognition error:', err);
+            micBtn.style.transform = 'scale(1)';
+            micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
+            micStatus.innerHTML = '<span style="color:#ef4444;">Mic Error — Tap to Retry</span>';
           }
         });
 
         currentActiveSpeechSession.start();
       });
 
-      // Initial state
-      updatePhotoView(existingPhoto);
-      runLiveValidation(savedAnswer || '');
+      // Initial State
+      updatePhotoView(existingPhoto, true);
+      runLiveValidation(savedAnswer || '', true);
     }
 
     function renderSpeech(area, controlArea, row, savedAnswer, snap = {}) {
@@ -3484,6 +3647,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         answeredMap[row.id] = dd.value.trim();
       }
 
+      // 4. Description / Point & Speak Transcript Input
+      const descEl = document.getElementById(`desc-transcript-${row.id}`);
+      if (descEl && descEl.value != null && descEl.value.trim()) {
+        answeredMap[row.id] = descEl.value.trim();
+      }
+
       persistLocalBuffer();
     }
 
@@ -3492,7 +3661,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       cancelMcAutoAdvance();
       abortActiveSpeechSession();
       const activeMap = window.answeredMap || answeredMap;
-      const answered = allAnswerRows.filter(r => !!(activeMap[r.id] && activeMap[r.id].trim())).length;
+      const answered = allAnswerRows.filter(r => hasAnswer(activeMap[r.id])).length;
       const total = allAnswerRows.length;
       const unanswered = total - answered;
 
@@ -3535,7 +3704,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       let targetLocalIdx = -1;
       for (let i = currentIndex + 1; i < answerRows.length; i++) {
         const r = answerRows[i];
-        if (!activeMap[r.id] || !activeMap[r.id].trim()) {
+        if (!hasAnswer(activeMap[r.id])) {
           targetLocalIdx = i;
           break;
         }
@@ -3545,7 +3714,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (targetLocalIdx === -1) {
         for (let i = 0; i <= currentIndex; i++) {
           const r = answerRows[i];
-          if (!activeMap[r.id] || !activeMap[r.id].trim()) {
+          if (!hasAnswer(activeMap[r.id])) {
             targetLocalIdx = i;
             break;
           }
@@ -3571,7 +3740,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         showToast(`Jumped to Question ${globalNum}`, 'info');
       } else if (testsections && testsections.length > 1) {
         // 3. Current section is completely answered! Look across allAnswerRows for other sections
-        const nextUnansweredRow = allAnswerRows.find(r => !activeMap[r.id] || !activeMap[r.id].trim());
+        const nextUnansweredRow = allAnswerRows.find(r => !hasAnswer(activeMap[r.id]));
         if (nextUnansweredRow) {
           let snap = nextUnansweredRow.question_snapshot;
           if (typeof snap === 'string') { try { snap = JSON.parse(snap); } catch { snap = {}; } }
@@ -3687,9 +3856,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         sessionStorage.setItem('topscore_fallback_payload_' + attemptData.id, JSON.stringify(payload));
       } catch (_) {}
 
+      const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
+      const activeSec = (typeof requestedSection !== 'undefined' ? requestedSection : '') || (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+      const secParam = activeSec ? `&section=${encodeURIComponent(activeSec)}` : '';
+
       try {
-        const targetStatus = isAuto ? 'auto_submitted' : 'submitted';
-        const activeSec = (typeof requestedSection !== 'undefined' ? requestedSection : '') || (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
         const result = await submitTest(attemptData.id, payload, { status: targetStatus, section: activeSec });
 
         if (String(testData?.test_type).toLowerCase() === 'exam' || ['EXAM', 'TEST'].includes(testData?.category)) {
@@ -3722,12 +3893,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
         hideLoading();
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
-        const secParam = activeSec ? `&section=${encodeURIComponent(activeSec)}` : '';
         window.location.href = `result.html?attempt_id=${encodeURIComponent(attemptData.id)}${secParam}`;
       } catch(e) {
         console.error('Submit error:', e);
         hideLoading();
-        const secParam = activeSec ? `&section=${encodeURIComponent(activeSec)}` : '';
         if (isAuto) {
           // 1. First fallback: Call server-authoritative emergency_submit_attempt RPC to score answers in PostgreSQL
           try {

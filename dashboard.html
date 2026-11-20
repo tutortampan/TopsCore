@@ -54,25 +54,24 @@
 
 
 
-  <!-- Top Navigation (Option B: Title on Left, Profile + Logout Actions on Right) -->
-  <!-- Top Navigation (60px: Door Icon Left, Class Name Center, Logout Right) -->
+  <!-- Top Navigation (60px: Logout Left, Class Name Center, Door/Lobby Icon Right) -->
   <header class="dashboard-header" id="dashboard-top-header">
     <div class="dashboard-header-left">
-      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Class Lobby" aria-label="Class Lobby">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"></path>
-          <path d="M2 20h20"></path>
-          <circle cx="14" cy="12" r="1.5" fill="currentColor"></circle>
+      <button class="header-action-btn header-logout-btn" id="logout-btn" title="Logout / Exit" aria-label="Logout / Exit">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
       </button>
     </div>
     <div class="dashboard-header-brand" id="dashboard-header-class-name">TopsCore</div>
     <div class="dashboard-header-right dashboard-header-actions" style="display:flex;align-items:center;gap:8px;">
-      <button class="header-action-btn header-logout-btn" id="logout-btn" title="Logout" aria-label="Logout">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
+      <button class="header-action-btn header-door-btn" id="btn-change-class" title="Class Lobby" aria-label="Class Lobby">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 20V6a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14"></path>
+          <path d="M2 20h20"></path>
+          <circle cx="14" cy="12" r="1.5" fill="currentColor"></circle>
         </svg>
       </button>
     </div>
@@ -177,7 +176,7 @@
       <!-- Pillar 1: GRADE -->
       <div class="perf-pillar perf-pillar-grade">
         <div class="perf-pillar-val-wrap">
-          <span id="stat-overall-grade-value" class="perf-pillar-val">—</span>
+          <span id="stat-overall-grade-value" class="perf-pillar-val">-</span>
         </div>
       </div>
 
@@ -186,7 +185,7 @@
       <!-- Pillar 2: GRADE DESCRIPTION -->
       <div class="perf-pillar perf-pillar-desc">
         <div class="perf-pillar-val-wrap">
-          <span class="achievement-status-text perf-pillar-val" id="dashboard-achievement-text">LET'S GO</span>
+          <span class="achievement-status-text perf-pillar-val" id="dashboard-achievement-text">START</span>
         </div>
       </div>
 
@@ -195,7 +194,7 @@
       <!-- Pillar 3: RATE -->
       <div class="perf-pillar perf-pillar-rate">
         <div class="perf-pillar-val-wrap">
-          <span id="bottom-stat-avg-score" class="perf-pillar-val">—</span>
+          <span id="bottom-stat-avg-score" class="perf-pillar-val">-</span>
         </div>
       </div>
     </div>

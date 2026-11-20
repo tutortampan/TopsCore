@@ -48,6 +48,7 @@
 
   // ─── FIVE SERVER (Live Preview for TopsCore HTML/CSS/JS) ────────────
   "fiveServer.port": 5500,
+  "fiveServer.host": "0.0.0.0",
   "fiveServer.openTerminal": false,
   "fiveServer.highlight": true,
   "fiveServer.watch": [
@@ -64,6 +65,11 @@
     "*.json",
     "*.md"
   ],
+
+  // ─── LIVE SERVER (Ritwick Dey fallback compatibility) ───────────────
+  "liveServer.settings.port": 5500,
+  "liveServer.settings.host": "0.0.0.0",
+  "liveServer.settings.useLocalIp": true,
 
   // ─── EDITOR UX ──────────────────────────────────────────────────────
   "editor.tabSize": 2,

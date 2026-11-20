@@ -40,9 +40,9 @@
      TOPSCORE SINGLE AUTHORITATIVE COLOR MASTER VAULT
      Strictly 1 single source of truth across Result, Admin, & Student
      ============================================================ */
-  --grade-star: #ff2d87;
-  --grade-star-rgb: 255, 45, 135;
-  --grade-star-glow: rgba(255, 45, 135, 0.5);
+  --grade-star: #c084fc;
+  --grade-star-rgb: 192, 132, 252;
+  --grade-star-glow: rgba(192, 132, 252, 0.5);
 
   --grade-a: #00c000ff;
   --grade-a-rgb: 0, 192, 0;

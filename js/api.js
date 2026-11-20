@@ -735,7 +735,7 @@ export async function fetchAllStudentAttempts(studentId) {
     await sb.rpc('auto_close_expired_attempts');
   } catch (_) {}
   const { data, error } = await sb.from('attempts')
-    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at, tests(id, class_id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
@@ -754,7 +754,7 @@ export async function fetchAllStudentAttempts(studentId) {
   const testIds = [...new Set(attempts.map(a => a.test_id).filter(Boolean))];
   let testMap = {};
   if (testIds.length > 0) {
-    const { data: asmData } = await sb.from('tests').select('id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name)').in('id', testIds);
+    const { data: asmData } = await sb.from('tests').select('id, class_id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name)').in('id', testIds);
     if (asmData) asmData.forEach(a => { testMap[a.id] = a; });
   }
 
@@ -1564,7 +1564,7 @@ export async function startTest(studentId, testId) {
     if (prereqId && !isStandaloneTryout) {
     const [prereqAttRes, prereqTestRes] = await Promise.all([
       sb.from('attempts')
-        .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked, is_remedial')
+        .select('score, percentage, effective_score, status, is_forgiven, is_remedial_unlocked, is_remedial, total_questions, correct_count, forgiven_reason')
         .eq('student_id', studentId)
         .eq('test_id', prereqId)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']),
@@ -1582,6 +1582,12 @@ export async function startTest(studentId, testId) {
     const defaultExamMin = Number(testSettings?.examMinScore) || 60;
 
     const isPrereqExam = prereqTest ? isWeeklyExam(prereqTest) : false;
+    const isPrereqUnified = Boolean(
+      prereqTest?.payload?.is_unified === true ||
+      prereqTest?.payload?.category === 'unified' ||
+      prereqTest?.category === 'unified' ||
+      (prereqTest?.test_subtype && prereqTest.test_subtype.startsWith('UNIFIED'))
+    );
 
     // Prerequisite passing threshold:
     // Must evaluate the prerequisite test's threshold (prereqTest), NOT the current test's threshold (asmData).
@@ -1593,23 +1599,67 @@ export async function startTest(studentId, testId) {
     const reqScore = explicitOverride !== null ? explicitOverride : prereqMin;
 
     let passCount = 0;
-    prereqAttempts.forEach(a => {
-      if (a.is_forgiven) {
-        passCount = Math.max(passCount, targetReps);
-      } else {
+    let wordsPasses = 0;
+    let phrasesPasses = 0;
+
+    if (isPrereqUnified && !isPrereqExam) {
+      prereqAttempts.forEach(a => {
+        const fr = String(a.forgiven_reason || '');
+        const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+        if (mMatch) {
+          const reps = Math.min(targetReps, parseInt(mMatch[1], 10));
+          const comp = (mMatch[3] || '').toUpperCase();
+          if (comp === 'PHRASES') phrasesPasses = Math.max(phrasesPasses, reps);
+          else if (comp === 'WORDS') wordsPasses = Math.max(wordsPasses, reps);
+          else {
+            wordsPasses = Math.max(wordsPasses, reps);
+            phrasesPasses = Math.max(phrasesPasses, reps);
+          }
+          return;
+        }
+        if (a.is_forgiven) {
+          wordsPasses = Math.max(wordsPasses, targetReps);
+          phrasesPasses = Math.max(phrasesPasses, targetReps);
+          return;
+        }
         const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
         const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
         if (pct >= reqScore || (isRem && pct >= 60)) {
-          passCount++;
+          const tQ = Number(a.total_questions || 0);
+          const cCount = Number(a.correct_count || a.score || 0);
+          const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10) || /PHRASES/i.test(fr);
+          if (isPhrases) phrasesPasses++;
+          else wordsPasses++;
         }
-      }
-    });
+      });
+      passCount = Math.min(wordsPasses, phrasesPasses);
+    } else {
+      prereqAttempts.forEach(a => {
+        const fr = String(a.forgiven_reason || '');
+        const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)/i);
+        if (mMatch) {
+          passCount = Math.max(passCount, Math.min(targetReps, parseInt(mMatch[1], 10)));
+          return;
+        }
+        if (a.is_forgiven) {
+          passCount = Math.max(passCount, targetReps);
+        } else {
+          const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
+          const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+          if (pct >= reqScore || (isRem && pct >= 60)) {
+            passCount++;
+          }
+        }
+      });
+    }
 
     const requiredPasses = isPrereqExam ? 1 : targetReps;
     if (passCount < requiredPasses) {
       const pErr = isPrereqExam
         ? new Error(`Prerequisite not completed. You must pass "${prereqTest?.title || 'the prerequisite exam'}" with at least ${reqScore}% before starting this test.`)
-        : new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`);
+        : (isPrereqUnified
+            ? new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery on both Words (${wordsPasses}/${targetReps}) and Phrases (${phrasesPasses}/${targetReps}) with at least ${reqScore}% on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`)
+            : new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`));
       pErr.code = 'PREREQUISITE_NOT_MET';
       pErr.status = 403;
       pErr.prereqTestId = prereqTest?.id;
@@ -1756,29 +1806,69 @@ export async function startTest(studentId, testId) {
       const targetReps = Number(testSettings?.taskRepetitions) || 7;
       const priorTaskIds = filteredPriorTasks.map(t => t.id);
       const { data: priorTaskAttempts } = await sb.from('attempts')
-        .select('test_id, percentage, effective_score, status, is_forgiven')
+        .select('test_id, percentage, effective_score, status, is_forgiven, total_questions, correct_count, score, forgiven_reason')
         .eq('student_id', studentId)
         .in('test_id', priorTaskIds)
         .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
       const taskMap = Object.fromEntries(filteredPriorTasks.map(t => [t.id, t]));
       const passCountByTask = {};
+      const wordsPassByTask = {};
+      const phrasesPassByTask = {};
+
       (priorTaskAttempts || []).forEach(att => {
+        const tid = att.test_id;
+        const tObj = taskMap[tid];
+        const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+        const fr = String(att.forgiven_reason || '');
+        const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
+
+        if (mMatch) {
+          const reps = Math.min(targetReps, parseInt(mMatch[1], 10));
+          const comp = (mMatch[3] || '').toUpperCase();
+          if (comp === 'PHRASES') phrasesPassByTask[tid] = Math.max(phrasesPassByTask[tid] || 0, reps);
+          else if (comp === 'WORDS') wordsPassByTask[tid] = Math.max(wordsPassByTask[tid] || 0, reps);
+          else {
+            wordsPassByTask[tid] = Math.max(wordsPassByTask[tid] || 0, reps);
+            phrasesPassByTask[tid] = Math.max(phrasesPassByTask[tid] || 0, reps);
+          }
+          passCountByTask[tid] = Math.max(passCountByTask[tid] || 0, reps);
+          return;
+        }
+
         if (att.is_forgiven) {
-          passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, targetReps);
-        } else {
-          const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-          const minReq = Number(taskMap[att.test_id]?.minimum_required_score || taskMap[att.test_id]?.payload?.min_score || 50);
-          if (pct >= minReq) {
-            passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+          passCountByTask[tid] = Math.max(passCountByTask[tid] || 0, targetReps);
+          wordsPassByTask[tid] = Math.max(wordsPassByTask[tid] || 0, targetReps);
+          phrasesPassByTask[tid] = Math.max(phrasesPassByTask[tid] || 0, targetReps);
+          return;
+        }
+
+        const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
+        const minReq = Number(taskMap[tid]?.minimum_required_score || taskMap[tid]?.payload?.min_score || 50);
+        if (pct >= minReq) {
+          if (isUni) {
+            const tQ = Number(att.total_questions || 0);
+            const cCount = Number(att.correct_count || att.score || 0);
+            const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10) || /PHRASES/i.test(fr);
+            if (isPhrases) phrasesPassByTask[tid] = (phrasesPassByTask[tid] || 0) + 1;
+            else wordsPassByTask[tid] = (wordsPassByTask[tid] || 0) + 1;
+          } else {
+            passCountByTask[tid] = (passCountByTask[tid] || 0) + 1;
           }
         }
       });
 
-      const unmasteredTask = filteredPriorTasks.find(t => (passCountByTask[t.id] || 0) < targetReps);
+      const unmasteredTask = filteredPriorTasks.find(t => {
+        const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+        if (isUni) {
+          return (wordsPassByTask[t.id] || 0) < targetReps || (phrasesPassByTask[t.id] || 0) < targetReps;
+        }
+        return (passCountByTask[t.id] || 0) < targetReps;
+      });
+
       if (unmasteredTask) {
         const unmasteredMin = unmasteredTask.minimum_required_score || unmasteredTask.payload?.min_score || 50;
-        const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${targetReps} passes with at least ${unmasteredMin}%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
+        const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery on both Words and Phrases (${targetReps} passes each with at least ${unmasteredMin}%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
         topErr.code = 'TOPIC_MASTERY_NOT_MET';
         topErr.status = 403;
         topErr.prereqTestId = unmasteredTask?.id;
@@ -1894,26 +1984,31 @@ export async function startTest(studentId, testId) {
   if (!answers || answers.length === 0) {
     const questions = await generateTestQuestions(sb, test);
     if (questions && questions.length > 0) {
+      const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
       const answerRows = questions.map((sq, idx) => ({
         attempt_id: attempt.id,
-        question_id: sq.question_id || null,
+        question_id: isUuid(sq.question_id) ? sq.question_id : null,
         question_snapshot: {
-          question_text: sq.question_text_snapshot,
-          word_type: sq.word_type_snapshot,
-          topic: sq.topic_snapshot,
-          theme: sq.theme_snapshot || test.payload?.theme_code || "General",
+          item_code: sq.item_code || sq.question_id || null,
+          question_text: sq.question_text_snapshot || sq.question_text || sq.prompt,
+          word_type: sq.word_type_snapshot || sq.word_type,
+          topic: sq.topic_snapshot || sq.topic,
+          theme: sq.theme_snapshot || sq.theme || test.payload?.theme_code || "General",
           theme_code: sq.theme_code || test.payload?.theme_code,
-          category: sq.category_snapshot || test.payload?.category || 'vocab',
+          category: sq.category_snapshot || sq.category || test.payload?.category || 'vocab',
           display_order: sq.display_order ?? (idx + 1),
-          answer_type: sq.answer_type || 'spoken',
+          answer_type: sq.answer_type || test.answer_type || test.payload?.answer_type || 'spoken',
           options_snapshot: sq.options_snapshot || [],
           test_section: sq.test_section || null,
           section_label: sq.section_label || null,
-          section_id: sq.test_section || 'default'
+          section_id: sq.test_section || 'default',
+          target_demonstrative: sq.target_demonstrative || null,
+          module: sq.module || test.payload?.module || (test.module_type === 'POINT_AND_SPEAK' ? 'description' : null)
         },
-        topic_snapshot: sq.topic_snapshot,
-        accepted_answers_snapshot: sq.accepted_answers_snapshot,
-        correct_answer_snapshot: Array.isArray(sq.accepted_answers_snapshot) ? sq.accepted_answers_snapshot.join('; ') : String(sq.accepted_answers_snapshot || ''),
+        topic_snapshot: sq.topic_snapshot || sq.topic,
+        question_type_snapshot: sq.word_type_snapshot || sq.word_type,
+        accepted_answers_snapshot: sq.accepted_answers_snapshot || sq.accepted_answers,
+        correct_answer_snapshot: Array.isArray(sq.accepted_answers_snapshot || sq.accepted_answers) ? (sq.accepted_answers_snapshot || sq.accepted_answers).join('; ') : String(sq.accepted_answers_snapshot || sq.accepted_answers || ''),
         student_answer: null,
         score: 0
       }));
@@ -2023,18 +2118,41 @@ export async function submitTest(attemptId, answersMap, options = {}) {
   if (!result) {
     // Server-authoritative fallback via PostgreSQL RPC (strictly server-side scoring & RLS compliance)
     const sb = await getSupabase();
+
+    // Pre-check: If this attempt contains Description module questions, PostgreSQL RPC does not contain
+    // the Royal Order NLP grammar engine. Route directly to authoritative client NLP engine.
+    let isDescriptionAttempt = false;
     try {
-      const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
-        p_attempt_id: attemptId,
-        p_answers: answersMap,
-        p_status: targetStatus
-      });
+      const { data: sampleRow } = await sb.from('attempt_answers')
+        .select('question_snapshot, question_type_snapshot')
+        .eq('attempt_id', attemptId)
+        .limit(1);
+      if (sampleRow && sampleRow[0]) {
+        const snap = typeof sampleRow[0].question_snapshot === 'string'
+          ? JSON.parse(sampleRow[0].question_snapshot || '{}')
+          : (sampleRow[0].question_snapshot || {});
+        if (snap?.answer_type === 'description' || sampleRow[0].question_type_snapshot === 'Description' || snap?.module === 'description') {
+          isDescriptionAttempt = true;
+        }
+      }
+    } catch (_) {}
 
-      if (rpcErr) throw rpcErr;
-      result = rpcData;
-    } catch (rpcErr) {
-      console.warn('PostgreSQL RPC fallback failed, executing direct client submit fallback:', rpcErr);
+    if (!isDescriptionAttempt) {
+      try {
+        const { data: rpcData, error: rpcErr } = await sb.rpc('emergency_submit_attempt', {
+          p_attempt_id: attemptId,
+          p_answers: answersMap,
+          p_status: targetStatus
+        });
 
+        if (rpcErr) throw rpcErr;
+        result = rpcData;
+      } catch (rpcErr) {
+        console.warn('PostgreSQL RPC fallback failed, executing direct client submit fallback:', rpcErr);
+      }
+    }
+
+    if (!result) {
       // Direct client evaluation fallback (guarantees student NEVER fails to submit or loses score)
       const { data: attempt } = await sb.from('attempts').select('id, is_remedial_unlocked').eq('id', attemptId).single();
       const { data: attemptAnswers } = await sb.from('attempt_answers').select('id, student_answer, accepted_answers_snapshot, correct_answer_snapshot, question_snapshot, question_type_snapshot').eq('attempt_id', attemptId);
@@ -2051,25 +2169,33 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       let totalPoints = 0;
       let correctCount = 0;
       const totalQuestions = scoredRows.length || 0;
+      const clientUpdatePromises = [];
 
       for (const row of (attemptAnswers || [])) {
         const isInSubmit = !isPartialSubmit || submittedIds.has(row.id);
         if (!isInSubmit) continue; // Skip non-submitted rows (e.g. other section) to avoid overwriting or penalizing
 
         const studentAns = answersDict.has(row.id) ? answersDict.get(row.id) : (row.student_answer || '');
-        const qType = row.question_snapshot?.answer_type || row.question_type_snapshot || 'written';
-        const evalRes = evaluateAnswer(studentAns, row.accepted_answers_snapshot || row.correct_answer_snapshot, qType);
+        const snap = typeof row.question_snapshot === 'string'
+          ? (() => { try { return JSON.parse(row.question_snapshot); } catch { return {}; } })()
+          : (row.question_snapshot || {});
+        const qType = snap?.answer_type || row.question_type_snapshot || 'written';
+        const targetDemo = snap?.target_demonstrative || row.accepted_answers_snapshot || row.correct_answer_snapshot;
+        const evalRes = evaluateAnswer(studentAns, targetDemo, qType);
         const score = evalRes.score || (evalRes.is_correct ? 1 : 0);
         totalPoints += score;
         if (score >= 1) correctCount++;
 
-        await sb.from('attempt_answers').update({
+        clientUpdatePromises.push(sb.from('attempt_answers').update({
           student_answer: studentAns,
           score: score,
           is_correct: score >= 1,
           evaluation_result: score >= 1 ? 'correct' : (score > 0 ? 'minor' : 'incorrect'),
           updated_at: new Date().toISOString()
-        }).eq('id', row.id);
+        }).eq('id', row.id));
+      }
+      if (clientUpdatePromises.length > 0) {
+        await Promise.all(clientUpdatePromises);
       }
 
       const pct = totalQuestions > 0 ? Math.round((totalPoints / totalQuestions) * 10000) / 100 : 0;
@@ -2137,24 +2263,32 @@ export async function submitTest(attemptId, answersMap, options = {}) {
     let newScore = 0;
     let newCorrect = 0;
 
+    const rescoreUpdatePromises = [];
     for (const r of scoredList) {
-      const qType = r.question_snapshot?.answer_type || r.question_type_snapshot || 'written';
-      const ev = evaluateAnswer(r.student_answer, r.accepted_answers_snapshot || r.correct_answer_snapshot, qType);
+      const snap = typeof r.question_snapshot === 'string'
+        ? (() => { try { return JSON.parse(r.question_snapshot); } catch { return {}; } })()
+        : (r.question_snapshot || {});
+      const qType = snap?.answer_type || r.question_type_snapshot || 'written';
+      const targetDemo = snap?.target_demonstrative || r.accepted_answers_snapshot || r.correct_answer_snapshot;
+      const ev = evaluateAnswer(r.student_answer, targetDemo, qType);
       const trueScore = ev.score || 0;
       if (trueScore > (r.score || 0)) {
         needsRescore = true;
-        await sb.from('attempt_answers').update({
+        rescoreUpdatePromises.push(sb.from('attempt_answers').update({
           score: trueScore,
           is_correct: trueScore >= 1,
           evaluation_result: ev.result || (trueScore >= 1 ? 'correct' : 'minor'),
           updated_at: new Date().toISOString()
-        }).eq('id', r.id);
+        }).eq('id', r.id));
         newScore += trueScore;
         if (trueScore >= 1) newCorrect++;
       } else {
         newScore += (r.score || 0);
         if (r.is_correct || r.score >= 1) newCorrect++;
       }
+    }
+    if (rescoreUpdatePromises.length > 0) {
+      await Promise.all(rescoreUpdatePromises);
     }
 
     if (needsRescore && totalQ > 0) {
@@ -4713,6 +4847,88 @@ export async function adminApplyForgiven({
             created_at: nowIso,
             updated_at: nowIso
           });
+        }
+        affectedSet.add(`${sId}_${testId}`);
+
+      } else if (action === 'manual_reps' || (action === 'manual' && ta.reason && ta.reason.includes('MANUAL_REPS'))) {
+        let reps = 0;
+        let maxReps = Number(ta.maxReps || 7);
+        if (ta.reps != null) {
+          reps = Math.max(0, Math.min(maxReps, Number(ta.reps)));
+        } else if (ta.reason) {
+          const m = String(ta.reason).match(/MANUAL_REPS:?\s*(\d+)/i);
+          if (m) reps = Math.max(0, Math.min(maxReps, parseInt(m[1], 10)));
+        }
+
+        const passPct = 70.0; // Rule 2.4.1 / SSOT minimal passing 70% per process
+        const sc = Math.round(totalQ * (passPct / 100));
+        const manualReason = `[${adminLabel}] MANUAL_REPS: ${reps}/${maxReps}`;
+
+        const submittedAtts = existingAtts.filter(a =>
+          ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+        );
+
+        if (reps > 0) {
+          // Provide minimal passing score (70% / Grade C) for each repetition process
+          for (let r = 0; r < reps; r++) {
+            const isBest = (r === reps - 1);
+            if (r < submittedAtts.length) {
+              const att = submittedAtts[r];
+              updates.push({
+                id: att.id,
+                score: sc,
+                correct_count: sc,
+                total_questions: totalQ,
+                percentage: passPct,
+                effective_score: passPct,
+                grade: 'C',
+                status: 'submitted',
+                is_best_score: isBest,
+                is_forgiven: false,
+                forgiven_by: validForgivenBy,
+                forgiven_at: nowIso,
+                forgiven_reason: manualReason,
+                updated_at: nowIso
+              });
+            } else {
+              inserts.push({
+                student_id: sId,
+                test_id: testId,
+                attempt_number: r + 1,
+                started_at: nowIso,
+                expires_at: nowIso,
+                submitted_at: nowIso,
+                status: 'submitted',
+                score: sc,
+                correct_count: sc,
+                total_questions: totalQ,
+                percentage: passPct,
+                effective_score: passPct,
+                grade: 'C',
+                is_best_score: isBest,
+                is_forgiven: false,
+                forgiven_by: validForgivenBy,
+                forgiven_at: nowIso,
+                forgiven_reason: manualReason,
+                created_at: nowIso,
+                updated_at: nowIso
+              });
+            }
+          }
+          // Any remaining attempts beyond reps: mark is_best_score = false
+          for (let r = reps; r < submittedAtts.length; r++) {
+            const att = submittedAtts[r];
+            if (att.is_best_score) {
+              updates.push({ id: att.id, is_best_score: false, updated_at: nowIso });
+            }
+          }
+        } else if (reps === 0 && submittedAtts.length > 0) {
+          // Clean up dummy 0% attempts so unattempted tasks remain clean
+          for (const att of submittedAtts) {
+            if (Number(att.percentage || att.score || 0) === 0 && att.forgiven_reason && att.forgiven_reason.includes('MANUAL_REPS')) {
+              await sb.from('attempts').delete().eq('id', att.id);
+            }
+          }
         }
         affectedSet.add(`${sId}_${testId}`);
 
