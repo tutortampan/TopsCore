@@ -22,6 +22,7 @@ const PARALLEL_SUITES = [
   // Heavy/Browser Playwright tests prioritized first to maximize parallel overlap
   'scripts/test_unified_test_room_ratios.mjs',
   'scripts/test_admin_headers_footers_standardization.mjs',
+  'scripts/test_test_modes_runtime_guard.mjs',
   // Fast unit, DOM & AST suites
   'scripts/test_tutor_role_rbac.mjs',
   'scripts/test_vocab_vault_and_edit_mode.mjs',

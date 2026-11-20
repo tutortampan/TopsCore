@@ -119,6 +119,7 @@ if (hasVocabChange) {
 }
 
 if (hasTestEngineChange) {
+  suitesToRun.push({ name: 'Question Modes Runtime Guard', script: 'scripts/test_test_modes_runtime_guard.mjs' });
   suitesToRun.push({ name: 'Student Dashboard Exam Parity', script: 'scripts/test_student_dashboard_exam_parity.mjs' });
   suitesToRun.push({ name: 'Prerequisite Guard', script: 'scripts/test_prerequisite_deficit_guard.mjs' });
 }

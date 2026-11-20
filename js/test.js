@@ -1521,12 +1521,15 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             const confirmBtn = document.getElementById('btn-confirm-component-selection');
             const closeBtn = document.getElementById('close-component-modal');
 
-            const f = formatTestDisplay(testData);
             if (modalTitleEl) {
-              if (f.line2) {
-                modalTitleEl.innerHTML = `<span style="display:block;font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
+              const rawTTitle = String(testData.title || testData.name || 'Topic Test').replace(/\s+(?:Words|Phrases)\s+/i, ' ').trim();
+              const tParts = rawTTitle.split(/\s+[-–:]\s+/);
+              if (tParts.length > 1) {
+                const tLine1 = tParts[0].trim();
+                const tLine2 = tParts.slice(1).join(' - ').trim();
+                modalTitleEl.innerHTML = `<span style="display:block;font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(tLine1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;line-height:1.2;margin-top:2px;">${escHtml(tLine2)}</span>`;
               } else {
-                modalTitleEl.textContent = f.fullTitle || testData.title || 'Topic Test';
+                modalTitleEl.textContent = rawTTitle;
               }
             }
 
@@ -1600,30 +1603,71 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                 .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
               let wPasses = 0;
               let pPasses = 0;
+              let wBestPct = null;
+              let pBestPct = null;
               const minReq = Number(testData.minimum_required_score || testData.payload?.min_score || 60);
               (pastAtts || []).forEach(pa => {
                 const pct = parseFloat(pa.effective_score ?? pa.percentage ?? 0);
                 const isPass = pa.is_forgiven || pct >= minReq;
-                if (isPass) {
-                  const tQ = Number(pa.total_questions || 0);
-                  const cC = Number(pa.correct_count || pa.score || 0);
-                  if (tQ > 0 && tQ <= 20) pPasses++;
-                  else if (tQ > 20 && tQ <= 45) wPasses++;
-                  else if (cC > 15) wPasses++;
-                  else if (cC > 0 && cC <= 10) pPasses++;
-                  else wPasses++;
+                const tQ = Number(pa.total_questions || 0);
+                const cC = Number(pa.correct_count || pa.score || 0);
+                const isPhr = (tQ > 0 && tQ <= 20) || (cC > 0 && cC <= 10 && tQ <= 20);
+                if (isPhr) {
+                  if (isPass) pPasses++;
+                  if (pBestPct == null || pct > pBestPct) pBestPct = pct;
+                } else {
+                  if (isPass) wPasses++;
+                  if (wBestPct == null || pct > wBestPct) wBestPct = pct;
                 }
               });
-              const renderPips = (elId, cnt) => {
-                const el = document.getElementById(elId);
-                if (el) el.querySelectorAll('.pip-box').forEach((pip, i) => pip.classList.toggle('active', i < cnt));
-              };
-              renderPips('component-words-pips', wPasses);
-              renderPips('component-phrases-pips', pPasses);
+
+              const isEx = isExam(testData);
+              const wordsPips = document.getElementById('component-words-pips');
+              const phrasesPips = document.getElementById('component-phrases-pips');
+              const wordsExamView = document.getElementById('component-words-exam-view');
+              const phrasesExamView = document.getElementById('component-phrases-exam-view');
               const wStat = document.getElementById('component-words-status');
               const pStat = document.getElementById('component-phrases-status');
-              if (wStat) wStat.textContent = `${wPasses}/7`;
-              if (pStat) pStat.textContent = `${pPasses}/7`;
+
+              if (isEx) {
+                if (wordsPips) wordsPips.classList.add('hidden');
+                if (phrasesPips) phrasesPips.classList.add('hidden');
+                if (wordsExamView) {
+                  wordsExamView.classList.remove('hidden');
+                  wordsExamView.style.display = 'flex';
+                  if (wBestPct != null) {
+                    const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(wBestPct) : (wBestPct >= minReq ? 'var(--grade-a)' : 'var(--grade-d)');
+                    wordsExamView.innerHTML = `<span style="color:${clr};font-size:14px;font-weight:800;">Best: ${Math.round(wBestPct)}% ${wBestPct >= minReq ? '✓' : ''}</span>`;
+                  } else {
+                    wordsExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:12px;font-weight:600;">Not Taken Yet</span>`;
+                  }
+                }
+                if (phrasesExamView) {
+                  phrasesExamView.classList.remove('hidden');
+                  phrasesExamView.style.display = 'flex';
+                  if (pBestPct != null) {
+                    const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pBestPct) : (pBestPct >= minReq ? 'var(--grade-a)' : 'var(--grade-d)');
+                    phrasesExamView.innerHTML = `<span style="color:${clr};font-size:14px;font-weight:800;">Best: ${Math.round(pBestPct)}% ${pBestPct >= minReq ? '✓' : ''}</span>`;
+                  } else {
+                    phrasesExamView.innerHTML = `<span style="color:var(--clr-text-3);font-size:12px;font-weight:600;">Not Taken Yet</span>`;
+                  }
+                }
+                if (wStat) wStat.textContent = '';
+                if (pStat) pStat.textContent = '';
+              } else {
+                if (wordsPips) wordsPips.classList.remove('hidden');
+                if (phrasesPips) phrasesPips.classList.remove('hidden');
+                if (wordsExamView) wordsExamView.classList.add('hidden');
+                if (phrasesExamView) phrasesExamView.classList.add('hidden');
+                const renderPips = (elId, cnt) => {
+                  const el = document.getElementById(elId);
+                  if (el) el.querySelectorAll('.pip-box').forEach((pip, i) => pip.classList.toggle('active', i < cnt));
+                };
+                renderPips('component-words-pips', wPasses);
+                renderPips('component-phrases-pips', pPasses);
+                if (wStat) wStat.textContent = `${wPasses}/7`;
+                if (pStat) pStat.textContent = `${pPasses}/7`;
+              }
             } catch (_) {}
 
             updateModalSelection();
@@ -2415,6 +2459,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (activeTrans) {
         handleTranslationDetected(activeTrans);
       }
+
+      let answerArea, controlArea;
+      const isWritten = (answerType === 'written');
 
       if (answerType === 'description') {
         // Description Mode: Strict 3 Equal-Sized Cards (Camera -> Answer Display -> Speech/Mic)

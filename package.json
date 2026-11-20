@@ -18,6 +18,7 @@
     "test:assets": "node scripts/verify_html_assets.mjs",
     "test:health": "node scripts/verify_system_health.mjs",
     "test:input": "node scripts/test_input_modes_responsiveness.mjs",
+    "test:modes": "node scripts/test_test_modes_runtime_guard.mjs",
     "test:e2e": "playwright test",
     "preview:mobile": "node scripts/open_mobile_preview.mjs dashboard.html",
     "preview:result": "node scripts/open_mobile_preview.mjs result.html",

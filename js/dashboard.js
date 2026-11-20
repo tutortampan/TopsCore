@@ -1915,24 +1915,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const ICON_3C_GREEN_PLAY  = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="#ffffff"/></svg>';
       const ICON_4D_WHITE_ARROW_RIGHT = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>';
 
-      // Build unified display item & title via SSOT formatTestDisplay (AGENTS.md § 2.6 / DECISION-056)
+      // Resolve authentic test title per SSOT (AGENTS.md § 2.6 / DECISION-056)
       const displayItem = nextAssignment.isPair ? nextAssignment.wordsTest : activeTestItem;
-      const formattedTitleObj = formatTestDisplay(displayItem);
-      const displayTitle = formattedTitleObj.fullTitle;
+      const rawTestTitle = (displayItem?.title || displayItem?.name || '').replace(/\s+(?:Words|Phrases)\s+/i, ' ').trim();
+      const displayTitle = rawTestTitle || formatTestDisplay(displayItem).fullTitle;
 
       function formatNextTestTitleHtml(target) {
         const item = (target && typeof target === 'object') ? target : displayItem;
-        const formatted = formatTestDisplay(item);
-        const esc1 = escapeHtml(formatted.line1 || displayTitle);
-        const esc2 = escapeHtml(formatted.line2 || '');
-        if (esc2) {
-          return `<div class="next-test-title-single-line" style="display:flex; align-items:center; gap:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%;">
-            <span class="next-test-primary-name" style="color:#ffffff; font-weight:800; font-size:15px;" title="${esc1} - ${esc2}">${esc1}</span>
-            <span style="color:#64748b; font-weight:600; font-size:13px;">—</span>
-            <span class="next-test-topic-name" style="color:#38bdf8; font-weight:700; font-size:13px; text-transform:uppercase;" title="${esc2}">${esc2}</span>
-          </div>`;
+        const fullTitle = (item?.title || item?.name || (typeof target === 'string' ? target : '') || displayTitle || '').replace(/\s+(?:Words|Phrases)\s+/i, ' ').trim();
+        const parts = fullTitle.split(/\s+[-–:]\s+/);
+        if (parts.length > 1) {
+          const line1 = parts[0].trim();
+          const line2 = parts.slice(1).join(' - ').trim();
+          return `
+            <span class="next-test-primary-name" title="${escapeHtml(line1)}">${escapeHtml(line1)}</span>
+            <span class="next-test-topic-name" title="${escapeHtml(line2)}">${escapeHtml(line2)}</span>
+          `;
         }
-        return `<span class="next-test-primary-name" style="color:#ffffff; font-weight:800; font-size:15px;" title="${esc1}">${esc1}</span>`;
+        return `<span class="next-test-primary-name" title="${escapeHtml(fullTitle)}">${escapeHtml(fullTitle)}</span>`;
       }
 
       const isVocabClass = isVocabularyClass(validClass || activeTestItem);
@@ -2040,35 +2040,38 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const pBestPct = nextAssignment.isUnified
             ? (phrasesBestByTest[nextAssignment.phrasesTest?.id] ?? bestMap[nextAssignment.phrasesTest?.id] ?? 0)
             : (bestMap[nextAssignment.phrasesTest?.id] ?? 0);
-          const wordsLitCount = wBestPct >= 60 ? 7 : 0;
-          const phrasesLitCount = pBestPct >= 60 ? 7 : 0;
+          const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 60;
 
-          let wordsBoxesHtml = '';
-          let phrasesBoxesHtml = '';
-          for (let s = 1; s <= 7; s++) {
-            wordsBoxesHtml += `<span class="rainbow-box ${s <= wordsLitCount ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
-            phrasesBoxesHtml += `<span class="rainbow-box ${s <= phrasesLitCount ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
-          }
+          const renderExamCompStatus = (pct) => {
+            if (pct > 0) {
+              const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (pct >= reqMin ? 'var(--grade-a)' : 'var(--grade-d)');
+              const isPassed = pct >= reqMin;
+              return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:${clr};">Best: ${Math.round(pct)}% ${isPassed ? '✓' : ''}</span>`;
+            }
+            return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#94a3b8;">Not Taken Yet <span style="color:#64748b; font-size:10px;">(Passing: ${reqMin}%)</span></span>`;
+          };
 
           subIndicatorHtml = `
-            <div class="rainbow-pass-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
-              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+            <div class="exam-status-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
+              <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
                 <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
-                <div class="rainbow-pass-bar ${wordsLitCount >= 7 ? 'is-full-glow' : ''}">
-                  ${wordsBoxesHtml}
-                </div>
+                ${renderExamCompStatus(wBestPct)}
               </div>
-              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+              <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
                 <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
-                <div class="rainbow-pass-bar ${phrasesLitCount >= 7 ? 'is-full-glow' : ''}">
-                  ${phrasesBoxesHtml}
-                </div>
+                ${renderExamCompStatus(pBestPct)}
               </div>
             </div>
           `;
         } else {
           const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 60;
-          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:var(--quad-a); letter-spacing:0.04em; margin-top:4px;">Official Exam • Passing: ${reqMin}%</div>`;
+          const bestScore = bestMap[activeTestItem.id] ?? 0;
+          let examStatusText = `Official Exam • Passing: ${reqMin}%`;
+          if (bestScore > 0) {
+            const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(bestScore) : (bestScore >= reqMin ? 'var(--grade-a)' : 'var(--grade-d)');
+            examStatusText = `Official Exam • Best: <span style="color:${clr};font-weight:800;">${Math.round(bestScore)}% ${bestScore >= reqMin ? '✓' : ''}</span> • Passing: ${reqMin}%`;
+          }
+          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:var(--quad-a); letter-spacing:0.04em; margin-top:4px;">${examStatusText}</div>`;
         }
 
         if (isUnlocked && isWhitelisted) {
@@ -2469,11 +2472,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         if (badgeEl) badgeEl.textContent = data.badge || (data.isExam ? 'EXAM' : 'TOPIC TASK');
         if (titleEl) {
-          const f = formatTestDisplay({ title: data.title });
-          if (f.line2) {
-            titleEl.innerHTML = `<span style="display:block;font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(f.line1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;text-transform:uppercase;line-height:1.2;margin-top:2px;">${escHtml(f.line2)}</span>`;
+          const rawMTitle = String(data.title || 'Topic Test').replace(/\s+(?:Words|Phrases)\s+/i, ' ').trim();
+          const mParts = rawMTitle.split(/\s+[-–:]\s+/);
+          if (mParts.length > 1) {
+            const mLine1 = mParts[0].trim();
+            const mLine2 = mParts.slice(1).join(' - ').trim();
+            titleEl.innerHTML = `<span style="display:block;font-size:16px;font-weight:800;color:#fff;line-height:1.2;">${escHtml(mLine1)}</span><span style="display:block;font-size:12px;font-weight:700;color:#38bdf8;line-height:1.2;margin-top:2px;">${escHtml(mLine2)}</span>`;
           } else {
-            titleEl.textContent = data.title || 'Topic Test';
+            titleEl.textContent = rawMTitle;
           }
         }
         if (subtitleEl) subtitleEl.textContent = data.subtitle || 'Choose which part you want to work on:';
@@ -3656,26 +3662,22 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const targetReps = Number(window._classTestSettings?.taskRepetitions) || 7;
       const isExamItem = (t) => (t.test_type || '').toLowerCase() === 'exam' || /exam/i.test(t.title || '') || /exam/i.test(t.shell_code || '');
 
-      // Display ALL genuinely completed tests belonging to this active class (strictly requiring full task mastery / exam passing)
+      // Display ALL completed tests OR tests currently in progress / attempted for this active class (keeps display 100% in sync)
       const completedOnlyTests = publishedClassTests.filter(t => {
-        const best = bestByTest[t.id];
-        if (!best) return false;
-        if (best.is_forgiven) return true;
+        const hasAttempts = bestByTest[t.id] != null ||
+          (wordsPassCountByTest[t.id] || 0) > 0 ||
+          (phrasesPassCountByTest[t.id] || 0) > 0 ||
+          (passCountByTest[t.id] || 0) > 0 ||
+          (attempts || []).some(a => (a.test_id || a.tests?.id) === t.id);
 
-        const isEx = isExamItem(t);
-        const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+        if (!hasAttempts) return false;
 
-        if (isEx) {
-          if (isUni) {
-            return (wordsBestByTest[t.id]?.effPct >= 60 && phrasesBestByTest[t.id]?.effPct >= 60);
-          }
-          return best.effPct >= 60;
-        } else {
-          if (isUni) {
-            return (wordsPassCountByTest[t.id] || 0) >= targetReps && (phrasesPassCountByTest[t.id] || 0) >= targetReps;
-          }
-          return (passCountByTest[t.id] || 0) >= targetReps;
+        // Ensure bestByTest entry exists even if only in-progress
+        if (!bestByTest[t.id]) {
+          bestByTest[t.id] = { effPct: 0, grade: 'E', isRem: false, rawPct: 0, is_forgiven: false };
         }
+
+        return true;
       });
 
       if (countBadge) {
@@ -3732,7 +3734,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let html = '';
       sortedAccessible.forEach((t, idx) => {
         const num = idx + 1;
-        const best = bestByTest[t.id];
+        const best = bestByTest[t.id] || { effPct: 0, grade: 'E', isRem: false, rawPct: 0, is_forgiven: false };
 
         // Format test title per SSOT standard (AGENTS.md § 2.6.2)
         const formatted = typeof formatTestDisplay === 'function' ? formatTestDisplay(t) : null;
