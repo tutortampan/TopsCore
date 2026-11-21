@@ -126,7 +126,8 @@
 .datagrid-thead tr.datagrid-super-header-row th:not([rowspan="2"]),
 .datagrid-thead tr.datagrid-super-header-row th.super-hdr:not([rowspan="2"]),
 #class-attendance-grid thead tr:nth-child(1) th:not([rowspan="2"]),
-#blueprint-matrix-table thead tr.bp-super-header-row th:not([rowspan="2"]) {
+#blueprint-matrix-table thead tr.bp-super-header-row th:not([rowspan="2"]),
+.classes-hub-workspace table thead tr:nth-child(1) th:not([rowspan="2"]) {
   position: sticky !important;
   top: 0 !important;
   z-index: 20 !important;
@@ -150,7 +151,8 @@
 th.datagrid-sub-header,
 th.sub-hdr,
 #class-attendance-grid thead tr:nth-child(2) th,
-#blueprint-matrix-table thead tr:nth-child(2) th {
+#blueprint-matrix-table thead tr:nth-child(2) th,
+.classes-hub-workspace table thead tr:nth-child(2) th {
   position: sticky !important;
   top: 30px !important;
   z-index: 19 !important;
@@ -1124,12 +1126,14 @@ th.super-th {
   top: 0 !important;
   left: 0 !important;
   z-index: 37 !important;
-  background: #0b1120 !important;
+  background: #1e293b !important;
   color: #ffffff !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
   border-left: 2px solid rgba(255, 255, 255, 0.28) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
   height: 30px !important;
   line-height: 30px !important;
   vertical-align: middle !important;
@@ -1137,33 +1141,40 @@ th.super-th {
 }
 
 th.super-hdr-demographic,
-.super-hdr-demographic {
-  background: #111b2e !important;
-  color: #93c5fd !important;
-  border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
-}
-
+.super-hdr-demographic,
+th.super-hdr-address,
+.super-hdr-address,
 th.super-hdr-security,
-.super-hdr-security {
-  background: #151f38 !important;
-  color: #38bdf8 !important;
+.super-hdr-security,
+th.super-hdr-class,
+.super-hdr-class {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
 }
 
-#class-attendance-grid th.super-hdr-overall {
+#class-attendance-grid th.super-hdr-overall,
+.datagrid-table th.super-hdr-overall,
+th.super-hdr-overall {
   position: sticky !important;
   top: 0 !important;
   z-index: 30 !important;
-  background: #0e172a !important;
-  color: #ffffff !important;
+  background: #0b1120 !important;
+  color: var(--grade-star, #c084fc) !important;
   font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
   border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   height: 30px !important;
   line-height: 30px !important;
   vertical-align: middle !important;
   box-sizing: border-box !important;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
+  text-shadow: 0 0 10px rgba(192, 132, 252, 0.35) !important;
 }
 
 #class-attendance-grid th.super-hdr-student {
@@ -1171,45 +1182,106 @@ th.super-hdr-security,
   top: 0 !important;
   left: 0 !important;
   z-index: 35 !important;
-  background: #0b1120 !important;
+  background: #1e293b !important;
   color: #ffffff !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
 }
 
-#class-attendance-grid th.super-hdr-theme-a {
-  background: rgba(var(--quad-a-rgb, 255, 45, 135), 0.12) !important;
+/* Universal Dark Surface with Themed Colored Font Headers (SSOT §2.34 & Rule 4.11) */
+#class-attendance-grid th.super-hdr-theme-a,
+.datagrid-table th.super-hdr-theme-a,
+th.super-hdr-theme-a {
+  background: #0b1120 !important;
   color: var(--quad-a, #ff2d87) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 0 10px rgba(255, 45, 135, 0.35) !important;
 }
 
-#class-attendance-grid th.super-hdr-theme-b {
-  background: rgba(255, 140, 0, 0.12) !important;
+#class-attendance-grid th.super-hdr-theme-b,
+.datagrid-table th.super-hdr-theme-b,
+th.super-hdr-theme-b {
+  background: #0b1120 !important;
   color: var(--quad-b, #ff8c00) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.35) !important;
 }
 
-#class-attendance-grid th.super-hdr-theme-c {
-  background: rgba(149, 255, 0, 0.12) !important;
+#class-attendance-grid th.super-hdr-theme-c,
+.datagrid-table th.super-hdr-theme-c,
+th.super-hdr-theme-c {
+  background: #0b1120 !important;
   color: var(--quad-c, #95ff00) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 0 10px rgba(149, 255, 0, 0.35) !important;
 }
 
-#class-attendance-grid th.super-hdr-theme-d {
-  background: rgba(192, 132, 252, 0.12) !important;
-  color: var(--quad-d, #c084fc) !important;
+#class-attendance-grid th.super-hdr-theme-d,
+.datagrid-table th.super-hdr-theme-d,
+th.super-hdr-theme-d {
+  background: #0b1120 !important;
+  color: var(--quad-d, #38bdf8) !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
 }
 
-#class-attendance-grid th.super-hdr-exam {
-  background: #241a0e !important;
-  color: var(--grade-c) !important;
+#class-attendance-grid th.super-hdr-exam,
+.datagrid-table th.super-hdr-exam,
+th.super-hdr-exam {
+  background: #0b1120 !important;
   border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.04em !important;
+}
+
+#class-attendance-grid th.super-hdr-exam.super-hdr-theme-a,
+#class-attendance-grid th.super-hdr-exam-a,
+.datagrid-table th.super-hdr-exam.super-hdr-theme-a,
+.datagrid-table th.super-hdr-exam-a {
+  color: var(--quad-a, #ff2d87) !important;
+  text-shadow: 0 0 10px rgba(255, 45, 135, 0.35) !important;
+}
+
+#class-attendance-grid th.super-hdr-exam.super-hdr-theme-b,
+#class-attendance-grid th.super-hdr-exam-b,
+.datagrid-table th.super-hdr-exam.super-hdr-theme-b,
+.datagrid-table th.super-hdr-exam-b {
+  color: var(--quad-b, #ff8c00) !important;
+  text-shadow: 0 0 10px rgba(255, 140, 0, 0.35) !important;
+}
+
+#class-attendance-grid th.super-hdr-exam.super-hdr-theme-c,
+#class-attendance-grid th.super-hdr-exam-c,
+.datagrid-table th.super-hdr-exam.super-hdr-theme-c,
+.datagrid-table th.super-hdr-exam-c {
+  color: var(--quad-c, #95ff00) !important;
+  text-shadow: 0 0 10px rgba(149, 255, 0, 0.35) !important;
+}
+
+#class-attendance-grid th.super-hdr-exam.super-hdr-theme-d,
+#class-attendance-grid th.super-hdr-exam-d,
+.datagrid-table th.super-hdr-exam.super-hdr-theme-d,
+.datagrid-table th.super-hdr-exam-d {
+  color: var(--quad-d, #38bdf8) !important;
+  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
 }
 
 #class-attendance-grid th.super-hdr-action,
@@ -1217,7 +1289,7 @@ th.super-hdr-security,
   background: #0b1120 !important;
   color: #38bdf8 !important;
   border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
-  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-left: none !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   letter-spacing: 0.04em !important;
@@ -1294,7 +1366,7 @@ th.super-hdr-security,
   position: sticky !important;
   top: 30px !important;
   z-index: 18 !important;
-  background: #0b1120 !important;
+  background: #1e293b !important;
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) !important;
 }
 
@@ -1673,37 +1745,268 @@ th.col-theme-task {
 #class-attendance-grid .test-subtag-test-score { color: #38bdf8 !important; }
 #class-attendance-grid .test-subtag-test-grade { color: #38bdf8 !important; }
 
-/* Theme Sub-Header Quadrant Colors (SSOT Rule 2.10.1 & Rule 4.1) */
-#class-attendance-grid th[class*="col-theme-task-a"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-score-a"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-total-a"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-a"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-status-a"] .datagrid-header-label {
+/* Theme Sub-Header Quadrant Colors & 100% Solid Card-Title Backgrounds (SSOT Rule 2.10.1 & Rule 4.1) */
+/* Universal Sub-Header Rules across ALL Tables in TopsCore (DataGrid & Static) */
+th.col-subhdr-students-data,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-students-data,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-students-data,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-1,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-2,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-students-data {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+th.col-subhdr-students-data *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-students-data *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-students-data *,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-1 *,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-2 *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-students-data *,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-1 .datagrid-header-label,
+#class-attendance-grid thead tr:nth-child(2) th.col-sticky-2 .datagrid-header-label {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-theme-a,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-a,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-a,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-a,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-a"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-a"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-a"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-a"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-a"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-a"] {
+  background: #0b1120 !important;
   color: var(--quad-a, #ff2d87) !important;
 }
+th.col-subhdr-theme-a *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-a *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-a *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-a *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-a"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-a"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-a"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-a"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-a"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-a"] *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-a .datagrid-header-label {
+  color: var(--quad-a, #ff2d87) !important;
+  font-weight: 700 !important;
+}
 
-#class-attendance-grid th[class*="col-theme-task-b"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-score-b"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-total-b"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-b"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-status-b"] .datagrid-header-label {
+th.col-subhdr-theme-b,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-b,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-b,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-b,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-b"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-b"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-b"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-b"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-b"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-b"] {
+  background: #0b1120 !important;
   color: var(--quad-b, #ff8c00) !important;
 }
-
-#class-attendance-grid th[class*="col-theme-task-c"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-score-c"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-total-c"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-c"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-status-c"] .datagrid-header-label {
-  color: var(--quad-c, #95ff00) !important;
+th.col-subhdr-theme-b *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-b *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-b *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-b *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-b"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-b"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-b"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-b"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-b"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-b"] *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-b .datagrid-header-label {
+  color: var(--quad-b, #ff8c00) !important;
+  font-weight: 700 !important;
 }
 
-#class-attendance-grid th[class*="col-theme-task-d"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-score-d"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-total-d"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-grade-d"] .datagrid-header-label,
-#class-attendance-grid th[class*="col-test-theme-status-d"] .datagrid-header-label {
-  color: var(--quad-d, #c084fc) !important;
+th.col-subhdr-theme-c,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-c,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-c,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-c,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-c"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-c"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-c"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-c"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-c"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-c"] {
+  background: #0b1120 !important;
+  color: var(--quad-c, #95ff00) !important;
+}
+th.col-subhdr-theme-c *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-c *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-c *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-c *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-c"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-c"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-c"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-c"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-c"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-c"] *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-c .datagrid-header-label {
+  color: var(--quad-c, #95ff00) !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-theme-d,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-d,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-d,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-d,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-d"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-d"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-d"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-d"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-d"],
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-d"] {
+  background: #0b1120 !important;
+  color: var(--quad-d, #38bdf8) !important;
+}
+th.col-subhdr-theme-d *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-d *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-d *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-d *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-task-d"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-score-d"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-total-d"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-grade-d"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-status-d"] *,
+#class-attendance-grid thead tr:nth-child(2) th[class*="-theme-topic-d"] *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-d .datagrid-header-label {
+  color: var(--quad-d, #38bdf8) !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-theme-overall,
+th.col-subhdr-overall,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-overall,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-overall,
+#class-attendance-grid thead tr:nth-child(2) th.col-overall,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-overall {
+  background: #0b1120 !important;
+  color: var(--grade-star, #c084fc) !important;
+}
+th.col-subhdr-theme-overall *,
+th.col-subhdr-overall *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-theme-overall *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-theme-overall *,
+#class-attendance-grid thead tr:nth-child(2) th.col-overall *,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-overall *,
+#class-attendance-grid thead tr:nth-child(2) th.col-overall .datagrid-header-label,
+#class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-overall .datagrid-header-label {
+  color: var(--grade-star, #c084fc) !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-demographic,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-demographic,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-demographic {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+th.col-subhdr-demographic *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-demographic *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-demographic * {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-address,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-address,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-address {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+th.col-subhdr-address *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-address *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-address * {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-security,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-security,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-security {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+th.col-subhdr-security *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-security *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-security * {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+th.col-subhdr-class,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-class,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-class {
+  background: #1e293b !important;
+  color: #ffffff !important;
+}
+th.col-subhdr-class *,
+.datagrid-table thead tr:nth-child(2) th.col-subhdr-class *,
+.datagrid-table thead tr:not(.datagrid-super-header-row) th.col-subhdr-class * {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+/* ============================================================
+   VOCABULARY VAULT TEST BLUEPRINT TWO-TIER THEMED HEADERS (Phase 642 SSOT)
+   Dark Surface with Category-Themed Colored Fonts
+   ============================================================ */
+#blueprint-matrix-table th.bp-sh-topic,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-topic,
+th.col-subhdr-topic {
+  background: #0b1120 !important;
+  color: var(--primary-tactical, #38bdf8) !important;
+}
+#blueprint-matrix-table th.bp-sh-topic *,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-topic *,
+th.col-subhdr-topic * {
+  color: var(--primary-tactical, #38bdf8) !important;
+  font-weight: 700 !important;
+}
+
+#blueprint-matrix-table th.bp-sh-vocab,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-vocab,
+th.col-subhdr-vocab {
+  background: #0b1120 !important;
+  color: var(--grade-star, #c084fc) !important;
+}
+#blueprint-matrix-table th.bp-sh-vocab *,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-vocab *,
+th.col-subhdr-vocab * {
+  color: var(--grade-star, #c084fc) !important;
+  font-weight: 700 !important;
+}
+
+#blueprint-matrix-table th.bp-sh-blueprint,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-blueprint,
+th.col-subhdr-blueprint {
+  background: #0b1120 !important;
+  color: var(--quad-b, #ff8c00) !important;
+}
+#blueprint-matrix-table th.bp-sh-blueprint *,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-blueprint *,
+th.col-subhdr-blueprint * {
+  color: var(--quad-b, #ff8c00) !important;
+  font-weight: 700 !important;
+}
+
+#blueprint-matrix-table th.bp-sh-status,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-status,
+th.col-subhdr-status {
+  background: #0b1120 !important;
+  color: var(--grade-b, #95ff00) !important;
+}
+#blueprint-matrix-table th.bp-sh-status *,
+#blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-status *,
+th.col-subhdr-status * {
+  color: var(--grade-b, #95ff00) !important;
+  font-weight: 700 !important;
 }
 
 /* Universal Single-Line Non-Wrapped Invariant for Student Cells (Rule 4.2.1) */
@@ -2024,109 +2327,40 @@ th.col-theme-task {
   box-shadow: 0 0 10px rgba(var(--quad-d-rgb, 192, 132, 252), 0.3);
 }
 
-/* Top Panel Theme Navigation (Phase 420 Dual-Level Theme & Topic Architecture) */
+/* Top Panel Theme Navigation (Deprecated: moved to Sub Panel per strict 2-panel SSOT) */
 .class-attendance-top-panel {
-  display: flex !important;
-  align-items: center !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  line-height: 40px !important;
-  padding: 0 10px !important;
-  margin: 0 10px 10px 10px !important;
-  background: #0f172a !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 6px !important;
-  box-sizing: border-box !important;
+  display: none !important;
 }
 
 .attendance-theme-top-group {
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 8px !important;
-  margin-left: auto !important; /* Sticking to the far right edge per user instruction */
+  display: none !important;
 }
 
 .btn-top-panel-theme {
-  height: 30px !important;
-  min-height: 30px !important;
-  max-height: 30px !important;
-  line-height: 28px !important;
-  padding: 0 12px !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  border-radius: 4px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.03em !important;
-  white-space: nowrap !important;
-  transition: all 0.15s ease !important;
+  display: none !important;
 }
 
-.btn-top-panel-theme:hover {
-  filter: brightness(1.18) !important;
-}
-
-/* Sub Panel Dynamic Topic Navigation */
-.attendance-topic-subpanel-group {
+/* Sub Panel Dynamic Theme & Topic Navigation (Phase 455 SSOT: Equal-Width 95px Architecture - Left-Aligned) */
+.attendance-nav-left-cluster,
+.attendance-topic-subpanel-group,
+.attendance-theme-subpanel-group {
   display: inline-flex !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: flex-start !important;
   gap: 8px !important;
   flex-wrap: nowrap !important;
 }
 
+.btn-subpanel-nav,
+.btn-subpanel-theme,
 .btn-subpanel-topic {
   height: 30px !important;
   min-height: 30px !important;
   max-height: 30px !important;
   line-height: 28px !important;
-  padding: 0 10px !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  border-radius: 4px !important;
-  cursor: pointer !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.03em !important;
-  white-space: nowrap !important;
-  max-width: 175px !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  transition: all 0.15s ease !important;
-}
-
-.btn-subpanel-topic:hover {
-  filter: brightness(1.18) !important;
-}
-
-/* Sub Panel Theme Switcher 5-Button Cluster (Phase 455 SSOT) */
-.attendance-theme-subpanel-group {
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 8px !important;
-  flex-wrap: nowrap !important;
-}
-
-.btn-subpanel-theme {
-  height: 30px !important;
-  min-height: 30px !important;
-  max-height: 30px !important;
-  line-height: 28px !important;
-  width: 160px !important;
-  min-width: 150px !important;
-  max-width: 180px !important;
   box-sizing: border-box !important;
-  padding: 0 8px !important;
-  font-size: 11px !important;
+  padding: 0 6px !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
   border-radius: 4px !important;
@@ -2137,13 +2371,16 @@ th.col-theme-task {
   text-transform: uppercase !important;
   letter-spacing: 0.03em !important;
   white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
   transition: all 0.15s ease !important;
+  width: 95px !important;
+  min-width: 95px !important;
+  max-width: 95px !important;
 }
 
-.btn-subpanel-theme:hover {
-  filter: brightness(1.18) !important;
+.btn-subpanel-nav:hover,
+.btn-subpanel-theme:hover,
+.btn-subpanel-topic:hover {
+  filter: brightness(1.22) !important;
 }
 
 /* 7x7 Attempt Rate Columns in Dedicated Theme Matrix */

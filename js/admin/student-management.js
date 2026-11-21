@@ -1353,7 +1353,7 @@ export async function renderStudents(area, options = {}) {
               <div class="text-xs text-muted mb-1">Completion</div>
               <div class="d-flex align-center gap-2">
                 <div style="flex:1;background:rgba(255,255,255,0.1);height:8px;border-radius:4px;overflow:hidden;">
-                  <div style="width:${rec.completionPct}%;background:var(--fm-accent-tactical, #6366f1);height:100%;border-radius:4px;"></div>
+                  <div style="width:${rec.completionPct}%;background:var(--primary-tactical, #38bdf8);height:100%;border-radius:4px;"></div>
                 </div>
                 <span class="text-xs fw-700" style="color:var(--clr-text-1);">${rec.completionPct}%</span>
               </div>
@@ -1982,7 +1982,7 @@ export async function renderStudents(area, options = {}) {
                   <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
                     <th style="width: 16%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">LEVEL</th>
                     <th style="width: 32%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">CLASS NAME</th>
-                    <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">POINT</th>
+                    <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">PTS</th>
                     <th style="width: 10%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">RATE</th>
                     <th style="width: 10%; text-align: center; padding: 12px 10px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE</th>
                     <th style="width: 18%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE DESCRIPTION</th>
@@ -2556,7 +2556,7 @@ export async function renderStudents(area, options = {}) {
         label: 'STUDENTS DATA',
         colSpan: 3,
         className: 'super-hdr super-hdr-identity super-hdr-students-data',
-        style: 'background:#0f172a; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
       // Group 2: Active Class Super Headers (Colspan across test/exam sub-columns)
@@ -2567,7 +2567,7 @@ export async function renderStudents(area, options = {}) {
             label: escapeHtml(cls.name),
             colSpan: colCount,
             className: 'super-hdr super-hdr-class',
-            style: 'background:#141a2e; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px;'
+            style: 'background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px;'
           });
         });
       } else {
@@ -2575,7 +2575,7 @@ export async function renderStudents(area, options = {}) {
           label: 'CLASSES',
           colSpan: 2,
           className: 'super-hdr super-hdr-class',
-          style: 'background:#141a2e; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px;'
+          style: 'background:#1e293b; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px;'
         });
       }
 
@@ -2584,7 +2584,7 @@ export async function renderStudents(area, options = {}) {
         label: 'OVERALL',
         colSpan: 3,
         className: 'super-hdr super-hdr-overall',
-        style: 'background:#121e33; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#1e3a5f; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
       // Group 4: SECURITY (Colspan 2: PIN & STATUS)
@@ -2592,31 +2592,31 @@ export async function renderStudents(area, options = {}) {
         label: 'SECURITY',
         colSpan: 2,
         className: 'super-hdr super-hdr-security',
-        style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12);'
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35);'
       });
     } else {
       // Group 1: STUDENTS DATA (Colspan 4: Level, Photo, Gender, Name)
       sh.push({
         label: 'STUDENTS DATA',
-      colSpan: 4,
+        colSpan: 4,
         className: 'super-hdr super-hdr-identity super-hdr-students-data',
-        style: 'background:#0f172a; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
       // Group 2: DEMOGRAPHIC (Colspan 3: DOB, Age, Education)
       sh.push({
         label: 'DEMOGRAPHIC',
-      colSpan: 3,
+        colSpan: 3,
         className: 'super-hdr super-hdr-demographic',
-        style: 'background:#111b2e; color:#93c5fd; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
       // Group 3: ADDRESS (Colspan 4: Village, District, City/Regency, Province)
       sh.push({
         label: 'ADDRESS',
-      colSpan: 4,
+        colSpan: 4,
         className: 'super-hdr super-hdr-address',
-        style: 'background:#131d36; color:#a5b4fc; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12); border-right:2px solid rgba(255,255,255,0.22) !important;'
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
       // Group 4: SECURITY (Colspan 2: PIN & STATUS)
@@ -2624,7 +2624,7 @@ export async function renderStudents(area, options = {}) {
         label: 'SECURITY',
         colSpan: 2,
         className: 'super-hdr super-hdr-security',
-        style: 'background:#151f38; color:#38bdf8; font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.05em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.12);'
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35);'
       });
     }
 
@@ -2911,13 +2911,13 @@ export async function renderStudents(area, options = {}) {
         minWidth: '42px',
         render: (row) => {
           const isLvlX = row.isAlumni || isAlumniPanel || row.studentLevelNum === 99 || (row.levelName && (row.levelName.toLowerCase() === 'alumni' || row.levelName.toUpperCase() === 'X'));
-          const isNonLvl = !isLvlX && (row.studentLevelNum === 0 || (row.levelName && (row.levelName.toLowerCase() === 'non-level' || row.levelName === '—' || row.levelName === '-')));
-          const shortLvl = isLvlX ? 'X' : (isNonLvl ? '—' : (typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '—')));
+          const isNonLvl = !isLvlX && (row.studentLevelNum === 0 || (row.levelName && (row.levelName.toLowerCase() === 'non-level' || row.levelName === '0' || row.levelName === '—' || row.levelName === '-')));
+          const shortLvl = isLvlX ? 'X' : (isNonLvl ? '0' : (typeof toShortLevel === 'function' ? toShortLevel(row.studentLevelNum || row.levelName || '1') : (row.levelName || '0')));
           const alumniExitPct = (row.overallScore != null && row.overallScore !== '—') ? parseFloat(row.overallScore) : NaN;
           const alumniScoreColor = !isNaN(alumniExitPct)
             ? ((typeof getGradeColorByScore === 'function') ? getGradeColorByScore(alumniExitPct) : (TOPSCORE_COLORS?.A || 'var(--grade-a)'))
             : (row.overallColor || (TOPSCORE_COLORS?.D || 'var(--grade-d)'));
-          const lvlColor = isLvlX ? alumniScoreColor : (shortLvl === '—' ? 'var(--clr-text-3)' : 'var(--clr-text-1)');
+          const lvlColor = isLvlX ? alumniScoreColor : 'var(--clr-text-1)';
 
           const sortedLevels = (allLevels || []).slice().sort((a, b) => {
             const numA = (a.level_number === 99 || (a.name || '').toLowerCase() === 'alumni') ? 99 : (a.level_number ?? 1);
@@ -2928,7 +2928,7 @@ export async function renderStudents(area, options = {}) {
           const levelOptionsHtml = sortedLevels.map(lvl => {
             const isAlum = lvl.level_number === 99 || (lvl.name || '').toLowerCase() === 'alumni';
             const isNon = lvl.level_number === 0 || (lvl.name || '').toLowerCase() === 'non-level';
-            const optLabel = isAlum ? 'X' : (isNon ? '—' : (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number || lvl.name) : (lvl.name || lvl.level_number)));
+            const optLabel = isAlum ? 'X' : (isNon ? '0' : (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number || lvl.name) : (lvl.name || lvl.level_number)));
             const isSel = (row.level_id === lvl.id) || (isAlum && isLvlX) || (isNon && isNonLvl) || (!isLvlX && !isNonLvl && row.studentLevelNum === lvl.level_number);
             return `<option value="${lvl.id}" ${isSel ? 'selected' : ''}>${escapeHtml(optLabel)}</option>`;
           }).join('');
@@ -4116,7 +4116,7 @@ export function showPromotionRequirementsModal(students = []) {
         <div style="border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden;">
           <table style="width:100%; border-collapse:collapse; text-align:left;">
             <thead>
-              <tr style="background:rgba(30,41,59,0.8); font-size:12px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
+              <tr style="background:#1e293b; font-size:12px; color:#ffffff; border-bottom:1px solid rgba(255,255,255,0.1);">
                 <th style="padding:8px 12px;">STUDENT</th>
                 <th style="padding:8px 12px; text-align:center;">LEVEL</th>
                 <th style="padding:8px 12px; text-align:center;">RATE</th>
@@ -4267,12 +4267,12 @@ window.openTransferBatchModal = async function(studentId) {
           </select>
         </div>
 
-        <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.25);border-radius:8px;padding:10px 12px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size: 12px;color:#e0e7ff;font-weight:600;">
-            <input type="checkbox" id="tb-inherit-level" checked style="width:16px;height:16px;accent-color:#6366f1;">
+        <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:10px 12px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size: 12px;color:#e0f2fe;font-weight:600;">
+            <input type="checkbox" id="tb-inherit-level" checked style="width:16px;height:16px;accent-color:var(--primary-tactical, #38bdf8);">
             <span>Inherit Destination Batch Level</span>
           </label>
-          <div style="font-size: 12px;color:#a5b4fc;margin-top:4px;margin-left:24px;">
+          <div style="font-size: 12px;color:#bae6fd;margin-top:4px;margin-left:24px;">
             Automatically updates student's academic level to match the destination batch's current level.
           </div>
         </div>

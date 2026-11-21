@@ -94,12 +94,12 @@ export async function openTestSystemSettingsModal(options = {}) {
         line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
         font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
         font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
-        background: #7c3aed !important; color: #ffffff !important; border: none; cursor: pointer;
+        background: var(--grade-star, #c084fc) !important; color: #0f172a !important; border: none; cursor: pointer;
         display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-        box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4); transition: all 0.15s ease; box-sizing: border-box;
+        box-shadow: 0 4px 14px rgba(192, 132, 252, 0.4); transition: all 0.15s ease; box-sizing: border-box;
       }
       #test-system-settings-modal .btn-cta-save:hover {
-        background: #8b5cf6 !important; box-shadow: 0 0 16px rgba(139, 92, 246, 0.6) !important;
+        background: #d8b4fe !important; box-shadow: 0 0 16px rgba(192, 132, 252, 0.6) !important;
       }
       #test-system-settings-modal .btn-cta-save:active {
         transform: translateY(1px);
@@ -151,6 +151,30 @@ export async function openTestSystemSettingsModal(options = {}) {
           </div>
         </div>
 
+        <!-- Question Order Block (Urutan Soal: Random Default SSOT) -->
+        <div class="setting-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label class="setting-label">Question Order</label>
+            <span style="font-size: 12px; color: #64748b; font-weight: 600;">Default: Random</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px;">
+            <div>
+              <label style="font-size: 12px; font-weight: 700; color: var(--task-color, var(--grade-b, #95ff00)); margin-bottom: 3px; display: block;">Task Order:</label>
+              <select id="setting-task-order" class="setting-input" style="width: 100%; text-align: left; padding: 0 8px; color: #f8fafc; background: #090d16; border: 1px solid rgba(149,255,0,0.4); border-radius: 6px;">
+                <option value="random" ${(cur.taskQuestionOrder || 'random') === 'random' ? 'selected' : ''}>Random</option>
+                <option value="sequential" ${cur.taskQuestionOrder === 'sequential' ? 'selected' : ''}>Sequential</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 12px; font-weight: 700; color: var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom: 3px; display: block;">Exam Order:</label>
+              <select id="setting-exam-order" class="setting-input" style="width: 100%; text-align: left; padding: 0 8px; color: #f8fafc; background: #090d16; border: 1px solid rgba(255,45,135,0.4); border-radius: 6px;">
+                <option value="random" ${(cur.examQuestionOrder || 'random') === 'random' ? 'selected' : ''}>Random</option>
+                <option value="sequential" ${cur.examQuestionOrder === 'sequential' ? 'selected' : ''}>Sequential</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- Scope & Batch Sync (Pillar D Violet Accent) -->
         <div class="setting-card" style="background: rgba(124, 58, 237, 0.05); border-color: rgba(124, 58, 237, 0.25); gap: 10px;">
           <div style="font-size: 12px; font-weight: 700; color: #c084fc; text-transform: uppercase; letter-spacing: 0.05em;">
@@ -158,18 +182,18 @@ export async function openTestSystemSettingsModal(options = {}) {
           </div>
           <div style="display: flex; flex-direction: column; gap: 8px; font-size: 12px;">
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #f8fafc;">
-              <input type="radio" name="setting_scope" value="class" checked style="accent-color: #8b5cf6;">
+              <input type="radio" name="setting_scope" value="class" checked style="accent-color: var(--grade-star, #c084fc);">
               <span>Apply specifically to class: <strong>${escapeHtml(className)}</strong></span>
             </label>
             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #f8fafc;">
-              <input type="radio" name="setting_scope" value="global" style="accent-color: #8b5cf6;">
+              <input type="radio" name="setting_scope" value="global" style="accent-color: var(--grade-star, #c084fc);">
               <span>Apply as <strong>Global System Default</strong> across all classes</span>
             </label>
           </div>
 
           <div style="padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
             <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; cursor: pointer; color: #f8fafc;">
-              <input type="checkbox" id="setting-apply-to-existing" checked style="margin-top: 2px; accent-color: #8b5cf6;">
+              <input type="checkbox" id="setting-apply-to-existing" checked style="margin-top: 2px; accent-color: var(--grade-star, #c084fc);">
               <span><strong>Apply now to existing tests:</strong> Automatically update minimum passing rate on all Tasks and Exams in this class.</span>
             </label>
           </div>
@@ -201,6 +225,8 @@ export async function openTestSystemSettingsModal(options = {}) {
     const taskRepetitions = Math.max(7, parseInt(overlay.querySelector('#setting-task-repetitions').value, 10) || 7);
     const taskMinScore = parseInt(overlay.querySelector('#setting-task-min-score').value, 10) || 60;
     const examMinScore = parseInt(overlay.querySelector('#setting-exam-min-score').value, 10) || 60;
+    const taskQuestionOrder = overlay.querySelector('#setting-task-order')?.value === 'sequential' ? 'sequential' : 'random';
+    const examQuestionOrder = overlay.querySelector('#setting-exam-order')?.value === 'sequential' ? 'sequential' : 'random';
     const isGlobal = overlay.querySelector('input[name="setting_scope"]:checked').value === 'global';
     const applyToExisting = overlay.querySelector('#setting-apply-to-existing').checked;
 
@@ -213,10 +239,12 @@ export async function openTestSystemSettingsModal(options = {}) {
         taskRepetitions,
         taskMinScore,
         examMinScore,
+        taskQuestionOrder,
+        examQuestionOrder,
         isGlobal
       }, applyToExisting);
 
-      showToast(`Settings saved successfully! Repetition target: ${taskRepetitions}x, Task: ${taskMinScore}%, Exam: ${examMinScore}%`, 'success');
+      showToast(`Settings saved successfully! Repetition target: ${taskRepetitions}x, Task: ${taskMinScore}% (${taskQuestionOrder}), Exam: ${examMinScore}% (${examQuestionOrder})`, 'success');
       overlay.remove();
       if (typeof onComplete === 'function') onComplete(res);
     } catch (err) {

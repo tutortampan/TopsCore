@@ -9,6 +9,45 @@
 
 ---
 
+## [2026-11-21 20:05] — Phase 649: Table Dimensions Matrix & Styling Architecture with 3-Card Layout & Full System Visual Invariant Verification
+- **Card Layout & Spatial Structure Overhaul (`js/admin/table-designs.js`)**:
+  - Merekonstruksi layout workstation Table Designs menjadi **3 Kartu Berstandar Invariant SSOT**:
+    1. **Card 1 (Kiri Atas)**: `TABLE DIMENSIONS & STYLING EDITOR` — Memuat matriks dimensi (Height Min-Max, Width Min-Max, Typography Size & Weight, Column Color) dengan indikator Fixed/Dynamic range visual, serta action bar `Reset Defaults` & `Apply Globally`.
+    2. **Card 2 (Kiri Bawah)**: `LIVE INTERACTIVE TABLE SPECIMEN` — Objek contoh tabel 6 kolom (3 regular headers: `HEADER 1..3` dengan `rowspan="2"` + 3 sub headers di bawah Super Header: `SUB 1..3`), 10 baris data (`Data 1-1` s.d. `Data 10-6`), dan 6 sticky footer (`FOOTER 1..6`). Dilengkapi kontrol `Toggle Gridlines`.
+    3. **Card 3 (Kanan, Setinggi Workspace)**: `TABLE ARCHITECTURE & GOVERNANCE (SSOT)` — Kartu aturan dan panduan 5 pilar tata kelola tabel TopsCore, pemilih gaya grid, dan tombol `Copy Spec`.
+- **Penerapan Ketat 10px Gap & 4-Way Panel Perimeter Clearance (§1.7 SSOT)**:
+  - Mengeliminasi padding ganda pada kontainer workspace sehingga jarak perimeter 4-arah (Top, Bottom, Left, Right) tepat **10px** terhadap batas panel dan sub-panel 40px.
+  - Memastikan seluruh celah antar-kartu (horizontal maupun vertikal) berjarak persis **10px**.
+- **Audit Visual Menyeluruh Seluruh Halaman Sistem (Full System Screenshot Invariant Audit)**:
+  - Memverifikasi 10 layar utama sistem (Student Login Gate Desktop & Mobile, Student Dashboard Desktop & Mobile, Test Room Desktop, Result Room Desktop, Curriculum Master Desktop, Class Workstation Desktop, Table Designs Desktop, dan Colour Designs Desktop).
+  - Lolos 100% pada 7 Pilar Audit Visual (Pilar 1: 10px Gap & Perimeter, Pilar 2: 10px Card Padding, Pilar 3: Dual-Scale Typography Inter SSOT tanpa sub-12px, Pilar 4: Matriks Tabel 60px Two-Tier Headers & PTS Whole Integer, Pilar 5: Grade Color Vault SSOT, Pilar 6: Tombol 30px / 40px modal & 100vh Single-Screen Lock, Pilar 7: 100% Pure English & Zero Clutter).
+- **Automated Verification**:
+  - `npm.cmd run test:fast; npm.cmd run test:table; npm.cmd run check:ui; npm.cmd run check:hygiene` lulus 100% Green (Zero Regressions, Zero Process Spawn, Zero Lingering One-offs).
+
+---
+
+## [2026-11-21 17:05] — Phase 646: Super-Header & Sub-Header Exact Group Color Match Invariant Across All Tables (Satu Kelompok Satu Warna Identik)
+- **Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant SSOT §2.34 & Rule 4.11)**:
+  - Menyelesaikan dan memberantas ketidaksesuaian warna antara Super-Header dan Sub-Header pada kelompok kolom yang sama ("sebab satu kelompok warna harus sama!").
+  - Menghapus override warna kuning (`var(--grade-c, #ffff00)`) pada header Ujian (`super-hdr-exam`), menyatukannya kembali ke dalam warna kuadran tema aktif:
+    - **Tema A (Theme A)**: Super-Header `THEME A EXAM` dan seluruh Sub-Headernya (`WRD %`, `W-PTS`, `PHR %`, `P-PTS`, `ACC`, `GRD`, `STS`) sama-sama berwarna **Electric Pink (`#ff2d87` / `var(--quad-a)`)**.
+    - **Tema B (Theme B)**: Super-Header `THEME B EXAM` dan seluruh Sub-Headernya sama-sama berwarna **Dark Orange (`#ff8c00` / `var(--quad-b)`)**.
+    - **Tema C (Theme C)**: Super-Header `THEME C EXAM` dan seluruh Sub-Headernya sama-sama berwarna **Electric Lime (`#95ff00` / `var(--quad-c)`)**.
+    - **Tema D (Theme D)**: Super-Header `THEME D EXAM` dan seluruh Sub-Headernya sama-sama berwarna **Tactical Cyan (`#38bdf8` / `var(--quad-d)`)**.
+    - **Students Data / Identity**: Super-Header dan seluruh Sub-Headernya sama-sama berwarna **White (`#ffffff`)** / Slate.
+    - **Overall / Overview**: Super-Header `OVERALL` dan seluruh Sub-Headernya (`DONE`, `PTS`, `GRD`) sama-sama berwarna **Vibrant Purple (`#c084fc` / `var(--grade-star)`)**.
+- **Standarisasi Menyeluruh di Seluruh Sistem**:
+  - Meng-upgrade `#theme-manager-flat-table` dan `#blueprint-matrix-table` di `vocab-vault.js` ke standar latar belakang gelap `#0b1120` dengan font berwarna selaras 100% per kategori (Hierarchy: White, Words: Cyan, Phrases: Pink, Metrics: Lime).
+  - Mengupdate `admin-tables.css` dengan kelas dinamis `.super-hdr-exam-a`, `.super-hdr-exam-b`, `.super-hdr-exam-c`, `.super-hdr-exam-d`.
+  - Rebuilt `css/admin.css` & `css/admin.min.css`. Cache buster bumped ke `v=20261121_v664` di `admin.html` dan `js/admin/app.js`.
+- **Kodifikasi Aturan & Test Otomatis**:
+  - Dikodifikasikan ke dalam `AGENTS.md` (§2.34) dan `.agents/rules/ui-invariants.md` (§4.11).
+  - Ditambahkan Pillar 12 ke dalam pengujian otomatis `scripts/test_universal_table_standardization.mjs` (`npm run test:table`).
+- **Automated Verification**:
+  - Seluruh test suite (`test:fast`, `test:table`, `test:color-ssot`, `check:spatial`, `check:hygiene`) lulus 100% Green.
+
+---
+
 ## [2026-11-17 22:35] — Phase 623: Zero Table Capsule & Zero Table Glow Invariant (System-Wide)
 - **Zero Table Capsule Invariant (Larangan Font Kapsul/Pill Pada Seluruh Tabel & Grid)**:
   - Mengeliminasi seluruh badge kapsul (`.badge`, `.badge-tag`, background pill, border kotak, padding chip) di seluruh sel tabel dan grid:

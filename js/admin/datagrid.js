@@ -93,6 +93,12 @@ export const HEADER_ABBREVIATIONS = {
   'PROGRAM': { full: 'PROGRAM', medium: 'PROGM', short: 'PRG' },
   'INSTITUTION': { full: 'INSTITUTION', medium: 'INSTN', short: 'INS' },
   'AVERAGE': { full: 'AVERAGE', medium: 'AVERG', short: 'AVG' },
+  'EVALUATED': { full: 'EVALUATED', medium: 'EVAL', short: 'EVL' },
+  'MISTAKES': { full: 'MISTAKES', medium: 'ERRS', short: 'ERR' },
+  'ERROR RATE': { full: 'ERROR RATE', medium: 'ERR %', short: 'ERR' },
+  'ERROR DIAGNOSIS': { full: 'ERROR DIAGNOSIS', medium: 'DIAG', short: 'DIAG' },
+  'STUDENT MISTAKES (TOP MISTAKES)': { full: 'STUDENT MISTAKES (TOP MISTAKES)', medium: 'TOP MISTAKES', short: 'MISTAKES' },
+  'TARGET VOCABULARY': { full: 'TARGET VOCABULARY', medium: 'VOCAB', short: 'VCB' },
   'ATTENDANCE': { full: 'ATTENDANCE', medium: 'ATTND', short: 'ATT' },
   'PERCENTAGE': { full: 'PERCENTAGE', medium: 'PERCT', short: 'PCT' },
   'REMEDIAL': { full: 'REMEDIAL', medium: 'REMED', short: 'RMD' },
@@ -363,12 +369,37 @@ export class DataGrid {
     this.dividerColKeys = new Set();
 
     if (hasSuperHdr) {
-      // Calculate boundary column keys across super-headers
+      // Calculate boundary column keys across super-headers & propagate style/theme to sub-headers
       let colIdxCounter = 0;
       this.superHeaders.forEach((sh) => {
         const span = sh.colSpan || 1;
+        const startIdx = colIdxCounter;
         colIdxCounter += span;
-        const boundaryIdx = colIdxCounter - 1;
+        const endIdx = colIdxCounter - 1;
+
+        // Propagate Super-Header style & theme class to all child sub-header columns
+        for (let i = startIdx; i <= endIdx && i < visibleCols.length; i++) {
+          const childCol = visibleCols[i];
+          if (childCol) {
+            childCol._parentSuperHeader = sh;
+            if (!childCol.headerStyle && sh.style) {
+              childCol.headerStyle = sh.style;
+            }
+            if (sh.className) {
+              const themeMatches = sh.className.match(/super-hdr-(?:theme-[a-d]|overall|students-data|demographic|security|address|class)/g);
+              if (themeMatches) {
+                themeMatches.forEach(tm => {
+                  const subCls = tm.replace('super-hdr-', 'col-subhdr-');
+                  if (!childCol.className || !childCol.className.includes(subCls)) {
+                    childCol.className = (childCol.className || '') + ' ' + subCls;
+                  }
+                });
+              }
+            }
+          }
+        }
+
+        const boundaryIdx = endIdx;
         if (boundaryIdx >= 0 && boundaryIdx < visibleCols.length - 1) {
           const boundaryCol = visibleCols[boundaryIdx];
           if (boundaryCol && boundaryCol.key) {
@@ -427,7 +458,7 @@ export class DataGrid {
         const colSpanAttr = sh.colSpan ? ` colspan="${sh.colSpan}"` : '';
         const baseCls = sh.className ? (sh.className.includes('super-hdr') ? sh.className : `super-hdr ${sh.className}`) : 'super-hdr';
         const cls = ` class="${baseCls}"`;
-        const st = sh.style ? ` style="position:sticky; top:0; z-index:20; background:var(--fm-bg-panel,#0f172a); ${sh.style}"` : ' style="position:sticky; top:0; z-index:20; background:var(--fm-bg-panel,#0f172a);"';
+        const st = sh.style ? ` style="position:sticky; top:0; z-index:20; ${sh.style}"` : ' style="position:sticky; top:0; z-index:20;"';
         superHtml += `<th${colSpanAttr}${cls}${st}>${sh.label}</th>`;
       });
       superHtml += '</tr>';
@@ -446,10 +477,10 @@ export class DataGrid {
       const topOffset = hasSuperHdr ? 'top:30px;' : 'top:0;';
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
       const stickyStyle = isStickyRight
-        ? `position:sticky; ${topOffset} right:0; z-index:21; background:var(--fm-bg-panel,#0f172a); border-bottom:2px solid rgba(255,255,255,0.28) !important;`
+        ? `position:sticky; ${topOffset} right:0; z-index:21; border-bottom:2px solid rgba(255,255,255,0.28) !important;`
         : (hasSuperHdr
-          ? `position:sticky; top:30px; z-index:19; background:var(--fm-bg-panel,#0f172a); border-bottom:2px solid rgba(255,255,255,0.28) !important;`
-          : `position:sticky; top:0; z-index:19; background:var(--fm-bg-panel,#0f172a); border-bottom:2px solid rgba(255,255,255,0.28) !important;`);
+          ? `position:sticky; top:30px; z-index:19; border-bottom:2px solid rgba(255,255,255,0.28) !important;`
+          : `position:sticky; top:0; z-index:19; border-bottom:2px solid rgba(255,255,255,0.28) !important;`);
       const widthVal = col.width || col.minWidth || '';
       const widthNum = parseInt(widthVal, 10) || null;
       const displayLabel = resolveHeaderLabel(col.label, widthNum, col.shortLabel, col.microLabel);
@@ -459,16 +490,16 @@ export class DataGrid {
       const customClass = (col.className ? ` ${col.className}` : '') + dividerClass;
       const rawTitle = col.headerTitle || col.title || col.label;
       const titleAttr = rawTitle ? ` title="${String(rawTitle).replace(/"/g, '&quot;')}"` : '';
-      const subHdrWeight = hasSuperHdr ? 'font-weight:400 !important;' : '';
+      const subHdrWeight = hasSuperHdr ? 'font-weight:700 !important;' : '';
       html += `
         <th class="text-center ${col.sortable ? 'datagrid-sortable' : ''}${customClass}${hasSuperHdr ? ' datagrid-sub-header' : ''}"
             data-key="${col.key || ''}"
             data-idx="${this.columns.indexOf(col)}"
             draggable="true"${titleAttr}
-            style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${subHdrWeight} text-align:center !important;">
-          <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
-            <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
-            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 12px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
+            style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${subHdrWeight} ${col.headerStyle || ''} text-align:center !important;">
+          <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden; color:inherit;">
+            <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center; color:inherit;">${displayLabel}</span>
+            ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 12px; line-height:1; color:inherit; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
           </div>
         </th>
       `;

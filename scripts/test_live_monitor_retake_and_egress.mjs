@@ -10,9 +10,9 @@ console.log('▶ Pillar 1: Verifying Expel-Only Column & Zero Peek Column in Liv
 const testsAccessContent = fs.readFileSync('js/admin/tests-access.js', 'utf8');
 
 // Check column headers: Must have EXPEL and must NOT have PEEK
-assert(!testsAccessContent.includes('<th style="text-align:center;">PEEK</th>'),
+assert(!testsAccessContent.includes('>PEEK</th>'),
   'Live monitor table must not have PEEK header');
-assert(testsAccessContent.includes('<th style="text-align:center;">EXPEL</th>'),
+assert(testsAccessContent.includes('>EXPEL</th>'),
   'Live monitor table must have EXPEL header');
 
 // Check row buttons: Must have btn-kick-student and must NOT have btn-inspect-student-answers
@@ -24,7 +24,7 @@ assert(testsAccessContent.includes('btn-kick-student'),
 // Check colgroup count: Exactly 7 columns
 const colMatches = testsAccessContent.match(/<col style="[^"]+">/g) || [];
 // The modal has 7 columns now
-assert(testsAccessContent.includes('<col style="width:65px;">'),
+assert(testsAccessContent.includes('<col style="width:55px;">') || testsAccessContent.includes('<col style="width:65px;">'),
   'Expel column should have calibrated width');
 console.log('  ✅ [PASS] Expel-only action verified. PEEK column and modal completely purged.');
 

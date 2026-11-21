@@ -626,18 +626,18 @@ export async function renderClassTestSessions(container, context = {}) {
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:var(--primary-tactical); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Words Module</label>
                 <select id="open-modal-words-module-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
-                  <option value="written" selected>Written (M3)</option>
-                  <option value="multiple_choice">Selection (M2)</option>
-                  <option value="spoken">Spoken (M4)</option>
+                  <option value="multiple_choice">Recognition Module</option>
+                  <option value="spoken">Spoken Module</option>
+                  <option value="written" selected>Written Module</option>
                 </select>
               </div>
 
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Phrases Module</label>
                 <select id="open-modal-phrases-module-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
-                  <option value="written">Written (M3)</option>
-                  <option value="multiple_choice" selected>Selection (M2)</option>
-                  <option value="spoken">Spoken (M4)</option>
+                  <option value="multiple_choice" selected>Recognition Module</option>
+                  <option value="spoken">Spoken Module</option>
+                  <option value="written">Written Module</option>
                 </select>
               </div>
             </div>
@@ -835,13 +835,15 @@ export async function renderClassTestSessions(container, context = {}) {
           </div>
 
           <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
-            <button type="button" class="btn btn-secondary" id="btn-live-modal-refresh" style="height:30px; line-height:28px; padding:0 10px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px; border-radius:5px; color:#ffffff; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); white-space:nowrap;" title="Manual Refresh">
+            <button type="button" class="btn btn-secondary" id="btn-live-modal-refresh" style="height:30px; line-height:28px; padding:0 12px; font-size:12px; font-weight:700; display:inline-flex; align-items:center; gap:6px; border-radius:5px; color:#ffffff; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.22); white-space:nowrap; cursor:pointer;" title="Manual Refresh">
               Refresh
             </button>
-            <label style="display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:500; color:#cbd5e1; cursor:pointer; user-select:none; margin:0; white-space:nowrap;">
-              <input type="checkbox" id="live-modal-auto-poll" checked style="cursor:pointer; width:14px; height:14px; accent-color:var(--primary-tactical);">
-              <span>Auto (5s)</span>
-            </label>
+            <select id="live-modal-poll-interval" class="form-control" style="font-size:12px; height:30px; padding:0 6px; width:95px; background:#1e293b; border:1px solid rgba(255,255,255,0.18); color:#cbd5e1; border-radius:5px; cursor:pointer;" title="Auto-Refresh Interval (Default: Off)">
+              <option value="0" selected>Off (Manual)</option>
+              <option value="30">Every 30s</option>
+              <option value="60">Every 60s</option>
+            </select>
+            <span id="live-modal-last-refreshed" style="font-size:12px; font-weight:500; color:#94a3b8; white-space:nowrap;">Manual Refresh</span>
             <input type="text" id="live-modal-search" placeholder="Search student..." class="form-control" style="font-size:12px; height:30px; padding:0 10px; width:130px; background:#1e293b; border:1px solid rgba(255,255,255,0.18); color:#ffffff; border-radius:5px;">
           </div>
         </div>
@@ -864,7 +866,7 @@ export async function renderClassTestSessions(container, context = {}) {
                   <th style="padding:6px 4px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">BATCH</th>
                   <th class="sortable-th" data-sort-key="name" style="padding:6px 10px; text-align:left; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">NAME <span class="sort-icon" id="th-sort-name"></span></th>
                   <th class="sortable-th" data-sort-key="status" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
-                  <th class="sortable-th" data-sort-key="progress" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
+                  <th class="sortable-th" data-sort-key="progress" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">DONE <span class="sort-icon" id="th-sort-progress"></span></th>
                   <th class="sortable-th" data-sort-key="score" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">RATE <span class="sort-icon" id="th-sort-score"></span></th>
                   <th class="sortable-th" data-sort-key="alarm" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
                   <th style="padding:6px 4px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">EXPEL</th>
@@ -1537,36 +1539,36 @@ function renderThemeCard(theme, context) {
           <div id="card-edit-mode-menu-${code}" class="card-edit-mode-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid #38bdf8; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(56, 189, 248, 0.25); z-index:99999; width:230px; padding:8px; flex-direction:column; gap:6px;">
             <div style="background:#38bdf8; color:#0f172a; font-weight:900; font-size:12px; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
               <span>LIVE MODALITY &bull; THEME ${code}</span>
-              <span style="font-size:10px; background:rgba(0,0,0,0.25); color:#0f172a; padding:1px 5px; border-radius:3px; font-weight:800;">AUTO NEXT</span>
+              <span style="font-size:12px; background:rgba(0,0,0,0.25); color:#0f172a; padding:1px 5px; border-radius:3px; font-weight:800;">AUTO NEXT</span>
             </div>
 
             <!-- Words Module Selection -->
             <div>
-              <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; display:flex; justify-content:space-between;">
+              <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; display:flex; justify-content:space-between;">
                 <span>Words Module</span>
                 <span id="label-live-words-${code}" style="color:#ffffff; font-weight:700;">${curWordsMode}</span>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px;">
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="written" style="background:${curWordsMode === 'written' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Written</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="multiple_choice" style="background:${curWordsMode === 'multiple_choice' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Select</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="spoken" style="background:${curWordsMode === 'spoken' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Spoken</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="written" style="background:${curWordsMode === 'written' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Written</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="multiple_choice" style="background:${curWordsMode === 'multiple_choice' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Select</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="spoken" style="background:${curWordsMode === 'spoken' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Spoken</button>
               </div>
             </div>
 
             <!-- Phrases Module Selection -->
             <div>
-              <div style="font-size:11px; font-weight:800; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; display:flex; justify-content:space-between;">
+              <div style="font-size:12px; font-weight:800; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; display:flex; justify-content:space-between;">
                 <span>Phrases Module</span>
                 <span id="label-live-phrases-${code}" style="color:#ffffff; font-weight:700;">${curPhrasesMode}</span>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px;">
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="written" style="background:${curPhrasesMode === 'written' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Written</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="multiple_choice" style="background:${curPhrasesMode === 'multiple_choice' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Select</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="spoken" style="background:${curPhrasesMode === 'spoken' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Spoken</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="written" style="background:${curPhrasesMode === 'written' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Written</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="multiple_choice" style="background:${curPhrasesMode === 'multiple_choice' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Select</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="spoken" style="background:${curPhrasesMode === 'spoken' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Spoken</button>
               </div>
             </div>
 
-            <div style="font-size:10px; color:#94a3b8; text-align:center; margin-top:2px; line-height:1.2;">
+            <div style="font-size:12px; color:#94a3b8; text-align:center; margin-top:2px; line-height:1.2;">
               Updates instantly on student's next question
             </div>
           </div>
@@ -1943,10 +1945,10 @@ function openThemeSessionModal(container, theme, mode, context) {
   const recalcVocabDuration = () => {
     if (isNonVocab) return;
     const wordsAns = (_selectedAnswerModeWords || 'written').toLowerCase();
-    const phrasesAns = (_selectedAnswerModePhrases || 'selection').toLowerCase();
+    const phrasesAns = (_selectedAnswerModePhrases || 'multiple_choice').toLowerCase();
 
     const wPace = (wordsAns === 'written') ? 15 : 10;
-    const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice') ? 10 : 20;
+    const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice' || phrasesAns === 'recognition') ? 10 : 20;
 
     const _examQ = theme.examTest?.total_questions || theme.examTest?.payload?.total_questions || (Array.isArray(theme.examTest?.questions) ? theme.examTest.questions.length : 0) || 0;
     let wCount = 0;
@@ -2682,9 +2684,9 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   const remainingEl = modal.querySelector('#live-modal-remaining');
   const studentsContainer = modal.querySelector('#live-modal-students-container');
   const tableBody = modal.querySelector('#live-modal-table-body') || studentsContainer;
-  const autoPollCheckbox = modal.querySelector('#live-modal-auto-poll');
   const searchInput = modal.querySelector('#live-modal-search');
   const refreshBtn = modal.querySelector('#btn-live-modal-refresh');
+  const lastRefreshedEl = modal.querySelector('#live-modal-last-refreshed');
   const footerInfoEl = modal.querySelector('#live-modal-footer-info');
 
   if (themeBadgeEl) {
@@ -3425,9 +3427,45 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     };
   }
 
-  // Refresh button
+  // Refresh button (Strict Manual-Only Refresh per SSOT Quota Policy)
   if (refreshBtn) {
-    refreshBtn.onclick = () => loadLiveData(false);
+    refreshBtn.onclick = async () => {
+      refreshBtn.disabled = true;
+      const originalText = refreshBtn.innerHTML;
+      refreshBtn.innerHTML = 'Refreshing...';
+      try {
+        await loadLiveData(true);
+      } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = originalText;
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const lastRefreshedEl = modal.querySelector('#live-modal-last-refreshed');
+        if (lastRefreshedEl) lastRefreshedEl.textContent = `Updated ${timeStr}`;
+      }
+    };
+  }
+
+  // Optional Long-Poll Interval Selector (Strictly Off/Manual by Default per DECISION-054)
+  const pollIntervalSel = modal.querySelector('#live-modal-poll-interval');
+  if (pollIntervalSel) {
+    pollIntervalSel.value = '0'; // Default: Off (Manual)
+    pollIntervalSel.onchange = () => {
+      if (_livePollingTimer) {
+        clearInterval(_livePollingTimer);
+        _livePollingTimer = null;
+      }
+      const val = parseInt(pollIntervalSel.value || '0', 10);
+      if (val > 0) {
+        _livePollingTimer = setInterval(() => {
+          if (!modal.classList.contains('hidden') && !document.hidden) {
+            loadLiveData(true);
+          } else if (modal.classList.contains('hidden')) {
+            clearInterval(_livePollingTimer);
+            _livePollingTimer = null;
+          }
+        }, val * 1000);
+      }
+    };
   }
 
   // Time Extension Controls (+ Add Time)
@@ -3510,44 +3548,6 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     }
   }
 
-  // Supabase Realtime Subscription setup
-  const debouncedRealtimeLoad = () => {
-    if (_realtimeDebounce) clearTimeout(_realtimeDebounce);
-    _realtimeDebounce = setTimeout(() => {
-      if (!modal.classList.contains('hidden')) {
-        loadLiveData(true);
-      }
-    }, 400);
-  };
-
-  async function setupRealtimeSubscription() {
-    try {
-      const sb = await getSupabase();
-      if (!sb || typeof sb.channel !== 'function') return;
-      const testIds = [theme.examTest?.id, theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
-      if (!testIds.length) return;
-
-      const channelId = `live-monitor-${theme.code}-${Date.now()}`;
-      _realtimeChannel = sb.channel(channelId)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'attempts' }, (payload) => {
-          if (testIds.includes(payload.new?.test_id || payload.old?.test_id)) {
-            debouncedRealtimeLoad();
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'attempt_answers' }, () => {
-          debouncedRealtimeLoad();
-        })
-        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'audit_logs' }, (payload) => {
-          if (payload.new?.action === 'CHEAT_ATTEMPT' && testIds.includes(payload.new?.entity_id)) {
-            debouncedRealtimeLoad();
-          }
-        })
-        .subscribe();
-    } catch (e) {
-      console.warn('Realtime subscription not available, falling back to auto-poll:', e);
-    }
-  }
-
   // Close handlers
   const closeModal = () => {
     if (_livePollingTimer) {
@@ -3558,51 +3558,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       clearInterval(_liveSecondCountdownTimer);
       _liveSecondCountdownTimer = null;
     }
-    if (_realtimeChannel) {
-      try {
-        getSupabase().then(sb => sb.removeChannel(_realtimeChannel));
-      } catch (_) {}
-      _realtimeChannel = null;
-    }
-    document.removeEventListener('visibilitychange', handleVisibilityChange);
     modal.classList.add('hidden');
   };
 
   modal.querySelector('#btn-close-live-modal-footer').onclick = closeModal;
 
-  // Smart Visibility Guard: pause polling when browser tab is inactive to protect egress quota
-  const handleVisibilityChange = () => {
-    if (!document.hidden && !modal.classList.contains('hidden') && autoPollCheckbox?.checked) {
-      loadLiveData(true);
-    }
-  };
-  document.addEventListener('visibilitychange', handleVisibilityChange);
-
-  // Auto-poll interval handling (5s heartbeat safety with background tab suppression)
-  const setupAutoPoll = () => {
-    if (_livePollingTimer) {
-      clearInterval(_livePollingTimer);
-      _livePollingTimer = null;
-    }
-    if (autoPollCheckbox && autoPollCheckbox.checked) {
-      _livePollingTimer = setInterval(() => {
-        if (!modal.classList.contains('hidden') && !document.hidden) {
-          loadLiveData(true);
-        } else if (modal.classList.contains('hidden')) {
-          clearInterval(_livePollingTimer);
-          _livePollingTimer = null;
-        }
-      }, 5000);
-    }
-  };
-
-  if (autoPollCheckbox) {
-    autoPollCheckbox.onchange = setupAutoPoll;
-  }
-
   await loadLiveData(false);
-  setupAutoPoll();
-  setupRealtimeSubscription();
+  const initialTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const initialLastRefreshedEl = modal.querySelector('#live-modal-last-refreshed');
+  if (initialLastRefreshedEl) initialLastRefreshedEl.textContent = `Updated ${initialTimeStr}`;
   modal.classList.remove('hidden');
 }
 
@@ -3786,14 +3750,41 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     if (activeTasks.length > 0) {
       for (const task of activeTasks) {
         const taskAtts = studAtts.filter(a => (a.test_id || a.Test_id) === task.id);
-        const passedAtt = taskAtts.find(a => {
-          const st = String(a.status || '').toLowerCase();
-          const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
-          const pct = parseFloat(a.percentage ?? 0);
-          return isSub && pct >= 60;
-        });
+        const isUni = task.payload?.is_unified === true || task.category === 'unified' || (task.test_subtype && task.test_subtype.startsWith('UNIFIED'));
+        const isForgiven = taskAtts.some(a => a.is_forgiven || a.is_manual_override);
 
-        if (passedAtt) {
+        let hasPassed = false;
+        if (isForgiven) {
+          hasPassed = true;
+        } else if (isUni) {
+          let wPass = 0;
+          let pPass = 0;
+          taskAtts.forEach(a => {
+            const st = String(a.status || '').toLowerCase();
+            const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+            const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
+            if (isSub && pct >= 60) {
+              const fr = String(a.forgiven_reason || '');
+              const tQ = Number(a.total_questions || 0);
+              const cCount = Number(a.correct_count || a.score || 0);
+              const isPhr = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10 && tQ <= 20) || /PHRASES/i.test(fr);
+              if (isPhr) pPass++;
+              else wPass++;
+            }
+          });
+          hasPassed = (wPass >= 7 && pPass >= 7) || (wPass + pPass >= 14);
+        } else {
+          const passCount = taskAtts.filter(a => {
+            const st = String(a.status || '').toLowerCase();
+            const isSub = ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st);
+            const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
+            return isSub && pct >= 60;
+          }).length;
+          const reqPasses = isNonVocab ? 1 : 7;
+          hasPassed = passCount >= reqPasses;
+        }
+
+        if (hasPassed) {
           completedTaskCount++;
         } else {
           prereqMet = false;
@@ -3857,10 +3848,11 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     let wBestPct = null;
     let pBestPct = null;
     let examBestPct = null;
+    let subE = [];
 
     if (hasTargetExam) {
       const eAtts = studAtts.filter(a => (a.test_id || a.Test_id) === targetExam.id);
-      const subE = eAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
+      subE = eAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
       if (subE.length > 0) {
         examBestPct = Math.max(...subE.map(a => parseFloat(a.percentage ?? 0)));
       }
@@ -3891,16 +3883,66 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     let phrasesPassed = false;
 
     if (hasTargetExam) {
-      const hasTakenExam = examBestPct !== null;
-      const examPassed = hasTakenExam && examBestPct >= 60;
-      hasAttempted = hasTakenExam;
-      isAlreadyPassed = hasAttempted && examPassed;
-      isFailed = hasAttempted && !isAlreadyPassed;
-      if (hasTakenExam) avgScore = Math.round(examBestPct);
-      wordsPassed = examPassed;
-      phrasesPassed = examPassed;
-      hasTakenWords = hasTakenExam;
-      hasTakenPhrases = hasTakenExam;
+      const isUnifiedExam = Boolean(
+        targetExam?.payload?.is_unified ||
+        targetExam?.category === 'unified' ||
+        (targetExam?.test_subtype && targetExam.test_subtype.startsWith('UNIFIED')) ||
+        (theme?.tasks || []).some(t => t.payload?.is_unified || t.payload?.category === 'phrases' || /PHRASE/i.test(t.shell_code || t.title || ''))
+      );
+
+      if (isUnifiedExam) {
+        const wordsAtts = subE.filter(a => String(a.forgiven_reason || '').includes('[SECTION: WORDS]') || (Number(a.total_questions || 0) > 40 && Number(a.total_questions || 0) <= 160));
+        const phrasesAtts = subE.filter(a => String(a.forgiven_reason || '').includes('[SECTION: PHRASES]') || (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 40));
+        const fullAtts = subE.filter(a => Number(a.total_questions || 0) > 160);
+
+        const candidateWords = [];
+        wordsAtts.forEach(a => candidateWords.push(parseFloat(a.percentage ?? 0)));
+        fullAtts.forEach(a => {
+          const wSc = Math.min(160, Number(a.score || 0));
+          candidateWords.push((wSc / 160) * 100);
+        });
+        if (candidateWords.length > 0) wBestPct = Math.max(...candidateWords);
+
+        const candidatePhrases = [];
+        phrasesAtts.forEach(a => candidatePhrases.push(parseFloat(a.percentage ?? 0)));
+        fullAtts.forEach(a => {
+          if (Number(a.score || 0) > 160) {
+            const pSc = Math.min(40, Number(a.score || 0) - 160);
+            candidatePhrases.push((pSc / 40) * 100);
+          }
+        });
+        if (candidatePhrases.length > 0) pBestPct = Math.max(...candidatePhrases);
+
+        hasTakenWords = wBestPct !== null;
+        hasTakenPhrases = pBestPct !== null;
+        wordsPassed = hasTakenWords && wBestPct >= 60;
+        phrasesPassed = hasTakenPhrases && pBestPct >= 60;
+
+        hasAttempted = hasTakenWords || hasTakenPhrases;
+        isAlreadyPassed = hasAttempted && wordsPassed && phrasesPassed;
+        isFailed = hasAttempted && !isAlreadyPassed;
+
+        if (hasTakenWords && hasTakenPhrases) {
+          const wPts = Math.round((wBestPct / 100) * 160);
+          const pPts = Math.round((pBestPct / 100) * 40);
+          avgScore = Math.round(((wPts + pPts) / 200) * 100);
+        } else if (hasTakenWords) {
+          avgScore = Math.round(wBestPct);
+        } else if (hasTakenPhrases) {
+          avgScore = Math.round(pBestPct);
+        }
+      } else {
+        const hasTakenExam = examBestPct !== null;
+        const examPassed = hasTakenExam && examBestPct >= 60;
+        hasAttempted = hasTakenExam;
+        isAlreadyPassed = hasAttempted && examPassed;
+        isFailed = hasAttempted && !isAlreadyPassed;
+        if (hasTakenExam) avgScore = Math.round(examBestPct);
+        wordsPassed = examPassed;
+        phrasesPassed = examPassed;
+        hasTakenWords = hasTakenExam;
+        hasTakenPhrases = hasTakenExam;
+      }
     } else {
       hasTakenWords = wBestPct !== null;
       hasTakenPhrases = pBestPct !== null;
@@ -3975,8 +4017,9 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
       } else if (isFailed) {
         isEligible = true;
         statusType = 'amber';
-        statusLabel = `Remedial (Previous Score: ${avgScore}%)`;
-        reason = `Previous score ${avgScore}% (< 60%). Eligible for remedial exam session.`;
+        const failDetail = (!wordsPassed && !phrasesPassed) ? 'Both Parts' : (!wordsPassed ? 'Words' : 'Phrases');
+        statusLabel = `Remedial (${failDetail} Needed)`;
+        reason = `Previous score ${avgScore != null ? avgScore : '—'}%. ${failDetail} below passing threshold (60%). Eligible for remedial.`;
       } else {
         isEligible = false;
         statusType = 'neutral';

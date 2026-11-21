@@ -4,7 +4,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160'
  * Extracted from test.html
  */
 
-import { startTest, saveAnswer, submitTest, logCheatingEvent, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261117_v549';
+import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261117_v549';
     import { requireStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
@@ -531,13 +531,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
       } catch (_) {}
 
-      logCheatingEvent(session.student_id, testId, 'CHEAT_ATTEMPT', {
-        reason: reason,
-        strike: cheatStrikes,
-        max_strikes: MAX_STRIKES,
-        url: location.href,
-        user_agent: navigator.userAgent
-      });
+      // Local warning counter in student browser (Zero Supabase audit log spam per user directive)
 
       // Safely buffer and persist answers immediately
       saveCurrentAnswer();
@@ -743,9 +737,6 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         navigator.mediaDevices.getDisplayMedia = async function(...args) {
           if (isTestActive) {
             triggerCheatAlert('Screen Recording or Screen Share Detected');
-            logCheatingEvent(session.student_id, testId, 'SCREEN_CAPTURE_ATTEMPT', {
-              timestamp: new Date().toISOString()
-            });
             throw new Error('Screen capture is prohibited during examinations.');
           }
           return origGetDisplayMedia(...args);
@@ -808,14 +799,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         const attId = attemptData?.id || sessionStorage.getItem('topscore_attempt_id');
         if (attId) sessionStorage.setItem(`topscore_tab_switches_${attId}`, String(_tabSwitchCount));
       } catch (_) {}
-      // Log to audit_logs every 3rd unpenalised focus-loss so admin can spot repeat offenders
-      if (_tabSwitchCount % 3 === 0) {
-        logCheatingEvent(session.student_id, testId, 'REPEATED_FOCUS_LOSS', {
-          tab_switch_count: _tabSwitchCount,
-          reason,
-          timestamp: new Date().toISOString()
-        });
-      }
+      // Local tab switch counter in browser (Zero Supabase audit log spam per user directive)
     }
 
     function handleFocusLost(reason) {
@@ -1011,25 +995,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }
 
       triggerCheatAlert(`Browser Translator Detected (${reason})! Please restore original English.`);
-
-      logCheatingEvent(session.student_id, testId, 'TRANSLATION_ATTEMPT', {
-        reason: reason,
-        timestamp: new Date().toISOString()
-      });
     }
-
-    const translationObserver = new MutationObserver(() => {
-      if (!isTestActive) return;
-      const reason = checkTranslationArtifacts();
-      if (reason) {
-        handleTranslationDetected(reason);
-      }
-    });
-    translationObserver.observe(document.documentElement, {
-      attributes: true,
-      childList: true,
-      subtree: true
-    });
 
     // ─── Universal Netlify Badge & External Floating Injections Purge ───
     function purgeExternalBadges() {
@@ -1042,10 +1008,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       } catch (_) {}
     }
     purgeExternalBadges();
-    try {
-      const badgeObserver = new MutationObserver(() => purgeExternalBadges());
-      badgeObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
-    } catch (_) {}
+    setTimeout(purgeExternalBadges, 2000);
 
     // Seeded shuffle for question_order = 'random'
     function shuffleWithSeed(array, seedStr) {
@@ -1290,7 +1253,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
               : (sessModes?.words || sessMode || 'written');
             let pace = 10;
             if (isPhraseSection) {
-              pace = (curMode === 'selection' || curMode === 'multiple_choice') ? 10 : 20;
+              pace = (curMode === 'recognition' || curMode === 'selection' || curMode === 'multiple_choice') ? 10 : 20;
             } else {
               pace = (curMode === 'written') ? 15 : 10;
             }
@@ -1360,12 +1323,14 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             const localBuffer = JSON.parse(localBufferRaw);
             let restoredCount = 0;
             for (const [ansId, ansVal] of Object.entries(localBuffer)) {
-              if (ansVal && !answeredMap[ansId]) {
+              if (ansVal) {
                 const cleanAns = typeof ansVal === 'string'
                   ? ansVal
                   : (ansVal?.text || ansVal?.student_answer || ansVal?.answer || (typeof ansVal === 'object' ? JSON.stringify(ansVal) : String(ansVal)));
-                answeredMap[ansId] = cleanAns;
-                restoredCount++;
+                if (cleanAns && (!answeredMap[ansId] || answeredMap[ansId] !== cleanAns)) {
+                  answeredMap[ansId] = cleanAns;
+                  restoredCount++;
+                }
               }
             }
             if (restoredCount > 0) {
@@ -1675,7 +1640,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                 const tQ = Number(pa.total_questions || 0);
                 const cC = Number(pa.correct_count || pa.score || 0);
                 const fr = String(pa.forgiven_reason || '');
-                const isPhr = (tQ > 0 && tQ <= 40) || (cC > 0 && cC <= 10 && tQ <= 40) || /\b(phrases?|phr)\b/i.test(fr);
+                const isPhr = (tQ > 0 && tQ <= 20) || (cC > 0 && cC <= 10 && tQ <= 20) || /\b(phrases?|phr)\b/i.test(fr);
                 if (isPhr) {
                   if (isPass) pPasses++;
                   if (pBestPct == null || pct > pBestPct) pBestPct = pct;
@@ -1815,15 +1780,19 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             if (st === 'cancelled') {
               isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
-              alert('Your test session has been cancelled or terminated by the Proctor/Tutor.');
-              window.location.href = 'dashboard.html';
+              showToast('Your test session has been cancelled or terminated by the Proctor/Tutor.', 'error', 6000);
+              setTimeout(() => { window.location.href = 'dashboard.html'; }, 2000);
               return;
             }
             if (st === 'auto_submitted') {
               isTestActive = false;
               clearInterval(_sessionHeartbeatTimer);
-              alert('Your test session has been submitted by the Proctor/Tutor.');
-              window.location.href = `result.html?attempt_id=${attemptData.id}`;
+              updateGracePeriodBanner(0, { mode: 'tutor_closed' });
+              saveCurrentAnswer();
+              showLoading('Session closed by Tutor. Submitting your test...');
+              setTimeout(() => {
+                window.location.href = `result.html?attempt_id=${attemptData.id}`;
+              }, 2000);
               return;
             }
 
@@ -1833,6 +1802,17 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
               const serverExp = new Date(att.expires_at).getTime();
               if (!_lastKnownServerExpMs) {
                 _lastKnownServerExpMs = serverExp;
+              } else if (serverExp <= Date.now()) {
+                // Server deadline has arrived/been cut short by tutor
+                isTestActive = false;
+                clearInterval(_sessionHeartbeatTimer);
+                updateGracePeriodBanner(0, { mode: 'tutor_closed' });
+                saveCurrentAnswer();
+                showLoading('Test session has concluded. Auto-submitting answers...');
+                setTimeout(() => {
+                  autoSubmit();
+                }, 2000);
+                return;
               } else if (Math.abs(serverExp - _lastKnownServerExpMs) > 15000) {
                 const diffMinutes = Math.round((serverExp - _lastKnownServerExpMs) / 60000);
                 _lastKnownServerExpMs = serverExp;
@@ -1846,56 +1826,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
               }
             }
           }
-
-          // 2. Check test session status, expiration, and attendance whitelist
-          if (testId) {
-            const { data: asm } = await sb.from('tests')
-              .select('payload')
-              .eq('id', testId)
-              .maybeSingle();
-            const sess = asm?.payload?.test_session;
-            const isAlumniStudent = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI';
-
-            if (!isAlumniStudent && sess) {
-              // A. If Tutor closed/locked the session: Immediately eject and auto-submit!
-              if (sess.status === 'LOCKED') {
-                isTestActive = false;
-                if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
-                alert('This test session has been closed by the Proctor/Tutor. Submitting your answers now...');
-                try {
-                  await doSubmit('auto_submitted');
-                } catch (_) {}
-                window.location.href = 'dashboard.html';
-                return;
-              }
-
-              // B. If Session auto_close_at reached: Immediately eject and auto-submit!
-              if (sess.auto_close_at && new Date(sess.auto_close_at) <= new Date()) {
-                isTestActive = false;
-                if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
-                alert('The test session time has expired. Submitting your answers now...');
-                try {
-                  await doSubmit('auto_submitted');
-                } catch (_) {}
-                window.location.href = 'dashboard.html';
-                return;
-              }
-
-              // C. If student was removed from allowed_student_ids: Eject!
-              if (sess.status === 'UNLOCKED') {
-                const allowed = sess.allowed_student_ids || [];
-                if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
-                  isTestActive = false;
-                  if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
-                  alert('Your access to this test session has been revoked by the Proctor/Tutor.');
-                  window.location.href = 'dashboard.html';
-                  return;
-                }
-              }
-            }
-          }
         } catch (_) {}
-      }, 8000);
+      }, 15000);
     }
 
     function startSection(index, initialIdx = 0) {
@@ -1953,6 +1885,58 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
        renderQuestion(targetIdx);
     }
 
+    // —— Grace Period & Live Session Lock Banner (SSOT) ——
+    let _isGracePeriodActive = false;
+    function updateGracePeriodBanner(remainingSeconds, opts = {}) {
+      const banner = document.getElementById('grace-period-banner');
+      if (!banner) return;
+
+      const titleEl = document.getElementById('grace-banner-title');
+      const subEl = document.getElementById('grace-banner-sub');
+      const timerEl = document.getElementById('grace-banner-countdown');
+      const pulseIcon = document.getElementById('grace-pulse-icon');
+
+      if (opts.mode === 'submitting') {
+        banner.classList.remove('hidden', 'grace-emergency');
+        banner.classList.add('grace-submitting');
+        if (titleEl) titleEl.textContent = 'FINALIZING & SUBMITTING TEST...';
+        if (subEl) subEl.textContent = 'All answers are auto-saved. Loading your results...';
+        if (timerEl) timerEl.innerHTML = '<span class="tc-spinner-sm" style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></span>';
+        if (pulseIcon) pulseIcon.textContent = '⚡';
+        _isGracePeriodActive = true;
+        return;
+      }
+
+      if (opts.mode === 'tutor_closed') {
+        banner.classList.remove('hidden', 'grace-submitting');
+        banner.classList.add('grace-emergency');
+        if (titleEl) titleEl.textContent = 'SESSION CLOSED BY TUTOR • AUTO-SAVING';
+        if (subEl) subEl.textContent = 'Tutor has concluded this exam session. Submitting your work...';
+        if (timerEl) timerEl.textContent = '00:00';
+        if (pulseIcon) pulseIcon.textContent = '🔒';
+        _isGracePeriodActive = true;
+        return;
+      }
+
+      if (remainingSeconds <= 60 && remainingSeconds > 0) {
+        banner.classList.remove('hidden', 'grace-emergency', 'grace-submitting');
+        if (titleEl) titleEl.textContent = 'FINAL 60 SECONDS • FINISH CURRENT QUESTION';
+        if (subEl) subEl.textContent = 'All answers are auto-saved. Finishing window active.';
+        if (timerEl) {
+          const mins = Math.floor(remainingSeconds / 60);
+          const secs = remainingSeconds % 60;
+          timerEl.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+        if (pulseIcon) pulseIcon.textContent = '⏳';
+        _isGracePeriodActive = true;
+      } else if (remainingSeconds > 60) {
+        if (_isGracePeriodActive) {
+          banner.classList.add('hidden');
+          _isGracePeriodActive = false;
+        }
+      }
+    }
+
     // —— Timer ——
     function startTimer(currentSection) {
       if (timerController) timerController.stop();
@@ -1996,13 +1980,15 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const display = document.getElementById('timer-display');
       timerEl.classList.remove('warning', 'critical');
 
-
-    // Pacing badge removed
-
       timerController = startCountdown(activeEndAt.toISOString(), {
         onTick(remaining) {
           display.textContent = formatTime(remaining);
-          },
+          if (remaining <= 60) {
+            updateGracePeriodBanner(remaining);
+          } else if (_isGracePeriodActive) {
+            updateGracePeriodBanner(remaining);
+          }
+        },
         onWarning(remaining) {
           if (remaining <= 120) {
             timerEl.classList.add('critical');
@@ -2013,6 +1999,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           }
         },
         onExpire() {
+          updateGracePeriodBanner(0, { mode: 'submitting' });
           handleTimeUp(isSectionTimer);
         }
       });
@@ -2044,11 +2031,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
     function handleTimeUp(isSection) {
        saveCurrentAnswer();
+       updateGracePeriodBanner(0, { mode: 'submitting' });
        // Speech Grace Buffer (+1.5s): Stop active speech session and allow in-flight transcription to flush cleanly
        if (window.currentActiveSpeechSession) {
           try { window.currentActiveSpeechSession.stop(); } catch(_) {}
        }
-       showToast('⏱️ Finalizing your speech recording...', 'info', 1500);
+       showToast('⏱️ Finalizing and auto-saving test answers...', 'info', 2000);
        setTimeout(() => {
           saveCurrentAnswer();
           proceedTimeUp(isSection);
@@ -2709,7 +2697,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           main.appendChild(controlArea);
 
           renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
-        } else if (answerType === 'multiple_choice' || answerType === 'selection') {
+        } else if (answerType === 'multiple_choice' || answerType === 'selection' || answerType === 'recognition') {
           // 3. Multiple Choice Options Container (Flex 6: Full options area)
           answerArea = document.createElement('div');
           answerArea.id = 'answer-container-mc';
@@ -2959,6 +2947,29 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     function renderPhraseChips(area, row, savedAnswer, snap = {}) {
       const rawOptions = parseSnapshotOptions(snap.options_snapshot || row.options_snapshot);
       let options = [...rawOptions];
+
+      // Dynamic Distractor Self-Healing:
+      // If snapshot options are empty (e.g. attempt initialized prior to modality selection),
+      // dynamically construct distractors from other questions in this attempt
+      if (options.length === 0) {
+        const accepted = snap?.accepted_answers || snap?.accepted_answers_snapshot || row?.accepted_answers_snapshot || row?.accepted_answers;
+        const correctOpt = Array.isArray(accepted) ? accepted[0] : (snap?.correct_answer || row?.correct_answer_snapshot || row?.correct_answer || '');
+        if (correctOpt) {
+          const pool = [];
+          (allAnswerRows || []).forEach(r => {
+            const s = typeof r.question_snapshot === 'string' ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })() : (r.question_snapshot || {});
+            const acc = s.accepted_answers || s.accepted_answers_snapshot || r.accepted_answers_snapshot || r.accepted_answers;
+            const cand = Array.isArray(acc) ? acc[0] : (s.correct_answer || r.correct_answer_snapshot || '');
+            if (cand && cand !== correctOpt && !pool.includes(cand)) {
+              pool.push(cand);
+            }
+          });
+          pool.sort(() => 0.5 - Math.random());
+          const distractors = pool.slice(0, 4);
+          options = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
+        }
+      }
+
       if (options.length > 5) {
         const correctOpt = snap?.correct_answer || row.correct_answer_snapshot || row.correct_answer;
         let correctItem = options.find(o => (typeof o === 'string' ? o : o.text || o.value) === correctOpt);
@@ -3468,7 +3479,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             console.warn('Speech recognition error:', err);
             micBtn.style.transform = 'scale(1)';
             micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
-            micStatus.innerHTML = '<span style="color:#ef4444;">Mic Error — Tap to Retry</span>';
+            micStatus.innerHTML = '<span style="color:var(--grade-e, #ff0000);">Mic Error — Tap to Retry</span>';
           }
         });
 
@@ -3732,16 +3743,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       persistLocalBuffer();
       const statusText = document.getElementById('sync-status-text');
       const syncDot = document.getElementById('sync-dot');
-      if (statusText) statusText.textContent = 'Saving…';
-      if (syncDot) syncDot.style.background = '#38bdf8';
-      try {
-        await saveAnswer(attemptAnswerId, studentAnswer);
-        if (statusText) statusText.textContent = 'Saved';
-        if (syncDot) syncDot.style.background = 'var(--clr-success)';
-      } catch(e) {
-        if (statusText) statusText.textContent = 'Saved (Offline)';
-        if (syncDot) syncDot.style.background = 'var(--clr-warning)';
-      }
+      if (statusText) statusText.textContent = 'Saved';
+      if (syncDot) syncDot.style.background = 'var(--clr-success)';
     }
 
     // Flush local buffer before unload
@@ -3750,7 +3753,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       persistLocalBuffer();
     });
 
-    // Network resilience: Offline buffer & auto-reconnect sync (Pilar 3)
+    // Network resilience: Answers are always buffered locally in localStorage
     window.addEventListener('offline', () => {
       const statusText = document.getElementById('sync-status-text');
       const syncDot = document.getElementById('sync-dot');
@@ -3761,30 +3764,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }
     });
 
-    window.addEventListener('online', async () => {
+    window.addEventListener('online', () => {
+      persistLocalBuffer();
       const statusText = document.getElementById('sync-status-text');
       const syncDot = document.getElementById('sync-dot');
-      if (statusText) statusText.textContent = 'Syncing…';
-      if (syncDot) syncDot.style.background = '#38bdf8';
-      if (typeof showToast === 'function') {
-        showToast('Connection restored! Syncing answers to server…', 'info');
-      }
-      try {
-        saveCurrentAnswer();
-        persistLocalBuffer();
-        const activeAnswers = window.answeredMap || answeredMap;
-        const promises = [];
-        for (const [ansId, ansVal] of Object.entries(activeAnswers)) {
-          if (ansVal && typeof ansVal === 'string' && ansVal.trim()) {
-            promises.push(saveAnswer(ansId, ansVal.trim()));
-          }
-        }
-        await Promise.allSettled(promises);
-        if (statusText) statusText.textContent = 'Saved';
-        if (syncDot) syncDot.style.background = 'var(--clr-success)';
-      } catch (syncErr) {
-        console.warn('[OnlineSync] Reconnect sync error:', syncErr);
-      }
+      if (statusText) statusText.textContent = 'Saved';
+      if (syncDot) syncDot.style.background = 'var(--clr-success)';
     });
 
     window.toggleMatrixPopup = function(show) {

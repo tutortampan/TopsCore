@@ -67,18 +67,18 @@ function diagnoseErrorReason(targetWord, mistakesList, isSpokenMode = false) {
   });
 
   if (blankCount / totalMistakes >= 0.45) {
-    return { label: 'Timeout / Blank', color: 'var(--grade-e)', icon: getSvgIcon('clock', 12), bg: 'rgba(var(--grade-e-rgb),0.15)', border: 'rgba(var(--grade-e-rgb),0.35)' };
+    return { label: 'Timeout / Blank', color: 'var(--grade-e)', icon: getSvgIcon('clock', 12), bg: 'rgba(var(--grade-e-rgb, 255, 0, 0),0.15)', border: 'rgba(var(--grade-e-rgb, 255, 0, 0),0.35)' };
   }
   if (isSpokenMode) {
-    return { label: 'STT / Audio Homophone', color: '#06b6d4', icon: getSvgIcon('mic', 12), bg: 'rgba(6,182,212,0.15)', border: 'rgba(6,182,212,0.35)' };
+    return { label: 'STT / Audio Homophone', color: 'var(--primary-tactical, #38bdf8)', icon: getSvgIcon('mic', 12), bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.35)' };
   }
   if (spellingTypoCount / totalMistakes >= 0.35) {
-    return { label: 'Spelling Typo', color: 'var(--grade-c)', icon: getSvgIcon('edit', 12), bg: 'rgba(var(--grade-c-rgb),0.15)', border: 'rgba(var(--grade-c-rgb),0.35)' };
+    return { label: 'Spelling Typo', color: 'var(--grade-c)', icon: getSvgIcon('edit', 12), bg: 'rgba(var(--grade-c-rgb, 255, 255, 0),0.15)', border: 'rgba(var(--grade-c-rgb, 255, 255, 0),0.35)' };
   }
   if (formCount / totalMistakes >= 0.3) {
-    return { label: 'Word Form / Root Error', color: '#f97316', icon: getSvgIcon('refresh', 12), bg: 'rgba(249,115,22,0.15)', border: 'rgba(249,115,22,0.35)' };
+    return { label: 'Word Form / Root Error', color: 'var(--grade-d)', icon: getSvgIcon('refresh', 12), bg: 'rgba(var(--grade-d-rgb, 255, 140, 0),0.15)', border: 'rgba(var(--grade-d-rgb, 255, 140, 0),0.35)' };
   }
-  return { label: 'Distractor Trap / Concept Error', color: '#a855f7', icon: getSvgIcon('alert-triangle', 12), bg: 'rgba(168,85,247,0.15)', border: 'rgba(168,85,247,0.35)' };
+  return { label: 'Distractor Trap / Concept Error', color: 'var(--grade-star, #c084fc)', icon: getSvgIcon('alert-triangle', 12), bg: 'rgba(var(--grade-star-rgb, 192, 132, 252),0.15)', border: 'rgba(var(--grade-star-rgb, 192, 132, 252),0.35)' };
 }
 
 /**
@@ -294,25 +294,25 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         <!-- Universal Lower Panel (50px Height, docked at bottom flush with sidebar footer and locked banner) -->
         <div class="workspace-lower-panel analytics-toolbar">
           <div style="display:flex; align-items:center; gap:8px;">
-            <!-- Mini Search Input (Opsi A: Compact & Elegant) -->
+            <!-- Mini Search Input -->
             <div style="position:relative; width:160px;">
               <input type="text" id="analytics-quick-search" placeholder="Filter word..."
-                     style="width:100%; height:28px; background:#0b1120; border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:4px; padding:0 8px; font-size: 12px; outline:none;"
+                     style="width:100%; height:30px; line-height:28px; background:#0b1120; border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:4px; padding:0 8px; font-size: 12px; outline:none; box-sizing:border-box;"
                      autocomplete="off" />
             </div>
 
             <!-- Triage Pills with Official TopsCore Grading Colors -->
             <div class="analytics-triage-pills" style="display:inline-flex; align-items:center; gap:6px;">
-              <button type="button" class="btn btn-sm btn-analytics-pill active" data-filter="all" style="font-size: 12px; font-weight:700;">
+              <button type="button" class="btn btn-sm btn-analytics-pill active" data-filter="all" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important;">
                 ${getSvgIcon('globe', 12)} All (${totalVocabCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size: 12px; font-weight:700; background:rgba(var(--grade-e-rgb),0.15); color:var(--grade-e); border:1px solid rgba(var(--grade-e-rgb),0.35);">
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important; background:rgba(var(--grade-e-rgb, 255, 0, 0),0.15); color:var(--grade-e); border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0),0.35);">
                 <span class="status-dot dot-critical" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-e);margin-right:4px;"></span> Critical &gt;50% (${criticalCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size: 12px; font-weight:700; background:rgba(var(--grade-c-rgb),0.15); color:var(--grade-c); border:1px solid rgba(var(--grade-c-rgb),0.35);">
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.15); color:var(--grade-c); border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35);">
                 <span class="status-dot dot-warning" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-c);margin-right:4px;"></span> Needs Attention (${warningCount})
               </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size: 12px; font-weight:700; background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a); border:1px solid rgba(var(--grade-a-rgb),0.35);">
+              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.15); color:var(--grade-a); border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.35);">
                 <span class="status-dot dot-safe" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-a);margin-right:4px;"></span> Safe (${safeCount})
               </button>
             </div>
@@ -346,9 +346,9 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         key: 'errorRate',
         label: 'ERROR RATE',
         align: 'center',
-        width: '95px',
+        width: '100px',
         render: (row) => {
-          const color = typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(row.errorRate) : (row.errorRate >= 50 ? 'var(--grade-e)' : (row.errorRate >= 25 ? 'var(--grade-d)' : 'var(--grade-a)'));
+          const color = typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(row.errorRate) : (row.errorRate >= 50 ? 'var(--grade-e)' : (row.errorRate >= 25 ? 'var(--grade-c)' : 'var(--grade-a)'));
           return `
             <div style="display:flex; flex-direction:column; align-items:center; gap:3px;">
               <span style="font-weight:900; font-size: 16px; color:${color}; font-variant-numeric:tabular-nums;">${row.errorRate}%</span>
@@ -363,7 +363,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         key: 'incorrectCount',
         label: 'MISTAKES',
         align: 'center',
-        width: '80px',
+        width: '85px',
         render: (row) => `
           <span style="font-weight:700; font-size: 12px; color:${row.incorrectCount > 0 ? 'var(--grade-e)' : 'var(--grade-a)'}; font-variant-numeric:tabular-nums;">
             ${row.incorrectCount}
@@ -374,7 +374,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         key: 'totalAttempts',
         label: 'EVALUATED',
         align: 'center',
-        width: '80px',
+        width: '100px',
         render: (row) => `
           <span style="font-weight:700; font-size: 12px; color:var(--clr-text-2); font-variant-numeric:tabular-nums;">
             ${row.totalAttempts}
@@ -394,9 +394,9 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         key: 'diag',
         label: 'ERROR DIAGNOSIS',
         align: 'center',
-        width: '180px',
+        width: '260px',
         render: (row) => `
-          <span class="badge" style="background:${row.diag.bg}; color:${row.diag.color}; border:1px solid ${row.diag.border}; font-size: 12px; font-weight:700; padding:3px 8px; display:inline-flex; align-items:center; gap:4px;">
+          <span class="badge" style="background:${row.diag.bg}; color:${row.diag.color}; border:1px solid ${row.diag.border}; font-size: 12px; font-weight:700; padding:3px 8px; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">
             <span>${row.diag.icon}</span>
             <span>${row.diag.label}</span>
           </span>
@@ -406,9 +406,9 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
         key: 'actions',
         label: 'ACTIONS',
         align: 'center',
-        width: '120px',
+        width: '140px',
         render: (row) => `
-          <button type="button" class="btn btn-secondary btn-sm btn-inspect-vocab-mistakes" data-key="${escapeHtml(row.key)}" style="font-size: 12px; font-weight:700; padding:2px 8px;">
+          <button type="button" class="btn btn-secondary btn-sm btn-inspect-vocab-mistakes" data-key="${escapeHtml(row.key)}" style="font-size: 12px; font-weight:700; padding:0 10px; height:28px; line-height:26px; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;">
             ${getSvgIcon('search', 12)} Student Details
           </button>
         `
@@ -515,57 +515,109 @@ function openVocabErrorDetailModal(item) {
 
   const backdrop = document.createElement('div');
   backdrop.id = 'vocab-error-details-modal';
-  backdrop.className = 'modal-backdrop';
-  backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); display:flex; align-items:center; justify-content:center; z-index:9999; padding:1rem;';
+  backdrop.className = 'topscore-modal-overlay';
+  backdrop.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(6px); display:flex; align-items:center; justify-content:center; z-index:9999; padding:10px; box-sizing:border-box; animation:fadeIn 0.15s ease-out;';
 
   const mistakes = item.mistakesList || [];
 
   backdrop.innerHTML = `
-    <div class="modal-box" style="max-width:640px; width:100%; max-height:85vh; display:flex; flex-direction:column; background:#0f172a; border:1px solid rgba(255,255,255,0.12); border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); overflow:hidden;">
-      <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:1rem 1.25rem; border-bottom:1px solid rgba(255,255,255,0.08); flex-shrink:0;">
-        <div>
-          <h3 style="margin:0; font-size: 16px; font-weight:800; color:var(--clr-text-1);">
-            Student Details: <span style="color:#38bdf8;">${escapeHtml(item.targetWord)}</span>
-          </h3>
-          <div style="font-size: 12px; color:var(--clr-text-muted); margin-top:2px;">
-            ${escapeHtml(item.translation)} • ${item.incorrectCount} of ${item.totalAttempts} Students Incorrect (${item.errorRate}%)
-          </div>
-        </div>
+    <style>
+      #vocab-error-details-modal .modal-card {
+        background: #0f172a; border: 1.5px solid rgba(255, 255, 255, 0.16); border-radius: 12px;
+        width: 100%; max-width: 680px; display: flex; flex-direction: column;
+        max-height: 80vh !important; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        overflow: hidden; color: #f8fafc;
+      }
+      #vocab-error-details-modal .title-area {
+        height: 60px !important; min-height: 60px !important; max-height: 60px !important;
+        border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+        display: flex; align-items: center; justify-content: center;
+        background: #1e293b !important; box-sizing: border-box; padding: 0 16px;
+      }
+      #vocab-error-details-modal .title-area h2 {
+        margin: 0; font-family: var(--fm-font-display, 'Inter', sans-serif);
+        font-size: 16px; font-weight: 800; text-transform: uppercase;
+        letter-spacing: 0.05em; color: #ffffff; text-align: center;
+        display: flex; align-items: center; gap: 8px;
+      }
+      #vocab-error-details-modal .modal-body {
+        padding: 10px !important; overflow-y: auto; max-height: calc(80vh - 120px);
+        display: flex; flex-direction: column; gap: 10px; box-sizing: border-box;
+      }
+      #vocab-error-details-modal .cta-area {
+        height: 60px !important; min-height: 60px !important; max-height: 60px !important;
+        border-top: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+        background: rgba(30, 41, 59, 0.5); display: flex !important; justify-content: flex-start !important;
+        align-items: center !important; gap: 10px; padding: 0 10px !important; box-sizing: border-box;
+      }
+      #vocab-error-details-modal .btn-cta-close {
+        height: 40px !important; min-height: 40px !important; max-height: 40px !important;
+        line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
+        font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
+        font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+        color: #94a3b8; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box;
+      }
+      #vocab-error-details-modal .btn-cta-close:hover {
+        background: rgba(255,255,255,0.12) !important; color: #ffffff !important;
+        border-color: rgba(255,255,255,0.3) !important;
+      }
+    </style>
+
+    <div class="modal-card">
+      <!-- Title Area (Strict 60px, ALL CAPS, Centered, Zero Subtitle Clutter) -->
+      <div class="title-area">
+        <h2>${getSvgIcon('alert-triangle', 18)} STUDENT MISTAKE DETAILS: ${escapeHtml((item.targetWord || '').toUpperCase())}</h2>
       </div>
 
-      <div class="modal-body" style="flex:1 1 0; min-height:0; overflow-y:auto; padding:1rem 1.25rem;">
+      <!-- Modal Body (Strict 10px padding, 10px gap) -->
+      <div class="modal-body">
+        <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
+          <div>
+            <div style="font-size:12px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase;">Meaning &amp; Translation</div>
+            <div style="font-size:14px; font-weight:700; color:#38bdf8;">${escapeHtml(item.translation || '—')}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:12px; font-weight:700; color:var(--clr-text-muted); text-transform:uppercase;">Failure Ratio</div>
+            <div style="font-size:14px; font-weight:800; color:var(--grade-e);">${item.incorrectCount} of ${item.totalAttempts} Students (${item.errorRate}%)</div>
+          </div>
+        </div>
+
         ${mistakes.length === 0 ? `
-          <div class="text-center p-4 text-muted">No students missed this vocabulary item!</div>
+          <div style="text-align:center; padding:20px; color:var(--clr-text-muted); font-size:12px;">No students missed this vocabulary item!</div>
         ` : `
-          <table class="table w-100" style="width:100%; border-collapse:collapse; font-size: 12px;">
-            <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8; font-size: 12px;">
-                <th style="padding:6px 8px;">STUDENT NAME</th>
-                <th style="padding:6px 8px;">STUDENT ANSWER</th>
-                <th style="padding:6px 8px;">PTS</th>
-                <th style="padding:6px 8px;">EXAM</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${mistakes.map(m => `
-                <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                  <td style="padding:8px; font-weight:700; color:var(--clr-text-1);">${escapeHtml(m.studentName)}</td>
-                  <td style="padding:8px; font-family:monospace; color:var(--grade-e); font-weight:700;">${escapeHtml(m.studentAnswer)}</td>
-                  <td style="padding:8px;">
-                    <span class="badge" style="background:${m.score > 0 ? 'rgba(var(--grade-c-rgb),0.15)' : 'rgba(var(--grade-e-rgb),0.15)'}; color:${m.score > 0 ? 'var(--grade-c)' : 'var(--grade-e)'}; font-size: 12px; font-weight:800;">
-                      ${m.score} pt
-                    </span>
-                  </td>
-                  <td style="padding:8px; font-size: 12px; color:var(--clr-text-muted);">${escapeHtml(m.testTitle)}</td>
+          <div style="border:1px solid rgba(255,255,255,0.12); border-radius:6px; overflow:hidden;">
+            <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+              <thead>
+                <tr style="background:#1e293b; color:#ffffff; border-bottom:1px solid rgba(255,255,255,0.12); text-transform:uppercase;">
+                  <th style="padding:6px 10px; font-weight:700;">STUDENT NAME</th>
+                  <th style="padding:6px 10px; font-weight:700;">STUDENT ANSWER</th>
+                  <th style="padding:6px 10px; font-weight:700; text-align:center;">PTS</th>
+                  <th style="padding:6px 10px; font-weight:700;">EXAM</th>
                 </tr>
-              `).join('')}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                ${mistakes.map(m => `
+                  <tr style="border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.01);">
+                    <td style="padding:8px 10px; font-weight:700; color:#ffffff;">${escapeHtml(m.studentName)}</td>
+                    <td style="padding:8px 10px; font-family:monospace; color:var(--grade-e); font-weight:700;">"${escapeHtml(m.studentAnswer)}"</td>
+                    <td style="padding:8px 10px; text-align:center;">
+                      <span class="badge" style="background:${m.score > 0 ? 'rgba(var(--grade-c-rgb, 255, 255, 0),0.15)' : 'rgba(var(--grade-e-rgb, 255, 0, 0),0.15)'}; color:${m.score > 0 ? 'var(--grade-c)' : 'var(--grade-e)'}; font-size:12px; font-weight:800; padding:2px 6px;">
+                        ${m.score} pt
+                      </span>
+                    </td>
+                    <td style="padding:8px 10px; font-size:12px; color:#94a3b8;">${escapeHtml(m.testTitle)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
         `}
       </div>
 
-      <div class="modal-footer" style="padding:0.75rem 1.25rem; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:flex-start; flex-shrink:0;">
-        <button class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-vocab-error-footer">Close</button>
+      <!-- CTA Area (Strict 60px, CLOSE button at far left) -->
+      <div class="cta-area">
+        <button type="button" class="btn-cta-close" id="btn-close-vocab-error-footer">CLOSE</button>
       </div>
     </div>
   `;
@@ -573,7 +625,6 @@ function openVocabErrorDetailModal(item) {
   document.body.appendChild(backdrop);
 
   const closeModal = () => backdrop.remove();
-  backdrop.querySelector('#close-vocab-error-modal')?.addEventListener('click', closeModal);
   backdrop.querySelector('#btn-close-vocab-error-footer')?.addEventListener('click', closeModal);
   backdrop.addEventListener('click', (e) => {
     if (e.target === backdrop) closeModal();

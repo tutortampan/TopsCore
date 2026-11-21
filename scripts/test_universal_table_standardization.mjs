@@ -157,4 +157,17 @@ assert(!studentMgmtJs.includes('pct >= 70 || att?.is_forgiven'), 'student-manage
 assert(studentMgmtJs.includes('pct >= minPass || att?.is_forgiven'), 'student-management.js must check pct >= minPass for level promotion eligibility');
 console.log('  ✅ Pillar 11 Passed: Level Promotion Passing Threshold Invariant strictly verified.');
 
-console.log('\n🎉 ALL 11 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');
+// 12. Pillar 12: Super-Header & Sub-Header Exact Group Color Match Invariant (SSOT §2.34 & Rule 4.11)
+console.log('▶ Checking Pillar 12: Super-Header & Sub-Header Exact Group Color Match Invariant...');
+assert(!appJs.includes("super-hdr-exam',\n                style: 'background: #0b1120 !important; color: var(--grade-c, #ffff00) !important;'") && !appJs.includes("className: `${themeColorClasses[activeThemeCode] || 'super-hdr super-hdr-theme'} super-hdr-exam`,\n                style: 'background: #0b1120 !important; color: var(--grade-c, #ffff00) !important;'"), 'app.js must not hardcode yellow color on dynamic exam super-header');
+assert(appJs.includes('super-hdr-exam-${activeThemeCode.toLowerCase()}'), 'app.js must dynamically attach theme quadrant class to super-hdr-exam');
+assert(!adminCss.includes('th.super-hdr-exam {\n  background: #241a0e !important;\n  color: var(--grade-c, #ffff00) !important;') && !adminCss.includes('th.super-hdr-exam{background:#241a0e !important;color:var(--grade-c, #ffff00) !important;'), 'admin.css must not force yellow on generic super-hdr-exam');
+assert(adminCss.includes('super-hdr-exam-a') && adminCss.includes('var(--quad-a, #ff2d87)'), 'admin.css must bind Theme A exam super-header to Electric Pink');
+assert(adminCss.includes('super-hdr-exam-b') && adminCss.includes('var(--quad-b, #ff8c00)'), 'admin.css must bind Theme B exam super-header to Dark Orange');
+assert(adminCss.includes('super-hdr-exam-c') && adminCss.includes('var(--quad-c, #95ff00)'), 'admin.css must bind Theme C exam super-header to Electric Lime');
+assert(adminCss.includes('super-hdr-exam-d') && adminCss.includes('var(--quad-d, #38bdf8)'), 'admin.css must bind Theme D exam super-header to Tactical Cyan');
+assert(agentsMd.includes('Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant)'), 'AGENTS.md must codify 100% Exact Group Color Match Invariant');
+assert(uiInvariantsMd.includes('Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant)'), 'ui-invariants.md must codify 100% Exact Group Color Match Invariant');
+console.log('  ✅ Pillar 12 Passed: Super-Header & Sub-Header Exact Group Color Match Invariant strictly verified.');
+
+console.log('\n🎉 ALL 12 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');

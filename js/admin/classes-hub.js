@@ -1,6 +1,15 @@
-import { adminFetchAll, adminUpdate, fetchClassTestSettings, saveClassTestSettings, toShortLevel } from '../api.js?v=20261114_v517';
-import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
-import { getClassSvgIcon } from '../grading.js?v=20261106_v160';
+import {
+  adminFetchAll,
+  adminUpdate,
+  fetchClassTestSettings,
+  saveClassTestSettings,
+  toShortLevel,
+  fetchDisciplineGovernance,
+  saveDisciplineGovernance,
+  DEFAULT_DISCIPLINE_GOVERNANCE
+} from '../api.js?v=20261114_v517';
+import { showToast, escapeHtml } from '../app.js?v=20261106_v160';
+import { detectClassDiscipline } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function renderClassesHub(area) {
@@ -9,7 +18,7 @@ export async function renderClassesHub(area) {
     : '<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">Loading Curriculum Hub...</p></div>';
 
   try {
-    const [institutions, programs, classes, levels, classLevels, students, batches, tests] = await Promise.all([
+    const [institutions, programs, classes, levels, classLevels, students, batches, tests, vaultWords] = await Promise.all([
       adminFetchAll('institutions', 'id, name, code, is_active, deleted_at'),
       adminFetchAll('programs',    'id, name, code, institution_id, is_active, deleted_at'),
       adminFetchAll('classes',     'id, name, code, is_active, program_id, level_id, institution_id, deleted_at'),
@@ -17,7 +26,8 @@ export async function renderClassesHub(area) {
       adminFetchAll('class_levels', 'class_id, level_id').catch(() => []),
       adminFetchAll('students',    'id, name, program_id, batch_id, level_id, is_active, deleted_at').catch(() => []),
       adminFetchAll('batches',     'id, program_id, current_level_id, is_active, deleted_at').catch(() => []),
-      adminFetchAll('tests',       'id, title, category, test_type, class_id, level_id, minimum_required_score, payload, status, deleted_at').catch(() => [])
+      adminFetchAll('tests',       'id, title, category, test_type, class_id, level_id, minimum_required_score, question_order, payload, status, deleted_at').catch(() => []),
+      adminFetchAll('vocabulary_vault', 'target_level, deleted_at').catch(() => [])
     ]);
 
     const activeInsts   = (institutions || []).filter(i => !i.deleted_at).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -28,6 +38,14 @@ export async function renderClassesHub(area) {
 
     const batchMap   = new Map((batches || []).filter(b => !b.deleted_at).map(b => [b.id, b]));
     const activeStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false);
+
+    // Live Vocabulary Vault target_level counts
+    const vaultCountsByLevel = { 0: 0, 1: 0, 2: 0, 3: 0, total: 0 };
+    (vaultWords || []).filter(w => !w.deleted_at).forEach(v => {
+      const lvl = v.target_level != null ? Number(v.target_level) : 0;
+      if (vaultCountsByLevel[lvl] != null) vaultCountsByLevel[lvl]++;
+      vaultCountsByLevel.total++;
+    });
 
     const classLevelPairs = new Set();
     (classLevels || []).forEach(cl => {
@@ -74,16 +92,6 @@ export async function renderClassesHub(area) {
       return !isNaN(num) && num > 0 ? num : 60;
     };
 
-    // Helper: evaluate grade badge info for a passing score
-    const getGradeInfoForScore = (score) => {
-      if (score >= 100) return { grade: '★', label: 'Excellent', color: 'var(--grade-star, #ff2d87)', bg: 'rgba(255, 45, 135, 0.15)' };
-      if (score >= 90)  return { grade: 'A', label: 'Very Good',  color: 'var(--grade-a, #00c000)',    bg: 'rgba(0, 192, 0, 0.15)' };
-      if (score >= 80)  return { grade: 'B', label: 'Good',       color: 'var(--grade-b, #95ff00)',    bg: 'rgba(149, 255, 0, 0.15)' };
-      if (score >= 60)  return { grade: 'C', label: 'Enough',     color: 'var(--grade-c, #FFFF00)',    bg: 'rgba(255, 255, 0, 0.15)' };
-      if (score >= 30)  return { grade: 'D', label: 'Less',       color: 'var(--grade-d, #FF8C00)',    bg: 'rgba(255, 140, 0, 0.15)' };
-      return { grade: 'E', label: 'Fail', color: 'var(--grade-e, #FF0000)', bg: 'rgba(255, 0, 0, 0.15)' };
-    };
-
     window._classesHubRecords = {};
     activeInsts.forEach(r   => window._classesHubRecords[r.id] = r);
     activeProgs.forEach(r   => window._classesHubRecords[r.id] = r);
@@ -93,6 +101,7 @@ export async function renderClassesHub(area) {
 
     // Default UI states
     if (!window._classesHubActiveInst) window._classesHubActiveInst = 'all'; // 'all' | instId
+    if (!window._classesHubDiscipline) window._classesHubDiscipline = 'VOCABULARY'; // 'VOCABULARY' | 'BASIC_ENGLISH' | 'SPEAKING' | 'STORYTELLING' | 'ALL_CLASSES'
     if (!window._classesHubExpandedLevels || window._classesHubExpandedLevels.size === 0) {
       window._classesHubExpandedLevels = new Set(activeLevels.map(l => l.id));
       window._classesHubExpandedLevels.add('unassigned');
@@ -101,29 +110,79 @@ export async function renderClassesHub(area) {
       window._classesHubExpandedTests = new Set();
     }
 
-    // Switch institution filter tab in topbar
+    // Discipline definitions & configuration metadata
+    const DISCIPLINE_TABS = [
+      {
+        key: 'VOCABULARY',
+        name: 'Vocabulary',
+        badge: 'Tiered Discipline (L1–L3 + Non-Level)',
+        icon: 'book',
+        color: '#c084fc',
+        description: 'One continuous tiered discipline sharing identical systemic rules across all levels (1st, 2nd, 3rd, Non-Level): 7×7 repetitive mastery, 4 themes (A–D), and exclusive Vocabulary Vault data binding.',
+        levels: ['1st Level', '2nd Level', '3rd Level', 'Non-Level'],
+        skus: ['CMP-1VOCAB', 'CMP-2VOCAB', 'CMP-3VOCAB', 'EVN-VOCAB', 'SHR-VOCAB', 'TMT-VOCAB'],
+        exclusiveModules: ['Vocabulary Mastery - Recognition (10s)', 'Vocabulary Mastery - Spoken (10s)', 'Vocabulary Mastery - Written (15s)'],
+        dataSourceLabel: 'Vocabulary Vault (Direct DB Link)'
+      },
+      {
+        key: 'BASIC_ENGLISH',
+        name: 'Basic English',
+        badge: 'Foundation Discipline',
+        icon: 'camera',
+        color: '#38bdf8',
+        description: 'Elementary English foundations: Grammar structure, sentence formation, and turn-based photo description.',
+        levels: ['1st Level', 'Foundation'],
+        skus: ['CMP-1BASIC', 'EVN-BASIC', 'SHR-BASIC', 'TMT-BASIC'],
+        exclusiveModules: ['Basic English - Description (M1)'],
+        dataSourceLabel: 'Item Bank (Basic English Repository)'
+      },
+      {
+        key: 'SPEAKING',
+        name: 'Speaking',
+        badge: 'Oral Performance & Speech',
+        icon: 'mic',
+        color: '#95ff00',
+        description: 'Speech fluency, audio dialogue turn-taking, and pronunciation evaluation.',
+        levels: ['2nd Level', 'Intermediate Speech'],
+        skus: ['CMP-2SPEAK', 'EVN-SPEAK', 'SHR-SPEAK', 'TMT-SPEAK'],
+        exclusiveModules: ['Public Speaking (M5, M7)'],
+        dataSourceLabel: 'Item Bank (Public Speaking Topics)'
+      },
+      {
+        key: 'STORYTELLING',
+        name: 'Storytelling',
+        badge: 'Narrative & Comprehension',
+        icon: 'film',
+        color: '#FF8C00',
+        description: 'Story comprehension, audio narrative retelling, and contextual expression.',
+        levels: ['1st Level', 'Narrative Performance'],
+        skus: ['CMP-1STORY', 'EVN-STORY', 'SHR-STORY', 'TMT-STORY'],
+        exclusiveModules: ['Storytelling (M6)'],
+        dataSourceLabel: 'Item Bank (Story Audio & Scripts)'
+      },
+      {
+        key: 'ALL_CLASSES',
+        name: 'Master Directory',
+        badge: 'All Institutions & Classes',
+        icon: 'globe',
+        color: '#cbd5e1',
+        description: 'Comprehensive multi-institution inventory and cross-program class directory.',
+        levels: ['All Levels'],
+        skus: ['All SKUs'],
+        exclusiveModules: ['All Engines'],
+        dataSourceLabel: 'Central Database'
+      }
+    ];
+
+    // Switch institution filter tab
     window.switchClassesHubInst = (instId) => {
       window._classesHubActiveInst = instId;
       renderView();
     };
 
-    // Toggle level accordion
-    window.toggleClassesHubLevel = (levelId) => {
-      if (window._classesHubExpandedLevels.has(levelId)) {
-        window._classesHubExpandedLevels.delete(levelId);
-      } else {
-        window._classesHubExpandedLevels.add(levelId);
-      }
-      renderView();
-    };
-
-    // Toggle class tests inspect drawer
-    window.toggleClassesHubTests = (classId) => {
-      if (window._classesHubExpandedTests.has(classId)) {
-        window._classesHubExpandedTests.delete(classId);
-      } else {
-        window._classesHubExpandedTests.add(classId);
-      }
+    // Switch discipline filter tab (called from Top Panel Topbar Tabs)
+    window.switchClassesHubDiscipline = (discKey) => {
+      window._classesHubDiscipline = discKey;
       renderView();
     };
 
@@ -178,7 +237,7 @@ export async function renderClassesHub(area) {
       renderView();
     };
 
-    window.openVocabVaultFromClassHub = (progId) => {
+    window.openVocabVaultFromClassHub = () => {
       window._activeVaultTab = 'blueprint';
       try {
         localStorage.setItem('topscore_admin_vault_tab', 'blueprint');
@@ -239,57 +298,17 @@ export async function renderClassesHub(area) {
       }
     };
 
-    // Quick Edit Passing Standard Modal
-    window.openQuickEditPassingStandard = (testId) => {
-      const test = window._classesHubRecords[testId];
-      if (!test) return;
-      const curScore = getTestMinScore(test);
-      const testTitle = test.title || test.display_name || 'Test';
-      const shellCode = test.shell_code || test.payload?.shell_code || '';
-      const testCat = (test.category || (test.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase();
-
-      const modalHtml = `
-        <div id="quick-edit-standard-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
-          <div style="background:#0F172A;border:2px solid rgba(56,189,248,0.35);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 40px rgba(0,0,0,0.6);padding:20px;color:#f8fafc;font-family:'Inter',sans-serif;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="color:#38bdf8;">${getSvgIcon('award', 18)}</span>
-                <span style="font-size:16px;font-weight:700;">Calibrate Passing Standard</span>
-              </div>
-              <button onclick="window.closeQuickEditModal()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;">✕</button>
-            </div>
-            <div style="margin-bottom:14px;">
-              <div style="font-size:12px;font-weight:600;color:#f1f5f9;margin-bottom:2px;">${escapeHtml(testTitle)}</div>
-              <div style="font-size:12px;color:#94a3b8;display:flex;gap:8px;align-items:center;">
-                <span style="font-family:monospace;background:rgba(255,255,255,0.06);padding:1px 5px;border-radius:3px;">${escapeHtml(shellCode || '-')}</span>
-                <span>Type: <strong style="color:${testCat === 'EXAM' ? '#FF8C00' : '#818cf8'};">${testCat}</strong></span>
-              </div>
-            </div>
-            <div style="margin-bottom:16px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:6px;">Minimum Required Passing Rate (%):</label>
-              <div style="display:flex;gap:8px;margin-bottom:10px;">
-                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;padding:6px 0;background:${curScore === 60 ? 'rgba(255,255,0,0.2)' : 'rgba(255,255,255,0.05)'};border-color:${curScore === 60 ? 'var(--grade-c)' : 'rgba(255,255,255,0.1)'};color:${curScore === 60 ? 'var(--grade-c)' : '#f8fafc'};" onclick="document.getElementById('quick-score-input').value = 60;">60% (Grade C)</button>
-                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;padding:6px 0;background:${curScore === 70 ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.05)'};border-color:${curScore === 70 ? '#38bdf8' : 'rgba(255,255,255,0.1)'};color:${curScore === 70 ? '#38bdf8' : '#f8fafc'};" onclick="document.getElementById('quick-score-input').value = 70;">70% (Task Pass)</button>
-                <button type="button" class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;padding:6px 0;background:${curScore === 80 ? 'rgba(149,255,0,0.2)' : 'rgba(255,255,255,0.05)'};border-color:${curScore === 80 ? 'var(--grade-b)' : 'rgba(255,255,255,0.1)'};color:${curScore === 80 ? 'var(--grade-b)' : '#f8fafc'};" onclick="document.getElementById('quick-score-input').value = 80;">80% (Grade B)</button>
-              </div>
-              <div style="display:flex;align-items:center;gap:10px;">
-                <input id="quick-score-input" type="number" min="1" max="100" value="${curScore}" class="form-control" style="font-size:14px;font-weight:700;text-align:center;height:36px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.2);color:#38bdf8;" />
-                <span style="font-size:14px;font-weight:700;color:#94a3b8;">%</span>
-              </div>
-              <div style="font-size:12px;color:#94a3b8;margin-top:6px;line-height:1.4;">
-                * Standard Tests require <strong>60% (Grade C Enough)</strong> for promotion eligibility per AGENTS.md §2.4.1.
-              </div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeQuickEditModal()" style="font-size:12px;padding:6px 14px;margin-right:auto;">CLOSE</button>
-              <button type="button" class="btn btn-primary btn-sm" onclick="window.saveQuickEditPassingStandard('${test.id}')" style="font-size:12px;padding:6px 16px;background:#38bdf8;border-color:#38bdf8;color:#090D16;font-weight:700;">Save Standard</button>
-            </div>
-          </div>
-        </div>
-      `;
-      const prev = document.getElementById('quick-edit-standard-overlay');
-      if (prev) prev.remove();
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    // Open specific class workstation directly
+    window.openClassWorkstation = (classId) => {
+      window._selectedClassId = classId;
+      try {
+        sessionStorage.setItem('topscore_current_class_context', JSON.stringify({ classId }));
+      } catch (_) {}
+      if (typeof window.loadSection === 'function') {
+        window.loadSection('class-hub');
+      } else {
+        window.location.hash = '#class-hub';
+      }
     };
 
     // Open Full Class Test Settings & Blueprint Rules Modal directly from Classes Hub
@@ -309,167 +328,127 @@ export async function renderClassesHub(area) {
       }
     };
 
-    window.closeQuickEditModal = () => {
-      const modal = document.getElementById('quick-edit-standard-overlay');
-      if (modal) modal.remove();
-    };
+    // Save Vocabulary Governance from inline workspace panel inputs
+    window.saveVocabGovInline = async () => {
+      const taskScoreInp = document.getElementById('gov-inline-task-score');
+      const examScoreInp = document.getElementById('gov-inline-exam-score');
+      const taskDurInp = document.getElementById('gov-inline-task-dur');
+      const examDurInp = document.getElementById('gov-inline-exam-dur');
 
-    window.saveQuickEditPassingStandard = async (testId) => {
-      const inp = document.getElementById('quick-score-input');
-      if (!inp) return;
-      const newScore = Math.max(1, Math.min(100, parseInt(inp.value, 10) || 60));
-      const test = window._classesHubRecords[testId];
-      if (!test) return;
+      const taskMinScore = Math.max(1, Math.min(100, parseInt(taskScoreInp?.value, 10) || 60));
+      const examMinScore = Math.max(1, Math.min(100, parseInt(examScoreInp?.value, 10) || 60));
+      const taskDuration = Math.max(1, parseInt(taskDurInp?.value, 10) || 11);
+      const examDuration = Math.max(1, parseInt(examDurInp?.value, 10) || 54);
+      const taskOrderInp = document.getElementById('gov-inline-task-order');
+      const examOrderInp = document.getElementById('gov-inline-exam-order');
+      const taskOrder = taskOrderInp?.value === 'sequential' ? 'sequential' : 'random';
+      const examOrder = examOrderInp?.value === 'sequential' ? 'sequential' : 'random';
 
-      const updatedPayload = { ...(test.payload || {}) };
-      updatedPayload.minimum_required_score = newScore;
-      updatedPayload.min_score = newScore;
+      // Read per-modality pacing
+      const pwWritten     = Math.max(1, parseInt(document.getElementById('pacing-words-written')?.value, 10) || 15);
+      const pwRecognition = Math.max(1, parseInt(document.getElementById('pacing-words-recognition')?.value || document.getElementById('pacing-words-selection')?.value, 10) || 10);
+      const pwSpoken      = Math.max(1, parseInt(document.getElementById('pacing-words-spoken')?.value, 10) || 10);
+
+      const ppWritten     = Math.max(1, parseInt(document.getElementById('pacing-phrases-written')?.value, 10) || 25);
+      const ppRecognition = Math.max(1, parseInt(document.getElementById('pacing-phrases-recognition')?.value || document.getElementById('pacing-phrases-selection')?.value, 10) || 10);
+      const ppSpoken      = Math.max(1, parseInt(document.getElementById('pacing-phrases-spoken')?.value, 10) || 20);
+
+      const wordsPacing = { written: pwWritten, recognition: pwRecognition, selection: pwRecognition, spoken: pwSpoken };
+      const phrasesPacing = { written: ppWritten, recognition: ppRecognition, selection: ppRecognition, spoken: ppSpoken };
+
+      showToast('Saving Vocabulary Governance Standards & Syncing...', 'info');
 
       try {
-        await adminUpdate('tests', testId, {
-          minimum_required_score: newScore,
-          payload: updatedPayload
+        await saveDisciplineGovernance('VOCABULARY', {
+          taskMinScore,
+          examMinScore,
+          taskDuration,
+          examDuration,
+          taskOrder,
+          examOrder,
+          wordsPacing,
+          phrasesPacing
         });
 
-        test.minimum_required_score = newScore;
-        test.payload = updatedPayload;
+        // Synchronize all vocabulary classes
+        const discClasses = activeClasses.filter(c => detectClassDiscipline(c) === 'VOCABULARY');
+        for (const cls of discClasses) {
+          try {
+            const curSettings = await fetchClassTestSettings(cls.id);
+            await saveClassTestSettings(cls.id, {
+              ...curSettings,
+              taskMinScore,
+              examMinScore,
+              taskQuestionOrder: taskOrder,
+              examQuestionOrder: examOrder
+            }, false);
+          } catch (_) {}
 
-        showToast(`Passing rate updated to ${newScore}%.`, 'success');
-        window.closeQuickEditModal();
-        renderView();
-      } catch (err) {
-        showToast('Failed to update passing standard: ' + (err && err.message ? err.message : err), 'error');
-      }
-    };
-
-    // Batch Align Class Standards Modal
-    window.openBatchAlignStandards = (classId) => {
-      const cls = window._classesHubRecords[classId];
-      if (!cls) return;
-      const classTests = testsByClass.get(classId) || [];
-      const examCount = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM').length;
-      const taskCount = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM').length;
-
-      const modalHtml = `
-        <div id="quick-edit-standard-overlay" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;">
-          <div style="background:#0F172A;border:2px solid rgba(149,255,0,0.35);border-radius:12px;width:100%;max-width:440px;box-shadow:0 20px 40px rgba(0,0,0,0.6);padding:20px;color:#f8fafc;font-family:'Inter',sans-serif;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.08);padding-bottom:10px;">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span style="color:var(--grade-b);">${getSvgIcon('award', 18)}</span>
-                <span style="font-size:16px;font-weight:700;">Batch Align Passing Standards</span>
-              </div>
-              <button onclick="window.closeQuickEditModal()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;">✕</button>
-            </div>
-            <div style="margin-bottom:14px;">
-              <div style="font-size:14px;font-weight:700;color:#f1f5f9;">${escapeHtml(cls.name)}</div>
-              <div style="font-size:12px;color:#94a3b8;margin-top:2px;">
-                ${classTests.length} Total Tests (${taskCount} Tasks, ${examCount} Exams)
-              </div>
-            </div>
-            <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
-              <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
-                <label style="display:block;font-size:12px;font-weight:600;color:#818cf8;margin-bottom:4px;">Set All ${taskCount} Tasks Passing Rate (%):</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input id="batch-task-score" type="number" min="1" max="100" value="70" class="form-control" style="font-size:12px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
-                  <span style="font-size:12px;color:#cbd5e1;">% (Standard Formative Mastery)</span>
-                </div>
-              </div>
-              <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
-                <label style="display:block;font-size:12px;font-weight:600;color:#FF8C00;margin-bottom:4px;">Set All ${examCount} Exams Passing Rate (%):</label>
-                <div style="display:flex;align-items:center;gap:8px;">
-                  <input id="batch-exam-score" type="number" min="1" max="100" value="60" class="form-control" style="font-size:12px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
-                  <span style="font-size:12px;color:#cbd5e1;">% (Standard TopsCore Grade C)</span>
-                </div>
-              </div>
-            </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.closeQuickEditModal()" style="font-size:12px;padding:6px 14px;margin-right:auto;">CLOSE</button>
-              <button type="button" class="btn btn-primary btn-sm" onclick="window.applyBatchAlignStandards('${cls.id}')" style="font-size:12px;padding:6px 16px;background:var(--grade-b);border-color:var(--grade-b);color:#090D16;font-weight:700;">Apply to All Tests</button>
-            </div>
-          </div>
-        </div>
-      `;
-      const prev = document.getElementById('quick-edit-standard-overlay');
-      if (prev) prev.remove();
-      document.body.insertAdjacentHTML('beforeend', modalHtml);
-    };
-
-    window.applyBatchAlignStandards = async (classId) => {
-      const examInput = document.getElementById('batch-exam-score');
-      const taskInput = document.getElementById('batch-task-score');
-      const newExamScore = Math.max(1, Math.min(100, parseInt(examInput?.value, 10) || 60));
-      const newTaskScore = Math.max(1, Math.min(100, parseInt(taskInput?.value, 10) || 70));
-
-      const classTests = testsByClass.get(classId) || [];
-      if (classTests.length === 0) {
-        showToast('No tests found in this class.', 'warning');
-        window.closeQuickEditModal();
-        return;
-      }
-
-      showToast(`Aligning ${classTests.length} tests...`, 'info');
-      try {
-        await Promise.all(classTests.map(t => {
-          const isExam = (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
-          const targetScore = isExam ? newExamScore : newTaskScore;
-          const updatedPayload = { ...(t.payload || {}) };
-          updatedPayload.minimum_required_score = targetScore;
-          updatedPayload.min_score = targetScore;
-          t.minimum_required_score = targetScore;
-          t.payload = updatedPayload;
-          return adminUpdate('tests', t.id, {
-            minimum_required_score: targetScore,
-            payload: updatedPayload
-          });
-        }));
-
-        // SSOT Synchronization: Propagate to class_test_settings in site_settings & cache
-        try {
-          const currentSettings = await fetchClassTestSettings(classId);
-          await saveClassTestSettings(classId, {
-            ...currentSettings,
-            taskMinScore: newTaskScore,
-            examMinScore: newExamScore
-          }, false);
-        } catch (syncErr) {
-          console.warn('[ClassesHub] site_settings sync note:', syncErr);
+          const clsTests = testsByClass.get(cls.id) || [];
+          if (clsTests.length > 0) {
+            await Promise.all(clsTests.map(t => {
+              const isExam = (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM';
+              const targetScore = isExam ? examMinScore : taskMinScore;
+              const targetOrder = isExam ? examOrder : taskOrder;
+              const updatedPayload = { ...(t.payload || {}) };
+              updatedPayload.minimum_required_score = targetScore;
+              updatedPayload.min_score = targetScore;
+              updatedPayload.question_order = targetOrder;
+              t.minimum_required_score = targetScore;
+              t.question_order = targetOrder;
+              t.payload = updatedPayload;
+              return adminUpdate('tests', t.id, {
+                minimum_required_score: targetScore,
+                question_order: targetOrder,
+                payload: updatedPayload
+              });
+            }));
+          }
         }
 
-        showToast(`Successfully calibrated all ${classTests.length} tests!`, 'success');
-        window.closeQuickEditModal();
+        const modalEl = document.getElementById('modal-vocab-discipline-rules');
+        if (modalEl) modalEl.remove();
+
+        showToast(`Vocabulary standards synced across ${discClasses.length} classes!`, 'success');
         renderView();
       } catch (err) {
-        showToast('Failed to batch align standards: ' + (err && err.message ? err.message : err), 'error');
+        showToast('Failed to save governance standards: ' + (err?.message || err), 'error');
       }
     };
 
-    // Main Renderer: Single Unified Table View
-    const renderView = () => {
+    // Main Renderer
+    const renderView = async () => {
       const activeInstFilter = window._classesHubActiveInst || 'all';
+      const activeDiscipline = window._classesHubDiscipline || 'VOCABULARY';
+      const isMasterDirectory = activeDiscipline === 'ALL_CLASSES';
 
-      // 1. Topbar: Standard Institution Navigation Tabs
-      const instTabs = [
-        { id: 'all', icon: getSvgIcon('globe', 14), label: 'All Institutions', val: activeClasses.length },
-        ...activeInsts.map(inst => {
-          const cnt = activeClasses.filter(c => {
-            const prog = progMap.get(c.program_id);
-            return (prog && prog.institution_id === inst.id) || (c.institution_id === inst.id);
-          }).length;
-          return { id: inst.id, icon: getSvgIcon('building', 14), label: inst.name, val: cnt };
-        })
-      ];
+      // ── Top Panel: SSOT Discipline Tabs Integration via setTopbarTabs ────
+      const disciplineTopTabs = DISCIPLINE_TABS.map(d => {
+        const count = d.key === 'ALL_CLASSES'
+          ? activeClasses.length
+          : activeClasses.filter(c => detectClassDiscipline(c) === d.key).length;
+        return {
+          id: d.key,
+          label: d.name,
+          icon: getSvgIcon(d.icon, 14),
+          val: count,
+          valColor: d.color
+        };
+      });
 
       if (window.setTopbarTabs) {
-        window.setTopbarTabs(instTabs, activeInstFilter, 'window.switchClassesHubInst');
+        window.setTopbarTabs(disciplineTopTabs, activeDiscipline, 'window.switchClassesHubDiscipline');
       }
 
-      // Filter classes by active institution
-      const filteredClasses = activeInstFilter === 'all'
-        ? activeClasses
-        : activeClasses.filter(c => {
-            const prog = progMap.get(c.program_id);
-            return (prog && prog.institution_id === activeInstFilter) || (c.institution_id === activeInstFilter);
-          });
+      // Filter classes by active discipline or all
+      let targetClasses = isMasterDirectory
+        ? (activeInstFilter === 'all'
+            ? activeClasses
+            : activeClasses.filter(c => {
+                const prog = progMap.get(c.program_id);
+                return (prog && prog.institution_id === activeInstFilter) || (c.institution_id === activeInstFilter);
+              }))
+        : activeClasses.filter(c => detectClassDiscipline(c) === activeDiscipline);
 
       const searchQuery = (window._classesHubSearch !== undefined
         ? window._classesHubSearch
@@ -507,12 +486,12 @@ export async function renderClassesHub(area) {
         });
       };
 
-      const searchedClasses = filterClassesList(filteredClasses, searchQuery);
+      const searchedClasses = filterClassesList(targetClasses, searchQuery);
 
       const getSortIcon = (key) => {
         const cur = window._classesHubSort || { key: 'level', asc: true };
         if (cur.key !== key) return '';
-        return cur.asc ? '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:12px;">▲</span>' : '<span style="color:var(--clr-primary,#6366f1);margin-left:4px;font-size:12px;">▼</span>';
+        return cur.asc ? '<span style="color:var(--primary-tactical, #38bdf8);margin-left:4px;font-size:12px;">▲</span>' : '<span style="color:var(--primary-tactical, #38bdf8);margin-left:4px;font-size:12px;">▼</span>';
       };
 
       const sortClassList = (list) => {
@@ -581,8 +560,9 @@ export async function renderClassesHub(area) {
             }
           }
         }
-        const shortLvl = (lvl && lvl.level_number > 0 && lvl.level_number < 99)
-          ? (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number) : (lvl.name || '—'))
+        const lvlNum = lvl?.level_number != null ? Number(lvl.level_number) : null;
+        const shortLvl = (lvl && lvl.level_number != null && lvl.level_number < 99)
+          ? (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number) : (lvl.level_number === 0 ? '0' : (lvl.name || '0')))
           : '—';
         const levelHtml = shortLvl !== '—'
           ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">${escapeHtml(shortLvl)}</span>`
@@ -605,14 +585,14 @@ export async function renderClassesHub(area) {
             progAbbr = progObj.code.slice(0, 3).toUpperCase();
           }
 
-          let lvlNum = levelObj?.level_number;
-          if (lvlNum === 0 || (levelObj?.name || '').toLowerCase() === 'non-level') {
-            lvlNum = ''; // Level 0 dianggap kosong!
-          } else if (!lvlNum) {
-            if (rawName.includes('1ST')) lvlNum = 1;
-            else if (rawName.includes('2ND')) lvlNum = 2;
-            else if (rawName.includes('3RD')) lvlNum = 3;
-            else lvlNum = '';
+          let lNum = levelObj?.level_number;
+          if (lNum === 0 || (levelObj?.name || '').toLowerCase() === 'non-level') {
+            lNum = ''; // Level 0 dianggap kosong!
+          } else if (!lNum) {
+            if (rawName.includes('1ST')) lNum = 1;
+            else if (rawName.includes('2ND')) lNum = 2;
+            else if (rawName.includes('3RD')) lNum = 3;
+            else lNum = '';
           }
 
           let classAbbr = 'VOCAB';
@@ -625,7 +605,7 @@ export async function renderClassesHub(area) {
             classAbbr = (words[0] || 'CLASS').slice(0, 5);
           }
 
-          return `${progAbbr}-${lvlNum}${classAbbr}`;
+          return `${progAbbr}-${lNum}${classAbbr}`;
         };
 
         const effectiveCode = getStandardClassCode(cls, lvl, prog);
@@ -635,12 +615,36 @@ export async function renderClassesHub(area) {
           ? `<span style="color:var(--fm-text-primary);font-weight:600;font-size:12px;font-variant-numeric:tabular-nums;">${studentCount}</span>`
           : '<span class="text-xs text-muted" style="font-variant-numeric:tabular-nums;">0</span>';
 
+        // Discipline Modality & Engine Isolation (Zero-Capsule SSOT: pure text colors)
+        const disc = detectClassDiscipline(cls);
+        let scopeHtml = '<span class="text-xs text-muted">—</span>';
+        let engineHtml = '<span class="text-xs text-muted">Standard</span>';
+
+        if (disc === 'VOCABULARY') {
+          const isL2 = lvlNum === 2 || (cls.name || '').toUpperCase().includes('2ND') || effectiveCode.includes('2VOCAB');
+          if (isL2) {
+            scopeHtml = '<span style="color:#95ff00;font-weight:700;font-size:12px;">100% Words (7 Reps)</span>';
+          } else {
+            scopeHtml = '<span style="font-weight:700;font-size:12px;"><span style="color:#95ff00;">Words</span> <span style="color:#94a3b8;">&amp;</span> <span style="color:#ff2d87;">Phrases</span> <span style="color:#94a3b8;font-weight:400;">(14 Reps)</span></span>';
+          }
+          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Vocabulary Mastery Modules</span> <span style="color:#94a3b8;font-size:12px;">(Recognition, Spoken, Written)</span>';
+        } else if (disc === 'BASIC_ENGLISH') {
+          scopeHtml = '<span style="color:#38bdf8;font-weight:700;font-size:12px;">Photo Description</span>';
+          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Basic English</span> <span style="color:#94a3b8;font-size:12px;">(M1)</span>';
+        } else if (disc === 'SPEAKING') {
+          scopeHtml = '<span style="color:#95ff00;font-weight:700;font-size:12px;">Speech &amp; Dialogue</span>';
+          engineHtml = '<span style="color:#95ff00;font-size:12px;font-weight:700;">Public Speaking</span> <span style="color:#94a3b8;font-size:12px;">(M5, M7)</span>';
+        } else if (disc === 'STORYTELLING') {
+          scopeHtml = '<span style="color:#FF8C00;font-weight:700;font-size:12px;">Narrative &amp; Retell</span>';
+          engineHtml = '<span style="color:#FF8C00;font-size:12px;font-weight:700;">Storytelling</span> <span style="color:#94a3b8;font-size:12px;">(M6)</span>';
+        }
+
         // Class tests and passing standards
         const classTests = testsByClass.get(cls.id) || [];
         const tasks = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM');
         const exams = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM');
 
-        // Task passing standard badge & inline edit
+        // Task passing standard
         let taskHtml = '';
         if (tasks.length > 0) {
           const taskScores = tasks.map(getTestMinScore);
@@ -649,11 +653,11 @@ export async function renderClassesHub(area) {
           const maxT = Math.max(...taskScores);
           const taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
           taskHtml = `
-            <span class="classes-hub-score-view" style="color:#818cf8;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
+            <span class="classes-hub-score-view" style="color:var(--task-color, var(--grade-b, #95ff00));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
               ${taskLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${tasks.length})</span>
             </span>
             <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-              <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#818cf8;border:1px solid rgba(129,140,248,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="Set passing rate for all ${tasks.length} tasks" />
+              <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:var(--task-color, var(--grade-b, #95ff00));border:1px solid rgba(149,255,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="Set passing rate for all ${tasks.length} tasks" />
               <span style="font-size:12px;color:#94a3b8;">%</span>
             </span>
           `;
@@ -661,7 +665,7 @@ export async function renderClassesHub(area) {
           taskHtml = '<span class="text-xs text-muted">—</span>';
         }
 
-        // Exam passing standard badge & inline edit
+        // Exam passing standard
         let examHtml = '';
         if (exams.length > 0) {
           const examScores = exams.map(getTestMinScore);
@@ -670,11 +674,11 @@ export async function renderClassesHub(area) {
           const maxE = Math.max(...examScores);
           const examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
           examHtml = `
-            <span class="classes-hub-score-view" style="color:#FF8C00;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
+            <span class="classes-hub-score-view" style="color:var(--exam-color, var(--quad-a, #ff2d87));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
               ${examLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${exams.length})</span>
             </span>
             <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-              <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#FF8C00;border:1px solid rgba(255,140,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="Set passing rate for all ${exams.length} exams" />
+              <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:var(--exam-color, var(--quad-a, #ff2d87));border:1px solid rgba(255,45,135,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="Set passing rate for all ${exams.length} exams" />
               <span style="font-size:12px;color:#94a3b8;">%</span>
             </span>
           `;
@@ -686,49 +690,47 @@ export async function renderClassesHub(area) {
           <tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s ease;">
             <!-- 1. NO -->
             <td class="text-center" style="font-size:12px;color:var(--fm-text-muted);font-variant-numeric:tabular-nums;padding:8px 6px;">${idx + 1}</td>
-            <!-- 2. INSTITUTION (Pure 1 Info) -->
+            <!-- 2. INSTITUTION -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
               <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);">${instCode}</span>
             </td>
-            <!-- 3. PROGRAM (Pure 1 Info) -->
+            <!-- 3. PROGRAM -->
             <td style="font-size:12px;white-space:nowrap;padding:8px 8px;">
               <span style="color:var(--fm-text-secondary);font-size:12px;">${progName}</span>
             </td>
-            <!-- 4. LEVEL (Pure 1 Info) -->
+            <!-- 4. LEVEL -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${levelHtml}</td>
-            <!-- 5. CLASS NAME (Pure 1 Info, Zero Clutter) -->
+            <!-- 5. CLASS NAME -->
             <td style="font-size:12px;white-space:nowrap;padding:8px 10px;">
-              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);" title="${escapeHtml(cls.name)}">${escapeHtml(cls.name)}</span>
+              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);cursor:pointer;transition:color 0.15s ease;"
+                    onmouseover="this.style.color='#38bdf8'"
+                    onmouseout="this.style.color='var(--fm-text-primary)'"
+                    onclick="window.openClassWorkstation('${cls.id}')"
+                    title="Click to open workstation for ${escapeHtml(cls.name)}">
+                ${escapeHtml(cls.name)}
+              </span>
             </td>
             <!-- 6. CODE -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
-            <!-- 7. STUDENTS (Pure Tabular Numbers) -->
+            <!-- 7. STUDENTS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${studentsHtml}</td>
-            <!-- 8. TASK PASS -->
+            <!-- 8. SCOPE / MODALITY -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${scopeHtml}</td>
+            <!-- 9. ENGINE -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${engineHtml}</td>
+            <!-- 10. TASK PASS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${taskHtml}</td>
-            <!-- 9. EXAM PASS -->
+            <!-- 11. EXAM PASS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${examHtml}</td>
-            <!-- 10. STATUS -->
+            <!-- 12. STATUS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
               <span style="cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
                 ${cls.is_active ? 'ACTIVE' : 'INACTIVE'}
               </span>
-            </td>
-            <!-- 11. ACTIONS -->
-            <td class="text-right" style="white-space:nowrap;padding:8px 10px;min-width:140px;">
-              <div class="d-flex align-center gap-1" style="justify-content:flex-end;">
-                ${!cls.is_active ? `
-                  <button class="btn btn-sm btn-activate-class" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;color:var(--grade-a);border:1px solid rgba(0,192,0,0.4);background:rgba(0,192,0,0.12);font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',true)" title="Activate this class">
-                    ${getSvgIcon('check-circle', 12)} Activate
-                  </button>
-                ` : `
-                  <button class="btn btn-secondary btn-sm" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;color:var(--fm-text-muted);border:1px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);font-weight:600;display:inline-flex;align-items:center;gap:3px;cursor:pointer;border-radius:4px;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',false)" title="Deactivate this class">
-                    Deactivate
-                  </button>
-                `}
-                <button class="btn btn-secondary btn-sm edit-mode-only" style="padding:0 10px;font-size:12px;height:28px;line-height:26px;" onclick="window.openClassesHubEdit('classes','${cls.id}')">Edit</button>
-                <button class="btn btn-danger btn-sm edit-mode-only"    style="padding:0 9px;font-size:12px;height:28px;line-height:26px;" onclick="window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')">Delete</button>
-              </div>
+              <span class="edit-mode-only" style="margin-left:6px;gap:4px;display:none;">
+                <button class="btn btn-secondary btn-sm" style="padding:0 6px;height:22px;line-height:20px;font-size:12px;" onclick="event.stopPropagation();window.openClassesHubEdit('classes','${cls.id}')" title="Edit Class">Edit</button>
+                <button class="btn btn-danger btn-sm" style="padding:0 6px;height:22px;line-height:20px;font-size:12px;" onclick="event.stopPropagation();window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')" title="Delete Class">Del</button>
+              </span>
             </td>
           </tr>
         `;
@@ -740,9 +742,9 @@ export async function renderClassesHub(area) {
         if (list.length === 0) {
           return `
             <tr>
-              <td colspan="11" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
+              <td colspan="12" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
                 <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No classes found</div>
-                <div style="font-size:12px;">Try adjusting your search query or institution filter.</div>
+                <div style="font-size:12px;">Try adjusting your search query or discipline selection.</div>
               </td>
             </tr>
           `;
@@ -750,162 +752,388 @@ export async function renderClassesHub(area) {
         return list.map((cls, idx) => buildClassRow(cls, idx)).join('');
       };
 
-      const updateTableOnly = () => {
-        const query = (window._classesHubSearch || '').toLowerCase().trim();
-        const activeInst = window._classesHubActiveInst || 'all';
-        const filtered = activeInst === 'all'
-          ? activeClasses
-          : activeClasses.filter(c => {
-              const prog = progMap.get(c.program_id);
-              return (prog && prog.institution_id === activeInst) || (c.institution_id === activeInst);
-            });
-        const searched = filterClassesList(filtered, query);
-        const sorted = sortClassList(searched);
-        const actCount = sorted.filter(c => c.is_active).length;
-        const inactCount = sorted.filter(c => !c.is_active).length;
-        const totalEligible = sorted.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
+      // Fetch governance rules for active discipline if in discipline view
+      let discGov = DEFAULT_DISCIPLINE_GOVERNANCE[activeDiscipline] || DEFAULT_DISCIPLINE_GOVERNANCE.VOCABULARY;
+      if (!isMasterDirectory) {
+        try {
+          discGov = await fetchDisciplineGovernance(activeDiscipline);
+        } catch (_) {}
+      }
 
-        const tbody = document.getElementById('classes-hub-tbody');
-        if (tbody) {
-          tbody.innerHTML = renderTableRowsHtml(sorted);
-        }
-        const summaryEl = document.getElementById('classes-hub-summary-text');
-        if (summaryEl) {
-          summaryEl.innerHTML = `
-            <span><strong style="color:#f8fafc;">${sorted.length}</strong>${query ? ` of ${filtered.length}` : ''} Classes</span>
-            <span>·</span>
-            <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${actCount}</strong> ACTIVE</span>
-            <span>·</span>
-            <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactCount}</strong> INACTIVE</span>
-            <span>·</span>
-            <span><strong style="color:#f8fafc;">${activeLevels.length}</strong> Levels</span>
-            <span>·</span>
-            <span><strong style="color:#818cf8;">${totalEligible}</strong> Eligible Students</span>
-          `;
-        }
-      };
+      const isVocab = activeDiscipline === 'VOCABULARY';
+      const taskScore = discGov.taskMinScore || 60;
+      const examScore = discGov.examMinScore || 60;
+      const wordsPacing = discGov.wordsPacing || { written: 15, recognition: 10, selection: 10, spoken: 10 };
+      const phrasesPacing = discGov.phrasesPacing || { written: 25, recognition: 10, selection: 10, spoken: 20 };
 
-      // Synchronize Canonical Sub Panel (Lower Panel 40px Height Docked Directly Above Banner per ui-invariants.md §1.3)
-      const syncSubPanel = (currentSorted, currentFiltered, query) => {
-        if (typeof window.setBottomInfobar !== 'function') return;
+      // Set bottom infobar: All summary and contextual info lives in Sub Panel per ui-invariants.md § 1.3
+      const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
+      const actCount = sortedClasses.filter(c => c.is_active).length;
+      const inactCount = sortedClasses.filter(c => !c.is_active).length;
+      const totalEligible = sortedClasses.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
 
-        const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
-        const actCount = currentSorted.filter(c => c.is_active).length;
-        const inactCount = currentSorted.filter(c => !c.is_active).length;
-        const totalEligible = currentSorted.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
+      const editBtnStyle = isEditOn
+        ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+        : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
+      const editBtnLabel = isEditOn
+        ? `${getSvgIcon('check-circle', 14)} Done Editing`
+        : `${getSvgIcon('edit', 14)} Edit Mode`;
 
-        const leftHtml = `
+      let leftSubPanelHtml = '';
+      let rightSubPanelHtml = '';
+
+      if (isVocab) {
+        // Sub Panel Left: Vocabulary Discipline Summary Info
+        leftSubPanelHtml = `
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1;white-space:nowrap;">
+            <span style="font-weight:800;color:#c084fc;text-transform:uppercase;">VOCABULARY MASTERY:</span>
+            <span><strong style="color:#f8fafc;">${targetClasses.length}</strong> Classes</span>
+            <span>·</span>
+            <span><strong style="color:#38bdf8;">${totalEligible}</strong> Students</span>
+            <span>·</span>
+            <span style="color:var(--grade-a);font-weight:700;"><strong>${actCount}</strong> ACTIVE</span>
+            <span>·</span>
+            <span style="color:#95ff00;font-weight:700;">L2: 100% Words (7 Reps)</span>
+            <span>·</span>
+            <span style="color:#ff2d87;font-weight:700;">L1/L3/TOP: Words &amp; Phrases (14 Reps)</span>
+            <span>·</span>
+            <span style="color:var(--task-color, var(--grade-b, #95ff00));font-weight:700;">Task: ${taskScore}%</span>
+            <span>·</span>
+            <span style="color:var(--exam-color, var(--quad-a, #ff2d87));font-weight:700;">Exam: ${examScore}%</span>
+            <span>·</span>
+            <span style="color:#38bdf8;font-weight:700;">Vault: ${vaultCountsByLevel.total} Words</span>
+          </div>
+        `;
+
+        // Sub Panel Right: Action buttons
+        rightSubPanelHtml = `
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
+              ${getSvgIcon('book-open', 14)} Open Vault
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
+              ${editBtnLabel}
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Class">
+              ${getSvgIcon('plus', 14)} Add Class
+            </button>
+          </div>
+        `;
+      } else if (!isMasterDirectory) {
+        const activeConfig = DISCIPLINE_TABS.find(d => d.key === activeDiscipline) || DISCIPLINE_TABS[0];
+        leftSubPanelHtml = `
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1;white-space:nowrap;">
+            <span style="font-weight:800;color:${activeConfig.color};text-transform:uppercase;">${activeConfig.name} DISCIPLINE:</span>
+            <span><strong style="color:#f8fafc;">${targetClasses.length}</strong> Classes</span>
+            <span>·</span>
+            <span><strong style="color:#38bdf8;">${totalEligible}</strong> Students</span>
+            <span>·</span>
+            <span style="color:var(--grade-a);font-weight:700;"><strong>${actCount}</strong> ACTIVE</span>
+            <span>·</span>
+            <span style="color:var(--task-color, var(--grade-b, #95ff00));font-weight:700;">Task: ${taskScore}%</span>
+            <span>·</span>
+            <span style="color:var(--exam-color, var(--quad-a, #ff2d87));font-weight:700;">Exam: ${examScore}%</span>
+          </div>
+        `;
+
+        rightSubPanelHtml = `
+          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
+              ${editBtnLabel}
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Class">
+              ${getSvgIcon('plus', 14)} Add Class
+            </button>
+          </div>
+        `;
+      } else {
+        // Master Directory Sub Panel Left: Search & Overall summary
+        leftSubPanelHtml = `
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;">
             <div style="position:relative;display:inline-flex;align-items:center;">
               <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;display:inline-flex;align-items:center;pointer-events:none;">
                 ${getSvgIcon('search', 12)}
               </span>
-              <input type="text" id="classes-hub-search" placeholder="Search classes, codes, programs..." value="${escapeHtml(query)}" style="padding:0 8px 0 26px;font-size:12px;height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;width:240px;outline:none;box-sizing:border-box;" />
+              <input type="text" id="classes-hub-search" placeholder="Search classes, codes, programs..." value="${escapeHtml(searchQuery)}" style="padding:0 8px 0 26px;font-size:12px;height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;width:240px;outline:none;box-sizing:border-box;" />
             </div>
             <div id="classes-hub-summary-text" style="display:inline-flex;align-items:center;gap:10px;font-size:12px;color:#94a3b8;font-weight:600;white-space:nowrap;">
-              <span><strong style="color:#f8fafc;">${currentSorted.length}</strong>${query ? ` of ${currentFiltered.length}` : ''} Classes</span>
+              <span><strong style="color:#f8fafc;">${sortedClasses.length}</strong>${searchQuery ? ` of ${targetClasses.length}` : ''} Classes</span>
               <span>·</span>
               <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${actCount}</strong> ACTIVE</span>
               <span>·</span>
               <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactCount}</strong> INACTIVE</span>
-              <span>·</span>
-              <span><strong style="color:#f8fafc;">${activeLevels.length}</strong> Levels</span>
               <span>·</span>
               <span><strong style="color:#818cf8;">${totalEligible}</strong> Eligible Students</span>
             </div>
           </div>
         `;
 
-        const editBtnStyle = isEditOn
-          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
-          : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
-        const editBtnLabel = isEditOn
-          ? `${getSvgIcon('check-circle', 14)} Done Editing`
-          : `${getSvgIcon('edit', 14)} Edit Mode`;
-
-        const rightHtml = `
+        // Master Directory Sub Panel Right: Controls
+        rightSubPanelHtml = `
           <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
               ${getSvgIcon('book-open', 14)} Open Vault
             </button>
-            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" style="${editBtnStyle}" title="Toggle Master Edit Mode (Excel Gridlines)">
+            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
               ${editBtnLabel}
             </button>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-classes-hub-add-class" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--clr-primary,#6366f1);border-color:var(--clr-primary,#6366f1);color:#fff;" title="Add New Class">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--primary-tactical, #38bdf8);border-color:var(--primary-tactical, #38bdf8);color:#0f172a;font-weight:800;" title="Add New Class">
               ${getSvgIcon('plus', 14)} Add Class
             </button>
             ${isEditOn ? `
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-level" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Level">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-level" onclick="window.openClassesHubAddLevel()" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Level">
                 ${getSvgIcon('plus', 14)} Add Level
               </button>
             ` : ''}
           </div>
         `;
+      }
 
-        window.setBottomInfobar(leftHtml, rightHtml);
+      if (typeof window.setBottomInfobar === 'function') {
+        window.setBottomInfobar(leftSubPanelHtml, rightSubPanelHtml);
 
-        // Bind Sub Panel events
         const sInp = document.getElementById('classes-hub-search');
         if (sInp && !sInp.dataset.bound) {
           sInp.dataset.bound = 'true';
           sInp.addEventListener('input', (e) => {
             window._classesHubSearch = e.target.value;
-            updateTableOnly();
+            const curTarget = isMasterDirectory
+              ? (activeInstFilter === 'all'
+                  ? activeClasses
+                  : activeClasses.filter(c => {
+                      const prog = progMap.get(c.program_id);
+                      return (prog && prog.institution_id === activeInstFilter) || (c.institution_id === activeInstFilter);
+                    }))
+              : activeClasses.filter(c => detectClassDiscipline(c) === activeDiscipline);
+            const searched = filterClassesList(curTarget, e.target.value.toLowerCase().trim());
+            const sorted = sortClassList(searched);
+            const tbody = document.getElementById('classes-hub-tbody');
+            if (tbody) tbody.innerHTML = renderTableRowsHtml(sorted);
           });
         }
+      }
 
-        const openVaultBtn = document.getElementById('btn-classes-hub-open-vault');
-        if (openVaultBtn) {
-          openVaultBtn.onclick = () => window.openVocabVaultFromClassHub();
-        }
+      // Workstation Datagrid View (Strict 100vh lock, zero outer scrollbar)
+      area.innerHTML = isVocab ? `
+        <!-- VOCABULARY DISCIPLINE: Cards Top & Full-Width Datagrid Bottom (Workspace Dual-Zone Vertical Split) -->
+        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; height:100% !important; overflow:hidden !important; gap:10px; padding:10px; box-sizing:border-box; background:#090d16;">
 
-        const toggleEditBtn = document.getElementById('btn-classes-hub-toggle-edit');
-        if (toggleEditBtn) {
-          toggleEditBtn.onclick = () => window.toggleClassesHubEditMode();
-        }
+          <!-- TOP ROW: Vocabulary Governance 4-Card Deck (flex: 0 0 auto) -->
+          <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1.05fr; gap:10px; flex:0 0 auto; box-sizing:border-box;">
 
-        const addClassBtn = document.getElementById('btn-classes-hub-add-class');
-        if (addClassBtn) {
-          addClassBtn.onclick = () => window.openClassesHubAddClass(null);
-        }
+            <!-- Card 1: Vocabulary Mastery Modules (Tactical Cyan SSOT) -->
+            <div style="background:#0F172A; border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <span style="font-size:12px; font-weight:800; color:#38BDF8; text-transform:uppercase; letter-spacing:0.04em;">1. Vocabulary Mastery Modules</span>
+                  <span style="font-size:12px; font-weight:700; color:var(--grade-e); border:1px solid rgba(255,0,0,0.3); padding:1px 6px; border-radius:4px; text-transform:uppercase;">Isolated</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <div>
+                    <div style="font-size:12px; font-weight:700; color:#38BDF8;">Recognition Module</div>
+                    <div style="font-size:12px; color:#94A3B8;">4-choice distractor recognition &amp; contextual filtering. Evaluates fast semantic identification.</div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px; font-weight:700; color:#38BDF8;">Spoken Module</div>
+                    <div style="font-size:12px; color:#94A3B8;">Phonetic speech analysis &amp; pronunciation verification. Evaluates oral production &amp; acoustic clarity.</div>
+                  </div>
+                  <div>
+                    <div style="font-size:12px; font-weight:700; color:#38BDF8;">Written Module</div>
+                    <div style="font-size:12px; color:#94A3B8;">Text typing, spelling recall &amp; lexical precision. Evaluates word-for-word spelling accuracy &amp; translation.</div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:6px; font-size:12px; color:#64748b; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
+                * Locked strictly to Vocabulary; zero cross-discipline leak.
+              </div>
+            </div>
 
-        const addLevelBtn = document.getElementById('btn-classes-hub-add-level');
-        if (addLevelBtn) {
-          addLevelBtn.onclick = () => window.openClassesHubAddLevel();
-        }
-      };
+            <!-- Card 2: Words Pacing & Modality (Lime SSOT) -->
+            <div style="background:#0F172A; border:1px solid rgba(149,255,0,0.35); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <span style="font-size:12px; font-weight:800; color:#95FF00; text-transform:uppercase; letter-spacing:0.04em;">2. Words Pacing &amp; Rules</span>
+                  <span style="font-size:12px; color:#95FF00; font-weight:700; border:1px solid rgba(149,255,0,0.3); padding:1px 6px; border-radius:4px;">INDIVIDUAL WORDS</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #95FF00;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Recognition Module:</span>
+                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#95FF00;">${wordsPacing.recognition || wordsPacing.selection || 10}s / word</span>
+                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
+                        <input type="number" id="pacing-words-recognition" value="${wordsPacing.recognition || wordsPacing.selection || 10}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#95FF00; border:1px solid rgba(149,255,0,0.5); border-radius:3px; padding:0;" />
+                        <span style="font-size:12px; color:#94a3b8;">s/word</span>
+                      </span>
+                    </div>
+                    <div style="font-size:12px; color:#94A3B8;">4-choice recognition &amp; distractor filtering</div>
+                  </div>
+                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #95FF00;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Spoken Module:</span>
+                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#95FF00;">${wordsPacing.spoken || 10}s / word</span>
+                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
+                        <input type="number" id="pacing-words-spoken" value="${wordsPacing.spoken || 10}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#95FF00; border:1px solid rgba(149,255,0,0.5); border-radius:3px; padding:0;" />
+                        <span style="font-size:12px; color:#94a3b8;">s/word</span>
+                      </span>
+                    </div>
+                    <div style="font-size:12px; color:#94A3B8;">Phonetic voice &amp; pronunciation check</div>
+                  </div>
+                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #95FF00;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Written Module:</span>
+                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#95FF00;">${wordsPacing.written || 15}s / word</span>
+                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
+                        <input type="number" id="pacing-words-written" value="${wordsPacing.written || 15}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#95FF00; border:1px solid rgba(149,255,0,0.5); border-radius:3px; padding:0;" />
+                        <span style="font-size:12px; color:#94a3b8;">s/word</span>
+                      </span>
+                    </div>
+                    <div style="font-size:12px; color:#94A3B8;">Typing, spelling &amp; meaning recall</div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:6px; font-size:12px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
+                Scope: 50 Q/task · 7 Reps · <strong style="color:#95FF00;">L2 is 100% Words Only</strong>
+              </div>
+            </div>
 
-      area.innerHTML = `
-        <div class="classes-hub-workspace" style="display:flex;flex-direction:column;flex:1 1 0 !important;min-height:0 !important;height:100% !important;overflow:hidden;gap:10px;">
-          <!-- Unified Curriculum Table (100vh lock, table-wrap scroll only per ui-invariants.md §1.1) -->
-          <div class="table-wrap sticky-first" style="flex:1 1 0 !important;min-height:0 !important;overflow-y:auto;overflow-x:auto !important;background:#0f172a;border:1px solid rgba(255,255,255,0.12) !important;border-radius:8px;margin:0;">
-            <table class="datagrid-table" style="width:100%;min-width:1150px;border-collapse:collapse;table-layout:fixed;">
+            <!-- Card 3: Phrases Pacing & Modality (Pink SSOT) -->
+            <div style="background:#0F172A; border:1px solid rgba(255,45,135,0.35); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <span style="font-size:12px; font-weight:800; color:#FF2D87; text-transform:uppercase; letter-spacing:0.04em;">3. Phrases Pacing &amp; Rules</span>
+                  <span style="font-size:12px; color:#FF2D87; font-weight:700; border:1px solid rgba(255,45,135,0.3); padding:1px 6px; border-radius:4px;">MULTI-WORD IDIOMS</span>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:6px;">
+                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #FF2D87;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Recognition Module:</span>
+                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#FF2D87;">${phrasesPacing.recognition || phrasesPacing.selection || 10}s / phrase</span>
+                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
+                        <input type="number" id="pacing-phrases-recognition" value="${phrasesPacing.recognition || phrasesPacing.selection || 10}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#FF2D87; border:1px solid rgba(255,45,135,0.5); border-radius:3px; padding:0;" />
+                        <span style="font-size:12px; color:#94a3b8;">s/phrase</span>
+                      </span>
+                    </div>
+                    <div style="font-size:12px; color:#94A3B8;">Context &amp; meaning match elimination</div>
+                  </div>
+                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #FF2D87;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Spoken Module:</span>
+                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#FF2D87;">${phrasesPacing.spoken || 20}s / phrase</span>
+                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
+                        <input type="number" id="pacing-phrases-spoken" value="${phrasesPacing.spoken || 20}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#FF2D87; border:1px solid rgba(255,45,135,0.5); border-radius:3px; padding:0;" />
+                        <span style="font-size:12px; color:#94a3b8;">s/phrase</span>
+                      </span>
+                    </div>
+                    <div style="font-size:12px; color:#94A3B8;">Full-cadence sentence articulation</div>
+                  </div>
+                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #FF2D87;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Written Module:</span>
+                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#FF2D87;">${phrasesPacing.written || 25}s / phrase</span>
+                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
+                        <input type="number" id="pacing-phrases-written" value="${phrasesPacing.written || 25}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#FF2D87; border:1px solid rgba(255,45,135,0.5); border-radius:3px; padding:0;" />
+                        <span style="font-size:12px; color:#94a3b8;">s/phrase</span>
+                      </span>
+                    </div>
+                    <div style="font-size:12px; color:#94A3B8;">Multi-word idiom keyboarding &amp; recall</div>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:6px; font-size:12px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
+                Scope: 10 Q/task · 7 Reps · <strong style="color:var(--grade-e);">L2 Excludes Phrases (0 Reps)</strong>
+              </div>
+            </div>
+
+            <!-- Card 4: Calibrate Standards & Vault -->
+            <div style="background:#0F172A; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
+                  <span style="font-size:12px; font-weight:800; color:#f8fafc; text-transform:uppercase; letter-spacing:0.04em;">4. Standards &amp; Vault</span>
+                  <span style="font-size:12px; color:var(--grade-c); font-weight:700;">LIVE PROPAGATION</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:8px;">
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px; white-space:nowrap;">Task Pass (%):</label>
+                    <input type="number" id="gov-inline-task-score" value="${taskScore}" min="1" max="100" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; color:var(--task-color, var(--grade-b, #95ff00)); font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom:2px; white-space:nowrap;">Exam Pass (%):</label>
+                    <input type="number" id="gov-inline-exam-score" value="${examScore}" min="1" max="100" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; color:var(--exam-color, var(--quad-a, #ff2d87)); font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:2px; white-space:nowrap;">Task Time (m):</label>
+                    <input type="number" id="gov-inline-task-dur" value="${discGov.taskDuration || 11}" min="1" max="180" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#f8fafc; font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:2px; white-space:nowrap;">Exam Time (m):</label>
+                    <input type="number" id="gov-inline-exam-dur" value="${discGov.examDuration || 54}" min="1" max="180" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#f8fafc; font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px; white-space:nowrap;">Task Order:</label>
+                    <select id="gov-inline-task-order" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; color:var(--task-color, var(--grade-b, #95ff00)); font-weight:700; font-size:12px; padding:0 4px; box-sizing:border-box;">
+                      <option value="random" ${(discGov.taskOrder || 'random') === 'random' ? 'selected' : ''}>Random</option>
+                      <option value="sequential" ${discGov.taskOrder === 'sequential' ? 'selected' : ''}>Sequential</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom:2px; white-space:nowrap;">Exam Order:</label>
+                    <select id="gov-inline-exam-order" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; color:var(--exam-color, var(--quad-a, #ff2d87)); font-weight:700; font-size:12px; padding:0 4px; box-sizing:border-box;">
+                      <option value="random" ${(discGov.examOrder || 'random') === 'random' ? 'selected' : ''}>Random</option>
+                      <option value="sequential" ${discGov.examOrder === 'sequential' ? 'selected' : ''}>Sequential</option>
+                    </select>
+                  </div>
+                </div>
+                <button type="button" onclick="window.saveVocabGovInline()" style="width:100%; height:30px !important; line-height:28px !important; background:var(--primary-tactical, #38bdf8); border:none; border-radius:4px; color:#0f172a; font-size:12px; font-weight:800; cursor:pointer; letter-spacing:0.04em; display:flex; align-items:center; justify-content:center; gap:6px;">
+                  ${getSvgIcon('check-circle', 14)} SAVE &amp; SYNC STANDARDS
+                </button>
+              </div>
+              <div style="margin-top:6px; font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
+                <span>Vault: <strong style="color:#38BDF8;">${vaultCountsByLevel.total}</strong> Words</span>
+                <span style="color:#64748b;">L1: <strong style="color:#818cf8;">${vaultCountsByLevel[1] || 0}</strong> · L2: <strong style="color:#95FF00;">${vaultCountsByLevel[2] || 0}</strong> · L3: <strong style="color:#C084FC;">${vaultCountsByLevel[3] || 0}</strong> · Non-L: <strong style="color:#94A3B8;">${vaultCountsByLevel[0] || 0}</strong></span>
+              </div>
+            </div>
+
+          </div><!-- /TOP ROW -->
+
+          <!-- BOTTOM SECTION: Full-Width Classes Datagrid Table (flex: 1 1 0) -->
+          <div class="table-wrap sticky-first" style="flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow-y:auto !important; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
+            <table class="datagrid-table" style="width:100%; min-width:1355px; border-collapse:collapse; table-layout:fixed;">
               <colgroup>
-                <col style="width:45px;">
+                <col style="width:40px;">
+                <col style="width:75px;">
                 <col style="width:95px;">
+                <col style="width:55px;">
+                <col style="width:170px;">
                 <col style="width:110px;">
-                <col style="width:75px;">
-                <col style="width:210px;">
-                <col style="width:125px;">
-                <col style="width:75px;">
-                <col style="width:95px;">
-                <col style="width:95px;">
-                <col style="width:85px;">
-                <col style="width:140px;">
+                <col style="width:65px;">
+                <col style="width:185px;">
+                <col style="width:320px;">
+                <col style="width:80px;">
+                <col style="width:80px;">
+                <col style="width:80px;">
               </colgroup>
-              <thead style="position:sticky;top:0;z-index:10;background:#0f172a;">
-                <tr style="height:40px;">
-                  <th style="width:45px;text-align:center;">NO</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INSTITUTION ${getSortIcon('institution')}</th>
-                  <th style="width:110px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
-                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('level')" title="Sort by Level">LEVEL ${getSortIcon('level')}</th>
-                  <th style="width:210px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
-                  <th style="width:125px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
-                  <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
-                  <th style="width:85px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
-                  <th style="width:140px;text-align:right;">ACTIONS</th>
+              <thead style="position:sticky; top:0; z-index:20;">
+                <!-- Super-Headers Grouping (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
+                <tr style="height:30px;">
+                  <th colspan="7" style="background:#0b1120 !important; color:#ffffff !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">CURRICULUM IDENTITY</th>
+                  <th colspan="2" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">ASSESSMENT ENGINE</th>
+                  <th colspan="2" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">PASSING STANDARDS</th>
+                  <th colspan="1" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS</th>
+                </tr>
+                <!-- Sub-Headers (Matching Themed Parent Colors on Dark Surface SSOT) -->
+                <tr style="height:30px;">
+                  <th style="width:40px; text-align:center; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">NO</th>
+                  <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INST ${getSortIcon('institution')}</th>
+                  <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
+                  <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
+                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
+                  <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
+                  <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
+                  <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>
+                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
+                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
+                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-weight:700; font-size:12px; height:30px; line-height:30px;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
                 </tr>
               </thead>
               <tbody id="classes-hub-tbody">
@@ -913,26 +1141,77 @@ export async function renderClassesHub(area) {
               </tbody>
             </table>
           </div>
+
+        </div>
+      ` : `
+        <!-- NON-VOCAB / MASTER DIRECTORY: Full-width Datagrid View -->
+        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow:hidden !important; gap:0; padding:10px; box-sizing:border-box; background:#090d16;">
+
+          <div class="table-wrap sticky-first" style="flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow-y:auto !important; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
+            <table class="datagrid-table" style="width:100%; min-width:1355px; border-collapse:collapse; table-layout:fixed;">
+              <colgroup>
+                <col style="width:40px;">
+                <col style="width:75px;">
+                <col style="width:95px;">
+                <col style="width:55px;">
+                <col style="width:170px;">
+                <col style="width:110px;">
+                <col style="width:65px;">
+                <col style="width:185px;">
+                <col style="width:320px;">
+                <col style="width:80px;">
+                <col style="width:80px;">
+                <col style="width:80px;">
+              </colgroup>
+              <thead style="position:sticky; top:0; z-index:20;">
+                <!-- Super-Headers Grouping (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
+                <tr style="height:30px;">
+                  <th colspan="7" style="background:#0b1120 !important; color:#ffffff !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">CURRICULUM IDENTITY</th>
+                  <th colspan="2" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">ASSESSMENT ENGINE</th>
+                  <th colspan="2" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">PASSING STANDARDS</th>
+                  <th colspan="1" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS</th>
+                </tr>
+                <!-- Sub-Headers (Matching Themed Parent Colors on Dark Surface SSOT) -->
+                <tr style="height:30px;">
+                  <th style="width:40px; text-align:center; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">NO</th>
+                  <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INSTITUTION ${getSortIcon('institution')}</th>
+                  <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
+                  <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
+                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
+                  <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
+                  <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
+                  <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>
+                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
+                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
+                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-weight:700; font-size:12px; height:30px; line-height:30px;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
+                </tr>
+              </thead>
+              <tbody id="classes-hub-tbody">
+                ${renderTableRowsHtml(sortedClasses)}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       `;
-
-      // Synchronize Sub Panel (Lower Panel 40px Height Docked Directly Above Banner per ui-invariants.md §1.3)
-      syncSubPanel(sortedClasses, filteredClasses, searchQuery);
 
       if (!window._classesHubEditModeListenerBound) {
         window._classesHubEditModeListenerBound = true;
         window.addEventListener('admin-edit-mode-changed', () => {
-          if (document.getElementById('classes-hub-tbody')) {
-            renderView();
-          }
+          renderView();
         });
       }
     };
 
-    renderView();
-
-  } catch (error) {
-    console.error('[ClassesHub] Load error:', error);
-    area.innerHTML = '<div class="empty-state"><p style="color:red;">Error loading Curriculum Hub: ' + error.message + '</p></div>';
+    await renderView();
+  } catch (err) {
+    console.error('[renderClassesHub] Error loading classes hub data:', err);
+    area.innerHTML = `
+      <div style="padding:24px; text-align:center; color:var(--grade-e);">
+        <p style="font-weight:700;">Failed to load Curriculum Hub</p>
+        <p style="font-size:12px; color:#94a3b8;">${err?.message || err}</p>
+      </div>
+    `;
   }
 }

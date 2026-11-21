@@ -18,7 +18,7 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261115_v547" />
   <!-- TopsCore Consolidated Master Workstation Stylesheet (Minified) -->
-  <link rel="stylesheet" href="css/admin.min.css?v=20261121_v647" />
+  <link rel="stylesheet" href="css/admin.min.css?v=20261121_v664" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
 
   <!-- High-Performance Parallel ES Module Preload Graph -->
@@ -27,12 +27,13 @@
   <link rel="modulepreload" href="./js/session.js?v=20261106_v160" />
   <link rel="modulepreload" href="./js/grading.js?v=20261116_v591" />
   <link rel="modulepreload" href="./js/svg-icons.js?v=20261114_v493" />
-  <link rel="modulepreload" href="./js/admin/datagrid.js?v=20261116_v591" />
+  <link rel="modulepreload" href="./js/admin/datagrid.js?v=20261121_v659" />
   <link rel="modulepreload" href="./js/admin/admin-init.js?v=20261116_v591" />
-  <link rel="modulepreload" href="./js/admin/app.js?v=20261121_v650" />
-  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261120_v641" />
-  <link rel="modulepreload" href="./js/admin/classes-hub.js?v=20261117_v613" />
-  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261121_v519" />
+  <link rel="modulepreload" href="./js/admin/app.js?v=20261121_v675" />
+  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261121_v659" />
+  <link rel="modulepreload" href="./js/admin/classes-hub.js?v=20261121_v664" />
+  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261121_v521" />
+  <link rel="modulepreload" href="./js/admin/system-glossary.js?v=20261121_v105" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261107_v161';"></script>
@@ -144,6 +145,8 @@
         <div class="nav-domain-group" data-domain="desk">
           <div class="nav-domain-header"><span class="domain-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span><span>D &mdash; Data</span></div>
           <div class="admin-nav-item" data-sub="modules"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg></span><span>Modules (Core Engines)</span></div>
+          <div class="admin-nav-item" data-sub="interface-settings"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></span><span>System Designs</span></div>
+          <div class="admin-nav-item" data-sub="system-glossary"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg></span><span>System Glossary</span></div>
           <div class="admin-nav-item" data-sub="settings"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span><span>System Settings</span></div>
           <div class="admin-nav-item" data-sub="vocab_vault"><span class="nav-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg></span><span>Vocabulary Vault</span></div>
         </div>
@@ -508,7 +511,7 @@
 
   <script type="module" src="./js/svg-icons.js?v=20261116_v603"></script>
   <script type="module" src="./js/admin/admin-init.js?v=20261116_v603"></script>
-  <script type="module" src="js/admin/app.js?v=20261121_v651"></script>
+  <script type="module" src="js/admin/app.js?v=20261121_v675"></script>
 
 
 

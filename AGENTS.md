@@ -33,7 +33,7 @@ When sources conflict:
 - **Git Commit & Push Gate (STRICT)**: NEVER execute `git commit` or `git push` autonomously ("no commit until I say so!"). All changes remain uncommitted for user review.
 - **Strict UTF-8 & No PowerShell File Manipulation**: All file operations MUST use native tools (`edit_file`, `write_file`) or Node.js (`fs.*FileSync`). PowerShell cmdlets (`Set-Content`, `Get-Content`, `-replace`) are forbidden.
 - **Windows CLI Standard**: Always invoke `npm.cmd run <script>` or direct `node scripts/<script>` with `WaitMsBeforeAsync: 8000–10000`.
-- **Minimal Supabase Footprint**: Zero uncompressed storage, select scalar columns, in-memory reference caching.
+- **Minimal Supabase Footprint & Quota Minimization Priority (STRICT)**: Setiap perancangan fitur, perubahan alur kerja, kueri database, dan sinkronisasi data WAJIB mengutamakan peminimalisiran penggunaan kuota Supabase (Egress Bandwidth, Database Requests/Operations, dan Storage) semaksimal dan seekstrem mungkin pada ambang batas teknis yang memungkinkan. Dilarang polling kolom blob/payload besar dalam interval; utamakan client-side caching & in-memory buffering.
 
 ## 0.2 Aturan Penerapan di Setiap Perintah (Standing Operational Discipline: Cepat, Cermat, Tepat, dan Akurat)
 Setiap instruksi dan perintah dari pengguna WAJIB dieksekusi dengan 4 pilar kedisiplinan mutlak:
@@ -42,8 +42,16 @@ Setiap instruksi dan perintah dari pengguna WAJIB dieksekusi dengan 4 pilar kedi
 3. **Tepat (Precise & Aligned)**: Penuhi kehendak pengguna secara persis sesuai konteks, tanpa asumsi liar, tanpa salah sasaran, dan taat 100% pada SSOT serta hierarki aturan.
 4. **Akurat (Accurate & Verified)**: Seluruh sintaks, formula perhitungan, pembulatan, token warna, dan layout wajib 100% valid dan lolos verifikasi pengujian otomatis (Zero Regressions, 100% Green).
 
-### 0.2.1 Protokol Audit Tangkapan Layar (Visual Screenshot Invariant Audit Protocol)
-Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar SSOT di [`.agents/rules/ui-invariants.md` §1.7](file:///.agents/rules/ui-invariants.md#17-protokol-audit-tangkapan-layar--visual-invariant-audit-7-pillars-ssot) (Strict 10px Gap, 10px Card Padding, Dual-Scale Typography, Punctuation & Zero-Truncation, Color SSOT, 100% English, dan Zero Clutter).
+### 0.2.1 Protokol Audit Tangkapan Layar (Visual Screenshot Invariant Audit Protocol & `/check-ui`)
+Setiap kali pengguna mengunggah tangkapan layar (screenshot) atau memanggil perintah shortcut `/check-ui` / `/audit-ui`, agen WAJIB secara proaktif melakukan audit visual menyeluruh berdasarkan 7 pilar SSOT di [`.agents/rules/ui-invariants.md` §1.7](file:///.agents/rules/ui-invariants.md#17-protokol-audit-tangkapan-layar--visual-invariant-audit-7-pillars-ssot) (Strict 10px Gap & 4-Way Panel Perimeter, 10px Card Padding, Dual-Scale Typography, Punctuation & Zero-Truncation, Color SSOT, 100% English, dan Zero Clutter) dan mengeksekusi skill `ui-spatial-checker`.
+
+### 0.2.2 Daftar Shortcut Perintah Cepat (TopsCore Fast Command Shortcuts)
+Sistem secara resmi mengenali shortcut instruksi cepat di chat untuk langsung mengaktifkan skill dan verifikasi terkait tanpa overhead bertele-tele:
+1. **`/check-ui`** (atau `/audit-ui`, `/check-all`): **Master Audit UI Menyeluruh** (memeriksa SEMUA aturan UI: Warna, Tabel, Card, Font, Padding, Ukuran, Spacing, 100vh lock, Tombol CTA, dan Bahasa 100% English) via skill `ui-spatial-checker` (`npm run check:ui`).
+2. **`/verify`** (atau `/test-fast`): Verifikasi kilat AST syntax 52 JS files, CSS minifier, dan repetitive mastery safeguards via skill `fast-verifier` (`npm run test:fast`).
+3. **`/check-table`** (atau `/fix-table`): Audit dan standardisasi 11 pilar datagrid matrix via skill `table-standardizer` (`npm run test:table`).
+4. **`/check-color`** (atau `/audit-color`): Audit kepatuhan token warna Grade A/C/E & kontras teks via skill `color-auditor` (`npm run test:color-ssot`).
+5. **`/clean`** (atau `/hygiene`): Audit kebersihan repositori dan pembersihan file temporer via skill `workspace-hygiene` (`npm run check:hygiene`).
 
 ## 0.3 Larangan Mutlak Tindakan Liar / Tanpa Permintaan (Strict Zero Unsolicited Action Invariant)
 Sistem dan AI coding agent MUTLAK DILARANG berinisiatif di luar batas perintah (detail operasional di [`.agents/rules/agent-workflow.md` §2.2](file:///.agents/rules/agent-workflow.md#22-strict-zero-unsolicited-action-invariant-no-unrequested-generation-modification-or-deletion)):
@@ -94,7 +102,7 @@ The admin navigation uses the **ABCD System** hierarchy with dedicated 4-pillar 
 1. `A — ADMIN` (Executive Dashboard, Profiles, Curriculum & Level Master, Organization) — **Electric Pink (`#ff2d87` / `var(--quad-a)`)**
 2. `B — BOARD` (Batches, Rosters, Progress, Student Attendance) — **Dark Orange (`#FF8C00` / `var(--grade-d)` / `var(--quad-b)`)**
 3. `C — CLASS` (Active Classes, Learning Sessions, Rosters, Class Tests) — **Electric Lime (`#95ff00` / `var(--grade-b)` / `var(--quad-c)`)**
-4. `D — DATA` (Vocabulary Vault, Item Banks, Modules, System Settings, Audit Logs) — **Vibrant Purple / Violet (`#C084FC` / `var(--quad-d)`)**
+4. `D — DATA` (Vocabulary Vault, Item Banks, Modules, System Settings, Audit Logs) — **Tactical Cyan (`#38bdf8` / `var(--primary-tactical)` / `var(--quad-d)`)**
 
 ## 2.2 Student business ID
 There is **no business-facing Student ID**. Use only internal database primary key/UUID. Never request or display Student ID in login, forms, lists, imports, or student-facing screens.
@@ -112,35 +120,74 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
 
 ### 2.4.1 Level Promotion & Passing Threshold Invariant (SSOT Aturan Baku Promosi Level)
 - **Syarat Kelulusan Promosi (Passing Threshold)**: Kelayakan kenaikan level (`isEligibleNext` / tombol `NEXT`) WAJIB merujuk 100% pada batas kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**).
-- **Mutlak Nol Angka Ambang Batas Arbitrer**: DILARANG KERAS menggunakan angka ambang batas arbitrer atau hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah resmi lulus (*Enough*) dan mutlak berhak dipromosikan bersamaan tanpa ada yang tertahan.
+- **Mutlak Nol Angka Ambang Batas Arbitrer pada Promosi**: DILARANG KERAS menggunakan angka ambang batas arbitrer atau hardcoded di luar SSOT (seperti angka liar `70%` untuk menahan kenaikan level). Siswa yang telah mencapai Grade C (60%–79%) telah resmi lulus (*Enough*) dan mutlak berhak dipromosikan bersamaan tanpa ada yang tertahan.
+- **Pembedaan Ranah Baku (Vocabulary Tasks vs Theme Exams/Promotion SSOT)**:
+  - **Aturan Baku Kelas VOCABULARY**: Sistem penguasaan tugas formatif kosakata (Vocabulary Tasks) menerapkan aturan khusus **7x7 Repetitions dengan standar minimal 70% per attempt** agar sebuah repetisi dinyatakan sah lulus (*passed repetition*). Sedangkan Ujian Akhir Tema (Vocabulary Exam) batas kelulusannya adalah **60% (Grade C)**.
+  - **Isolasi Domain Multi-Kelas (Multi-Class Scope Invariant)**: Aturan 7x7 minimal 70% ini **HANYA BERLAKU UNTUK KELAS VOCABULARY**. Setiap jenis kelas di TopsCore (Speaking, Storytelling, Grammar, Basic, dll.) memiliki passing grade, modalitas evaluasi, dan struktur tugasnya masing-masing. Sistem secara tegas membedakan aturan per-kelas melalui kode kelas, kode tes, dan metadata kurikulum agar tidak terjadi kerancuan antar-kelas.
 - **Keselarasan Roster & Batch**: Seluruh siswa dalam batch yang telah menyelesaikan ujian levelnya dengan status lulus/forgiven berhak dipromosikan bersamaan ke level berikutnya agar tidak terjadi ketimpangan level antar-siswa dalam satu rombongan belajar.
 
-### 2.4.2 Non-Level Programs (Level 0 / Tampilan `—`) & Alumni (Level X) Architecture (SSOT)
+### 2.4.2 Non-Level Programs (Level 0 / Tampilan Angka 0) & Alumni (Level X) Architecture (SSOT)
 - **Program Tanpa Jenjang (Non-Level Programs / Level 0)**: Program yang sejak awal tidak memiliki jenjang bertahap (seperti seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata) menggunakan entitas Level 0 di database (`level_number = 0`, nama `'Non-Level'`).
-- **Tampilan Visual Kolom Level (`—`)**: Pada seluruh tabel workstation admin (kolom `LVL`) dan dashboard, Level 0 ditampilkan sebagai tanda strip bersih **`—`** (slate netral `#94a3b8`). Meniadakan kemunculan angka 0 di layar agar siswa dan tutor tidak mengira ada "Level Nol".
-- **Aturan Penamaan Kosong (Zero-Level Omission Invariant)**: Pada program tanpa jenjang, segmen level pada nama kelas, kode kelas, judul tes, dan kode tes **wajib ditiadakan (dianggap kosong)**:
+- **Tampilan Visual Kolom Level (`0`)**: Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`).
+- **Aturan Penamaan Kelas & Kode Kelas (Zero-Level Omission Invariant)**: Pada program tanpa jenjang, segmen level ordinal pada nama kelas dan kode kelas ditiadakan karena kurikulumnya tidak bertingkat:
   - **Nama Kelas**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (dilarang menggunakan `1st`).
   - **Kode Kelas**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).
-  - **Judul Tes**: `Evnikom Vocabulary G1 Task - Time Name` (dilarang menggunakan `1st`).
-  - **Kode Tes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM` (dilarang menggunakan `EVN-1VCB-...`).
+- **Aturan Penamaan & Kode Tes Level 0 (Uniform Level-Prefixed SSOT per DECISION-061)**: Selaras dengan kurikulum berjenjang (`1...`, `2...`, `3...`), kode tema dan topik pada Level 0 wajib ber-prefix angka **`0`** (`0G1`, `0G2`, `0A1`, `0G`, `0A`) untuk menjaga keseragaman format kode di seluruh modul:
+  - **Judul Tes**: `Evnikom Vocabulary Task 0G1 - Time Name`, `Evnikom Vocabulary Exam 0G - General`, `Sheraton Vocabulary Task 0A1 - Pre-Test`.
+  - **Kode Tes**: `EVN-VCB-0G1-TASK`, `EVN-VCB-0G-EXAM`, `SHR-VCB-0A1-TASK`.
 - **Peniadaan Tombol Promosi**: Siswa pada program Non-Level tidak memiliki tombol `LEVEL UP` karena kurikulum mereka adalah program tunggal selesai (*single-tier completion*).
+- **Status Alumni Institusi TOP**: Siswa pada program institusi TOP (Evnikom, Sheraton, Tamata) yang telah menyelesaikan seluruh kurikulum programnya **resmi berstatus ALUMNI (`program_status = 'ALUMNI'`)**, karena tata kelola institusi TOP berbeda dengan CEC (Camp yang bertingkat Level 1–3). Alumni institusi TOP dapat mengakses kembali untuk meninjau (*review*) kelas-kelas yang telah mereka selesaikan sesuai programnya.
 - **Alumni Resmi Menjadi Level X (Grade X / Simbol `X`)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, badge bertuliskan **`X`**, `program_status = 'ALUMNI'`). Warna badge Level X di tabel workstation dan dashboard secara dinamis mengikuti nilai kelulusan akhir siswa (Grade Color SSOT), membebaskan warna ungu (`#c084fc`) secara eksklusif untuk Nilai 100% (Grade Star ★). Alumni mutlak TIDAK menggunakan angka level 0.
 
 ## 2.5 Test Auto-Assignment (Level-Centric)
 Tests (Tasks & Exams) are created within a Class. Because that Class belongs to a Level, the system automatically assigns the test to any Batch/Student that has unlocked that Level. Batches inherit tests automatically based on their current Level.
 
 ### 2.5.1 Class Code Standard Formula (PROGRAM-LEVELCLASS SSOT)
-- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CMP-3VOCAB`, `CMP-1BASIC`, `CMP-2SPEAK`).
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CMP-3VOCAB`, `CMP-1BASIC`, `CMP-2SPEAK`, `CMP-1STORY`, `CMP-2GRAM`).
+- **Daftar Singkatan Resmi Kelas (Class Modality Standard)**:
+  - Vocabulary: **`VOCAB`** (Kode Tes: **`VCB`**)
+  - Speaking: **`SPEAK`** (Kode Tes: **`SPK`**)
+  - Storytelling: **`STORY`** (Kode Tes: **`STT`** — strictly `STT`, dilarang `STY`)
+  - Grammar: **`GRAM`** (Kode Tes: **`GRM`**)
+  - Basic: **`BASIC`** (Kode Tes: **`BSC`**)
 - **Segmen 1 (PROGRAM)**: Singkatan 3-huruf resmi program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
 - **Separator**: Tanda hubung (`-`).
 - **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (misal `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
 - **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Pada program yang tidak memiliki jenjang (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB`). Dilarang mencantumkan angka 1 (`EVN-1VOCAB`).
+- **Item Bank Namespace Isolation**: Setiap butir soal di bank soal (*Item Bank*) wajib terikat pada metadata `class_type` / `modality` dan `level` yang bersangkutan. Soal Vocabulary murni berada di bank VCB, soal Storytelling di bank STT, dan soal Speaking di bank SPK; mutlak dilarang mencampur bank soal antar modalitas kelas yang berbeda.
 - **Invarian Format**: Disimpan di database `classes.code` dan ditampilkan seragam pada tabel workstation, modal, dan export.
 
 ### 2.5.2 Class Lobby Cumulative Access & Dashboard Class-Scoped Architecture (SSOT)
 - **Class Lobby Cumulative Access**: Siswa memiliki akses kumulatif ke seluruh kelas dari level yang telah dibuka (`cLvlNum <= studentLevelNum`). Kelas level sebelumnya ditampilkan di Class Lobby dengan status Completed (100% ★). Landing default saat login memprioritaskan kelas level aktif saat ini (`cLvlNum === studentLevelNum`).
+- **Alumni Read-Only / Review Mode Invariant**: Akun siswa berstatus ALUMNI (`program_status = 'ALUMNI'` / Level X) yang mengakses Class Lobby dan membuka kelas atau tes yang telah diselesaikan **MURNI BERSTATUS READ-ONLY (REVIEW MODE)**. Tombol submit/retake dikunci; Alumni dapat meninjau materi dan riwayat jawaban tanpa risiko mengubah atau menimpa skor kelulusan historis yang telah diraih secara permanen.
 - **Dashboard Class-Scoped Architecture**: Seluruh metrik di Dashboard Siswa (Grade Card [GRADE, GRADE DESCRIPTION, RATE], Hero Card tier aura/score, My Rank / Standings, Completed Tests table, dan Next Assignment) merepresentasikan **hanya kelas yang sedang dipilih (`window._selectedClassId`)**.
 - **Completed Tests Table Invariant**: Tabel Completed Tests menampilkan seluruh tes yang telah diselesaikan pada kelas terpilih, baik formative Task maupun milestone Exam. Total count badge mencerminkan jumlah seluruh tes selesai di kelas tersebut.
+
+### 2.5.3 Class Modality Inheritance & Strict Cross-Class Gating Invariant (Triple-Lock SSOT)
+- **Modality Inheritance Principle**: Setiap jenis kelas (Class Modality) mendefinisikan kontrak aturan evaluasi, engine modul, passing grade, dan struktur tes yang berlaku mengikat **DI SELURUH LEVEL** kelas tersebut. Level hanya membedakan materi dan tingkat kesulitan, bukan mengubah aturan dasar modalitas.
+- **Cross-Level Consistency Invariant**: Vocabulary Level 1, Level 2, dan Level 3 menggunakan aturan evaluasi yang identik (7×7 repetisi, modul M2/M3/M4, passing exam 60%). Perbedaan level HANYA pada konten kurikulum (topik, tema, kosakata), bukan pada engine evaluasi atau ambang kelulusan.
+- **Triple-Lock Gating Invariant**:
+  - **Lapis 1 — SSOT Contract** (Rules): Modul evaluasi terikat eksklusif ke disiplin kelasnya sesuai `DEFAULT_MODULE_CLASS_MAP` dan `CLASS_DISCIPLINES` di `js/admin/modules.js`. Tidak ada modul yang boleh beroperasi di luar domain kelasnya.
+    - Vocabulary (semua level): M2 Recognition, M3 Spoken, M4 Written — eksklusif
+    - Speaking: M5 Speech, M7 Dialogue — eksklusif
+    - Storytelling: M6 Monologue — eksklusif
+    - Basic English: M1 Description — eksklusif
+    - Grammar: M1 Description (shared with Basic, with Grammar-specific rubric)
+  - **Lapis 2 — UI Gating** (Frontend): `auto-gen-modal.js` membaca modality kelas aktif via `inferClassModality()` dan menampilkan **modality badge** di header wizard serta **Non-Vocabulary Notice** untuk kelas non-Vocabulary yang mengarahkan admin ke pembuatan tes manual. Modul dari disiplin lain tidak ditampilkan.
+  - **Lapis 3 — Backend Guard** (Edge Function): `evaluate-test/index.ts` memanggil `validateModuleClassBinding()` yang menolak request jika `CanonicalModuleType` tidak sesuai `classDiscipline` yang diinfer dari `classCode`. Cross-class module injection dihentikan di server.
+- **Inferensi Class Modality dari Kode Kelas (Code-Based Inference SSOT)**: Karena tabel `classes` tidak memiliki kolom `class_type`, sistem WAJIB menginfer modality dari segmen kode kelas menggunakan pola resmi:
+  - Kode mengandung `VCB` atau `VOCAB` → `VOCABULARY`
+  - Kode mengandung `SPK` atau `SPEAK` → `SPEAKING`
+  - Kode mengandung `STT` atau `STORY` → `STORYTELLING`
+  - Kode mengandung `GRM` atau `GRAM` → `GRAMMAR`
+  - Kode mengandung `BSC` atau `BASIC` → `BASIC`
+  - Tidak dikenali → fallback `VOCABULARY` (safe default, logged as warning)
+  - Fungsi canonical: `detectClassDiscipline()` di `js/grading.js` adalah satu-satunya referensi inference; `inferClassModality()` di `auto-gen-modal.js` adalah mirror lokal tanpa import circular.
+- **Modality Color Identity SSOT** (di seluruh permukaan UI):
+  - Vocabulary: Electric Lime `#95ff00` (`var(--grade-b)`)
+  - Speaking: Tactical Cyan `#38bdf8` (`var(--primary-tactical)`)
+  - Storytelling: Dark Orange `#FF8C00` (`var(--grade-d)`)
+  - Basic / Grammar: Violet `#c084fc` (Grade Star reserved color)
 
 ## 2.6 Test Naming & Code Standard Formula (SSOT)
 Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku: **Test Code (`shell_code`)** dan **Test Name (`title`)**. Istilah `display_name` ditiadakan secara permanen agar tidak menimbulkan ambiguitas dan tumpang tindih.
@@ -148,10 +195,10 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
 ### 2.6.1 Test Code Formula (`shell_code` — Machine & Admin SKU)
 - **Formula Baku 4-Blok Simetris**: `PROGRAM-LEVEL_CLASS-CODE-TYPE`
 - **Segmen 1 (PROGRAM)**: Singkatan resmi 3-huruf program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
-- **Segmen 2 (LEVEL_CLASS)**: Angka level belajar langsung digabung dengan 3-huruf singkatan kelas **tanpa huruf 'L'** (misal `3VCB` untuk Level 3 Vocabulary, `2VCB` untuk Level 2 Vocabulary, `2SPK` untuk Speaking, `1STY` untuk Storytelling). Meniadakan huruf 'L' mencegah kerancuan tipografi font (seperti `L1` vs `11` vs `I1`). Pada program Non-Level (Level 0), angka level **wajib ditiadakan** per Zero-Level Omission Invariant sehingga murni 3-huruf singkatan kelas (`VCB`, `SPK`).
+- **Segmen 2 (LEVEL_CLASS)**: Angka level belajar langsung digabung dengan 3-huruf singkatan kelas **tanpa huruf 'L'** (misal `3VCB` untuk Level 3 Vocabulary, `2VCB` untuk Level 2 Vocabulary, `2SPK` untuk Speaking, `1STT` untuk Storytelling [strictly `STT`]). Meniadakan huruf 'L' mencegah kerancuan tipografi font (seperti `L1` vs `11` vs `I1`). Pada program Non-Level (Level 0), segmen level pada singkatan kelas ditiadakan sehingga murni 3-huruf (`VCB`, `SPK`), sedangkan nomor level `0` disematkan pada segmen kode (Segmen 3: `0G1`, `0G`, `0A1`).
 - **Segmen 3 (CODE)**:
-  - Untuk Task: Kode tema dan nomor topik (misal `A1`, `A2`, `B1`, ..., `D4`, atau `G1`, `G2` untuk General).
-  - Untuk Exam: Huruf tema tunggal (misal `A`, `B`, `C`, `D`, atau `G` untuk General).
+  - Untuk Task: Kode tema dan nomor topik (misal `A1`, `A2`, `B1`, ..., `D4`, atau `0G1`, `0G2`, `0A1` untuk Level 0).
+  - Untuk Exam: Huruf tema tunggal (misal `A`, `B`, `C`, `D`, atau `0G`, `0A` untuk Level 0).
 - **Segmen 4 (TYPE)**: Strictly `TASK` atau `EXAM`.
 - **Contoh Resmi**:
   - `CMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
@@ -159,8 +206,8 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
   - `CMP-3VCB-D-EXAM` (Camp Level 3 Vocabulary Theme D Exam)
   - `CMP-2VCB-B2-TASK` (Camp Level 2 Vocabulary Topic B2 Task)
   - `CMP-2SPK-A1-TASK` (Camp Level 2 Speaking Topic A1 Task)
-  - `EVN-VCB-G1-TASK` (Evnikom Non-Level Vocabulary Topic G1 Task — segmen level ditiadakan)
-  - `EVN-VCB-G-EXAM` (Evnikom Non-Level Vocabulary General Exam — segmen level ditiadakan)
+  - `EVN-VCB-0G1-TASK` (Evnikom Level 0 Vocabulary Topic 0G1 Task)
+  - `EVN-VCB-0G-EXAM` (Evnikom Level 0 Vocabulary General 0G Exam)
 
 ### 2.6.2 Test Name Formula (`title` SSOT)
 - **Formula Baku Terpadu (Natural English Flow)**:
@@ -170,7 +217,7 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
   - **Bebas Simbol Asing**: Tidak menggunakan kurung siku `[ ]` ataupun titik tengah `·`. Mengalir alami sesuai standar bahasa Inggris akademik.
   - **Task Standar**: `2nd Vocabulary Task A1 - Greetings & Basics`, `2nd Vocabulary Task B1 - Podcast Hosting & Introduction`, `3rd Vocabulary Task A1 - Job Hunting & Application`, `2nd Public Speaking Task A1 - Introduction & Delivery`.
   - **Exam Standar**: `2nd Vocabulary Exam D - Cooking Class`, `3rd Vocabulary Exam A - World of Work`, `1st Vocabulary Exam A - Foundational Communication`.
-  - **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Segmen `[LEVEL_ORDINAL]` ditiadakan (dianggap kosong) sehingga judul tes mengalir alami: `[CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]` (contoh: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General`, `Sheraton Vocabulary A1 Task - Greetings`). Dilarang mencantumkan kata `1st` atau angka level pada judul tes program tanpa jenjang.
+  - **Program Tanpa Jenjang (Level 0 per DECISION-061)**: Segmen `[LEVEL_ORDINAL]` ditiadakan (karena kurikulum tidak bertingkat), namun kode tetap menyertakan prefix `0` (`0G1`, `0G`, `0A1`): `[CLASS_NAME] [TASK/EXAM] [0_CODE] - [TOPIC/THEME_NAME]` (contoh: `Evnikom Vocabulary Task 0G1 - Time Name`, `Evnikom Vocabulary Exam 0G - General`, `Sheraton Vocabulary Task 0A1 - Pre-Test`). Dilarang mencantumkan kata `1st` pada judul tes program tanpa jenjang.
 - **Universal 2-Line Test Title Architecture (SSOT Tampilan Card Dashboard & Header)**:
   Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian dirender menjadi **2 Baris Terpisah** via pemisah ` - `:
   - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`). Ditampilkan tebal (Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman (`CAMP 3RD VOCABULARY`).
@@ -181,12 +228,19 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
 ## 2.7 Module Progression & Prerequisites
 Dynamic prerequisites supporting 0 to N parent modules with minimum score thresholds. Report cards store HIGHEST score. Global average counts unattempted available modules as 0.
 
-### 2.7.1 Repetitive Mastery & Synchronization Safeguards (SSOT)
-- **Struktur Repetisi Terpadu 7×7**: Setiap tugas topik terpadu (*Unified Topic Task*) memerlukan 14 repetisi tuntas: **7 repetisi Words** dan **7 repetisi Phrases**.
+### 2.7.1 Vocabulary Class Repetitive Mastery & Synchronization Safeguards (SSOT)
+> **Ruang Lingkup Khusus (Vocabulary Domain Contract)**: Sub-aturan 7x7 repetisi dan ambang batas kelulusan tugas per-attempt 70% di bawah ini adalah **aturan baku khusus kurikulum kelas VOCABULARY**. Kelas-kelas modalitas lain (Speaking, Storytelling, Grammar, dll.) beroperasi dengan rubrik, durasi, dan sistem penilaian tersendiri sesuai modalitas pembelajarannya.
+
+- **Struktur Repetisi Terpadu 7×7 (Unified Topics)**: Setiap tugas topik terpadu (*Unified Topic Task*, seperti pada Level 3 Vocabulary) memerlukan 14 repetisi tuntas: **7 repetisi Words** dan **7 repetisi Phrases**.
+- **Penyebut Matriks Tugas Workstation (Zero Double-Multiplication SSOT)**: Penyebut target repetisi pada tabel workstation wajib selaras dengan struktur kurikulum tanpa penggandaan ganda:
+  - **Topik Terpadu (Level 3 / Unified)**: Target per topik adalah **14** (`X/14`), target per tema (4 topik) adalah **56** (`X/56`).
+  - **Topik Words-Only (Level 2 / Zero-Phrases)**: Target per topik adalah **7** (`X/7`), target per tema (4 topik) adalah **28** (`X/28`).
+  - **Self-Normalizing Invariant**: Jika pengaturan `taskRepetitions` di database bernilai 14 (mewakili total topik), sistem secara otomatis menetapkan target per komponen adalah 7 (`compTargetReps = 7`), mutlak mencegah penyebut membengkak menjadi 28 atau 112.
+- **Level 2 Words-Only 7 Repetitions Invariant (Zero-Phrases SSOT)**: Kurikulum Level 2 Vocabulary (`CMP-2VOCAB`) murni memuat **100% Words (nol frase)**. Setiap topik di Level 2 HANYA memerlukan **7 repetisi Words**. Tampilan ringkasan topik di workstation wajib menampilkan skala `X/7` (bukan `X/14`), dan detail per-topik hanya merender 7 kolom (`W1..W7`) tanpa kolom frase (`P1..P7`). Ujian Level 2 menggunakan 4 kolom standar (`RATE | PTS | GRD | STS`).
 - **Invarian Kolom Attempt Query**: Seluruh query yang membaca data `attempts` (pada `api.js` dan `dashboard.js`) **WAJIB MENYERTAKAN** kolom `forgiven_reason`, `is_manual_override`, `forgiven_by`, dan `forgiven_at` agar metadata dispensasi dan repetisi manual selalu terbaca 100% konsisten antara admin dan dashboard siswa.
 - **Symmetric Backend Partitioning (`adminApplyForgiven`)**: Penginputan nilai atau repetisi manual gabungan (> 7, misal 14) pada Unified Tasks **WAJIB SECARA OTOMATIS DIPECAH SECARA SIMETRIS** menjadi:
-  - 7 repetisi `WORDS` (50 butir soal, passing minimal 70% / Grade C, tag `[Admin] MANUAL_REPS: 7/7 WORDS`).
-  - 7 repetisi `PHRASES` (10 butir soal, passing minimal 70% / Grade C, tag `[Admin] MANUAL_REPS: 7/7 PHRASES`).
+  - 7 repetisi `WORDS` (50 butir soal, passing penguasaan repetisi tugas 70% / Grade C, tag `[Admin] MANUAL_REPS: 7/7 WORDS`).
+  - 7 repetisi `PHRASES` (10 butir soal, passing penguasaan repetisi tugas 70% / Grade C, tag `[Admin] MANUAL_REPS: 7/7 PHRASES`).
 - **Self-Healing Balancer Invariant (Anti-Blockage Guard)**: Jika terdapat kegagalan pelabelan manual atau attempt tak bertag pada Unified Task di mana kelulusan Words $\ge 14$ sementara Phrases bernilai 0, sistem evaluasi kelulusan di `dashboard.js` (pada Next Assignment Hero Card, Leaderboard Standings, dan Completed Tests Table) **SECARA OTOMATIS MENYEIMBANGKAN** separuh repetisi tersebut ke Phrases (7 Words + 7 Phrases). Menjamin mutlak nol kasus frase hilang, nol chip kosong melompong, dan ruang ujian terbuka seketika (*Zero Exam Blockage*).
 - **Automated Verification**: Seluruh proteksi ini dikunci dan diverifikasi oleh suite pengujian otomatis `scripts/test_repetitive_mastery_safeguards.mjs` yang terintegrasi langsung ke dalam `npm run test:fast`.
 
@@ -196,6 +250,7 @@ Average of all Tests that are available/takeable under current rules and complet
 ## 2.9 Question scoring & Points (PTS) Half-Up Whole Integer Invariant
 - Every question is worth **1 point** (partial credit 0.5 for minor spelling/word form error).
 - **Points Half-Up Whole Integer Invariant (Aturan Pembulatan Poin Penuh)**: Seluruh akumulasi poin dan nilai poin siswa/kelas (Theme Exam Points, Overall Points, Class Average Points) yang memiliki desimal **`.5` ke atas WAJIB dibulatkan ke atas** menjadi bilangan bulat penuh via `Math.round()` (misal `274.5` $\rightarrow$ `275`, `257.5` $\rightarrow$ `258`, `225.9` $\rightarrow$ `226`, `473.2` $\rightarrow$ `473`, `814.6` $\rightarrow$ `815`). Tidak boleh ada angka berkoma/pecahan desimal pada kolom dan metrik poin.
+- **Ceiling Cap Exception (Pengecualian Batas Maksimal / Star Protection Invariant)**: Sebagai pengecualian tunggal atas pembulatan ke atas, jika nilai poin mendekati poin maksimal sempurna (`points >= maxPoints - 0.5` dan `points < maxPoints`), pembulatan **WAJIB DIBULATKAN KE BAWAH (`Math.floor()`)** (contoh: 49.5 dari 50 poin dibulatkan menjadi **49**, bukan 50). Hal ini secara mutlak melindungi integritas predikat **100% Star (★ / Perfect Mastery)** agar predikat bintang sempurna hanya berhak diraih oleh siswa yang benar-benar 100% tanpa kesalahan ejaan.
 - **3-Letter 'PTS' Header Abbreviation Invariant**: Header kolom poin wajib menggunakan singkatan 3-huruf resmi **`PTS`** di seluruh resolusi tabel untuk mencegah tumpang tindih (*anti-crowding / zero text wrapping*).
 - **5-Pillar Theme Matrix Compact Header Standards (SSOT)**: Seluruh subheader matriks tema kelas resmi menggunakan format ringkas 3–4 huruf: **`TASK`** (Formative Tasks), **`RATE`** (Exam Rate %), **`PTS`** (Exam Points whole integer), **`GRD`** (Exam Grade), dan **`STS`** (Exam/Administrative Status). Mencegah tumpang tindih teks (*anti-crowding*) pada tabel workstation desktop.
 - **Overall Performance 3-Pillar Compact Header Standards (SSOT)**: Subheader performa keseluruhan di sisi kanan tabel resmi menggunakan format ringkas: **`DONE`** (Completion Rate %), **`PTS`** (Total Points whole integer), dan **`GRD`** (Overall Grade). Istilah `DONE` menggantikan `PROGRESS` / `PRGRS` untuk melenyapkan kerancuan dengan istilah Program (`PRG`).
@@ -236,15 +291,16 @@ Centralized authoritative grading (Official Grading Scale):
 - **Remedial Rules**: Capped at 60%. Letter "R" appears beside Score percentage on result and grade pages.
 
 ### 2.10.1 Standar Warna 4-Pillar (ABCD System & ABCD Tema)
-Struktur 4 tahap, 4 tema kelas, atau 4 domain navigasi menetapkan palet resmi **Pink – Orange – Lime – Ungu**:
+Struktur 4 tahap, 4 tema kelas, atau 4 domain navigasi menetapkan palet resmi **Pink – Orange – Lime – Cyan**:
 - **A (Tahap 1 / Domain A / Theme A / Exam 1)**: **Electric Pink (`#ff2d87`)** ➔ Token: `--quad-a`, `TOPSCORE_QUAD_COLORS.A`. *(Independen dari token Bintang Nilai ★)*.
 - **B (Tahap 2 / Domain B / Theme B / Exam 2)**: **Dark Orange (`#FF8C00`)** ➔ Token: `--quad-b`, `var(--grade-d)`, `TOPSCORE_COLORS.D`, `TOPSCORE_QUAD_COLORS.B`.
 - **C (Tahap 3 / Domain C / Theme C / Exam 3)**: **Electric Lime (`#95ff00`)** ➔ Token: `--quad-c`, `var(--grade-b)`, `TOPSCORE_COLORS.B`, `TOPSCORE_QUAD_COLORS.C`.
-- **D (Tahap 4 / Domain D / Theme D / Exam 4)**: **Vibrant Purple / Violet (`#C084FC`)** ➔ Token: `--quad-d`, `TOPSCORE_QUAD_COLORS.D`.
+- **D (Tahap 4 / Domain D / Theme D / Exam 4)**: **Tactical Cyan / Blue (`#38bdf8`)** ➔ Token: `--quad-d`, `TOPSCORE_QUAD_COLORS.D`, `var(--primary-tactical)`.
 - **Zero Raw Hex & Aksen Lembut**: Wajib token `var(--quad-*)` / `TOPSCORE_QUAD_COLORS`. Aksen teks, border, pill latar lembut (`rgba(..., 0.15)`), bukan blok solid pekat.
 
-### 2.10.2 Standar Warna Komponen Pembelajaran (Words & Phrases SSOT)
-- **Frame Kartu, Judul, Ikon & CTA**: Menggunakan standar terpadu **Tactical Blue / Cyan (`#38bdf8` / `var(--primary-tactical)`)** untuk frame kartu, teks judul, ikon SVG, garis pembatas, dan tombol aksi footer (elegan, modern, dan bebas dari kesan tacky).
+### 2.10.2 Standar Warna Komponen & Tipe Pengujian (Dual Pairs SSOT)
+- **WORDS & TASK**: Menggunakan warna **Electric Lime (`#95ff00` / `var(--grade-b)` / `--words-color` / `--task-color`)**. Mewakili komponen kata dan tugas formatif harian. Konteks dengan Grade B dibedakan melalui bentuk elemen UI (chip/label teks vs badge rapor bulat).
+- **PHRASES & EXAM**: Menggunakan warna **Electric Pink (`#ff2d87` / `var(--quad-a)` / `--phrases-color` / `--exam-color`)**. Mewakili komponen frasa dan ujian milestone tema resmi.
 - **Universal 7-Step Rainbow Progress Pips (Merah s/d Ungu SSOT)**: Ketujuh kotak indikator progres (pips 1–7) pada WORDS dan PHRASES mengadopsi spektrum pelangi resmi dari token sistem TopsCore yang menyala secara sekuensial:
   1. **Pip 1 (Merah)**: `var(--grade-e)` (`#FF0000` / Grade E Fail)
   2. **Pip 2 (Jingga)**: `var(--grade-d)` (`#FF8C00` / Grade D Less / Quad B)
@@ -252,18 +308,30 @@ Struktur 4 tahap, 4 tema kelas, atau 4 domain navigasi menetapkan palet resmi **
   4. **Pip 4 (Hijau)**: `var(--grade-a)` (`#00c000` / Grade A Very Good)
   5. **Pip 5 (Biru)**: `var(--primary-tactical)` (`#38bdf8` / Tactical Blue)
   6. **Pip 6 (Nila)**: `var(--clr-accent-1)` (`#6366f1` / Royal Indigo)
-  7. **Pip 7 (Ungu)**: `var(--quad-d)` (`#C084FC` / Quad D Violet Mastery)
+  7. **Pip 7 (Ungu Spektrum)**: `var(--rainbow-step-7)` (`#C084FC` / Violet Mastery — independen dari token Pilar D)
+
+### 2.10.3 Interface System (Pillar D Master UI & Design System Governance)
+TopsCore menyediakan panel **Interface System** terpadu di dalam **Domain D (System Settings)** dengan arsitektur 3 sub-tab modular:
+1. **Colours & Palette**: Kendali spektrum warna sistem (Sistem 4 Warna, Sistem 2 Warna, Sistem 3 Warna, Sistem 7 Warna Pelangi, dan Skala Nilai Akademik).
+2. **Typography & Texts**: Pilihan kurasi font aman (Inter SSOT untuk UI dan JetBrains Mono untuk angka/timer) serta 3 tingkat kontras warna teks (`--clr-text-1` Pure White, `--clr-text-2` Light Slate, `--clr-text-3` Soft Slate). Batas minimal 12px dan tabular-nums terkunci otomatis.
+3. **Surface & Chrome**: Warna kanvas workstation (`#090D16`), sidebar/topbar (`#0F172A`), kartu elevated (`#121c35`), kepekatan garis batas border, dan intensitas pendaran neon aura.
+- Seluruh input mendukung live picker & text hex dengan sinkronisasi realtime ke CSS variables (`:root`) serta persistensi global ke `site_settings` dan `localStorage`.
 
 ## 2.11 The 8 Test Evaluation Modules (Unification of Module & Answer Type SSOT)
-TopsCore consolidates all legacy 'Module' and 'Answer Type' terminology into a single authoritative concept: **Module** (`m1`–`m8`):
-1. **Description** (`m1`, formerly *Point & Speak!* — Visual Context & Pronouns)
-2. **Selection** (`m2`, formerly *Multiple Choice* — Standardized Multi-Option Choices)
-3. **Written** (`m3`, formerly *Vocabulary Mastery* — Text, Spelling & Lexical Precision)
-4. **Spoken** (`m4`, formerly *Read Aloud / Pronunciation* — Speech & Phonetic Analysis)
-5. **Speech** (`m5`, formerly *Speaking Performance* — Formal 5-Pillar Speaking Assessment)
-6. **Monologue** (`m6`, formerly *Storytelling* — Independent 3–5 min Narrative Speech)
-7. **Dialogue** (`m7`, formerly *Turn-based Roleplay* — Pair Live Conversation Room via WebRTC)
-8. **Interview** (`m8`, formerly *Conversation-based* — Guided Sequential Q&A)
+TopsCore consolidates all legacy 'Module' and 'Answer Type' terminology into authoritative domain modules.
+- **Class-Bound Module Isolation Invariant (Prinsip Keterikatan Modul Khusus Kelas)**:
+  Modul evaluasi terikat secara eksklusif ke kelasnya masing-masing dan **MUTLAK TIDAK BISA DIPAKAI SILANG** di kelas lain. Sekalipun dua modul memiliki kemiripan interaksi (misalnya sama-sama menggunakan input suara/audio antara *Spoken Module* di Vocabulary, *Speech Module* di Speaking, dan *Monologue Module* di Storytelling), modul tersebut **hanya mirip secara teknis, bukan sama secara domain**. Setiap modul memiliki engine penilaian, rubrik, batas toleransi, dan bobot kelulusan tersendiri yang terkunci pada kelasnya.
+- **Vocabulary Mastery Modules (Disiplin Vocabulary Eksklusif)**:
+  Kelas Vocabulary secara khusus dan eksklusif HANYA menggunakan keluarga **Vocabulary Mastery Modules** yang terdiri dari 3 modul terpisah (kode legasi `M2, M3, M4` mutlak ditiadakan), diurutkan secara alfabetis (A–Z):
+  1. **Recognition Module**: Evaluates 4-choice distractor recognition and contextual filtering.
+  2. **Spoken Module**: Evaluates phonetic speech analysis and pronunciation verification.
+  3. **Written Module**: Evaluates text typing, spelling recall, and semantic precision.
+- **Modul Disiplin Khusus Lainnya (Non-Vocabulary Class Modalities)**:
+  4. **Description Module** (Visual Context & Pronouns eksklusif untuk Basic English / `BSC`)
+  5. **Speech Module** (Formal 5-Pillar Speaking Assessment eksklusif untuk Public Speaking / `SPK`)
+  6. **Monologue Module** (Independent 3–5 min Narrative Speech eksklusif untuk Storytelling / `STT`)
+  7. **Dialogue Module** (Turn-based Roleplay & Pair Live Conversation Room)
+  8. **Interview Module** (Guided Sequential Q&A)
 
 ## 2.12 AI Scoring Pipeline (Stateless)
 Stateless & Low-Egress. Audio/media processed transiently in browser/Edge Functions and discarded; Supabase stores only structured text/JSON scores, transcripts, and metadata.
@@ -297,7 +365,7 @@ Server-authoritative timer: client visual countdown is UI only. Server validates
   - **Per Frasa (Phrases)**:
     - **Spoken**: **20 detik** per frasa / idiom / kalimat (artikulasi kalimat lengkap).
     - **Selection (Multiple Choice)**: **10 detik** per frasa / soal (membaca & memilih 1 dari 5 opsi).
-    - **Written**: **20 detik** per frasa / kalimat.
+    - **Written**: **25 detik** per frasa / kalimat (multi-word idiom keyboarding & spelling).
 - **Formula Durasi Ujian Terpadu (Unified Exam Benchmark)**:
   $$\text{Durasi (menit)} = \left\lceil \frac{(\text{Jumlah Kata} \times \text{Pace Kata}) + (\text{Jumlah Frasa} \times \text{Pace Frasa})}{60} \right\rceil$$
   - Contoh Ujian 200 Soal (160 Words Written @ 15s + 40 Phrases Selection @ 10s):
@@ -345,8 +413,11 @@ All table columns, labels, titles, and metrics must display 100% in full without
 ## 2.25 In-Browser Photo & Avatar Processing (Zero Supabase Storage Egress)
 - All photos and avatars are processed strictly **client-side (browser)** via Canvas compression or SVG data URIs, never stored as raw uncompressed image files in Supabase Storage.
 
-## 2.26 Minimal Supabase Footprint & Ultra-Lean Architecture (SSOT)
-- Minimize bandwidth/egress. Audit every call. Max 2–5 KB per polling cycle (no blobs in intervals). Client-side compute first; Supabase strictly for structured relational persistence.
+## 2.26 Minimal Supabase Footprint & Extreme Egress Minimization Priority (SSOT)
+- **Extreme Minimization Priority**: Setiap perancangan fitur, arsitektur, dan perubahan alur kerja WAJIB mengutamakan peminimalisiran kuota Supabase (Egress Bandwidth, Database Requests/Operations, dan Storage) semaksimal dan seekstrem mungkin pada ambang batas teknis yang memungkinkan.
+- **Strict Polling & Wire Transfer Guard**: Dilarang melakukan polling interval terhadap kolom besar (seperti `payload`, `snapshots`, atau array besar). Polling real-time/live WAJIB hanya men-select kolom skalar minimal (`id`, `status`, `expires_at`, `score`). Batas transfer maksimal 2–5 KB per siklus polling.
+- **Client-Side Compute & Buffer First**: Jawaban ujian dan interaksi siswa wajib dibuffer di browser (`localStorage`/`sessionStorage`) dengan zero database spam. Sinkronisasi dilakukan secara batch atau final submit.
+- **Lean Live Monitor**: Hilangkan fitur live monitoring yang membebani database (seperti polling berkala tabel jawaban/snapshots detail). Jika fitur live view siswa dirasa memberatkan kuota atau performa, fiturnya disederhanakan murni ke status attempt skalar (Online / In Progress / Finished / Expel).
 
 ## 2.27 Authoritative Entity Status & Type Standards (SSOT)
 - **Student Status (`students.program_status` / `is_active`)**: Strictly **`ACTIVE`**, **`HOLD`**, **`ALUMNI`**, and **`INACTIVE`**. Legacy `graduated` and `completed` terms are eradicated and consolidated into `ALUMNI`. `HOLD` represents students paused or not advancing with their batch, serving as a dedicated roster target for batch transfers.
@@ -382,6 +453,50 @@ All table columns, labels, titles, and metrics must display 100% in full without
 - **Pemberantasan Total Font Outfit**: Font `Outfit` dihapus dan dilarang di seluruh sistem (judul halaman, title area modal, header tabel, tombol CTA, nilai hero metrics, kartu, hingga banner).
 - Seluruh variabel CSS font display (`--font-display`, `--fm-font-display`) dan font body (`--font-sans`, `--font-body`, `--fm-font-sans`) dipetakan secara terpusat ke `'Inter', sans-serif`.
 - Hierarki visual diatur secara murni melalui skala ukuran terpusat (20px, 16px, 14px, 12px, 30px, 40px) dan ketebalan font (*font-weight*: 400 untuk sel tabel regular, 700/800/900 untuk judul, hero metrics, dan tombol aksi).
+
+## 2.34 Universal Two-Tier Themed Headers Architecture (Dark Surface with Category-Themed Colored Fonts Across All Tables SSOT)
+- **Universal Two-Tier Themed Headers across ALL Tables in TopsCore (Font Saja Yang Berwarna)**:
+  - Setiap tabel di seluruh sistem TopsCore (baik `#class-attendance-grid`, `student_roster_raport_grid_v2`, `student_roster_data_grid_v2`, `#blueprint-matrix-table`, `#vault-table`, maupun tabel modular/dinamis lainnya) yang memiliki dua tingkat header (Baris 1 Super-Header dan Baris 2 Sub-Header) **WAJIB menerapkan latar belakang gelap pekat solid (`#0b1120` atau `#0f172a`) dengan HANYA FONT/TEKS YANG BERWARNA**.
+  - Dilarang menggunakan blok latar belakang neon/terang solid yang berat dan menyilaukan mata pada tema gelap (*no full bright solid background blocks*).
+  - Sub-Header pada Baris 2 **MUTLAK MENGIKUTI 100% warna font/teks Super-Header induknya** di atas kanvas latar belakang gelap pekat yang sama.
+- **Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant)**:
+  - Setiap super-header dan seluruh sub-header di bawah kelompok kolom yang sama WAJIB memiliki warna font/teks yang 100% PERSIS SAMA (satu kelompok = satu warna identik).
+  - Dilarang keras super-header berwarna berbeda dari sub-headernya (misal: super-header kuning sementara sub-header pink).
+  - Ujian tema (Exam) adalah anggota keluarga tak terpisahkan dari tema terkait, sehingga Super-Header Ujian (`THEME A EXAM`, `THEME B EXAM`, dst.) wajib menggunakan warna kuadran tema aktif (Electric Pink `#ff2d87` untuk Tema A, Dark Orange `#ff8c00` untuk Tema B, Electric Lime `#95ff00` untuk Tema C, Tactical Cyan `#38bdf8` untuk Tema D) dan dilarang keras di-override ke warna kuning/amber arbitrer.
+- **Larangan Efek Opasitas Parsial (Anti-Muddy Background SSOT)**:
+  - Latar belakang header wajib 100% solid opacity (`#0b1120` atau `#0f172a`) agar baris tabel yang di-scroll di bawahnya tidak tembus pandang (*no opacity bleed-through*). Dilarang keras menggunakan opasitas parsial (`rgba 0.5–0.9`).
+- **Pemisah Antar-Tingkat (1px Inter-Tier Divider)**:
+  - Garis horizontal pembatas antara Super-Header (Baris 1) dan Sub-Header (Baris 2) berukuran halus 1px (`border-bottom: 1px solid rgba(255, 255, 255, 0.18)`).
+- **Anti-Double Divider Line Invariant**:
+  - Garis pembatas vertikal antar-kelompok kolom yang berada pada jalur/sumbu pertemuan yang sama WAJIB DISATUKAN menjadi 1 garis tunggal 2px (`border-right: 2px solid rgba(255, 255, 255, 0.22); border-left: none !important;`). Dilarang border ganda 4px (`border-right` + `border-left`) yang membuat garis tampak menebal atau berhimpit.
+- **Sub Panel Theme/Topic Navigation Architecture**:
+  - Tombol navigasi tema dan topik wajib berada di Sub Panel (Lower Panel 40px) pada sisi paling kiri (`flex-start`) dengan ukuran seragam **95px** (`width: 95px !important; height: 30px !important;`), zero floating navigation bar.
+- **Propagasi Otomatis di Tingkat Engine DataGrid (`js/admin/datagrid.js`)**:
+  - Engine `DataGrid` secara otomatis menyalurkan gaya dan class tema (`col-subhdr-theme-*`, `col-subhdr-students-data`, `col-subhdr-demographic`, `col-subhdr-address`, `col-subhdr-security`, `col-subhdr-class`) dari `superHeaders` ke setiap anak kolom sub-header yang dinaunginya, menjamin konsistensi 100% di seluruh aplikasi. Detail lengkap dikodifikasi dalam [`.agents/rules/ui-invariants.md` §4.6 & §4.11](file:///.agents/rules/ui-invariants.md#411-universal-two-tier-themed-headers-architecture-dark-surface-with-category-themed-colored-fonts-across-all-tables-ssot).
+
+## 2.35 Workspace Dual-Zone Rule (Card + Table Layout Invariant SSOT)
+Ketika antarmuka workstation admin menggabungkan kartu ringkasan/governance/kontrol (*Cards/Panels*) dengan tabel data (*Datagrid*), sistem WAJIB menerapkan salah satu dari 2 arsitektur resmi:
+1. **Cards Kiri & Tabel Kanan (Horizontal Split)**: Digunakan saat tabel berkolom ringkas ($\le 6$–7 kolom).
+2. **Cards Atas & Tabel Bawah (Vertical Split)**: Digunakan saat tabel berkolom banyak ($\ge 8$–12 kolom, misal Curriculum Hub). Kartu-kartu berjejer rapi di baris atas (`flex: 0 0 auto`), dan tabel data membentang penuh (*full-width*, `flex: 1 1 0`) di bawahnya dengan scroll vertikal/horizontal hanya di dalam `.table-wrap`.
+Dilarang keras menaruh toolbar liar di dalam workspace. Detail lengkap di [`.agents/rules/ui-invariants.md` §1.9](file:///.agents/rules/ui-invariants.md#19-workspace-dual-zone-rule-card--table-layout-invariant-ssot).
+
+## 2.36 Alphabetical Ordering First Priority Invariant (SSOT Aturan Baku Pengurutan Alfabetis)
+Setiap kali sistem melakukan pengurutan (*sorting*), menampilkan daftar modul pembelajaran/evaluasi, kartu komponen tata kelola, opsi dropdown, atau elemen antarmuka yang setara, **urutan alfabetis (Alphabetical A–Z) MUTLAK menjadi aturan baku yang dipertimbangkan pertama kali (First Priority Consideration)**:
+1. **Vocabulary Mastery Modules**: Tiga modul evaluasi wajib tersusun alfabetis:
+   - **Recognition Module** (R)
+   - **Spoken Module** (S)
+   - **Written Module** (W)
+   Hal ini berlaku seragam pada kartu kontrol (*Governance Cards*), kartu pacing kata & frase, deskripsi engine pada kolom tabel workstation, modal pengaturan, dan definisi modul di `js/api.js`.
+2. **Dropdowns & Option Lists**: Seluruh daftar pilihan dalam form input, dropdown filter, dan checklist yang tidak memiliki hierarki numerik bawaan (seperti Level 1, 2, 3) WAJIB disusun alfabetis (A–Z) guna memastikan konsistensi dan kecepatan pemindaian visual.
+3. Detail operasional lengkap di [`.agents/rules/ui-invariants.md` §1.10](file:///.agents/rules/ui-invariants.md#110-alphabetical-ordering-first-priority-invariant-ssot-aturan-baku-pengurutan-alfabetis).
+
+## 2.37 Universal 10px Full-Perimeter & Panel Boundary Invariant (Aturan Baku Jarak 10px 4-Sisi Panel)
+- **Bukan Hanya Antar-Elemen**: Aturan jarak 10 pixel **BUKAN HANYA** berlaku antar-elemen (kartu, form, tombol, toolbar, tabel), melainkan juga berlaku **MUTLAK sebagai jarak pembatas (clearance/gap) dengan panel atas, bawah, dan samping**:
+  1. **Panel Atas (Top Panel / Nav Tabs / Workspace Header)**: Jarak tepi atas elemen/kartu/tabel ke panel atas terkunci tepat **10px** (`padding-top: 10px;` atau `gap: 10px;`).
+  2. **Panel Bawah (Sub Panel / Lower Panel 40px)**: Jarak tepi bawah elemen/kartu/tabel ke Sub Panel terkunci tepat **10px** (`padding-bottom: 10px;` atau `gap: 10px;`).
+  3. **Panel Samping Kiri (Sidebar / Left Navigation)**: Jarak tepi kiri elemen/kartu/tabel ke sidebar terkunci tepat **10px** (`padding-left: 10px;`).
+  4. **Panel Samping Kanan (Tepi Layar / Right Viewport Edge)**: Jarak tepi kanan elemen/kartu/tabel ke batas kanan monitor terkunci tepat **10px** (`padding-right: 10px;`).
+- **Workspace Full-Perimeter Consistency**: Seluruh container workspace (`.admin-content`, `#mockup-table-canvas-wrap`, dsb.) wajib menerapkan `padding: 10px 10px 10px 10px !important; box-sizing: border-box !important; gap: 10px !important;` untuk menjamin kerapian simetris dan mutlak bebas dari jarak rapat 0px maupun gap ganda liar (20px–30px). Detail teknis di [`.agents/rules/ui-invariants.md` §1.2](file:///.agents/rules/ui-invariants.md#12-universal-10px-container-gap--4-way-panel-perimeter-invariant-ssot).
 
 ---
 

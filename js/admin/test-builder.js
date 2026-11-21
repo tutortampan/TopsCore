@@ -133,10 +133,10 @@ export async function openTestBuilder(testId = null, initialClassId = null, init
                 <div class="form-group mb-3">
                   <label class="form-label">Module</label>
                   <select class="form-control" id="wiz-answer-type">
-                    <option value="description">Description (m1)</option>
-                    <option value="selection">Selection (m2)</option>
-                    <option value="written">Written (m3)</option>
-                    <option value="spoken">Spoken (m4)</option>
+                    <option value="description">Point & Speak (m1)</option>
+                    <option value="selection">Recognition Module (m2)</option>
+                    <option value="spoken">Spoken Module (m3)</option>
+                    <option value="written">Written Module (m4)</option>
                     <option value="speech">Speech (m5)</option>
                     <option value="monologue">Monologue (m6)</option>
                     <option value="dialogue">Dialogue (m7)</option>

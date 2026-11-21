@@ -32,15 +32,52 @@ export async function openAutoGenerateModal(options = {}) {
   document.body.appendChild(loading);
 
   try {
-    const [institutions, allClasses] = await Promise.all([
+    const [institutions, allClasses, allLevels] = await Promise.all([
       fetchInstitutions(),
-      adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => [])
+      adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
+      adminFetchAll('levels', 'id, name, level_number').catch(() => [])
     ]);
 
-    // Determine current active class first
+    // Determine current active class and strict level binding
+    const isExplicitClass = Boolean(explicitClassId);
     const currentClassId = explicitClassId || window._selectedClassId || localStorage.getItem('topscore_selected_class_id');
     const matchedClass = allClasses.find(c => String(c.id) === String(currentClassId));
     const className = matchedClass ? matchedClass.name : 'Vocabulary Class';
+
+    let matchedLevel = null;
+    let matchedLevelNum = null;
+    if (matchedClass && matchedClass.level_id) {
+      matchedLevel = (allLevels || []).find(l => String(l.id) === String(matchedClass.level_id));
+      if (matchedLevel && matchedLevel.level_number != null) {
+        matchedLevelNum = Number(matchedLevel.level_number);
+      }
+    }
+    if (matchedLevelNum == null && matchedClass) {
+      const match = String(matchedClass.code || matchedClass.name || '').match(/(\d+)/);
+      if (match) matchedLevelNum = Number(match[1]);
+      else if (/evnikom|sheraton|tamata/i.test(matchedClass.name || '')) matchedLevelNum = 0;
+    }
+
+    // Class-scoped mode: locked to that specific class and its intrinsic level
+    const isClassScoped = Boolean(matchedClass && matchedLevelNum != null && isExplicitClass);
+    const isLevel2 = isClassScoped && (matchedLevelNum === 2);
+
+    // ── Triple-Lock Lapis 2: Infer class modality from code/name (SSOT §2.5.3) ──
+    // Mirrors detectClassDiscipline in grading.js without importing (avoid circular dep)
+    function inferClassModality(classObj) {
+      if (!classObj) return 'VOCABULARY';
+      const code = String(classObj.code || '').toUpperCase();
+      const name = String(classObj.name || '').toLowerCase();
+      if (/-([0-9]*VCB|VOCAB)\b/.test(code) || /\b(vocab|vocabulary)\b/.test(name)) return 'VOCABULARY';
+      if (/-([0-9]*BSC|BASIC)\b/.test(code) || /\bbasic(\s*english)?\b/.test(name)) return 'BASIC';
+      if (/-([0-9]*SPK|SPEAK)\b/.test(code) || /\b(speaking|public\s*speaking)\b/.test(name)) return 'SPEAKING';
+      if (/-([0-9]*STT|STORY)\b/.test(code) || /\b(storytelling|story)\b/.test(name)) return 'STORYTELLING';
+      if (/-([0-9]*GRM|GRAM)\b/.test(code) || /\bgrammar\b/.test(name)) return 'GRAMMAR';
+      return 'VOCABULARY'; // safe default
+    }
+    const classModality = inferClassModality(matchedClass);
+    const isVocabularyModal = classModality === 'VOCABULARY';
+    const isNonVocabularyModal = !isVocabularyModal;
 
     let instId = matchedClass?.institution_id || (institutions.length > 0 ? institutions[0].id : null);
     let programs = [];
@@ -170,17 +207,26 @@ export async function openAutoGenerateModal(options = {}) {
           border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px;
           box-sizing: border-box;
         }
-        #test-generator-wizard-overlay .wizard-card-highlight {
-          border-color: rgba(var(--grade-c-rgb), 0.35);
+        #test-generator-wizard-overlay .wizard-card-task {
+          border-color: rgba(var(--grade-b-rgb, 149, 255, 0), 0.35);
+        }
+        #test-generator-wizard-overlay .wizard-card-task .wizard-card-title {
+          font-family: var(--fm-font-display, 'Inter', sans-serif);
+          font-size: 12px; font-weight: 800; color: var(--task-color, var(--grade-b, #95ff00));
+          text-transform: uppercase; letter-spacing: 0.04em;
+          display: inline-flex; align-items: center; gap: 6px;
+        }
+        #test-generator-wizard-overlay .wizard-card-exam {
+          border-color: rgba(var(--quad-a-rgb, 255, 45, 135), 0.35);
+        }
+        #test-generator-wizard-overlay .wizard-card-exam .wizard-card-title {
+          font-family: var(--fm-font-display, 'Inter', sans-serif);
+          font-size: 12px; font-weight: 800; color: var(--exam-color, var(--quad-a, #ff2d87));
+          text-transform: uppercase; letter-spacing: 0.04em;
+          display: inline-flex; align-items: center; gap: 6px;
         }
         #test-generator-wizard-overlay .wizard-card-header {
           display: flex; justify-content: space-between; align-items: center;
-        }
-        #test-generator-wizard-overlay .wizard-card-title {
-          font-family: var(--fm-font-display, 'Inter', sans-serif);
-          font-size: 12px; font-weight: 800; color: var(--grade-c);
-          text-transform: uppercase; letter-spacing: 0.04em;
-          display: inline-flex; align-items: center; gap: 6px;
         }
         #test-generator-wizard-overlay .field-label {
           font-size: 12px; font-weight: 700; color: #94a3b8;
@@ -195,7 +241,7 @@ export async function openAutoGenerateModal(options = {}) {
         #test-generator-wizard-overlay .btn-cta-close {
           height: 40px !important; min-height: 40px !important; max-height: 40px !important;
           line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
           font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
           background: transparent !important; border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
           color: #94a3b8; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box;
@@ -209,7 +255,7 @@ export async function openAutoGenerateModal(options = {}) {
         #test-generator-wizard-overlay .btn-cta-secondary {
           height: 40px !important; min-height: 40px !important; max-height: 40px !important;
           line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
           font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
           background: transparent !important; border: 1.5px solid rgba(56, 189, 248, 0.4) !important;
           color: #38bdf8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
@@ -223,7 +269,7 @@ export async function openAutoGenerateModal(options = {}) {
         #test-generator-wizard-overlay .btn-cta-primary {
           height: 40px !important; min-height: 40px !important; max-height: 40px !important;
           line-height: 38px !important; padding: 0 22px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
           font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
           background: transparent !important; color: #38bdf8 !important; border: 1.5px solid #38bdf8 !important;
           cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -243,11 +289,24 @@ export async function openAutoGenerateModal(options = {}) {
             ${getSvgIcon('settings', 18)}
           </div>
           <h2>TEST GENERATOR WIZARD</h2>
+          ${isClassScoped ? (() => {
+            // Modality badge colors (Class Discipline Color SSOT §2.5.3)
+            const MODALITY_BADGE = {
+              VOCABULARY:   { bg: 'rgba(149,255,0,0.18)',  border: 'rgba(149,255,0,0.5)',  color: '#95ff00',  label: 'VOCABULARY' },
+              SPEAKING:     { bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.5)', color: '#38bdf8',  label: 'SPEAKING' },
+              STORYTELLING: { bg: 'rgba(255,140,0,0.18)',  border: 'rgba(255,140,0,0.5)',  color: '#FF8C00',  label: 'STORYTELLING' },
+              BASIC:        { bg: 'rgba(192,132,252,0.18)',border: 'rgba(192,132,252,0.5)',color: '#c084fc',  label: 'BASIC ENGLISH' },
+              GRAMMAR:      { bg: 'rgba(192,132,252,0.18)',border: 'rgba(192,132,252,0.5)',color: '#c084fc',  label: 'GRAMMAR' },
+            };
+            const mb = MODALITY_BADGE[classModality] || MODALITY_BADGE.VOCABULARY;
+            return `<span style="margin-left:auto; background:${mb.bg}; border:1px solid ${mb.border}; color:${mb.color}; font-size:11px; font-weight:800; padding:2px 10px; border-radius:4px; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap;">${mb.label}</span>`;
+          })() : ''}
         </div>
 
         <!-- Modal Body (10px padding & gaps, capped at 80vh) -->
         <div class="modal-body">
-          <!-- Locked Class Context Banner -->
+          <!-- Context Banner -->
+          ${isClassScoped ? `
           <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
             <div style="display:flex; align-items:center; gap:8px;">
               <span style="display:inline-flex; align-items:center; color:#38bdf8;">${getSvgIcon('book-open', 16)}</span>
@@ -258,32 +317,73 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
             <span class="badge" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px;">LOCKED</span>
           </div>
+          ` : `
+          <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-flex; align-items:center; color:#38bdf8;">${getSvgIcon('book-open', 16)}</span>
+              <div>
+                <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">CURRICULUM BLUEPRINT MODE</div>
+                <div style="font-size:12px; font-weight:700; color:#f8fafc;">Program-Wide Dynamic Test Synchronization</div>
+              </div>
+            </div>
+            <span class="badge" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px;">BLUEPRINT</span>
+          </div>
+          `}
 
           <!-- Section 1: Target Level & Category Scope -->
+          ${isNonVocabularyModal ? `
+          <!-- Triple-Lock Lapis 2: Non-Vocabulary Class Notice (§2.5.3) -->
+          <div style="background:rgba(255,140,0,0.08); border:1px solid rgba(255,140,0,0.3); border-radius:8px; padding:10px; display:flex; align-items:flex-start; gap:10px; box-sizing:border-box;">
+            <span style="display:inline-flex; align-items:center; color:#FF8C00; flex-shrink:0; margin-top:1px;">${getSvgIcon('alert-triangle', 16)}</span>
+            <div>
+              <div style="font-size:12px; font-weight:800; color:#FF8C00; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:2px;">Non-Vocabulary Class — Manual Test Creation Required</div>
+              <div style="font-size:12px; font-weight:600; color:#cbd5e1; line-height:1.45;">
+                Class modality: <strong style="color:#f8fafc;">${classModality}</strong>. The Auto-Generate Wizard is optimized for the Vocabulary curriculum (7×7 repetition structure). For <strong>${classModality}</strong> classes, manually create tests via the Tests tab using the appropriate evaluation engine (${classModality === 'SPEAKING' ? 'M5/M7 Speech modules' : classModality === 'STORYTELLING' ? 'M6 Monologue module' : classModality === 'BASIC' ? 'M1 Description module' : 'class-specific module'}). Cross-class module injection is blocked by Triple-Lock Lapis 3.
+              </div>
+            </div>
+          </div>
+          ` : ''}
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; box-sizing:border-box;">
+            ${isClassScoped ? `
+            <div>
+              <label class="field-label">Target Level (Locked):</label>
+              <div style="background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px; min-height:34px; display:flex; align-items:center; gap:8px; box-sizing:border-box;">
+                <span class="badge" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px;">
+                  ${matchedLevelNum === 0 ? '0 (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(matchedLevelNum) : matchedLevelNum + 'th Level')}
+                </span>
+                <span style="font-size:12px; color:#94a3b8; font-weight:600;">(Locked to ${escapeHtml(className)})</span>
+              </div>
+              <input type="hidden" class="wizard-level-chk" value="${matchedLevelNum}" checked />
+            </div>
+            ` : `
             <div>
               <label class="field-label">Select Level:</label>
               <div style="display:flex; flex-wrap:wrap; gap:8px; background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px; min-height:34px; align-items:center; box-sizing:border-box;">
                 ${displayLevels.map(lvl => `
                   <label style="display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; color:#e2e8f0;">
-                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> ${lvl === 0 ? '— (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : lvl)}
+                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> ${lvl === 0 ? '0 (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : lvl)}
                   </label>
                 `).join('')}
               </div>
             </div>
+            `}
 
             <div>
               <label for="wizard-scope-select" class="field-label">Category Scope:</label>
               <select id="wizard-scope-select" class="form-control" style="background:#090d16; color:#f8fafc; border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:12px; height:34px; padding:0 8px; width:100%; box-sizing:border-box;">
-                <option value="all" selected>● All (Words &amp; Phrases — 40 Questions)</option>
-                <option value="words">○ Words Only (20 Questions)</option>
-                <option value="phrases">○ Phrases Only (20 Questions)</option>
+                ${isLevel2 ? `
+                  <option value="words" selected>● Words Only (Level 2 Words-Only SSOT)</option>
+                ` : `
+                  <option value="all" selected>● All (Words &amp; Phrases — 40 Questions)</option>
+                  <option value="words">○ Words Only (20 Questions)</option>
+                  <option value="phrases">○ Phrases Only (20 Questions)</option>
+                `}
               </select>
             </div>
           </div>
 
           <!-- Section 2: Task Configuration -->
-          <div class="wizard-card wizard-card-highlight">
+          <div class="wizard-card wizard-card-task">
             <div class="wizard-card-header">
               <span class="wizard-card-title">
                 ${getSvgIcon('zap', 14)} 1. TASK SETTINGS (TASKS)
@@ -293,7 +393,7 @@ export async function openAutoGenerateModal(options = {}) {
             <!-- Row 1: Separate Durations (Words vs Phrases) & Passing Score -->
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; box-sizing:border-box;">
               <div>
-                <label for="wizard-task-words-pace" class="field-label" style="color:var(--grade-c); margin-bottom:2px;">
+                <label for="wizard-task-words-pace" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">
                   WORDS TASK (<span id="words-task-calc-dur">7m</span>)
                 </label>
                 <div style="display:flex; align-items:center; gap:4px;">
@@ -309,7 +409,7 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-task-phrases-pace" class="field-label" style="color:var(--grade-c); margin-bottom:2px;">
+                <label for="wizard-task-phrases-pace" class="field-label" style="color:var(--phrases-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">
                   PHRASES TASK (<span id="phrases-task-calc-dur">4m</span>)
                 </label>
                 <div style="display:flex; align-items:center; gap:4px;">
@@ -333,32 +433,40 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
             </div>
 
-            <!-- Row 2: Cara Jawab Terpisah (Words Task vs Phrases Task) -->
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(var(--grade-c-rgb),0.2); box-sizing:border-box;">
+            <!-- Row 2: Cara Jawab Terpisah & Question Order -->
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(var(--grade-b-rgb, 149, 255, 0), 0.2); box-sizing:border-box;">
               <div>
-                <label for="wizard-task-ans-words" class="field-label" style="color:var(--grade-c); margin-bottom:2px;">Words Task</label>
+                <label for="wizard-task-ans-words" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">Words Task</label>
                 <select id="wizard-task-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 15s)</option>
-                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
-                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
+                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
+                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>Spoken Module (15s)</option>
+                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
                   <option value="mixed" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
               </div>
 
               <div>
-                <label for="wizard-task-ans-phrases" class="field-label" style="color:var(--grade-c); margin-bottom:2px;">Phrases Task</label>
+                <label for="wizard-task-ans-phrases" class="field-label" style="color:var(--phrases-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">Phrases Task</label>
                 <select id="wizard-task-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 20s)</option>
-                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
-                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
+                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
+                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>Spoken Module (20s)</option>
+                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
                   <option value="mixed" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="wizard-task-order" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">Task Order</label>
+                <select id="wizard-task-order" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
+                  <option value="random" selected>Random</option>
+                  <option value="sequential">Sequential</option>
                 </select>
               </div>
             </div>
           </div>
 
           <!-- Section 3: Exam Configuration -->
-          <div class="wizard-card wizard-card-highlight">
+          <div class="wizard-card wizard-card-exam">
             <div class="wizard-card-header">
               <span class="wizard-card-title">
                 ${getSvgIcon('clipboard', 14)} 2. EXAM SETTINGS (EXAMS)
@@ -366,17 +474,17 @@ export async function openAutoGenerateModal(options = {}) {
             </div>
 
             <!-- Dynamic Session Duration Callout -->
-            <div style="background:rgba(0,0,0,0.3); border-left:3px solid var(--grade-c); padding:6px 10px; border-radius:4px; font-size:12px; color:#cbd5e1; line-height:1.35; box-sizing:border-box;">
+            <div style="background:rgba(0,0,0,0.3); border-left:3px solid var(--exam-color, var(--quad-a, #ff2d87)); padding:6px 10px; border-radius:4px; font-size:12px; color:#cbd5e1; line-height:1.35; box-sizing:border-box;">
               <strong>Exam Duration:</strong> Automatically calculated per item based on cumulative theme scope (Words: 15s/item, Phrases: 20s/item). Live tutor sessions can also define dedicated time limits when launching exams.
             </div>
 
-            <div style="display:grid; grid-template-columns:1.2fr 1.2fr 1fr; gap:10px; box-sizing:border-box;">
+            <div style="display:grid; grid-template-columns:1.25fr 1.25fr 0.75fr 0.85fr; gap:10px; box-sizing:border-box;">
               <div>
-                <label for="wizard-test-ans-words" class="field-label" style="margin-bottom:2px;">Words Exam</label>
+                <label for="wizard-test-ans-words" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">Words Exam</label>
                 <select id="wizard-test-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 15s)</option>
-                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
-                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
+                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
+                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>Spoken Module (15s)</option>
+                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
                   <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
                 <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
@@ -386,11 +494,11 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-test-ans-phrases" class="field-label" style="margin-bottom:2px;">Phrases Exam</label>
+                <label for="wizard-test-ans-phrases" class="field-label" style="color:var(--phrases-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">Phrases Exam</label>
                 <select id="wizard-test-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>Selection (m2 / 20s)</option>
-                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>Written (Typing / 30s)</option>
-                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>Spoken (Oral / 20s)</option>
+                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
+                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>Spoken Module (20s)</option>
+                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
                   <option value="mixed" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
                 </select>
                 <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
@@ -405,6 +513,14 @@ export async function openAutoGenerateModal(options = {}) {
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-test-min" data-val="60" style="font-size:12px; padding:1px 8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">60% (Grade C)</button>
                 </div>
+              </div>
+
+              <div>
+                <label for="wizard-test-order" class="field-label" style="color:var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">Exam Order</label>
+                <select id="wizard-test-order" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
+                  <option value="random" selected>Random</option>
+                  <option value="sequential">Sequential</option>
+                </select>
               </div>
             </div>
           </div>
@@ -512,10 +628,12 @@ export async function openAutoGenerateModal(options = {}) {
     overlay.querySelector('#wizard-cancel-btn').onclick = closeOverlay;
 
     const getWizardConfig = () => {
-      const selectedLevels = Array.from(overlay.querySelectorAll('.wizard-level-chk:checked')).map(cb => parseInt(cb.value, 10));
+      const selectedLevels = (isClassScoped && matchedLevelNum != null)
+        ? [matchedLevelNum]
+        : Array.from(overlay.querySelectorAll('.wizard-level-chk:checked')).map(cb => parseInt(cb.value, 10));
       const progId = overlay.querySelector('#wizard-prog-id').value;
       const institutionId = overlay.querySelector('#wizard-inst-id')?.value || null;
-      const category = overlay.querySelector('#wizard-scope-select').value;
+      const category = isLevel2 ? 'words' : overlay.querySelector('#wizard-scope-select').value;
       const durEl = overlay.querySelector('#wizard-task-dur') || overlay.querySelector('#wizard-task-dur');
       const wordsDurEl = overlay.querySelector('#wizard-task-words-dur');
       const phrasesDurEl = overlay.querySelector('#wizard-task-phrases-dur');
@@ -538,6 +656,8 @@ export async function openAutoGenerateModal(options = {}) {
       const wordsTestAnswer = overlay.querySelector('#wizard-test-ans-words').value;
       const phrasesTestAnswer = overlay.querySelector('#wizard-test-ans-phrases').value;
       const testPassing = parseInt(overlay.querySelector('#wizard-test-min').value, 10) || 60;
+      const taskQuestionOrder = overlay.querySelector('#wizard-task-order')?.value === 'sequential' ? 'sequential' : 'random';
+      const examQuestionOrder = overlay.querySelector('#wizard-test-order')?.value === 'sequential' ? 'sequential' : 'random';
 
       return {
         selectedLevels,
@@ -561,6 +681,8 @@ export async function openAutoGenerateModal(options = {}) {
         wordsTestAnswer,
         phrasesTestAnswer,
         testPassing,
+        taskQuestionOrder,
+        examQuestionOrder,
         targetClassId: currentClassId
       };
     };
@@ -592,7 +714,9 @@ export async function openAutoGenerateModal(options = {}) {
           taskPassingScore: cfg.taskPassing,
           wordsTestAnswerType: cfg.wordsTestAnswer,
           phrasesTestAnswerType: cfg.phrasesTestAnswer,
-          testPassingScore: cfg.testPassing
+          testPassingScore: cfg.testPassing,
+          taskQuestionOrder: cfg.taskQuestionOrder,
+          examQuestionOrder: cfg.examQuestionOrder
         });
 
         overlay.remove();
@@ -619,13 +743,17 @@ export async function openAutoGenerateModal(options = {}) {
         return;
       }
 
+      const loadingSubtitle = isClassScoped
+        ? `Building Task hierarchy (Words: ${cfg.wordsTaskDuration}m) &amp; Exams for ${matchedLevelNum === 0 ? 'Level 0' : (typeof toShortLevel === 'function' ? toShortLevel(matchedLevelNum) : 'Level ' + matchedLevelNum)} in class ${escapeHtml(className)}...`
+        : `Building Task hierarchy (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exams for Level ${cfg.selectedLevels.join(', ')}...`;
+
       overlay.innerHTML = `
         <div style="background:#0f172a; padding:2rem 2.5rem; border-radius:12px; width:440px; text-align:center; font-family:Inter,sans-serif; color:white; border:1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
           <div class="topscore-loading-center" style="min-height: 120px !important;">
             <div class="spinner"></div>
             <h3 style="margin:0 0 6px 0; font-size: 16px; font-weight:700; color:#f8fafc;">Generating Curriculum Tests</h3>
             <p style="color:#94a3b8; font-size: 12px; margin:0; line-height:1.4;">
-              Building Task hierarchy (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exams for Level ${cfg.selectedLevels.join(', ')} in class ${escapeHtml(className)}...
+              ${loadingSubtitle}
             </p>
           </div>
         </div>
@@ -649,7 +777,9 @@ export async function openAutoGenerateModal(options = {}) {
           taskPassingScore: cfg.taskPassing,
           wordsTestAnswerType: cfg.wordsTestAnswer,
           phrasesTestAnswerType: cfg.phrasesTestAnswer,
-          testPassingScore: cfg.testPassing
+          testPassingScore: cfg.testPassing,
+          taskQuestionOrder: cfg.taskQuestionOrder,
+          examQuestionOrder: cfg.examQuestionOrder
         });
 
         overlay.remove();

@@ -116,10 +116,10 @@ const formFields = {
     ], required: true },
     { id: 'working_duration_minutes', label: 'Duration (Minutes)', type: 'number', required: true, defaultValue: 5 },
     { id: 'answer_type', label: 'Module', type: 'select', options: [
-      { value: 'description', label: 'Description (m1)' },
-      { value: 'selection', label: 'Selection (m2)' },
-      { value: 'written', label: 'Written (m3)' },
-      { value: 'spoken', label: 'Spoken (m4)' },
+      { value: 'description', label: 'Point & Speak (m1)' },
+      { value: 'selection', label: 'Recognition Module (m2)' },
+      { value: 'spoken', label: 'Spoken Module (m3)' },
+      { value: 'written', label: 'Written Module (m4)' },
       { value: 'speech', label: 'Speech (m5)' },
       { value: 'monologue', label: 'Monologue (m6)' },
       { value: 'dialogue', label: 'Dialogue (m7)' },
@@ -139,10 +139,10 @@ const formFields = {
     { id: 'question_order', label: 'Order', type: 'number', required: true },
     { id: 'test_id', label: 'Test', type: 'select', source: 'Tests', required: true },
     { id: 'answer_type', label: 'Module', type: 'select', options: [
-      { value: 'description', label: 'Description (m1)' },
-      { value: 'selection', label: 'Selection (m2)' },
-      { value: 'written', label: 'Written (m3)' },
-      { value: 'spoken', label: 'Spoken (m4)' },
+      { value: 'description', label: 'Point & Speak (m1)' },
+      { value: 'selection', label: 'Recognition Module (m2)' },
+      { value: 'spoken', label: 'Spoken Module (m3)' },
+      { value: 'written', label: 'Written Module (m4)' },
       { value: 'speech', label: 'Speech (m5)' },
       { value: 'monologue', label: 'Monologue (m6)' },
       { value: 'dialogue', label: 'Dialogue (m7)' },
@@ -1497,7 +1497,7 @@ async function loadDuplicateQuestions() {
       let html = '';
       data.crossTestDuplicates.forEach((group) => {
         html += `
-          <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-primary, #6366f1); background:var(--clr-surface, #1e293b); border-radius:8px;">
+          <div class="card p-4 mb-4" style="border-left:4px solid var(--primary-tactical, #38bdf8); background:var(--clr-surface, #1e293b); border-radius:8px;">
             <div class="fw-700 mb-2" style="color:#f8fafc;">Identical Text in ${group.TestCount} tests (${group.candidatesCount} instances)</div>
             <div class="text-sm mb-2 px-3 py-2 rounded" style="background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.08);">
               ${escapeHtml(group.questionText)}

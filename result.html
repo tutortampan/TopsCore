@@ -36,12 +36,7 @@
         } catch (_) {}
       }
       purgeBadges();
-      if (typeof MutationObserver !== 'undefined') {
-        try {
-          var obs = new MutationObserver(function () { purgeBadges(); });
-          obs.observe(document.documentElement, { childList: true, subtree: true });
-        } catch (_) {}
-      }
+      setTimeout(purgeBadges, 2000);
     })();
   </script>
   <title>Result Page — TOPS CORE</title>
@@ -54,6 +49,10 @@
   <link rel="stylesheet" href="css/style.css?v=20261119_v631" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261119_v631" />
   <link rel="stylesheet" href="css/result.css?v=20261119_v631" />
+  <!-- Instant Transition Prefetch Pipeline (Prefetch dashboard for return trip) -->
+  <link rel="prefetch" href="dashboard.html" />
+  <link rel="prefetch" href="css/dashboard.css" />
+  <link rel="prefetch" href="js/dashboard.js" />
   <!-- Web App Manifest & PWA Metadata -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#060911" />

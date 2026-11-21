@@ -1761,7 +1761,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
           <div class="text-xs fw-700 uppercase mb-1 text-danger" style="letter-spacing:0.5px;">Real-Time Integrity Incident Logs (WITA Time)</div>
           <div style="max-height:240px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
             <table class="table w-100" style="margin:0; font-size:12px;">
-              <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+              <thead style="background:#0f172a; position:sticky; top:0;">
                 <tr>
                   <th style="padding:6px 10px;">TIME (WITA)</th>
                   <th style="padding:6px 10px;">STUDENT</th>
@@ -1792,7 +1792,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             <div class="text-xs fw-700 uppercase mb-1 text-warning" style="letter-spacing:0.5px;">Detected Speed-Runners (&lt; 60s Submissions)</div>
             <div style="max-height:160px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
               <table class="table w-100" style="margin:0; font-size:12px;">
-                <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+                <thead style="background:#0f172a; position:sticky; top:0;">
                   <tr>
                     <th style="padding:6px 10px;">STUDENT</th>
                     <th style="padding:6px 10px;">TEST</th>
@@ -1877,7 +1877,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         <p class="text-xs text-muted mb-0">These 20 questions represent the highest failure frequency across student task and exam attempts. Use these insights for class review drills.</p>
         <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
           <table class="table w-100" style="margin:0; font-size:12px;">
-            <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+            <thead style="background:#0f172a; position:sticky; top:0;">
               <tr>
                 <th style="padding:6px 10px; width:45px;">RANK</th>
                 <th style="padding:6px 10px;">INDONESIAN PROMPT</th>
@@ -1977,7 +1977,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
 
         <div style="max-height:260px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
           <table class="table w-100" style="margin:0; font-size:12px;">
-            <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+            <thead style="background:#0f172a; position:sticky; top:0;">
               <tr>
                 <th style="padding:6px 10px;">RANK</th>
                 <th style="padding:6px 10px;">STUDENT NAME</th>
@@ -2022,7 +2022,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
         <p class="text-xs text-muted mb-0">Complete difficulty ranking of all 40 curriculum tests sorted from lowest student average rate (Toughest) to highest (Easiest).</p>
         <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
           <table class="table w-100" style="margin:0; font-size:12px;">
-            <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+            <thead style="background:#0f172a; position:sticky; top:0;">
               <tr>
                 <th style="padding:6px 10px; width:45px;">RANK</th>
                 <th style="padding:6px 10px;">TEST TITLE</th>
@@ -2120,7 +2120,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
           <div class="text-xs fw-700 uppercase mb-2" style="letter-spacing:0.5px; color:#cbd5e1;">Audio Review Queue &amp; Teacher Override Console</div>
           <div style="max-height:360px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
             <table class="table w-100" style="margin:0; font-size:12px;">
-              <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
+              <thead style="background:#0f172a; position:sticky; top:0;">
                 <tr>
                   <th style="padding:6px 10px;">STUDENT</th>
                   <th style="padding:6px 10px;">PROMPT (ID)</th>

@@ -39,11 +39,11 @@ for (const token of requiredTokens) {
 }
 console.log('  ✅ Pillar 1 Passed: Authoritative 8-tier typographic tokens declared in :root.');
 
-// 2. Audit css/admin.css for Zero Sub-11px Rule
-console.log('▶ Checking Pillar 2: Zero Sub-11px Rule in css/admin.css...');
+// 2. Audit css/admin.css for Zero Sub-12px Rule (SSOT Invariant)
+console.log('▶ Checking Pillar 2: Zero Sub-12px Rule in css/admin.css...');
 const fontRegex = /font-size:\s*([^;]+);/g;
 let match;
-let sub11Count = 0;
+let sub12Count = 0;
 while ((match = fontRegex.exec(adminCss)) !== null) {
   const val = match[1].trim();
   let px = null;
@@ -51,13 +51,13 @@ while ((match = fontRegex.exec(adminCss)) !== null) {
   else if (val.endsWith('rem')) px = parseFloat(val) * 12.8;
   else if (val.endsWith('pt')) px = parseFloat(val) * (96 / 72);
 
-  if (px !== null && px < 10.9) {
-    sub11Count++;
-    console.error(`    Found sub-11px declaration: ${val} (${px.toFixed(1)}px)`);
+  if (px !== null && px < 11.9) {
+    sub12Count++;
+    console.error(`    Found sub-12px declaration: ${val} (${px.toFixed(1)}px)`);
   }
 }
-assert(sub11Count === 0, `css/admin.css must have 0 sub-11px font declarations, found ${sub11Count}`);
-console.log('  ✅ Pillar 2 Passed: Zero sub-11px font declarations verified across admin.css.');
+assert(sub12Count === 0, `css/admin.css must have 0 sub-12px font declarations, found ${sub12Count}`);
+console.log('  ✅ Pillar 2 Passed: Zero sub-12px font declarations verified across admin.css.');
 
 // 3. Audit Centered Loading State Component in css/admin.css
 console.log('▶ Checking Pillar 3: Centered Loading State Component in css/admin.css...');

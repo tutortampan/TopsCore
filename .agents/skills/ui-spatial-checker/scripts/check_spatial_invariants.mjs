@@ -85,19 +85,18 @@ assert.ok(
 );
 console.log('  ✔ Window, Wizard, Card & Popup buttons (40px) and footers (60px) strictly verified');
 
-// Title Area 60px, Centered Title & ALL CAPS Typography Invariant (§1.5.1)
+// Title Area 60px & ALL CAPS Typography Invariant (§1.5.1)
 assert.ok(
   adminCss.includes('.title-area h3,') &&
-  adminCss.includes('text-transform: uppercase !important;') &&
-  adminCss.includes('text-align: center !important;'),
-  '[Rule 1.5.1] Title Area titles must enforce text-transform: uppercase and centered alignment'
+  adminCss.includes('text-transform: uppercase !important;'),
+  '[Rule 1.5.1] Title Area titles must enforce text-transform: uppercase'
 );
 assert.ok(
-  adminCss.includes('.title-area.dual-line,') &&
-  adminCss.includes('flex-direction: column !important;'),
-  '[Rule 1.5.1] Dual-line Title Areas must enforce vertically stacked subtitles'
+  adminCss.includes('.title-area .subtitle,') &&
+  adminCss.includes('display: none !important;'),
+  '[Rule 1.5.1] Title Areas must enforce Zero Subtitle Clutter (display: none !important)'
 );
-console.log('  ✔ Title Area titles strictly locked to ALL CAPS, Centered alignment & Stacked Subtitles');
+console.log('  ✔ Title Area titles strictly locked to ALL CAPS & Zero Subtitle Clutter (§1.5.1)');
 
 // Standard Modal 80vh Height Invariant (§1.5.3)
 assert.ok(
@@ -107,12 +106,24 @@ assert.ok(
 console.log('  ✔ Floating window dialogs strictly bound to standard 80vh height');
 
 
-// Container 10px gap
+// Container 10px gap & Universal 4-Way Panel Perimeter Clearance (Pilar 1 SSOT)
 assert.ok(
-  adminCss.includes('gap: 10px !important;') || adminCss.includes('gap: 10px;'),
-  '[Rule 20] Containers must maintain 10px gap'
+  adminCss.includes('gap: 10px !important;'),
+  '[Rule 20 / Pilar 1] Containers & .admin-content must enforce gap: 10px !important'
 );
-console.log('  ✔ Container 10px spacing invariant verified');
+assert.ok(
+  adminCss.includes('padding: 10px 10px 10px 10px !important;'),
+  '[Pilar 1] .admin-content must enforce strict 10px 4-way perimeter clearance (padding: 10px 10px 10px 10px !important)'
+);
+console.log('  ✔ Universal 10px gap & 4-way panel perimeter clearance verified');
+
+// Card Internal Padding 10px SSOT (Pilar 2)
+assert.ok(
+  adminCss.includes('.admin-content .card:not(:has(.table-wrap)):not(:has(table))') &&
+  adminCss.includes('padding: 10px !important;'),
+  '[Pilar 2] Cards without full-bleed tables must enforce padding: 10px !important'
+);
+console.log('  ✔ Card Internal Padding strictly locked to 10px (Pilar 2 SSOT)');
 
 // Table cells single-line nowrap
 assert.ok(

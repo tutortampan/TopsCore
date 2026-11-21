@@ -1090,12 +1090,90 @@ Status: ACCEPTED
 
 
 
+---
+
+## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
+
+**Date:** 2026-11-21
+**Status:** Approved & Enforced
+
+### Context
+As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
+
+### Decision
+**Triple-Lock Gating Architecture** implemented across three layers:
+
+1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
+   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
+   - Modality rules apply identically across all levels of the same class type.
+   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
+
+2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
+   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
+   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
+   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
+   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
+
+3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
+   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
+   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
+   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
+
+### Bug Fix (included in this decision)
+- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
+
+### Inferensi Modality (Code-Based, No DB Column)
+The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
+
+### Not in Scope (Deferred)
+- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
+- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
+- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
+- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.
 
 
 
 
+---
 
+## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
 
+**Date:** 2026-11-21
+**Status:** Approved & Enforced
+
+### Context
+As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
+
+### Decision
+**Triple-Lock Gating Architecture** implemented across three layers:
+
+1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
+   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
+   - Modality rules apply identically across all levels of the same class type.
+   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
+
+2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
+   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
+   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
+   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
+   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
+
+3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
+   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
+   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
+   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
+
+### Bug Fix (included in this decision)
+- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
+
+### Inferensi Modality (Code-Based, No DB Column)
+The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
+
+### Not in Scope (Deferred)
+- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
+- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
+- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
+- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.
 
 
 ---
@@ -1909,3 +1987,340 @@ In Vocabulary classes (e.g. Camp 1st/2nd/3rd Vocabulary, Evnikom/Sheraton/Tamata
    - `supabase/functions/start-test/index.ts`: Evaluates attempt deadline based on modality pacing for both unified and single-section tests.
    - `js/test.js`: Section filter and runtime expiration calculations honor the modality pacing.
 
+---
+
+## DECISION-064 — Modality and Level Structure for Vocabulary Classes (Level 2 Words-Only 7 Repetitions Architecture & Non-Phrases Governance)
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+In Vocabulary classes across levels, curriculum structures differ fundamentally:
+1. **Level 1 Vocabulary (Foundational)**: Contains both Words and Phrases formatted as distinct module tasks.
+2. **Level 2 Vocabulary (Camp 2nd Step / `CMP-2VOCAB`)**: Contains strictly **100% Words** (1,229 words, 0 active phrases in vault, `is_unified: false`). Each topic requires exactly **7 repetitions** of Words. There are no phrases tasks or phrase exam sections in Level 2.
+3. **Level 3 Vocabulary (Camp 3rd Step / `CMP-3VOCAB`)**: Contains **Unified Topic Packages** (Words + Phrases combined per DECISION-034: 7 words repetitions + 7 phrase repetitions = 14 total repetitions).
+4. **Non-Level Vocabulary (Level 0)**: Evnikom (`EVN-VOCAB`) is Words-only (7 reps), while Sheraton (`SHR-VOCAB`) is Unified (14 reps).
+
+Previously, a hardcoded `isVocab ||` flag in `js/admin/app.js` assumed that *any* vocabulary class possessed phrases. This caused Level 2 to erroneously calculate topic denominators as 14 (displaying `7/14` instead of `7/7`) and render 7 empty phrase columns (`P1..P7`) filled with dashes (`—`) in the single-topic detail view.
+
+### Decision
+1. **Authoritative Level 2 Words-Only SSOT (Zero-Phrases Invariant in Level 2)**:
+   - Level 2 Vocabulary curriculum is strictly **Words-only**.
+   - No phrase tasks, phrase columns, or phrase repetitions exist in Level 2.
+2. **Dynamic Repetition Scaling by Topic Structure**:
+   - **Topics with Phrases (Level 3 / Unified)**: Requires 14 repetitions (7 Words + 7 Phrases). Topic overview displays `X/14`. Single-topic detail view renders 14 columns (`W1..W7` and `P1..P7`) under superheader colSpan 14.
+   - **Words-Only Topics (Level 2 / Single Component)**: Requires exactly 7 repetitions (7 Words). Topic overview displays `X/7` (with `7/7` marking full topic completion). Single-topic detail view renders strictly 7 columns (`W1..W7`) under superheader colSpan 7. Phrase columns (`P1..P7`) are completely suppressed.
+3. **Workstation Table Column Geometry**:
+   - **Classes with Exam Phrases (Level 3 Vocabulary)**: Exam renders 7 distinct columns (`WRD RATE | WRD PTS | PHR RATE | PHR PTS | ACC PTS | GRADE | STATUS`) with superheader colSpan 8 (Overview) or 7 (Detail Exam).
+   - **Classes without Exam Phrases (Level 2 Vocabulary & Non-Vocab)**: Exam renders standard 4 compact columns (`RATE | PTS | GRD | STS`) with superheader colSpan 5 (Overview) or 4 (Detail Exam).
+4. **System-Wide Implementation**:
+   - `js/admin/app.js`: Implemented `checkTopicHasPhrases`, `checkThemeHasPhrases`, and `isLevel2Vocab` guards across all attendance matrix view modes (Master Overview, Topics Overview, Single Topic Detail).
+   - Ensured student mastery rates and class averages reflect accurate denominators (7 reps for Level 2, 14 reps for Level 3).
+
+---
+
+## DECISION-065 — 60-Second Grace Period & Seamless Session Finalization Architecture (Zero-Egress Anti-Panic Guard)
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+During formal exam sessions (such as Camp 3rd Vocabulary `CMP-3VCB-A-EXAM`), sudden session cut-offs and expiration can cause typing fatigue, panic, and uncertainty over whether in-flight answers are saved. Additionally, when a tutor closes or locks a session from the Admin workstation, students previously faced an abrupt browser `alert()` modal or sudden page redirect that felt like an unexpected crash.
+
+Furthermore, auto-polling live monitors were strictly prohibited to protect Supabase quotas (Egress Bandwidth, DB read operations) per `AGENTS.md §0.1`.
+
+### Decision
+1. **Zero-Egress Floating Grace Banner (`#grace-period-banner`)**:
+   - Implemented a high-visibility, calm floating banner pinned top-center (`test.html`, `css/test.css`).
+   - Driven entirely by client-side countdown and the existing 15s attempt heartbeat. Strictly **zero additional Supabase queries or egress load**.
+2. **Dynamic States & Visual SSOT**:
+   - **Final 60 Seconds Window (`remaining <= 60s`)**: Dark slate canvas (`rgba(15, 23, 42, 0.96)`), 1.5px Dark Orange border (`var(--grade-d, #FF8C00)`), soft pulsating timer badge (`00:59`...`00:01`), and reassuring text: *"FINAL 60 SECONDS • FINISH CURRENT QUESTION — All answers are auto-saved. Finishing window active."*
+   - **Tutor Session Closure / Lock State**: When tutor closes/locks session or marks attempt auto-submitted, activates emergency alert styling (`var(--grade-d)` / `var(--grade-e)`) with 2-second graceful flush: *"SESSION CLOSED BY TUTOR • AUTO-SAVING — Tutor has concluded this exam session. Submitting your work..."*
+   - **Submission State (`00:00`)**: Displays Tactical Blue accent (`var(--primary-tactical, #38bdf8)`), centered spinner, and smooth auto-submit transition to `result.html` without blocking thread execution.
+3. **Guaranteed Data Preservation**:
+   - In-flight text is explicitly persisted via `saveCurrentAnswer()` immediately upon entering grace state and right before submitting.
+
+---
+
+## DECISION-066 — Level 0 Numeric Display ('0') Architecture (Universal Replacement of Dash '—')
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+Previously per legacy draft (DECISION-058), programs without hierarchical levels (such as Evnikom, Sheraton, Tamata on TOP institution, represented internally as `level_number = 0`) rendered level cells and badges as a neutral dash (`—`) to indicate "Non-Level".
+However, rendering a dash (`—`) created ambiguity with truly empty/unassigned data fields (`null` or `undefined`) and appeared inconsistent across administrative tables (Workstations, Student Rosters, Curriculum Manager, Vault Items) where levels are expected to be numeric identifiers.
+
+User instructed: *"pada tampilan level kita taruh saja 0 agar tidak pakai strip"*.
+
+### Decision
+1. **Universal Numeric Display '0' for Level 0**:
+   - All level formatting helpers (`toShortLevel`, `toOrdinalLevel`, batch/student level cells, select filters, and modals) now explicitly return `'0'` instead of `'—'` for Level 0 / Non-Level.
+   - The dash symbol (`—`) is reserved strictly for unassigned/empty data (`null`, `undefined`, or unselected).
+2. **Synchronized Scope**:
+   - `js/api.js`: `toShortLevel(0)` and `toOrdinalLevel(0)` return `'0'`.
+   - `js/admin/curriculum-management.js`: `formatLevelOptionLabel` returns `'0'` for `level_number === 0`, and program-only batch rows render `'0'`.
+   - `js/admin/student-management.js`: Workstation student level badges render `'0'`.
+   - `js/admin/vocab-vault.js` & `js/admin/auto-gen-modal.js`: Select filters display `'0 (Non-Level)'`.
+   - `js/admin/classes-hub.js`: Renders `'0'` for Level 0 classes.
+   - `AGENTS.md` §2.4.2 & §2.6: Formally synchronized to document numeric `'0'` display and uniform level-prefixed test codes (`0G1`, `0G`, `0A1`) per DECISION-061.
+
+---
+
+## DECISION-067 — Workstation Topic & Theme Task Denominator Normalization Architecture (Zero Double-Multiplication Guard)
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+In Camp 3rd Vocabulary (`CMP-3VOCAB`), the curriculum uses Unified Topic Packages (7 Words + 7 Phrases = 14 total repetitions per topic).
+In database `site_settings`, `class_test_settings` stores `taskRepetitions: 14` representing this total topic target.
+However, in `js/admin/app.js`, calculations for `maxThemeTasks` and `maxTopicReps` treated `taskRepetitions` as per-component repetitions and multiplied it by 2 (`* (hasPhrases ? 2 : 1)`), resulting in:
+- Topic denominator becoming `14 * 2 = 28` (instead of 14).
+- Theme denominator becoming `4 * 14 * 2 = 112` (instead of 56).
+- Student completion rate displaying `53%` (Orange / Grade D) despite completing 60 repetitions (full mastery).
+- Class average topic footer summing `words_reps + phrases_reps + topic_reps` (7 + 7 + 7 = 21 instead of 14).
+
+### Decision
+1. **Per-Component Normalization (`compTargetReps`)**:
+   - `compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : targetReps;`
+   - Component level caps for Words and Phrases clamp to `compTargetReps` (7).
+2. **Deterministic Matrix Denominators**:
+   - `maxTopicReps = hasPhrases ? (compTargetReps * 2) : compTargetReps;` (strictly 14 for Unified, 7 for Words-Only).
+   - `maxThemeTasks = numTopics * maxTopicReps;` (strictly 56 for Unified 4-topic theme, 28 for Words-Only).
+3. **Automated Continuous Regression Guard**:
+   - Codified as Pillar 5 in `scripts/test_repetitive_mastery_safeguards.mjs` running under `npm run test:fast`.
+
+---
+
+## DECISION-069 — System Glossary Workstation Panel (Domain D — DATA) & Hybrid Persistence Architecture
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+As the TopsCore LMS codebase expanded across 4 primary quadrants (A, B, C, D), numerous grading tiers (Star, A–E, F, R, X), strict curriculum structures (Unified Topics 7×7, Level 2 Words-Only, Level 0 Non-Level), and strict UI spatial invariants (100vh lock, 10px gaps, 10px padding, dual-scale typography), administrative auditing became increasingly difficult without a single unified glossary.
+User requested: *"saya mau buat daftar istilah di seleutruh sistem TopsCore tabel ini berisi Group/ Lokasi | nama istilah | fungsi| warna | nanti tabel ini bisa kita edit dan periksa kita buat super detaiil. sebab saya mulai kesulitan menegcek semua yang ada . Kita Taruh di Bagian D dengan nama panel System Glossary"*.
+
+### Decision
+1. **Dedicated Workstation Navigation in Domain D (Data)**:
+   - Sidebar item added in Domain D (`data-domain="desk"`) directly below *System Designs* labeled `System Glossary` (`data-sub="system-glossary"`).
+   - Canonical route: `admin.html#system-glossary` (with aliases `#glossary` and `#system_glossary`).
+   - Integrated tab in *System Designs* (`#interface-settings`) topbar for quick cross-navigation.
+2. **5-Pillar Column Schema**:
+   - `Group / Lokasi`: Categorical classification (ABCD, Grading, Curriculum, Student Gate, UI, Backend).
+   - `Nama Istilah`: Authoritative term name + 1-Click Copy helper.
+   - `Fungsi & Aturan SSOT`: Detailed technical description, formulas, bounds, and impact.
+   - `Warna / Visual Token`: Live visual preview badge (rendering exact font/padding/color) + Hex/Token + 1-Click Copy.
+   - `Referensi SSOT`: Direct pointer to governing documentation (e.g. `AGENTS.md §2.10`, `ui-invariants.md §1.2`).
+3. **Subpanel Toolbar Controls**:
+   - Filter pills dynamically counted by group: `[ALL]`, `[A — ADMIN]`, `[B — BOARD]`, `[C — CLASS]`, `[D — DATA]`, `[Grading & Badges]`, `[Curriculum & Tests]`, `[Student Gate]`, `[UI & Spasial]`, `[Backend & Governance]`.
+   - Live debounced search bar.
+   - 1-Click Export buttons for Markdown (`.md`) and CSV (`.csv`) offline cheat sheets.
+   - Edit Mode toggle allowing inline table modifications, "+ Add Term", and row deletions.
+4. **Hybrid Quota-Minimizing Persistence Strategy**:
+   - Pre-seeded with 33+ comprehensive, authoritative SSOT terms in `js/admin/system-glossary-data.js` (0 database overhead on load).
+   - When modified in Edit Mode, changes persist to Supabase `site_settings` under key `system_glossary` via a single lightweight upsert.
+   - "Reset to SSOT" button provided for instantaneous restoration to canonical defaults.
+
+---
+
+## DECISION-070 — Task & Exam Dual-Pair Color SSOT Harmonization & 100% Unbroken Prerequisite Chain Integrity
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+In the Class Tests datagrid (`admin.html#class-hub?tab=tests`) and Test Generator Wizard modal:
+1. `Task` was inadvertently styled with `var(--grade-c)` (yellow) and `Exam` with `#38bdf8` (tactical cyan), directly conflicting with the Dual Pairs SSOT in `AGENTS.md § 2.10.2` which dictates **Electric Lime (`#95ff00` / `var(--grade-b)` / `var(--task-color)`)** for `Task` and **Electric Pink (`#ff2d87` / `var(--quad-a)` / `var(--exam-color)`)** for `Exam`.
+2. In `Camp 2nd Vocabulary`, 3 tests exhibited broken/null prerequisites: `CMP-2VCB-A-EXAM`, `CMP-2VCB-B-EXAM`, and `CMP-2VCB-C1-TASK` showed `—` because legacy auto-generator shells previously bypassed exact SKU matching.
+
+### Decision
+1. **Task & Exam Dual-Pair Color Harmonization (`AGENTS.md § 2.10.2`)**:
+   - **Task Tokens**: Strict use of `var(--task-color, var(--grade-b, #95ff00))` (Electric Lime) across `TITLE` text spans, `TYPE` badge cells, modal card headers, and governance labels.
+   - **Exam Tokens**: Strict use of `var(--exam-color, var(--quad-a, #ff2d87))` (Electric Pink) across `TITLE` text spans, `TYPE` badge cells, modal card headers, and governance labels.
+   - Section 1 (Tasks) of the Test Generator Wizard modal styled with Electric Lime border & title; Section 2 (Exams) styled with Electric Pink border & title.
+2. **100% Unbroken Prerequisite Chain Enforcement**:
+   - Database prerequisites verified and linked for `Camp 2nd Vocabulary`:
+     - `CMP-2VCB-A-EXAM` linked to `CMP-2VCB-A3-TASK` (`d66f11b6-c9cf-4b12-b37c-3e0bb153f51a`).
+     - `CMP-2VCB-B-EXAM` linked to `CMP-2VCB-B4-TASK` (`e6fadab2-9587-4ab9-8150-88584395d199`).
+     - `CMP-2VCB-C1-TASK` linked to `CMP-2VCB-B-EXAM` (`90308450-e456-4070-9e55-96ce2c26fa31`).
+   - `Camp 1st Vocabulary` linked: `CMP-1VCB-A1-PHRASES-TASK` to `CMP-1VCB-A1-WORDS-TASK`.
+   - All classes in TopsCore audited: 0 missing or broken prerequisite linkages.
+
+---
+
+## DECISION-071 — Universal Question Order (Sequential vs Random) Controls with Random Default SSOT
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+User requested configurable question delivery ordering (`Sequential` vs `Random`) across all relevant test governance interfaces, with `Random` enforced as the canonical system default to prevent cheating and position memorization.
+
+### Decision
+1. **Random Default SSOT**:
+   - All tests, class governance defaults, and wizard auto-generators initialize with `question_order = 'random'`.
+2. **5-Point Integrated Interface Architecture**:
+   - **Point 1 (Card 4 — Standards & Vault on Classes Hub)**: Added `Task Order` and `Exam Order` inline selects, saved and synchronized across all active class tests on clicking `SAVE & SYNC STANDARDS`.
+   - **Point 2 (Test System Settings Modal)**: Added `Question Order (Urutan Soal)` block with Task and Exam order configuration, supporting class-specific and global persistence via `site_settings`.
+   - **Point 3 (Test Generator Wizard Modal)**: Integrated `Task Order` in Section 1 and `Exam Order` in Section 2 with default `Random (Acak)`.
+   - **Point 4 (Class Tests Datagrid Edit Mode)**: In `[ Edit Mode ]`, the `ORDER` column renders interactive `<select>` dropdowns (`Random` vs `Sequential`), persisting changes directly via `adminUpdate('tests', id, { question_order, payload })`.
+   - **Point 5 (Backend Persistence & Engine)**: `fetchClassTestSettings`, `saveClassTestSettings`, `updateClassTestsConfig`, `autoGenerateTestsHierarchy`, and `upsertDynamicTestShell` all support bidirectional parsing, defaults, and persistence of `question_order` in the `tests` table and its internal `payload`.
+
+---
+
+## DECISION-072 — Question Order Query Synchronization, Resilient Random Fallback & Multi-Tier Cache Invalidation
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+When saving class test governance settings, `tests.question_order = 'random'` successfully persisted to Supabase, but the Class Tests table UI continued rendering `Sequential`. Root causes identified:
+1. `adminFetchAll('tests', ...)` in `js/admin/app.js` and `js/admin/classes-hub.js` did not list `question_order` in the explicit select query string, resulting in `r.question_order === undefined` in frontend rows.
+2. The UI ternary `r?.question_order === 'random' ? 'Random' : 'Seq'` silently fell back to `Seq` instead of the mandated `Random` system default.
+3. `clearApiCache('tests')` only invalidated `_apiCache` while leaving `_adminCache` stale.
+
+### Decision
+1. **Explicit Query Inclusion**: `question_order` added to all `tests` SELECT queries (`js/admin/app.js`, `js/admin/classes-hub.js`, and `js/api.js`).
+2. **Resilient Random Fallback Invariant**:
+   `questionOrder: (String(r?.question_order || r?.payload?.question_order || 'random').toLowerCase() === 'sequential') ? 'Seq' : 'Random'`
+   If not explicitly set to `sequential`, the order strictly defaults to `Random`.
+3. **Multi-Tier Cache Invalidation**: `clearApiCache('tests')` automatically invokes `clearAdminCache('tests')`, guaranteeing immediate refresh on save.
+4. **Permanent Regression Guard**: Codified into `scripts/test_repetitive_mastery_safeguards.mjs` Pillar 1.4, verified on every `npm run test:fast`.
+
+---
+
+## DECISION-073 — Multi-Class Modality Scoping, Vocabulary Mastery Contract & Deferral of Gemini Live API
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+Detailed system audit resolved multiple ambiguities regarding passing thresholds across classes, class code abbreviations, evaluation module isolation, and external AI speech engines:
+1. Passing rate of 70% was previously loosely referenced, creating ambiguity with the 60% Grade C passing threshold for Level Promotion.
+2. Multiple future classes (Speaking, Storytelling, Grammar, Basic) require distinct evaluation mechanics and must not inherit Vocabulary-specific repetitive formulas.
+3. Audio/speech evaluation via Gemini Live API (WebSocket full-duplex) was assessed against Supabase egress constraints and current project maturity.
+
+### Decision
+1. **Vocabulary Class Repetitive Mastery Contract (SSOT)**:
+   - The 7x7 repetitive mastery requirement (with $\ge 70\%$ per attempt) is strictly and exclusively scoped to the **VOCABULARY** curriculum.
+   - Vocabulary Theme Exams require $\ge 60\%$ (Grade C).
+   - Level Promotion requires $\ge 60\%$ (Grade C).
+2. **Multi-Class Modality Scoping & Item Bank Namespace Isolation**:
+   - Official Class Code & Test SKU abbreviations codified:
+     - Vocabulary: `VOCAB` (Class) / `VCB` (Test SKU)
+     - Speaking: `SPEAK` (Class) / `SPK` (Test SKU)
+     - Storytelling: `STORY` (Class) / `STT` (Test SKU — strictly `STT`, never `STY`)
+     - Grammar: `GRAM` (Class) / `GRM` (Test SKU)
+     - Basic: `BASIC` (Class) / `BSC` (Test SKU)
+   - Item Bank items must be strictly isolated by `class_type` / `modality` namespace so questions never cross-pollinate between classes.
+3. **Class-Bound Module Isolation Invariant**:
+   - The 8 Evaluation Modules are bound exclusively to their host class domains. Similar interactions (e.g. voice/audio across Vocabulary Spoken vs Public Speaking Speech vs Storytelling Monologue) are technically distinct with dedicated scoring rubrics, tolerances, and passing logic.
+4. **Web Speech API Retention & Gemini Live API Deferral**:
+   - Web Speech API native browser engine (`js/speech.js`) is retained for current audio evaluation.
+   - Real-time streaming via Google Gemini Live API (`gemini-3.8-live` over WebSockets) is officially deferred until all text modules and multi-class curricula are 100% stabilized, preserving Supabase egress quota and eliminating premature architectural complexity.
+
+---
+
+## DECISION-074 — Alumni Read-Only Review Mode, Universal TOP Institutions Alumni Status & Points Ceiling-Cap Rounding
+**Date:** 2026-11-21  
+**Status:** Approved & Enforced
+
+### Context
+Three critical operational nuances required definitive binding:
+1. Student accounts that achieve ALUMNI status must be protected against accidental data overwrite or score regression when reviewing previous courses in Class Lobby.
+2. Students graduating from single-tier Non-Level programs in TOP institutions (Evnikom, Sheraton, Tamata) require authoritative recognition as Alumni upon program completion.
+3. Rounding half-up on fractional points (0.5 for minor spelling) risked erroneously elevating 49.5/50 to 50/50, generating an unearned 100% Star (★).
+
+### Decision
+1. **Alumni Read-Only / Review Mode Invariant**:
+   - Any student with `program_status = 'ALUMNI'` accessing Class Lobby and completed tests operates in strict **Read-Only / Review Mode**.
+   - Submissions, answer mutations, and retakes are locked; historical scores, percentages, and ranks cannot be overwritten.
+2. **Universal Alumni Status for TOP Institutions**:
+   - Graduating students from TOP institutions (Evnikom, Sheraton, Tamata) officially receive **ALUMNI status (`program_status = 'ALUMNI'`)** upon completing their program curriculum.
+   - They retain full access to review all classes completed within their program.
+3. **Ceiling-Cap Points Rounding Exception (Star Protection Invariant)**:
+   - All fractional points $\ge .5$ round half-up via `Math.round()`.
+   - **Exception**: When accumulated points approach maximum points without reaching it (`points >= maxPoints - 0.5` and `points < maxPoints`), points **strictly round down via `Math.floor()`** (e.g. 49.5/50 -> 49).
+   - Protects the 100% Star (★) predicate so it is strictly exclusive to true zero-error performances.
+   - Codified via `roundPointsWithCeilingCap(points, maxPoints)` in `js/grading.js`.
+
+
+
+
+---
+
+## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
+
+**Date:** 2026-11-21
+**Status:** Approved & Enforced
+
+### Context
+As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
+
+### Decision
+**Triple-Lock Gating Architecture** implemented across three layers:
+
+1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
+   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
+   - Modality rules apply identically across all levels of the same class type.
+   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
+
+2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
+   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
+   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
+   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
+   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
+
+3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
+   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
+   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
+   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
+
+### Bug Fix (included in this decision)
+- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
+
+### Inferensi Modality (Code-Based, No DB Column)
+The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
+
+### Not in Scope (Deferred)
+- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
+- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
+- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
+- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.
+
+
+
+
+---
+
+## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
+
+**Date:** 2026-11-21
+**Status:** Approved & Enforced
+
+### Context
+As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
+
+### Decision
+**Triple-Lock Gating Architecture** implemented across three layers:
+
+1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
+   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
+   - Modality rules apply identically across all levels of the same class type.
+   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
+
+2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
+   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
+   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
+   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
+   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
+
+3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
+   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
+   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
+   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
+
+### Bug Fix (included in this decision)
+- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
+
+### Inferensi Modality (Code-Based, No DB Column)
+The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
+
+### Not in Scope (Deferred)
+- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
+- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
+- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
+- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.

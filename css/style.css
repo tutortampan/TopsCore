@@ -83,16 +83,42 @@
   --primary-tactical: #38bdf8;
   --primary-tactical-rgb: 56, 189, 248;
 
-  /* 4-Pillar Progression & ABCD System Tokens (SSOT Rule 2.10.1: Pink -> Orange -> Lime -> Purple) */
+  /* 4-Pillar Progression & ABCD System Tokens (SSOT Rule 2.10.1: Pink -> Orange -> Lime -> Cyan) */
   /* Entitas A / Theme A uses Electric Pink (#ff2d87) with independent token source, completely decoupled from --grade-star */
   --quad-a: #ff2d87;
   --quad-b: var(--grade-d);
   --quad-c: var(--grade-b);
-  --quad-d: #c084fc;
+  --quad-d: #38bdf8;
   --quad-a-rgb: 255, 45, 135;
   --quad-b-rgb: var(--grade-d-rgb);
   --quad-c-rgb: var(--grade-b-rgb);
-  --quad-d-rgb: 192, 132, 252;
+  --quad-d-rgb: 56, 189, 248;
+
+  /* Dual Components & Test Types (Words/Task = Lime, Phrases/Exam = Pink) */
+  --words-color: var(--grade-b);
+  --words-color-rgb: var(--grade-b-rgb);
+  --phrases-color: var(--quad-a);
+  --phrases-color-rgb: var(--quad-a-rgb);
+  --task-color: var(--grade-b);
+  --task-color-rgb: var(--grade-b-rgb);
+  --exam-color: var(--quad-a);
+  --exam-color-rgb: var(--quad-a-rgb);
+
+  /* 7-Step Rainbow Progress Pips Spectrum Tokens (1-7) */
+  --rainbow-step-1: var(--grade-e);
+  --rainbow-step-1-rgb: var(--grade-e-rgb);
+  --rainbow-step-2: var(--grade-d);
+  --rainbow-step-2-rgb: var(--grade-d-rgb);
+  --rainbow-step-3: var(--grade-c);
+  --rainbow-step-3-rgb: var(--grade-c-rgb);
+  --rainbow-step-4: var(--grade-a);
+  --rainbow-step-4-rgb: var(--grade-a-rgb);
+  --rainbow-step-5: var(--primary-tactical);
+  --rainbow-step-5-rgb: var(--primary-tactical-rgb);
+  --rainbow-step-6: var(--clr-accent-1);
+  --rainbow-step-6-rgb: 99, 102, 241;
+  --rainbow-step-7: #c084fc;
+  --rainbow-step-7-rgb: 192, 132, 252;
 
   /* Text */
   --clr-text-1: #ffffff;
@@ -2037,7 +2063,7 @@ body {
   height: 50px !important;
   min-height: 50px !important;
   max-height: 50px !important;
-  background-color: #030a12 !important;
+  background-color: var(--fm-bg-banner, #030a12) !important;
   border-top: 1px solid rgba(56, 189, 248, 0.25) !important;
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.6) !important;
   color: #cbd5e1 !important;

@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261119_v630';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261119_v630';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
@@ -1084,20 +1084,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (photoUrl) {
         applyPhotoEverywhere(photoUrl);
         checkMicrophoneOnEntry();
-
-        (async () => {
-          try {
-            const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
-            const { data: st } = await sb.from('students').select('photo_url').eq('id', session.student_id).maybeSingle();
-            if (st && st.photo_url !== photoUrl) {
-              if (st.photo_url) {
-                applyPhotoEverywhere(st.photo_url);
-              } else {
-                clearPhotoEverywhere();
-              }
-            }
-          } catch (_) {}
-        })();
         return;
       }
 
@@ -1393,6 +1379,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function loadDashboard() {
       try {
         hideLoading();
+        // Consolidate full student profile in ONE single query (demographics + photo + level)
+        let fullProf = null;
+        try {
+          fullProf = await fetchFullStudentProfile(session.student_id);
+          if (fullProf) {
+            if (fullProf.gender) session.gender = fullProf.gender;
+            if (fullProf.birth_date) { session.birth_date = fullProf.birth_date; session.dob = fullProf.birth_date; }
+            if (fullProf.education) { session.education = fullProf.education; session.education_level = fullProf.education; }
+            if (fullProf.province) session.province = fullProf.province;
+            if (fullProf.city) session.city = fullProf.city;
+            if (fullProf.district) session.district = fullProf.district;
+            if (fullProf.village) session.village = fullProf.village;
+            if (fullProf.photo_url) {
+              session.photo_url = fullProf.photo_url;
+              localStorage.setItem(`stu_photo_${session.student_id}`, fullProf.photo_url);
+            }
+            if (fullProf.resolved_level?.level_id) {
+              session.level_id = fullProf.resolved_level.level_id;
+              session.level_number = fullProf.resolved_level.level_number;
+              session.level_name = fullProf.resolved_level.level_name;
+            }
+            sessionStorage.setItem('topscore_session', JSON.stringify(session));
+            renderHeroProfileDetails(session);
+          }
+        } catch (_) {}
+
         // Onboarding Step 1: Pop-up 01 ABOUT YOU (All-in-One: Gender + Birthday + Address + Education)
         await checkAndPromptIntroduce();
         // Onboarding Step 2: Pop-up 03 TAKE YOUR PHOTO (Webcam Snapshot Capture)
@@ -1400,7 +1412,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         showLoading('Loading your dashboard…');
 
-        const studentLvl = await fetchStudentLevel(session.student_id);
+        const studentLvl = fullProf?.resolved_level || await fetchStudentLevel(session.student_id);
         if (studentLvl.level_id) {
           session.level_id = studentLvl.level_id;
           session.level_number = studentLvl.level_number;
@@ -1669,8 +1681,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
-        if (totalQ > 0 && totalQ <= 40) return 'phrases';
-        if (totalQ > 40) return 'words';
+        if (totalQ > 0 && totalQ <= 20) return 'phrases';
+        if (totalQ > 20) return 'words';
+        if (correctCount > 15) return 'words';
         if (correctCount > 0 && correctCount <= 10) return 'phrases';
         return 'words';
       };
@@ -2751,8 +2764,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
-        if (totalQ > 0 && totalQ <= 40) return 'phrases';
-        if (totalQ > 40) return 'words';
+        if (totalQ > 0 && totalQ <= 20) return 'phrases';
+        if (totalQ > 20) return 'words';
+        if (correctCount > 15) return 'words';
         if (correctCount > 0 && correctCount <= 10) return 'phrases';
         return 'words';
       };
@@ -3634,8 +3648,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
-        if (totalQ > 0 && totalQ <= 40) return 'phrases';
-        if (totalQ > 40) return 'words';
+        if (totalQ > 0 && totalQ <= 20) return 'phrases';
+        if (totalQ > 20) return 'words';
+        if (correctCount > 15) return 'words';
         if (correctCount > 0 && correctCount <= 10) return 'phrases';
         return 'words';
       };

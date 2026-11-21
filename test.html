@@ -28,7 +28,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261115_v518" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261113_v174" />
-  <link rel="stylesheet" href="css/test.css?v=20261114_v481" />
+  <link rel="stylesheet" href="css/test.css?v=20261121_v482" />
+  <!-- Instant Transition Prefetch Pipeline (Prefetch result viewer while student answers questions) -->
+  <link rel="prefetch" href="result.html" />
+  <link rel="prefetch" href="css/result.css" />
+  <link rel="prefetch" href="js/result.js" />
   <!-- Web App Manifest & PWA Metadata -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#060911" />
@@ -41,6 +45,26 @@
   <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
 </head>
 <body class="test-page notranslate" translate="no">
+
+  <!-- Floating Grace Period Notification Banner (SSOT) -->
+  <aside id="grace-period-banner" class="grace-period-banner hidden" role="alert" aria-live="assertive">
+    <div class="grace-banner-left">
+      <div class="grace-pulse-ring" id="grace-pulse-ring">
+        <span class="grace-icon" id="grace-pulse-icon">⏳</span>
+      </div>
+      <div class="grace-banner-content">
+        <div class="grace-banner-title" id="grace-banner-title">
+          FINAL 60 SECONDS • FINISH CURRENT QUESTION
+        </div>
+        <div class="grace-banner-sub" id="grace-banner-sub">
+          All your answers are auto-saved. Finishing window active.
+        </div>
+      </div>
+    </div>
+    <div class="grace-banner-timer" id="grace-banner-countdown">
+      00:59
+    </div>
+  </aside>
 
   <!-- 1. Top Header: FULL TEST NAME (2 Baris: Test Title + Tema/Topic di baris kedua) — 50px -->
   <header class="test-top-header" id="test-top-header">
@@ -430,7 +454,7 @@
   </div>
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v487"></script>
-  <script type="module" src="./js/test.js?v=20261121_v559"></script>
+  <script type="module" src="./js/test.js?v=20261121_v560"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 </body>

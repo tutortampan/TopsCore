@@ -129,7 +129,7 @@ export async function openQuickRemedialModal({ classId, classTests = [], student
       <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead>
-            <tr style="background: rgba(30, 41, 59, 0.8); color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <tr style="background: #1e293b; color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
               <th style="padding: 8px 12px; text-align: left; width: 220px;">STUDENT</th>
               <th style="padding: 8px 12px; text-align: left;">REMEDIATION CANDIDATE MODULES</th>
             </tr>
@@ -309,7 +309,7 @@ export async function openQuickForgivenModal({ classId, classTests = [], student
       <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead>
-            <tr style="background: rgba(30, 41, 59, 0.8); color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <tr style="background: #1e293b; color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
               <th style="padding: 8px 12px; text-align: left; width: 220px;">STUDENT</th>
               <th style="padding: 8px 12px; text-align: left;">INCOMPLETE EXAMS REQUIRING WAIVER</th>
             </tr>
@@ -465,7 +465,7 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
       <div style="padding: 16px 20px; overflow-y: auto; flex: 1;">
         <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
           <thead>
-            <tr style="background: rgba(30, 41, 59, 0.8); color: #94a3b8; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <tr style="background: #1e293b; color: #ffffff; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
               <th style="padding: 8px 12px; text-align: center; width: 40px;"></th>
               <th style="padding: 8px 12px; text-align: left;">STUDENT</th>
               <th style="padding: 8px 12px; text-align: center;">CURRENT LEVEL</th>

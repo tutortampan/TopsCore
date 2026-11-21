@@ -913,8 +913,8 @@ Deno.serve(async (req) => {
 
       if (vaultWords && vaultWords.length > 0) {
         let distractorPool: any[] = [];
-        const isWordsSelection = wordsAnswerType === 'dropdown' || wordsAnswerType === 'selection' || wordsAnswerType === 'multiple_choice';
-        const isPhrasesSelection = phrasesAnswerType === 'dropdown' || phrasesAnswerType === 'selection' || phrasesAnswerType === 'multiple_choice';
+        const isWordsSelection = wordsAnswerType === 'dropdown' || wordsAnswerType === 'selection' || wordsAnswerType === 'multiple_choice' || wordsAnswerType === 'recognition';
+        const isPhrasesSelection = phrasesAnswerType === 'dropdown' || phrasesAnswerType === 'selection' || phrasesAnswerType === 'multiple_choice' || phrasesAnswerType === 'recognition';
         const needsDistractorPool = isWordsSelection || isPhrasesSelection;
 
         if (needsDistractorPool) {
@@ -942,7 +942,7 @@ Deno.serve(async (req) => {
 
              const isPhraseItem = vw.test_section === 'phrases' || vw.section_label?.includes('Phrases') || ['expression', 'idiom', 'proverb', 'phrase'].includes((vw.word_type || '').toLowerCase());
              const itemAnswerType = isPhraseItem ? phrasesAnswerType : wordsAnswerType;
-             const isItemSelection = itemAnswerType === 'dropdown' || itemAnswerType === 'selection' || itemAnswerType === 'multiple_choice';
+             const isItemSelection = itemAnswerType === 'dropdown' || itemAnswerType === 'selection' || itemAnswerType === 'multiple_choice' || itemAnswerType === 'recognition';
 
              if (isItemSelection) {
                  const correctAnswer = accepted[0] || "N/A";
@@ -952,8 +952,8 @@ Deno.serve(async (req) => {
              }
 
              return {
-                 question_id: null,
-                 item_code: vw.item_code || null,
+                 question_id: isUuid(vw.id) ? vw.id : null,
+                 item_code: vw.item_code || vw.id || null,
                  question_text_snapshot: vw.indonesian || "N/A",
                  accepted_answers_snapshot: accepted,
                  options_snapshot: options ? options : null,
@@ -993,7 +993,7 @@ Deno.serve(async (req) => {
       const wordsAns = String(sessModes?.words || sessAnsweringMode || test.answer_type || 'written').toLowerCase();
       const phrasesAns = String(sessModes?.phrases || (wordsAns === 'written' ? 'selection' : wordsAns)).toLowerCase();
       const wPace = wordsAns === 'written' ? 15 : 10;
-      const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice') ? 10 : 20;
+      const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice' || phrasesAns === 'recognition') ? 10 : 20;
 
       let wCount = 0;
       let pCount = 0;
@@ -1011,7 +1011,7 @@ Deno.serve(async (req) => {
       const ansType = String(test.answer_type || 'spoken').toLowerCase();
       let pace = 10;
       if (isPhrase) {
-        pace = (ansType === 'selection' || ansType === 'multiple_choice') ? 10 : 20;
+        pace = (ansType === 'selection' || ansType === 'multiple_choice' || ansType === 'recognition') ? 10 : 20;
       } else {
         pace = (ansType === 'written') ? 15 : 10;
       }

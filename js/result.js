@@ -45,10 +45,7 @@ function purgeExternalBadges() {
   } catch (_) {}
 }
 purgeExternalBadges();
-try {
-  const badgeObserver = new MutationObserver(() => purgeExternalBadges());
-  badgeObserver.observe(document.body || document.documentElement, { childList: true, subtree: true });
-} catch (_) {}
+setTimeout(purgeExternalBadges, 2000);
 
     // escapeHtml / escHtml imported canonically
 
@@ -578,10 +575,10 @@ try {
           <div class="answers-table-wrap" style="width: 100%; overflow-x: auto;">
             <table class="answers-table" style="width: 100%; border-collapse: collapse; text-align: left;">
               <thead>
-                <tr style="border-bottom: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(15, 23, 42, 0.6);">
+                <tr style="border-bottom: 1.5px solid rgba(255, 255, 255, 0.16); background: #0f172a;">
                   <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 50%;">QUESTION</th>
                   <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; width: 35%;">YOUR ANSWER</th>
-                  <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 15%;">POINT</th>
+                  <th style="padding: 8px 8px; font-size: 12px; font-weight: 800; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; width: 15%;">PTS</th>
                 </tr>
               </thead>
               <tbody>
@@ -796,8 +793,9 @@ try {
           if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
           const tq = Number(att?.total_questions || 0);
           const correctCount = Number(att?.correct_count || att?.score || 0);
-          if (tq > 0 && tq <= 40) return 'phrases';
-          if (tq > 40) return 'words';
+          if (tq > 0 && tq <= 20) return 'phrases';
+          if (tq > 20) return 'words';
+          if (correctCount > 15) return 'words';
           if (correctCount > 0 && correctCount <= 10) return 'phrases';
           return 'words';
         };
@@ -1285,8 +1283,8 @@ try {
           const fr = String(attempt.forgiven_reason || '');
           if (/\b(phrases?|phr)\b/i.test(fr)) activeSectionName = 'Phrases';
           else if (/\b(words?|wrd)\b/i.test(fr)) activeSectionName = 'Words';
-          else if (attTotalQ > 0 && attTotalQ <= 40) activeSectionName = 'Phrases';
-          else if (attTotalQ > 40) activeSectionName = 'Words';
+          else if (attTotalQ > 0 && attTotalQ <= 20) activeSectionName = 'Phrases';
+          else if (attTotalQ > 20) activeSectionName = 'Words';
         }
 
         if (isUnified && Array.isArray(answers) && answers.length > 0) {

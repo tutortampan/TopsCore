@@ -21,32 +21,33 @@ function assert(condition, message) {
   }
 }
 
-// 1. Top Panel Theme Navigation & Sub Panel Topic Navigation Architecture
-console.log('--- 1. Testing Two-Tier Top Panel & Sub Panel Navigation Architecture ---');
+// 1. Sub Panel Theme & Topic Navigation & Interactive Headers Architecture
+console.log('--- 1. Testing Sub Panel Theme/Topic Navigation & Interactive Headers Architecture ---');
 assert(
-  adminTablesCss.includes('.class-attendance-top-panel') &&
-  adminTablesCss.includes('.attendance-theme-top-group') &&
-  adminTablesCss.includes('.btn-top-panel-theme'),
-  'admin-tables.css defines .class-attendance-top-panel, .attendance-theme-top-group and .btn-top-panel-theme'
+  !appJs.includes('<div id="class-attendance-top-panel"') &&
+  adminTablesCss.includes('.btn-subpanel-nav') &&
+  adminTablesCss.includes('width: 95px !important;'),
+  'Floating top panel eradicated; Sub Panel enforces equal-width 95px button architecture'
 );
 
 assert(
-  adminTablesCss.includes('margin-left: auto !important;') ||
-  appJs.includes('margin-left:auto;'),
-  'Top panel theme buttons stick to far right edge (margin-left: auto)'
+  appJs.includes('attendance-nav-left-cluster') &&
+  appJs.includes('btn-subpanel-nav') &&
+  appJs.includes('width: 95px !important;') &&
+  appJs.includes("switchClassAttendanceTheme('ALL')"),
+  'Sub Panel renders equal-width 95px navigation buttons docked at the FAR LEFT edge'
 );
 
 assert(
-  adminTablesCss.includes('.attendance-topic-subpanel-group') &&
-  adminTablesCss.includes('.btn-subpanel-topic'),
-  'admin-tables.css defines .attendance-topic-subpanel-group and .btn-subpanel-topic'
+  appJs.includes("label: `THEME ${tc}${tName}`") &&
+  appJs.includes("label: `THEME ${activeThemeCode}${tName} - TOPICS OVERVIEW`"),
+  'Table headers remain clean authoritative non-interactive super-headers'
 );
 
 assert(
-  appJs.includes("btn-top-panel-theme") &&
   appJs.includes("switchClassAttendanceTheme") &&
   appJs.includes("switchClassAttendanceTopic"),
-  'app.js provides switchClassAttendanceTheme and switchClassAttendanceTopic'
+  'app.js provides switchClassAttendanceTheme and switchClassAttendanceTopic handlers'
 );
 
 assert(

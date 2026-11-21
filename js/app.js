@@ -14,12 +14,26 @@ import {
   getAchievementStatus,
   isExam,
   isWeeklyExam,
-  computeMilestoneExamMastery
+  computeMilestoneExamMastery,
+  TOPSCORE_QUAD_COLORS,
+  DEFAULT_COLOR_SYSTEM,
+  DEFAULT_INTERFACE_SYSTEM,
+  applyGlobalColorSystem,
+  loadAndApplyGlobalColorSystem,
+  applyGlobalInterfaceSystem,
+  loadAndApplyGlobalInterfaceSystem
 } from './grading.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_01';
 
 export {
   TOPSCORE_COLORS,
+  TOPSCORE_QUAD_COLORS,
+  DEFAULT_COLOR_SYSTEM,
+  DEFAULT_INTERFACE_SYSTEM,
+  applyGlobalColorSystem,
+  loadAndApplyGlobalColorSystem,
+  applyGlobalInterfaceSystem,
+  loadAndApplyGlobalInterfaceSystem,
   getEvaluationColor,
   calculateGrade,
   calculateGrade as getGrade,
@@ -46,6 +60,13 @@ if (typeof window !== 'undefined') {
   window.getGradeSymbol = getGradeSymbol;
   window.GRADE_PALETTE = GRADE_PALETTE;
   window.TOPSCORE_COLORS = TOPSCORE_COLORS;
+  window.TOPSCORE_QUAD_COLORS = TOPSCORE_QUAD_COLORS;
+  window.DEFAULT_COLOR_SYSTEM = DEFAULT_COLOR_SYSTEM;
+  window.DEFAULT_INTERFACE_SYSTEM = DEFAULT_INTERFACE_SYSTEM;
+  window.applyGlobalColorSystem = applyGlobalColorSystem;
+  window.loadAndApplyGlobalColorSystem = loadAndApplyGlobalColorSystem;
+  window.applyGlobalInterfaceSystem = applyGlobalInterfaceSystem;
+  window.loadAndApplyGlobalInterfaceSystem = loadAndApplyGlobalInterfaceSystem;
   window.isExam = isExam;
   window.isWeeklyExam = isExam;
   window.computeMilestoneExamMastery = computeMilestoneExamMastery;

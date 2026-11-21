@@ -114,7 +114,7 @@ export async function renderCurriculum(area) {
     const activeStudents = (students   || []).filter(s => !s.deleted_at && s.is_active !== false);
 
     // Build lookup maps
-    const lvlMap = new Map(activeLevels.map(l => [l.id, l.name || (l.level_number === 0 ? '—' : `Level ${l.level_number}`)]));
+    const lvlMap = new Map(activeLevels.map(l => [l.id, l.name || (l.level_number === 0 ? '0' : `Level ${l.level_number}`)]));
     const batchStudentCountMap = new Map();
     activeStudents.forEach(s => {
       if (s.batch_id) {
@@ -438,8 +438,8 @@ export async function renderCurriculum(area) {
         } else {
           progBatches.forEach(b => {
             const primaryClass = progClasses.find(c => !b.current_level_id || c.level_id === b.current_level_id) || progClasses[0] || null;
-            const lvlRaw = b.current_level_id ? (lvlMap.get(b.current_level_id) || '—') : '—';
-            const lvlName = (lvlRaw === 'Non-Level' || !b.current_level_id) ? '—' : (typeof toShortLevel === 'function' ? toShortLevel(lvlRaw) : lvlRaw);
+            const lvlRaw = b.current_level_id ? (lvlMap.get(b.current_level_id) || '0') : '—';
+            const lvlName = (lvlRaw === 'Non-Level' || !b.current_level_id) ? (b.current_level_id ? '0' : '—') : (typeof toShortLevel === 'function' ? toShortLevel(lvlRaw) : lvlRaw);
 
             tableItems.push({
               type: 'batch',
@@ -578,16 +578,16 @@ export async function renderCurriculum(area) {
           // 4. Level Cell (Zero-Truncation SSOT per ui-invariants.md §6.5)
           let levelCellHtml = '';
           const formatLevelOptionLabel = (l) => {
-            if (l.level_number === 0 || (l.name && l.name.toLowerCase().includes('non-level'))) return '—';
+            if (l.level_number === 0 || (l.name && l.name.toLowerCase().includes('non-level'))) return '0';
             if (l.level_number === 99 || (l.name && l.name.toLowerCase().includes('alumni'))) return 'X (Alumni)';
             if (l.level_number === 1 || (l.name && l.name.startsWith('1'))) return '1st';
             if (l.level_number === 2 || (l.name && l.name.startsWith('2'))) return '2nd';
             if (l.level_number === 3 || (l.name && l.name.startsWith('3'))) return '3rd';
-            return l.name || (l.level_number ? `Level ${l.level_number}` : '—');
+            return l.name || (l.level_number ? `Level ${l.level_number}` : '0');
           };
 
           if (isProgOnly) {
-            levelCellHtml = `<span style="color:#94a3b8;font-size:12px;">—</span>`;
+            levelCellHtml = `<span style="color:#94a3b8;font-size:12px;">0</span>`;
           } else if (isEditOn) {
             levelCellHtml = `
               <select class="table-cell-select" onchange="window.updateCurriculumBatchField('${batch.id}','current_level_id',this.value)" style="background:#1e293b;color:#f8fafc;border:1px solid rgba(56,189,248,0.4);border-radius:4px;padding:2px 4px;font-size:12px;width:100%;box-sizing:border-box;">

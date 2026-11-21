@@ -41,6 +41,15 @@ console.log('  ✔ Pillar 1.2: fetchStudentAttemptsForTest selects all critical 
 assert(dashboardContent.includes('.select(\'id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, forgiven_reason,'), 'dashboard leaderboard query MUST select forgiven_reason');
 console.log('  ✔ Pillar 1.3: dashboard batch attempts query selects forgiven_reason');
 
+// Check tests query in app.js and classes-hub.js
+const appJsContent = fs.readFileSync('js/admin/app.js', 'utf8');
+const classesHubContent = fs.readFileSync('js/admin/classes-hub.js', 'utf8');
+assert(appJsContent.includes("adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order,"), 'app.js classTests query MUST select question_order');
+assert(classesHubContent.includes("adminFetchAll('tests',       'id, title, category, test_type, class_id, level_id, minimum_required_score, question_order,"), 'classes-hub.js tests query MUST select question_order');
+assert(appJsContent.includes("(String(r?.question_order || r?.payload?.question_order || 'random').toLowerCase() === 'sequential') ? 'Seq' : 'Random'"), 'app.js questionOrder mapping MUST default to Random');
+assert(apiContent.includes("if (prefix === 'tests' || prefix.startsWith('tests')) {\n      clearAdminCache('tests');\n    }"), 'api.js clearApiCache must automatically invalidate clearAdminCache tests');
+console.log('  ✔ Pillar 1.4: Tests queries select question_order, enforce Random default, and auto-purge admin cache');
+
 
 // ============================================================
 // 2. ATTEMPT COMPONENT CLASSIFIER (getAttemptSection)
@@ -174,4 +183,31 @@ assert.strictEqual(wordsAttempts[0].itemTotalQ, 50, 'WORDS must have 50 question
 assert.strictEqual(phrasesAttempts[0].itemTotalQ, 10, 'PHRASES must have 10 questions');
 console.log('  ✔ Pillar 4: Backend partitioning cleanly divides 14 reps into 7 WORDS (50 Q) + 7 PHRASES (10 Q)');
 
-console.log('\n✅ ALL 4 REPETITIVE MASTERY SAFEGUARDS PASSED WITH 100% SUCCESS!\n');
+// ============================================================
+// 5. WORKSTATION TOPIC & THEME DENOMINATOR SAFEGUARDS (Anti-Double-Multiplication)
+// ============================================================
+assert(appJsContent.includes('const compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : targetReps;'), 'app.js MUST define compTargetReps with normalization guard');
+assert(appJsContent.includes('const maxThemeTasks = numTopics * topicTargetReps;'), 'app.js MUST calculate maxThemeTasks from topicTargetReps without double multiplier');
+assert(appJsContent.includes('const maxTopicReps = hasPhrases ? (compTargetReps * 2) : compTargetReps;'), 'app.js MUST calculate maxTopicReps from compTargetReps without double multiplier');
+
+function calculateMatrixDenominators({ taskRepetitions, hasPhrases, numTopics = 4 }) {
+  const targetReps = Math.max(7, Number(taskRepetitions) || 7);
+  const compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : targetReps;
+  const maxTopicReps = hasPhrases ? (compTargetReps * 2) : compTargetReps;
+  const maxThemeTasks = numTopics * maxTopicReps;
+  return { maxTopicReps, maxThemeTasks };
+}
+
+// Case A: Level 3 Vocabulary (Unified Topic, taskRepetitions stored as 14)
+const l3Denom = calculateMatrixDenominators({ taskRepetitions: 14, hasPhrases: true, numTopics: 4 });
+assert.strictEqual(l3Denom.maxTopicReps, 14, 'Level 3 topic denominator MUST be exactly 14 (not 28)');
+assert.strictEqual(l3Denom.maxThemeTasks, 56, 'Level 3 theme denominator MUST be exactly 56 (not 112)');
+
+// Case B: Level 2 Vocabulary (Words-Only, taskRepetitions stored as 7)
+const l2Denom = calculateMatrixDenominators({ taskRepetitions: 7, hasPhrases: false, numTopics: 4 });
+assert.strictEqual(l2Denom.maxTopicReps, 7, 'Level 2 topic denominator MUST be exactly 7');
+assert.strictEqual(l2Denom.maxThemeTasks, 28, 'Level 2 theme denominator MUST be exactly 28');
+
+console.log('  ✔ Pillar 5: Workstation topic & theme denominators strictly guarded against double-multiplication (L3: 14/56, L2: 7/28)');
+
+console.log('\n✅ ALL 5 REPETITIVE MASTERY SAFEGUARDS PASSED WITH 100% SUCCESS!\n');

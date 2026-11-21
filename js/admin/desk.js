@@ -23,6 +23,8 @@ import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app
 import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261115_v528';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
+import { DEFAULT_COLOR_SYSTEM, DEFAULT_INTERFACE_SYSTEM, applyGlobalColorSystem, applyGlobalInterfaceSystem } from '../grading.js';
+import { renderSystemArchitecture } from './system-architecture.js?v=20261121_v656';
 
 // escapeHtml / escHtml imported canonically
 
@@ -192,7 +194,7 @@ export async function renderRecycleBin(container) {
         showLoading('Restoring record...');
         try {
           await adminRestore(table, id);
-          
+
           // Write to audit log
           const sb = await getSupabase();
           await sb.from('audit_logs').insert({
@@ -601,7 +603,7 @@ export async function renderDataHealth(container) {
 
     <!-- 3 Relational Diagnostic Panels -->
     <div class="grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:10px;">
-      
+
       <!-- Panel 1: Students Duplicate Engine -->
       <div class="antigravity-card p-4" style="display:flex;flex-direction:column;justify-content:space-between;height:100%;border-radius:8px;">
         <div>
@@ -872,18 +874,18 @@ export async function renderDataHealth(container) {
       const TestIdSet = new Set((Tests || []).map(e => e.id));
       const attemptIdSet = new Set((attempts || []).map(a => a.id));
 
-      const orphanedAttempts = (attempts || []).filter(a => 
-        (a.student_id && !studentIdSet.has(a.student_id)) || 
+      const orphanedAttempts = (attempts || []).filter(a =>
+        (a.student_id && !studentIdSet.has(a.student_id)) ||
         (a.test_id && !TestIdSet.has(a.test_id))
       );
 
       const orphanedQuestions = [];
 
-      const orphanedAnswers = (attemptAnswers || []).filter(ans => 
+      const orphanedAnswers = (attemptAnswers || []).filter(ans =>
         ans.attempt_id && !attemptIdSet.has(ans.attempt_id)
       );
 
-      const danglingProgress = (progress || []).filter(p => 
+      const danglingProgress = (progress || []).filter(p =>
         p.student_id && !studentIdSet.has(p.student_id)
       );
 
@@ -1193,7 +1195,7 @@ export async function renderSettings(area) {
             <div class="text-xs text-muted">Controls for exam-taking integrity</div>
           </div>
         </div>
-        
+
         <p class="text-xs text-muted mb-3" style="line-height:1.4;">
           Configurable anti-cheat controls to prevent tab switching and enforce exam integrity. Settings are synced dynamically to the test runner.
         </p>
@@ -1307,7 +1309,7 @@ export async function renderSettings(area) {
       <!-- 3. Global Platform Configuration Card -->
       <div class="antigravity-card p-5">
         <h3 style="font-size: 16px;margin-bottom:1rem;color:var(--clr-text-1);">Global Platform Configuration</h3>
-        
+
         <div class="form-group mb-3">
           <label class="form-label text-sm">Site Name</label>
           <input class="form-control" id="setting-site_name" value="${escapeHtml(settings.site_name || 'TOPS CORE')}" />
@@ -1383,7 +1385,7 @@ export async function renderSettings(area) {
           Update Tutor Credentials
         </button>
       </div>
-      
+
       <!-- 5. Workspace Scratchpad -->
       <div class="antigravity-card p-5">
         <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
@@ -1627,7 +1629,7 @@ export async function renderSettings(area) {
     const isEnabled = document.getElementById('setting-anti_cheat_enabled')?.checked ?? true;
     const isSoundEnabled = document.getElementById('setting-anti_cheat_sound')?.checked ?? true;
     let countdown = document.getElementById('setting-anti_cheat_countdown')?.value.trim();
-    
+
     // Ensure boundaries for countdown
     if (!countdown || isNaN(countdown) || parseInt(countdown) < 3) countdown = '3';
     if (parseInt(countdown) > 60) countdown = '60';
@@ -1759,6 +1761,7 @@ export async function renderSettings(area) {
 
     try {
       await Promise.all([
+        saveInterfaceSystem(true),
         saveCostGuard(true),
         saveAntiCheat(true),
         saveVault(true),
@@ -1837,4 +1840,498 @@ export async function renderSettings(area) {
       saveAllSettings(e.currentTarget);
     });
   }
+}
+
+// ============================================================
+// MODULE 5: INTERFACE SYSTEM & DESIGN SSOT STUDIO (PILLAR D)
+// ============================================================
+
+export async function renderInterfaceSettings(area) {
+  if (!area) return;
+  const sb = await getSupabase();
+  const { data } = await sb.from('site_settings').select('*');
+  const settings = Object.fromEntries((data || []).map(r => [r.key, r.value]));
+
+  // Parse interface system settings (Colours, Typography, Surfaces)
+  let ifaceSettings = {
+    colors: { ...DEFAULT_INTERFACE_SYSTEM.colors },
+    typography: { ...DEFAULT_INTERFACE_SYSTEM.typography },
+    surface: { ...DEFAULT_INTERFACE_SYSTEM.surface }
+  };
+  try {
+    if (settings.interface_system_settings) {
+      const parsed = JSON.parse(settings.interface_system_settings);
+      ifaceSettings.colors = { ...ifaceSettings.colors, ...(parsed.colors || {}) };
+      ifaceSettings.typography = { ...ifaceSettings.typography, ...(parsed.typography || {}) };
+      ifaceSettings.surface = { ...ifaceSettings.surface, ...(parsed.surface || {}) };
+    } else {
+      const local = localStorage.getItem('topscore_interface_system');
+      if (local) {
+        const parsed = JSON.parse(local);
+        ifaceSettings.colors = { ...ifaceSettings.colors, ...(parsed.colors || {}) };
+        ifaceSettings.typography = { ...ifaceSettings.typography, ...(parsed.typography || {}) };
+        ifaceSettings.surface = { ...ifaceSettings.surface, ...(parsed.surface || {}) };
+      } else if (settings.color_system_overrides) {
+        ifaceSettings.colors = { ...ifaceSettings.colors, ...JSON.parse(settings.color_system_overrides) };
+      } else {
+        const localColors = localStorage.getItem('topscore_color_system');
+        if (localColors) ifaceSettings.colors = { ...ifaceSettings.colors, ...JSON.parse(localColors) };
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to parse interface system settings:', e);
+  }
+
+  const colorSettings = ifaceSettings.colors;
+
+  const renderColorItem = (key, label, colorName, loc, currentHex) => {
+    const hexVal = currentHex || DEFAULT_COLOR_SYSTEM[key] || '#94a3b8';
+    const hex7 = hexVal.startsWith('#') && hexVal.length >= 7 ? hexVal.substring(0, 7) : (hexVal.startsWith('#') ? hexVal : '#' + hexVal);
+    return `
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; border-radius:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); margin-bottom:8px; min-height:48px; box-sizing:border-box;">
+        <div style="min-width:0; flex:1; padding-right:10px;">
+          <div style="font-size:12px; font-weight:700; color:#f8fafc; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(label)}">${label}</div>
+          <div style="font-size:12px; color:#94a3b8; line-height:1.2; margin-top:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:5px;" title="${escapeHtml(colorName)} · Location: ${escapeHtml(loc)}">
+            <span style="color:#f1f5f9; font-weight:700; flex-shrink:0;">${colorName}</span>
+            <span style="color:#475569; flex-shrink:0;">·</span>
+            <span style="color:var(--quad-d, #38bdf8); display:inline-flex; align-items:center; flex-shrink:0;">${getSvgIcon('map-pin', 12)}</span>
+            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${loc}</span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <label style="position:relative; width:26px; height:26px; margin:0; cursor:pointer; display:inline-block;" title="Pick color (${escapeHtml(label)} - ${escapeHtml(colorName)})">
+            <span class="cs-preview-swatch" id="cs-swatch-${key}" style="display:block; width:26px; height:26px; border-radius:5px; background:${hexVal}; border:1px solid rgba(255,255,255,0.3); box-shadow:0 0 6px ${hex7}55;"></span>
+            <input type="color" class="cs-color-picker" data-key="${key}" value="${hex7}" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; padding:0; border:none;" />
+          </label>
+          <input type="text" class="cs-hex-input form-control" data-key="${key}" value="${hexVal}" maxlength="9" style="height:26px; width:82px; padding:2px 6px; font-family:'JetBrains Mono', 'Fira Code', monospace; font-size:12px; font-weight:700; text-align:center; text-transform:uppercase; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#f8fafc;" />
+        </div>
+      </div>
+    `;
+  };
+
+  area.innerHTML = `
+    <!-- Streamlined 4-Column Balanced Layout with 11 Independent Cards SSOT -->
+    <div class="interface-compact-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(290px, 1fr)); gap:10px; height:100%; min-height:0; overflow-y:auto; overflow-x:hidden; padding:10px; box-sizing:border-box;">
+
+      <!-- COLUMN 1: NAVIGATION & CONTROLS (3 DISTINCT CARDS: 4 + 3 + 2 = 9 ITEMS) -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+
+        <!-- CARD 1: ABCD NAVIGATION PILLARS -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:var(--quad-d, #38bdf8); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('layers', 13)}</span>
+              <span>ABCD Pillars</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">4 Pillars</span>
+          </div>
+          ${renderColorItem('quadA', 'Pillar A (Admin &amp; Theme A)', 'Electric Pink', 'Sidebar Navigation A · Theme A Super-Header · Exam 1', colorSettings.quadA)}
+          ${renderColorItem('quadB', 'Pillar B (Board &amp; Theme B)', 'Dark Orange', 'Sidebar Navigation B · Theme B Super-Header · Exam 2', colorSettings.quadB)}
+          ${renderColorItem('quadC', 'Pillar C (Class &amp; Theme C)', 'Electric Lime', 'Sidebar Navigation C · Theme C Super-Header · Exam 3', colorSettings.quadC)}
+          ${renderColorItem('quadD', 'Pillar D (Data &amp; Theme D)', 'Tactical Cyan', 'Sidebar Navigation D · Modules &amp; System Settings · Exam 4', colorSettings.quadD)}
+        </div>
+
+        <!-- CARD 2: EVALUATION SEMANTICS (RED ➔ GREEN) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:var(--clr-success, #00c000); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('check-circle', 13)}</span>
+              <span>Evaluation Semantics</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Red ➔ Green</span>
+          </div>
+          ${renderColorItem('incorrect', 'Incorrect (0.0 pt) / Danger', 'Pure Red', 'Wrong 0.0 pt · Inactive Status · Danger Alert · Forgive', colorSettings.incorrect)}
+          ${renderColorItem('partial', 'Partial (0.5 pt) / Warning', 'Pure Yellow', 'Minor Typo 0.5 pt · Remedial Status · Draft Action', colorSettings.partial)}
+          ${renderColorItem('correct', 'Correct (1.0 pt) / Success', 'Pure Green', 'Score 1.0 pt · Online Status · Published Action', colorSettings.correct)}
+        </div>
+
+        <!-- CARD 3: ACTION BUTTONS (RED ➔ BLUE) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('zap', 13)}</span>
+              <span>Action Buttons</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Red ➔ Blue</span>
+          </div>
+          ${renderColorItem('btnDanger', 'Danger Action (Delete Button)', 'Pure Crimson', 'Permanent Delete · Hard Purge · Kick Student &amp; End Session', colorSettings.btnDanger || '#dc2626')}
+          ${renderColorItem('btnPrimary', 'Primary Action (CTA Button)', 'Tactical Blue', 'Modal Save Buttons · Proceed CTAs · Create Class &amp; Submit Exam', colorSettings.btnPrimary || '#0284c7')}
+        </div>
+
+      </div>
+
+      <!-- COLUMN 2: ACADEMICS & ASSESSMENTS (3 DISTINCT CARDS: 6 + 2 + 2 = 10 ITEMS) -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+
+        <!-- CARD 4: ACADEMIC GRADES (RED ➔ PURPLE SPECTRUM) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('award', 13)}</span>
+              <span>Academic Grades (SSOT)</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Red ➔ Purple</span>
+          </div>
+          ${renderColorItem('gradeE', 'Grade E (0–29% · Fail)', 'Pure Red', 'Failed Score &amp; Danger Red Highlight (.badge-e)', colorSettings.gradeE)}
+          ${renderColorItem('gradeD', 'Grade D (30–59% · Less)', 'Dark Orange', 'Remedial Status &amp; Low Score Indicator (.badge-d)', colorSettings.gradeD)}
+          ${renderColorItem('gradeC', 'Grade C (60–79% · Enough)', 'Pure Yellow', 'Official Level Promotion Passing Threshold (.badge-c)', colorSettings.gradeC)}
+          ${renderColorItem('gradeB', 'Grade B (80–89% · Good)', 'Electric Lime', 'Score 80%–89% · Good Report &amp; Standings', colorSettings.gradeB)}
+          ${renderColorItem('gradeA', 'Grade A (90–99% · Very Good)', 'Pure Green', 'Score 90%–99% · Very Good Report &amp; Standings', colorSettings.gradeA)}
+          ${renderColorItem('gradeStar', 'Grade ★ (100% · Excellent)', 'Vibrant Purple', 'Perfect Score 100% · Purple Star Badge (.grade-circle)', colorSettings.gradeStar)}
+        </div>
+
+        <!-- CARD 5: ASSESSMENT INSTRUMENTS (TESTS) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:var(--quad-c, #95ff00); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('target', 13)}</span>
+              <span>Assessment Instruments</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Tests &amp; Exams</span>
+          </div>
+          ${renderColorItem('exam', 'EXAM (Milestone)', 'Electric Pink', 'Milestone Evaluation Exam · EXAM &amp; RATE Column · Theme Exams', colorSettings.exam)}
+          ${renderColorItem('task', 'TASK (Formative)', 'Electric Lime', 'Daily Formative Task · Workstation TASK Column · Topic Quizzes', colorSettings.task)}
+        </div>
+
+        <!-- CARD 6: CURRICULUM WORKSHEETS -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:var(--quad-d, #38bdf8); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('file-text', 13)}</span>
+              <span>Curriculum Worksheets</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Unified Topics</span>
+          </div>
+          ${renderColorItem('phrases', 'Phrases (PHR Component)', 'Electric Pink', 'Phrases Worksheet (10 Phrases) · Repetition Pips Sub-Row P1–P7', colorSettings.phrases)}
+          ${renderColorItem('words', 'Words (WRD Component)', 'Electric Lime', 'Words Worksheet (50 Words) · Repetition Pips Sub-Row W1–W7', colorSettings.words)}
+        </div>
+
+      </div>
+
+      <!-- COLUMN 3: REPETITIONS & TYPOGRAPHY (2 DISTINCT CARDS: 7 + 2 = 9 ITEMS) -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+
+        <!-- CARD 7: RAINBOW REPETITION PIPS (RED ➔ VIOLET SPECTRUM) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:var(--primary-tactical, #38bdf8); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('activity', 13)}</span>
+              <span>Rainbow Pips (Steps 1–7)</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Red ➔ Violet</span>
+          </div>
+          ${renderColorItem('rainbow1', 'Pip 1 (Step 1)', 'Pure Red', 'Module Repetition Step 1/7 · Grade E Threshold', colorSettings.rainbow1)}
+          ${renderColorItem('rainbow2', 'Pip 2 (Step 2)', 'Dark Orange', 'Module Repetition Step 2/7 · Grade D Threshold', colorSettings.rainbow2)}
+          ${renderColorItem('rainbow3', 'Pip 3 (Step 3)', 'Pure Yellow', 'Module Repetition Step 3/7 · Grade C Threshold', colorSettings.rainbow3)}
+          ${renderColorItem('rainbow4', 'Pip 4 (Step 4)', 'Pure Green', 'Module Repetition Step 4/7 · Grade A Threshold', colorSettings.rainbow4)}
+          ${renderColorItem('rainbow5', 'Pip 5 (Step 5)', 'Tactical Blue', 'Module Repetition Step 5/7 · Tactical Blue Accent', colorSettings.rainbow5)}
+          ${renderColorItem('rainbow6', 'Pip 6 (Step 6)', 'Royal Indigo', 'Module Repetition Step 6/7 · Royal Indigo Accent', colorSettings.rainbow6)}
+          ${renderColorItem('rainbow7', 'Pip 7 (Step 7)', 'Violet Mastery', 'Module Repetition Step 7/7 · Violet Mastery Complete', colorSettings.rainbow7)}
+        </div>
+
+        <!-- CARD 8: TYPOGRAPHY FAMILIES (SSOT) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:var(--quad-d, #38bdf8); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('settings', 13)}</span>
+              <span>Typography Families (SSOT)</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Font Stack</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <label style="font-size:12px; font-weight:700; color:#cbd5e1; margin:0;">Primary Sans-Serif</label>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px; display:flex; align-items:center; gap:4px;"><span style="color:var(--quad-d, #38bdf8); display:inline-flex; align-items:center; flex-shrink:0;">${getSvgIcon('map-pin', 12)}</span><span>Page Titles, Sidebar, Workstation Tables &amp; Dialogs</span></div>
+            <select class="form-control" id="is-font-sans" style="height:30px; font-size:12px; padding:0 8px; background:rgba(0,0,0,0.35); border-color:rgba(255,255,255,0.12); color:#f8fafc;">
+              <option value="'Inter', sans-serif" ${ifaceSettings.typography.fontSans?.includes('Inter') ? 'selected' : ''}>Inter (SSOT Standard)</option>
+              <option value="'Plus Jakarta Sans', sans-serif" ${ifaceSettings.typography.fontSans?.includes('Plus Jakarta Sans') ? 'selected' : ''}>Plus Jakarta Sans</option>
+              <option value="system-ui, -apple-system, sans-serif" ${ifaceSettings.typography.fontSans?.includes('system-ui') ? 'selected' : ''}>System UI Native</option>
+              <option value="'Roboto', sans-serif" ${ifaceSettings.typography.fontSans?.includes('Roboto') ? 'selected' : ''}>Roboto</option>
+            </select>
+          </div>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <label style="font-size:12px; font-weight:700; color:#cbd5e1; margin:0;">Monospace (Numeric &amp; Timers)</label>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px; display:flex; align-items:center; gap:4px;"><span style="color:var(--quad-d, #38bdf8); display:inline-flex; align-items:center; flex-shrink:0;">${getSvgIcon('map-pin', 12)}</span><span>Exam Countdown Timers, Tabular Numbers &amp; Shell Codes</span></div>
+            <select class="form-control" id="is-font-mono" style="height:30px; font-size:12px; padding:0 8px; background:rgba(0,0,0,0.35); border-color:rgba(255,255,255,0.12); color:#f8fafc;">
+              <option value="'JetBrains Mono', 'Fira Code', monospace" ${ifaceSettings.typography.fontMono?.includes('JetBrains') ? 'selected' : ''}>JetBrains Mono / Fira Code (SSOT)</option>
+              <option value="'Consolas', monospace" ${ifaceSettings.typography.fontMono?.includes('Consolas') ? 'selected' : ''}>Consolas</option>
+              <option value="'Courier New', monospace" ${ifaceSettings.typography.fontMono?.includes('Courier') ? 'selected' : ''}>Courier New</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMN 4: SURFACES & EFFECTS (3 DISTINCT CARDS: 5 + 3 + 2 = 10 ITEMS) -->
+      <div style="display:flex; flex-direction:column; gap:10px;">
+
+        <!-- CARD 9: DARK CANVAS SURFACES -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('layers', 13)}</span>
+              <span>Dark Canvas Surfaces</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">5 Surfaces</span>
+          </div>
+          ${renderColorItem('bgMain', 'Canvas Main Background', 'Deep Space Dark', 'Main Workstation Canvas &amp; Exam Room Workspace', ifaceSettings.surface.bgMain)}
+          ${renderColorItem('bgSidebar', 'Sidebar &amp; Topbar Surface', 'Navy Slate', 'Left Sidebar Navigation &amp; Top Header Bar', ifaceSettings.surface.bgSidebar)}
+          ${renderColorItem('bgCard', 'Card &amp; Panel Elevation', 'Midnight Elevation', 'Workstation Cards, Table Containers, Popovers &amp; Modals', ifaceSettings.surface.bgCard)}
+          ${renderColorItem('bgStudent', 'Student Outer Canvas', 'Deep Pitch Black', 'Desktop Outer Canvas Surrounding 430px Student Corridor', ifaceSettings.surface.bgStudent || '#060911')}
+          ${renderColorItem('bgBanner', 'Locked Base Banner', 'Base Midnight Dark', 'Standardized 50px Bottom Identity Banner (TopsCore by Mr. Top)', ifaceSettings.surface.bgBanner || '#030a12')}
+        </div>
+
+        <!-- CARD 10: TEXT CONTRAST LEVELS (WHITE ➔ SLATE) -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:#f8fafc; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('file-text', 13)}</span>
+              <span>Text Contrast Levels</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">White ➔ Slate</span>
+          </div>
+          ${renderColorItem('text1', 'Text Primary (High Contrast)', 'Pure White', 'Page Titles, Table Headers &amp; Primary Score Metrics', ifaceSettings.typography.text1)}
+          ${renderColorItem('text2', 'Text Secondary (Body)', 'Light Slate', 'Table Data Rows, Question Body &amp; Student Names', ifaceSettings.typography.text2)}
+          ${renderColorItem('text3', 'Text Tertiary (Muted)', 'Soft Slate', 'Subtitles, Hints, Help Notes &amp; Placeholders', ifaceSettings.typography.text3)}
+        </div>
+
+        <!-- CARD 11: BORDERS & NEON AURA -->
+        <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
+          <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:flex; align-items:center; gap:6px;">
+              <span>${getSvgIcon('sparkles', 13)}</span>
+              <span>Borders &amp; Neon Aura</span>
+            </span>
+            <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Effects</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <label style="font-size:12px; font-weight:700; color:#cbd5e1; margin:0;">Border Line Opacity</label>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px; display:flex; align-items:center; gap:4px;"><span style="color:var(--quad-d, #38bdf8); display:inline-flex; align-items:center; flex-shrink:0;">${getSvgIcon('map-pin', 12)}</span><span>Card Perimeter Borders, Column Dividers &amp; Modals</span></div>
+            <select class="form-control" id="is-border-opacity" style="height:30px; font-size:12px; padding:0 8px; background:rgba(0,0,0,0.35); border-color:rgba(255,255,255,0.12); color:#f8fafc;">
+              <option value="0.08" ${ifaceSettings.surface.borderOpacity === '0.08' ? 'selected' : ''}>0.08 (Subtle Minimalist SSOT)</option>
+              <option value="0.12" ${ifaceSettings.surface.borderOpacity === '0.12' ? 'selected' : ''}>0.12 (Crisp Definition)</option>
+              <option value="0.18" ${ifaceSettings.surface.borderOpacity === '0.18' ? 'selected' : ''}>0.18 (High Contrast)</option>
+              <option value="0.04" ${ifaceSettings.surface.borderOpacity === '0.04' ? 'selected' : ''}>0.04 (Ultra Soft)</option>
+            </select>
+          </div>
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+              <label style="font-size:12px; font-weight:700; color:#cbd5e1; margin:0;">Neon Glow Intensity</label>
+            </div>
+            <div style="font-size:12px; color:#94a3b8; margin-bottom:4px; display:flex; align-items:center; gap:4px;"><span style="color:var(--quad-d, #38bdf8); display:inline-flex; align-items:center; flex-shrink:0;">${getSvgIcon('map-pin', 12)}</span><span>Rainbow Pips, Active Badges &amp; Tactical Glow Buttons</span></div>
+            <select class="form-control" id="is-glow-intensity" style="height:30px; font-size:12px; padding:0 8px; background:rgba(0,0,0,0.35); border-color:rgba(255,255,255,0.12); color:#f8fafc;">
+              <option value="1.0" ${ifaceSettings.surface.glowIntensity === '1.0' ? 'selected' : ''}>1.0x (Standard Tactical Glow SSOT)</option>
+              <option value="0.7" ${ifaceSettings.surface.glowIntensity === '0.7' ? 'selected' : ''}>0.7x (Soft Subtle Glow)</option>
+              <option value="1.3" ${ifaceSettings.surface.glowIntensity === '1.3' ? 'selected' : ''}>1.3x (Vivid Neon Aura)</option>
+              <option value="0" ${ifaceSettings.surface.glowIntensity === '0' ? 'selected' : ''}>0.0x (Matte / Off)</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  `;
+
+  // Sub Panel (Lower Panel 40px) with Info & Action Buttons
+  const syncSubPanel = () => {
+    if (typeof window.setBottomInfobar !== 'function') return;
+    const leftHtml = `
+      <div style="display:flex; align-items:center; gap:8px; font-size:12px; font-weight:700; color:#f8fafc; white-space:nowrap;">
+        <span style="color:var(--quad-d, #38bdf8); display:inline-flex; align-items:center;">${getSvgIcon('layers', 15)}</span>
+        <span>System Designs SSOT (Pillar D)</span>
+        <span style="color:#475569;">·</span>
+        <span style="font-size:12px; color:#94a3b8; font-weight:500;">Unified Design System Governance</span>
+        <span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px; display:inline-flex; align-items:center; gap:5px;">
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#38bdf8;"></span>
+          LIVE PROPAGATION ACTIVE
+        </span>
+      </div>
+    `;
+    const rightHtml = `
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-interface-system" style="height:30px !important; min-height:30px !important; max-height:30px !important; line-height:28px !important; font-size:12px !important; font-weight:700; border-color:rgba(255,255,255,0.2); padding:0 12px; cursor:pointer;">
+          ${getSvgIcon('refresh', 12)} Reset Defaults
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-save-interface-system" style="height:30px !important; min-height:30px !important; max-height:30px !important; line-height:28px !important; font-size:12px !important; font-weight:800; background:#0284c7; border:1px solid #38bdf8; color:#fff; padding:0 14px; cursor:pointer;">
+          ${getSvgIcon('save', 12)} Save System Designs
+        </button>
+      </div>
+    `;
+    window.setBottomInfobar(leftHtml, rightHtml);
+
+    document.getElementById('btn-save-interface-system')?.addEventListener('click', () => saveInterfaceSystem(false));
+    document.getElementById('btn-reset-interface-system')?.addEventListener('click', resetInterfaceSystem);
+  };
+
+  const getInterfaceCurrentValues = () => {
+    const colors = {};
+    area.querySelectorAll('.cs-hex-input').forEach(input => {
+      const k = input.dataset.key;
+      if (k && !['text1', 'text2', 'text3', 'bgMain', 'bgSidebar', 'bgCard', 'bgStudent', 'bgBanner'].includes(k)) {
+        colors[k] = input.value.trim();
+      }
+    });
+    return {
+      colors,
+      typography: {
+        fontSans: document.getElementById('is-font-sans')?.value || "'Inter', sans-serif",
+        fontMono: document.getElementById('is-font-mono')?.value || "'JetBrains Mono', 'Fira Code', monospace",
+        text1: area.querySelector('.cs-hex-input[data-key="text1"]')?.value || '#ffffff',
+        text2: area.querySelector('.cs-hex-input[data-key="text2"]')?.value || '#e2e8f0',
+        text3: area.querySelector('.cs-hex-input[data-key="text3"]')?.value || '#94a3b8'
+      },
+      surface: {
+        bgMain: area.querySelector('.cs-hex-input[data-key="bgMain"]')?.value || '#090D16',
+        bgSidebar: area.querySelector('.cs-hex-input[data-key="bgSidebar"]')?.value || '#0F172A',
+        bgCard: area.querySelector('.cs-hex-input[data-key="bgCard"]')?.value || '#121c35',
+        bgStudent: area.querySelector('.cs-hex-input[data-key="bgStudent"]')?.value || '#060911',
+        bgBanner: area.querySelector('.cs-hex-input[data-key="bgBanner"]')?.value || '#030a12',
+        borderOpacity: document.getElementById('is-border-opacity')?.value || '0.08',
+        glowIntensity: document.getElementById('is-glow-intensity')?.value || '1.0'
+      }
+    };
+  };
+
+  // Live picker sync & dynamic real-time preview
+  area.querySelectorAll('.cs-color-picker').forEach(picker => {
+    picker.addEventListener('input', (e) => {
+      const key = e.target.dataset.key;
+      const hex = e.target.value;
+      const hexInput = area.querySelector(`.cs-hex-input[data-key="${key}"]`);
+      if (hexInput) hexInput.value = hex.toUpperCase();
+      const swatch = document.getElementById(`cs-swatch-${key}`);
+      if (swatch) {
+        swatch.style.background = hex;
+        swatch.style.boxShadow = `0 0 5px ${hex}55`;
+      }
+      applyGlobalInterfaceSystem(getInterfaceCurrentValues());
+    });
+  });
+
+  area.querySelectorAll('.cs-hex-input').forEach(hexInput => {
+    hexInput.addEventListener('input', (e) => {
+      const key = e.target.dataset.key;
+      let hex = e.target.value.trim();
+      if (!hex.startsWith('#')) hex = '#' + hex;
+      if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+        const picker = area.querySelector(`.cs-color-picker[data-key="${key}"]`);
+        if (picker) picker.value = hex;
+        const swatch = document.getElementById(`cs-swatch-${key}`);
+        if (swatch) {
+          swatch.style.background = hex;
+          swatch.style.boxShadow = `0 0 5px ${hex}55`;
+        }
+        applyGlobalInterfaceSystem(getInterfaceCurrentValues());
+      }
+    });
+  });
+
+  // Typography & Surface select changes
+  ['is-font-sans', 'is-font-mono', 'is-border-opacity', 'is-glow-intensity'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', () => {
+      applyGlobalInterfaceSystem(getInterfaceCurrentValues());
+    });
+  });
+
+  const saveInterfaceSystem = async (silent = false) => {
+    const ifaceVals = getInterfaceCurrentValues();
+    try {
+      localStorage.setItem('topscore_interface_system', JSON.stringify(ifaceVals));
+      localStorage.setItem('topscore_color_system', JSON.stringify(ifaceVals.colors));
+      await Promise.all([
+        sb.from('site_settings').upsert({
+          key: 'interface_system_settings',
+          value: JSON.stringify(ifaceVals),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' }),
+        sb.from('site_settings').upsert({
+          key: 'color_system_overrides',
+          value: JSON.stringify(ifaceVals.colors),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' })
+      ]);
+      applyGlobalInterfaceSystem(ifaceVals);
+      if (!silent) showToast('✓ System Designs saved and applied globally across TopsCore!', 'success');
+      return true;
+    } catch (err) {
+      if (!silent) showToast('Failed to save System Designs: ' + err.message, 'error');
+      throw err;
+    }
+  };
+
+  const resetInterfaceSystem = async () => {
+    if (!confirm('Reset all System Designs settings (Colours, Typography, Surfaces) to TopsCore SSOT defaults?')) return;
+    try {
+      localStorage.removeItem('topscore_interface_system');
+      localStorage.removeItem('topscore_color_system');
+      await Promise.all([
+        sb.from('site_settings').upsert({
+          key: 'interface_system_settings',
+          value: JSON.stringify(DEFAULT_INTERFACE_SYSTEM),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' }),
+        sb.from('site_settings').upsert({
+          key: 'color_system_overrides',
+          value: JSON.stringify(DEFAULT_INTERFACE_SYSTEM.colors),
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'key' })
+      ]);
+
+      // Reset color inputs & swatches
+      Object.entries(DEFAULT_INTERFACE_SYSTEM.colors).forEach(([key, val]) => {
+        const picker = area.querySelector(`.cs-color-picker[data-key="${key}"]`);
+        if (picker) picker.value = val.substring(0, 7);
+        const hexInput = area.querySelector(`.cs-hex-input[data-key="${key}"]`);
+        if (hexInput) hexInput.value = val.toUpperCase();
+        const swatch = document.getElementById(`cs-swatch-${key}`);
+        if (swatch) {
+          swatch.style.background = val;
+          swatch.style.boxShadow = `0 0 5px ${val}55`;
+        }
+      });
+
+      // Reset typography inputs
+      const fontSans = document.getElementById('is-font-sans');
+      if (fontSans) fontSans.value = DEFAULT_INTERFACE_SYSTEM.typography.fontSans;
+      const fontMono = document.getElementById('is-font-mono');
+      if (fontMono) fontMono.value = DEFAULT_INTERFACE_SYSTEM.typography.fontMono;
+      ['text1', 'text2', 'text3'].forEach(k => {
+        const val = DEFAULT_INTERFACE_SYSTEM.typography[k];
+        const picker = area.querySelector(`.cs-color-picker[data-key="${k}"]`);
+        if (picker) picker.value = val.substring(0, 7);
+        const hexInput = area.querySelector(`.cs-hex-input[data-key="${k}"]`);
+        if (hexInput) hexInput.value = val.toUpperCase();
+        const swatch = document.getElementById(`cs-swatch-${k}`);
+        if (swatch) swatch.style.background = val;
+      });
+
+      // Reset surface inputs
+      ['bgMain', 'bgSidebar', 'bgCard', 'bgStudent', 'bgBanner'].forEach(k => {
+        const val = DEFAULT_INTERFACE_SYSTEM.surface[k];
+        const picker = area.querySelector(`.cs-color-picker[data-key="${k}"]`);
+        if (picker) picker.value = val.substring(0, 7);
+        const hexInput = area.querySelector(`.cs-hex-input[data-key="${k}"]`);
+        if (hexInput) hexInput.value = val.toUpperCase();
+        const swatch = document.getElementById(`cs-swatch-${k}`);
+        if (swatch) swatch.style.background = val;
+      });
+      const borderOp = document.getElementById('is-border-opacity');
+      if (borderOp) borderOp.value = DEFAULT_INTERFACE_SYSTEM.surface.borderOpacity;
+      const glowInt = document.getElementById('is-glow-intensity');
+      if (glowInt) glowInt.value = DEFAULT_INTERFACE_SYSTEM.surface.glowIntensity;
+
+      applyGlobalInterfaceSystem(DEFAULT_INTERFACE_SYSTEM);
+      showToast('✓ System Designs reset to canonical defaults.', 'info');
+    } catch (err) {
+      showToast('Failed to reset: ' + err.message, 'error');
+    }
+  };
+
+  syncSubPanel();
 }

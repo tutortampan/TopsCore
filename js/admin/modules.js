@@ -2,9 +2,9 @@ import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 
 export const OFFICIAL_MODULES = [
   { id: 'm1', key: 'description', name: 'Description (m1)', icon: 'target', desc: 'Visual context, pronouns, and image description.' },
-  { id: 'm2', key: 'selection',   name: 'Selection (m2)',   icon: 'check-circle', desc: 'Standardized multiple choice for vocabulary & grammar precision.' },
-  { id: 'm3', key: 'written',     name: 'Written (m3)',     icon: 'edit', desc: 'Rigorous target lexicon typing, spelling, and meaning verification.' },
-  { id: 'm4', key: 'spoken',      name: 'Spoken (m4)',      icon: 'mic', desc: 'Phonetic analysis & pronunciation accuracy evaluation.' },
+  { id: 'm2', key: 'recognition', name: 'Vocabulary Mastery - Recognition', icon: 'check-circle', desc: 'Standardized multiple choice for vocabulary precision.' },
+  { id: 'm3', key: 'spoken',      name: 'Vocabulary Mastery - Spoken',      icon: 'mic', desc: 'Phonetic analysis & pronunciation accuracy evaluation.' },
+  { id: 'm4', key: 'written',     name: 'Vocabulary Mastery - Written',     icon: 'edit', desc: 'Rigorous target lexicon typing, spelling, and meaning verification.' },
   { id: 'm5', key: 'speech',      name: 'Speech (m5)',      icon: 'award', desc: 'Formal 5-pillar speaking performance assessment.' },
   { id: 'm6', key: 'monologue',   name: 'Monologue (m6)',   icon: 'book-open', desc: 'Independent 3–5 minute narrative continuity speech.' },
   { id: 'm7', key: 'dialogue',    name: 'Dialogue (m7)',    icon: 'users', desc: 'Live pair conversation room evaluated via WebRTC interaction.' },
@@ -20,9 +20,9 @@ export const CLASS_DISCIPLINES = [
 
 export const DEFAULT_MODULE_CLASS_MAP = {
   m1: ['grammar'],                     // Description -> Basic English
-  m2: ['vocabulary', 'grammar'],       // Selection   -> Vocabulary, Basic English
-  m3: ['vocabulary', 'grammar'],       // Written     -> Vocabulary, Basic English
-  m4: ['vocabulary', 'speaking'],      // Spoken      -> Vocabulary, Speaking
+  m2: ['vocabulary'],                  // Vocabulary Mastery - Recognition (Strictly Vocabulary)
+  m3: ['vocabulary'],                  // Vocabulary Mastery - Spoken      (Strictly Vocabulary)
+  m4: ['vocabulary'],                  // Vocabulary Mastery - Written     (Strictly Vocabulary)
   m5: ['speaking'],                    // Speech      -> Speaking
   m6: ['storytelling'],                // Monologue   -> Storytelling
   m7: ['storytelling', 'speaking'],    // Dialogue    -> Storytelling, Speaking
@@ -126,9 +126,9 @@ export async function renderModules(area) {
 
   const modules = [
     { id: 'm1', name: 'Description', type: 'Visual Context', desc: 'Real-time object, pronoun, and image context description.', status: 'Active', icon: 'target', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nMedia (photos) must be processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and discarded.' },
-    { id: 'm2', name: 'Selection', type: 'Standardized Choices', desc: 'Classic multi-option evaluation for vocabulary, grammar, and syntax precision.', status: 'Active', icon: 'check-circle', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nClassic multi-option evaluation.' },
-    { id: 'm3', name: 'Written', type: 'Text & Spelling', desc: 'Rigorous testing of target lexicon spelling, meaning, and written precision.', status: 'Active', icon: 'clipboard', directive: 'Direct English Only.\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' },
-    { id: 'm4', name: 'Spoken', type: 'Phonetic Analysis', desc: 'Speech analysis comparing spoken words and pronunciation against standard targets.', status: 'Active', icon: 'mic', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nMedia (audio) must be processed transiently in the browser, sent directly to the AI API for evaluation, and discarded.' },
+    { id: 'm2', name: 'Recognition', type: 'Standardized Choices', desc: 'Classic multi-option evaluation for vocabulary, grammar, and syntax precision.', status: 'Active', icon: 'check-circle', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nClassic multi-option evaluation.' },
+    { id: 'm3', name: 'Spoken', type: 'Phonetic Analysis', desc: 'Speech analysis comparing spoken words and pronunciation against standard targets.', status: 'Active', icon: 'mic', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nMedia (audio) must be processed transiently in the browser, sent directly to the AI API for evaluation, and discarded.' },
+    { id: 'm4', name: 'Written', type: 'Text & Spelling', desc: 'Rigorous testing of target lexicon spelling, meaning, and written precision.', status: 'Active', icon: 'clipboard', directive: 'Direct English Only.\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' },
     { id: 'm5', name: 'Speech', type: '5 Pillars Performance', desc: 'Comprehensive grading on Fluency, Pronunciation, Vocabulary, Grammar, and Comprehension.', status: 'Active', icon: 'award', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nEvaluate based on 5 Pillars: Fluency, Pronunciation, Vocabulary, Grammar, Comprehension.' },
     { id: 'm6', name: 'Monologue', type: 'Narrative Speech', desc: 'Evaluates independent 3-5 minute narrative continuity (past, present, and future tense).', status: 'Active', icon: 'book-open', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nEvaluate narrative tense (past/present/future continuity).' },
     { id: 'm7', name: 'Dialogue', type: 'Pair Live Conversation', desc: 'Live two-way peer conversation room evaluating real-time interaction.', status: 'Active', icon: 'users', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nReal-world dialogue simulation via WebSockets/WebRTC.' },

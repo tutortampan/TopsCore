@@ -26,7 +26,7 @@
 
   /* Tactical Status & Accent Tokens - Mapped to Authoritative Grade Vault (Rule 26) */
   --fm-accent-pitch: var(--grade-a);       /* Academy pitch green (Completed, Passing, Online) */
-  --fm-accent-tactical: #6366f1;    /* Tactical blue (Primary highlight, Selected tab) */
+  --fm-accent-tactical: var(--primary-tactical, #38bdf8);    /* Tactical blue (Primary highlight, Selected tab) */
   --fm-accent-indigo: #6366f1;      /* Academy crest indigo */
   --fm-accent-amber: var(--grade-c);       /* Tactical amber/yellow (Pending review, Deadlines) */
   --fm-accent-crimson: var(--grade-e);     /* Urgent / Danger / Below threshold */
@@ -1437,6 +1437,13 @@ textarea.form-control {
   box-shadow: none !important;
   -webkit-backdrop-filter: none !important;
   backdrop-filter: none !important;
+}
+
+/* Card Internal Padding 10px SSOT (Pilar 2 UI Spatial Invariant) */
+.admin-content .card:not(:has(.table-wrap)):not(:has(table)),
+.admin-content .glass-card:not(:has(.table-wrap)):not(:has(table)) {
+  padding: 10px !important;
+  box-sizing: border-box !important;
 }
 
 /* Override any stray color utility classes from style.css */

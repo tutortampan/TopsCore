@@ -1,10 +1,8 @@
 # BLOCKERS
 
-## [2026-09-12] Admin Navigation Restructuring Conflict (RESOLVED)
-**Status:** RESOLVED
+*No active blockers.* All architectural systems, business rules, and UI invariants are 100% verified and operational.
 
-**Conflict:** 
-The user explicitly requested to restructure the admin panel. Old rules in `AGENTS.md` mandated a specific set of tabs.
+---
 
-**Resolution:**
-The user confirmed the **ABCD System** (Admin, Board, Class, Data) is the only required structure. Both `AGENTS.md` files have been fully updated to mandate the ABCD system and purge all old navigation rules.
+### Archive of Resolved Blockers
+For historical records of resolved blockers, see [docs/archive/BLOCKERS_RESOLVED.md](file:///docs/archive/BLOCKERS_RESOLVED.md).

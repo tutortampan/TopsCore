@@ -402,25 +402,29 @@ import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdm
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261120_v641';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261114_v465';
-import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261114_v474';
+import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261121_v665';
 import { renderResults } from './class.js?v=20261116_v572';
-import { renderTests } from './tests-management.js?v=20261114_v474';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261121_v519';
+import { renderTests } from './tests-management.js?v=20261121_v665';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261121_v521';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261118_v600';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261121_v664';
 import { renderModules } from './modules.js?v=20261106_v160';
-import { renderAuditLog, renderSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261114_v474';
+import { renderAuditLog, renderSettings, renderInterfaceSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261121_v665';
+import { renderSystemArchitecture } from './system-architecture.js?v=20261121_v656';
+import { renderSystemGlossary } from './system-glossary.js?v=20261121_v105';
+import { renderTableDesigns, initGlobalTableDimensions } from './table-designs.js?v=20261121_v106';
 import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261115_v528';
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
-import { renderClassesHub } from './classes-hub.js?v=20261117_v613';
-import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261114_v474';
+import { renderClassesHub } from './classes-hub.js?v=20261121_v664';
+import { renderDashboard } from './admin-deck.js?v=20261121_v655';
 import { openStudentFullEdit } from './student-management.js?v=20261120_v641';
 import { renderStudentsRegistration } from './student-registration.js?v=20261120_v640';
 
 if (typeof window !== 'undefined') {
   window.renderStudentsRegistration = renderStudentsRegistration;
   window.openStudentFullEdit = openStudentFullEdit;
+  window.renderSystemGlossary = renderSystemGlossary;
 }
 
     // -- Primary Tab Switching Variables --
@@ -428,7 +432,7 @@ if (typeof window !== 'undefined') {
 
     // ——— ABCD Primary Architecture Section Titles ———
     const sectionTitles = {
-      dashboard: 'Executive Dashboard', profile: 'My Profile', schedule: 'Personal Schedule', work_records: 'Work Records', cv_generator: 'CV Generator',
+      dashboard: 'Executive Dashboard',
       organization: 'Organization Structure',
       curriculum: 'Curriculum & Level Master',
       'classes-hub': 'Curriculum & Level Master',
@@ -437,19 +441,19 @@ if (typeof window !== 'undefined') {
       institutions: 'Batches', students: 'Students', alumni: 'Alumni', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
       Classes: 'Curriculum & Classes', classes: 'Classes', 'classes-org': 'Organization Hub', class_instances: 'Class Instances', levels: 'Levels', topics: 'Topics', questions: 'Question Bank', vocab_vault: 'Vocabulary Vault', modules: 'Modules (Core Engines)', 'import-questions': 'Import Questions', 'export-questions': 'Export Questions',
       tests: 'Test Analytics', 'test-access': 'Test Access', assignments: 'Assignments & Rosters', results: 'Test Results', recalibrator: 'Test Engine Recalibration', question_types: 'Validation Dictionary',
-      audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
+      audit: 'Activity & Audit Logs', settings: 'Site Settings & Cost Guard', 'interface-settings': 'System Designs', 'system-designs': 'System Designs', 'system-palette': 'System Designs', palette: 'System Designs', interface: 'System Designs', 'interface-setting': 'System Designs', 'system-glossary': 'System Glossary', 'system_glossary': 'System Glossary', glossary: 'System Glossary', recycle: 'Recycle Bin', health: 'Data Health & Connectivity',
       'class-panel': 'Class Panel'
     };
 
     // ABCD 4-Domain Mapping
     const sectionDomainMap = {
-      dashboard: 'ADMIN', profile: 'ADMIN', schedule: 'ADMIN', work_records: 'ADMIN', cv_generator: 'ADMIN', organization: 'ADMIN',
+      dashboard: 'ADMIN', organization: 'ADMIN',
       'classes-hub': 'ADMIN', curriculum: 'ADMIN',
       institutions: 'BOARD', students: 'BOARD', alumni: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       tests: 'CLASS', 'test-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_tests: 'CLASS',
       'class-panel': 'CLASS', 'class-hub': 'CLASS',
-      audit: 'DATA', settings: 'DATA', recycle: 'DATA', health: 'DATA', recalibrator: 'DATA', modules: 'DATA', vocab_vault: 'DATA'
+      audit: 'DATA', settings: 'DATA', 'interface-settings': 'DATA', 'system-palette': 'DATA', palette: 'DATA', interface: 'DATA', 'interface-setting': 'DATA', 'system-glossary': 'DATA', 'system_glossary': 'DATA', glossary: 'DATA', recycle: 'DATA', health: 'DATA', recalibrator: 'DATA', modules: 'DATA', vocab_vault: 'DATA'
     };
 
     // Mobile Bottom Tab Panels -> Primary Domain
@@ -494,8 +498,23 @@ if (typeof window !== 'undefined') {
       'class-recalibrator': 'settings',
       'tests-recalibrator': 'settings',
 
+      // System Designs (Pillar D)
+      'system-designs': 'interface-settings',
+      'system_designs': 'interface-settings',
+      'system-palette': 'interface-settings',
+      'palette': 'interface-settings',
+      'interface': 'interface-settings',
+      'interface-setting': 'interface-settings',
+      'interface_settings': 'interface-settings',
+      'interface-system': 'interface-settings',
+      'desk-interface': 'interface-settings',
+      'system_glossary': 'system-glossary',
+      'glossary': 'system-glossary',
+
       // Curriculum & Classes
       'curriculum': 'classes-hub',
+      'class-system': 'classes-hub',
+      'discipline-governance': 'classes-hub',
       'curriculum-org': 'organization',
       'classes': 'class-hub',
       'class': 'class-hub',
@@ -546,10 +565,7 @@ if (typeof window !== 'undefined') {
       'import-ai-tests': 'tests',
       'question-types': 'question_types',
       'word-types': 'question_types',
-      'wordtypes': 'question_types',
-      'work-records': 'profile',
-      'cv': 'cv_generator',
-      'cv-generator': 'cv_generator'
+      'wordtypes': 'question_types'
     };
 
     function parseHashRoute(hashStr) {
@@ -830,7 +846,7 @@ if (typeof window !== 'undefined') {
       const savedParsed = parseHashRoute(savedSec);
       const savedTargetSec = aliasSectionMap[savedParsed.section] || savedParsed.section;
 
-      const isValidSection = (sec) => !!(sec && (sectionTitles[sec] || sec === 'students' || sec === 'class-hub' || sec === 'settings' || sec === 'vocab_vault' || sec === 'classes-hub' || sec === 'classes' || sec === 'institutions' || sec === 'modules' || sec === 'organization' || sec === 'curriculum'));
+      const isValidSection = (sec) => !!(sec && (sectionTitles[sec] || sec === 'students' || sec === 'class-hub' || sec === 'settings' || sec === 'vocab_vault' || sec === 'classes-hub' || sec === 'classes' || sec === 'institutions' || sec === 'modules' || sec === 'organization' || sec === 'curriculum' || sec === 'system-glossary' || sec === 'glossary'));
 
       if (isValidSection(targetSec)) {
         applySubRouteState(targetSec, parsed.subTab, parsed.params, parsed.section);
@@ -1221,7 +1237,7 @@ if (typeof window !== 'undefined') {
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
         let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
-          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, payload, deleted_at, created_at').catch(() => []),
+          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
@@ -1256,6 +1272,36 @@ if (typeof window !== 'undefined') {
         (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
         const isVocab = currentClass ? isVocabularyClass(currentClass) : false;
+        const classLevelId = currentClass?.level_id;
+        const classLevelRec = classLevelId ? (allLevels || []).find(l => l.id === classLevelId) : null;
+        const detectedLvlMatch = String(currentClass?.code || currentClass?.name || '').match(/(\d+)/);
+        const fallbackLvlNum = detectedLvlMatch ? Number(detectedLvlMatch[1]) : null;
+        const classLevelNum = (classLevelRec?.level_number != null) ? Number(classLevelRec.level_number) : fallbackLvlNum;
+        const isLevel2Vocab = isVocab && (classLevelNum === 2);
+
+        // Authoritative helpers to determine if a topic or theme contains Phrases (Level 2 is strictly Words-only SSOT)
+        const checkTopicHasPhrases = (matchingTasks) => {
+          if (isLevel2Vocab) return false;
+          return (matchingTasks || []).some(a =>
+            a.payload?.is_unified ||
+            a.payload?.category === 'phrases' ||
+            a.payload?.category === 'unified' ||
+            /PHRASE/i.test(a.shell_code || a.title || '')
+          );
+        };
+
+        const checkThemeHasPhrases = (taskAsmsInTheme) => {
+          if (isLevel2Vocab) return false;
+          const hasTaskPhrases = (taskAsmsInTheme || []).some(a =>
+            a.payload?.is_unified ||
+            a.payload?.category === 'phrases' ||
+            a.payload?.category === 'unified' ||
+            /PHRASE/i.test(a.shell_code || a.title || '')
+          );
+          if (hasTaskPhrases) return true;
+          if (isVocab && classLevelNum === 3) return true;
+          return false;
+        };
 
         let classTests = (allTests || []).filter(a => {
           if (a.class_id !== classId) return false;
@@ -1279,9 +1325,6 @@ if (typeof window !== 'undefined') {
 
         // Self-Healing / Auto-Provisioning: Strictly for Vocabulary classes only!
         if (classTests.length === 0 && currentClass && isVocab) {
-          const classLevelId = currentClass.level_id;
-          const classLevelRec = classLevelId ? (allLevels || []).find(l => l.id === classLevelId) : null;
-          const classLevelNum = classLevelRec?.level_number;
           if (classLevelNum !== null && classLevelNum !== undefined) {
             const hasVaultData = (allVault || []).some(v => Number(v.target_level) === Number(classLevelNum) && !v.deleted_at);
             if (hasVaultData) {
@@ -1329,8 +1372,9 @@ if (typeof window !== 'undefined') {
           if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
           const totalQ = Number(att?.total_questions || 0);
           const correctCount = Number(att?.correct_count || att?.score || 0);
-          if (totalQ > 0 && totalQ <= 40) return 'phrases';
-          if (totalQ > 40) return 'words';
+          if (totalQ > 0 && totalQ <= 20) return 'phrases';
+          if (totalQ > 20) return 'words';
+          if (correctCount > 15) return 'words';
           if (correctCount > 0 && correctCount <= 10) return 'phrases';
           return 'words';
         };
@@ -1408,11 +1452,11 @@ if (typeof window !== 'undefined') {
         };
 
         const formatAnswerType = (type) => {
-          if (!type) return 'Selection';
+          if (!type) return 'Recognition';
           const t = String(type).toLowerCase().replace(/_/g, ' ').trim();
-          if (t === 'multiple choice' || t === 'selection' || t === 'm2') return 'Selection';
-          if (t === 'text match' || t === 'written' || t === 'm3') return 'Written';
-          if (t === 'voice match' || t === 'spoken' || t === 'm4') return 'Spoken';
+          if (t === 'multiple choice' || t === 'selection' || t === 'recognition' || t === 'm2') return 'Recognition';
+          if (t === 'voice match' || t === 'spoken' || t === 'm3') return 'Spoken';
+          if (t === 'text match' || t === 'written' || t === 'm4') return 'Written';
           if (t === 'description' || t === 'point & speak' || t === 'm1') return 'Description';
           if (t === 'speech' || t === 'speaking performance' || t === 'm5') return 'Speech';
           if (t === 'monologue' || t === 'storytelling' || t === 'm6') return 'Monologue';
@@ -1434,7 +1478,7 @@ if (typeof window !== 'undefined') {
           const lvlObj = (r?.level_id && levelMap[r.level_id]) || r?.levels;
           const lvlNum = lvlObj?.level_number != null ? lvlObj.level_number : (currentClass?.level_id && levelMap[currentClass.level_id]?.level_number != null ? levelMap[currentClass.level_id].level_number : 1);
           const cleanLvlNum = lvlNum != null ? lvlNum : 1;
-          const levelDisplay = window.toLevelLetter ? window.toLevelLetter(cleanLvlNum) : (cleanLvlNum === 0 ? '—' : 'LVL ' + cleanLvlNum);
+          const levelDisplay = window.toLevelLetter ? window.toLevelLetter(cleanLvlNum) : (cleanLvlNum === 0 ? 'LVL 0' : 'LVL ' + cleanLvlNum);
           const prereqTitle = prereqTest?.shell_code || prereqTest?.title || prereqTest?.name || r?.prereq?.name || r?.prerequisite?.name || r?.prereq || '';
 
           const title = r?.title || r?.display_name || r?.name || 'Untitled';
@@ -1472,7 +1516,7 @@ if (typeof window !== 'undefined') {
             order: r?.display_order ?? r?.order_index ?? 1,
             prereq: prereqTitle,
             answerType: formatAnswerType(rawAns),
-            questionOrder: r?.question_order === 'random' ? 'Random' : 'Seq',
+            questionOrder: (String(r?.question_order || r?.payload?.question_order || 'random').toLowerCase() === 'sequential') ? 'Seq' : 'Random',
             TestCategory,
             timeLimit,
             minScore,
@@ -1519,6 +1563,8 @@ if (typeof window !== 'undefined') {
           ? await fetchClassTestSettings(classId || cid).catch(() => ({ taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 }))
           : { taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 };
         const targetReps = Math.max(7, Number(classTestSettings?.taskRepetitions) || 7);
+        // Per-component repetition target (Words or Phrases individually, strictly 7 in standard 7x7 system)
+        const compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : targetReps;
         const taskMinScore = Number(classTestSettings?.taskMinScore) || 60;
         const examMinScore = Number(classTestSettings?.examMinScore) || 60;
 
@@ -1634,7 +1680,7 @@ if (typeof window !== 'undefined') {
               const fr = String(a.forgiven_reason || '');
               const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
               if (mMatch) {
-                const reps = Math.min(targetReps, parseInt(mMatch[1], 10));
+                const reps = Math.min(compTargetReps, parseInt(mMatch[1], 10));
                 const comp = (mMatch[3] || '').toUpperCase();
                 if (comp === 'PHRASES') {
                   manualRepsP = Math.max(manualRepsP || 0, reps);
@@ -1660,13 +1706,13 @@ if (typeof window !== 'undefined') {
             if (manualRepsW != null) wordsPasses = manualRepsW;
             if (manualRepsP != null) phrasesPasses = manualRepsP;
             if (hasForgiven) {
-              wordsPasses = Math.max(wordsPasses, targetReps);
-              phrasesPasses = Math.max(phrasesPasses, targetReps);
+              wordsPasses = Math.max(wordsPasses, compTargetReps);
+              phrasesPasses = Math.max(phrasesPasses, compTargetReps);
             }
 
-            asmWordsPassCounts[asm.id] = Math.min(targetReps, wordsPasses);
-            asmPhrasesPassCounts[asm.id] = Math.min(targetReps, phrasesPasses);
-            asmPassCounts[asm.id] = Math.min(targetReps, Math.min(wordsPasses, phrasesPasses));
+            asmWordsPassCounts[asm.id] = Math.min(compTargetReps, wordsPasses);
+            asmPhrasesPassCounts[asm.id] = Math.min(compTargetReps, phrasesPasses);
+            asmPassCounts[asm.id] = Math.min(compTargetReps, Math.min(wordsPasses, phrasesPasses));
           });
 
           // Step 2: Rule 2.10 Paired Theme Exam Remedial Synchronization ("Satu Paket")
@@ -1950,7 +1996,6 @@ if (typeof window !== 'undefined') {
                 </div>
               ` : `
                 <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
-                  <div id="class-attendance-top-panel" class="class-attendance-top-panel"></div>
                   <div id="class-attendance-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
                 </div>
               `))}
@@ -2008,50 +2053,11 @@ if (typeof window !== 'undefined') {
           'D': { border: 'var(--quad-d, #C084FC)', bg: 'var(--quad-d, #C084FC)', text: '#0f172a', glow: 'rgba(192,132,252,0.45)' }
         };
 
-        // Render Top Panel for Theme Navigation (Sticking to the far right edge per user request)
-        const renderAttendanceTopPanel = () => {
-          const topPanelEl = document.getElementById('class-attendance-top-panel');
-          if (!topPanelEl) return;
-          const currentTheme = window._classAttendanceThemeFilter || 'ALL';
-          const isOverviewActive = currentTheme === 'ALL' || currentTheme === 'OVERVIEW';
-
-          const btnBaseStyle = 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; box-sizing: border-box !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important;';
-
-          // 1. Overview Button (Tactical Cyan #38bdf8)
-          const overviewStyle = isOverviewActive
-            ? `${btnBaseStyle} width: 140px; background: #0284c7 !important; border: 1px solid #38bdf8 !important; color: #ffffff !important; box-shadow: 0 0 10px rgba(56,189,248,0.45) !important;`
-            : `${btnBaseStyle} width: 140px; background: transparent !important; border: 1px solid #38bdf8 !important; color: #38bdf8 !important;`;
-          const overviewBtnHtml = `<button type="button" class="btn btn-sm btn-top-panel-theme ${isOverviewActive ? 'active' : ''}" onclick="window.switchClassAttendanceTheme('ALL')" style="${overviewStyle}" title="Master Overview (All Themes 5-Pillar Matrix)">OVERVIEW</button>`;
-
-          // 2. Theme Buttons (A, B, C, D)
-          const themeButtonsHtml = sortedThemes.map(tc => {
-            const isThemeActive = currentTheme === tc;
-            const colCfg = themeBtnColors[tc] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
-            const tName = themeNames[tc] ? `${tc} - ${themeNames[tc]}` : `THEME ${tc}`;
-            const themeStyle = isThemeActive
-              ? `${btnBaseStyle} width: 160px; min-width: 140px; max-width: 180px; overflow: hidden !important; text-overflow: ellipsis !important; background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
-              : `${btnBaseStyle} width: 160px; min-width: 140px; max-width: 180px; overflow: hidden !important; text-overflow: ellipsis !important; background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
-            return `<button type="button" class="btn btn-sm btn-top-panel-theme ${isThemeActive ? 'active' : ''}" onclick="window.switchClassAttendanceTheme('${tc}')" style="${themeStyle}" title="${tName} (General Overview &amp; Topic Access)">${tName}</button>`;
-          }).join('');
-
-          topPanelEl.innerHTML = `
-            <div class="attendance-top-panel-left" style="display:inline-flex; align-items:center; gap:8px;">
-              <span style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.04em;">THEME NAVIGATION</span>
-            </div>
-            <div class="attendance-theme-top-group" style="display:inline-flex; align-items:center; gap:8px; margin-left:auto;">
-              ${overviewBtnHtml}
-              ${themeButtonsHtml}
-            </div>
-          `;
-        };
+        // Render Top Panel for Theme Navigation (Deprecated: moved 100% to Sub Panel per strict 2-panel SSOT)
+        const renderAttendanceTopPanel = () => {};
 
         const syncClassHubLowerPanel = (activeTab) => {
           if (activeTab === 'attendance') {
-            const leftHtml = `
-              <div class="attendance-summary-cluster" style="display:inline-flex; align-items:center; gap:12px; font-size:12px; color:#94a3b8; font-weight:600;">
-                <span id="class-roster-count-badge">${activeBatchStudents.length} Enrolled</span>
-              </div>
-            `;
             const isManualOn = Boolean(window._classManualScoreEditMode);
             const isRemedialOn = Boolean(window._classRemedialEditMode);
             const isForgivenOn = Boolean(window._classForgivenEditMode);
@@ -2060,15 +2066,30 @@ if (typeof window !== 'undefined') {
             const currentTopic = window._classAttendanceTopicFilter || 'ALL';
             const isThemeOverview = currentTheme === 'ALL' || currentTheme === 'OVERVIEW';
 
-            let centerHtml = '';
+            // Authoritative Sub Panel In-Panel Equal-Width Navigation Buttons (30px Height, 95px Equal-Width)
+            const navBtnBase = 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; box-sizing: border-box !important; padding: 0 6px !important; font-size: 12px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important; width: 95px !important; min-width: 95px !important; max-width: 95px !important;';
+
+            let navButtonsHtml = '';
             if (isThemeOverview) {
-              centerHtml = `
+              // Master Overview: 5 Equal-Width Buttons (OVERVIEW + THEME A..D) docked at the FAR LEFT
+              const ovBtnStyle = `${navBtnBase} background: #0284c7 !important; border: 1px solid #38bdf8 !important; color: #ffffff !important; box-shadow: 0 0 10px rgba(56,189,248,0.45) !important;`;
+              const ovBtnHtml = `<button type="button" class="btn btn-sm btn-subpanel-nav btn-subpanel-theme active" onclick="window.switchClassAttendanceTheme('ALL')" style="${ovBtnStyle}" title="Master Overview (All Themes Matrix)">OVERVIEW</button>`;
+
+              const themeBtnsHtml = sortedThemes.map(tc => {
+                const colCfg = themeBtnColors[tc] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
+                const tName = themeNames[tc] ? `${tc} - ${themeNames[tc]}` : `THEME ${tc}`;
+                const btnStyle = `${navBtnBase} background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+                return `<button type="button" class="btn btn-sm btn-subpanel-nav btn-subpanel-theme" onclick="window.switchClassAttendanceTheme('${tc}')" style="${btnStyle}" title="${tName} (Inspect Topics &amp; Detail)">THEME ${tc}</button>`;
+              }).join('');
+
+              navButtonsHtml = `
                 <div class="attendance-topic-subpanel-group" style="display:inline-flex; align-items:center; gap:8px;">
-                  <span style="font-size:11px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Select a theme above to inspect topic progress</span>
+                  ${ovBtnHtml}
+                  ${themeBtnsHtml}
                 </div>
               `;
             } else {
-              // Dedicated Theme Selected: Render 3-5 Topic Buttons for active theme
+              // Dedicated Theme Selected: Render Equal-Width Buttons (← ALL + OVERVIEW + TOPIC A1..An) docked at the FAR LEFT
               const asmsInTheme = themeGroups[currentTheme] || [];
               const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
               const rawTCodes = taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || ''));
@@ -2081,33 +2102,48 @@ if (typeof window !== 'undefined') {
               const colCfg = themeBtnColors[currentTheme] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
               const isTopicAllActive = currentTopic === 'ALL' || currentTopic === 'OVERVIEW';
 
-              // 1. Theme Overview Button in Sub Panel
-              const topicOverviewStyle = isTopicAllActive
-                ? `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important; background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
-                : `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important; background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+              // 1. Back to Master Overview (← ALL)
+              const backBtnStyle = `${navBtnBase} background: transparent !important; border: 1px solid #38bdf8 !important; color: #38bdf8 !important;`;
+              const backBtnHtml = `<button type="button" class="btn btn-sm btn-subpanel-nav" onclick="window.switchClassAttendanceTheme('ALL')" style="${backBtnStyle}" title="Return to Master Overview (All Themes)">← ALL</button>`;
 
-              const topicOverviewBtn = `<button type="button" class="btn btn-sm btn-subpanel-topic ${isTopicAllActive ? 'active' : ''}" onclick="window.switchClassAttendanceTopic('ALL')" style="${topicOverviewStyle}" title="Theme ${currentTheme} Topics Overview">OVERVIEW</button>`;
+              // 2. Theme Topics Overview
+              const themeOvStyle = isTopicAllActive
+                ? `${navBtnBase} background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
+                : `${navBtnBase} background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+              const themeOvBtnHtml = `<button type="button" class="btn btn-sm btn-subpanel-nav btn-subpanel-topic ${isTopicAllActive ? 'active' : ''}" onclick="window.switchClassAttendanceTopic('ALL')" style="${themeOvStyle}" title="Theme ${currentTheme} Topics Overview">OVERVIEW</button>`;
 
-              // 2. Individual Topic Buttons (e.g. A1, A2, A3, A4)
+              // 3. Individual Topic Buttons (e.g. A1, A2, A3, A4)
               const topicBtnsHtml = tCodes.map(topCode => {
                 const isTopActive = !isTopicAllActive && currentTopic.toUpperCase() === topCode.toUpperCase();
                 const topName = topicNames[topCode.toUpperCase()] || topicNames[topCode] || '';
-                const label = topName ? `${topCode} - ${topName}` : `TOPIC ${topCode}`;
+                const displayCode = topCode.toUpperCase().startsWith(currentTheme) ? topCode.toUpperCase() : `${currentTheme}${topCode.toUpperCase()}`;
+                const label = `TOPIC ${displayCode}`;
 
                 const topBtnStyle = isTopActive
-                  ? `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; max-width: 175px !important; overflow: hidden !important; text-overflow: ellipsis !important; transition: all 0.15s ease !important; background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
-                  : `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; max-width: 175px !important; overflow: hidden !important; text-overflow: ellipsis !important; transition: all 0.15s ease !important; background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+                  ? `${navBtnBase} background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
+                  : `${navBtnBase} background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
 
-                return `<button type="button" class="btn btn-sm btn-subpanel-topic ${isTopActive ? 'active' : ''}" onclick="window.switchClassAttendanceTopic('${topCode}')" style="${topBtnStyle}" title="${label} (Inspect 7x7 Words &amp; Phrases)">${label}</button>`;
+                return `<button type="button" class="btn btn-sm btn-subpanel-nav btn-subpanel-topic ${isTopActive ? 'active' : ''}" onclick="window.switchClassAttendanceTopic('${topCode}')" style="${topBtnStyle}" title="${label}: ${topName} (Inspect 7x7 Words &amp; Phrases)">${label}</button>`;
               }).join('');
 
-              centerHtml = `
-                <div class="attendance-topic-subpanel-group" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
-                  ${topicOverviewBtn}
+              navButtonsHtml = `
+                <div class="attendance-topic-subpanel-group" style="display:inline-flex; align-items:center; gap:8px;">
+                  ${backBtnHtml}
+                  ${themeOvBtnHtml}
                   ${topicBtnsHtml}
                 </div>
               `;
             }
+
+            const leftHtml = `
+              <div class="attendance-nav-left-cluster" style="display:inline-flex; align-items:center; gap:10px;">
+                ${navButtonsHtml}
+                <div class="attendance-summary-cluster" style="display:inline-flex; align-items:center; gap:8px; margin-left:4px; font-size:12px; color:#94a3b8; font-weight:600; white-space:nowrap;">
+                  <span style="color:rgba(255,255,255,0.18);">|</span>
+                  <span id="class-roster-count-badge">${activeBatchStudents.length} Enrolled</span>
+                </div>
+              </div>
+            `;
 
             // 1. Manual / Edit Mode Button (Cyan #38bdf8 / #0284c7)
             const manualBtnStyle = isManualOn
@@ -2143,31 +2179,40 @@ if (typeof window !== 'undefined') {
                 ${forgivenBtnHtml}
               </div>
             `;
-            setBottomInfobar(leftHtml, rightHtml, centerHtml);
+            setBottomInfobar(leftHtml, rightHtml, '');
           } else if (activeTab === 'tests') {
+            const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
+            const editBtnStyle = isEditOn
+              ? 'width: 140px; min-width: 140px; max-width: 140px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
+              : 'width: 140px; min-width: 140px; max-width: 140px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid #38bdf8; color: #38bdf8; padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
+            const editBtnLabel = isEditOn
+              ? `${getSvgIcon('check-circle', 14)} Done Editing`
+              : `${getSvgIcon('edit', 14)} Edit Mode`;
+
             const leftHtml = `
               <div class="class-tests-summary-cluster" style="display:inline-flex; align-items:center; gap:12px; font-size:12px; color:#94a3b8; font-weight:600;">
                 <span>Total Tests: <strong style="color:#f8fafc;">${classTests.length}</strong></span>
+                ${isEditOn ? '<span class="badge" style="background:rgba(56,189,248,0.18); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); font-size:11px; font-weight:700;">EDIT MODE ACTIVE</span>' : ''}
               </div>
             `;
             const rightHtml = isVocab ? `
               <div class="class-tests-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-class-tests" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer; color:#38bdf8; border-color:rgba(56,189,248,0.35);" title="Sync tests for this class with Vocabulary Vault themes &amp; topics">
+                <button type="button" class="btn btn-sm" id="btn-class-tests-toggle-edit" onclick="window.toggleClassTestsEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Table Editing &amp; Delete)">
+                  ${editBtnLabel}
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-class-tests" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer;" title="Sync tests for this class with Vocabulary Vault themes &amp; topics">
                   ${getSvgIcon('refresh', 14)} Sync Tests
                 </button>
-                <button type="button" class="btn btn-tactical btn-sm" id="btn-open-blueprint-settings" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer;" title="Open Default Test System &amp; Blueprint Settings">
-                  ${getSvgIcon('lock', 14)} Test System Settings
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" id="btn-open-blueprint-from-class" style="height: 30px; font-size: 12px; font-weight:600; padding: 0 10px; cursor:pointer;" title="Open Complete Curriculum Roadmap in Test Blueprint">
-                  ${getSvgIcon('book-open', 14)} Open Test Blueprint ↗
-                </button>
-                <button type="button" class="btn btn-purple btn-sm" id="btn-open-generator-from-class" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer;" title="Open Generator &amp; Curriculum Settings Wizard">
+                <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; background:rgba(56,189,248,0.15); border:1.5px solid #38bdf8; color:#38bdf8;" title="Open Generator &amp; Curriculum Settings Wizard">
                   ${getSvgIcon('zap', 14)} Generator &amp; Settings Wizard
                 </button>
               </div>
             ` : `
               <div class="class-tests-actions-cluster" style="display:inline-flex; align-items:center; gap:8px;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="window.renderClassHub(document.getElementById('admin-content-area'))" style="height: 30px; font-size: 12px; font-weight:700; padding: 0 10px; cursor:pointer; color:#38bdf8; border-color:rgba(56,189,248,0.35);" title="Refresh Class Tests">
+                <button type="button" class="btn btn-sm" id="btn-class-tests-toggle-edit" onclick="window.toggleClassTestsEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Table Editing &amp; Delete)">
+                  ${editBtnLabel}
+                </button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.renderClassHub(document.getElementById('admin-content-area'))" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer;" title="Refresh Class Tests">
                   ${getSvgIcon('refresh', 14)} Refresh Tests
                 </button>
               </div>
@@ -2202,6 +2247,17 @@ if (typeof window !== 'undefined') {
 
         window.syncClassHubLowerPanel = syncClassHubLowerPanel;
         window.renderAttendanceTopPanel = renderAttendanceTopPanel;
+
+        window.toggleClassTestsEditMode = () => {
+          if (typeof window.toggleGlobalEditMode === 'function') {
+            const newState = window.toggleGlobalEditMode();
+            showToast(newState ? 'Master Edit Mode ON (Inline Table Standards)' : 'Master Edit Mode OFF', newState ? 'info' : 'success');
+            syncClassHubLowerPanel('tests');
+            if (window._classAsmGridInstance) {
+              window._classAsmGridInstance.render();
+            }
+          }
+        };
 
         window.switchClassAttendanceTheme = (targetTheme) => {
           window._classAttendanceThemeFilter = targetTheme;
@@ -2299,7 +2355,7 @@ if (typeof window !== 'undefined') {
                 key: 'order',
                 label: 'CODE',
                 sortable: true,
-                width: '145px',
+                width: '165px',
                 render: (val, row) => {
                   if (row.shellCode) {
                     return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
@@ -2314,10 +2370,14 @@ if (typeof window !== 'undefined') {
                 sortable: true,
                 minWidth: '240px',
                 render: (val, row) => {
+                  const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
+                  if (isEditOn) {
+                    return `<input type="text" class="form-control form-control-sm input-test-title" data-test-id="${row.id}" data-original-val="${escapeHtml(row.title || '')}" value="${escapeHtml(row.title || '')}" style="height:24px !important; font-size:12px; font-weight:600; width:100%; min-width:240px; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#f8fafc; padding:0 6px; box-sizing:border-box;" />`;
+                  }
                   let displayTitle = escapeHtml(row.title);
-                  displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--grade-c);">$1</span>');
-                  displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: #38bdf8;">$1</span>');
-                  displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: #38bdf8;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--task-color, var(--grade-b, #95ff00)); font-weight:600;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: var(--exam-color, var(--quad-a, #ff2d87)); font-weight:600;">$1</span>');
+                  displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: var(--exam-color, var(--quad-a, #ff2d87)); font-weight:600;">$1</span>');
                   return `<div class="fw-500" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:240px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
                 }
               },
@@ -2325,7 +2385,7 @@ if (typeof window !== 'undefined') {
                 key: 'prereq',
                 label: 'PREREQUISITE',
                 sortable: true,
-                width: '170px',
+                width: '180px',
                 render: (val, row) => {
                   const prereqDisplay = row.prereq || '';
                   if (!prereqDisplay) return '<span class="text-muted" style="font-size:12px; font-weight:500;">—</span>';
@@ -2341,8 +2401,8 @@ if (typeof window !== 'undefined') {
                   const rawType = String(row.TestCategory || row._raw?.test_type || 'Task').toLowerCase();
                   const isExam = rawType.includes('exam');
                   const label = isExam ? 'Exam' : 'Task';
-                  const color = isExam ? '#38bdf8' : 'var(--grade-c)';
-                  return `<span style="font-size:12px; color:${color}; font-weight:500; white-space:nowrap;">${label}</span>`;
+                  const color = isExam ? 'var(--exam-color, var(--quad-a, #ff2d87))' : 'var(--task-color, var(--grade-b, #95ff00))';
+                  return `<span style="font-size:12px; color:${color}; font-weight:600; white-space:nowrap;">${label}</span>`;
                 }
               },
               {
@@ -2361,11 +2421,18 @@ if (typeof window !== 'undefined') {
                 key: 'questionOrder',
                 label: 'ORDER',
                 sortable: true,
-                width: '85px',
+                width: '95px',
                 render: (val, row) => {
+                  const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
                   const isRand = String(row.questionOrder || '').toLowerCase().includes('rand');
+                  if (isEditOn) {
+                    return `<select class="form-control form-control-sm select-test-order" data-test-id="${row.id}" style="height:24px !important; font-size:12px; font-weight:600; width:100%; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:${isRand ? '#38bdf8' : '#94a3b8'}; padding:0 4px; box-sizing:border-box;">
+                      <option value="random" ${isRand ? 'selected' : ''}>Random</option>
+                      <option value="sequential" ${!isRand ? 'selected' : ''}>Sequential</option>
+                    </select>`;
+                  }
                   const accessLabel = isRand ? 'Random' : 'Sequential';
-                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${accessLabel}</span>`;
+                  return `<span style="font-size:12px; color:${isRand ? '#38bdf8' : 'var(--clr-text-2)'}; white-space:nowrap; font-weight:500;">${accessLabel}</span>`;
                 }
               },
               {
@@ -2379,10 +2446,17 @@ if (typeof window !== 'undefined') {
                 key: 'minScore',
                 label: 'PASS RATE',
                 sortable: true,
-                width: '95px',
+                width: '100px',
                 render: (val, row) => {
                   const currentMin = row.minScore || 60;
                   const passColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(currentMin) : 'var(--grade-c)';
+                  const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
+                  if (isEditOn) {
+                    return `<div style="display:inline-flex; align-items:center; gap:3px;">
+                      <input type="number" min="1" max="100" class="form-control form-control-sm input-test-pass-score" data-test-id="${row.id}" data-original-val="${currentMin}" value="${currentMin}" style="width:52px; height:24px !important; text-align:center; font-weight:700; color:${passColor}; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; font-size:12px; padding:0 4px;" />
+                      <span style="font-size:12px; color:#94a3b8; font-weight:700;">%</span>
+                    </div>`;
+                  }
                   return `<span style="font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; color:${passColor};">${currentMin}%</span>`;
                 }
               },
@@ -2404,10 +2478,18 @@ if (typeof window !== 'undefined') {
                 shortLabel: 'STS',
                 microLabel: 'STS',
                 sortable: true,
-                width: '95px',
+                width: '135px',
                 render: (val, row) => {
                   const st = String(row.status || 'draft').toLowerCase();
                   const isPub = st === 'published';
+                  const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
+                  if (isEditOn) {
+                    return `<select class="form-control form-control-sm input-test-status-select" data-test-id="${row.id}" data-test-title="${escapeHtml(row.title || 'Test')}" data-original-status="${st}" style="height:24px !important; font-size:12px; font-weight:700; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:${isPub ? 'var(--grade-a)' : '#94a3b8'}; padding:0 4px; width:100%; box-sizing:border-box;">
+                      <option value="published" ${isPub ? 'selected' : ''} style="color:var(--grade-a); background:#0f172a;">Published</option>
+                      <option value="draft" ${!isPub ? 'selected' : ''} style="color:#94a3b8; background:#0f172a;">Draft</option>
+                      <option value="delete" style="color:var(--grade-e, #ff0000); background:#0f172a; font-weight:800;">🗑 Delete</option>
+                    </select>`;
+                  }
                   const displayStatus = st.charAt(0).toUpperCase() + st.slice(1);
                   return `<span style="font-size:12px; font-weight:500; color:${isPub ? 'var(--grade-a)' : '#94a3b8'};">${escapeHtml(displayStatus)}</span>`;
                 }
@@ -2424,14 +2506,12 @@ if (typeof window !== 'undefined') {
               if (document.getElementById('class-tests-grid') && window._classAsmGridInstance) {
                 window._classAsmGridInstance.render();
               }
+              if (window._classHubActiveTab === 'tests' && typeof window.syncClassHubLowerPanel === 'function') {
+                window.syncClassHubLowerPanel('tests');
+              }
             });
           }
 
-          // Open Test Blueprint in Vocabulary Vault
-          document.getElementById('btn-open-blueprint-from-class')?.addEventListener('click', () => {
-            window._activeVaultTab = 'blueprint';
-            window.location.hash = '#vocab_vault';
-          });
 
           // Sync Class Tests directly from Vocabulary Vault (Scoped strictly to this Class only)
           document.getElementById('btn-sync-class-tests')?.addEventListener('click', async () => {
@@ -2473,22 +2553,6 @@ if (typeof window !== 'undefined') {
             }
           });
 
-          // Open Test System Settings Modal
-          document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
-            try {
-              const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261106_v140');
-              await openTestSystemSettingsModal({
-                classId: classId || cid,
-                className: currentClass?.name || 'Vocabulary Class',
-                onComplete: () => {
-                  window.renderClassHub(document.getElementById('admin-content-area'));
-                }
-              });
-            } catch (err) {
-              console.error(err);
-              showToast('Failed to open settings: ' + err.message, 'error');
-            }
-          });
 
           // Open Generator & Curriculum Settings Wizard
           document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
@@ -2497,6 +2561,7 @@ if (typeof window !== 'undefined') {
               await openAutoGenerateModal({
                 explicitClassId: classId,
                 onComplete: () => {
+                  if (window._classHubCache) delete window._classHubCache[classId];
                   window.renderClassHub(document.getElementById('admin-content-area'));
                 }
               });
@@ -2616,6 +2681,36 @@ if (typeof window !== 'undefined') {
                   titleInput.value = origTitle;
                 } finally {
                   titleInput.disabled = false;
+                }
+                return;
+              }
+
+              // 4. Order change (random / sequential)
+              const orderSelect = e.target.closest('.select-test-order');
+              if (orderSelect) {
+                const testId = orderSelect.dataset.testId;
+                const newVal = orderSelect.value;
+                try {
+                  orderSelect.disabled = true;
+                  const testRecord = window._classHubRecords && window._classHubRecords[testId];
+                  const updatedPayload = {
+                    ...(testRecord?.payload || {}),
+                    question_order: newVal
+                  };
+                  await adminUpdate('tests', testId, { question_order: newVal, payload: updatedPayload });
+                  orderSelect.style.color = newVal === 'random' ? '#38bdf8' : '#94a3b8';
+                  const targetRow = testsGridData.find(t => t.id === testId);
+                  if (targetRow) targetRow.questionOrder = newVal;
+                  if (testRecord) {
+                    testRecord.question_order = newVal;
+                    testRecord.payload = updatedPayload;
+                  }
+                  showToast(`Test question order set to ${newVal.toUpperCase()}`, 'success');
+                } catch (err) {
+                  console.error(err);
+                  showToast('Failed to update question order: ' + err.message, 'error');
+                } finally {
+                  orderSelect.disabled = false;
                 }
                 return;
               }
@@ -3695,7 +3790,7 @@ if (typeof window !== 'undefined') {
               const targetAsms = examAsmsInTheme.length > 0 ? examAsmsInTheme : asmsInTheme;
 
               // Determine number of topics in theme
-              const hasPhrasesInTheme = isVocab || taskAsmsInTheme.some(a => a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+              const hasPhrasesInTheme = checkThemeHasPhrases(taskAsmsInTheme);
               let topicCodes = [];
               if (hasPhrasesInTheme) {
                 topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || '1'))));
@@ -3704,38 +3799,133 @@ if (typeof window !== 'undefined') {
               }
               topicCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
               const numTopics = topicCodes.length;
-              const maxThemeTasks = numTopics * targetReps * (hasPhrasesInTheme ? 2 : 1);
+              const topicTargetReps = hasPhrasesInTheme ? (compTargetReps * 2) : compTargetReps;
+              const maxThemeTasks = numTopics * topicTargetReps;
 
               studentsGridData.forEach(row => {
                 // 1. Exam Points & Score Calculation
-                let themeEarned = 0;
-                let hasAtt = false;
-                let studentThemeMaxQ = 0;
+                const themeHasExamPhrases = isVocab && !isLevel2Vocab && (hasPhrasesInTheme || examAsmsInTheme.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')));
+                if (themeHasExamPhrases) {
+                  const examTestIds = new Set(examAsmsInTheme.map(e => e.id));
+                  const studentExamAtts = (row.allAttempts || []).filter(a => {
+                    const tid = a.test_id || a.Test_id;
+                    return examTestIds.has(tid);
+                  }).filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
 
-                targetAsms.forEach(asm => {
-                  const att = row.asmScores?.[asm.id];
-                  const fallbackMax = getAsmExpectedMax(asm);
+                  // A. Words attempts
+                  const wordsAtts = studentExamAtts.filter(a => {
+                    const fr = String(a.forgiven_reason || '');
+                    const tQ = Number(a.total_questions || 0);
+                    return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
+                  });
+                  wordsAtts.sort((x, y) => Number(y.score || 0) - Number(x.score || 0));
+                  const bestWords = wordsAtts[0] || null;
 
-                  if (att) {
-                    const st = String(att.status || '').toLowerCase();
-                    if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
-                      hasAtt = true;
-                      const totalQ = Number(att.total_questions || fallbackMax);
-                      studentThemeMaxQ += totalQ;
-                      const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
-                      themeEarned += sc;
-                    }
+                  // B. Phrases attempts
+                  const phrasesAtts = studentExamAtts.filter(a => {
+                    const fr = String(a.forgiven_reason || '');
+                    const tQ = Number(a.total_questions || 0);
+                    return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
+                  });
+                  phrasesAtts.sort((x, y) => Number(y.score || 0) - Number(x.score || 0));
+                  const bestPhrases = phrasesAtts[0] || null;
+
+                  // C. Full 200Q attempts fallback
+                  const fullAtts = studentExamAtts.filter(a => Number(a.total_questions || 0) > 160);
+                  fullAtts.sort((x, y) => Number(y.score || 0) - Number(x.score || 0));
+                  const bestFull = fullAtts[0] || null;
+
+                  let wordsRate = null, wordsPts = null;
+                  let phrasesRate = null, phrasesPts = null;
+                  let accPts = null, accRate = null;
+
+                  // Candidate words: pick highest between words-only attempt and full attempt
+                  const candidateWords = [];
+                  if (bestWords) {
+                    candidateWords.push({
+                      pts: Math.round(Number(bestWords.score || 0)),
+                      pct: Math.round(Number(bestWords.percentage || (bestWords.total_questions ? (bestWords.score / bestWords.total_questions) * 100 : 0)))
+                    });
                   }
-                });
+                  if (bestFull) {
+                    const wSc = Math.min(160, Number(bestFull.score || 0));
+                    candidateWords.push({
+                      pts: Math.round(wSc),
+                      pct: Math.round((wSc / 160) * 100)
+                    });
+                  }
+                  if (candidateWords.length > 0) {
+                    candidateWords.sort((a, b) => b.pts - a.pts);
+                    wordsPts = candidateWords[0].pts;
+                    wordsRate = candidateWords[0].pct;
+                  }
 
-                // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
-                const cleanThemeEarned = Math.round(themeEarned);
-                const themePct = (hasAtt && studentThemeMaxQ > 0) ? Math.round((cleanThemeEarned / studentThemeMaxQ) * 100) : -1;
-                row[`theme_${tc}_total_pts`] = hasAtt ? cleanThemeEarned : -1;
-                row[`theme_${tc}_score`] = hasAtt ? themePct : -1;
-                row[`theme_${tc}_grade`] = hasAtt ? themePct : -1;
-                row[`theme_${tc}_max_q`] = studentThemeMaxQ;
-                row[`theme_${tc}_has_exam_att`] = hasAtt;
+                  // Candidate phrases: pick highest between phrases-only attempt and full attempt
+                  const candidatePhrases = [];
+                  if (bestPhrases) {
+                    candidatePhrases.push({
+                      pts: Math.round(Number(bestPhrases.score || 0)),
+                      pct: Math.round(Number(bestPhrases.percentage || (bestPhrases.total_questions ? (bestPhrases.score / bestPhrases.total_questions) * 100 : 0)))
+                    });
+                  }
+                  if (bestFull && Number(bestFull.score || 0) > 160) {
+                    const pSc = Math.min(40, Number(bestFull.score || 0) - 160);
+                    candidatePhrases.push({
+                      pts: Math.round(pSc),
+                      pct: Math.round((pSc / 40) * 100)
+                    });
+                  }
+                  if (candidatePhrases.length > 0) {
+                    candidatePhrases.sort((a, b) => b.pts - a.pts);
+                    phrasesPts = candidatePhrases[0].pts;
+                    phrasesRate = candidatePhrases[0].pct;
+                  }
+
+                  const hasAnyExamAtt = (wordsPts != null || phrasesPts != null);
+                  if (hasAnyExamAtt) {
+                    accPts = (wordsPts || 0) + (phrasesPts || 0);
+                    accRate = Math.round((accPts / 200) * 100);
+                  }
+
+                  row[`theme_${tc}_words_pts`] = wordsPts;
+                  row[`theme_${tc}_words_rate`] = wordsRate;
+                  row[`theme_${tc}_phrases_pts`] = phrasesPts;
+                  row[`theme_${tc}_phrases_rate`] = phrasesRate;
+                  row[`theme_${tc}_total_pts`] = hasAnyExamAtt ? accPts : -1;
+                  row[`theme_${tc}_score`] = hasAnyExamAtt ? accRate : -1;
+                  row[`theme_${tc}_grade`] = hasAnyExamAtt ? accRate : -1;
+                  row[`theme_${tc}_max_q`] = 200;
+                  row[`theme_${tc}_has_exam_att`] = hasAnyExamAtt;
+                } else {
+                  let themeEarned = 0;
+                  let hasAtt = false;
+                  let studentThemeMaxQ = 0;
+
+                  targetAsms.forEach(asm => {
+                    const att = row.asmScores?.[asm.id];
+                    const fallbackMax = getAsmExpectedMax(asm);
+
+                    if (att) {
+                      const st = String(att.status || '').toLowerCase();
+                      if (['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) {
+                        hasAtt = true;
+                        const totalQ = Number(att.total_questions || fallbackMax);
+                        studentThemeMaxQ += totalQ;
+                        const sc = att.score != null ? Math.min(Number(att.score), totalQ) : 0;
+                        themeEarned += sc;
+                      }
+                    }
+                  });
+
+                  // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                  const cleanThemeEarned = Math.round(themeEarned);
+                  const themePct = (hasAtt && studentThemeMaxQ > 0) ? Math.round((cleanThemeEarned / studentThemeMaxQ) * 100) : -1;
+                  row[`theme_${tc}_total_pts`] = hasAtt ? cleanThemeEarned : -1;
+                  row[`theme_${tc}_score`] = hasAtt ? themePct : -1;
+                  row[`theme_${tc}_grade`] = hasAtt ? themePct : -1;
+                  row[`theme_${tc}_max_q`] = studentThemeMaxQ;
+                  row[`theme_${tc}_has_exam_att`] = hasAtt;
+                }
 
                 // 2. Formative Task Progress Calculation per Topic (1 to targetReps in 7x7 system)
                 let earnedTasks = 0;
@@ -3759,22 +3949,22 @@ if (typeof window !== 'undefined') {
                       pPass = row.asmPhrasesPassCounts?.[wTask.id] ?? 0;
                     }
 
-                    wPass = Math.min(Math.max(0, wPass), targetReps);
-                    pPass = Math.min(Math.max(0, pPass), targetReps);
+                    wPass = Math.min(Math.max(0, wPass), compTargetReps);
+                    pPass = Math.min(Math.max(0, pPass), compTargetReps);
                     topicLevel = Math.min(wPass, pPass);
 
                     row[`theme_${tc}_topic_${topCode}_words_reps`] = wPass;
                     row[`theme_${tc}_topic_${topCode}_phrases_reps`] = pPass;
                     row[`theme_${tc}_topic_${topCode}_reps`] = topicLevel;
                     earnedTasks += (wPass + pPass);
-                    if (wPass >= targetReps && pPass >= targetReps) topicsPassedCount++;
+                    if (wPass >= compTargetReps && pPass >= compTargetReps) topicsPassedCount++;
                   } else {
                     const asm = taskAsmsInTheme.find(a => String(a.payload?.topic_code || (idx + 1)) === topCode) || taskAsmsInTheme[idx];
                     topicLevel = asm ? (row.asmPassCounts?.[asm.id] || 0) : 0;
-                    const repsEarned = Math.min(Math.max(0, topicLevel), targetReps);
+                    const repsEarned = Math.min(Math.max(0, topicLevel), compTargetReps);
                     row[`theme_${tc}_topic_${topCode}_reps`] = repsEarned;
                     earnedTasks += repsEarned;
-                    if (repsEarned >= targetReps) topicsPassedCount++;
+                    if (repsEarned >= compTargetReps) topicsPassedCount++;
                   }
                 });
 
@@ -3835,8 +4025,22 @@ if (typeof window !== 'undefined') {
             });
 
             // Dynamic super-headers: STUDENTS DATA (2 cols: BATCH & STUDENT NAME), active themes, and OVERALL (3 cols) at the far right
+            const themeStyles = {
+              'A': 'background: #0b1120 !important; color: var(--quad-a, #ff2d87) !important;',
+              'B': 'background: #0b1120 !important; color: var(--quad-b, #ff8c00) !important;',
+              'C': 'background: #0b1120 !important; color: var(--quad-c, #95ff00) !important;',
+              'D': 'background: #0b1120 !important; color: var(--quad-d, #38bdf8) !important;'
+            };
+
+            const themeSubHeaderStyles = {
+              'A': 'background: #0b1120 !important; color: var(--quad-a, #ff2d87) !important;',
+              'B': 'background: #0b1120 !important; color: var(--quad-b, #ff8c00) !important;',
+              'C': 'background: #0b1120 !important; color: var(--quad-c, #95ff00) !important;',
+              'D': 'background: #0b1120 !important; color: var(--quad-d, #38bdf8) !important;'
+            };
+
             const dynamicSuperHeaders = [
-              { label: 'STUDENTS DATA', colSpan: 2, className: 'super-hdr super-hdr-identity super-hdr-students-data' }
+              { label: 'STUDENTS DATA', colSpan: 2, className: 'super-hdr super-hdr-identity super-hdr-students-data', style: 'background: #0b1120 !important; color: #ffffff !important;' }
             ];
 
             const themeColorClasses = {
@@ -3850,20 +4054,26 @@ if (typeof window !== 'undefined') {
             const isTopicOverview = selectedTopic === 'ALL' || selectedTopic === 'OVERVIEW';
 
             if (isOverviewMode) {
-              // Master Overview Super-Headers (5 cols per active theme + 3 cols OVERALL)
+              // Master Overview Super-Headers (8 cols for Vocab with Phrases or 5 cols per active theme + 3 cols OVERALL)
               sortedActiveThemes.forEach(tc => {
                 const tName = themeNames[tc] ? ` (${themeNames[tc].toUpperCase()})` : '';
+                const asmsInTheme = themeGroups[tc] || [];
+                const taskAsms = asmsInTheme.filter(a => !isWeeklyExam(a));
+                const examAsms = asmsInTheme.filter(isWeeklyExam);
+                const themeHasExamPhrases = isVocab && !isLevel2Vocab && (checkThemeHasPhrases(taskAsms) || examAsms.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')));
                 dynamicSuperHeaders.push({
                   label: `THEME ${tc}${tName}`,
-                  colSpan: 5,
-                  className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
+                  colSpan: themeHasExamPhrases ? 8 : 5,
+                  className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`,
+                  style: themeStyles[tc] || ''
                 });
               });
-              dynamicSuperHeaders.push({ label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall' });
+              dynamicSuperHeaders.push({ label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall', style: 'background: #0b1120 !important; color: var(--grade-star, #c084fc) !important;' });
             } else {
               const activeThemeCode = sortedActiveThemes.includes(selectedTheme) ? selectedTheme : (sortedActiveThemes[0] || 'A');
               const asmsInTheme = themeGroups[activeThemeCode] || [];
               const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
+              const examAsmsInTheme = asmsInTheme.filter(isWeeklyExam);
               const tName = themeNames[activeThemeCode] ? ` (${themeNames[activeThemeCode].toUpperCase()})` : '';
 
               const rawTCodes = taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || ''));
@@ -3878,7 +4088,8 @@ if (typeof window !== 'undefined') {
                 dynamicSuperHeaders.push({
                   label: `THEME ${activeThemeCode}${tName} - TOPICS OVERVIEW`,
                   colSpan: tCodes.length,
-                  className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`
+                  className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`,
+                  style: themeStyles[activeThemeCode] || ''
                 });
               } else {
                 // Mode 3: Detailed 7x7 Progress for Single Selected Topic
@@ -3887,9 +4098,7 @@ if (typeof window !== 'undefined') {
                   String(a.payload?.topic_code || '').toUpperCase() === targetTopCode ||
                   (a.shell_code && a.shell_code.includes(targetTopCode))
                 );
-                const hasPhrasesInTopic = isVocab || matchingTasks.some(a =>
-                  a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')
-                );
+                const hasPhrasesInTopic = checkTopicHasPhrases(matchingTasks);
                 const topName = topicNames[targetTopCode] || topicNames[selectedTopic] || '';
                 const superHdrText = topName
                   ? `TOPIC ${targetTopCode}: ${topName.toUpperCase()}`
@@ -3898,14 +4107,17 @@ if (typeof window !== 'undefined') {
                 dynamicSuperHeaders.push({
                   label: superHdrText,
                   colSpan: hasPhrasesInTopic ? 14 : 7,
-                  className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`
+                  className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`,
+                  style: themeStyles[activeThemeCode] || ''
                 });
               }
 
+              const activeExamHasPhrases = isVocab && !isLevel2Vocab && (examAsmsInTheme.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')) || checkThemeHasPhrases(taskAsmsInTheme));
               dynamicSuperHeaders.push({
                 label: `THEME ${activeThemeCode}${tName} EXAM`,
-                colSpan: 4,
-                className: `${themeColorClasses[activeThemeCode] || 'super-hdr super-hdr-theme'} super-hdr-exam`
+                colSpan: activeExamHasPhrases ? 7 : 4,
+                className: `${themeColorClasses[activeThemeCode] || 'super-hdr super-hdr-theme'} super-hdr-exam super-hdr-exam-${activeThemeCode.toLowerCase()}`,
+                style: themeStyles[activeThemeCode] || 'background: #0b1120 !important;'
               });
             }
 
@@ -3942,13 +4154,13 @@ if (typeof window !== 'undefined') {
                 dynamicAsmCols.push({
                   key: `theme_${tc}_task`,
                   className: `col-asm col-task col-theme-task col-theme-task-${tc.toLowerCase()}`,
-                  width: '50px',
-                  minWidth: '40px',
-                  headerTitle: `Theme ${tc} Tasks (Completed / Max Required)`,
-                  title: `Theme ${tc} Tasks`,
-                  label: 'TASK',
-                  shortLabel: 'TASK',
-                  microLabel: 'TASK',
+                  width: '58px',
+                  minWidth: '48px',
+                  headerTitle: `Theme ${tc} Task Progress Percentage (0-100%)`,
+                  title: `Theme ${tc} Tasks %`,
+                  label: 'TASK %',
+                  shortLabel: 'TASK %',
+                  microLabel: 'TASK %',
                   sortable: true,
                   align: 'center',
                   render: (val, row) => {
@@ -3956,6 +4168,7 @@ if (typeof window !== 'undefined') {
                     const earned = row[`theme_${tc}_task_progress`] || 0;
                     const maxT = row[`theme_${tc}_task_max`] || 0;
                     const isComplete = Boolean(row[`theme_${tc}_task_completed`]);
+                    const pct = maxT > 0 ? Math.min(100, Math.round((earned / maxT) * 100)) : 0;
 
                     if (isManualMode && maxT > 0) {
                       const taskKey = `task_${tc}`;
@@ -3980,13 +4193,13 @@ if (typeof window !== 'undefined') {
                     }
 
                     if (maxT === 0) return '<span class="asm-dot" style="font-size:12px; font-weight:700;" title="No tasks required">&middot;</span>';
-                    const color = isComplete ? 'var(--grade-a)' : (earned > 0 ? '#38bdf8' : '#64748b');
+                    const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (isComplete ? 'var(--grade-a)' : (pct >= 60 ? 'var(--grade-c)' : (pct > 0 ? 'var(--grade-d)' : '#64748b')));
                     return `
                       <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
                            ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
-                           title="Theme ${tc} Tasks Progress: ${earned}/${maxT}${isComplete ? ' (Completed)' : ' (Incomplete)'} - Double click to edit">
-                        <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:500; color:${color}; font-variant-numeric:tabular-nums;">
-                          ${earned}/${maxT}
+                           title="Theme ${tc} Tasks: ${pct}% (${earned}/${maxT} reps)${isComplete ? ' — Completed' : ''} - Double click to edit">
+                        <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:700; color:${color}; font-variant-numeric:tabular-nums;">
+                          ${pct}%
                         </span>
                       </div>
                     `;
@@ -4000,8 +4213,8 @@ if (typeof window !== 'undefined') {
                     (a.shell_code && a.shell_code.includes(topCode))
                   );
                   const topName = topicNames[topCode.toUpperCase()] || topicNames[topCode] || '';
-                  const hasPhrases = isVocab || matchingTasks.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
-                  const maxTopicReps = targetReps * (hasPhrases ? 2 : 1);
+                  const hasPhrases = checkTopicHasPhrases(matchingTasks);
+                  const maxTopicReps = hasPhrases ? (compTargetReps * 2) : compTargetReps;
                   const isEndCol = topIdx === topicCodes.length - 1;
 
                   dynamicAsmCols.push({
@@ -4112,9 +4325,7 @@ if (typeof window !== 'undefined') {
                     (a.shell_code && a.shell_code.includes(topCode))
                   );
                   const phrasesTask = matchingTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
-                  const hasPhrasesInTopic = isVocab || Boolean(phrasesTask) || matchingTasks.some(a =>
-                    a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')
-                  );
+                  const hasPhrasesInTopic = checkTopicHasPhrases(matchingTasks);
 
                   // 7 Columns for Words: W1, W2, W3, W4, W5, W6, W7
                   for (let rep = 1; rep <= 7; rep++) {
@@ -4316,6 +4527,309 @@ if (typeof window !== 'undefined') {
                 });
               }
 
+              const hasExamPhrases = isVocab && !isLevel2Vocab && (examAsms.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')) || checkThemeHasPhrases(taskAsmsInTheme));
+              if (hasExamPhrases) {
+                // 1. WRD RATE (Words Exam Rate %)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_words_rate`,
+                  className: `col-asm col-exam col-exam-wrd-rate col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
+                  width: '48px',
+                  minWidth: '40px',
+                  headerTitle: `Theme ${tc} Words Rate %`,
+                  title: `Words Rate`,
+                  label: 'WRD RATE',
+                  shortLabel: 'WRD %',
+                  microLabel: 'WRD %',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const wRate = row[`theme_${tc}_words_rate`];
+                    const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
+                    const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
+                    const maxTasks = row[`theme_${tc}_task_max`] || 0;
+
+                    if (wRate != null && wRate >= 0) {
+                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(wRate) : '#ffffff';
+                      return `
+                        <span class="asm-score asm-score-test test-score-theme-wrd-rate"
+                              style="color:${color}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;"
+                              title="Theme ${tc} Words Rate: ${wRate}%">
+                          ${wRate}%
+                        </span>
+                      `;
+                    }
+                    if (!isTaskCompleted) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Tasks Incomplete (${earnedTasks}/${maxTasks}). Complete all tasks to unlock exam.">
+                          <span style="color:var(--grade-e); display:inline-flex; align-items:center;">${getSvgIcon('lock', 12)}</span>
+                        </div>
+                      `;
+                    }
+                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 2. WRD PTS (Words Points)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_words_pts`,
+                  className: `col-asm col-exam col-exam-wrd-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                  width: '44px',
+                  minWidth: '36px',
+                  headerTitle: `Theme ${tc} Words Points`,
+                  title: `Words Points`,
+                  label: 'WRD PTS',
+                  shortLabel: 'W-PTS',
+                  microLabel: 'W-PTS',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const wPts = row[`theme_${tc}_words_pts`];
+                    const wRate = row[`theme_${tc}_words_rate`] || 0;
+                    if (wPts != null && wPts >= 0) {
+                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(wRate) : '#ffffff';
+                      return `
+                        <span class="asm-score asm-score-test test-score-theme-wrd-pts"
+                              style="color:${color}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;"
+                              title="Theme ${tc} Words Points: ${wPts}">
+                          ${wPts}
+                        </span>
+                      `;
+                    }
+                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 3. PHR RATE (Phrase Exam Rate %)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_phrases_rate`,
+                  className: `col-asm col-exam col-exam-phr-rate col-test-theme-score col-test-theme-score-${tc.toLowerCase()}`,
+                  width: '48px',
+                  minWidth: '40px',
+                  headerTitle: `Theme ${tc} Phrase Rate %`,
+                  title: `Phrase Rate`,
+                  label: 'PHR RATE',
+                  shortLabel: 'PHR %',
+                  microLabel: 'PHR %',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const pRate = row[`theme_${tc}_phrases_rate`];
+                    const wRate = row[`theme_${tc}_words_rate`];
+                    if (pRate != null && pRate >= 0) {
+                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pRate) : '#ffffff';
+                      return `
+                        <span class="asm-score asm-score-test test-score-theme-phr-rate"
+                              style="color:${color}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;"
+                              title="Theme ${tc} Phrase Rate: ${pRate}%">
+                          ${pRate}%
+                        </span>
+                      `;
+                    }
+                    if (wRate != null && wRate >= 0) {
+                      return `<span class="badge-rem-tag" style="display:inline-block; font-size:12px; font-weight:800; color:var(--grade-d); background:rgba(255,140,0,0.15); border:1px solid rgba(255,140,0,0.3); border-radius:3px; padding:1px 3px;" title="Phrases not completed or cut-off (Needs Remedial)">REM</span>`;
+                    }
+                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 4. PHR PTS (Phrase Points)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_phrases_pts`,
+                  className: `col-asm col-exam col-exam-phr-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                  width: '44px',
+                  minWidth: '36px',
+                  headerTitle: `Theme ${tc} Phrase Points`,
+                  title: `Phrase Points`,
+                  label: 'PHR PTS',
+                  shortLabel: 'P-PTS',
+                  microLabel: 'P-PTS',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const pPts = row[`theme_${tc}_phrases_pts`];
+                    const pRate = row[`theme_${tc}_phrases_rate`] || 0;
+                    if (pPts != null && pPts >= 0) {
+                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pRate) : '#ffffff';
+                      return `
+                        <span class="asm-score asm-score-test test-score-theme-phr-pts"
+                              style="color:${color}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;"
+                              title="Theme ${tc} Phrase Points: ${pPts}">
+                          ${pPts}
+                        </span>
+                      `;
+                    }
+                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 5. ACC PTS (Accumulative Points)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_total_pts`,
+                  className: `col-asm col-exam col-exam-pts col-test-theme-total col-test-theme-total-${tc.toLowerCase()}`,
+                  width: '46px',
+                  minWidth: '38px',
+                  headerTitle: `Theme ${tc} Accumulative Exam Points`,
+                  title: `Accumulative Points`,
+                  label: 'ACC PTS',
+                  shortLabel: 'ACC',
+                  microLabel: 'ACC',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const ptsVal = row[`theme_${tc}_total_pts`];
+                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                    if (hasExamAttempt && ptsVal != null && ptsVal >= 0) {
+                      const cleanTotal = Math.round(Number(ptsVal || 0));
+                      const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0 ? row[`theme_${tc}_score`] : 0;
+                      const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(themePct) : '#ffffff';
+                      return `
+                        <span class="asm-score asm-score-test test-score-theme-total"
+                              style="color:${color} !important; font-weight:800; font-size:12px; font-variant-numeric:tabular-nums;"
+                              title="Theme ${tc} Accumulative Points: ${cleanTotal}">
+                          ${cleanTotal}
+                        </span>
+                      `;
+                    }
+                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 6. GRADE (Theme Grade Column)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_grade`,
+                  className: `col-asm col-exam col-exam-grade col-test-theme-grade col-test-theme-grade-${tc.toLowerCase()}`,
+                  width: '34px',
+                  minWidth: '28px',
+                  headerTitle: `Theme ${tc} Exam Grade`,
+                  title: `Theme ${tc} Grade`,
+                  label: 'GRD',
+                  shortLabel: 'GRD',
+                  microLabel: 'GRD',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const scoreVal = row[`theme_${tc}_score`];
+                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                    if (hasExamAttempt && scoreVal != null && scoreVal >= 0) {
+                      const themeGrade = typeof calculateGrade === 'function' ? calculateGrade(scoreVal) : 'C';
+                      const cleanGrade = String(themeGrade || '').trim().toUpperCase();
+                      const gradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(scoreVal) : '#94a3b8';
+                      const isGradeS = cleanGrade === '★' || cleanGrade === 'S';
+                      if (isGradeS) {
+                        return `
+                          <div style="display:flex; align-items:center; justify-content:center;">
+                            <span class="grid-grade-val grid-grade-star" style="color:var(--grade-star); font-size:12px; font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Theme ${tc} Grade ★ (100% Excellent)">★</span>
+                          </div>
+                        `;
+                      }
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;">
+                          <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:12px; line-height:1;" title="Theme ${tc} Grade ${cleanGrade}">${cleanGrade}</span>
+                        </div>
+                      `;
+                    }
+                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                  }
+                });
+
+                // 7. STATUS (Theme Status Column)
+                dynamicAsmCols.push({
+                  key: `theme_${tc}_status`,
+                  className: `col-asm col-exam col-exam-status col-test-theme-status col-test-theme-status-${tc.toLowerCase()} super-hdr-divider`,
+                  width: '34px',
+                  minWidth: '28px',
+                  headerTitle: `Theme ${tc} Exam Status`,
+                  title: `Theme ${tc} Status`,
+                  label: 'STS',
+                  shortLabel: 'STS',
+                  microLabel: 'STS',
+                  sortable: true,
+                  align: 'center',
+                  render: (val, row) => {
+                    const scoreVal = row[`theme_${tc}_score`];
+                    const pRate = row[`theme_${tc}_phrases_rate`];
+                    const wRate = row[`theme_${tc}_words_rate`];
+                    const hasExamAttempt = Boolean(row[`theme_${tc}_has_exam_att`]);
+                    const examTestIds = new Set(examAsms.map(e => e.id));
+                    const studentAtts = (row.allAttempts || []).filter(a => examTestIds.has(a.test_id || a.Test_id));
+                    const bestAtts = examAsms.map(e => row.asmScores?.[e.id]).filter(Boolean);
+                    const themeAtts = studentAtts.length > 0 ? studentAtts : bestAtts;
+                    const isForgiven = themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_forgiven || att?.grade === 'F'));
+                    const isRem = (themeAtts.length > 0 && themeAtts.some(att => Boolean(att?.is_remedial_unlocked || att?.is_remedial || att?.grade === 'R'))) || (wRate != null && (pRate == null || pRate < 60));
+                    const isPassed = ((scoreVal != null && scoreVal >= 60 && pRate != null && pRate >= 60) || isForgiven);
+
+                    const isRemMode = Boolean(window._classRemedialEditMode);
+                    const isForgiveMode = Boolean(window._classForgivenEditMode);
+
+                    if ((isRemMode || isForgiveMode) && examAsms.length > 0) {
+                      const examTestIdsArr = examAsms.map(e => e.id);
+                      const examTestIdsJson = JSON.stringify(examTestIdsArr).replace(/"/g, '&quot;');
+                      if (isRemMode) {
+                        return `
+                          <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%; height:100%;">
+                            <input type="checkbox"
+                                   class="table-remedial-check"
+                                   data-student-id="${row.id}"
+                                   ${isRem ? 'checked' : ''}
+                                   title="Click to toggle Remedial"
+                                   onclick="event.stopPropagation(); window.toggleCellRemedial('${row.id}', ${examTestIdsJson}, this.checked);"
+                                   style="cursor:pointer; width:14px; height:14px; accent-color:var(--grade-c); margin:0;">
+                            ${isRem ? '<span style="font-weight:700; font-size:12px; color:var(--grade-c);">R</span>' : ''}
+                          </div>
+                        `;
+                      }
+                      if (isForgiveMode) {
+                        return `
+                          <div style="display:flex; align-items:center; justify-content:center; gap:4px; width:100%; height:100%;">
+                            <input type="checkbox"
+                                   class="table-forgiven-check"
+                                   data-student-id="${row.id}"
+                                   ${isForgiven ? 'checked' : ''}
+                                   title="Click to toggle Forgiven Waiver"
+                                   onclick="event.stopPropagation(); window.toggleCellForgiven('${row.id}', ${examTestIdsJson}, this.checked);"
+                                   style="cursor:pointer; width:14px; height:14px; accent-color:var(--grade-e); margin:0;">
+                            ${isForgiven ? '<span style="font-weight:700; font-size:12px; color:var(--grade-e);">F</span>' : ''}
+                          </div>
+                        `;
+                      }
+                    }
+
+                    if (isRem && !isPassed) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Needs Remedial (Phrases or Exam incomplete)">
+                          <span class="status-badge-rem" style="color:var(--grade-d); font-weight:700; font-size:12px; background:rgba(255,140,0,0.15); border:1px solid rgba(255,140,0,0.3); border-radius:3px; padding:1px 3px;">REM</span>
+                        </div>
+                      `;
+                    }
+                    if (isForgiven) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Forgiven Waiver Granted (Grade F - Passed)">
+                          <span class="status-badge-forgive" style="color:var(--grade-e); font-weight:700; font-size:12px;">F</span>
+                        </div>
+                      `;
+                    }
+                    if (hasExamAttempt && isPassed) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Passed (${scoreVal}%)">
+                          <span style="color:var(--grade-a); display:inline-flex; align-items:center;">${getSvgIcon('check-circle', 14)}</span>
+                        </div>
+                      `;
+                    }
+                    if (hasExamAttempt && !isPassed) {
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center;" title="Failed (${scoreVal}%)">
+                          <span style="color:var(--grade-e); font-weight:700; font-size:12px;">—</span>
+                        </div>
+                      `;
+                    }
+                    return `
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Exam Not Attempted">
+                        <span style="color:#64748b; font-size:12px;">—</span>
+                      </div>
+                    `;
+                  }
+                });
+              } else {
               // 2. Theme Exam RATE Column
               dynamicAsmCols.push({
                 key: `theme_${tc}_score`,
@@ -4486,7 +5000,7 @@ if (typeof window !== 'undefined') {
                 minWidth: '26px',
                 headerTitle: `Theme ${tc} Exam Grade`,
                 title: `Theme ${tc} Exam Grade`,
-                label: 'GRADE',
+                label: 'GRD',
                 shortLabel: 'GRD',
                 microLabel: 'GRD',
                 sortable: true,
@@ -4544,7 +5058,7 @@ if (typeof window !== 'undefined') {
                 minWidth: '28px',
                 headerTitle: `Theme ${tc} Exam Status`,
                 title: `Theme ${tc} Exam Status`,
-                label: 'STATUS',
+                label: 'STS',
                 shortLabel: 'STS',
                 microLabel: 'STS',
                 sortable: true,
@@ -4638,6 +5152,17 @@ if (typeof window !== 'undefined') {
                     </div>
                   `;
                 }});
+              }
+            });
+
+            // Synchronize Sub-Header background with Super-Header parent quadrant (100% Solid Card-Title)
+            dynamicAsmCols.forEach(col => {
+              const match = String(col.key || '').match(/^theme_([A-Za-z])_/i);
+              const tc = match ? match[1].toUpperCase() : null;
+              if (tc && themeSubHeaderStyles[tc]) {
+                col.headerStyle = themeSubHeaderStyles[tc];
+                col.className = (col.className || '') + ` col-subhdr-theme-${tc.toLowerCase()}`;
+              }
             });
 
             // Clean destruction of previous instance if any
@@ -4886,7 +5411,13 @@ if (typeof window !== 'undefined') {
                     const topCode = parts[3];
                     let repsSum = 0;
                     filteredData.forEach(s => {
-                      repsSum += (s[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (s[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                      const wR = s[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
+                      const pR = s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
+                      if (wR > 0 || pR > 0) {
+                        repsSum += (wR + pR);
+                      } else {
+                        repsSum += (s[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                      }
                     });
                     if (totalStudents > 0 && repsSum > 0) {
                       const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
@@ -4997,10 +5528,10 @@ if (typeof window !== 'undefined') {
                     if (totalStudents > 0 && repsSum > 0) {
                       const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
                       const avgRepsNum = repsSum / totalStudents;
-                      const avgColor = avgRepsNum >= targetReps ? 'var(--grade-a)' : (avgRepsNum >= 4 ? '#38bdf8' : 'var(--grade-c)');
+                      const avgColor = avgRepsNum >= compTargetReps ? 'var(--grade-a)' : (avgRepsNum >= 4 ? '#38bdf8' : 'var(--grade-c)');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg ${label} Repetitions: ${avgReps}/${targetReps}">${avgReps}</span>
+                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg ${label} Repetitions: ${avgReps}/${compTargetReps}">${avgReps}</span>
                         </td>
                       `;
                     } else {
@@ -5024,6 +5555,112 @@ if (typeof window !== 'undefined') {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
                           <span style="color:${avgTaskCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Tasks Progress: ${avgTaskPct}% (${sumTasks}/${sumMax})">${avgTaskPct}%</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_words_rate')) {
+                    const tc = col.key.replace('theme_', '').replace('_words_rate', '');
+                    let count = 0;
+                    let totalScoreSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[col.key];
+                      if (val !== undefined && val !== null && val >= 0) {
+                        count++;
+                        totalScoreSum += Number(val);
+                      }
+                    });
+                    if (count > 0) {
+                      const avgWrdRate = Math.round(totalScoreSum / count);
+                      const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgWrdRate) : (TOPSCORE_COLORS?.C || 'var(--grade-c)');
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgScoreCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Words Rate: ${avgWrdRate}%">${avgWrdRate}%</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_words_pts')) {
+                    const tc = col.key.replace('theme_', '').replace('_words_pts', '');
+                    let count = 0;
+                    let totalPtsSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[col.key];
+                      if (val !== undefined && val !== null && val >= 0) {
+                        count++;
+                        totalPtsSum += Number(val);
+                      }
+                    });
+                    if (count > 0) {
+                      const avgWrdPts = Math.round(totalPtsSum / count);
+                      const avgWrdPct = Math.min(100, Math.round((avgWrdPts / 160) * 100));
+                      const avgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgWrdPct) : '#ffffff';
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgColor}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Words Points: ${avgWrdPts} pts">${avgWrdPts}</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_phrases_rate')) {
+                    const tc = col.key.replace('theme_', '').replace('_phrases_rate', '');
+                    let count = 0;
+                    let totalScoreSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[col.key];
+                      if (val !== undefined && val !== null && val >= 0) {
+                        count++;
+                        totalScoreSum += Number(val);
+                      }
+                    });
+                    if (count > 0) {
+                      const avgPhrRate = Math.round(totalScoreSum / count);
+                      const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPhrRate) : (TOPSCORE_COLORS?.C || 'var(--grade-c)');
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgScoreCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Phrase Rate: ${avgPhrRate}%">${avgPhrRate}%</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.endsWith('_phrases_pts')) {
+                    const tc = col.key.replace('theme_', '').replace('_phrases_pts', '');
+                    let count = 0;
+                    let totalPtsSum = 0;
+                    filteredData.forEach(s => {
+                      const val = s[col.key];
+                      if (val !== undefined && val !== null && val >= 0) {
+                        count++;
+                        totalPtsSum += Number(val);
+                      }
+                    });
+                    if (count > 0) {
+                      const avgPhrPts = Math.round(totalPtsSum / count);
+                      const avgPhrPct = Math.min(100, Math.round((avgPhrPts / 40) * 100));
+                      const avgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPhrPct) : '#ffffff';
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgColor}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Phrase Points: ${avgPhrPts} pts">${avgPhrPts}</span>
                         </td>
                       `;
                     } else {
@@ -5222,8 +5859,9 @@ if (typeof window !== 'undefined') {
               columns: [
                 {
                   key: 'batch',
-                  label: 'BATCH',
-                  className: 'col-sticky col-sticky-1',
+                  label: 'BTC',
+                  className: 'col-sticky col-sticky-1 col-subhdr-students-data',
+                  headerStyle: 'background: #1e293b !important; color: #ffffff !important;',
                   sortable: true,
                   align: 'center',
                   width: '45px',
@@ -5233,7 +5871,8 @@ if (typeof window !== 'undefined') {
                 {
                   key: 'displayName',
                   label: 'STUDENT NAME',
-                  className: 'col-sticky col-sticky-2',
+                  className: 'col-sticky col-sticky-2 col-subhdr-students-data',
+                  headerStyle: 'background: #1e293b !important; color: #ffffff !important;',
                   sortable: true,
                   width: '180px',
                   minWidth: '140px',
@@ -5262,7 +5901,8 @@ if (typeof window !== 'undefined') {
                     microLabel: 'DONE',
                     headerTitle: 'Overall Completion Rate % (Exams & Activities Completed)',
                     title: 'Overall Completion Rate %',
-                    className: 'col-overall col-overall-prog',
+                    className: 'col-overall col-overall-prog col-subhdr-theme-overall',
+                    headerStyle: 'background: #1e3a5f !important; color: #ffffff !important;',
                     sortable: true,
                     align: 'center',
                     width: '45px',
@@ -5283,7 +5923,8 @@ if (typeof window !== 'undefined') {
                     label: 'PTS',
                     shortLabel: 'PTS',
                     microLabel: 'PTS',
-                    className: 'col-overall col-overall-pts',
+                    className: 'col-overall col-overall-pts col-subhdr-theme-overall',
+                    headerStyle: 'background: #1e3a5f !important; color: #ffffff !important;',
                     sortable: true,
                     align: 'center',
                     width: '42px',
@@ -5307,10 +5948,11 @@ if (typeof window !== 'undefined') {
                   },
                   {
                     key: 'grade',
-                    label: 'GRADE',
+                    label: 'GRD',
                     shortLabel: 'GRD',
                     microLabel: 'GRD',
-                    className: 'col-overall col-overall-grade',
+                    className: 'col-overall col-overall-grade col-subhdr-theme-overall',
+                    headerStyle: 'background: #1e3a5f !important; color: #ffffff !important;',
                     sortable: true,
                     align: 'center',
                     width: '32px',
@@ -6018,24 +6660,6 @@ if (typeof window !== 'undefined') {
           }
         });
 
-        document.getElementById('btn-open-blueprint-settings')?.addEventListener('click', async () => {
-          try {
-            const { openTestSystemSettingsModal } = await import('./test-system-settings-modal.js?v=20261106_v140');
-            openTestSystemSettingsModal({
-              classId: classId || cid,
-              onSaved: () => {
-                window.renderClassHub(document.getElementById('admin-content-area'));
-              }
-            });
-          } catch (err) {
-            console.error(err);
-            showToast('Failed to open blueprint settings: ' + err.message, 'error');
-          }
-        });
-
-        document.getElementById('btn-open-blueprint-from-class')?.addEventListener('click', () => {
-          window.location.hash = '#vocab_vault?tab=blueprint';
-        });
 
         document.getElementById('btn-open-generator-from-class')?.addEventListener('click', async () => {
           try {
@@ -6043,6 +6667,7 @@ if (typeof window !== 'undefined') {
             await openAutoGenerateModal({
               explicitClassId: classId,
               onComplete: () => {
+                if (window._classHubCache) delete window._classHubCache[classId];
                 window.renderClassHub(document.getElementById('admin-content-area'));
               }
             });
@@ -6442,6 +7067,50 @@ if (typeof window !== 'undefined') {
             };
             await renderSettingSection();
             break;
+          case 'system-palette':
+          case 'palette':
+          case 'interface':
+          case 'interface-settings':
+          case 'interface-setting':
+            const interfaceTabs = [
+              { id: 'settings', label: 'Colour Designs' },
+              { id: 'architecture', label: 'Architecture Designs' },
+              { id: 'table_designs', label: 'Table Designs' }
+            ];
+            window._activeInterfaceTab = window._activeInterfaceTab || 'settings';
+            if (window.setTopbarTabs) {
+              window.setTopbarTabs(interfaceTabs, window._activeInterfaceTab, 'window._switchInterfaceTab');
+            }
+            window._switchInterfaceTab = async (tabId) => {
+              window._activeInterfaceTab = tabId;
+              if (window.setTopbarTabs) {
+                window.setTopbarTabs(interfaceTabs, tabId, 'window._switchInterfaceTab');
+              }
+              const iArea = area.querySelector('#unified-interface-content');
+              if (!iArea) return;
+              if (tabId === 'architecture') {
+                await renderSystemArchitecture(iArea);
+              } else if (tabId === 'table_designs') {
+                await renderTableDesigns(iArea);
+              } else {
+                await renderInterfaceSettings(iArea);
+              }
+            };
+            area.innerHTML = `<div id="unified-interface-content" style="height:100%; min-height:0; display:flex; flex-direction:column; box-sizing:border-box; overflow:hidden;"></div>`;
+            const iArea = area.querySelector('#unified-interface-content');
+            if (window._activeInterfaceTab === 'architecture') {
+              await renderSystemArchitecture(iArea);
+            } else if (window._activeInterfaceTab === 'table_designs') {
+              await renderTableDesigns(iArea);
+            } else {
+              await renderInterfaceSettings(iArea);
+            }
+            break;
+          case 'system-glossary':
+          case 'system_glossary':
+          case 'glossary':
+            await renderSystemGlossary(area);
+            break;
           case 'student-registration':
           case 'students-registration':
           case 'import-students':
@@ -6462,10 +7131,6 @@ if (typeof window !== 'undefined') {
             break;
           case 'class-panel':         await renderClassPanel(area); break;
           case 'dashboard':           await renderDashboard(area); break;
-          case 'profile':             await renderAdminProfile(area); break;
-          case 'schedule':            await renderAdminSchedule(area); break;
-          case 'work_records':        return loadSection('profile');
-          case 'cv_generator':        await renderCVGenerator(area); break;
 
           default: area.innerHTML = `<div class="empty-state"><div class="empty-state__icon" style="color:#64748b;">${getSvgIcon('settings', 32)}</div><h3>${sectionTitles[section] || section}</h3><p>This section is under development.</p></div>`;
         }
@@ -6879,7 +7544,7 @@ if (typeof window !== 'undefined') {
                   </div>
                   <table style="width:100%;border-collapse:collapse;font-size: 12px;">
                     <thead>
-                      <tr style="border-bottom:1px solid var(--clr-border);background:rgba(255,255,255,0.02);color:var(--clr-text-muted);font-size: 12px;text-transform:uppercase;">
+                      <tr style="border-bottom:1px solid var(--clr-border);background:#1e293b;color:#ffffff;font-size: 12px;text-transform:uppercase;">
                         <th style="padding:0.6rem 1rem;text-align:left;">INSTITUTION</th>
                         <th style="padding:0.6rem 1rem;text-align:left;">PROGRAM</th>
                         <th style="padding:0.6rem 1rem;text-align:left;">BATCH</th>

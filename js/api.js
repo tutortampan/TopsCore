@@ -150,15 +150,18 @@ export function formatMatrixStudentName(name, maxChars = 19) {
 /**
  * Konversi nomor level menjadi teks ordinal baku:
  * 1 -> 1st Level, 2 -> 2nd Level, 3 -> 3rd Level, 4 -> 4th Level, dst.
- * 0, 'Non-Level', 'General' -> '—'
+ * 0, 'Non-Level', 'General' -> '0'
  * 99, 'Alumni', 'X' -> 'Alumni'
- * Jika short === true, memanggil toShortLevel: '1st', '2nd', '3rd', 'X', '—'
+ * Jika short === true, memanggil toShortLevel: '1st', '2nd', '3rd', 'X', '0'
  */
 export function toOrdinalLevel(num, short = false) {
   if (short) return toShortLevel(num);
   if (num == null) return '—';
   const str = String(num).trim().toLowerCase();
-  if (str === '0' || str === 'non-level' || str === 'general' || str === '—' || str === '-') {
+  if (str === '0' || str === 'non-level' || str === 'general') {
+    return '0';
+  }
+  if (str === '—' || str === '-') {
     return '—';
   }
   if (str === 'alumni' || str === 'ex' || str === 'alumnus' || str === '99' || str === 'x') {
@@ -166,7 +169,7 @@ export function toOrdinalLevel(num, short = false) {
   }
   const n = parseInt(num, 10);
   if (isNaN(n)) return '1st Level';
-  if (n === 0) return '—';
+  if (n === 0) return '0';
   if (n === 99) return 'Alumni';
   if (n < 0) return '1st Level';
   const j = n % 10;
@@ -182,7 +185,7 @@ export function toOrdinalLevel(num, short = false) {
  * Format teks level ringkas khusus untuk tabel & badge di seluruh panel admin:
  * 1 -> '1st', 2 -> '2nd', 3 -> '3rd', 4 -> '4th'
  * 99, 'Alumni', 'Ex', 'X' -> 'X'
- * 0, '0', 'Non-Level', 'General', 'None' -> '—'
+ * 0, '0', 'Non-Level', 'General', 'None' -> '0'
  * Menormalisasi string seperti '1st Level', '2nd Level', 'Level 3', 'LVL 2' menjadi '1st', '2nd', '3rd'.
  */
 export function toShortLevel(val) {
@@ -195,7 +198,7 @@ export function toShortLevel(val) {
     return 'X';
   }
   if (str === '0' || lower === 'non-level' || lower === 'general' || lower === 'none' || lower === 'no level') {
-    return '—';
+    return '0';
   }
 
   let n = parseInt(str, 10);
@@ -205,9 +208,9 @@ export function toShortLevel(val) {
   }
 
   if (isNaN(n)) return str;
-  if (n === 0) return '—';
+  if (n === 0) return '0';
   if (n === 99) return 'X';
-  if (n < 1) return '—';
+  if (n < 1) return '0';
 
   const j = n % 10;
   const k = n % 100;
@@ -254,10 +257,14 @@ const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5-minute cache for static master rec
 export function clearApiCache(prefix = null, { keepPersistent = false } = {}) {
   if (!prefix) {
     _apiCache.clear();
+    clearAdminCache();
     if (!keepPersistent) _clearPersistentVaultCache();
   } else {
     for (const key of _apiCache.keys()) {
       if (key.startsWith(prefix)) _apiCache.delete(key);
+    }
+    if (prefix === 'tests' || prefix.startsWith('tests')) {
+      clearAdminCache('tests');
     }
     if ((prefix === 'vault' || prefix.startsWith('vault')) && !keepPersistent) {
       _clearPersistentVaultCache();
@@ -362,40 +369,44 @@ export async function fetchBatches(programId, forceRefresh = false, activeOnly =
   });
 }
 
-export async function fetchStudentsByProgram(programId, batchId = null, activeOnly = true) {
-  let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId) && (!activeOnly || s.is_active !== false));
-  if (!isPlaceholderUrl()) {
-    try {
-      const sb = await getSupabase();
-      let query = sb.from('students')
-        .select('id, name, gender, program_id, batch_id, is_active, batches!batch_id(id, is_active)')
-        .eq('program_id', programId)
-        .is('deleted_at', null);
-      if (activeOnly) {
-        query = query.eq('is_active', true);
+export async function fetchStudentsByProgram(programId, batchId = null, activeOnly = true, forceRefresh = false) {
+  const cacheKey = `students_prog_${programId}_${batchId}_${activeOnly}`;
+  if (forceRefresh) clearApiCache(cacheKey);
+  return withCache(cacheKey, async () => {
+    let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId) && (!activeOnly || s.is_active !== false));
+    if (!isPlaceholderUrl()) {
+      try {
+        const sb = await getSupabase();
+        let query = sb.from('students')
+          .select('id, name, gender, program_id, batch_id, is_active, batches!batch_id(id, is_active)')
+          .eq('program_id', programId)
+          .is('deleted_at', null);
+        if (activeOnly) {
+          query = query.eq('is_active', true);
+        }
+        if (batchId) {
+          query = query.eq('batch_id', batchId);
+        }
+        const { data, error } = await query.order('name');
+        if (error) throw error;
+        if (data && data.length) {
+          list = (activeOnly && !batchId)
+            ? data.filter(s => !s.batches || s.batches.is_active !== false)
+            : data;
+        }
+      } catch (e) {
+        console.warn('Supabase fetch students failed, falling back to mock data:', e.message);
       }
-      if (batchId) {
-        query = query.eq('batch_id', batchId);
-      }
-      const { data, error } = await query.order('name');
-      if (error) throw error;
-      if (data && data.length) {
-        list = (activeOnly && !batchId)
-          ? data.filter(s => !s.batches || s.batches.is_active !== false)
-          : data;
-      }
-    } catch (e) {
-      console.warn('Supabase fetch students failed, falling back to mock data:', e.message);
     }
-  }
-  return list.map(s => ({
-    ...s,
-    displayName: s.name,
-    name: s.name
-  })).sort((a, b) => {
-    const nameA = a.name || a.displayName || '';
-    const nameB = b.name || b.displayName || '';
-    return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+    return list.map(s => ({
+      ...s,
+      displayName: s.name,
+      name: s.name
+    })).sort((a, b) => {
+      const nameA = a.name || a.displayName || '';
+      const nameB = b.name || b.displayName || '';
+      return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
+    });
   });
 }
 
@@ -783,7 +794,9 @@ export async function fetchClassTestSettings(classId = null) {
   const defaultSettings = {
     taskRepetitions: 7,
     taskMinScore: 60,
-    examMinScore: 60
+    examMinScore: 60,
+    taskQuestionOrder: 'random',
+    examQuestionOrder: 'random'
   };
 
   const getLocal = (k) => {
@@ -814,7 +827,9 @@ export async function fetchClassTestSettings(classId = null) {
         const res = {
           taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
           taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 60)),
-          examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
+          examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60)),
+          taskQuestionOrder: parsed.taskQuestionOrder === 'sequential' ? 'sequential' : 'random',
+          examQuestionOrder: parsed.examQuestionOrder === 'sequential' ? 'sequential' : 'random'
         };
         setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
         return res;
@@ -832,7 +847,7 @@ export async function fetchClassTestSettings(classId = null) {
     // 1c. Inspect existing class tests from DB (Ground Truth for this class)
     try {
       const { data: sampleTests } = await sb.from('tests')
-        .select('payload, minimum_required_score, test_type, category, shell_code, title')
+        .select('payload, minimum_required_score, test_type, category, shell_code, title, question_order')
         .eq('class_id', classId)
         .is('deleted_at', null)
         .limit(30);
@@ -846,7 +861,9 @@ export async function fetchClassTestSettings(classId = null) {
         const derived = {
           taskRepetitions: Math.max(1, parseInt(sampleTask?.payload?.task_repetitions, 10) || 7),
           taskMinScore: taskScore !== null && !isNaN(parseInt(taskScore, 10)) ? Math.min(100, Math.max(1, parseInt(taskScore, 10))) : 60,
-          examMinScore: examScore !== null && !isNaN(parseInt(examScore, 10)) ? Math.min(100, Math.max(1, parseInt(examScore, 10))) : 60
+          examMinScore: examScore !== null && !isNaN(parseInt(examScore, 10)) ? Math.min(100, Math.max(1, parseInt(examScore, 10))) : 60,
+          taskQuestionOrder: (sampleTask?.question_order || sampleTask?.payload?.question_order) === 'sequential' ? 'sequential' : 'random',
+          examQuestionOrder: (sampleExam?.question_order || sampleExam?.payload?.question_order) === 'sequential' ? 'sequential' : 'random'
         };
         setLocal(`topscore_test_settings_${classId}`, JSON.stringify(derived));
         return derived;
@@ -866,7 +883,9 @@ export async function fetchClassTestSettings(classId = null) {
       return {
         taskRepetitions: Math.max(1, parseInt(parsed.taskRepetitions, 10) || 7),
         taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 60)),
-        examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60))
+        examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60)),
+        taskQuestionOrder: parsed.taskQuestionOrder === 'sequential' ? 'sequential' : 'random',
+        examQuestionOrder: parsed.examQuestionOrder === 'sequential' ? 'sequential' : 'random'
       };
     }
   } catch (e) {
@@ -886,7 +905,9 @@ export async function saveClassTestSettings(classId, settings = {}, applyToExist
   const cleanSettings = {
     taskRepetitions: Math.max(1, parseInt(settings.taskRepetitions, 10) || 7),
     taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 50)),
-    examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60))
+    examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60)),
+    taskQuestionOrder: settings.taskQuestionOrder === 'sequential' ? 'sequential' : 'random',
+    examQuestionOrder: settings.examQuestionOrder === 'sequential' ? 'sequential' : 'random'
   };
   const payloadStr = JSON.stringify(cleanSettings);
 
@@ -936,15 +957,18 @@ export async function saveClassTestSettings(classId, settings = {}, applyToExist
         for (const t of classTests) {
           const isExamTest = isWeeklyExam(t);
           const newScore = isExamTest ? cleanSettings.examMinScore : cleanSettings.taskMinScore;
+          const newOrder = isExamTest ? cleanSettings.examQuestionOrder : cleanSettings.taskQuestionOrder;
           const updatedPayload = {
             ...(t.payload || {}),
             minimum_required_score: newScore,
             min_score: newScore,
-            task_repetitions: cleanSettings.taskRepetitions
+            task_repetitions: cleanSettings.taskRepetitions,
+            question_order: newOrder
           };
 
           const updateFields = {
-            payload: updatedPayload
+            payload: updatedPayload,
+            question_order: newOrder
           };
           if (applyToExisting) {
             updateFields.minimum_required_score = newScore;
@@ -979,6 +1003,233 @@ export async function updateTestPassingScore(testId, newScore) {
   if (error) throw error;
   clearApiCache('tests');
   return { success: true, newScore: validScore };
+}
+
+/**
+ * Authoritative Class Discipline Governance Architecture (SSOT)
+ * Provides centralized configuration for each class discipline.
+ */
+export const DEFAULT_DISCIPLINE_GOVERNANCE = {
+  VOCABULARY: {
+    discipline: 'VOCABULARY',
+    name: 'Vocabulary',
+    engineFamily: 'Vocabulary Mastery Modules',
+    badge: 'Tiered Discipline',
+    isTiered: true,
+    levels: ['1st Level', '2nd Level', '3rd Level', 'Non-Level'],
+    taskRepetitions: 7,
+    taskMinScore: 70,
+    examMinScore: 60,
+    taskDuration: 11,
+    examDuration: 54,
+    numThemes: 4,
+    wordsPacing: {
+      written: 15,
+      selection: 10,
+      spoken: 10
+    },
+    phrasesPacing: {
+      written: 25,
+      selection: 10,
+      spoken: 20
+    },
+    exclusiveModules: [
+      'Recognition Module',
+      'Spoken Module',
+      'Written Module'
+    ],
+    levelRules: {
+      LEVEL_1: {
+        levelNumber: 1,
+        name: '1st Level',
+        sku: 'CMP-1VOCAB',
+        scope: 'Words & Phrases',
+        scopeShort: 'Words & Phrases',
+        taskRepetitions: 14,
+        wordsReps: 7,
+        phrasesReps: 7,
+        numThemes: 4,
+        numTopics: 16,
+        engine: 'Vocabulary Mastery Modules',
+        modules: ['Recognition Module', 'Spoken Module', 'Written Module'],
+        taskMinScore: 70,
+        examMinScore: 60,
+        taskDuration: 11,
+        examDuration: 54,
+        description: 'Basic Vocabulary · Dual Repetition 7×7 (7 Words + 7 Phrases = 14 reps)'
+      },
+      LEVEL_2: {
+        levelNumber: 2,
+        name: '2nd Level',
+        sku: 'CMP-2VOCAB',
+        scope: '100% Words Only',
+        scopeShort: '100% Words Only',
+        taskRepetitions: 7,
+        wordsReps: 7,
+        phrasesReps: 0,
+        numThemes: 4,
+        numTopics: 16,
+        engine: 'Vocabulary Mastery Modules',
+        modules: ['Recognition Module', 'Spoken Module', 'Written Module'],
+        taskMinScore: 70,
+        examMinScore: 60,
+        taskDuration: 11,
+        examDuration: 54,
+        description: '100% Words Only (Zero-Phrases SSOT per § 2.7.1) · 7 Words Repetitions'
+      },
+      LEVEL_3: {
+        levelNumber: 3,
+        name: '3rd Level',
+        sku: 'CMP-3VOCAB',
+        scope: 'Words & Phrases',
+        scopeShort: 'Words & Phrases',
+        taskRepetitions: 14,
+        wordsReps: 7,
+        phrasesReps: 7,
+        numThemes: 4,
+        numTopics: 16,
+        engine: 'Vocabulary Mastery Modules',
+        modules: ['Recognition Module', 'Spoken Module', 'Written Module'],
+        taskMinScore: 70,
+        examMinScore: 60,
+        taskDuration: 11,
+        examDuration: 54,
+        description: 'Unified Topic Package · 7×7 Repetitive Mastery (7 Words + 7 Phrases = 14 reps)'
+      },
+      NON_LEVEL: {
+        levelNumber: 0,
+        name: 'Non-Level',
+        sku: 'EVN-VOCAB, SHR-VOCAB, TMT-VOCAB',
+        scope: 'Words & Phrases',
+        scopeShort: 'Words & Phrases',
+        taskRepetitions: 14,
+        wordsReps: 7,
+        phrasesReps: 7,
+        numThemes: 4,
+        numTopics: 16,
+        engine: 'Vocabulary Mastery Modules',
+        modules: ['Recognition Module', 'Spoken Module', 'Written Module'],
+        taskMinScore: 70,
+        examMinScore: 60,
+        taskDuration: 11,
+        examDuration: 54,
+        description: 'Single-Tier Institutional Curriculum · Dual Repetition 7×7'
+      }
+    },
+    dataSource: 'vocabulary_vault',
+    dataSourceLabel: 'Vocabulary Vault (Direct DB Link)',
+    description: 'One continuous tiered discipline sharing identical systemic rules across all levels: 7×7 repetitive mastery, 4 themes (A–D), and exclusive Vocabulary Vault data binding.'
+  },
+  BASIC_ENGLISH: {
+    discipline: 'BASIC_ENGLISH',
+    name: 'Basic English',
+    badge: 'Foundation Discipline',
+    isTiered: false,
+    levels: ['1st Level', 'Foundation'],
+    taskRepetitions: 1,
+    taskMinScore: 60,
+    examMinScore: 60,
+    taskDuration: 15,
+    examDuration: 40,
+    numThemes: 1,
+    exclusiveModules: ['BASIC-M1-DESC (Point & Speak Photo Description)'],
+    dataSource: 'grammar_demonstratives',
+    dataSourceLabel: 'Demonstrative & Adjective Grammar Matrix',
+    description: 'Dedicated demonstrative grammar rules (THIS, THAT, THESE, THOSE), adjective ordering, and camera photo capture evaluation engine.'
+  },
+  SPEAKING: {
+    discipline: 'SPEAKING',
+    name: 'Speaking',
+    badge: 'Oral Performance Discipline',
+    isTiered: true,
+    levels: ['2nd Level', '3rd Level'],
+    taskRepetitions: 1,
+    taskMinScore: 60,
+    examMinScore: 60,
+    taskDuration: 15,
+    examDuration: 30,
+    numThemes: 2,
+    exclusiveModules: ['SPEAK-M5-ORAL (Public Speaking Performance)', 'SPEAK-M7-DIALOGUE (Interactive Conversational)'],
+    dataSource: 'speaking_prompts',
+    dataSourceLabel: 'Oral Topic Prompts & Speech Rubrics',
+    description: 'Oral speech presentation, pronunciation clarity, fluency pacing, and conversational dialogue scoring.'
+  },
+  STORYTELLING: {
+    discipline: 'STORYTELLING',
+    name: 'Storytelling',
+    badge: 'Narrative Literature Discipline',
+    isTiered: true,
+    levels: ['1st Level', '2nd Level'],
+    taskRepetitions: 1,
+    taskMinScore: 60,
+    examMinScore: 60,
+    taskDuration: 15,
+    examDuration: 30,
+    numThemes: 2,
+    exclusiveModules: ['STORY-M6-NARRATIVE (Story Reading & Comprehension)'],
+    dataSource: 'narrative_texts',
+    dataSourceLabel: 'Narrative Story Passages & Comprehension Banks',
+    description: 'Story narrative comprehension, character dialogue, plot sequencing, and monologue retelling.'
+  }
+};
+
+export async function fetchDisciplineGovernance(disciplineKey = 'VOCABULARY') {
+  const disc = String(disciplineKey || 'VOCABULARY').toUpperCase();
+  const defaultObj = DEFAULT_DISCIPLINE_GOVERNANCE[disc] || DEFAULT_DISCIPLINE_GOVERNANCE.VOCABULARY;
+  const sb = await getSupabase();
+  const cacheKey = `topscore_disc_gov_${disc}`;
+
+  try {
+    const local = localStorage.getItem(cacheKey);
+    if (local) {
+      try { return { ...defaultObj, ...JSON.parse(local) }; } catch (_) {}
+    }
+  } catch (_) {}
+
+  try {
+    const { data, error } = await sb.from('site_settings')
+      .select('key, value')
+      .eq('key', `discipline_rules_${disc}`)
+      .maybeSingle();
+
+    if (!error && data && data.value) {
+      const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+      const merged = { ...defaultObj, ...parsed };
+      try { localStorage.setItem(cacheKey, JSON.stringify(merged)); } catch (_) {}
+      return merged;
+    }
+  } catch (err) {
+    console.warn('[fetchDisciplineGovernance] Error:', err?.message || err);
+  }
+
+  return defaultObj;
+}
+
+export async function saveDisciplineGovernance(disciplineKey, updates = {}) {
+  const disc = String(disciplineKey || 'VOCABULARY').toUpperCase();
+  const defaultObj = DEFAULT_DISCIPLINE_GOVERNANCE[disc] || DEFAULT_DISCIPLINE_GOVERNANCE.VOCABULARY;
+  const merged = { ...defaultObj, ...updates, discipline: disc };
+  const payloadStr = JSON.stringify(merged);
+  const sb = await getSupabase();
+
+  try {
+    localStorage.setItem(`topscore_disc_gov_${disc}`, payloadStr);
+  } catch (_) {}
+
+  try {
+    const { error } = await sb.from('site_settings').upsert({
+      key: `discipline_rules_${disc}`,
+      value: payloadStr,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'key' });
+
+    if (error) throw error;
+  } catch (err) {
+    console.warn('[saveDisciplineGovernance] Error:', err?.message || err);
+    throw err;
+  }
+
+  return { success: true, data: merged };
 }
 
 /**
@@ -1635,7 +1886,7 @@ export async function startTest(studentId, testId) {
         if (pct >= reqScore || (isRem && pct >= 60)) {
           const tQ = Number(a.total_questions || 0);
           const cCount = Number(a.correct_count || a.score || 0);
-          const isPhrases = (tQ > 0 && tQ <= 40) || (cCount > 0 && cCount <= 10 && tQ <= 40) || /PHRASES/i.test(fr);
+          const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10 && tQ <= 20) || /PHRASES/i.test(fr);
           if (isPhrases) phrasesPasses++;
           else wordsPasses++;
         }
@@ -1857,7 +2108,7 @@ export async function startTest(studentId, testId) {
           if (isUni) {
             const tQ = Number(att.total_questions || 0);
             const cCount = Number(att.correct_count || att.score || 0);
-            const isPhrases = (tQ > 0 && tQ <= 40) || (cCount > 0 && cCount <= 10 && tQ <= 40) || /PHRASES/i.test(fr);
+            const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10 && tQ <= 20) || /PHRASES/i.test(fr);
             if (isPhrases) phrasesPassByTask[tid] = (phrasesPassByTask[tid] || 0) + 1;
             else wordsPassByTask[tid] = (wordsPassByTask[tid] || 0) + 1;
           } else {
@@ -2123,7 +2374,7 @@ export async function startTest(studentId, testId) {
       if (!Array.isArray(snap.options_snapshot) || snap.options_snapshot.length < 2) {
         const acc = Array.isArray(a.accepted_answers_snapshot) ? a.accepted_answers_snapshot[0] : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
         const correctOpt = acc || snap.question_text || 'Option';
-        const distractors = candidatePool.filter(c => c !== correctOpt).sort(() => 0.5 - Math.random()).slice(0, 4);
+        const distractors = candidatePool.filter(c => c !== correctOpt).sort(() => 0.5 - Math.random()).slice(0, 3);
         snap.options_snapshot = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
         changed = true;
       }
@@ -2141,9 +2392,7 @@ export async function startTest(studentId, testId) {
       options_snapshot: snap.options_snapshot || a.options_snapshot,
       student_answer: a.student_answer,
       topic_snapshot: a.topic_snapshot,
-      question_type_snapshot: a.question_type_snapshot,
-      accepted_answers_snapshot: a.accepted_answers_snapshot,
-      correct_answer_snapshot: a.correct_answer_snapshot
+      question_type_snapshot: a.question_type_snapshot
     };
   });
 
@@ -2799,7 +3048,7 @@ export async function logCheatingEvent(studentId, testId, action, detail) {
 export async function fetchTests(filters = {}) {
   const sb = await getSupabase();
   try {
-    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
+    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
     if (filters.class_id) query = query.eq('class_id', filters.class_id);
     if (filters.class_ids && Array.isArray(filters.class_ids)) {
       if (filters.class_ids.length === 0) return [];
@@ -4258,6 +4507,34 @@ export async function checkAndTriggerLevelUp(studentId, currentLevelId) {
   return { levelUp: true, newLevel: nextLevel.name, status: 'LEVELED_UP' };
 }
 
+export async function fetchFullStudentProfile(studentId) {
+  const sb = await getSupabase();
+  const { data, error } = await sb.from('students')
+    .select(`
+      id, name, gender, birth_date, education, province, city, district, village, photo_url, photo_status,
+      level_id,
+      levels:level_id(id, level_number, name),
+      batch_id,
+      batches:batch_id(current_level_id, levels:current_level_id(id, level_number, name))
+    `)
+    .eq('id', studentId)
+    .maybeSingle();
+
+  if (error || !data) {
+    if (error) console.error("fetchFullStudentProfile Error:", error);
+    return null;
+  }
+
+  const lvlId = data.level_id || data.batches?.current_level_id || null;
+  const lvlNum = data.levels?.level_number != null ? data.levels.level_number : (data.batches?.levels?.level_number != null ? data.batches.levels.level_number : 1);
+  const lvlName = data.levels?.name || data.batches?.levels?.name || (lvlNum === 0 ? 'Non-Level' : (lvlNum === 99 ? 'Alumni' : '1st Level'));
+
+  return {
+    ...data,
+    resolved_level: { level_id: lvlId, level_number: lvlNum, level_name: lvlName }
+  };
+}
+
 export async function fetchStudentLevel(studentId) {
   const sb = await getSupabase();
   const { data, error } = await sb.from('students')
@@ -5117,7 +5394,7 @@ export async function adminApplyForgiven({
         if (isUnifiedTask && pct >= 60) {
           const phrAtts = submittedAtts.filter(a =>
             (a.forgiven_reason && /PHRASES?/i.test(a.forgiven_reason)) ||
-            (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 40)
+            (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 20)
           );
           const phrTotalQ = 10;
           const phrSc = Math.round(phrTotalQ * (pct / 100));
@@ -5410,7 +5687,8 @@ export async function upsertDynamicTestShell(config) {
     prerequisiteId = null,
     moduleId = null,
     answerType = null,
-    displayOrder = 1
+    displayOrder = 1,
+    questionOrder = 'random'
   } = config;
 
   const isTest = tier === 'TEST' || tier === 'EXAM';
@@ -5428,7 +5706,7 @@ export async function upsertDynamicTestShell(config) {
   const codeThemeTopic = levelNum === 0 ? `0${themeCode}${cleanTopCode}` : `${themeCode}${cleanTopCode}`;
   const codeThemeExam = levelNum === 0 ? `0${themeCode}` : `${themeCode}`;
 
-  const code = isUnified
+  const code = (isUnified || levelNum === 2)
     ? (isTest ? `${progCode}-${classShort}-${codeThemeExam}-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-TASK`)
     : (isPhrase
         ? (isTest ? `${progCode}-${classShort}-${codeThemeExam}-PHRASES-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-PHRASES-TASK`)
@@ -5440,7 +5718,7 @@ export async function upsertDynamicTestShell(config) {
   const ordinal = toOrdinal(levelNum);
   const prefix = ordinal ? `${ordinal} ` : '';
   const classTitlePart = (levelNum === 0 && config.className) ? config.className : 'Vocabulary';
-  const generatedTitle = isUnified
+  const generatedTitle = (isUnified || levelNum === 2)
     ? (isTest
         ? `${prefix}${classTitlePart} Exam ${codeThemeExam}${cleanTitle ? ' - ' + cleanTitle : ''}`
         : `${prefix}${classTitlePart} Task ${codeThemeTopic}${cleanTitle ? ' - ' + cleanTitle : ''}`)
@@ -5514,6 +5792,8 @@ export async function upsertDynamicTestShell(config) {
             `3VOCAB-${themeCode}-TEST-PHR`
           ]
         : [
+            `${progCode}-${classShort}-${codeThemeExam}-WORDS-EXAM`,
+            `${progCode}-${classShort}-${codeThemeExam}-EXAM`,
             `${levelNum}${themeCode}-WORDS-EXAM`,
             `${levelNum}${themeCode}-WORDS-TEST`,
             `${levelNum}${themeCode} Words Exam`,
@@ -5539,6 +5819,8 @@ export async function upsertDynamicTestShell(config) {
             `3VOCAB-${themeCode}${cleanTopCode}-PHR`
           ]
         : [
+            `${progCode}-${classShort}-${codeThemeTopic}-WORDS-TASK`,
+            `${progCode}-${classShort}-${codeThemeTopic}-TASK`,
             `${levelNum}${themeCode}${cleanTopCode}-WORDS-TASK`,
             `${levelNum}${themeCode}${cleanTopCode}-WORDS-QUIZ`,
             `${levelNum}${themeCode}${rawCode}-WORDS-TASK`,
@@ -5602,6 +5884,7 @@ export async function upsertDynamicTestShell(config) {
     minimum_required_score:     effectiveMinScore,
     prerequisite_test_id:       prerequisiteId,
     answer_type:                effectiveAnswerType,
+    question_order:             questionOrder,
     is_dynamic_shell:           true,
     display_order:              displayOrder,
     payload:                    {
@@ -5615,6 +5898,7 @@ export async function upsertDynamicTestShell(config) {
       topic_code: isTest ? null : (topicCode || null),
       category: isUnified ? 'unified' : (isPhrase ? 'phrases' : 'words'),
       answer_type: effectiveAnswerType,
+      question_order: questionOrder,
       shell_code: code,
       tier: isTest ? 'EXAM' : 'TASK',
       working_duration_minutes: effectiveDurationMinutes,
@@ -5655,7 +5939,9 @@ export async function updateClassTestsConfig(params = {}) {
     taskPassingScore = 60,
     wordsTestAnswerType = 'spoken',
     phrasesTestAnswerType = 'selection',
-    testPassingScore = 60
+    testPassingScore = 60,
+    taskQuestionOrder = 'random',
+    examQuestionOrder = 'random'
   } = params;
 
   if (!classId) throw new Error('classId is required.');
@@ -5689,6 +5975,7 @@ export async function updateClassTestsConfig(params = {}) {
       updateData.minimum_required_score = Number(testPassingScore);
       const testAns = isPhrase ? (phrasesTestAnswerType || 'selection') : (wordsTestAnswerType || 'spoken');
       updateData.answer_type = testAns;
+      updateData.question_order = examQuestionOrder;
 
       // Extract theme code to calculate expected question count
       const thMatch = (row.shell_code && row.shell_code.match(/([A-H])(?:-|$)/i)) || (row.title && row.title.match(/Vocabulary\s+([A-H])/i));
@@ -5713,7 +6000,8 @@ export async function updateClassTestsConfig(params = {}) {
           minimum_required_score: Number(testPassingScore),
           answer_type: testAns,
           working_duration_minutes: Number(examDur),
-          duration_minutes: Number(examDur)
+          duration_minutes: Number(examDur),
+          question_order: examQuestionOrder
         };
       }
       updatedTests++;
@@ -5731,13 +6019,15 @@ export async function updateClassTestsConfig(params = {}) {
       updateData.working_duration_minutes = Number(dur);
       updateData.minimum_required_score = Number(taskPassingScore);
       updateData.answer_type = taskAns;
+      updateData.question_order = taskQuestionOrder;
       if (row.payload && typeof row.payload === 'object') {
         updateData.payload = {
           ...row.payload,
           working_duration_minutes: Number(dur),
           duration_minutes: Number(dur),
           minimum_required_score: Number(taskPassingScore),
-          answer_type: taskAns
+          answer_type: taskAns,
+          question_order: taskQuestionOrder
         };
       }
       updatedTasks++;
@@ -5784,7 +6074,33 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
   const vocabModuleId = vocabModule ? vocabModule.id : null;
   const phraseModuleId = phraseModule ? phraseModule.id : null;
 
-  for (const levelNum of targetLevels) {
+  // Strict Class-Level Invariant Guard:
+  // If an explicitClassId is provided, resolve the class's assigned level and STRICTLY constrain generation to that single level!
+  let explicitClass = null;
+  let explicitClassLevelNum = null;
+  if (config.explicitClassId) {
+    const { data: clsData } = await sb.from('classes')
+      .select('id, name, code, program_id, level_id')
+      .eq('id', config.explicitClassId)
+      .maybeSingle();
+    if (clsData) {
+      explicitClass = clsData;
+      if (clsData.level_id) {
+        const { data: lvlRec } = await sb.from('levels').select('level_number').eq('id', clsData.level_id).maybeSingle();
+        if (lvlRec?.level_number != null) explicitClassLevelNum = Number(lvlRec.level_number);
+      }
+    }
+  }
+
+  let effectiveLevels = targetLevels;
+  if (explicitClass && explicitClassLevelNum != null) {
+    if (targetLevels.length !== 1 || Number(targetLevels[0]) !== explicitClassLevelNum) {
+      console.warn(`[autoGenerateTestsHierarchy] Target class "${explicitClass.name}" belongs strictly to Level ${explicitClassLevelNum}. Constraining targetLevels from [${targetLevels.join(', ')}] to [${explicitClassLevelNum}] to prevent cross-level test pollution.`);
+    }
+    effectiveLevels = [explicitClassLevelNum];
+  }
+
+  for (const levelNum of effectiveLevels) {
     // Determine level_id
     const { data: lvlData } = await sb.from('levels')
       .select('id, name')
@@ -5793,15 +6109,15 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     if (!lvlData) continue;
     const levelId = lvlData.id;
 
-    let targetClassId = config.explicitClassId || null;
+    let targetClassId = null;
     let targetClassName = null;
-    if (targetClassId) {
-      const { data: clsData } = await sb.from('classes').select('name, code').eq('id', targetClassId).maybeSingle();
-      if (!clsData || !isVocabularyClass(clsData)) {
-        console.warn(`[autoGenerateTestsHierarchy] Target class ${targetClassId} is not a Vocabulary class. Skipping vocabulary generation.`);
+    if (explicitClass && explicitClassLevelNum === levelNum) {
+      if (!isVocabularyClass(explicitClass)) {
+        console.warn(`[autoGenerateTestsHierarchy] Target class ${explicitClass.name} is not a Vocabulary class. Skipping vocabulary generation.`);
         continue;
       }
-      targetClassName = clsData.name;
+      targetClassId = explicitClass.id;
+      targetClassName = explicitClass.name;
     } else {
       // Prioritize active vocabulary class assigned to this exact level and program
       const { data: classDataList } = await sb.from('classes')
@@ -5885,6 +6201,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const wordsTestAns = config.wordsTestAnswerType || 'spoken';
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
     const testPass = config.testPassingScore !== undefined ? Number(config.testPassingScore) : 60;
+    const taskOrder = config.taskQuestionOrder || config.questionOrder || 'random';
+    const examOrder = config.examQuestionOrder || config.questionOrder || 'random';
 
     const isUnifiedMode = config.category === 'unified' || config.unified === true;
 
@@ -5917,7 +6235,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             durationMinutes: (wordsTaskDur || 10) + (phrasesTaskDur || 5),
             minimumRequiredScore: taskPass,
             prerequisiteId: topicPrereqId,
-            displayOrder: displayOrder++
+            displayOrder: displayOrder++,
+            questionOrder: taskOrder
           });
           if (action === 'inserted') results.tasks++;
           if (action === 'updated') results.updated++;
@@ -5937,15 +6256,16 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
               durationMinutes: wordsTaskDur,
               minimumRequiredScore: taskPass,
               prerequisiteId: topicPrereqId,
-              displayOrder: displayOrder++
+              displayOrder: displayOrder++,
+              questionOrder: taskOrder
             });
             if (action === 'inserted') results.tasks++;
             if (action === 'updated') results.updated++;
             thisTopicLastId = testId;
           }
 
-          // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId)
-          if (topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+          // 2. Phrases Task (Peer in topic pair, shares same topicPrereqId) — Strictly skipped for Level 2 (Zero-Phrases SSOT per Rule 2.7.1)
+          if (levelNum !== 2 && topicObj.hasPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
             hasAnyPhrases = true;
             const { testId, action } = await upsertShell({
               institutionId, programId, levelId, classId: targetClassId, levelNum,
@@ -5958,7 +6278,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
               durationMinutes: phrasesTaskDur,
               minimumRequiredScore: taskPass,
               prerequisiteId: topicPrereqId,
-              displayOrder: displayOrder++
+              displayOrder: displayOrder++,
+              questionOrder: taskOrder
             });
             if (action === 'inserted') results.tasks++;
             if (action === 'updated') results.updated++;
@@ -5992,7 +6313,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
           durationMinutes: examDuration,
           minimumRequiredScore: testPass,
           prerequisiteId: lastThemeTaskId,
-          displayOrder: displayOrder++
+          displayOrder: displayOrder++,
+          questionOrder: examOrder
         });
         if (action === 'inserted') results.tests++;
         if (action === 'updated') results.updated++;
@@ -6011,15 +6333,16 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             durationMinutes: config.wordsExamDurationMinutes || null,
             minimumRequiredScore: testPass,
             prerequisiteId: lastThemeTaskId,
-            displayOrder: displayOrder++
+            displayOrder: displayOrder++,
+            questionOrder: examOrder
           });
           if (action === 'inserted') results.tests++;
           if (action === 'updated') results.updated++;
           lastThemeExamId = testId;
         }
 
-        // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId)
-        if (hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
+        // 4. Phrases Exam (Peer in exam pair, shares same lastThemeTaskId) — Strictly skipped for Level 2 (Zero-Phrases SSOT per Rule 2.7.1)
+        if (levelNum !== 2 && hasAnyPhrases && (!config.category || config.category === 'all' || config.category === 'phrases')) {
           const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'EXAM', themeName: themeData.name, topicName: null,
@@ -6031,7 +6354,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             durationMinutes: config.phrasesExamDurationMinutes || null,
             minimumRequiredScore: testPass,
             prerequisiteId: lastThemeTaskId,
-            displayOrder: displayOrder++
+            displayOrder: displayOrder++,
+            questionOrder: examOrder
           });
           if (action === 'inserted') results.tests++;
           if (action === 'updated') results.updated++;
@@ -7308,6 +7632,8 @@ if (typeof window !== 'undefined') {
   window.fetchClassTestSettings = fetchClassTestSettings;
   window.saveClassTestSettings = saveClassTestSettings;
   window.updateTestPassingScore = updateTestPassingScore;
+  window.fetchDisciplineGovernance = fetchDisciplineGovernance;
+  window.saveDisciplineGovernance = saveDisciplineGovernance;
   window.fetchThemeProgramAssignments = fetchThemeProgramAssignments;
   window.toggleThemeProgramAssignment = toggleThemeProgramAssignment;
 }

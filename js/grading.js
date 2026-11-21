@@ -831,6 +831,25 @@ export function isPrerequisiteMet(studentBestPercentage, requiredPercentage = 60
 }
 
 /**
+ * Authoritative Points Rounder with Ceiling-Cap Star Protection (Rule 2.9 SSOT)
+ * Normal half-up rounding (Math.round for >= .5), except when points approach
+ * maximum points without fully reaching it (e.g. 49.5 out of 50 -> 49 via Math.floor)
+ * to strictly protect 100% Star (★) integrity.
+ *
+ * @param {number} points
+ * @param {number} [maxPoints=0]
+ * @returns {number}
+ */
+export function roundPointsWithCeilingCap(points, maxPoints = 0) {
+  const p = Number(points) || 0;
+  const m = Number(maxPoints) || 0;
+  if (m > 0 && p < m && p >= m - 0.5) {
+    return Math.floor(p);
+  }
+  return Math.round(p);
+}
+
+/**
  * Centralized Authoritative Grade Engine (Official Scale)
  * ★ (S) : 100%       - Excellent (Green / Hijau #00c000ff)
  * A     : 90% – 99%  - Very Good (Rich Green #00c000ff)
@@ -910,7 +929,7 @@ export const isWeeklyExam = isExam; // Backward compatibility alias
  * Strictly 1 unified palette for all grades, scores, points, and answer evaluations.
  * No hardcoded hex codes may exist outside of this definition.
  */
-export const TOPSCORE_COLORS = Object.freeze({
+export const TOPSCORE_COLORS = {
   // 1. Grade & Score Tiers (Nilai Ujian & Persentase)
   STAR: '#c084fc', // 100% Star ★ (Vibrant Purple - #c084fc)
   STAR_8HEX: '#c084fcff', // 8-digit hex alias with alpha
@@ -938,7 +957,6 @@ export const TOPSCORE_COLORS = Object.freeze({
   FORGIVEN_RGB: '255, 0, 0',
   X_RGB: '139, 92, 246',
   PURPLE_RGB: '139, 92, 246',
-  NEUTRAL_RGB: '148, 163, 184',
 
   // 3. Question Answer Evaluation Status (Result Page)
   CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Strictly referencing Grade A, never Star)
@@ -948,30 +966,30 @@ export const TOPSCORE_COLORS = Object.freeze({
   // 4. Grade Badge Text Contrast
   TEXT_STAR: '#0F172A', // Deep dark slate star symbol on ★ badge (Universal Dark Standard)
   TEXT_DARK: '#0F172A', // Deep dark slate letters for A, B, C, D, E badges
-});
+};
 
 /**
- * 4-Pillar Progression & ABCD System Colors (SSOT Rule 2.10.1: Pink -> Orange -> Lime -> Purple)
+ * 4-Pillar Progression & ABCD System Colors (SSOT Rule 2.10.1: Pink -> Orange -> Lime -> Cyan)
  * A: Electric Pink (#ff2d87 - Independent SSOT token source, decoupled from Grade Star)
  * B: Dark Orange (Grade D, #ff8c00)
  * C: Electric Lime (Grade B, #95ff00)
- * D: Vibrant Purple / Violet (#c084fc)
+ * D: Tactical Cyan / Blue (#38bdf8)
  */
-export const TOPSCORE_QUAD_COLORS = Object.freeze({
+export const TOPSCORE_QUAD_COLORS = {
   A: '#ff2d87',
   B: TOPSCORE_COLORS.D, // #FF8C00 (Dark Orange)
   C: TOPSCORE_COLORS.B, // #95ff00ff (Electric Lime)
-  D: '#c084fc',
+  D: '#38bdf8', // Tactical Cyan
   A_RGB: '255, 45, 135',
   B_RGB: TOPSCORE_COLORS.D_RGB,
   C_RGB: TOPSCORE_COLORS.B_RGB,
-  D_RGB: '192, 132, 252'
-});
+  D_RGB: '56, 189, 248'
+};
 
 /**
  * Authoritative Grade & Score Palette (6 Clean Tiers: ★, A, B, C, D, E)
  */
-const STAR_THEME = {
+export const STAR_THEME = {
   symbol: '★',
   label: 'Excellent',
   predicate: 'Excellent',
@@ -1111,6 +1129,366 @@ export const GRADE_PALETTE = {
     sparkle: false,
   },
 };
+
+/**
+ * Authoritative Canonical Default Color System (SSOT)
+ */
+export const DEFAULT_COLOR_SYSTEM = Object.freeze({
+  // 1. 4-Pillar Architecture (ABCD System & Themes)
+  quadA: '#ff2d87', // Pilar A (ADMIN & Theme A)
+  quadB: '#FF8C00', // Pilar B (BOARD & Theme B)
+  quadC: '#95ff00', // Pilar C (CLASS & Theme C)
+  quadD: '#38bdf8', // Pilar D (DATA & Theme D)
+
+  // 2. Dual Pairs (Components & Test Types)
+  words: '#95ff00', // Words (WRD) -> Lime
+  phrases: '#ff2d87', // Phrases (PHR) -> Pink
+  task: '#95ff00', // Task (Formatif) -> Lime
+  exam: '#ff2d87', // Exam (Milestone) -> Pink
+
+  // 3. 3-Pillar Evaluations & Semantic Alerts
+  correct: '#00c000', // Correct (1.0 pt) & Status Sukses/Aktif
+  partial: '#FFFF00', // Partial (0.5 pt) & Status Warning/Pending/Remedi
+  incorrect: '#FF0000', // Incorrect (0.0 pt) & Status Danger/Hapus/Forgive
+
+  // 4. Action Buttons (Primary CTA & Permanent Danger)
+  btnPrimary: '#0284c7', // Primary Action CTA (Save, Proceed, Submit)
+  btnDanger: '#dc2626',  // Permanent Danger Action (Delete, Purge, Kick)
+
+  // 5. 7-Step Repetition Rainbow Spectrum (Pips 1-7)
+  rainbow1: '#FF0000', // Pip 1: Merah
+  rainbow2: '#FF8C00', // Pip 2: Jingga
+  rainbow3: '#FFFF00', // Pip 3: Kuning
+  rainbow4: '#00c000', // Pip 4: Hijau
+  rainbow5: '#38bdf8', // Pip 5: Biru
+  rainbow6: '#6366f1', // Pip 6: Nila
+  rainbow7: '#C084FC', // Pip 7: Ungu Spektrum (Tetap Ungu)
+
+  // 5. Academic Grade Scale (Rapor Siswa)
+  gradeStar: '#c084fc', // Grade Star ★ (100%)
+  gradeA: '#00c000', // Grade A (90-99%)
+  gradeB: '#95ff00', // Grade B (80-89%)
+  gradeC: '#FFFF00', // Grade C (60-79%)
+  gradeD: '#FF8C00', // Grade D (30-59%)
+  gradeE: '#FF0000'  // Grade E (0-29%)
+});
+
+/**
+ * Convert Hex color string to comma-separated RGB string
+ * @param {string} hex
+ * @returns {string} e.g. "56, 189, 248"
+ */
+export function hexToRgbString(hex) {
+  if (!hex || typeof hex !== 'string') return '148, 163, 184';
+  const clean = hex.replace('#', '').trim();
+  if (clean.length === 3) {
+    const r = parseInt(clean[0] + clean[0], 16) || 0;
+    const g = parseInt(clean[1] + clean[1], 16) || 0;
+    const b = parseInt(clean[2] + clean[2], 16) || 0;
+    return `${r}, ${g}, ${b}`;
+  }
+  if (clean.length >= 6) {
+    const r = parseInt(clean.substring(0, 2), 16) || 0;
+    const g = parseInt(clean.substring(2, 4), 16) || 0;
+    const b = parseInt(clean.substring(4, 6), 16) || 0;
+    return `${r}, ${g}, ${b}`;
+  }
+  return '148, 163, 184';
+}
+
+/**
+ * Apply color system overrides globally to document CSS variables (:root)
+ * and mutate JavaScript memory constants (TOPSCORE_COLORS, GRADE_PALETTE, STAR_THEME)
+ * so all dynamic JavaScript views, table formatters, and CSS rules update immediately.
+ * @param {Object} overrides
+ */
+export function applyGlobalColorSystem(overrides = {}) {
+  const cfg = { ...DEFAULT_COLOR_SYSTEM, ...overrides };
+
+  // 1. Mutate TOPSCORE_COLORS & palettes in memory so JS callers (getGradeColor, getGradeTheme, formatGradeBadgeHtml)
+  // immediately return the updated colors without requiring page reloads
+  if (cfg.gradeStar) {
+    TOPSCORE_COLORS.STAR = cfg.gradeStar;
+    TOPSCORE_COLORS.STAR_8HEX = cfg.gradeStar.length === 7 ? cfg.gradeStar + 'ff' : cfg.gradeStar;
+    TOPSCORE_COLORS.STAR_RGB = hexToRgbString(cfg.gradeStar);
+    if (typeof STAR_THEME !== 'undefined' && STAR_THEME) {
+      STAR_THEME.color = cfg.gradeStar;
+      STAR_THEME.rgb = TOPSCORE_COLORS.STAR_RGB;
+      STAR_THEME.glow = `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.5)`;
+    }
+    if (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE) {
+      if (GRADE_PALETTE['★']) {
+        GRADE_PALETTE['★'].color = cfg.gradeStar;
+        GRADE_PALETTE['★'].rgb = TOPSCORE_COLORS.STAR_RGB;
+        GRADE_PALETTE['★'].glow = `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.5)`;
+      }
+      if (GRADE_PALETTE['S']) {
+        GRADE_PALETTE['S'].color = cfg.gradeStar;
+        GRADE_PALETTE['S'].rgb = TOPSCORE_COLORS.STAR_RGB;
+        GRADE_PALETTE['S'].glow = `rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.5)`;
+      }
+    }
+  }
+
+  if (cfg.gradeA) {
+    TOPSCORE_COLORS.A = cfg.gradeA;
+    TOPSCORE_COLORS.A_8HEX = cfg.gradeA.length === 7 ? cfg.gradeA + 'ff' : cfg.gradeA;
+    TOPSCORE_COLORS.A_RGB = hexToRgbString(cfg.gradeA);
+    if (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE && GRADE_PALETTE['A']) {
+      GRADE_PALETTE['A'].color = cfg.gradeA;
+      GRADE_PALETTE['A'].rgb = TOPSCORE_COLORS.A_RGB;
+    }
+  }
+
+  if (cfg.gradeB) {
+    TOPSCORE_COLORS.B = cfg.gradeB;
+    TOPSCORE_COLORS.B_8HEX = cfg.gradeB.length === 7 ? cfg.gradeB + 'ff' : cfg.gradeB;
+    TOPSCORE_COLORS.B_RGB = hexToRgbString(cfg.gradeB);
+    if (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE && GRADE_PALETTE['B']) {
+      GRADE_PALETTE['B'].color = cfg.gradeB;
+      GRADE_PALETTE['B'].rgb = TOPSCORE_COLORS.B_RGB;
+    }
+  }
+
+  if (cfg.gradeC) {
+    TOPSCORE_COLORS.C = cfg.gradeC;
+    TOPSCORE_COLORS.C_RGB = hexToRgbString(cfg.gradeC);
+    TOPSCORE_COLORS.REMEDIAL = cfg.gradeC;
+    TOPSCORE_COLORS.REMEDIAL_RGB = TOPSCORE_COLORS.C_RGB;
+    if (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE) {
+      if (GRADE_PALETTE['C']) {
+        GRADE_PALETTE['C'].color = cfg.gradeC;
+        GRADE_PALETTE['C'].rgb = TOPSCORE_COLORS.C_RGB;
+      }
+      if (GRADE_PALETTE['R']) {
+        GRADE_PALETTE['R'].color = cfg.gradeC;
+        GRADE_PALETTE['R'].rgb = TOPSCORE_COLORS.C_RGB;
+      }
+    }
+  }
+
+  if (cfg.gradeD) {
+    TOPSCORE_COLORS.D = cfg.gradeD;
+    TOPSCORE_COLORS.D_RGB = hexToRgbString(cfg.gradeD);
+    if (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE && GRADE_PALETTE['D']) {
+      GRADE_PALETTE['D'].color = cfg.gradeD;
+      GRADE_PALETTE['D'].rgb = TOPSCORE_COLORS.D_RGB;
+    }
+  }
+
+  if (cfg.gradeE) {
+    TOPSCORE_COLORS.E = cfg.gradeE;
+    TOPSCORE_COLORS.E_RGB = hexToRgbString(cfg.gradeE);
+    TOPSCORE_COLORS.FORGIVEN = cfg.gradeE;
+    TOPSCORE_COLORS.FORGIVEN_RGB = TOPSCORE_COLORS.E_RGB;
+    if (typeof GRADE_PALETTE !== 'undefined' && GRADE_PALETTE) {
+      if (GRADE_PALETTE['E']) {
+        GRADE_PALETTE['E'].color = cfg.gradeE;
+        GRADE_PALETTE['E'].rgb = TOPSCORE_COLORS.E_RGB;
+      }
+      if (GRADE_PALETTE['F']) {
+        GRADE_PALETTE['F'].color = cfg.gradeE;
+        GRADE_PALETTE['F'].rgb = TOPSCORE_COLORS.E_RGB;
+      }
+    }
+  }
+
+  if (cfg.correct) TOPSCORE_COLORS.CORRECT = cfg.correct;
+  if (cfg.partial) TOPSCORE_COLORS.PARTIAL = cfg.partial;
+  if (cfg.incorrect) TOPSCORE_COLORS.INCORRECT = cfg.incorrect;
+
+  if (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS) {
+    if (cfg.quadA) TOPSCORE_QUAD_COLORS.A = cfg.quadA;
+    if (cfg.quadB) TOPSCORE_QUAD_COLORS.B = cfg.quadB;
+    if (cfg.quadC) TOPSCORE_QUAD_COLORS.C = cfg.quadC;
+    if (cfg.quadD) TOPSCORE_QUAD_COLORS.D = cfg.quadD;
+  }
+
+  const root = document.documentElement;
+  if (!root || !root.style) return;
+
+  // 4-Pillar
+  root.style.setProperty('--quad-a', cfg.quadA);
+  root.style.setProperty('--quad-a-rgb', hexToRgbString(cfg.quadA));
+  root.style.setProperty('--quad-b', cfg.quadB);
+  root.style.setProperty('--quad-b-rgb', hexToRgbString(cfg.quadB));
+  root.style.setProperty('--quad-c', cfg.quadC);
+  root.style.setProperty('--quad-c-rgb', hexToRgbString(cfg.quadC));
+  root.style.setProperty('--quad-d', cfg.quadD);
+  root.style.setProperty('--quad-d-rgb', hexToRgbString(cfg.quadD));
+
+  // Dual Pairs
+  root.style.setProperty('--words-color', cfg.words);
+  root.style.setProperty('--words-color-rgb', hexToRgbString(cfg.words));
+  root.style.setProperty('--phrases-color', cfg.phrases);
+  root.style.setProperty('--phrases-color-rgb', hexToRgbString(cfg.phrases));
+  root.style.setProperty('--task-color', cfg.task);
+  root.style.setProperty('--task-color-rgb', hexToRgbString(cfg.task));
+  root.style.setProperty('--exam-color', cfg.exam);
+  root.style.setProperty('--exam-color-rgb', hexToRgbString(cfg.exam));
+
+  // 3-Pillar & Evaluation
+  root.style.setProperty('--eval-correct', cfg.correct);
+  root.style.setProperty('--eval-correct-rgb', hexToRgbString(cfg.correct));
+  root.style.setProperty('--eval-partial', cfg.partial);
+  root.style.setProperty('--eval-partial-rgb', hexToRgbString(cfg.partial));
+  root.style.setProperty('--eval-incorrect', cfg.incorrect);
+  root.style.setProperty('--eval-incorrect-rgb', hexToRgbString(cfg.incorrect));
+
+  // 7 Rainbow Steps
+  root.style.setProperty('--rainbow-step-1', cfg.rainbow1);
+  root.style.setProperty('--rainbow-step-1-rgb', hexToRgbString(cfg.rainbow1));
+  root.style.setProperty('--rainbow-step-2', cfg.rainbow2);
+  root.style.setProperty('--rainbow-step-2-rgb', hexToRgbString(cfg.rainbow2));
+  root.style.setProperty('--rainbow-step-3', cfg.rainbow3);
+  root.style.setProperty('--rainbow-step-3-rgb', hexToRgbString(cfg.rainbow3));
+  root.style.setProperty('--rainbow-step-4', cfg.rainbow4);
+  root.style.setProperty('--rainbow-step-4-rgb', hexToRgbString(cfg.rainbow4));
+  root.style.setProperty('--rainbow-step-5', cfg.rainbow5);
+  root.style.setProperty('--rainbow-step-5-rgb', hexToRgbString(cfg.rainbow5));
+  root.style.setProperty('--rainbow-step-6', cfg.rainbow6);
+  root.style.setProperty('--rainbow-step-6-rgb', hexToRgbString(cfg.rainbow6));
+  root.style.setProperty('--rainbow-step-7', cfg.rainbow7);
+  root.style.setProperty('--rainbow-step-7-rgb', hexToRgbString(cfg.rainbow7));
+
+  // Academic Grade Scale
+  root.style.setProperty('--grade-star', cfg.gradeStar);
+  root.style.setProperty('--grade-star-rgb', hexToRgbString(cfg.gradeStar));
+  root.style.setProperty('--grade-star-glow', `rgba(${hexToRgbString(cfg.gradeStar)}, 0.45)`);
+  root.style.setProperty('--grade-a', cfg.gradeA);
+  root.style.setProperty('--grade-a-rgb', hexToRgbString(cfg.gradeA));
+  root.style.setProperty('--grade-b', cfg.gradeB);
+  root.style.setProperty('--grade-b-rgb', hexToRgbString(cfg.gradeB));
+  root.style.setProperty('--grade-c', cfg.gradeC);
+  root.style.setProperty('--grade-c-rgb', hexToRgbString(cfg.gradeC));
+  root.style.setProperty('--grade-d', cfg.gradeD);
+  root.style.setProperty('--grade-d-rgb', hexToRgbString(cfg.gradeD));
+  root.style.setProperty('--grade-e', cfg.gradeE);
+  root.style.setProperty('--grade-e-rgb', hexToRgbString(cfg.gradeE));
+
+  // Action Buttons
+  if (cfg.btnPrimary) {
+    root.style.setProperty('--btn-primary-bg', cfg.btnPrimary);
+    root.style.setProperty('--btn-primary-rgb', hexToRgbString(cfg.btnPrimary));
+  }
+  if (cfg.btnDanger) {
+    root.style.setProperty('--btn-danger-bg', cfg.btnDanger);
+    root.style.setProperty('--btn-danger-rgb', hexToRgbString(cfg.btnDanger));
+  }
+}
+
+/**
+ * Authoritative Canonical Default Interface System (SSOT)
+ * Comprehensive 3-Pillar UI Governance: Colours, Typography, Surfaces
+ */
+export const DEFAULT_INTERFACE_SYSTEM = Object.freeze({
+  colors: { ...DEFAULT_COLOR_SYSTEM },
+  typography: {
+    fontSans: "'Inter', sans-serif",
+    fontMono: "'JetBrains Mono', 'Fira Code', monospace",
+    text1: '#ffffff',
+    text2: '#e2e8f0',
+    text3: '#94a3b8'
+  },
+  surface: {
+    bgMain: '#090D16',
+    bgSidebar: '#0F172A',
+    bgCard: '#121c35',
+    bgStudent: '#060911',
+    bgBanner: '#030a12',
+    borderOpacity: '0.08',
+    glowIntensity: '1.0'
+  }
+});
+
+/**
+ * Apply interface system overrides globally to document CSS variables (:root)
+ * @param {Object} custom
+ */
+export function applyGlobalInterfaceSystem(custom = {}) {
+  const cfg = {
+    colors: { ...DEFAULT_INTERFACE_SYSTEM.colors, ...(custom.colors || {}) },
+    typography: { ...DEFAULT_INTERFACE_SYSTEM.typography, ...(custom.typography || {}) },
+    surface: { ...DEFAULT_INTERFACE_SYSTEM.surface, ...(custom.surface || {}) }
+  };
+
+  // 1. Apply colours
+  applyGlobalColorSystem(cfg.colors);
+
+  const root = document.documentElement;
+  if (!root || !root.style) return;
+
+  // 2. Apply typography
+  if (cfg.typography.fontSans) {
+    root.style.setProperty('--font-sans', cfg.typography.fontSans);
+    root.style.setProperty('--font-body', cfg.typography.fontSans);
+    root.style.setProperty('--font-display', cfg.typography.fontSans);
+  }
+  if (cfg.typography.fontMono) {
+    root.style.setProperty('--font-mono', cfg.typography.fontMono);
+  }
+  if (cfg.typography.text1) root.style.setProperty('--clr-text-1', cfg.typography.text1);
+  if (cfg.typography.text2) root.style.setProperty('--clr-text-2', cfg.typography.text2);
+  if (cfg.typography.text3) root.style.setProperty('--clr-text-3', cfg.typography.text3);
+
+  // 3. Apply surface
+  if (cfg.surface.bgMain) root.style.setProperty('--fm-bg-main', cfg.surface.bgMain);
+  if (cfg.surface.bgSidebar) root.style.setProperty('--fm-bg-sidebar', cfg.surface.bgSidebar);
+  if (cfg.surface.bgCard) root.style.setProperty('--clr-surface', cfg.surface.bgCard);
+  if (cfg.surface.bgStudent) root.style.setProperty('--fm-bg-student', cfg.surface.bgStudent);
+  if (cfg.surface.bgBanner) root.style.setProperty('--fm-bg-banner', cfg.surface.bgBanner);
+  if (cfg.surface.borderOpacity) {
+    root.style.setProperty('--clr-border', `rgba(255, 255, 255, ${cfg.surface.borderOpacity})`);
+  }
+}
+
+/**
+ * Load saved interface system from localStorage and apply to :root
+ */
+export function loadAndApplyGlobalInterfaceSystem() {
+  try {
+    const cached = localStorage.getItem('topscore_interface_system');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      applyGlobalInterfaceSystem(parsed);
+      return;
+    }
+    const legacyColors = localStorage.getItem('topscore_color_system');
+    if (legacyColors) {
+      applyGlobalColorSystem(JSON.parse(legacyColors));
+      return;
+    }
+  } catch (e) {
+    console.warn('Failed to load interface system settings:', e);
+  }
+  applyGlobalInterfaceSystem(DEFAULT_INTERFACE_SYSTEM);
+}
+
+/**
+ * Load saved color system from localStorage / site_settings and apply to :root
+ */
+export function loadAndApplyGlobalColorSystem() {
+  loadAndApplyGlobalInterfaceSystem();
+}
+
+// Auto-apply on script evaluation
+if (typeof document !== 'undefined') {
+  loadAndApplyGlobalInterfaceSystem();
+}
+
+// Cross-tab synchronization
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'topscore_interface_system' || e.key === 'topscore_color_system') {
+      loadAndApplyGlobalInterfaceSystem();
+    }
+  });
+}
+
+// Auto-apply on script evaluation
+if (typeof document !== 'undefined') {
+  loadAndApplyGlobalInterfaceSystem();
+}
 
 /**
  * Universal Grade Color Resolver by Percentage Score (Single Source of Truth)
@@ -1423,9 +1801,10 @@ export function computeUnifiedScore({
   const effectiveWordsPts = wordsPts ?? 0;
   const effectivePhrasesPts = phrasesPts ?? 0;
 
-  // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
-  const totalPoints = Math.round(effectiveWordsPts + effectivePhrasesPts);
+  // Rule 2.9: Points Half-Up Whole Integer Invariant with Ceiling Cap Exception
   const maxPoints = hasPhrases ? (wordsMax + phrasesMax) : wordsMax;
+  const rawSum = effectiveWordsPts + effectivePhrasesPts;
+  const totalPoints = roundPointsWithCeilingCap(rawSum, maxPoints);
   const percentage = (isAttempted && maxPoints > 0) ? Math.round((totalPoints / maxPoints) * 100) : 0;
   const isRemedial = Boolean(
     wordsBest?.is_remedial || wordsBest?.is_remedial_unlocked ||
@@ -2098,7 +2477,7 @@ export function detectClassDiscipline(classObjOrName) {
   if (/\b(speaking|public\s*speaking)\b/i.test(name) || /-(?:[0-9]*SPK|SPEAK)\b/i.test(code)) {
     return 'SPEAKING';
   }
-  if (/\b(storytelling|story)\b/i.test(name) || /-(?:[0-9]*STY|STORY)\b/i.test(code)) {
+  if (/\b(storytelling|story)\b/i.test(name) || /-(?:[0-9]*STT|STORY)\b/i.test(code)) {
     return 'STORYTELLING';
   }
   return 'GENERAL';

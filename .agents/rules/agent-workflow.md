@@ -7,6 +7,12 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 3. **Tepat (Precise & Aligned)**: Eksekusi presisi sesuai kemauan pengguna dan standar baku tanpa menyimpang dari SSOT dan hierarki aturan.
 4. **Akurat (Accurate & Verified)**: Lakukan verifikasi otomatis setiap selesai mengedit untuk memastikan 0 syntax error, 0 regresi, dan 100% tests green.
 - **Audit Tangkapan Layar Proaktif**: Setiap kali pengguna mengunggah tangkapan layar (screenshot), lakukan audit visual menyeluruh berdasarkan 7 pilar SSOT di [`.agents/rules/ui-invariants.md` §1.7](file:///.agents/rules/ui-invariants.md#17-protokol-audit-tangkapan-layar--visual-invariant-audit-7-pillars-ssot).
+- **Fast Command Shortcuts Recognition**: Agen mengenali dan langsung mengeksekusi shortcut perintah cepat:
+  1. `/check-ui` (atau `/audit-ui`, `/check-all`): **Master Audit UI Menyeluruh** (memeriksa SEMUA aturan UI: Warna, Tabel, Card, Font, Padding, Ukuran, Spacing, 100vh lock, Tombol CTA, dan Bahasa 100% English) via skill `ui-spatial-checker` (`npm run check:ui`).
+  2. `/verify` (atau `/test-fast`): Menjalankan verifikasi kilat sintaks AST JS, CSS build, dan proteksi sinkronisasi via `fast-verifier` (`npm run test:fast`).
+  3. `/check-table` (atau `/fix-table`): Mengaudit dan menyelaraskan 11 pilar tabel datagrid via `table-standardizer` (`npm run test:table`).
+  4. `/check-color` (atau `/audit-color`): Memverifikasi kepatuhan token warna & kontras teks via `color-auditor` (`npm run test:color-ssot`).
+  5. `/clean` (atau `/hygiene`): Mengaudit kebersihan repositori dan membuang file sisa/scratch via `workspace-hygiene` (`npm run check:hygiene`).
 
 ## 1. Task Management & Git Execution Gate
 
@@ -114,4 +120,11 @@ Setiap instruksi dan perintah dari pengguna WAJIB diterapkan berlandaskan 4 pila
 - **No Backup Suffixes**: DILARANG membuat file dengan suffix `_2.*`, `_3.*`, `_new.*`, atau file cadangan lainnya. Semua perubahan wajib dilakukan dengan *in-place editing*.
 - **Module Variable Hoisting**: Selalu hoist variabel modul penting (seperti `_currentSection`, modal references) di baris teratas modul.
 - **JavaScript Syntax Validation**: Setiap selesai mengedit file JavaScript, jalankan `npm run test:syntax` (in-process AST engine 0.14 detik untuk 50 file) atau `node --check <file>` untuk memastikan tidak ada syntax error.
+
+## 12. Supabase Quota & Extreme Egress Minimization Protocol (SSOT)
+- **Extreme Minimization Priority**: Setiap perancangan fitur dan perubahan alur kerja WAJIB mengutamakan peminimalisiran penggunaan kuota Supabase (Egress, Database Requests/Operations, Storage) semaksimal dan seekstrem mungkin pada ambang batas teknis yang memungkinkan.
+- **Strict Polling Guard**: Dilarang melakukan polling interval terhadap kolom besar (seperti `payload`, `snapshots`, atau array besar). Polling real-time/live WAJIB hanya men-select kolom skalar minimal (`id`, `status`, `expires_at`, `score`).
+- **Client-Side Buffer First**: Gunakan `localStorage`/`sessionStorage` sebagai buffer utama jawaban dan interaksi siswa; sinkronisasi ke Supabase dilakukan secara batch atau final submit, bukan request per-ketikan.
+- **Lean Live Monitor**: Hilangkan fitur live monitoring yang membebani database (seperti polling berkala tabel jawaban/snapshots detail). Jika fitur live view terlalu berat, fiturnya disederhanakan murni menjadi status attempt skalar (Online / In Progress / Finished).
+
 

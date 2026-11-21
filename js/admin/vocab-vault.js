@@ -153,8 +153,8 @@ export async function renderVocabularyVault(area) {
 function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   let title = mode === 'single_words' ? `${getSvgIcon('book-open', 14)} Words` : `${getSvgIcon('activity', 14)} Phrases`;
   let desc = mode === 'single_words'
-    ? 'Standard vocabulary (Noun, Verb, Adjective, Adverb). Feeds Module 1.'
-    : 'Expressions, idioms, and proverbs. Feeds Module 2.';
+    ? 'Standard vocabulary (Noun, Verb, Adjective, Adverb). Feeds Vocabulary Mastery Modules (Recognition, Spoken, Written).'
+    : 'Expressions, idioms, and proverbs. Feeds Vocabulary Mastery Modules (Recognition, Spoken, Written).';
 
   // Determine allowed options in filter based on mode
   const wordTypeOptions = mode === 'single_words'
@@ -173,7 +173,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
   const uniqueLevels = Array.from(new Set(words.map(w => parseInt(w.target_level)).filter(n => !isNaN(n) && n >= 0))).sort((a, b) => a - b);
   if (uniqueLevels.length === 0) uniqueLevels.push(0, 1, 2, 3);
-  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${lvl === 0 ? '— (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl))}</option>`).join('');
+  const levelSelectOptions = uniqueLevels.map(lvl => `<option value="${lvl}">${lvl === 0 ? '0 (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl))}</option>`).join('');
 
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
@@ -210,7 +210,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
   // Filter down to the mode initially
   let _allWords = words.filter(w => {
     const wt = (w.word_type || '').toLowerCase();
-    const isPhrase = ['expression', 'idiom', 'proverb'].includes(wt);
+    const isPhrase = ['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'].includes(wt);
     if (mode === 'single_words') return !isPhrase;
     return isPhrase;
   });
@@ -271,7 +271,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
         <select id="vault-level-filter" style="width: 95px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
           <option value="">All Levels</option>
-          ${uniqueLevels.map(lvl => `<option value="${lvl}"${lvlVal === String(lvl) ? ' selected' : ''}>${lvl === 0 ? '— (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl))}</option>`).join('')}
+          ${uniqueLevels.map(lvl => `<option value="${lvl}"${lvlVal === String(lvl) ? ' selected' : ''}>${lvl === 0 ? '0 (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : (typeof toOrdinalLevel === 'function' ? toOrdinalLevel(lvl) : lvl))}</option>`).join('')}
         </select>
 
         <select id="vault-topic-filter" style="width: 135px; height: 32px; font-size: 12px; background: rgba(15,23,42,0.85); border: 1px solid rgba(255,255,255,0.15); color: #fff; border-radius: 6px; padding: 0 6px; cursor: pointer;">
@@ -513,7 +513,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
       const cleanThCode = (w.theme_code || 'A').trim().toUpperCase();
       const rawTpCode = (w.topic_code || '1').trim();
       const cleanTpCode = rawTpCode.replace(/^[A-Za-z]+/, '') || rawTpCode || '1';
-      const compositeCode = `${cleanLvl}${cleanThCode}${cleanTpCode}`;
+      const lvlPrefix = (cleanLvl === 0) ? '' : String(cleanLvl);
+      const compositeCode = `${lvlPrefix}${cleanThCode}${cleanTpCode}`;
       const lexCode = topicWordIndexMap.get(w.id) || compositeCode;
 
       const phraseOpts = `
@@ -667,7 +668,8 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
           // Recalculate composite code in this row
           const cleanTp = (word.topic_code || '1').replace(/^[A-Za-z]+/, '');
-          const newComp = `${parsedLvl}${word.theme_code || 'A'}${cleanTp}`;
+          const lvlPrefix = (parsedLvl === 0) ? '' : String(parsedLvl);
+          const newComp = `${lvlPrefix}${word.theme_code || 'A'}${cleanTp}`;
           const codeInput = tr?.querySelector('.col-vault-composite-code input');
           const codeSpan = tr?.querySelector('.col-vault-composite-code .vault-cell-view');
           if (codeInput) codeInput.value = newComp;
@@ -801,7 +803,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       <p class="text-muted text-sm mb-3">
         Upload an <strong>.xlsx</strong> file conforming to the official 10-column standard:<br>
         <code>1. Institution</code> &bull; <code>2. Program</code> &bull; <code>3. Level</code> &bull; <code>4. Category</code> &bull; <code>5. Code (A1, A2..)</code> &bull; <code>6. Theme</code> &bull; <code>7. Topic</code> &bull; <code>8. Type</code> &bull; <code>9. Indonesian</code> &bull; <code>10. English</code><br>
-        <span class="text-xs" style="color: #6366f1;">Unified Code: Enter <code>A1</code>, <code>A2</code>, <code>B1</code> directly. (Legacy 11-column files with separate Theme Code &amp; Topic Code are also automatically supported).</span>
+        <span class="text-xs" style="color: var(--primary-tactical, #38bdf8);">Unified Code: Enter <code>A1</code>, <code>A2</code>, <code>B1</code> directly. (Legacy 11-column files with separate Theme Code &amp; Topic Code are also automatically supported).</span>
       </p>
 
       <div class="d-flex gap-3 mb-3">
@@ -982,7 +984,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       }).filter(r => r.topic && r.indonesian && r.english);
 
       // Auto-classify rows using Category if provided, fallback to Type
-      const allowedPhraseTypes = ['expression', 'idiom', 'proverb'];
+      const allowedPhraseTypes = ['expression', 'idiom', 'proverb', 'phrase', 'phrasal verb'];
       _parsedRows = _parsedRows.map(r => {
         const wt = (r.word_type || '').toLowerCase();
         const cat = (r.category || '').toLowerCase();
@@ -2214,7 +2216,8 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
         topics.forEach(tp => {
           const cleanTopicCode = (tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || (tp.topicCode || '1');
           const cleanThemeCode = (thCode || 'A').trim().toUpperCase();
-          const compositeCode = `${lvl}${cleanThemeCode}${cleanTopicCode}`;
+          const lvlPrefix = (lvl === 0) ? '' : String(lvl);
+          const compositeCode = `${lvlPrefix}${cleanThemeCode}${cleanTopicCode}`;
 
           rowsHtml += `
             <tr class="blueprint-table-row" data-level="${lvl}" data-theme-code="${thCode}" data-topic="${escapeHtml(tp.name)}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
@@ -2356,54 +2359,54 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             <col class="edit-mode-only" style="width: 65px;">
           </colgroup>
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
-            <!-- Super-Headers Grouping -->
+            <!-- Super-Headers Grouping (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
             <tr>
-              <th colspan="6" class="super-th super-hdr" style="background:#0c192e; color:#38bdf8; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">HIERARCHY &amp; IDENTITY</th>
-              <th colspan="4" class="super-th super-hdr" style="background:#131d36; color:#818cf8; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">WORDS BREAKDOWN</th>
-              <th colspan="4" class="super-th super-hdr" style="background:#1a1936; color:#c084fc; font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES BREAKDOWN</th>
-              <th colspan="3" class="super-th super-hdr" style="background:rgba(var(--grade-a-rgb), 0.15); color:var(--grade-a); font-size: 12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">METRICS SUMMARY</th>
-              <th rowspan="2" class="super-th super-hdr-divider" style="background:#1e293b; color:var(--grade-a); font-size:12px; font-weight:700; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; vertical-align:middle; height:60px;" title="Assigned Programs">PROGRAMS</th>
-              <th rowspan="2" class="edit-mode-only" style="background:rgba(var(--grade-e-rgb), 0.2); color:var(--grade-e); font-size:12px; font-weight:700; text-align:center; padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.1); vertical-align:middle; height:60px;" title="Action">ACT</th>
+              <th colspan="6" class="super-th super-hdr" style="background:#0b1120 !important; color:#ffffff !important; font-size: 12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">HIERARCHY &amp; IDENTITY</th>
+              <th colspan="4" class="super-th super-hdr" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-size: 12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">WORDS BREAKDOWN</th>
+              <th colspan="4" class="super-th super-hdr" style="background:#0b1120 !important; color:var(--quad-a, #ff2d87) !important; font-size: 12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,45,135,0.35);">PHRASES BREAKDOWN</th>
+              <th colspan="3" class="super-th super-hdr" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-size: 12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">METRICS SUMMARY</th>
+              <th rowspan="2" class="super-th super-hdr-divider" style="background:#0b1120 !important; color:#ffffff !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; vertical-align:middle; height:60px;" title="Assigned Programs">PROGRAMS</th>
+              <th rowspan="2" class="edit-mode-only" style="background:#0b1120 !important; color:var(--grade-e, #ff0000) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 6px; border-bottom:1px solid rgba(255,255,255,0.18); vertical-align:middle; height:60px; text-shadow:0 0 10px rgba(255,0,0,0.35);" title="Action">ACT</th>
             </tr>
-            <!-- Sub-Headers (Exact 17 Grouped Sub-Columns; Programs & Act Span RowSpan 2) -->
+            <!-- Sub-Headers (Matching Themed Parent Colors on Dark Surface SSOT) -->
             <tr>
               <!-- 1. LVL -->
-              <th style="padding: 6px 8px; font-weight: 400; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); height:30px; line-height:30px;" title="Level">LVL</th>
+              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Level">LVL</th>
               <!-- 2. TH-CD -->
-              <th style="padding: 6px 4px; font-weight: 400; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
               <!-- 3. THEME -->
-              <th style="padding: 6px 8px; font-weight: 400; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 140px; border-right: 1px solid rgba(255,255,255,0.1); height:30px; line-height:30px;" title="Theme Name">THEME</th>
+              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 140px; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Theme Name">THEME</th>
               <!-- 4. TP-CD -->
-              <th style="padding: 6px 4px; font-weight: 400; color: #a5b4fc; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
               <!-- 5. TOPIC NAME (Flex Primary) -->
-              <th style="padding: 6px 8px; font-weight: 400; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Topic Name">TOPIC NAME</th>
+              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Topic Name">TOPIC NAME</th>
               <!-- 6. CODE (Boundary Column 1) -->
-              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 400; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" title="Composite Code (e.g. 1G1)">CODE</th>
+              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Composite Code (e.g. 1G1)">CODE</th>
 
               <!-- 7. VERB -->
-              <th style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Verb Count">VERB</th>
+              <th style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Verb Count">VERB</th>
               <!-- 8. NOUN -->
-              <th style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Noun Count">NOUN</th>
+              <th style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Noun Count">NOUN</th>
               <!-- 9. ADJ -->
-              <th style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Adjective Count">ADJ</th>
+              <th style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Adjective Count">ADJ</th>
               <!-- 10. OTH (Boundary Column 2) -->
-              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 400; color: #93c5fd; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" title="Words Other (Adverbs, etc.)">OTH</th>
+              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Words Other (Adverbs, etc.)">OTH</th>
 
               <!-- 11. EXP -->
-              <th style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Expression Count">EXP</th>
+              <th style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Expression Count">EXP</th>
               <!-- 12. PRV -->
-              <th style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Proverb Count">PRV</th>
+              <th style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Proverb Count">PRV</th>
               <!-- 13. IDM -->
-              <th style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" title="Idiom Count">IDM</th>
+              <th style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Idiom Count">IDM</th>
               <!-- 14. OTH (Boundary Column 3) -->
-              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 400; color: #d8b4fe; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
+              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
 
               <!-- 15. WORDS -->
-              <th style="padding: 6px 4px; font-weight: 400; color: #60a5fa; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #1e3a5f; height:30px; line-height:30px;" title="Total Single Words">WORDS</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Total Single Words">WORDS</th>
               <!-- 16. PHRASES -->
-              <th style="padding: 6px 4px; font-weight: 400; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.1); background: #2e1e5f; height:30px; line-height:30px;" title="Total Phrases &amp; Idioms">PHRASES</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Total Phrases &amp; Idioms">PHRASES</th>
               <!-- 17. TOTAL (Boundary Column 4) -->
-              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 400; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0f2922; height:30px; line-height:30px;" title="Grand Total Vocabulary">TOTAL</th>
+              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Grand Total Vocabulary">TOTAL</th>
             </tr>
           </thead>
           <tbody id="theme-manager-tbody">
@@ -2696,7 +2699,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 setTimeout(() => lvlInp.classList.remove('save-success'), 700);
               }
               if (lvlSpan) {
-                const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(newLvl) : (newLvl === 0 ? '—' : `${newLvl}ST`);
+                const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(newLvl) : (newLvl === 0 ? '0' : `${newLvl}ST`);
                 lvlSpan.textContent = shortLbl.toUpperCase();
               }
               if (lvlCell) {
@@ -2848,12 +2851,30 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   const assignments = freshAssignments || meta.themeAssignments || window._vaultMeta?.themeAssignments || [];
   if (window._vaultMeta) window._vaultMeta.themeAssignments = assignments;
 
+  // Active Program Selection
+  const activeProgs = (meta?.programs || []).filter(p => !p.deleted_at && p.is_active !== false);
+  let selectedProgId = window._bpSelectedProgramId || localStorage.getItem('topscore_bp_selected_prog_id') || (activeProgs[0]?.id || '');
+  if (!activeProgs.some(p => p.id === selectedProgId) && activeProgs.length > 0) {
+    selectedProgId = activeProgs[0].id;
+  }
+  window._bpSelectedProgramId = selectedProgId;
+
+  // Determine if selected program is a Non-Level program (e.g. Evnikom/Sheraton/Tamata)
+  const progClasses = (classes || []).filter(c => c.program_id === selectedProgId && c.name && c.name.toLowerCase().includes('vocab'));
+  const hasLevel0 = progClasses.some(c => c.level_id === '0e1c49fb-d8a8-4fd5-a239-a50466875c23' || (c.name && c.name.toLowerCase().includes('non-level')));
+
   // Group words by Level -> Theme Code -> Topic
-  const levelsSet = new Set([0, 1, 2, 3]);
+  const levelsSet = new Set(hasLevel0 ? [0] : []);
   (words || []).forEach(w => {
     const lvl = parseInt(w.target_level, 10);
-    if (!isNaN(lvl)) levelsSet.add(lvl);
+    if (!isNaN(lvl)) {
+      if (lvl === 0 && !hasLevel0) return; // Do not include level 0 for level-based programs like Camp
+      levelsSet.add(lvl);
+    }
   });
+  if (!hasLevel0) {
+    [1, 2, 3].forEach(l => levelsSet.add(l));
+  }
   const levels = Array.from(levelsSet).sort((a, b) => a - b);
 
   const levelGroups = new Map();
@@ -2862,6 +2883,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   (words || []).forEach(w => {
     const parsedLvl = parseInt(w.target_level, 10);
     const lvl = !isNaN(parsedLvl) ? parsedLvl : 3;
+    if (lvl === 0 && !hasLevel0) return;
     if (!levelGroups.has(lvl)) levelGroups.set(lvl, new Map());
     const themesMap = levelGroups.get(lvl);
 
@@ -2900,14 +2922,6 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     tpObj.totalCount = tpObj.totalWords + tpObj.totalPhrases;
   });
 
-  // Active Program Selection
-  const activeProgs = (meta?.programs || []).filter(p => !p.deleted_at && p.is_active !== false);
-  let selectedProgId = window._bpSelectedProgramId || localStorage.getItem('topscore_bp_selected_prog_id') || (activeProgs[0]?.id || '');
-  if (!activeProgs.some(p => p.id === selectedProgId) && activeProgs.length > 0) {
-    selectedProgId = activeProgs[0].id;
-  }
-  window._bpSelectedProgramId = selectedProgId;
-
   // Active Level Selection
   let activeLevel = window._bpSelectedLevel || 'ALL';
   window._bpSelectedLevel = activeLevel;
@@ -2920,12 +2934,13 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
     // 0. Non-level program match
     if (lvl === 0) {
+      if (!hasLevel0) return null;
       const nonLvlMatch = classes.find(c => c.program_id === selectedProgId &&
         (c.level_id === '0e1c49fb-d8a8-4fd5-a239-a50466875c23' ||
-         (c.name && (c.name.toLowerCase().includes('non-level') || c.name.toLowerCase().includes(progName)))) &&
+         (c.name && c.name.toLowerCase().includes('non-level'))) &&
         c.name && c.name.toLowerCase().includes('vocab')
       );
-      if (nonLvlMatch) return nonLvlMatch;
+      return nonLvlMatch || null;
     }
 
     // 1. Best match: Program Name + Level (e.g. "Camp 2nd Vocabulary")
@@ -2945,11 +2960,11 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     );
     if (match) return match;
 
-    // 3. Fallback to generic level + vocab
+    // 3. Fallback to specific level vocab class (never match another level!)
     return classes.find(c => c.program_id === selectedProgId &&
       (c.name.toLowerCase().includes(shortLvl) || c.name.toLowerCase().includes(`${lvl}`)) &&
       c.name.toLowerCase().includes('vocab')
-    ) || classes.find(c => c.program_id === selectedProgId && c.name && c.name.toLowerCase().includes('vocab')) || null;
+    ) || null;
   };
 
   // Multi-Tenant Assignment Lookup Set
@@ -3028,7 +3043,9 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   let totalExamsExpected = 0;
   let totalExamsReady = 0;
 
-  const levelsToScan = activeLevel === 'ALL' ? levels : [Number(activeLevel)];
+  const levelsToScan = activeLevel === 'ALL'
+    ? levels.filter(lvl => hasLevel0 || lvl > 0)
+    : [Number(activeLevel)];
   levelsToScan.forEach(lvl => {
     const targetClass = getLevelClass(lvl);
     const thMap = levelGroups.get(lvl);
@@ -3057,6 +3074,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
   // Setup Bottom Infobar for Test Blueprint (Rules 2.23, 2.24 & Phase 398)
   if (window.setBottomInfobar) {
+    const availableLevels = levels.filter(lvl => hasLevel0 || lvl > 0);
     const leftHtml = `
       <div style="display: flex; align-items: center; gap: 8px;">
         <div style="display: flex; align-items: center; gap: 5px;">
@@ -3067,7 +3085,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
         </div>
         <div style="display: flex; gap: 2px; align-items: center; background: rgba(15,23,42,0.8); padding: 2px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
           <button type="button" class="btn btn-tactical btn-sm btn-bp-level-tab ${activeLevel === 'ALL' ? 'active' : ''}" data-lvl="ALL" style="height: 24px; font-size: 12px; font-weight: 800; padding: 0 8px; border-radius: 4px;">ALL LEVELS</button>
-          ${levels.map(lvl => {
+          ${availableLevels.map(lvl => {
             const isActive = (String(activeLevel) === String(lvl));
             const shortLbl = typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`;
             const displayLbl = lvl === 0 ? '— (NON-LVL)' : shortLbl;
@@ -3108,8 +3126,13 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
       if (!thMap) return;
 
       const lvlLabel = (typeof toShortLevel === 'function' ? toShortLevel(lvl) : `${lvl}`).toUpperCase();
-      // Sort blueprint themes alphabetically A-Z by name
-      const themeList = Array.from(thMap.values()).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      // Sort blueprint themes strictly by theme code A-Z (Theme A -> B -> C -> D per SSOT §2.36)
+      const themeList = Array.from(thMap.values()).sort((a, b) => {
+        const codeA = String(a.code || '').trim().toUpperCase();
+        const codeB = String(b.code || '').trim().toUpperCase();
+        if (codeA !== codeB) return codeA.localeCompare(codeB, undefined, { numeric: true });
+        return (a.name || '').localeCompare(b.name || '');
+      });
 
       themeList.forEach(th => {
         const thCode = String(th.code || '').trim().toUpperCase();
@@ -3118,13 +3141,18 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
         const thExam = findExamForTheme(lvl, thCode, th.name, targetClass?.id);
 
-        // Sort blueprint topics alphabetically A-Z by name
+        // Sort blueprint topics strictly by numeric topicCode order (1 -> 2 -> 3 -> 4)
         const topics = Array.from(th.topicsMap.values())
           .filter(t => {
             if (!q) return true;
             return t.name.toLowerCase().includes(q) || th.name.toLowerCase().includes(q) || t.topicCode.toLowerCase().includes(q);
           })
-          .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          .sort((a, b) => {
+            const numA = parseInt(String(a.topicCode || '').replace(/\D+/g, ''), 10);
+            const numB = parseInt(String(b.topicCode || '').replace(/\D+/g, ''), 10);
+            if (!isNaN(numA) && !isNaN(numB) && numA !== numB) return numA - numB;
+            return String(a.topicCode || '').localeCompare(String(b.topicCode || ''), undefined, { numeric: true });
+          });
 
         if (topics.length === 0) return;
 
@@ -3132,31 +3160,36 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           renderedCount++;
           const cleanTopicNum = String(tp.topicCode || '1').trim().replace(/^[A-Za-z]+/, '') || String(tp.topicCode || '1');
           const cleanThemeCode = String(thCode || th.code || 'A').trim().toUpperCase();
-          const compositeCode = `${lvl}${cleanThemeCode}${cleanTopicNum}`;
+          // SSOT §2.4.2 & §2.6: Zero-Level Omission Invariant (omit '0' for level 0)
+          const compositeCode = (lvl === 0) ? `${cleanThemeCode}${cleanTopicNum}` : `${lvl}${cleanThemeCode}${cleanTopicNum}`;
+          const lvlDisplay = (lvl === 0) ? '—' : lvlLabel;
 
           const tpTask = findTaskForTopic(lvl, thCode, tp.topicCode, tp.name, targetClass?.id);
           const taskReady = Boolean(tpTask);
           const examReady = Boolean(thExam);
 
-          // Pacing defaults
+          // Pacing & Passing Threshold: Official TopsCore SSOT Grade C is 60%
           const taskDuration = tpTask?.working_duration_minutes || 15;
-          const taskScore = tpTask?.minimum_required_score || 60;
+          const taskScore = 60; // SSOT §2.4.1 Passing Threshold is Grade C (60%)
           const examDuration = thExam?.working_duration_minutes || 30;
-          const examScore = thExam?.minimum_required_score || 60;
+          const examScore = 60;
           const ansType = window._bpTopicAnswerTypes[tp.topicCode] || tpTask?.answer_type || (tpTask?.payload && tpTask.payload.answer_type) || 'spoken';
+
+          // DECISION-064 & SSOT §2.7.1: Level 2 and Words-Only topics enforce 7 Repetitions (7 Reps)
+          const formatLabel = (lvl === 2 || tp.totalPhrases === 0) ? '7 Reps' : '7×7';
 
           rowsHtml += `
             <tr class="blueprint-table-row" data-topic-code="${escapeHtml(compositeCode)}" data-raw-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              <td style="text-align: center; font-weight: 800; font-size: 12px; color: #38bdf8; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
-                ${escapeHtml(lvlLabel)}
+              <td style="text-align: center; font-weight: 800; font-size: 12px; color: ${lvl === 0 ? '#94a3b8' : '#38bdf8'}; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
+                ${escapeHtml(lvlDisplay)}
               </td>
               <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; width: 55px;">
                 ${escapeHtml(compositeCode)}
               </td>
-              <td style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; min-width: 130px;">
+              <td style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; min-width: 180px;">
                 ${escapeHtml(th.name || '—')}
               </td>
-              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 12px; min-width: 150px;">
+              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 12px; min-width: 220px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 ${escapeHtml(tp.name)}
               </td>
 
@@ -3167,7 +3200,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
                 <span style="color: #cbd5e1; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
               </td>
-              <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px;">
+              <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <span style="color: #a78bfa; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
 
@@ -3175,7 +3208,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
                 <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
-                  <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
+                  <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid var(--primary-tactical, #38bdf8); border-radius:4px; padding:0 3px; text-align:center;">
                   <span style="font-size: 12px; color:#94a3b8;">m</span>
                 </span>
               </td>
@@ -3184,23 +3217,23 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
                 <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: ${getGradeColorByScore(taskScore)}; font-variant-numeric: tabular-nums;">${taskScore}%</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
-                  <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 3px; text-align:center;">
+                  <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid var(--primary-tactical, #38bdf8); border-radius:4px; padding:0 3px; text-align:center;">
                   <span style="font-size: 12px; color:${getGradeColorByScore(taskScore)}; font-weight:600;">%</span>
                 </span>
               </td>
 
               <!-- Generation Blueprint Split: Format -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
-                <span style="color: #38bdf8; font-weight: 600; font-size: 12px;">7×7</span>
+                <span style="color: #38bdf8; font-weight: 600; font-size: 12px;">${formatLabel}</span>
               </td>
 
               <!-- Generation Blueprint Split: Answer Type -->
-              <td class="col-bp-sep" style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px;">
-                <span class="badge-answer-type badge-answer-${ansType}">
-                  ${ansType === 'written' ? `${getSvgIcon('edit', 12)} Written` : (ansType === 'hybrid' ? `${getSvgIcon('refresh', 12)} Hybrid` : `${getSvgIcon('mic', 12)} Spoken`)}
+              <td class="col-bp-sep" style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
+                <span class="badge-answer-type badge-answer-${ansType}" style="display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12px; color:var(--grade-a);" title="Vocabulary Mastery Modules: Recognition, Spoken, Written">
+                  ${getSvgIcon('layers', 12)} Vocab Mastery
                 </span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center;">
-                  <select class="bp-inline-answer-type" data-topic-code="${escapeHtml(tp.topicCode)}" onchange="window._onBpAnswerTypeChange && window._onBpAnswerTypeChange('${escapeHtml(tp.topicCode)}', this.value)" style="height:22px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid #6366f1; border-radius:4px; padding:0 2px;">
+                  <select class="bp-inline-answer-type" data-topic-code="${escapeHtml(tp.topicCode)}" onchange="window._onBpAnswerTypeChange && window._onBpAnswerTypeChange('${escapeHtml(tp.topicCode)}', this.value)" style="height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid var(--primary-tactical, #38bdf8); border-radius:4px; padding:0 2px;">
                     <option value="spoken" ${ansType === 'spoken' ? 'selected' : ''}>Spoken</option>
                     <option value="written" ${ansType === 'written' ? 'selected' : ''}>Written</option>
                     <option value="hybrid" ${ansType === 'hybrid' ? 'selected' : ''}>Hybrid</option>
@@ -3257,8 +3290,8 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
           <colgroup>
             <col style="width: 55px;">
             <col style="width: 55px;">
-            <col style="width: 140px;">
-            <col style="min-width: 240px; width: auto;">
+            <col style="width: 180px;">
+            <col style="min-width: 220px; width: auto;">
             <col style="width: 55px;">
             <col style="width: 55px;">
             <col style="width: 55px;">
@@ -3269,30 +3302,32 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
             <col style="width: 95px;">
             <col style="width: 95px;">
           </colgroup>
-          <thead style="background: #1e293b; position: sticky; top: 0; z-index: 10; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
+          <thead style="position: sticky; top: 0; z-index: 10;">
+            <!-- Super-Header Row (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
             <tr class="bp-super-header-row">
-              <th colspan="4" class="bp-sh-topic" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; color:#38bdf8;">CURRICULUM TOPIC</th>
-              <th colspan="3" class="bp-sh-vocab" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; color:#a5b4fc;">VOCABULARY POOL</th>
-              <th colspan="4" class="bp-sh-blueprint" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); border-right:2px solid rgba(255,255,255,0.22) !important; color:#f8fafc;">GENERATION BLUEPRINT</th>
-              <th colspan="2" class="bp-sh-status" style="padding:5px 8px; font-size:12px; font-weight:700; text-align:center; border-bottom:1px solid rgba(255,255,255,0.1); color:var(--grade-a);">READINESS STATUS</th>
+              <th colspan="4" class="bp-sh-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">CURRICULUM TOPIC</th>
+              <th colspan="3" class="bp-sh-vocab" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(192,132,252,0.35);">VOCABULARY POOL</th>
+              <th colspan="4" class="bp-sh-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">GENERATION BLUEPRINT</th>
+              <th colspan="2" class="bp-sh-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS STATUS</th>
             </tr>
+            <!-- Sub-Header Row (Matching Themed Parent Colors on Dark Surface SSOT) -->
             <tr>
-              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">LEVEL</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">CODE</th>
-              <th style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.08);">THEME NAME</th>
-              <th class="col-bp-sep" style="padding: 7px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px;">TOPIC NAME</th>
+              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">LEVEL</th>
+              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">CODE</th>
+              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">THEME NAME</th>
+              <th class="col-subhdr-topic col-bp-sep" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">TOPIC NAME</th>
 
-              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">ITEMS</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: #818cf8; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">WORDS</th>
-              <th class="col-bp-sep" style="padding: 7px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center;">PHRASES</th>
+              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">ITEMS</th>
+              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">WORDS</th>
+              <th class="col-subhdr-vocab col-bp-sep" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES</th>
 
-              <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS RATE</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
-              <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">MODULE</th>
+              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">DURATION</th>
+              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">PASS RATE</th>
+              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">FORMAT</th>
+              <th class="col-subhdr-blueprint col-bp-sep" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 8px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 95px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">MODULE</th>
 
-              <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08);">TASK STATUS</th>
-              <th style="padding: 7px 10px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center;">EXAM STATUS</th>
+              <th class="col-subhdr-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">TASK STATUS</th>
+              <th class="col-subhdr-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; height:30px; line-height:30px;">EXAM STATUS</th>
             </tr>
           </thead>
           <tbody id="bp-matrix-tbody">
@@ -3366,7 +3401,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
       return Array.from(thMap.values()).some(th => isThemeAssignedToProgram(lvl, th.code, targetClass?.id));
     });
     if (importedLevels.length === 0) return showToast('No levels with topics detected in Blueprint for this program', 'error');
-    const targetClass = getLevelClass(activeLevel === 'ALL' ? importedLevels[0] : Number(activeLevel));
+    const targetClass = activeLevel === 'ALL' ? null : getLevelClass(Number(activeLevel));
 
     try {
       const { openAutoGenerateModal } = await import('./auto-gen-modal.js?v=20261106_v140');

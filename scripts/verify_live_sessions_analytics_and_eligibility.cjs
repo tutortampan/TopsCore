@@ -111,7 +111,7 @@ const mockStudents = [
   { id: 's4', name: 'Student 4 - Incomplete Tasks' },
 ];
 
-const mockTheme = { code: 'A', name: 'Public Speaking' };
+const mockTheme = { code: 'A', name: 'Public Speaking', isNonVocab: true };
 const mockTasks = [{ id: 'task-1' }, { id: 'task-2' }];
 const mockWordsTest = { id: 'test-words' };
 
@@ -184,7 +184,24 @@ assert.ok(s1Remedial.statusLabel.includes('Exam Not Attempted'), 's1 status must
 // Passed student s3 must NOT be eligible in Remedial
 const s3Remedial = remedialResults.find(r => r.student.id === 's3');
 assert.strictEqual(s3Remedial.isEligible, false, 'Passed student s3 must NOT be eligible in Remedial mode');
-assert.ok(s3Remedial.statusLabel.includes('Remedial Ineligible'), 's3 status must state Remedial Ineligible');
+assert.ok(s3Remedial.statusLabel.includes('Remedial Ineligible'), 's3 status state Remedial Ineligible');
+
+// Unified Exam Scope Safeguard (Verify subE scoping and zero ReferenceError)
+const unifiedResults = fn({
+  students: mockStudents,
+  theme: { ...mockTheme, examTest: { id: 'exam-unified', payload: { is_unified: true } } },
+  themeTasks: mockTasks,
+  examTest: { id: 'exam-unified', payload: { is_unified: true } },
+  classTests: [{ id: 'exam-unified', payload: { is_unified: true } }, ...mockTasks],
+  allAttempts: [
+    ...mockAttempts,
+    { student_id: 's2', test_id: 'exam-unified', percentage: 50, score: 80, total_questions: 100, status: 'submitted' },
+    { student_id: 's3', test_id: 'exam-unified', percentage: 95, score: 190, total_questions: 200, status: 'submitted' }
+  ],
+  mode: 'normal'
+});
+assert.ok(Array.isArray(unifiedResults), 'Unified exam results must execute cleanly without ReferenceError');
+assert.strictEqual(unifiedResults.find(r => r.student.id === 's1').isEligible, true, 's1 must be eligible for unified exam');
 
 console.log('  ✅ PASS: 3-way eligibility split (Normal vs Remedi vs Passed) strictly verified.\n');
 

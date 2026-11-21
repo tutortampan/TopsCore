@@ -5124,7 +5124,7 @@ body.dashboard-page .rainbow-box[data-step="3"].is-lit { background: var(--grade
 body.dashboard-page .rainbow-box[data-step="4"].is-lit { background: var(--grade-a) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(var(--grade-a-rgb), 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 body.dashboard-page .rainbow-box[data-step="5"].is-lit { background: var(--primary-tactical, #38bdf8) !important; color: #0F172A !important; box-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 body.dashboard-page .rainbow-box[data-step="6"].is-lit { background: var(--clr-accent-1, #6366f1) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(99, 102, 241, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
-body.dashboard-page .rainbow-box[data-step="7"].is-lit { background: var(--quad-d, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(192, 132, 252, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
+body.dashboard-page .rainbow-box[data-step="7"].is-lit { background: var(--rainbow-step-7, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 8px rgba(192, 132, 252, 0.5) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; }
 
 /* Dimmed / Unreached boxes: jelas dan kontras */
 body.dashboard-page .rainbow-box.is-dim {
@@ -5177,7 +5177,7 @@ body.dashboard-page .pass-counter-btn.rainbow-step-3 { background: var(--grade-c
 body.dashboard-page .pass-counter-btn.rainbow-step-4 { background: var(--grade-a) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(var(--grade-a-rgb), 0.6) !important; }
 body.dashboard-page .pass-counter-btn.rainbow-step-5 { background: var(--primary-tactical, #38bdf8) !important; color: #0F172A !important; box-shadow: 0 0 10px rgba(56, 189, 248, 0.6) !important; }
 body.dashboard-page .pass-counter-btn.rainbow-step-6 { background: var(--clr-accent-1, #6366f1) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(99, 102, 241, 0.6) !important; }
-body.dashboard-page .pass-counter-btn.rainbow-step-7 { background: var(--quad-d, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(192, 132, 252, 0.6) !important; }
+body.dashboard-page .pass-counter-btn.rainbow-step-7 { background: var(--rainbow-step-7, #C084FC) !important; color: #FFFFFF !important; box-shadow: 0 0 10px rgba(192, 132, 252, 0.6) !important; }
 
 /* Yellow Padlock (Waiting for Exam) in 80px Column */
 body.dashboard-page .next-test-col-right .is-exam-lock {
