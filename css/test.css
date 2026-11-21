@@ -134,7 +134,7 @@
       }
       body.test-page #fixed-bottom-area {
         gap: 6px !important;
-        margin: 6px auto calc(50px + 10px + env(safe-area-inset-bottom, 0px)) auto !important;
+        margin: 6px auto 0 auto !important;
         padding: 0 !important;
       }
       .test-page .bottom-nav-bar {
@@ -218,16 +218,18 @@
     /* Dedicated Bottom Banner (430px Mobile-Locked Dual-Viewport Invariant SSOT §2.28) */
     body.test-page .topscore-locked-banner,
     body.test-page #bottom-ad-banner {
-      position: fixed !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
-      bottom: 0 !important;
+      position: relative !important;
+      flex-shrink: 0 !important;
+      bottom: auto !important;
+      left: auto !important;
+      right: auto !important;
+      transform: none !important;
       width: 100% !important;
       max-width: 430px !important;
-      margin: 0 auto !important;
+      margin: 10px auto 0 auto !important;
       height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+      min-height: 50px !important;
+      max-height: 50px !important;
       display: flex !important;
       align-items: center !important;
       justify-content: flex-start !important;
@@ -248,8 +250,7 @@
       font-weight: 800 !important;
       color: #cbd5e1 !important;
       letter-spacing: 0.04em !important;
-      flex-shrink: 0 !important;
-      z-index: 1000 !important;
+      z-index: 100 !important;
       pointer-events: auto !important;
     }
 
@@ -1168,7 +1169,7 @@ body.test-page #fixed-bottom-area {
   align-items: center !important;
   width: 100% !important;
   max-width: 100vw !important;
-  margin: 10px auto calc(50px + 10px + env(safe-area-inset-bottom, 0px)) auto !important; /* Strictly 10px above 50px locked lower banner */
+  margin: 10px auto 0 auto !important; /* Strictly 10px above bottom banner */
   box-sizing: border-box !important;
   padding: 0 !important;
 }
@@ -2621,12 +2622,13 @@ div:has(> a[href*="netlify.com"]) {
 }
 
 .desc-card-mic .speech-mic-btn-lg:hover {
-  transform: scale(1.05) !important;
+  transform: none !important;
   box-shadow: 0 0 20px rgba(0, 192, 0, 0.5) !important;
 }
 
 .desc-card-mic .speech-mic-btn-lg:active {
-  transform: scale(0.96) !important;
+  transform: none !important;
+  box-shadow: 0 0 25px rgba(0, 192, 0, 0.7) !important;
 }
 
 

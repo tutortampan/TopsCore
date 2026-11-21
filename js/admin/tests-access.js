@@ -25,6 +25,7 @@ import {
   extendTestSessionTime,
   extendIndividualAttemptTime,
   reopenStudentAttempt,
+  updateLiveSessionModality,
   getGrade
 } from '../api.js?v=20261114_v517';
 import { getSupabase } from '../supabase.js';
@@ -53,6 +54,34 @@ export async function renderTestAccess(area) {
   if (window.loadSection) {
     window.loadSection('class-hub');
   }
+}
+
+/**
+ * Dynamic Test Theme Code Extractor SSOT
+ * Extracts Theme Code ('A', 'B', 'C', 'D', 'G', etc.) across all legacy and standard test formulas.
+ */
+export function getTestThemeCode(t) {
+  if (!t) return '';
+  const pl = t.payload || {};
+  if (pl.theme_code) return String(pl.theme_code).toUpperCase();
+  const shell = String(t.shell_code || pl.shell_code || '').toUpperCase();
+  if (shell) {
+    const parts = shell.split('-');
+    if (parts.length >= 4 && parts[2]) {
+      const m = parts[2].match(/^([A-Za-z])/);
+      if (m) return m[1].toUpperCase();
+    }
+    const legacy = shell.replace(/^[0-9]+/, '');
+    if (legacy && /^[A-Za-z]/.test(legacy)) {
+      return legacy.charAt(0).toUpperCase();
+    }
+  }
+  const title = String(t.title || '');
+  const mTheme = title.match(/Theme\s+([A-Za-z])/i);
+  if (mTheme) return mTheme[1].toUpperCase();
+  const mCode = title.match(/\b(?:Task|Exam)\s+([A-Za-z])/i) || title.match(/\b([A-Za-z])[0-9]?\s+(?:Words|Phrases|Task|Exam)\b/i);
+  if (mCode) return mCode[1].toUpperCase();
+  return '';
 }
 
 /**
@@ -121,10 +150,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
   if (isVocab) {
     // Discover distinct theme codes present in this class's tests
-    const discoveredCodes = [...new Set(classTests.map(t => {
-      const pl = t.payload || {};
-      return (pl.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-    }).filter(Boolean))].sort();
+    const discoveredCodes = [...new Set(classTests.map(t => getTestThemeCode(t)).filter(Boolean))].sort();
 
     const themeCodes = discoveredCodes.length > 0 ? discoveredCodes : ['A', 'B', 'C', 'D'];
     if (!_selectedMatrixTheme || !themeCodes.includes(_selectedMatrixTheme)) {
@@ -135,54 +161,88 @@ export async function renderClassTestSessions(container, context = {}) {
     themesData = themeCodes.map(code => {
       const palette = THEME_PALETTES[code] || DEFAULT_THEME_PALETTE;
 
+      // Separate explicit Words Test (only if dedicated words exam, not the theme primary/unified exam)
       const wordsTest = classTests.find(a => {
         const pl = a.payload || {};
-        const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
-        const cat = (pl.category || '').toLowerCase();
+        const tc = getTestThemeCode(a);
+        if (tc !== code) return false;
         const type = (a.test_type || '').toLowerCase();
         const subtype = (a.test_subtype || '').toUpperCase();
         const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
         const title = (a.title || '').toLowerCase();
 
-        const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
         if (isTask) return false;
 
         const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-        return tc === code && isExam && (cat === 'words' || subtype === 'VOCAB_EXAM' || subtype === 'VOCAB_TEST' || shell.includes('WORDS-EXAM') || shell.includes('WORDS-TEST') || title.includes('words exam') || title.includes('words test'));
+        if (!isExam) return false;
+
+        const isExplicitWords = subtype === 'WORDS_EXAM' || shell.includes('-WORDS-EXAM') || shell.includes('-WORDS-TEST') || title.includes('words exam') || title.includes('words test');
+        return isExplicitWords && !pl.is_unified && !pl.is_unified_test && !shell.match(/-[A-D]-EXAM$/);
       });
 
+      // Separate explicit Phrases Test (only if dedicated phrases exam, not the theme primary/unified exam)
       const phrasesTest = classTests.find(a => {
         const pl = a.payload || {};
-        const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+        const tc = getTestThemeCode(a);
+        if (tc !== code) return false;
         const cat = (pl.category || '').toLowerCase();
         const type = (a.test_type || '').toLowerCase();
         const subtype = (a.test_subtype || '').toUpperCase();
         const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
         const title = (a.title || '').toLowerCase();
 
-        const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
         if (isTask) return false;
 
         const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-        return tc === code && isExam && (cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('PHRASES-EXAM') || shell.includes('PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test'));
+        if (!isExam) return false;
+
+        const isExplicitPhrases = cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('-PHRASES-EXAM') || shell.includes('-PHRASE-EXAM') || shell.includes('-PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test');
+        return isExplicitPhrases && !pl.is_unified && !pl.is_unified_test && !shell.match(/-[A-D]-EXAM$/);
+      });
+
+      // Unified Exam Test or Primary Exam for this theme (DECISION-034 SSOT)
+      const examTest = classTests.find(a => {
+        const pl = a.payload || {};
+        const tc = getTestThemeCode(a);
+        if (tc !== code) return false;
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        if (isTask) return false;
+
+        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+        if (!isExam) return false;
+
+        if (wordsTest && a.id === wordsTest.id) return false;
+        if (phrasesTest && a.id === phrasesTest.id) return false;
+
+        return true;
       });
 
       const tasks = classTests.filter(a => {
         const pl = a.payload || {};
-        const tc = (pl.theme_code || (a.shell_code ? a.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
+        const tc = getTestThemeCode(a);
         const type = (a.test_type || '').toLowerCase();
         const subtype = (a.test_subtype || '').toUpperCase();
         const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
         const title = (a.title || '').toLowerCase();
-        const isTask = type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
         return tc === code && isTask;
       }).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
 
       // Dynamic Topic Name
       let topicName = '';
-      const directTopicName = wordsTest?.topics?.name || phrasesTest?.topics?.name || tasks[0]?.topics?.name || wordsTest?.payload?.topic_name;
+      const directTopicName = examTest?.topics?.name || wordsTest?.topics?.name || phrasesTest?.topics?.name || tasks[0]?.topics?.name || examTest?.payload?.topic_name || wordsTest?.payload?.topic_name;
       if (directTopicName) {
         topicName = directTopicName.trim();
+      } else if (examTest?.title) {
+        const m = examTest.title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : examTest.title;
       } else if (wordsTest?.title) {
         const m = wordsTest.title.match(/-\s*([^-\n]+)$/);
         topicName = m ? m[1].trim() : wordsTest.title;
@@ -198,6 +258,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
       // Check live state
       const now = Date.now();
+      const sessE = examTest?.payload?.test_session;
       const sessW = wordsTest?.payload?.test_session;
       const sessP = phrasesTest?.payload?.test_session;
 
@@ -207,6 +268,13 @@ export async function renderClassTestSessions(container, context = {}) {
         return ac > now;
       };
 
+      if (examTest && sessE && sessE.status === 'UNLOCKED') {
+        const ac = sessE.auto_close_at ? new Date(sessE.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(examTest.id).catch(err => console.warn('[Auto-sync] Close expired examTest notice:', err?.message || err));
+          sessE.status = 'LOCKED';
+        }
+      }
       if (wordsTest && sessW && sessW.status === 'UNLOCKED') {
         const ac = sessW.auto_close_at ? new Date(sessW.auto_close_at).getTime() : 0;
         if (ac && ac <= now) {
@@ -222,11 +290,14 @@ export async function renderClassTestSessions(container, context = {}) {
         }
       }
 
+      const eLive = _sessIsLive(sessE);
       const wLive = _sessIsLive(sessW);
       const pLive = _sessIsLive(sessP);
 
       let sess = null;
-      if (wLive && pLive) {
+      if (eLive) {
+        sess = sessE;
+      } else if (wLive && pLive) {
         const wEnd = new Date(sessW.auto_close_at).getTime();
         const pEnd = new Date(sessP.auto_close_at).getTime();
         sess = wEnd >= pEnd ? sessW : sessP;
@@ -249,20 +320,40 @@ export async function renderClassTestSessions(container, context = {}) {
         remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
         liveBatchId = sess.batch_id;
         liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
+        const eIds = (eLive ? (sessE.allowed_student_ids || []) : []);
         const wIds = (wLive ? (sessW.allowed_student_ids || []) : []);
         const pIds = (pLive ? (sessP.allowed_student_ids || []) : []);
-        allowedStudentIds = [...new Set([...wIds, ...pIds])];
+        allowedStudentIds = [...new Set([...eIds, ...wIds, ...pIds])];
         isRemedial = Boolean(sess.is_remedial);
       }
 
       // Evaluate Batch Readiness
-      const themeObj = { code, name: topicName, wordsTest, phrasesTest, tasks, isNonVocab: false };
+      const themeObj = {
+        code,
+        name: topicName,
+        color: palette.color,
+        bgRgba: palette.bgRgba,
+        borderRgba: palette.borderRgba,
+        wordsTest,
+        phrasesTest,
+        examTest,
+        tasks,
+        isNonVocab: false,
+        isLive,
+        remainingMinutes,
+        liveBatchId,
+        liveBatchName,
+        allowedStudentIds,
+        isRemedial,
+        unlockedAt: sess?.unlocked_at || null
+      };
       const normalEvals = evaluateStudentsEligibility({
         students: activeBatchStudents,
         theme: themeObj,
         themeTasks: tasks,
         wordsTest,
         phrasesTest,
+        examTest,
         classTests,
         allAttempts,
         mode: 'normal'
@@ -275,33 +366,18 @@ export async function renderClassTestSessions(container, context = {}) {
         themeTasks: tasks,
         wordsTest,
         phrasesTest,
+        examTest,
         classTests,
         allAttempts,
         mode: 'remedial'
       });
       const eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
 
-      return {
-        code,
-        name: topicName,
-        color: palette.color,
-        bgRgba: palette.bgRgba,
-        borderRgba: palette.borderRgba,
-        wordsTest,
-        phrasesTest,
-        tasks,
-        isNonVocab: false,
-        isLive,
-        remainingMinutes,
-        liveBatchId,
-        liveBatchName,
-        allowedStudentIds,
-        isRemedial,
-        unlockedAt: sess?.unlocked_at || null,
-        eligibleNormalCount,
-        eligibleRemedialCount,
-        batchTotalStudents: activeBatchStudents.length
-      };
+      themeObj.eligibleNormalCount = eligibleNormalCount;
+      themeObj.eligibleRemedialCount = eligibleRemedialCount;
+      themeObj.batchTotalStudents = activeBatchStudents.length;
+
+      return themeObj;
     });
   } else {
     // Non-vocabulary classes (Basic English, Speaking, Storytelling, etc.):
@@ -409,7 +485,7 @@ export async function renderClassTestSessions(container, context = {}) {
   // Update Lower Infobar Metadata (50px Lower Sub-Panel)
   if (typeof window.setBottomInfobar === 'function') {
     const totalExamsCount = isVocab
-      ? themesData.reduce((acc, t) => acc + (t.wordsTest ? 1 : 0) + (t.phrasesTest ? 1 : 0), 0)
+      ? themesData.reduce((acc, t) => acc + (t.examTest ? 1 : ((t.wordsTest ? 1 : 0) + (t.phrasesTest ? 1 : 0))), 0)
       : themesData.length;
     const selectedBatch = effectiveBatches.find(b => b.id === _selectedBatchId) || effectiveBatches[0];
     const selTheme = themesData.find(t => t.code === _selectedMatrixTheme) || themesData[0];
@@ -559,8 +635,8 @@ export async function renderClassTestSessions(container, context = {}) {
               <div>
                 <label class="form-label" style="font-weight:800; font-size:12px; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px; display:block;">Phrases Module</label>
                 <select id="open-modal-phrases-module-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.22); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px;">
-                  <option value="written" selected>Written (M3)</option>
-                  <option value="multiple_choice">Selection (M2)</option>
+                  <option value="written">Written (M3)</option>
+                  <option value="multiple_choice" selected>Selection (M2)</option>
                   <option value="spoken">Spoken (M4)</option>
                 </select>
               </div>
@@ -582,7 +658,7 @@ export async function renderClassTestSessions(container, context = {}) {
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
               <div style="display:flex; align-items:center; gap:10px;">
                 <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.04em; margin:0;">Duration:</label>
-                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="180" step="5" style="width:65px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; font-size:12px; text-align:center;">
+                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="360" step="5" style="width:65px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; font-size:12px; text-align:center;">
                 <span id="open-modal-duration-suggestion-text" style="font-size:12px; color:var(--grade-c); font-weight:700;">60 min</span>
               </div>
 
@@ -626,9 +702,9 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <!-- 3. Modal Footer: Standardized 60px CTA Area Invariant (§1.5.2 & §1.5.4) - Red Left Cancel & Green Right Unlock -->
         <div class="modal-footer" style="height:60px; min-height:60px; max-height:60px; padding:0 16px; border-top:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
-          <!-- Cancel Button: Strictly on Left with Red Accent -->
+          <!-- Close Button: Strictly on Left with Red Accent -->
           <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-cancel-open-modal" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:14px; font-weight:800; border-radius:6px; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer; text-transform:uppercase;">
-            Cancel
+            CLOSE
           </button>
 
           <!-- Middle Student Count Summary -->
@@ -714,9 +790,9 @@ export async function renderClassTestSessions(container, context = {}) {
 
         <!-- Standardized 60px CTA Area Invariant (Solid Navy, Left Red Cancel & Right Green Add) -->
         <div class="modal-footer" style="height:60px; min-height:60px; max-height:60px; padding:0 16px; border-top:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
-          <!-- Cancel Button: Strictly on Left with Red Accent -->
+          <!-- Close Button: Strictly on Left with Red Accent -->
           <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-cancel-late-modal" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:14px; font-weight:800; border-radius:6px; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer; text-transform:uppercase;">
-            Cancel
+            CLOSE
           </button>
 
           <!-- Middle Student Count Summary -->
@@ -789,7 +865,7 @@ export async function renderClassTestSessions(container, context = {}) {
                   <th class="sortable-th" data-sort-key="name" style="padding:6px 10px; text-align:left; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">NAME <span class="sort-icon" id="th-sort-name"></span></th>
                   <th class="sortable-th" data-sort-key="status" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">TEST STATUS <span class="sort-icon" id="th-sort-status"></span></th>
                   <th class="sortable-th" data-sort-key="progress" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">PROGRESS <span class="sort-icon" id="th-sort-progress"></span></th>
-                  <th class="sortable-th" data-sort-key="score" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">SCORE <span class="sort-icon" id="th-sort-score"></span></th>
+                  <th class="sortable-th" data-sort-key="score" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">RATE <span class="sort-icon" id="th-sort-score"></span></th>
                   <th class="sortable-th" data-sort-key="alarm" style="padding:6px 6px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12); cursor:pointer;">ALARM <span class="sort-icon" id="th-sort-alarm"></span></th>
                   <th style="padding:6px 4px; text-align:center; font-size:12px; font-weight:700; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.12);">EXPEL</th>
                 </tr>
@@ -806,7 +882,7 @@ export async function renderClassTestSessions(container, context = {}) {
         <div class="modal-footer" style="height:60px; min-height:60px; max-height:60px; padding:0 16px; border-top:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
           <!-- Left: Bottom-Left Close CTA Invariant (Red Accent) -->
           <button type="button" class="btn btn-secondary btn-modal-close-left" id="btn-close-live-modal-footer" style="height:40px; min-height:40px; line-height:38px; padding:0 20px; font-size:14px; font-weight:800; border-radius:6px; color:#ffffff; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); box-shadow:0 0 10px rgba(255,0,0,0.3); cursor:pointer; text-transform:uppercase;">
-            Close Monitor
+            CLOSE
           </button>
 
           <!-- Right Operational Controls: NORMAL/REMEDIAL -> EDIT TIME -> TIME (Standard 40px Height) -->
@@ -915,7 +991,7 @@ export async function renderClassTestSessions(container, context = {}) {
           </label>
         </div>
         <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); display:flex; justify-content:space-between; align-items:center; background:#1E293B; box-sizing:border-box;">
-          <button type="button" class="btn btn-modal-close-left" id="btn-cancel-kick" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); color:#ffffff; font-weight:600; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; cursor:pointer;">Cancel</button>
+          <button type="button" class="btn btn-modal-close-left" id="btn-cancel-kick" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); color:#ffffff; font-weight:600; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; cursor:pointer;">CLOSE</button>
           <button type="button" class="btn" id="btn-confirm-kick" style="height:40px; min-height:40px; line-height:38px; background:var(--grade-e) !important; border:1.5px solid var(--grade-e) !important; color:#ffffff !important; font-weight:800; font-size:14px; padding:0 18px; border-radius:4px; box-sizing:border-box; display:inline-flex; align-items:center; gap:6px; cursor:pointer; box-shadow:0 0 14px rgba(255,0,0,0.45);">
             Expel Now
           </button>
@@ -928,13 +1004,12 @@ export async function renderClassTestSessions(container, context = {}) {
       <div class="modal-box card" style="background:#0f172a; border:1.5px solid rgba(var(--grade-e-rgb),0.35); border-radius:12px; width:100%; max-width:480px; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9);">
         <div style="height:60px; min-height:60px; max-height:60px; padding:0 20px; background:#1E293B; border-bottom:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box;">
           <h4 id="alarm-detail-student-name" style="margin:0; font-family:'Inter',sans-serif; font-size:16px; font-weight:800; color:#ffffff; text-transform:uppercase; letter-spacing:0.5px;">STUDENT INTEGRITY &amp; TAB-SWITCH ALARMS</h4>
-          <div id="alarm-detail-meta" style="font-family:'Inter',sans-serif; font-size:12px; font-weight:400; color:#94a3b8; margin-top:2px;">Exam integrity warning history</div>
         </div>
         <div id="alarm-detail-logs-list" style="padding:10px 16px; max-height:50vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; box-sizing:border-box;">
           <!-- Items injected dynamically -->
         </div>
         <div style="height:60px; min-height:60px; max-height:60px; padding:10px 20px; border-top:1px solid rgba(255,255,255,0.08); background:#1E293B; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
-          <button type="button" class="btn btn-modal-close-left" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); color:#ffffff; font-weight:600; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; cursor:pointer;">Close</button>
+          <button type="button" class="btn btn-modal-close-left" id="btn-dismiss-alarm-detail" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,0,0,0.15); border:1.5px solid var(--grade-e); color:#ffffff; font-weight:600; font-size:12px; padding:0 18px; border-radius:4px; box-sizing:border-box; cursor:pointer;">CLOSE</button>
           <button type="button" class="btn" id="btn-clear-student-alarms" style="height:40px; min-height:40px; line-height:38px; background:rgba(255,255,0,0.12); border:1.5px solid var(--grade-c); color:var(--grade-c); font-size:12px; font-weight:700; padding:0 16px; border-radius:4px; cursor:pointer; box-sizing:border-box;">
             Reset / Forgive Student Alarms
           </button>
@@ -1236,6 +1311,7 @@ function renderThemeCard(theme, context) {
     borderRgba,
     wordsTest,
     phrasesTest,
+    examTest,
     tasks,
     isLive,
     remainingMinutes,
@@ -1250,23 +1326,86 @@ function renderThemeCard(theme, context) {
   const isNonVocab = Boolean(theme.isNonVocab);
   const wordsQ = wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0);
   const phrasesQ = phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0);
-  const totalQ = isNonVocab ? (theme.totalQuestions || 20) : (wordsQ + phrasesQ);
-  const autoDur = isNonVocab ? (theme.duration || 40) : (totalQ > 0 ? Math.max(10, Math.ceil(totalQ * 1.5)) : (wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 60));
+  const examQ = examTest?.total_questions || examTest?.payload?.total_questions || (Array.isArray(examTest?.questions) ? examTest.questions.length : 0);
+  const totalQ = isNonVocab ? (theme.totalQuestions || 20) : (examTest ? examQ : (wordsQ + phrasesQ));
 
   const enrolledCount = (allowedStudentIds && allowedStudentIds.length) ? allowedStudentIds.length : 0;
   const hasWords = Boolean(wordsTest);
   const hasPhrases = Boolean(phrasesTest);
+  const hasExam = Boolean(examTest);
   const readinessPct = batchTotalStudents > 0 ? Math.round((eligibleNormalCount / batchTotalStudents) * 100) : 0;
+
+  // Standar Pacing SSOT (DECISION-063 Khusus Vocabulary Class):
+  // Words: 10s spoken / 15s written / 10s selection
+  // Phrases: 20s spoken / 10s selection / 20s written
+  let autoDur = 45;
+  let wCount = 0;
+  let pCount = 0;
+
+  if (isNonVocab) {
+    autoDur = theme.duration || examTest?.working_duration_minutes || 40;
+  } else {
+    const curModes = examTest?.payload?.test_session?.answering_modes || wordsTest?.payload?.test_session?.answering_modes || {};
+    const curMode = examTest?.payload?.test_session?.answering_mode || wordsTest?.payload?.test_session?.answering_mode || 'written';
+    const wordsAns = (curModes.words || curMode || 'written').toLowerCase();
+    const phrasesAns = (curModes.phrases || 'multiple_choice').toLowerCase();
+
+    const wPace = (wordsAns === 'written') ? 15 : 10;
+    const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice') ? 10 : 20;
+
+    if (hasExam) {
+      const isUnified = examTest.payload?.is_unified || examTest.payload?.category === 'unified' || examQ === 200;
+      if (isUnified && examQ > 0) {
+        if (Array.isArray(examTest.payload?.questions) && examTest.payload.questions.length > 0) {
+          examTest.payload.questions.forEach(q => {
+            if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
+            else wCount++;
+          });
+        }
+        if (wCount === 0 && pCount === 0) {
+          if (examQ === 200) {
+            wCount = 160;
+            pCount = 40;
+          } else if (examQ === 50) {
+            wCount = 40;
+            pCount = 10;
+          } else {
+            pCount = Math.round(examQ * 0.2);
+            wCount = examQ - pCount;
+          }
+        }
+      } else {
+        const cat = (examTest.payload?.category || examTest.category || '').toLowerCase();
+        if (cat === 'phrases') {
+          pCount = examQ;
+        } else {
+          wCount = examQ;
+        }
+      }
+    } else {
+      wCount = wordsQ;
+      pCount = phrasesQ;
+    }
+
+    const totalSeconds = (wCount * wPace) + (pCount * pPace);
+    autoDur = totalSeconds > 0
+      ? Math.max(5, Math.ceil(totalSeconds / 60))
+      : (examTest?.working_duration_minutes || wordsTest?.working_duration_minutes || phrasesTest?.working_duration_minutes || 45);
+  }
 
   const examTitleStr = isNonVocab
     ? escapeHtml(theme.name)
-    : (hasWords && hasPhrases
-        ? 'Words Exam & Phrases Exam'
-        : (hasWords ? 'Words Exam' : (hasPhrases ? 'Phrases Exam' : 'Tasks Only')));
+    : (hasExam
+        ? escapeHtml(examTest.title || `Theme ${code} Exam`)
+        : (hasWords && hasPhrases
+            ? 'Words Exam & Phrases Exam'
+            : (hasWords ? 'Words Exam' : (hasPhrases ? 'Phrases Exam' : 'Tasks Only'))));
 
   const questionCountStr = isNonVocab
     ? `${theme.totalQuestions || 20} Questions &bull; ${escapeHtml(theme.moduleName || 'Exam Engine')}`
-    : `Words: ${wordsQ}, Phrases: ${phrasesQ}`;
+    : (hasExam
+        ? (pCount > 0 ? `Words: ${wCount}, Phrases: ${pCount} &bull; ${examQ} Qs` : `Words: ${wCount}, Phrases: 0 &bull; ${examQ} Qs`)
+        : `Words: ${wordsQ}, Phrases: ${phrasesQ}`);
 
   // Top Group: Header Line, Exam Title Line, Standard 12px Metadata Box
   const topBlock = `
@@ -1334,15 +1473,22 @@ function renderThemeCard(theme, context) {
   // Row 3: Secondary Action / Standby Box
   let row3Content = '';
   if (isLive) {
+    const curWordsMode = theme.examTest?.payload?.test_session?.answering_modes?.words ||
+                         theme.wordsTest?.payload?.test_session?.answering_modes?.words ||
+                         theme.examTest?.payload?.test_session?.answering_mode || 'written';
+    const curPhrasesMode = theme.examTest?.payload?.test_session?.answering_modes?.phrases ||
+                           theme.phrasesTest?.payload?.test_session?.answering_modes?.phrases ||
+                           'multiple_choice';
+
     row3Content = `
-      <div class="card-block-row-buttons" style="position:relative; display:flex; gap:8px;">
-        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" style="border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none;" title="Add Late Arrival Students">
+      <div class="card-block-row-buttons" style="position:relative; display:flex; gap:6px;">
+        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Add Late Arrival Students">
           +LATE
         </button>
 
         <!-- Edit Time Popover -->
         <div style="position:relative; flex:1; height:100%; display:flex;">
-          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none;" title="Edit Exam Time (+ / -)">
+          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Edit Exam Time (+ / -)">
             TIME
           </button>
           <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
@@ -1383,8 +1529,51 @@ function renderThemeCard(theme, context) {
           </div>
         </div>
 
+        <!-- Live Modality Switch Popover -->
+        <div style="position:relative; flex:1; height:100%; display:flex;">
+          <button type="button" class="btn btn-wireframe-edit-mode btn-card-edit-mode" data-theme="${code}" style="width:100%; border:1px solid rgba(56, 189, 248, 0.85); color:#38bdf8; background:rgba(56, 189, 248, 0.06); box-shadow:none; padding:4px 6px;" title="Live Modality Switch (Written / Selection / Spoken)">
+            MODE
+          </button>
+          <div id="card-edit-mode-menu-${code}" class="card-edit-mode-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid #38bdf8; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(56, 189, 248, 0.25); z-index:99999; width:230px; padding:8px; flex-direction:column; gap:6px;">
+            <div style="background:#38bdf8; color:#0f172a; font-weight:900; font-size:12px; padding:5px 8px; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em; display:flex; align-items:center; justify-content:space-between;">
+              <span>LIVE MODALITY &bull; THEME ${code}</span>
+              <span style="font-size:10px; background:rgba(0,0,0,0.25); color:#0f172a; padding:1px 5px; border-radius:3px; font-weight:800;">AUTO NEXT</span>
+            </div>
+
+            <!-- Words Module Selection -->
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; display:flex; justify-content:space-between;">
+                <span>Words Module</span>
+                <span id="label-live-words-${code}" style="color:#ffffff; font-weight:700;">${curWordsMode}</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px;">
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="written" style="background:${curWordsMode === 'written' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Written</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="multiple_choice" style="background:${curWordsMode === 'multiple_choice' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Select</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="spoken" style="background:${curWordsMode === 'spoken' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Spoken</button>
+              </div>
+            </div>
+
+            <!-- Phrases Module Selection -->
+            <div>
+              <div style="font-size:11px; font-weight:800; color:var(--quad-d); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; display:flex; justify-content:space-between;">
+                <span>Phrases Module</span>
+                <span id="label-live-phrases-${code}" style="color:#ffffff; font-weight:700;">${curPhrasesMode}</span>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px;">
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="written" style="background:${curPhrasesMode === 'written' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Written</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="multiple_choice" style="background:${curPhrasesMode === 'multiple_choice' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Select</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="spoken" style="background:${curPhrasesMode === 'spoken' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer;">Spoken</button>
+              </div>
+            </div>
+
+            <div style="font-size:10px; color:#94a3b8; text-align:center; margin-top:2px; line-height:1.2;">
+              Updates instantly on student's next question
+            </div>
+          </div>
+        </div>
+
         <!-- Close Session -->
-        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" style="border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:#fca5a5; background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); box-shadow:none;" title="Close Active Exam Session">
+        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:#fca5a5; background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Close Active Exam Session">
           CLOSE
         </button>
       </div>
@@ -1515,9 +1704,9 @@ function bindTestSessionsEvents(container, themesData, context) {
       showLoading();
       try {
         const promises = [];
-        if (theme.isNonVocab && theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
-        if (theme.wordsTest) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
-        if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
+        if (theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
         const targetName = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
@@ -1566,9 +1755,9 @@ function bindTestSessionsEvents(container, themesData, context) {
       showLoading();
       try {
         const promises = [];
-        if (theme.isNonVocab && theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
-        if (theme.wordsTest) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
-        if (theme.phrasesTest) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
+        if (theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
         await Promise.all(promises);
 
         showToast(`Exam timer for ${targetLabel} successfully ${actionText}!`, 'success');
@@ -1578,6 +1767,81 @@ function bindTestSessionsEvents(container, themesData, context) {
       } catch (err) {
         console.error('Error adjusting session time from card:', err);
         showToast('Failed to adjust exam timer: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    });
+  });
+
+  // 3d. Card Direct Edit Modality Triggers (Live Answering Mode Switch)
+  container.querySelectorAll('.btn-card-edit-mode').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const menu = container.querySelector(`#card-edit-mode-menu-${themeCode}`);
+      if (!menu) return;
+
+      // Close all other menus first
+      container.querySelectorAll('.card-add-time-menu, .card-edit-mode-menu').forEach(m => {
+        if (m !== menu) m.style.display = 'none';
+      });
+
+      menu.style.display = (menu.style.display === 'flex' || menu.style.display === 'block') ? 'none' : 'flex';
+    });
+  });
+
+  // Close modality menus when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.btn-card-edit-mode') && !e.target.closest('.card-edit-mode-menu')) {
+      container.querySelectorAll('.card-edit-mode-menu').forEach(m => {
+        m.style.display = 'none';
+      });
+    }
+  });
+
+  // Quick live mode opt buttons
+  container.querySelectorAll('.btn-live-mode-opt').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const section = e.currentTarget.getAttribute('data-section');
+      const mode = e.currentTarget.getAttribute('data-mode');
+      const theme = themesData.find(t => t.code === themeCode);
+      if (!theme || !section || !mode) return;
+
+      const examTest = theme.examTest || theme.wordsTest || theme.phrasesTest;
+      if (!examTest) return;
+
+      const currentSession = examTest.payload?.test_session || {};
+      const currentModes = currentSession.answering_modes || {};
+
+      const newWordsMode = section === 'words' ? mode : (currentModes.words || currentSession.answering_mode || 'written');
+      const newPhrasesMode = section === 'phrases' ? mode : (currentModes.phrases || currentSession.answering_mode || 'written');
+
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.examTest) {
+          promises.push(updateLiveSessionModality({ testId: theme.examTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
+        }
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
+          promises.push(updateLiveSessionModality({ testId: theme.wordsTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
+        }
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
+          promises.push(updateLiveSessionModality({ testId: theme.phrasesTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
+        }
+        await Promise.all(promises);
+
+        const targetLabel = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+        const secLabel = section === 'words' ? 'Words' : 'Phrases';
+        showToast(`Live modality for ${targetLabel} (${secLabel}) changed to ${mode.toUpperCase()}! Students will automatically switch on their next question.`, 'success');
+
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error updating session modality:', err);
+        showToast('Failed to update modality: ' + err.message, 'error');
       } finally {
         hideLoading();
       }
@@ -1598,9 +1862,9 @@ function bindTestSessionsEvents(container, themesData, context) {
       showLoading();
       try {
         const promises = [];
-        if (theme.isNonVocab && theme.examTest) promises.push(closeTestSession(theme.examTest.id));
-        if (theme.wordsTest) promises.push(closeTestSession(theme.wordsTest.id));
-        if (theme.phrasesTest) promises.push(closeTestSession(theme.phrasesTest.id));
+        if (theme.examTest) promises.push(closeTestSession(theme.examTest.id));
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(closeTestSession(theme.wordsTest.id));
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(closeTestSession(theme.phrasesTest.id));
         await Promise.all(promises);
 
         showToast(`Test session "${theme.name}" closed successfully.`, 'success');
@@ -1638,59 +1902,142 @@ function openThemeSessionModal(container, theme, mode, context) {
   const batchSelect = modal.querySelector('#open-modal-batch-select');
   const wordsModuleSelect = modal.querySelector('#open-modal-words-module-select');
   const phrasesModuleSelect = modal.querySelector('#open-modal-phrases-module-select');
+
+  // Pre-populate selections from active session or previous settings if present
+  const existingSessModes = theme.examTest?.payload?.test_session?.answering_modes ||
+                            theme.wordsTest?.payload?.test_session?.answering_modes;
+  const existingSessMode = theme.examTest?.payload?.test_session?.answering_mode ||
+                           theme.wordsTest?.payload?.test_session?.answering_mode;
+
+  if (wordsModuleSelect) {
+    if (existingSessModes?.words) {
+      wordsModuleSelect.value = existingSessModes.words;
+    } else if (existingSessMode) {
+      wordsModuleSelect.value = existingSessMode;
+    }
+  }
+  if (phrasesModuleSelect) {
+    if (existingSessModes?.phrases) {
+      phrasesModuleSelect.value = existingSessModes.phrases;
+    } else {
+      phrasesModuleSelect.value = 'multiple_choice';
+    }
+  }
+
   let _selectedAnswerModeWords = wordsModuleSelect ? wordsModuleSelect.value : 'written';
-  let _selectedAnswerModePhrases = phrasesModuleSelect ? phrasesModuleSelect.value : 'written';
+  let _selectedAnswerModePhrases = phrasesModuleSelect ? phrasesModuleSelect.value : 'multiple_choice';
+
+  const isNonVocab = Boolean(theme.isNonVocab);
+  const vocabModulesRow = modal.querySelector('#open-modal-vocab-modules-row');
+  const nonVocabDetailsRow = modal.querySelector('#open-modal-nonvocab-details-row');
+  const durationInput = modal.querySelector('#open-modal-duration-input');
+  if (durationInput) {
+    delete durationInput.dataset.userSet;
+    durationInput.addEventListener('input', () => { durationInput.dataset.userSet = '1'; });
+    durationInput.addEventListener('change', () => { durationInput.dataset.userSet = '1'; });
+  }
+
+  // ── Auto-duration calculation (SSOT DECISION-063 Khusus Vocabulary Class) ────
+  // Words: 10s spoken / 15s written / 10s selection
+  // Phrases: 20s spoken / 10s selection / 20s written
+  const recalcVocabDuration = () => {
+    if (isNonVocab) return;
+    const wordsAns = (_selectedAnswerModeWords || 'written').toLowerCase();
+    const phrasesAns = (_selectedAnswerModePhrases || 'selection').toLowerCase();
+
+    const wPace = (wordsAns === 'written') ? 15 : 10;
+    const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice') ? 10 : 20;
+
+    const _examQ = theme.examTest?.total_questions || theme.examTest?.payload?.total_questions || (Array.isArray(theme.examTest?.questions) ? theme.examTest.questions.length : 0) || 0;
+    let wCount = 0;
+    let pCount = 0;
+
+    const isUnified = theme.examTest?.payload?.is_unified || theme.examTest?.payload?.category === 'unified' || _examQ === 200;
+    if (isUnified && _examQ > 0) {
+      if (Array.isArray(theme.examTest?.payload?.questions) && theme.examTest.payload.questions.length > 0) {
+        theme.examTest.payload.questions.forEach(q => {
+          if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
+          else wCount++;
+        });
+      }
+      if (wCount === 0 && pCount === 0) {
+        if (_examQ === 200) {
+          wCount = 160;
+          pCount = 40;
+        } else if (_examQ === 50) {
+          wCount = 40;
+          pCount = 10;
+        } else {
+          pCount = Math.round(_examQ * 0.2);
+          wCount = _examQ - pCount;
+        }
+      }
+    } else if (theme.examTest) {
+      const cat = (theme.examTest.payload?.category || theme.examTest.category || '').toLowerCase();
+      if (cat === 'phrases') {
+        pCount = _examQ;
+      } else {
+        wCount = _examQ;
+      }
+    } else {
+      wCount = theme.wordsTest?.payload?.total_questions || theme.wordsTest?.total_questions || 0;
+      pCount = theme.phrasesTest?.payload?.total_questions || theme.phrasesTest?.total_questions || 0;
+    }
+
+    const totalSeconds = (wCount * wPace) + (pCount * pPace);
+    const autoDur = totalSeconds > 0
+      ? Math.max(5, Math.ceil(totalSeconds / 60))
+      : (theme.examTest?.working_duration_minutes || 45);
+
+    const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
+    if (_suggEl) {
+      const breakdownStr = pCount > 0
+        ? `${wCount} Words @ ${wPace}s + ${pCount} Phrases @ ${pPace}s`
+        : `${wCount} Questions @ ${wPace}s`;
+      _suggEl.textContent = `Auto: ${autoDur} min (${breakdownStr})`;
+    }
+
+    if (durationInput && !durationInput.dataset.userSet) {
+      durationInput.value = autoDur;
+    }
+  };
 
   if (wordsModuleSelect) {
     wordsModuleSelect.onchange = (e) => {
       _selectedAnswerModeWords = e.target.value;
+      recalcVocabDuration();
     };
   }
   if (phrasesModuleSelect) {
     phrasesModuleSelect.onchange = (e) => {
       _selectedAnswerModePhrases = e.target.value;
+      recalcVocabDuration();
     };
   }
-
-  const isNonVocab = Boolean(theme.isNonVocab);
-  const vocabModulesRow = modal.querySelector('#open-modal-vocab-modules-row');
-  const nonVocabDetailsRow = modal.querySelector('#open-modal-nonvocab-details-row');
 
   if (isNonVocab) {
     if (vocabModulesRow) vocabModulesRow.style.display = 'none';
     if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'flex';
     const nonVocabTitleEl = modal.querySelector('#open-modal-nonvocab-exam-title');
     const nonVocabInfoEl = modal.querySelector('#open-modal-nonvocab-engine-info');
-    if (nonVocabTitleEl) nonVocabTitleEl.textContent = theme.name;
-    if (nonVocabInfoEl) nonVocabInfoEl.textContent = `${theme.moduleName || 'Exam Engine'} • ${theme.totalQuestions || 20} Questions`;
+    if (nonVocabTitleEl) nonVocabTitleEl.textContent = (theme.examTest?.title || theme.name);
+    const qCount = theme.examTest?.total_questions || theme.examTest?.payload?.total_questions || (Array.isArray(theme.examTest?.questions) ? theme.examTest.questions.length : 0) || (theme.totalQuestions || 20);
+    const engName = theme.moduleName || 'Exam Engine';
+    if (nonVocabInfoEl) nonVocabInfoEl.textContent = `${engName} • ${qCount} Questions`;
 
     const autoDur = theme.duration || 40;
     const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
     if (_suggEl) _suggEl.textContent = `Default: ${autoDur} min`;
-    const durationInput = modal.querySelector('#open-modal-duration-input');
     if (durationInput && !durationInput.dataset.userSet) durationInput.value = autoDur;
   } else {
+    // VOCABULARY CLASSES (both Unified Exam & separate Words/Phrases modules):
+    // Answering module selectors (Written M3, Selection M2, Spoken M4) must always be visible!
     if (vocabModulesRow) vocabModulesRow.style.display = 'grid';
     if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'none';
 
-    // ── Auto-duration calculation ────────────────────────
-    const _wordsQ = theme.wordsTest?.total_questions || 0;
-    const _phrasesQ = theme.phrasesTest?.total_questions || 0;
-    const _totalQ = _wordsQ + _phrasesQ;
-    const _autoDur = _totalQ > 0 ? Math.max(10, Math.ceil(_totalQ * 1.5)) : (theme.wordsTest?.working_duration_minutes || theme.phrasesTest?.working_duration_minutes || 60);
-    const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
-    if (_suggEl) {
-      _suggEl.textContent = _totalQ > 0
-        ? 'Auto: ' + _autoDur + ' min (' + _totalQ + ' questions × 1.5)'
-        : 'Default: ' + _autoDur + ' min';
-    }
-
-    const durationInput = modal.querySelector('#open-modal-duration-input');
-    if (durationInput && !durationInput.dataset.userSet) durationInput.value = _autoDur;
+    // Calculate duration using modality-specific pacing SSOT
+    recalcVocabDuration();
   }
-
-  const durationInput = modal.querySelector('#open-modal-duration-input');
-  if (durationInput) durationInput.addEventListener('change', () => { durationInput.dataset.userSet = '1'; });
 
   const confirmBtn = modal.querySelector('#btn-confirm-open-session');
 
@@ -2000,11 +2347,13 @@ function openThemeSessionModal(container, theme, mode, context) {
 
     const duration = parseInt(durationInput.value, 10) || 60;
     const isRemedial = (mode === 'remedial');
+    const selectedWordsMode = wordsModuleSelect ? wordsModuleSelect.value : (_selectedAnswerModeWords || 'written');
+    const selectedPhrasesMode = phrasesModuleSelect ? phrasesModuleSelect.value : (_selectedAnswerModePhrases || 'multiple_choice');
 
     showLoading();
     try {
       const promises = [];
-      if (theme.isNonVocab && theme.examTest) {
+      if (theme.examTest) {
         promises.push(openTestSession({
           testId: theme.examTest.id,
           batchId: targetBatchId,
@@ -2012,35 +2361,46 @@ function openThemeSessionModal(container, theme, mode, context) {
           allowedStudentIds: allowedStudentIds,
           isRemedial: isRemedial,
           remedialStudentIds: isRemedial ? allowedStudentIds : [],
-          answeringMode: theme.examTest.payload?.answering_mode || 'description'
+          answeringMode: theme.isNonVocab
+            ? (theme.examTest.payload?.answering_mode || 'description')
+            : selectedWordsMode,
+          answeringModes: {
+            words: selectedWordsMode,
+            phrases: selectedPhrasesMode
+          }
         }));
-      } else {
-        if (theme.wordsTest) {
-          promises.push(openTestSession({
-            testId: theme.wordsTest.id,
-            batchId: targetBatchId,
-            allocatedMinutes: duration,
-            allowedStudentIds: allowedStudentIds,
-            isRemedial: isRemedial,
-            remedialStudentIds: isRemedial ? allowedStudentIds : [],
-            answeringMode: _selectedAnswerModeWords
-          }));
-        }
-        if (theme.phrasesTest) {
-          // Unify Theme Test Access: Whitelist all selected students for both Words and Phrases.
-          // Sequential prerequisite (Phrases requires Words Exam >= 60%) is dynamically enforced
-          // on the student dashboard at test attempt time, so students can seamlessly take Phrases
-          // as soon as they finish Words within this active session.
-          promises.push(openTestSession({
-            testId: theme.phrasesTest.id,
-            batchId: targetBatchId,
-            allocatedMinutes: duration,
-            allowedStudentIds: allowedStudentIds,
-            isRemedial: isRemedial,
-            remedialStudentIds: isRemedial ? allowedStudentIds : [],
-            answeringMode: _selectedAnswerModePhrases
-          }));
-        }
+      }
+      if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
+        promises.push(openTestSession({
+          testId: theme.wordsTest.id,
+          batchId: targetBatchId,
+          allocatedMinutes: duration,
+          allowedStudentIds: allowedStudentIds,
+          isRemedial: isRemedial,
+          remedialStudentIds: isRemedial ? allowedStudentIds : [],
+          answeringMode: selectedWordsMode,
+          answeringModes: {
+            words: selectedWordsMode,
+            phrases: selectedPhrasesMode
+          }
+        }));
+      }
+      if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
+        // Sequential prerequisite (Phrases requires Words Exam >= 60%) is dynamically enforced
+        // on the student dashboard at test attempt time
+        promises.push(openTestSession({
+          testId: theme.phrasesTest.id,
+          batchId: targetBatchId,
+          allocatedMinutes: duration,
+          allowedStudentIds: allowedStudentIds,
+          isRemedial: isRemedial,
+          remedialStudentIds: isRemedial ? allowedStudentIds : [],
+          answeringMode: selectedPhrasesMode,
+          answeringModes: {
+            words: selectedWordsMode,
+            phrases: selectedPhrasesMode
+          }
+        }));
       }
 
       if (promises.length === 0) {
@@ -2248,27 +2608,26 @@ function openThemeLateModal(container, theme, context) {
     showLoading();
     try {
       const promises = [];
-      if (theme.isNonVocab && theme.examTest) {
+      if (theme.examTest) {
         promises.push(addLateStudentsToSession({
           testId: theme.examTest.id,
           studentIds: studentIds,
           remedialStudentIds: isRem ? studentIds : []
         }));
-      } else {
-        if (theme.wordsTest) {
-          promises.push(addLateStudentsToSession({
-            testId: theme.wordsTest.id,
-            studentIds: studentIds,
-            remedialStudentIds: isRem ? studentIds : []
-          }));
-        }
-        if (theme.phrasesTest) {
-          promises.push(addLateStudentsToSession({
-            testId: theme.phrasesTest.id,
-            studentIds: studentIds,
-            remedialStudentIds: isRem ? studentIds : []
-          }));
-        }
+      }
+      if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
+        promises.push(addLateStudentsToSession({
+          testId: theme.wordsTest.id,
+          studentIds: studentIds,
+          remedialStudentIds: isRem ? studentIds : []
+        }));
+      }
+      if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
+        promises.push(addLateStudentsToSession({
+          testId: theme.phrasesTest.id,
+          studentIds: studentIds,
+          remedialStudentIds: isRem ? studentIds : []
+        }));
       }
 
       await Promise.all(promises);
@@ -2445,9 +2804,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     }
 
     try {
-      const testIds = theme.isNonVocab
-        ? [theme.examTest?.id].filter(Boolean)
-        : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = [theme.examTest?.id, theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       const studentIds = theme.allowedStudentIds || [];
       const sessionData = await fetchLiveTestSessionData({
         testIds,
@@ -2480,20 +2837,18 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         const studAttempts = (sessionData.attempts || []).filter(a => a.student_id === student.id);
         const wAtt = getActiveOrLatestAttempt(studAttempts, theme.wordsTest?.id);
         const pAtt = getActiveOrLatestAttempt(studAttempts, theme.phrasesTest?.id);
-        const exAtt = theme.isNonVocab ? getActiveOrLatestAttempt(studAttempts, theme.examTest?.id) : null;
+        const exAtt = getActiveOrLatestAttempt(studAttempts, theme.examTest?.id);
 
         const totalAttemptCount = studAttempts.length;
         const isRetake = totalAttemptCount > 1;
 
-        const inProgressAtt = theme.isNonVocab
-          ? (exAtt && exAtt.status === 'in_progress' ? exAtt : null)
+        const inProgressAtt = (exAtt && exAtt.status === 'in_progress')
+          ? exAtt
           : [wAtt, pAtt].find(a => a && a.status === 'in_progress');
-        const hasSubmitted = theme.isNonVocab
-          ? (exAtt && ['submitted', 'auto_submitted', 'evaluated'].includes(exAtt.status))
-          : [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
-        const hasCancelled = theme.isNonVocab
-          ? (exAtt && exAtt.status === 'cancelled')
-          : [wAtt, pAtt].some(a => a && a.status === 'cancelled');
+        const hasSubmitted = (exAtt && ['submitted', 'auto_submitted', 'evaluated'].includes(exAtt.status)) ||
+          [wAtt, pAtt].some(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
+        const hasCancelled = (exAtt && exAtt.status === 'cancelled') ||
+          [wAtt, pAtt].some(a => a && a.status === 'cancelled');
 
         let status = 'not_started';
         let statusText = 'Not Started';
@@ -2516,15 +2871,15 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         // Active module identification
         let activeModule = 'None';
         let targetAtt = null;
-        if (theme.isNonVocab) {
+        if (theme.isNonVocab || (theme.examTest && !theme.wordsTest && !theme.phrasesTest)) {
           targetAtt = inProgressAtt || exAtt;
-          activeModule = theme.moduleName || 'Exam';
+          activeModule = (theme.isNonVocab ? theme.moduleName : (theme.examTest?.title || 'Exam'));
         } else if (inProgressAtt) {
           targetAtt = inProgressAtt;
           activeModule = (inProgressAtt.test_id === theme.wordsTest?.id) ? 'Words Exam' : 'Phrases Exam';
         } else if (hasSubmitted) {
-          targetAtt = pAtt || wAtt;
-          activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Exam' : 'Phrases Exam');
+          targetAtt = pAtt || wAtt || exAtt;
+          activeModule = (wAtt && pAtt) ? 'Words & Phrases' : (wAtt ? 'Words Exam' : (pAtt ? 'Phrases Exam' : (theme.examTest?.title || 'Exam')));
         }
 
         // Answers belonging specifically to target attempt
@@ -2556,9 +2911,22 @@ async function openThemeLiveMonitorModal(container, theme, context) {
 
         const answeredPercent = totalQuestions > 0 ? Math.min(100, Math.round((answeredCount / totalQuestions) * 100)) : 0;
 
-        // Telemetry: Heartbeat & Last Activity
-        const lastAns = validAnswers[validAnswers.length - 1];
-        const lastActivityTime = lastAns?.answered_at || lastAns?.updated_at || lastAns?.created_at;
+        // Telemetry: Heartbeat & Last Activity (robust maximum timestamp across valid answers)
+        let lastActivityTime = null;
+        if (validAnswers.length > 0) {
+          for (const ans of validAnswers) {
+            const t = ans.answered_at || ans.updated_at || ans.created_at;
+            if (t) {
+              const ms = new Date(t).getTime();
+              if (!isNaN(ms) && (!lastActivityTime || ms > new Date(lastActivityTime).getTime())) {
+                lastActivityTime = t;
+              }
+            }
+          }
+        }
+        if (!lastActivityTime && targetAtt?.started_at) {
+          lastActivityTime = targetAtt.started_at;
+        }
         const activitySecAgo = lastActivityTime ? Math.max(0, Math.floor((Date.now() - new Date(lastActivityTime).getTime()) / 1000)) : null;
 
         let heartbeat = 'not_started';
@@ -2624,7 +2992,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
         let scoreLabel = 'No Score Yet';
 
         if (status === 'submitted') {
-          const validSub = [wAtt, pAtt].filter(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
+          const validSub = [exAtt, wAtt, pAtt].filter(a => a && ['submitted', 'auto_submitted', 'evaluated'].includes(a.status));
           if (validSub.length > 0) {
             let sumEff = 0;
             validSub.forEach(a => {
@@ -2647,17 +3015,11 @@ async function openThemeLiveMonitorModal(container, theme, context) {
             scoreLabel = effectiveScore >= 60 ? 'Passing' : 'Below Passing';
           }
         } else if (status === 'in_progress' && targetAtt) {
-          if (answeredCount === 0) {
-            isEvaluated = false;
-            scoreLabel = 'Starting Exam...';
-          } else {
-            isEvaluated = true;
-            const correctCount = countCorrectAnswers(targetAnswers);
-            const runningAccuracy = Math.round((correctCount / answeredCount) * 100);
-            rawScore = runningAccuracy;
-            effectiveScore = theme.isRemedial ? Math.min(rawScore, 60) : rawScore;
-            scoreLabel = `Accuracy (${correctCount}/${answeredCount})`;
-          }
+          // Official scoring occurs on submit; in-progress attempts display clean un-evaluated state (—)
+          isEvaluated = false;
+          rawScore = 0;
+          effectiveScore = 0;
+          scoreLabel = answeredCount > 0 ? `In Progress (${answeredCount}/${totalQuestions})` : 'Starting Exam...';
         }
 
         const grade = isEvaluated ? getGrade(effectiveScore) : '-';
@@ -3120,9 +3482,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
   }
 
   async function doExtendTime(mins) {
-    const testIds = theme.isNonVocab
-      ? [theme.examTest?.id].filter(Boolean)
-      : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+    const testIds = [theme.examTest?.id, theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
     if (!testIds.length) {
       showToast('No active tests available to adjust time.', 'error');
       return;
@@ -3164,9 +3524,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
     try {
       const sb = await getSupabase();
       if (!sb || typeof sb.channel !== 'function') return;
-      const testIds = theme.isNonVocab
-        ? [theme.examTest?.id].filter(Boolean)
-        : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = [theme.examTest?.id, theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       if (!testIds.length) return;
 
       const channelId = `live-monitor-${theme.code}-${Date.now()}`;
@@ -3299,9 +3657,7 @@ function openStudentAlarmDetailModal(container, student, alarmsList = [], theme,
   const resetBtn = alarmModal.querySelector('#btn-clear-student-alarms');
   if (resetBtn) {
     resetBtn.onclick = async () => {
-      const testIds = theme.isNonVocab
-        ? [theme.examTest?.id].filter(Boolean)
-        : [theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
+      const testIds = [theme.examTest?.id, theme.wordsTest?.id, theme.phrasesTest?.id].filter(Boolean);
       if (!confirm(`Reset all exam integrity alarms for ${student.name}? This will treat previous warnings as false alarms.`)) return;
 
       try {
@@ -3347,27 +3703,26 @@ function openKickConfirmationModal(container, studentId, studentName, theme, onD
     showLoading();
     try {
       const promises = [];
-      if (theme.isNonVocab && theme.examTest) {
+      if (theme.examTest) {
         promises.push(removeStudentFromTestSession({
           testId: theme.examTest.id,
           studentId: studentId,
           action: chosenAction
         }));
-      } else {
-        if (theme.wordsTest) {
-          promises.push(removeStudentFromTestSession({
-            testId: theme.wordsTest.id,
-            studentId: studentId,
-            action: chosenAction
-          }));
-        }
-        if (theme.phrasesTest) {
-          promises.push(removeStudentFromTestSession({
-            testId: theme.phrasesTest.id,
-            studentId: studentId,
-            action: chosenAction
-          }));
-        }
+      }
+      if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
+        promises.push(removeStudentFromTestSession({
+          testId: theme.wordsTest.id,
+          studentId: studentId,
+          action: chosenAction
+        }));
+      }
+      if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
+        promises.push(removeStudentFromTestSession({
+          testId: theme.phrasesTest.id,
+          studentId: studentId,
+          action: chosenAction
+        }));
       }
 
       await Promise.all(promises);
@@ -3415,7 +3770,8 @@ function evaluateStudentEligibility(themeOrObj, students, allAttempts, mode = 'n
  */
 function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes, wordsTest, phrasesTest, examTest, classTests = [], allAttempts = [], mode }) {
   const targetExam = examTest || theme?.examTest;
-  const isNonVocab = Boolean(theme?.isNonVocab || targetExam);
+  const isNonVocab = Boolean(theme?.isNonVocab);
+  const hasTargetExam = Boolean(targetExam);
   const testMap = Object.fromEntries((classTests || []).map(t => [t.id, t]));
   const results = [];
   const activeTasks = themeTasks || themeQuizzes || theme?.tasks || theme?.quizzes || [];
@@ -3461,7 +3817,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
         const isEx = t.test_type === 'exam' || /EXAM/i.test(shell) || /EXAM/i.test(title);
         if (!isEx) return false;
         const m = shell.match(/^[0-9]+([A-Za-z])/);
-        const tc = m ? m[1].toUpperCase() : (title.match(/Theme\s+([A-Za-z])/i)?.[1]?.toUpperCase() || '');
+        const tc = getTestThemeCode(t) || (m ? m[1].toUpperCase() : (title.match(/Theme\s+([A-Za-z])/i)?.[1]?.toUpperCase() || ''));
         return tc === priorThemeCode;
       });
 
@@ -3485,7 +3841,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
           const title = String(t.title || '');
           const isEx = t.test_type === 'exam' || /EXAM/i.test(shell) || /EXAM/i.test(title);
           const m = shell.match(/^[0-9]+([A-Za-z])/);
-          const tc = m ? m[1].toUpperCase() : (title.match(/Theme\s+([A-Za-z])/i)?.[1]?.toUpperCase() || '');
+          const tc = getTestThemeCode(t) || (m ? m[1].toUpperCase() : (title.match(/Theme\s+([A-Za-z])/i)?.[1]?.toUpperCase() || ''));
           const isPub = t.status === 'PUBLISHED' && !t.deleted_at;
           return isEx && tc === priorThemeCode && isPub;
         });
@@ -3502,7 +3858,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     let pBestPct = null;
     let examBestPct = null;
 
-    if (isNonVocab && targetExam) {
+    if (hasTargetExam) {
       const eAtts = studAtts.filter(a => (a.test_id || a.Test_id) === targetExam.id);
       const subE = eAtts.filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
       if (subE.length > 0) {
@@ -3534,7 +3890,7 @@ function evaluateStudentsEligibility({ students, theme, themeTasks, themeQuizzes
     let wordsPassed = false;
     let phrasesPassed = false;
 
-    if (isNonVocab && targetExam) {
+    if (hasTargetExam) {
       const hasTakenExam = examBestPct !== null;
       const examPassed = hasTakenExam && examBestPct >= 60;
       hasAttempted = hasTakenExam;

@@ -2164,7 +2164,7 @@ body.dashboard-page #welcome-banner-section,
 body.dashboard-page .dashboard-classes-deck,
 body.dashboard-page .next-test-card,
 body.dashboard-page .dashboard-standings-card {
-  border: 1px solid rgba(var(--tier-rgb), 0.35) !important;
+  border: 1.5px solid rgba(var(--tier-rgb), 0.45) !important; /* Unified 1.5px card border SSOT */
   background: radial-gradient(ellipse 90% 70% at 50% 0%, rgba(var(--tier-rgb), 0.12), transparent 75%), #0f172a !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
   box-sizing: border-box !important;
@@ -2542,24 +2542,49 @@ body.dashboard-page .dock-tab-pane.hidden {
 
 body.dashboard-page .standings-table-header {
   display: grid !important;
-  grid-template-columns: 24px 1fr 38px 28px !important;
-  gap: 6px !important;
-  align-items: center !important;
-  padding: 4px 10px !important;
-  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  grid-template-columns: 36px 1fr 52px 38px !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 600 !important;
-  color: #64748b !important;
-  letter-spacing: 0.06em !important;
-  background: rgba(30, 41, 59, 0.45) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  letter-spacing: 0.04em !important;
+  background: #0f172a !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
   flex-shrink: 0 !important;
+  box-sizing: border-box !important;
 }
 
-body.dashboard-page .standings-table-header .th-rank { text-align: center !important; }
-body.dashboard-page .standings-table-header .th-name { text-align: left !important; }
-body.dashboard-page .standings-table-header .th-point { text-align: right !important; }
-body.dashboard-page .standings-table-header .th-grade { text-align: center !important; }
+body.dashboard-page .standings-table-header .th-rank {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+body.dashboard-page .standings-table-header .th-name {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  padding-left: 8px !important;
+}
+body.dashboard-page .standings-table-header .th-point {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
+body.dashboard-page .standings-table-header .th-grade {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+}
 
 body.dashboard-page .standings-table-wrap {
   flex: 1 1 0% !important;
@@ -2567,6 +2592,8 @@ body.dashboard-page .standings-table-wrap {
   overflow-y: auto !important;
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
 body.dashboard-page .standings-table-wrap::-webkit-scrollbar {
@@ -2575,12 +2602,14 @@ body.dashboard-page .standings-table-wrap::-webkit-scrollbar {
 
 body.dashboard-page .standings-row {
   display: grid !important;
-  grid-template-columns: 24px 1fr 38px 28px !important;
-  gap: 6px !important;
-  align-items: center !important;
-  padding: 5px 10px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  grid-template-columns: 36px 1fr 52px 38px !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  min-height: 42px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   transition: background 0.15s ease !important;
+  box-sizing: border-box !important;
 }
 
 body.dashboard-page .standings-row:hover {
@@ -2588,7 +2617,7 @@ body.dashboard-page .standings-row:hover {
 }
 
 body.dashboard-page .standings-row.my-row {
-  background: rgba(var(--tier-rgb), 0.1) !important;
+  background: rgba(var(--tier-rgb), 0.12) !important;
   border-left: 3px solid var(--tier-color) !important;
 }
 
@@ -2605,7 +2634,7 @@ body.dashboard-page .completed-table-wrap {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   overscroll-behavior: contain !important;
-  padding: 4px 6px 60px 6px !important;
+  padding: 0 0 60px 0 !important;
   scrollbar-width: thin !important;
   scrollbar-color: rgba(var(--tier-rgb), 0.6) rgba(15, 23, 42, 0.4) !important;
 }
@@ -2808,61 +2837,38 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 
 .classes-selector-modal-header {
   position: relative !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  line-height: 40px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   padding: 0 16px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: rgba(255, 255, 255, 0.02) !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+  border-left: 4px solid #95ff00 !important;
+  background: linear-gradient(90deg, rgba(149, 255, 0, 0.38) 0%, rgba(149, 255, 0, 0.12) 55%, rgba(15, 23, 42, 0.95) 100%) !important;
   width: 100% !important;
 }
 
 .classes-selector-close-btn,
-.component-selector-close-btn {
-  position: absolute !important;
-  right: 12px !important;
-  top: 50% !important;
-  transform: translateY(-50%) !important;
-  width: 30px !important;
-  height: 30px !important;
-  min-height: 30px !important;
-  max-height: 30px !important;
-  background: none !important;
-  border: none !important;
-  color: #94a3b8 !important;
-  font-size: 14px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  cursor: pointer !important;
-  border-radius: 4px !important;
-  padding: 0 !important;
-  transition: color 0.15s ease, background-color 0.15s ease !important;
-}
-
-.classes-selector-close-btn:hover,
-.component-selector-close-btn:hover {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+.component-selector-close-btn,
+#close-component-modal {
+  display: none !important;
 }
 
 .classes-selector-title {
   font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
-  color: #38bdf8 !important;
+  color: #FFFFFF !important;
   margin: 0 !important;
-  line-height: 1 !important;
-  text-align: center !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
 }
 
 .classes-selector-modal-body {
@@ -3075,32 +3081,32 @@ body.dashboard-page .class-deck-box.active .class-deck-progress {
 
 .component-selector-modal-header {
   position: relative !important;
-  height: 40px !important;
-  min-height: 40px !important;
-  max-height: 40px !important;
-  line-height: 40px !important;
+  height: 60px !important;
+  min-height: 60px !important;
+  max-height: 60px !important;
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   padding: 0 16px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
-  text-align: center !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: rgba(255, 255, 255, 0.02) !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+  border-left: 4px solid #38bdf8 !important;
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.38) 0%, rgba(56, 189, 248, 0.12) 55%, rgba(15, 23, 42, 0.95) 100%) !important;
   width: 100% !important;
 }
 
 .component-selector-title {
   font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 16px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
   letter-spacing: 0.04em !important;
   text-transform: uppercase !important;
-  color: #38bdf8 !important;
+  color: #FFFFFF !important;
   margin: 0 !important;
-  line-height: 1 !important;
-  text-align: center !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
 }
 
 .component-selector-modal-body {
@@ -5207,62 +5213,140 @@ body.dashboard-page .next-test-col-right .is-exam-play:hover {
   box-shadow: 0 0 18px rgba(var(--grade-a-rgb), 0.75) !important;
 }
 
-/* Standings Table Grid Separation */
+/* Standings Table Grid Separation & Table Lines */
 body.dashboard-page .standings-table-header {
-  grid-template-columns: 24px 1fr 38px 28px !important;
-  gap: 6px !important;
-  padding: 4px 10px !important;
+  display: grid !important;
+  grid-template-columns: 36px 1fr 52px 38px !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
+  background: #0f172a !important;
+  box-sizing: border-box !important;
 }
+
 body.dashboard-page .standings-row {
-  grid-template-columns: 24px 1fr 38px 28px !important;
-  gap: 6px !important;
-  padding: 6px 10px !important;
+  display: grid !important;
+  grid-template-columns: 36px 1fr 52px 38px !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  min-height: 42px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-sizing: border-box !important;
+}
+
+/* Standings Header & Row Column Divider Lines */
+body.dashboard-page .standings-table-header > span,
+body.dashboard-page .standings-table-header > div {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-sizing: border-box !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 4px !important;
+}
+body.dashboard-page .standings-table-header .th-name {
+  justify-content: flex-start !important;
+  padding-left: 8px !important;
+}
+body.dashboard-page .standings-table-header > *:last-child {
+  border-right: none !important;
+}
+
+body.dashboard-page .standings-row > span,
+body.dashboard-page .standings-row > div {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 4px !important;
+}
+body.dashboard-page .standings-row .th-name {
+  justify-content: flex-start !important;
+  padding: 6px 8px !important;
+  overflow: hidden !important;
+}
+body.dashboard-page .standings-row > *:last-child {
+  border-right: none !important;
 }
 
 /* Completed Tests Table Header & Rows Grid */
 body.dashboard-page .completed-table-header {
   display: grid !important;
-  grid-template-columns: 24px 1fr 38px 28px 34px !important;
-  gap: 6px !important;
-  align-items: center !important;
-  padding: 4px 10px !important;
-  font-family: var(--font-sans, 'Inter', sans-serif) !important;
+  grid-template-columns: 36px 1fr 52px 38px 38px !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
-  font-weight: 600 !important;
-  color: #64748b !important;
-  letter-spacing: 0.06em !important;
-  background: rgba(30, 41, 59, 0.45) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  letter-spacing: 0.04em !important;
+  background: #0f172a !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
   flex-shrink: 0 !important;
+  box-sizing: border-box !important;
 }
 
-body.dashboard-page .completed-table-header .th-rank {
-  text-align: center !important;
+body.dashboard-page .completed-table-header > span,
+body.dashboard-page .completed-table-header > div {
+  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-sizing: border-box !important;
+  height: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 4px !important;
 }
 body.dashboard-page .completed-table-header .th-name {
-  text-align: left !important;
+  justify-content: flex-start !important;
+  padding-left: 8px !important;
 }
-body.dashboard-page .completed-table-header .th-score {
-  text-align: right !important;
-}
-body.dashboard-page .completed-table-header .th-grade {
-  text-align: center !important;
-}
-body.dashboard-page .completed-table-header .th-action {
-  text-align: center !important;
+body.dashboard-page .completed-table-header > *:last-child {
+  border-right: none !important;
 }
 
 body.dashboard-page .completed-row {
   display: grid !important;
-  grid-template-columns: 24px 1fr 38px 28px 34px !important;
-  gap: 6px !important;
-  align-items: center !important;
-  padding: 6px 10px !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04) !important;
+  grid-template-columns: 36px 1fr 52px 38px 38px !important;
+  gap: 0 !important;
+  align-items: stretch !important;
+  padding: 0 !important;
+  min-height: 44px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
   transition: background 0.15s ease !important;
+  box-sizing: border-box !important;
 }
 body.dashboard-page .completed-row:hover {
   background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Completed Row Column Divider Lines */
+body.dashboard-page .completed-row > span,
+body.dashboard-page .completed-row > div {
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 6px 4px !important;
+}
+body.dashboard-page .completed-row .completed-col-name-wrap {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: center !important;
+  padding: 6px 8px !important;
+  overflow: hidden !important;
+}
+body.dashboard-page .completed-row > *:last-child {
+  border-right: none !important;
 }
 
 body.dashboard-page .completed-col-num {
@@ -5313,11 +5397,12 @@ body.dashboard-page .completed-col-name {
   padding-right: 6px !important;
 }
 
-body.dashboard-page .completed-col-score {
-  text-align: right !important;
-  font-family: var(--font-sans, 'Inter', sans-serif) !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
+body.dashboard-page .completed-col-score,
+body.dashboard-page .completed-col-rate {
+  text-align: center !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
   font-variant-numeric: tabular-nums !important;
 }
 
@@ -5518,7 +5603,7 @@ body.dashboard-page .unified-hero-card {
   align-items: stretch !important;
   justify-content: flex-start !important;
   gap: 6px !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.14) !important; /* Unified 1.5px card border SSOT */
   background: #0F1524 !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
   box-sizing: border-box !important;
@@ -5528,15 +5613,20 @@ body.dashboard-page .unified-hero-card {
   position: relative !important;
 }
 
-/* 1. Top Identity: Centered Name & Academic Hierarchy */
+/* 1. Top Identity: Centered Name & Academic Hierarchy (Full-Bleed Solid Title Area Header) */
 body.dashboard-page .hero-identity-top {
+  margin: -10px -10px 4px -10px !important;
+  width: calc(100% + 20px) !important;
+  padding: 8px 12px !important;
+  background: var(--tier-color, #38bdf8) !important;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.25) !important;
+  box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;
   align-items: center !important;
   justify-content: center !important;
   text-align: center !important;
   gap: 2px !important;
-  width: 100% !important;
 }
 
 body.dashboard-page #welcome-name,
@@ -5544,7 +5634,7 @@ body.dashboard-page .hero-student-name {
   font-family: 'Inter', sans-serif !important;
   font-size: 16px !important;
   font-weight: 800 !important;
-  color: #f8fafc !important;
+  color: #ffffff !important;
   letter-spacing: 0.01em !important;
   white-space: nowrap !important;
   overflow: hidden !important;
@@ -5554,9 +5644,10 @@ body.dashboard-page .hero-student-name {
   line-height: 1.2 !important;
   width: 100% !important;
   text-align: center !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
 }
 
-/* Font metadata akademis sesuai warna grade! */
+/* Font metadata akademis bersih */
 body.dashboard-page #welcome-meta-wrapper,
 body.dashboard-page .hero-academic-meta {
   display: flex !important;
@@ -5566,9 +5657,9 @@ body.dashboard-page .hero-academic-meta {
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important; /* Level 3 Baseline SSOT */
   font-weight: 700 !important;
-  color: var(--tier-color, #FFFF00) !important;
+  color: #ffffff !important;
   letter-spacing: 0.04em !important;
-  text-shadow: 0 0 10px rgba(var(--tier-rgb), 0.35) !important;
+  text-shadow: none !important;
   white-space: nowrap !important;
   overflow: hidden !important;
   text-overflow: ellipsis !important;
@@ -5578,15 +5669,52 @@ body.dashboard-page .hero-academic-meta {
   width: 100% !important;
 }
 
+body.dashboard-page #welcome-meta-wrapper .meta-sep,
+body.dashboard-page .hero-academic-meta .meta-sep {
+  color: rgba(255, 255, 255, 0.7) !important;
+  font-size: 12px !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* High-Contrast Adaptations on Bright Solid Tier Backgrounds (C, B, A, S/Star) */
+body.dashboard-page #welcome-banner-section[data-tier="C"] #welcome-name,
+body.dashboard-page #welcome-banner-section[data-tier="C"] .hero-student-name,
+body.dashboard-page #welcome-banner-section[data-tier="B"] #welcome-name,
+body.dashboard-page #welcome-banner-section[data-tier="B"] .hero-student-name,
+body.dashboard-page #welcome-banner-section[data-tier="A"] #welcome-name,
+body.dashboard-page #welcome-banner-section[data-tier="A"] .hero-student-name,
+body.dashboard-page #welcome-banner-section[data-tier="S"] #welcome-name,
+body.dashboard-page #welcome-banner-section[data-tier="S"] .hero-student-name,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #welcome-name,
+body.dashboard-page #welcome-banner-section[data-tier="★"] .hero-student-name {
+  color: #0f172a !important;
+  text-shadow: none !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="C"] #welcome-meta-wrapper,
+body.dashboard-page #welcome-banner-section[data-tier="C"] .hero-academic-meta,
+body.dashboard-page #welcome-banner-section[data-tier="B"] #welcome-meta-wrapper,
+body.dashboard-page #welcome-banner-section[data-tier="B"] .hero-academic-meta,
+body.dashboard-page #welcome-banner-section[data-tier="A"] #welcome-meta-wrapper,
+body.dashboard-page #welcome-banner-section[data-tier="A"] .hero-academic-meta,
+body.dashboard-page #welcome-banner-section[data-tier="S"] #welcome-meta-wrapper,
+body.dashboard-page #welcome-banner-section[data-tier="S"] .hero-academic-meta,
+body.dashboard-page #welcome-banner-section[data-tier="★"] #welcome-meta-wrapper,
+body.dashboard-page #welcome-banner-section[data-tier="★"] .hero-academic-meta {
+  color: rgba(15, 23, 42, 0.92) !important;
+}
+
+body.dashboard-page #welcome-banner-section[data-tier="C"] .meta-sep,
+body.dashboard-page #welcome-banner-section[data-tier="B"] .meta-sep,
+body.dashboard-page #welcome-banner-section[data-tier="A"] .meta-sep,
+body.dashboard-page #welcome-banner-section[data-tier="S"] .meta-sep,
+body.dashboard-page #welcome-banner-section[data-tier="★"] .meta-sep {
+  color: rgba(15, 23, 42, 0.55) !important;
+}
+
 body.dashboard-page .hero-card-divider {
-  width: 100% !important;
-  height: 1px !important;
-  min-height: 1px !important;
-  max-height: 1px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  margin: 1px 0 3px 0 !important;
-  border: none !important;
-  flex-shrink: 0 !important;
+  display: none !important;
 }
 
 /* 2. Bottom Row: 3:4 Portrait Photo Flush vertically with Biodata */
@@ -5783,7 +5911,7 @@ body.dashboard-page .perf-pillar {
   min-width: 0 !important;
   box-sizing: border-box !important;
   background: #0F1524 !important;
-  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important; /* sub-element: 1px, opacity dinaikkan agar seimbang visual */
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 
@@ -6127,7 +6255,7 @@ body.dashboard-page #completed-Tests-container {
   -webkit-overflow-scrolling: touch !important;
   touch-action: pan-y !important;
   overscroll-behavior: contain !important;
-  padding: 4px 6px 10px 6px !important;
+  padding: 0 0 10px 0 !important;
   scrollbar-width: thin !important;
   scrollbar-color: rgba(var(--tier-rgb), 0.6) transparent !important;
 }
@@ -6200,18 +6328,32 @@ body.dashboard-page .completed-col-name-wrap {
   flex-direction: column !important;
   justify-content: center !important;
   min-width: 0 !important;
-  gap: 3px !important;
+  gap: 2px !important; /* tighter gap agar tidak berantakan */
 }
 body.dashboard-page .task-grades-subrow {
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   width: 100% !important;
+  flex-wrap: nowrap !important; /* zero wrap agar satu baris */
+  overflow: hidden !important;
+}
+/* comp-label WRD/PHR — 3-huruf, lebar tetap 32px agar kotak-kotak nilai sejajar presisi */
+body.dashboard-page .comp-label,
+body.dashboard-page .rainbow-pass-label {
+  display: inline-block !important;
+  width: 32px !important;
+  min-width: 32px !important;
+  max-width: 32px !important;
+  flex-shrink: 0 !important;
+  line-height: 1 !important;
+  text-align: left !important;
 }
 body.dashboard-page .task-mini-grade {
   width: 17px !important;
   height: 15px !important;
   min-width: 17px !important;
+  flex-shrink: 0 !important;
   border-radius: 3px !important;
   font-family: var(--font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;

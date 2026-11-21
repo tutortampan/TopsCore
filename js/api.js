@@ -503,7 +503,7 @@ export async function updateStudentPin(studentId, oldPin, newPin) {
 
   const newPinHash = await sha256(String(newPin));
   const { error: updateErr } = await sb.from('students')
-    .update({ pin_hash: newPinHash, updated_at: new Date().toISOString() })
+    .update({ pin_hash: newPinHash, pin: String(newPin), updated_at: new Date().toISOString() })
     .eq('id', studentId);
 
   if (updateErr) throw new Error(updateErr.message || 'Failed to update PIN.');
@@ -731,11 +731,8 @@ export async function fetchTestsForStudentLevel(programId, levelId, institutionI
 export async function fetchAllStudentAttempts(studentId) {
   if (!studentId) return [];
   const sb = await getSupabase();
-  try {
-    await sb.rpc('auto_close_expired_attempts');
-  } catch (_) {}
   const { data, error } = await sb.from('attempts')
-    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at, tests(id, class_id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, status, is_best_score, submitted_at, tests(id, class_id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
@@ -744,7 +741,7 @@ export async function fetchAllStudentAttempts(studentId) {
 
   // Fallback 2-step jika foreign key cache Supabase belum sinkron
   const { data: attempts, error: attErr } = await sb.from('attempts')
-    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, status, is_best_score, submitted_at')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, status, is_best_score, submitted_at')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
@@ -768,7 +765,7 @@ export async function fetchStudentAttemptsForTest(studentId, testId) {
   if (!studentId || !testId) return [];
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
-    .select('id, status, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, grade, submitted_at')
+    .select('id, status, score, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, submitted_at')
     .eq('student_id', studentId)
     .eq('test_id', testId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
@@ -1325,20 +1322,23 @@ export async function generateTestQuestions(sb, test) {
     if (vaultWords && vaultWords.length > 0) {
       let allEnglishAnswers = [];
       let typeDistractorPools = {};
-      const ansType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
+      const sessAnsweringMode = test.payload?.test_session?.answering_mode;
+      const sessModes = test.payload?.test_session?.answering_modes;
 
-      if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
-        let allDataQuery = sb.from('vocabulary_vault').select('english, word_type').is('deleted_at', null);
+      const baseAnsType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
+      const wordsAnsType = sessModes?.words || sessAnsweringMode || baseAnsType;
+      const phrasesAnsType = sessModes?.phrases || sessAnsweringMode || (isUnified ? (baseAnsType === 'written' ? 'selection' : baseAnsType) : baseAnsType);
+
+      const isWordsSelection = wordsAnsType.startsWith('dropdown') || wordsAnsType === 'multiple_choice' || wordsAnsType === 'selection';
+      const isPhrasesSelection = phrasesAnsType.startsWith('dropdown') || phrasesAnsType === 'multiple_choice' || phrasesAnsType === 'selection';
+      const needsDistractors = isWordsSelection || isPhrasesSelection;
+
+      if (needsDistractors) {
+        let allDataQuery = sb.from('vocabulary_vault').select('english, word_type, category').is('deleted_at', null);
         const { data: allData } = await allDataQuery;
         if (allData) {
-          const isTargetPhrase = (category === 'phrases' || test.test_subtype === 'PHRASE_TASK' || test.test_subtype === 'PHRASE_TEST');
-          const filteredAllData = allData.filter(r => {
-            const wt = (r.word_type || '').toLowerCase();
-            const isP = ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
-            return isTargetPhrase ? isP : !isP;
-          });
-          allEnglishAnswers = filteredAllData.map(r => (r.english || '').split('/')[0].trim()).filter(Boolean);
-          filteredAllData.forEach(r => {
+          allEnglishAnswers = allData.map(r => (r.english || '').split('/')[0].trim()).filter(Boolean);
+          allData.forEach(r => {
             const wt = (r.word_type || 'Vocab').toLowerCase();
             const eng = (r.english || '').split('/')[0].trim();
             if (!eng) return;
@@ -1353,8 +1353,16 @@ export async function generateTestQuestions(sb, test) {
         const correctAns = accepted[0] || 'N/A';
         let optionsSnapshot = [];
 
-        if (ansType.startsWith('dropdown') || ansType === 'multiple_choice' || ansType === 'selection') {
-          const numDistractors = (ansType === 'dropdown_10') ? 9 : 4;
+        const isPhraseItem = vw.test_section === 'phrases' ||
+                             vw.section_id === 'phrases' ||
+                             vw.category === 'phrases' ||
+                             /phrase/i.test(vw.section_label || '') ||
+                             ['expression', 'idiom', 'proverb', 'phrase'].includes((vw.word_type || '').toLowerCase());
+        const itemAnsType = isPhraseItem ? phrasesAnsType : wordsAnsType;
+
+        const isItemSelection = itemAnsType.startsWith('dropdown') || itemAnsType === 'multiple_choice' || itemAnsType === 'selection';
+        if (isItemSelection) {
+          const numDistractors = (itemAnsType === 'dropdown_10') ? 9 : 4;
           const wordType = (vw.word_type || 'Vocab').toLowerCase();
           let sameTypePool = (typeDistractorPools[wordType] || []).filter(a => !accepted.includes(a));
           fisherYates(sameTypePool);
@@ -1372,12 +1380,12 @@ export async function generateTestQuestions(sb, test) {
           topic_snapshot: vw.topic || vw.topic_code || 'General',
           theme_snapshot: vw.theme || vw.theme_code || test.payload?.theme_code || 'General',
           theme_code: vw.theme_code || test.payload?.theme_code,
-          category_snapshot: vw.category || category,
+          category_snapshot: vw.category || (isPhraseItem ? 'phrases' : 'words'),
           word_type_snapshot: vw.word_type,
           display_order: idx + 1,
-          answer_type: ansType,
-          test_section: vw.test_section || null,
-          section_label: vw.section_label || null
+          answer_type: itemAnsType,
+          test_section: vw.test_section || (isPhraseItem ? 'phrases' : 'words'),
+          section_label: vw.section_label || (isPhraseItem ? 'Part 2: Phrases' : 'Part 1: Words')
         };
       });
     }
@@ -1522,7 +1530,7 @@ export async function startTest(studentId, testId) {
   // 1. Ambil detail test & existing in_progress attempt in parallel (Zero-Waterfall Fast Path)
   const [testRes, existingAttemptsRes] = await Promise.all([
     sb.from('tests')
-      .select('id, title, shell_code, status, deleted_at, test_subtype, test_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order, classes(name), levels(name, level_number)')
+      .select('id, title, shell_code, status, deleted_at, test_subtype, test_type, answer_type, class_id, level_id, display_order, working_duration_minutes, schedule_mode, minimum_required_score, prerequisite_test_id, payload, module_id, question_order, classes(name), levels(name, level_number)')
       .eq('id', testId)
       .single(),
     sb.from('attempts')
@@ -1627,7 +1635,7 @@ export async function startTest(studentId, testId) {
         if (pct >= reqScore || (isRem && pct >= 60)) {
           const tQ = Number(a.total_questions || 0);
           const cCount = Number(a.correct_count || a.score || 0);
-          const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10) || /PHRASES/i.test(fr);
+          const isPhrases = (tQ > 0 && tQ <= 40) || (cCount > 0 && cCount <= 10 && tQ <= 40) || /PHRASES/i.test(fr);
           if (isPhrases) phrasesPasses++;
           else wordsPasses++;
         }
@@ -1849,7 +1857,7 @@ export async function startTest(studentId, testId) {
           if (isUni) {
             const tQ = Number(att.total_questions || 0);
             const cCount = Number(att.correct_count || att.score || 0);
-            const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10) || /PHRASES/i.test(fr);
+            const isPhrases = (tQ > 0 && tQ <= 40) || (cCount > 0 && cCount <= 10 && tQ <= 40) || /PHRASES/i.test(fr);
             if (isPhrases) phrasesPassByTask[tid] = (phrasesPassByTask[tid] || 0) + 1;
             else wordsPassByTask[tid] = (wordsPassByTask[tid] || 0) + 1;
           } else {
@@ -1886,9 +1894,9 @@ export async function startTest(studentId, testId) {
   }
 
   // Guard: Test Session Access & Attendance Whitelist (for formal EXAM category)
-  const isExamSubtype = (asmData.test_subtype || '').toUpperCase().includes('TEST');
-  const isExamShell = (asmData.shell_code || '').toUpperCase().endsWith('-TEST');
-  const isExamTitle = (asmData.title || '').toLowerCase().includes('test') && !(asmData.title || '').toLowerCase().includes('task');
+  const isExamSubtype = (asmData.test_subtype || '').toUpperCase().includes('TEST') || (asmData.test_subtype || '').toUpperCase().includes('EXAM');
+  const isExamShell = (asmData.shell_code || '').toUpperCase().endsWith('-TEST') || (asmData.shell_code || '').toUpperCase().endsWith('-EXAM');
+  const isExamTitle = ((asmData.title || '').toLowerCase().includes('test') || (asmData.title || '').toLowerCase().includes('exam')) && !(asmData.title || '').toLowerCase().includes('task');
   const isFormalExam = ((asmData.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
                        !(asmData.shell_code || '').toUpperCase().includes('-TASK') &&
                        !(asmData.test_subtype || '').toUpperCase().includes('TASK') &&
@@ -1910,8 +1918,20 @@ export async function startTest(studentId, testId) {
   }
   } // End if (!attempt)
 
+  // Enforce session lock on resumed attempts for formal exams (cannot resume closed sessions)
+  if (attempt && !isAlumniStudent && isFormalExam && !isFlexible) {
+    const liveSess = asmData.payload?.test_session;
+    if (liveSess && (liveSess.status === 'LOCKED' || (liveSess.auto_close_at && new Date(liveSess.auto_close_at) <= new Date()))) {
+      const lockErr = new Error('This test session has been closed by the Tutor. Access is locked.');
+      lockErr.code = 'SESSION_LOCKED';
+      lockErr.status = 403;
+      throw lockErr;
+    }
+  }
+
   const test = {
     ...asmData,
+    answer_type: asmData.answer_type || asmData.payload?.test_session?.answering_mode || asmData.payload?.answer_type,
     name: asmData.title || asmData.name,
     question_order: asmData.question_order || asmData.payload?.question_order || 'random',
     time_limit_minutes: asmData.working_duration_minutes || asmData.time_limit_minutes || 60
@@ -1978,7 +1998,7 @@ export async function startTest(studentId, testId) {
 
   // 3. Ambil jawaban attempt atau self-heal jika attempt belum memiliki butir soal
   let { data: answers } = await sb.from('attempt_answers')
-    .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score')
+    .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, accepted_answers_snapshot, correct_answer_snapshot, student_answer, score')
     .eq('attempt_id', attempt.id);
 
   if (!answers || answers.length === 0) {
@@ -2052,7 +2072,25 @@ export async function startTest(studentId, testId) {
     });
   }
 
-  // Sanitasi jawaban agar kunci rahasia tidak bocor ke browser siswa
+  const sessAnsweringModes = asmData.payload?.test_session?.answering_modes || {};
+  const sessAnsweringMode = asmData.payload?.test_session?.answering_mode;
+  const isUnifiedTestSession = Boolean(
+    asmData.payload?.is_unified === true ||
+    asmData.payload?.category === 'unified' ||
+    asmData.category === 'unified' ||
+    (asmData.test_subtype && asmData.test_subtype.startsWith('UNIFIED'))
+  );
+
+  // Distractor candidate pool from all attempt answers
+  const candidatePool = [];
+  (answers || []).forEach(a => {
+    const acc = Array.isArray(a.accepted_answers_snapshot) ? a.accepted_answers_snapshot[0] : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
+    if (acc && !candidatePool.includes(acc)) candidatePool.push(acc);
+  });
+
+  const answersToPersist = [];
+
+  // Sanitasi & sinkronisasi mode aktif agar resumed attempt selalu mengikuti mode sesi tutor terkini
   const sanitizedAnswers = (answers || []).map(a => {
     let snap = typeof a.question_snapshot === 'string'
       ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
@@ -2061,17 +2099,59 @@ export async function startTest(studentId, testId) {
     delete snap.correct_answer;
     delete snap.accepted_answers;
 
+    const isPhrase = (
+      snap.category === 'phrases' ||
+      snap.test_section === 'phrases' ||
+      snap.section_id === 'phrases' ||
+      /phrase/i.test(snap.section_label || '') ||
+      ['expression', 'idiom', 'proverb', 'phrase'].includes((snap.word_type || a.question_type_snapshot || '').toLowerCase())
+    );
+    const targetMode = isPhrase
+      ? (sessAnsweringModes.phrases || (isUnifiedTestSession ? 'multiple_choice' : sessAnsweringMode))
+      : (sessAnsweringModes.words || sessAnsweringMode);
+
+    let changed = false;
+    if (targetMode) {
+      const targetAnsType = (targetMode === 'selection' || targetMode === 'multiple_choice') ? 'selection' : targetMode;
+      if (snap.answer_type !== targetAnsType) {
+        snap.answer_type = targetAnsType;
+        changed = true;
+      }
+    }
+
+    if (snap.answer_type === 'selection') {
+      if (!Array.isArray(snap.options_snapshot) || snap.options_snapshot.length < 2) {
+        const acc = Array.isArray(a.accepted_answers_snapshot) ? a.accepted_answers_snapshot[0] : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
+        const correctOpt = acc || snap.question_text || 'Option';
+        const distractors = candidatePool.filter(c => c !== correctOpt).sort(() => 0.5 - Math.random()).slice(0, 4);
+        snap.options_snapshot = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      answersToPersist.push({ id: a.id, snap });
+    }
+
     return {
       id: a.id,
       attempt_id: a.attempt_id,
       question_id: a.question_id,
       question_snapshot: snap,
-      options_snapshot: a.options_snapshot,
+      options_snapshot: snap.options_snapshot || a.options_snapshot,
       student_answer: a.student_answer,
       topic_snapshot: a.topic_snapshot,
-      question_type_snapshot: a.question_type_snapshot
+      question_type_snapshot: a.question_type_snapshot,
+      accepted_answers_snapshot: a.accepted_answers_snapshot,
+      correct_answer_snapshot: a.correct_answer_snapshot
     };
   });
+
+  if (answersToPersist.length > 0) {
+    Promise.all(answersToPersist.map(item => sb.from('attempt_answers').update({ question_snapshot: item.snap }).eq('id', item.id))).catch(err => {
+      console.warn('[startTest] Background option synchronization notice:', err?.message || err);
+    });
+  }
 
   const hasWordsAndPhrases = sanitizedAnswers.some(a => a.question_snapshot?.test_section === 'words') &&
                              sanitizedAnswers.some(a => a.question_snapshot?.test_section === 'phrases');
@@ -2205,7 +2285,7 @@ export async function submitTest(attemptId, answersMap, options = {}) {
       }
       const grade = getGrade(effectiveScore);
 
-      const { data: updAttempt, error: updAttErr } = await sb.from('attempts').update({
+      const attUpdateFields = {
         status: targetStatus,
         submitted_at: new Date().toISOString(),
         score: totalPoints,
@@ -2215,7 +2295,17 @@ export async function submitTest(attemptId, answersMap, options = {}) {
         effective_score: effectiveScore,
         grade: grade,
         updated_at: new Date().toISOString()
-      }).eq('id', attemptId).select().single();
+      };
+
+      if (options?.section) {
+        const secTag = options.section === 'phrases' ? '[SECTION: PHRASES]' : '[SECTION: WORDS]';
+        const curFr = String(attempt?.forgiven_reason || '');
+        attUpdateFields.forgiven_reason = curFr.includes('[SECTION:')
+          ? curFr.replace(/\[SECTION:\s*[A-Z]+\]/gi, secTag)
+          : (curFr ? `${curFr} ${secTag}` : secTag);
+      }
+
+      const { data: updAttempt, error: updAttErr } = await sb.from('attempts').update(attUpdateFields).eq('id', attemptId).select().single();
 
       if (updAttErr) throw updAttErr;
       result = updAttempt || { id: attemptId, status: targetStatus, percentage: pct, grade: grade, total_questions: totalQuestions, score: totalPoints, correct_count: correctCount };
@@ -2484,11 +2574,6 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
 
   try {
     const sb = await getSupabase();
-    if (normTable === 'attempts') {
-      try {
-        await sb.rpc('auto_close_expired_attempts');
-      } catch (_) {}
-    }
     let query = sb.from(normTable).select(select);
 
     const noDeletedAtTables = [
@@ -2716,6 +2801,12 @@ export async function fetchTests(filters = {}) {
   try {
     let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
     if (filters.class_id) query = query.eq('class_id', filters.class_id);
+    if (filters.class_ids && Array.isArray(filters.class_ids)) {
+      if (filters.class_ids.length === 0) return [];
+      query = query.in('class_id', filters.class_ids);
+    }
+    if (filters.level_id) query = query.eq('level_id', filters.level_id);
+    if (filters.program_id) query = query.eq('program_id', filters.program_id);
     if (!filters.include_deleted) {
       query = query.is('deleted_at', null);
     }
@@ -4851,18 +4942,24 @@ export async function adminApplyForgiven({
         affectedSet.add(`${sId}_${testId}`);
 
       } else if (action === 'manual_reps' || (action === 'manual' && ta.reason && ta.reason.includes('MANUAL_REPS'))) {
-        let reps = 0;
-        let maxReps = Number(ta.maxReps || 7);
-        if (ta.reps != null) {
-          reps = Math.max(0, Math.min(maxReps, Number(ta.reps)));
-        } else if (ta.reason) {
-          const m = String(ta.reason).match(/MANUAL_REPS:?\s*(\d+)/i);
-          if (m) reps = Math.max(0, Math.min(maxReps, parseInt(m[1], 10)));
-        }
+        const isUnifiedTask = Boolean(
+          meta?.payload?.is_unified === true ||
+          meta?.category === 'unified' ||
+          (meta?.test_subtype && meta.test_subtype.startsWith('UNIFIED')) ||
+          (meta?.shell_code && meta.shell_code.includes('-TASK'))
+        );
+        const parsedM = ta.reason ? String(ta.reason).match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?/i) : null;
+        const requestedReps = ta.reps != null ? Number(ta.reps) : (parsedM ? parseInt(parsedM[1], 10) : 0);
+        let defaultMax = (isUnifiedTask && requestedReps > 7) ? 14 : 7;
+        let maxReps = Number(ta.maxReps || (parsedM && parsedM[2] ? parseInt(parsedM[2], 10) : defaultMax));
+        let reps = Math.max(0, Math.min(maxReps, requestedReps));
 
         const passPct = 70.0; // Rule 2.4.1 / SSOT minimal passing 70% per process
         const sc = Math.round(totalQ * (passPct / 100));
-        const manualReason = `[${adminLabel}] MANUAL_REPS: ${reps}/${maxReps}`;
+        const compTag = ta.section
+          ? ` ${String(ta.section).toUpperCase()}`
+          : (ta.reason && /PHRASES?/i.test(ta.reason) ? ' PHRASES' : (ta.reason && /WORDS?/i.test(ta.reason) ? ' WORDS' : ''));
+        const manualReason = `[${adminLabel}] MANUAL_REPS: ${reps}/${maxReps}${compTag}`;
 
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
@@ -4870,15 +4967,35 @@ export async function adminApplyForgiven({
 
         if (reps > 0) {
           // Provide minimal passing score (70% / Grade C) for each repetition process
+          // Rule 2.6 SSOT: Unified Tasks require symmetric 7 Words + 7 Phrases partition
+          const isSplitReps = reps > 7 || (isUnifiedTask && reps === 14) || (isUnifiedTask && reps > 0 && !compTag);
           for (let r = 0; r < reps; r++) {
             const isBest = (r === reps - 1);
+            let itemReason = manualReason;
+            let itemTotalQ = totalQ;
+            let itemSc = sc;
+
+            if (isSplitReps) {
+              const halfMax = Math.max(1, Math.floor(reps / 2));
+              const isWordHalf = r < halfMax;
+              if (isWordHalf) {
+                itemReason = `[${adminLabel}] MANUAL_REPS: ${halfMax}/${halfMax} WORDS`;
+                itemTotalQ = totalQ;
+                itemSc = sc;
+              } else {
+                itemReason = `[${adminLabel}] MANUAL_REPS: ${halfMax}/${halfMax} PHRASES`;
+                itemTotalQ = Math.min(totalQ, 10);
+                itemSc = Math.round(itemTotalQ * (passPct / 100));
+              }
+            }
+
             if (r < submittedAtts.length) {
               const att = submittedAtts[r];
               updates.push({
                 id: att.id,
-                score: sc,
-                correct_count: sc,
-                total_questions: totalQ,
+                score: itemSc,
+                correct_count: itemSc,
+                total_questions: itemTotalQ,
                 percentage: passPct,
                 effective_score: passPct,
                 grade: 'C',
@@ -4887,7 +5004,7 @@ export async function adminApplyForgiven({
                 is_forgiven: false,
                 forgiven_by: validForgivenBy,
                 forgiven_at: nowIso,
-                forgiven_reason: manualReason,
+                forgiven_reason: itemReason,
                 updated_at: nowIso
               });
             } else {
@@ -4899,9 +5016,9 @@ export async function adminApplyForgiven({
                 expires_at: nowIso,
                 submitted_at: nowIso,
                 status: 'submitted',
-                score: sc,
-                correct_count: sc,
-                total_questions: totalQ,
+                score: itemSc,
+                correct_count: itemSc,
+                total_questions: itemTotalQ,
                 percentage: passPct,
                 effective_score: passPct,
                 grade: 'C',
@@ -4909,7 +5026,7 @@ export async function adminApplyForgiven({
                 is_forgiven: false,
                 forgiven_by: validForgivenBy,
                 forgiven_at: nowIso,
-                forgiven_reason: manualReason,
+                forgiven_reason: itemReason,
                 created_at: nowIso,
                 updated_at: nowIso
               });
@@ -4933,13 +5050,20 @@ export async function adminApplyForgiven({
         affectedSet.add(`${sId}_${testId}`);
 
       } else if (action === 'manual') {
+        const isUnifiedTask = Boolean(
+          meta?.payload?.is_unified === true ||
+          meta?.category === 'unified' ||
+          (meta?.test_subtype && meta.test_subtype.startsWith('UNIFIED')) ||
+          (meta?.shell_code && meta.shell_code.includes('-TASK'))
+        );
         const pct = Math.max(0, Math.min(100, Number(inputPct) || 0));
         const sc = inputScore != null
           ? Number(inputScore)
           : Math.round(totalQ * (pct / 100) * 10) / 10;
         const grade = _gradeForScore(pct);
         const itemReason = (ta.reason || reason || '').trim();
-        const manualReason = `MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${itemReason ? ': ' + itemReason : ''}`;
+        const baseManualReason = `MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${itemReason ? ': ' + itemReason : ''}`;
+        const manualReason = isUnifiedTask ? `${baseManualReason} [WORDS]` : baseManualReason;
 
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
@@ -4987,6 +5111,59 @@ export async function adminApplyForgiven({
             created_at: nowIso,
             updated_at: nowIso
           });
+        }
+
+        // Rule 2.6 SSOT: For Unified Tasks, also guarantee Phrases companion attempt is synchronized
+        if (isUnifiedTask && pct >= 60) {
+          const phrAtts = submittedAtts.filter(a =>
+            (a.forgiven_reason && /PHRASES?/i.test(a.forgiven_reason)) ||
+            (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 40)
+          );
+          const phrTotalQ = 10;
+          const phrSc = Math.round(phrTotalQ * (pct / 100));
+          const phrReason = `${baseManualReason} [PHRASES]`;
+
+          if (phrAtts.length > 0) {
+            updates.push({
+              id: phrAtts[0].id,
+              score: phrSc,
+              correct_count: phrSc,
+              total_questions: phrTotalQ,
+              percentage: pct,
+              effective_score: pct,
+              grade,
+              status: 'submitted',
+              is_best_score: false,
+              is_forgiven: false,
+              forgiven_by: validForgivenBy,
+              forgiven_at: nowIso,
+              forgiven_reason: phrReason,
+              updated_at: nowIso
+            });
+          } else {
+            inserts.push({
+              student_id: sId,
+              test_id: testId,
+              attempt_number: (submittedAtts.length || 0) + 2,
+              started_at: nowIso,
+              expires_at: nowIso,
+              submitted_at: nowIso,
+              status: 'submitted',
+              score: phrSc,
+              correct_count: phrSc,
+              total_questions: phrTotalQ,
+              percentage: pct,
+              effective_score: pct,
+              grade,
+              is_best_score: false,
+              is_forgiven: false,
+              forgiven_by: validForgivenBy,
+              forgiven_at: nowIso,
+              forgiven_reason: phrReason,
+              created_at: nowIso,
+              updated_at: nowIso
+            });
+          }
         }
         affectedSet.add(`${sId}_${testId}`);
       }
@@ -5153,18 +5330,15 @@ export const toOrdinal = (n) => {
 };
 
 /**
- * Authoritative mathematical duration calibration standard (SSOT):
+ * Authoritative mathematical duration calibration standard (SSOT DECISION-063 Khusus Vocabulary Class):
  * Working Duration (Minutes) = Math.ceil((questionCount * secondsPerQuestion) / 60)
  *
  * Rates:
- * - spoken (words): 15 seconds
- * - spoken (phrases): 20 seconds
- * - selection (pilgan): 20 seconds
- * - written: 30 seconds
- * - mixed: 25 seconds
+ * - Words: 10s spoken, 15s written, 10s selection (multiple choice)
+ * - Phrases: 20s spoken, 10s selection (multiple choice), 20s written
  *
  * @param {number} questionCount - Number of questions
- * @param {string} answerType - 'spoken', 'written', 'selection', 'mixed', etc.
+ * @param {string} answerType - 'spoken', 'written', 'selection', 'multiple_choice', etc.
  * @param {string} category - 'words' or 'phrases'
  * @param {number|null} customPace - Optional custom seconds per item override
  * @param {number} minMinutes - Minimum allowed minutes (default 1)
@@ -5175,14 +5349,53 @@ export function calculateAutoDurationMinutes(questionCount, answerType = 'spoken
   if (count <= 0) return Math.max(minMinutes, 1);
 
   const isPhrase = String(category).toLowerCase() === 'phrases' || String(answerType).toLowerCase().includes('phrase');
-  // Standar Pacing SSOT (DECISION-062): 10 detik per kata (words), 20 detik per frasa (phrases)
-  let rate = isPhrase ? 20 : 10;
+  const ansType = String(answerType || '').toLowerCase();
+
+  // Standar Pacing SSOT (DECISION-063 Khusus Vocabulary Class):
+  // 1 kata: 10 detik spoken, 15 detik written, 10 detik selection
+  // 1 frasa: 20 detik spoken, 10 detik selection, 20 detik written
+  let rate;
+  if (isPhrase) {
+    if (ansType === 'selection' || ansType === 'multiple_choice') {
+      rate = 10;
+    } else {
+      rate = 20; // spoken and written default 20s
+    }
+  } else {
+    if (ansType === 'written') {
+      rate = 15;
+    } else {
+      rate = 10; // spoken and selection default 10s
+    }
+  }
 
   if (customPace && Number(customPace) > 0) {
     rate = Number(customPace);
   }
 
   return Math.max(minMinutes, Math.ceil((count * rate) / 60));
+}
+
+/**
+ * Calculate unified exam duration for Vocabulary Class combining Words and Phrases sections (DECISION-063 SSOT):
+ * Words: 10s spoken, 15s written, 10s selection
+ * Phrases: 20s spoken, 10s selection, 20s written
+ */
+export function calculateVocabUnifiedDurationMinutes({
+  wordsCount = 160,
+  phrasesCount = 40,
+  wordsMode = 'written',
+  phrasesMode = 'multiple_choice',
+  minMinutes = 1
+} = {}) {
+  const wAns = String(wordsMode || 'written').toLowerCase();
+  const pAns = String(phrasesMode || 'multiple_choice').toLowerCase();
+
+  const wRate = (wAns === 'written') ? 15 : 10;
+  const pRate = (pAns === 'selection' || pAns === 'multiple_choice') ? 10 : 20;
+
+  const totalSeconds = (Number(wordsCount) * wRate) + (Number(phrasesCount) * pRate);
+  return Math.max(minMinutes, Math.ceil(totalSeconds / 60));
 }
 
 export async function upsertDynamicTestShell(config) {
@@ -6134,7 +6347,7 @@ export async function fetchActiveTestSession(testId, batchId = null) {
   };
 }
 
-export async function openTestSession({ testId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [], answeringMode = null, dialogueRoomCode = null }) {
+export async function openTestSession({ testId, batchId, allocatedMinutes, allowedStudentIds = [], isRemedial = false, remedialStudentIds = [], answeringMode = null, answeringModes = null, dialogueRoomCode = null }) {
   const sb = await getSupabase();
   const { data: existing, error: fetchErr } = await sb.from('tests')
     .select('id, module_id, shell_code, payload')
@@ -6162,21 +6375,44 @@ export async function openTestSession({ testId, batchId, allocatedMinutes, allow
     is_remedial: Boolean(isRemedial),
     remedial_student_ids: Array.isArray(remedialStudentIds) ? remedialStudentIds : [],
     answering_mode: answeringMode || null,
+    ...(answeringModes ? { answering_modes: answeringModes } : {}),
     ...(code ? { dialogue_room_code: code } : {})
   };
 
   const updatedPayload = {
     ...(existing.payload || {}),
+    ...(answeringMode ? { answer_type: answeringMode } : {}),
     test_session: testSession
   };
 
-  const updated = await adminUpdate('tests', testId, {
+  const updateFields = {
     working_duration_minutes: minutes,
     availability_start: now.toISOString(),
     availability_end: autoClose.toISOString(),
     schedule_mode: 'strict',
     payload: updatedPayload
-  });
+  };
+  if (answeringMode) {
+    updateFields.answer_type = answeringMode;
+  }
+
+  const updated = await adminUpdate('tests', testId, updateFields);
+
+  // Authoritative Synchronization: Sync expires_at on all in_progress attempts for this session
+  if (Array.isArray(allowedStudentIds) && allowedStudentIds.length > 0) {
+    try {
+      await sb.from('attempts')
+        .update({
+          expires_at: autoClose.toISOString(),
+          updated_at: now.toISOString()
+        })
+        .eq('test_id', testId)
+        .in('student_id', allowedStudentIds)
+        .eq('status', 'in_progress');
+    } catch (syncErr) {
+      console.warn('[openTestSession] Error syncing in_progress attempts expires_at:', syncErr);
+    }
+  }
 
   return { success: true, session: testSession, test: updated };
 }
@@ -6214,6 +6450,131 @@ export async function addLateStudentsToSession({ testId, studentIds = [], remedi
   const updated = await adminUpdate('tests', testId, {
     payload: updatedPayload
   });
+
+  return { success: true, session: updatedSession, test: updated };
+}
+
+export async function updateLiveSessionModality({ testId, wordsMode = null, phrasesMode = null }) {
+  const sb = await getSupabase();
+  const { data: existing, error: fetchErr } = await sb.from('tests')
+    .select('id, payload, answer_type')
+    .eq('id', testId)
+    .single();
+  if (fetchErr || !existing) throw new Error('Test not found');
+
+  const currentSession = existing.payload?.test_session || {};
+  if (currentSession.status !== 'UNLOCKED') {
+    throw new Error('This test session is inactive or has been closed.');
+  }
+
+  const existingModes = currentSession.answering_modes || {};
+  const newWordsMode = wordsMode || existingModes.words || currentSession.answering_mode || 'written';
+  const newPhrasesMode = phrasesMode || existingModes.phrases || currentSession.answering_mode || 'written';
+
+  const updatedSession = {
+    ...currentSession,
+    answering_mode: newWordsMode,
+    answering_modes: {
+      words: newWordsMode,
+      phrases: newPhrasesMode
+    }
+  };
+
+  const updatedPayload = {
+    ...(existing.payload || {}),
+    answer_type: newWordsMode,
+    test_session: updatedSession
+  };
+
+  const updateFields = {
+    answer_type: newWordsMode,
+    payload: updatedPayload
+  };
+
+  const updated = await adminUpdate('tests', testId, updateFields);
+
+  // Propagate modality switch directly to all active in_progress attempts
+  try {
+    const { data: activeAtts } = await sb.from('attempts')
+      .select('id')
+      .eq('test_id', testId)
+      .eq('status', 'in_progress');
+
+    if (activeAtts && activeAtts.length > 0) {
+      const attIds = activeAtts.map(a => a.id);
+      const { data: allAns } = await sb.from('attempt_answers')
+        .select('id, attempt_id, question_snapshot, question_type_snapshot, accepted_answers_snapshot, correct_answer_snapshot')
+        .in('attempt_id', attIds);
+
+      if (allAns && allAns.length > 0) {
+        // Collect distractor candidates from allAns
+        const pool = [];
+        allAns.forEach(a => {
+          const acc = Array.isArray(a.accepted_answers_snapshot)
+            ? a.accepted_answers_snapshot[0]
+            : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
+          if (acc && !pool.includes(acc)) pool.push(acc);
+        });
+
+        // Also query broader vocabulary_vault if pool is small
+        if (pool.length < 5) {
+          try {
+            const { data: vaultItems } = await sb.from('vocabulary_vault').select('english').is('deleted_at', null).limit(100);
+            (vaultItems || []).forEach(v => {
+              const eng = (v.english || '').split(/[;,/]/)[0]?.trim();
+              if (eng && !pool.includes(eng)) pool.push(eng);
+            });
+          } catch (_) {}
+        }
+
+        const updates = [];
+        for (const a of allAns) {
+          let snap = typeof a.question_snapshot === 'string'
+            ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+            : (a.question_snapshot ? { ...a.question_snapshot } : {});
+
+          const isPhrase = (
+            snap.category === 'phrases' ||
+            snap.test_section === 'phrases' ||
+            snap.section_id === 'phrases' ||
+            /phrase/i.test(snap.section_label || '') ||
+            ['expression', 'idiom', 'proverb', 'phrase'].includes((snap.word_type || a.question_type_snapshot || '').toLowerCase())
+          );
+
+          const targetMode = isPhrase ? newPhrasesMode : newWordsMode;
+          const targetAnswerType = (targetMode === 'multiple_choice' || targetMode === 'selection') ? 'selection' : targetMode;
+
+          let changed = false;
+          if (snap.answer_type !== targetAnswerType) {
+            snap.answer_type = targetAnswerType;
+            changed = true;
+          }
+
+          if (targetAnswerType === 'selection') {
+            if (!Array.isArray(snap.options_snapshot) || snap.options_snapshot.length < 2) {
+              const acc = Array.isArray(a.accepted_answers_snapshot)
+                ? a.accepted_answers_snapshot[0]
+                : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
+              const correctOpt = acc || snap.question_text || 'Option';
+              const distractors = pool.filter(cand => cand !== correctOpt).sort(() => 0.5 - Math.random()).slice(0, 4);
+              snap.options_snapshot = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
+              changed = true;
+            }
+          }
+
+          if (changed) {
+            updates.push(sb.from('attempt_answers').update({ question_snapshot: snap }).eq('id', a.id));
+          }
+        }
+
+        if (updates.length > 0) {
+          await Promise.all(updates);
+        }
+      }
+    }
+  } catch (syncErr) {
+    console.warn('[updateLiveSessionModality] Failed to propagate live attempts:', syncErr?.message || syncErr);
+  }
 
   return { success: true, session: updatedSession, test: updated };
 }
@@ -6458,6 +6819,17 @@ export async function closeTestSession(testId) {
     payload: updatedPayload
   });
 
+  // Authoritative session termination: immediately expire all remaining in-progress attempts
+  try {
+    const nowIso = new Date().toISOString();
+    await sb.from('attempts')
+      .update({ expires_at: nowIso, updated_at: nowIso })
+      .eq('test_id', testId)
+      .eq('status', 'in_progress');
+  } catch (attCloseErr) {
+    console.warn('Failed to expire in-progress attempts on close session:', attCloseErr);
+  }
+
   return { success: true, session: testSession, test: updated };
 }
 
@@ -6485,9 +6857,9 @@ export async function checkStudentTestAccess(studentId, testId) {
     return { allowed: false, reason: 'NOT_FOUND', message: 'Test not found.' };
   }
 
-  const isExamSubtype = (asm.test_subtype || '').toUpperCase().includes('TEST');
-  const isExamShell = (asm.shell_code || '').toUpperCase().endsWith('-TEST');
-  const isExamTitle = (asm.title || '').toLowerCase().includes('test') && !(asm.title || '').toLowerCase().includes('task');
+  const isExamSubtype = (asm.test_subtype || '').toUpperCase().includes('TEST') || (asm.test_subtype || '').toUpperCase().includes('EXAM');
+  const isExamShell = (asm.shell_code || '').toUpperCase().endsWith('-TEST') || (asm.shell_code || '').toUpperCase().endsWith('-EXAM');
+  const isExamTitle = ((asm.title || '').toLowerCase().includes('test') || (asm.title || '').toLowerCase().includes('exam')) && !(asm.title || '').toLowerCase().includes('task');
   const isFormalExam = ((asm.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
                        !(asm.shell_code || '').toUpperCase().includes('-TASK') &&
                        !(asm.test_subtype || '').toUpperCase().includes('TASK') &&
@@ -6816,9 +7188,12 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
     .in('student_id', studentIds)
     .order('created_at', { ascending: false });
 
-  // Safe window start: if unlockedAt provided, use it; otherwise default to past 3 hours to prevent leaking ancient historical attempts
-  const safeUnlockedAt = unlockedAt || new Date(Date.now() - 3 * 3600 * 1000).toISOString();
-  const windowStart = new Date(new Date(safeUnlockedAt).getTime() - 10 * 60 * 1000).toISOString();
+  // Safe session window: capture all attempts from this live exam session.
+  // Uses a 4-hour lookback or at least 2 hours prior to unlockedAt to prevent cutting off students who started before session edit/re-unlock.
+  const nowMs = Date.now();
+  const unlockedMs = unlockedAt ? new Date(unlockedAt).getTime() : nowMs;
+  const windowStartMs = Math.min(nowMs - 4 * 3600 * 1000, unlockedMs - 2 * 3600 * 1000);
+  const windowStart = new Date(windowStartMs).toISOString();
 
   attemptsQuery = attemptsQuery.gte('created_at', windowStart);
   const { data: attempts } = await attemptsQuery;
@@ -6840,7 +7215,8 @@ export async function fetchLiveTestSessionData({ testIds = [], studentIds = [], 
       .select('attempt_id, is_correct, score, updated_at')
       .in('attempt_id', attemptIds)
       .not('student_answer', 'is', null)
-      .neq('student_answer', '');
+      .neq('student_answer', '')
+      .order('updated_at', { ascending: true });
     answersData = answers || [];
   }
 

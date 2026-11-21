@@ -230,7 +230,7 @@ function openTopicModal(topic, Classes, onSaved) {
           </select>
         </div>
         <div class="d-flex justify-between align-center gap-2 mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-          <button class="btn btn-secondary btn-sm btn-modal-close-left" id="cancel-topic-btn">Cancel</button>
+          <button class="btn btn-secondary btn-sm btn-modal-close-left" id="cancel-topic-btn">CLOSE</button>
           <button class="btn btn-primary btn-sm" id="save-topic-btn">${isEdit ? 'Save Changes' : 'Create Topic'}</button>
         </div>
       </div>
@@ -456,7 +456,7 @@ export async function renderResults(area) {
         <div class="section-header d-flex justify-between align-center flex-wrap gap-2">
           <div>
             <h2 class="section-title">Test Results <span class="count-chip" id="res-count-chip">${allData.length} Total</span></h2>
-            <p class="section-subtitle">Student test attempt submissions displaying highest score records and prerequisite status</p>
+            <p class="section-subtitle">Student test attempt submissions displaying highest rate records and prerequisite status</p>
           </div>
           <div>
             <button class="btn btn-secondary btn-sm" id="export-gradebook-btn" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;">
@@ -586,7 +586,7 @@ export async function renderResults(area) {
     const deduplicated = Array.from(mergedResults.values());
     currentDeduplicatedResults = deduplicated;
 
-    countChip.textContent = `${deduplicated.length} Records (Highest Score)`;
+    countChip.textContent = `${deduplicated.length} Records (Highest Rate)`;
 
     document.getElementById('results-grid-container').innerHTML = '';
     if (!deduplicated.length) {

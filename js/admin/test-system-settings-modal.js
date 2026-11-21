@@ -114,7 +114,7 @@ export async function openTestSystemSettingsModal(options = {}) {
 
       <!-- Modal Body (Strict 10px Gap & 10px Padding) -->
       <div class="modal-body">
-        
+
         <!-- Task Repetitions Block -->
         <div class="setting-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -130,7 +130,7 @@ export async function openTestSystemSettingsModal(options = {}) {
         <!-- Task Passing Score Block -->
         <div class="setting-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label class="setting-label">Minimum Task Passing Score (%)</label>
+            <label class="setting-label">Minimum Task Passing Rate (%)</label>
             <span style="font-size: 12px; color: #64748b; font-weight: 600;">Default: 60% (Grade C)</span>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -142,7 +142,7 @@ export async function openTestSystemSettingsModal(options = {}) {
         <!-- Exam Passing Score Block -->
         <div class="setting-card">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <label class="setting-label">Minimum Exam Passing Score (%)</label>
+            <label class="setting-label">Minimum Exam Passing Rate (%)</label>
             <span style="font-size: 12px; color: #64748b; font-weight: 600;">Default: 60% (Grade C)</span>
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
@@ -170,7 +170,7 @@ export async function openTestSystemSettingsModal(options = {}) {
           <div style="padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.08);">
             <label style="display: flex; align-items: flex-start; gap: 8px; font-size: 12px; cursor: pointer; color: #f8fafc;">
               <input type="checkbox" id="setting-apply-to-existing" checked style="margin-top: 2px; accent-color: #8b5cf6;">
-              <span><strong>Apply now to existing tests:</strong> Automatically update minimum passing score on all Tasks and Exams in this class.</span>
+              <span><strong>Apply now to existing tests:</strong> Automatically update minimum passing rate on all Tasks and Exams in this class.</span>
             </label>
           </div>
         </div>

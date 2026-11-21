@@ -125,7 +125,7 @@ const formFields = {
       { value: 'dialogue', label: 'Dialogue (m7)' },
       { value: 'interview', label: 'Interview (m8)' }
     ], required: true },
-    { id: 'minimum_required_score', label: 'Passing Score %', type: 'number', defaultValue: 60 },
+    { id: 'minimum_required_score', label: 'Passing Rate %', type: 'number', defaultValue: 60 },
     { id: 'question_order', label: 'Question Order', type: 'select', options: [
       { value: 'sequential', label: 'Sequential (Berurutan)' },
       { value: 'random', label: 'Random (Diacak)' }
@@ -1676,7 +1676,7 @@ function _initBulkEditModal() {
       const chkOrd = document.getElementById('bulk-check-order')?.checked;
 
       if (!chkDur && !chkAns && !chkMin && !chkOrd) {
-        showToast('Select at least one checkbox option (Duration, Module, or Passing Score) to modify.', 'warning');
+        showToast('Select at least one checkbox option (Duration, Module, or Passing Rate) to modify.', 'warning');
         return;
       }
 

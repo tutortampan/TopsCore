@@ -524,7 +524,8 @@
     .admin-gear-link:hover {
       color: var(--primary-tactical, #38bdf8);
       background: rgba(56, 189, 248, 0.12);
-      transform: rotate(45deg);
+      transform: none !important;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
     }
 
     /* Short screen optimizations */

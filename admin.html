@@ -18,7 +18,7 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261115_v547" />
   <!-- TopsCore Consolidated Master Workstation Stylesheet (Minified) -->
-  <link rel="stylesheet" href="css/admin.min.css?v=20261119_v637" />
+  <link rel="stylesheet" href="css/admin.min.css?v=20261121_v647" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
 
   <!-- High-Performance Parallel ES Module Preload Graph -->
@@ -29,10 +29,10 @@
   <link rel="modulepreload" href="./js/svg-icons.js?v=20261114_v493" />
   <link rel="modulepreload" href="./js/admin/datagrid.js?v=20261116_v591" />
   <link rel="modulepreload" href="./js/admin/admin-init.js?v=20261116_v591" />
-  <link rel="modulepreload" href="./js/admin/app.js?v=20261119_v636" />
-  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261119_v636" />
+  <link rel="modulepreload" href="./js/admin/app.js?v=20261121_v650" />
+  <link rel="modulepreload" href="./js/admin/student-management.js?v=20261120_v641" />
   <link rel="modulepreload" href="./js/admin/classes-hub.js?v=20261117_v613" />
-  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261115_v545" />
+  <link rel="modulepreload" href="./js/admin/tests-access.js?v=20261121_v519" />
   <!-- SheetJS for Excel Import / Export -->
   <script src="./js/vendor/xlsx.full.min.js?v=20261107_v161" defer
     onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js?v=20261107_v161';"></script>
@@ -189,7 +189,12 @@
   <div class="modal-backdrop hidden" id="crud-modal" role="dialog" aria-modal="true" aria-labelledby="crud-modal-title">
     <div class="modal-box">
       <div class="modal-header">
-        <h3 id="crud-modal-title">Add Record</h3>
+        <div class="title-left-group">
+          <div class="title-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          </div>
+          <h3 id="crud-modal-title">Add Record</h3>
+        </div>
       </div>
       <form id="crud-form" novalidate></form>
       <div class="modal-footer">
@@ -228,11 +233,11 @@
     aria-labelledby="dup-students-modal-title">
     <div class="modal-box modal-box-lg">
       <div class="modal-header modal-header-bordered">
-        <div>
-          <h3 id="dup-students-modal-title" class="modal-title-lg">Duplicate Students Review &amp; Resolver
-          </h3>
-          <p class="text-xs text-muted modal-subtitle">Compare duplicate student profiles side-by-side and safely unify
-            their TEST attempts and progress.</p>
+        <div class="title-left-group">
+          <div class="title-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </div>
+          <h3 id="dup-students-modal-title" class="modal-title-lg">Duplicate Students Review &amp; Resolver</h3>
         </div>
       </div>
 
@@ -271,11 +276,11 @@
     aria-labelledby="dup-questions-modal-title">
     <div class="modal-box modal-box-lg">
       <div class="modal-header modal-header-bordered">
-        <div>
-          <h3 id="dup-questions-modal-title" class="modal-title-lg">Duplicate Questions Review &amp;
-            Resequencer</h3>
-          <p class="text-xs text-muted modal-subtitle">Detect duplicate question texts within Tests and auto-resequence
-            question orders seamlessly.</p>
+        <div class="title-left-group">
+          <div class="title-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <h3 id="dup-questions-modal-title" class="modal-title-lg">Duplicate Questions Review &amp; Resequencer</h3>
         </div>
       </div>
 
@@ -326,9 +331,11 @@
     aria-labelledby="bulk-edit-tests-title">
     <div class="modal-box modal-box-lg bulk-edit-modal-box">
       <div class="modal-header modal-header-bordered">
-        <div>
+        <div class="title-left-group">
+          <div class="title-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          </div>
           <h3 id="bulk-edit-tests-title" class="modal-title-lg">Bulk Edit Tests</h3>
-          <p class="text-xs text-muted modal-subtitle" id="bulk-edit-tests-subtitle">Modify duration, answer type, and passing score across multiple tests simultaneously.</p>
         </div>
       </div>
 
@@ -395,20 +402,20 @@
             </div>
           </div>
 
-          <!-- 3. MINIMAL SCORE / PASSING SCORE -->
+          <!-- 3. MINIMAL RATE / PASSING RATE -->
           <div class="bulk-edit-field-card">
             <div class="bulk-edit-field-header">
               <input type="checkbox" id="bulk-check-minscore" class="bulk-edit-checkbox"
-                title="Enable passing score change" />
+                title="Enable passing rate change" />
               <label for="bulk-check-minscore" class="bulk-edit-field-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> Change Passing Score (%)
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg> Change Passing Rate (%)
               </label>
             </div>
             <div id="bulk-wrap-minscore" class="bulk-edit-field-wrap">
               <div class="bulk-edit-input-group">
                 <input type="number" id="bulk-input-minscore" min="1" max="100" value="60" placeholder="60"
-                  title="Minimum Passing Score (%)" class="form-control bulk-edit-input-num" />
-                <label for="bulk-input-minscore" class="text-sm text-muted">% minimum score required to pass module</label>
+                  title="Minimum Passing Rate (%)" class="form-control bulk-edit-input-num" />
+                <label for="bulk-input-minscore" class="text-sm text-muted">% minimum rate required to pass module</label>
               </div>
               <div class="bulk-edit-preset-row">
                 <button type="button" class="btn btn-secondary btn-sm bulk-preset-btn" id="btn-preset-min-60">60% (Grade C Standard)</button>
@@ -467,9 +474,11 @@
   <div class="modal-backdrop modal-z-1000 hidden" id="add-class-modal" role="dialog" aria-modal="true">
     <div class="modal-box modal-box-add-class">
       <div class="modal-header modal-header-add-class">
-        <div>
+        <div class="title-left-group">
+          <div class="title-icon-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          </div>
           <h3 class="modal-title-lg">Add Class</h3>
-          <p class="text-xs text-muted modal-subtitle" id="add-class-level-label">Inheriting Level</p>
         </div>
       </div>
       <div class="form-group mb-4">
@@ -499,7 +508,7 @@
 
   <script type="module" src="./js/svg-icons.js?v=20261116_v603"></script>
   <script type="module" src="./js/admin/admin-init.js?v=20261116_v603"></script>
-  <script type="module" src="js/admin/app.js?v=20261119_v636"></script>
+  <script type="module" src="js/admin/app.js?v=20261121_v651"></script>
 
 
 

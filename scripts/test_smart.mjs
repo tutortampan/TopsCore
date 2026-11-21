@@ -23,7 +23,9 @@ if (args.includes('--fast') || args.includes('-f')) {
   const res1 = spawnSync(process.execPath, ['--no-warnings', '--experimental-vm-modules', 'scripts/check_all_js_syntax.mjs'], { stdio: 'inherit' });
   if (res1.status !== 0) process.exit(res1.status ?? 1);
   const res2 = spawnSync(process.execPath, ['scripts/build_admin_css.mjs'], { stdio: 'inherit' });
-  process.exit(res2.status ?? 0);
+  if (res2.status !== 0) process.exit(res2.status ?? 1);
+  const res3 = spawnSync(process.execPath, ['scripts/test_repetitive_mastery_safeguards.mjs'], { stdio: 'inherit' });
+  process.exit(res3.status ?? 0);
 }
 
 // 1. Inspect Git Working Tree

@@ -55,20 +55,25 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
   - **SIGN Area** (`.sign-area` / `.hazard-sign-area`): Dedicated visual hero status glyph container positioned specifically **UNDER the Title Area** (e.g. Incomplete Test Warning, Alert Windows).
     - **No Divider Rule**: The SIGN Area connects seamlessly into the body without an internal divider line (`border-bottom: none !important;`).
     - **50% Window Width Square Rule**: The icon container is strictly a **Square** scaled to **50% of the modal box width** (`width: 50% !important; aspect-ratio: 1 / 1 !important; border-radius: 20px !important;`), with a centered SVG icon scaled to 50–55% of the box, soft ambient glow, and high-contrast styling.
-- **1.5.1 Standardized 60px "Title Area" Height Invariant & Authoritative Perimeter Borders (SSOT)**:
-  - Official term **"Title Area"** (`.title-area` / `.modal-header`), height strictly baku **`60px`** (`height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;`) with prominent border `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`.
-  - **Area-Colored Accent Invariant (Aksen pada Bagian Area, Bukan pada Tulisan)**:
-    - Seluruh aksen warna tema/status (Cyan/Tactical Blue, Hijau Grade A, Kuning Grade C, Merah Grade E, Ungu Quad D, dsb.) **WAJIB diberikan ke bagian background AREANYA**, bukan ke warna font tulisannya.
-    - Warna font judul WAJIB menggunakan warna kontras pekat (**`#090D16`** / dark slate) untuk background area yang cerah/terang (seperti Kuning Grade C dan Hijau Grade A), atau putih bersih (**`#FFFFFF`**) untuk background area yang pekat/gelap.
-    - **Domain-Themed Modal & Wizard Color Synchronization Protocol (Title Area & Activation Button SSOT)**:
-      - Setiap modal/wizard wajib memiliki warna tema terpadu yang **IDENTIK antara background Title Area dan tombol aksi utama (Primary Activation / Save Button)**.
-      - **Pillar D / Settings & Engine Wizards**: Menggunakan **Vibrant Violet / Purple (`#7c3aed` / `var(--quad-d)`)** sebagai representasi resmi Kuadran D (*Site Settings, Engine, Blueprint & System Configurations*). Title Area berlatar `#7c3aed` (teks `#FFFFFF`), dan tombol simpan/aktivasi berlatar `#7c3aed` (teks `#FFFFFF`, hover glow `0 0 16px rgba(139, 92, 246, 0.6)`).
-      - **Pillar A (Admin / Master Curriculum Wizards)**: Electric Pink (`#ff2d87` / `var(--quad-a)`).
-      - **Pillar B (Board / Batches / Roster Wizards)**: Dark Orange (`#FF8C00` / `var(--quad-b)`).
-      - **Pillar C (Class / Active Learning Wizards)**: Electric Lime (`#95ff00` / `var(--quad-c)`).
-  - Typography: 16px Inter Bold (`font-size: 16px !important; font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-weight: 800 !important;`).
-  - **Centered Title Invariant**: Title text mathematically centered (`text-align: center !important; justify-content: center !important;`). Strictly ZERO close buttons or '✕' icons in the Title Area.
-  - **Mandatory Uppercase Invariant (ALL CAPS)**: Title text MUST be **ALL CAPS (`text-transform: uppercase !important;`)** with `letter-spacing: 0.05em;`.
+- **1.5.1 Standardized 60px "Title Area" Height Invariant & Striking Semantic Backgrounds (SSOT)**:
+  - Official term **"Title Area"** (`.title-area` / `.modal-header`), height strictly baku **`60px`** (`height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;`) with prominent perimeter border `border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;`.
+  - **Striking Semantic Area Background (Warna Aksen Terlihat Mencolok pada Kanvas Area)**:
+    - Seluruh aksen warna tema/status **WAJIB diberikan ke bagian background AREANYA secara tegas dan mencolok** (bukan gradasi tipis transparan dan bukan pada font tulisannya) agar pengguna langsung mengenali tipe jendela secara instan:
+      - 🔵 **Technical / Wizards / Config**: Tactical Cyan (`#0284c7` / `#0369a1`).
+      - 🔴 **Danger / Permanent Delete / Kick**: Danger Red (`#b91c1c` / `#dc2626`).
+      - 🟡 **Warning / Conflict Resolver**: Warning Amber/Gold (`#b45309` / `#d97706`).
+      - 🔷 **Info / Student Records**: Info Navy (`#1d4ed8` / `#1e40af`).
+      - 🟣 **Vault / Engine / Item Bank**: Vibrant Violet (`#6d28d9` / `#7c3aed`).
+      - 🌸 **Pillar A (Admin / Master Curriculum)**: Electric Pink (`#ff2d87` / `var(--quad-a)`).
+      - 🟠 **Pillar B (Board / Live Exam Sessions)**: Dark Orange (`#FF8C00` / `var(--quad-b)`).
+      - 🟢 **Pillar C (Class / Active Learning)**: Electric Lime (`#95ff00` / `var(--quad-c)`).
+  - **Pure 16px Left-Aligned White Title Typography (Rata Kiri Tepat di Samping Ikon)**:
+    - Teks judul **MUTLAK RATA KIRI** (`text-align: left; display: flex; align-items: center;`), diposisikan tepat di sebelah kanan kotak ikon (`gap: 12px;`).
+    - Ukuran font **WAJIB 16px Inter 800/900 ALL CAPS** (`font-size: 16px !important; font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-weight: 800 !important; text-transform: uppercase !important; letter-spacing: 0.04em; color: #FFFFFF !important;`).
+  - **Strict Zero-Clutter Invariants (Zero Subtitle, Zero Pill, Zero Description)**:
+    - **Zero Subtitle & Zero Pill in Header**: Title Area HANYA berisi Ikon dan Judul 16px. DILARANG ada teks deskripsi, subtitle, atau teks di dalam kotak/pil/tag di area header. Sisi kanan header bebas dari tombol silang `✕`.
+    - **Strict Zero-Description Invariant in Modal Body**: DILARANG menambahkan kartu/panel penjelasan atau kalimat deskriptif yang tidak diminta oleh pengguna. Konten modal murni hanya kontrol form/input aktual.
+  - **100% English Language Invariant**: Seluruh judul, label formulir, tombol aksi, dan status dalam modal dan CTA wajib 100% dalam bahasa Inggris murni tanpa campuran bahasa Indonesia.
 - **1.5.2 Standardized 40px "Toolbar Area" & 60px "CTA Area" Invariant**:
   - Toolbar Area: 40px height with 30px controls.
   - CTA Area: 60px height (`height: 60px !important; min-height: 60px !important; max-height: 60px !important;`) with 36px–40px buttons (`height: 36px` to `40px !important;`), prominent top divider `border-top: 1.5px solid rgba(255, 255, 255, 0.16) !important;`.
@@ -87,6 +92,11 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
   - **Button Size Golden Rules**:
     - Modal CTA Area: Strictly **36px–40px** height (`height: 36px` to `40px !important; padding: 0 20px !important; font-size: 14px !important; font-weight: 800 !important; border-radius: 6px !important;`). Must never exceed 40px.
     - In-Panel / Toolbar: Strictly **30px** height (`height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; border-radius: 4px !important;`). Must never exceed 30px.
+  - **CTA Ghost-to-Solid Button Invariant (Standby Ghost, Hover/Click Solid Glow)**:
+    - Seluruh tombol aksi pada CTA Area (baik tombol sekunder `CLOSE` maupun tombol aksi utama) **WAJIB menggunakan pola Ghost-to-Solid**:
+      - **Standby (Default)**: Ghost Outline Mode (`background: transparent !important;`, border 1.5px dan teks menyala mengikuti warna semantik token).
+      - **Hover / Click (:active)**: Solid Filled + Neon Glow Mode (`background: [TOKEN_COLOR] !important; color: #FFFFFF / #0F172A; box-shadow: 0 0 14px rgba(var(--token-rgb), 0.45);`).
+      - **Strict Stationary Hover**: DILARANG bergerak fisik saat hover (`transform: none !important;`).
   - **Universal Hover & Click (Active) Glow**: Every button across the application MUST emit a smooth, luminous glow on `:hover` and click/press (`:active`) via dynamic `box-shadow` matched to its theme/semantic color token.
 
 ### 1.6 Architectural Anti-Freeze & Performance Invariants

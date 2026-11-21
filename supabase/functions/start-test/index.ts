@@ -884,24 +884,40 @@ Deno.serve(async (req) => {
 
       let dynamicAnswerType = ((test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE') ? test.answer_type : null) || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
 
+      const sessAnsweringMode = liveSession?.answering_mode;
+      const sessModes = liveSession?.answering_modes;
+
+      let wordsAnswerType = sessModes?.words || sessAnsweringMode || dynamicAnswerType;
+      let phrasesAnswerType = sessModes?.phrases || sessAnsweringMode || (isUnified ? (dynamicAnswerType === 'written' ? 'selection' : dynamicAnswerType) : dynamicAnswerType);
+
       if (isSelfPacedRetake) {
         // Outside active tutor sessions, self-paced retakes strictly enforce 100% SPOKEN modality (SSOT Standard)
         dynamicAnswerType = 'spoken';
+        wordsAnswerType = 'spoken';
+        phrasesAnswerType = 'spoken';
       } else {
         if (test.answer_type === 'written' || (test.shell_code && test.shell_code.endsWith('-WORDS-EXAM')) || (test.title && test.title.toUpperCase().includes('WORDS EXAM'))) {
-          dynamicAnswerType = 'written';
+          wordsAnswerType = sessModes?.words || sessAnsweringMode || 'written';
         }
         if (!test.payload?.answer_type && !(test.answer_type && test.answer_type !== 'MULTIPLE_CHOICE')) {
-           if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') dynamicAnswerType = 'spoken';
-           else if (test.test_subtype === 'VOCAB_TEST') dynamicAnswerType = 'spoken';
-           else if (test.test_subtype === 'PHRASE_TEST') dynamicAnswerType = 'selection';
+           if (test.test_subtype === 'VOCAB_TASK' || test.test_subtype === 'PHRASE_TASK') {
+             wordsAnswerType = sessModes?.words || sessAnsweringMode || 'spoken';
+             phrasesAnswerType = sessModes?.phrases || sessAnsweringMode || 'spoken';
+           } else if (test.test_subtype === 'VOCAB_TEST') {
+             wordsAnswerType = sessModes?.words || sessAnsweringMode || 'spoken';
+           } else if (test.test_subtype === 'PHRASE_TEST') {
+             phrasesAnswerType = sessModes?.phrases || sessAnsweringMode || 'selection';
+           }
         }
       }
 
       if (vaultWords && vaultWords.length > 0) {
         let distractorPool: any[] = [];
-        const isSelectionMode = dynamicAnswerType === 'dropdown' || dynamicAnswerType === 'selection' || dynamicAnswerType === 'multiple_choice';
-        if (isSelectionMode) {
+        const isWordsSelection = wordsAnswerType === 'dropdown' || wordsAnswerType === 'selection' || wordsAnswerType === 'multiple_choice';
+        const isPhrasesSelection = phrasesAnswerType === 'dropdown' || phrasesAnswerType === 'selection' || phrasesAnswerType === 'multiple_choice';
+        const needsDistractorPool = isWordsSelection || isPhrasesSelection;
+
+        if (needsDistractorPool) {
             let distractorQuery = supabase.from('vocabulary_vault')
                 .select('id, english, indonesian, word_type, topic, topic_code, theme, theme_code, category, target_level')
                 .eq('target_level', levelNum)
@@ -924,9 +940,13 @@ Deno.serve(async (req) => {
              const accepted = vw.english ? vw.english.split('/').map((s: string) => s.trim()) : [];
              let options = null;
 
-             if (isSelectionMode) {
+             const isPhraseItem = vw.test_section === 'phrases' || vw.section_label?.includes('Phrases') || ['expression', 'idiom', 'proverb', 'phrase'].includes((vw.word_type || '').toLowerCase());
+             const itemAnswerType = isPhraseItem ? phrasesAnswerType : wordsAnswerType;
+             const isItemSelection = itemAnswerType === 'dropdown' || itemAnswerType === 'selection' || itemAnswerType === 'multiple_choice';
+
+             if (isItemSelection) {
                  const correctAnswer = accepted[0] || "N/A";
-                 const numDistractors = (dynamicAnswerType === 'dropdown_10') ? 9 : 4;
+                 const numDistractors = (itemAnswerType === 'dropdown_10') ? 9 : 4;
                  const rankedDistractors = rankDistractorsForVaultItem(vw, distractorPool, numDistractors);
                  options = [correctAnswer, ...rankedDistractors].sort(() => 0.5 - Math.random());
              }
@@ -940,9 +960,9 @@ Deno.serve(async (req) => {
                  topic_snapshot: vw.topic || vw.topic_code || "General",
                  word_type_snapshot: vw.word_type,
                  display_order: idx + 1,
-                 answer_type: dynamicAnswerType,
-                 test_section: vw.test_section || null,
-                 section_label: vw.section_label || null
+                 answer_type: itemAnswerType,
+                 test_section: vw.test_section || (isPhraseItem ? 'phrases' : 'words'),
+                 section_label: vw.section_label || (isPhraseItem ? 'Part 2: Phrases' : 'Part 1: Words')
              };
         });
       }
@@ -963,10 +983,40 @@ Deno.serve(async (req) => {
     // 9. Create New Attempt
     const isPhrase = test.test_subtype?.includes('PHRASE') || (test.shell_code && test.shell_code.includes('PHRASE')) || test.category === 'phrases' || test.payload?.category === 'phrases';
 
-    // Standar Pacing SSOT (DECISION-062): 10s per word & 20s per phrase (prioritizes tutor manual override if set)
+    // Standar Pacing SSOT (DECISION-063 Khusus Vocabulary Class):
+    // Words: 10s spoken / 15s written / 10s selection
+    // Phrases: 20s spoken / 10s selection / 20s written
     let manualDuration = Number(test.working_duration_minutes || test.payload?.working_duration_minutes || 0);
-    const ssotPace = isPhrase ? 20 : 10;
-    const autoCalcMinutes = Math.max(1, Math.ceil((snapQuestions.length * ssotPace) / 60));
+    let autoCalcMinutes = 10;
+
+    if (isUnified) {
+      const wordsAns = String(sessModes?.words || sessAnsweringMode || test.answer_type || 'written').toLowerCase();
+      const phrasesAns = String(sessModes?.phrases || (wordsAns === 'written' ? 'selection' : wordsAns)).toLowerCase();
+      const wPace = wordsAns === 'written' ? 15 : 10;
+      const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice') ? 10 : 20;
+
+      let wCount = 0;
+      let pCount = 0;
+      snapQuestions.forEach((q: any) => {
+        if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
+        else wCount++;
+      });
+      if (wCount === 0 && pCount === 0) {
+        wCount = snapQuestions.length > 50 ? 160 : 40;
+        pCount = snapQuestions.length - wCount;
+      }
+      const totalSec = (wCount * wPace) + (pCount * pPace);
+      autoCalcMinutes = Math.max(1, Math.ceil(totalSec / 60));
+    } else {
+      const ansType = String(test.answer_type || 'spoken').toLowerCase();
+      let pace = 10;
+      if (isPhrase) {
+        pace = (ansType === 'selection' || ansType === 'multiple_choice') ? 10 : 20;
+      } else {
+        pace = (ansType === 'written') ? 15 : 10;
+      }
+      autoCalcMinutes = Math.max(1, Math.ceil((snapQuestions.length * pace) / 60));
+    }
 
     let durationMinutes = manualDuration > 0 ? manualDuration : autoCalcMinutes;
     if (test.test_type === 'exam' && effectiveEnd && !isSelfPacedRetake) {

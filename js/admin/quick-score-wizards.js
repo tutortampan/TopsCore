@@ -95,7 +95,7 @@ export async function openQuickRemedialModal({ classId, classTests = [], student
                 <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px;">
                   <span style="font-weight: 600; color: #e2e8f0;">${test.title || test.shell_code}</span>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="color: ${pct != null ? getGradeColorByScore(pct) : '#94a3b8'}; font-weight: 700;">Score: ${scoreText}</span>
+                    <span style="color: ${pct != null ? getGradeColorByScore(pct) : '#94a3b8'}; font-weight: 700;">Rate: ${scoreText}</span>
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--grade-c); font-weight: 700; font-size: 12px;">
                       <input type="checkbox" class="remedial-target-check"
                              data-attempt-id="${attId}" data-student-id="${student.id}" data-test-id="${test.id}"
@@ -120,7 +120,7 @@ export async function openQuickRemedialModal({ classId, classTests = [], student
           <span style="color: var(--grade-c);">${getSvgIcon('refresh', 18)}</span>
           <div>
             <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #f8fafc;">Remedial Authorization — Grade R (Yellow, Cap 60%)</h3>
-            <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Showing ${remedialCandidates.length} students with scores below 60% or pending in this class.</p>
+            <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Showing ${remedialCandidates.length} students with rates below 60% or pending in this class.</p>
           </div>
         </div>
       </div>
@@ -269,7 +269,7 @@ export async function openQuickForgivenModal({ classId, classTests = [], student
                 <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 6px 10px;">
                   <span style="font-weight: 600; color: #e2e8f0;">${test.title || test.shell_code}</span>
                   <div style="display: flex; align-items: center; gap: 8px;">
-                    <span style="color: ${pct != null ? getGradeColorByScore(pct) : '#94a3b8'}; font-weight: 700;">Score: ${pct != null ? `${pct}%` : 'Not Taken'}</span>
+                    <span style="color: ${pct != null ? getGradeColorByScore(pct) : '#94a3b8'}; font-weight: 700;">Rate: ${pct != null ? `${pct}%` : 'Not Taken'}</span>
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer; color: var(--grade-e); font-weight: 700; font-size: 12px;">
                       <input type="checkbox" class="forgiven-target-check"
                              data-attempt-id="${attId}" data-student-id="${student.id}" data-test-id="${test.id}"
@@ -294,7 +294,7 @@ export async function openQuickForgivenModal({ classId, classTests = [], student
           <span style="color: var(--grade-e);">${getSvgIcon('shield', 18)}</span>
           <div>
             <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: #f8fafc;">Forgiven Exemption Waiver — Grade F (Red)</h3>
-            <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Grant score waiver to unblock sequential prerequisites for ${forgiveCandidates.length} students.</p>
+            <p style="margin: 2px 0 0; font-size: 12px; color: #94a3b8;">Grant grade waiver to unblock sequential prerequisites for ${forgiveCandidates.length} students.</p>
           </div>
         </div>
       </div>
@@ -469,7 +469,7 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
               <th style="padding: 8px 12px; text-align: center; width: 40px;"></th>
               <th style="padding: 8px 12px; text-align: left;">STUDENT</th>
               <th style="padding: 8px 12px; text-align: center;">CURRENT LEVEL</th>
-              <th style="padding: 8px 12px; text-align: center;">SCORE</th>
+              <th style="padding: 8px 12px; text-align: center;">RATE</th>
               <th style="padding: 8px 12px; text-align: center;">STATUS</th>
             </tr>
           </thead>

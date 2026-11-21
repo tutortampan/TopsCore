@@ -145,13 +145,21 @@ export async function openAutoGenerateModal(options = {}) {
         #test-generator-wizard-overlay .title-area {
           height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;
           border-bottom: 1.5px solid rgba(255,255,255,0.16) !important;
-          display: flex; align-items: center; justify-content: center;
-          background: #7c3aed !important; box-sizing: border-box; padding: 0 10px;
+          border-left: 4px solid #38bdf8 !important;
+          display: flex; align-items: center; justify-content: flex-start;
+          background: linear-gradient(90deg, rgba(56, 189, 248, 0.38) 0%, rgba(56, 189, 248, 0.12) 55%, rgba(15, 23, 42, 0.95) 100%) !important;
+          box-sizing: border-box; padding: 0 16px; gap: 12px;
+        }
+        #test-generator-wizard-overlay .title-icon-box {
+          width: 34px !important; height: 34px !important; border-radius: 8px !important;
+          display: inline-flex !important; align-items: center !important; justify-content: center !important;
+          flex-shrink: 0 !important; background: rgba(56, 189, 248, 0.18) !important;
+          border: 1.5px solid rgba(56, 189, 248, 0.5) !important; color: #38bdf8 !important;
         }
         #test-generator-wizard-overlay .title-area h2 {
           margin: 0; font-family: var(--fm-font-display, 'Inter', sans-serif);
           font-size: 16px; font-weight: 800; text-transform: uppercase;
-          letter-spacing: 0.05em; color: #ffffff; text-align: center;
+          letter-spacing: 0.04em; color: #ffffff; text-align: left;
         }
         #test-generator-wizard-overlay .modal-body {
           padding: 10px !important; overflow-y: auto; max-height: calc(80vh - 120px);
@@ -182,53 +190,59 @@ export async function openAutoGenerateModal(options = {}) {
           height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;
           border-top: 1.5px solid rgba(255, 255, 255, 0.16) !important;
           background: rgba(30, 41, 59, 0.5); display: flex !important; justify-content: space-between !important;
-          align-items: center !important; gap: 10px; padding: 0 10px !important; box-sizing: border-box;
+          align-items: center !important; gap: 10px; padding: 0 16px !important; box-sizing: border-box;
         }
         #test-generator-wizard-overlay .btn-cta-close {
           height: 40px !important; min-height: 40px !important; max-height: 40px !important;
           line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
-          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
-          background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.15);
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
+          background: transparent !important; border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
           color: #94a3b8; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box;
-          margin-right: auto !important; margin-left: 0 !important; align-self: center !important;
+          margin-right: auto !important; margin-left: 0 !important; align-self: center !important; transform: none !important;
         }
-        #test-generator-wizard-overlay .btn-cta-close:hover {
-          background: rgba(255, 255, 255, 0.12) !important; color: #ffffff !important;
-          border-color: rgba(255, 255, 255, 0.3) !important;
+        #test-generator-wizard-overlay .btn-cta-close:hover,
+        #test-generator-wizard-overlay .btn-cta-close:active {
+          background: #334155 !important; color: #ffffff !important;
+          border-color: #64748b !important; box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
         }
         #test-generator-wizard-overlay .btn-cta-secondary {
           height: 40px !important; min-height: 40px !important; max-height: 40px !important;
           line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
-          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
-          background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.4);
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
+          background: transparent !important; border: 1.5px solid rgba(56, 189, 248, 0.4) !important;
           color: #38bdf8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-          gap: 6px; transition: all 0.15s ease; box-sizing: border-box;
+          gap: 6px; transition: all 0.15s ease; box-sizing: border-box; transform: none !important;
         }
-        #test-generator-wizard-overlay .btn-cta-secondary:hover {
+        #test-generator-wizard-overlay .btn-cta-secondary:hover,
+        #test-generator-wizard-overlay .btn-cta-secondary:active {
           background: rgba(56, 189, 248, 0.18) !important; color: #38bdf8 !important;
-          border-color: rgba(56, 189, 248, 0.6) !important; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+          border-color: #38bdf8 !important; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
         }
         #test-generator-wizard-overlay .btn-cta-primary {
           height: 40px !important; min-height: 40px !important; max-height: 40px !important;
-          line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
-          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
-          background: #7c3aed !important; color: #ffffff !important; border: none; cursor: pointer;
-          display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-          box-shadow: 0 4px 14px rgba(124, 58, 237, 0.4); transition: all 0.15s ease; box-sizing: border-box;
-          margin-left: auto !important;
+          line-height: 38px !important; padding: 0 22px !important; border-radius: 6px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
+          background: transparent !important; color: #38bdf8 !important; border: 1.5px solid #38bdf8 !important;
+          cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+          transition: all 0.15s ease; box-sizing: border-box; margin-left: auto !important; transform: none !important;
         }
-        #test-generator-wizard-overlay .btn-cta-primary:hover {
-          background: #6d28d9 !important; box-shadow: 0 0 16px rgba(139, 92, 246, 0.6);
+        #test-generator-wizard-overlay .btn-cta-primary:hover,
+        #test-generator-wizard-overlay .btn-cta-primary:active {
+          background: #38bdf8 !important; color: #0f172a !important;
+          box-shadow: 0 0 16px rgba(56, 189, 248, 0.6) !important;
         }
       </style>
 
       <div class="modal-card">
-        <!-- Title Area (60px SSOT, Centered, ALL CAPS, Pillar D Violet #7c3aed, Zero Subtitle Clutter) -->
+        <!-- Title Area (60px SSOT, Left-Aligned 16px White Title with 34px Icon Box, Tactical Cyan #38bdf8, Zero Subtitle Clutter) -->
         <div class="title-area">
-          <h2>TEST GENERATOR &amp; BLUEPRINT WIZARD</h2>
+          <div class="title-icon-box">
+            ${getSvgIcon('settings', 18)}
+          </div>
+          <h2>TEST GENERATOR WIZARD</h2>
         </div>
 
         <!-- Modal Body (10px padding & gaps, capped at 80vh) -->
@@ -311,7 +325,7 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-task-min" class="field-label" style="margin-bottom:2px;">MIN. SCORE (%)</label>
+                <label for="wizard-task-min" class="field-label" style="margin-bottom:2px;">MIN. RATE (%)</label>
                 <input type="number" id="wizard-task-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:32px; width:100%; box-sizing:border-box;" title="Passing threshold for tasks" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="60" style="font-size:12px; padding:1px 8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">60% (Grade C)</button>
@@ -386,7 +400,7 @@ export async function openAutoGenerateModal(options = {}) {
               </div>
 
               <div>
-                <label for="wizard-test-min" class="field-label" style="margin-bottom:2px;">MIN. SCORE (%)</label>
+                <label for="wizard-test-min" class="field-label" style="margin-bottom:2px;">MIN. RATE (%)</label>
                 <input type="number" id="wizard-test-min" min="1" max="100" value="${escapeHtml(String(prefillTestMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:32px; width:100%; box-sizing:border-box;" title="Passing threshold for exam" />
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-test-min" data-val="60" style="font-size:12px; padding:1px 8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">60% (Grade C)</button>

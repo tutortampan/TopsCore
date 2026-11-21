@@ -1867,3 +1867,45 @@ Standardizing test pacing across the platform is critical for consistent exam di
    - `js/admin/auto-gen-modal.js`: defaults wizard inputs to 10s/word and 20s/phrase, with real-time recalculation and manual duration input support.
    - `js/admin/app.js`: table datagrid honors tutor manual duration before falling back to auto-calculation.
 
+## DECISION-063 — Modality-Specific Pacing SSOT for Vocabulary Classes (Words: 10s Spoken / 15s Written; Phrases: 20s Spoken / 10s Selection)
+
+**Date:** 2026-11-21
+**Status:** Approved & Enforced
+
+### Context
+In Vocabulary classes (e.g. Camp 1st/2nd/3rd Vocabulary, Evnikom/Sheraton/Tamata Vocabulary), tutors configure different answering modalities across tasks and unified exams. For example, a unified theme exam may have Part 1 (Words) as Written Answer and Part 2 (Phrases) as Selection (Multiple Choice). Previously, an outdated calculation formula in the test access modal (`totalQ * 1.5`) produced inflated durations (e.g. 200 questions $\times$ 1.5 = 300 minutes = 5 hours) with an artificial input ceiling of 180 minutes. A unified, modality-specific pacing SSOT was needed to calibrate precise, equitable test timers reflecting typing vs speaking vs selection speeds.
+
+### Decision
+1. **Vocabulary Class Modality-Specific Pacing Rules (SSOT)**:
+   - **Words (Per Kata)**:
+     - **Spoken**: Strictly **10 seconds** per word.
+     - **Written**: Strictly **15 seconds** per word (accounts for typing and spelling).
+     - **Selection / Multiple Choice**: Strictly **10 seconds** per word.
+   - **Phrases (Per Frasa)**:
+     - **Spoken**: Strictly **20 seconds** per phrase (accounts for complete utterance delivery).
+     - **Selection / Multiple Choice**: Strictly **10 seconds** per phrase (reading and clicking 1 of 5 options).
+     - **Written**: Strictly **20 seconds** per phrase.
+2. **Unified Exam Dynamic Duration Formula**:
+   $$\text{Duration (minutes)} = \left\lceil \frac{(\text{Words Count} \times \text{Words Pace}) + (\text{Phrases Count} \times \text{Phrases Pace})}{60} \right\rceil$$
+   - **Standard 200-Question Exam (160 Words Written + 40 Phrases Selection)**:
+     $$(160 \times 15\text{s}) + (40 \times 10\text{s}) = 2.400\text{s} + 400\text{s} = 2.800\text{s} \longrightarrow \lceil 2.800 / 60 \rceil = \mathbf{47\text{ minutes}}.$$
+   - **All-Spoken 200-Question Exam (160 Words Spoken + 40 Phrases Spoken)**:
+     $$(160 \times 10\text{s}) + (40 \times 20\text{s}) = 1.600\text{s} + 800\text{s} = 2.400\text{s} \longrightarrow \lceil 2.400 / 60 \rceil = \mathbf{40\text{ minutes}}.$$
+   - **Words Task (40 Questions)**:
+     - Spoken: $40 \times 10\text{s} = 400\text{s} \longrightarrow \mathbf{7\text{ minutes}}$.
+     - Written: $40 \times 15\text{s} = 600\text{s} \longrightarrow \mathbf{10\text{ minutes}}$.
+   - **Phrases Task (10 Questions)**:
+     - Spoken: $10 \times 20\text{s} = 200\text{s} \longrightarrow \mathbf{4\text{ minutes}}$.
+     - Selection: $10 \times 10\text{s} = 100\text{s} \longrightarrow \mathbf{2\text{ minutes}}$.
+3. **Tutor Manual Duration Override Authority**:
+   - The auto-calculated duration serves as the default suggestion and prefilled value.
+   - If a tutor manually inputs an override duration (`dataset.userSet = '1'`), the manual duration takes strict precedence.
+   - The modal input ceiling was raised to `max="360"` to prevent artificial clipping.
+4. **Interactive Modal Reactivity**:
+   - In `js/admin/tests-access.js`, changing either the Words module or Phrases module dropdown triggers instant real-time recalculation of the duration suggestion and prefilled input (e.g. `Auto: 47 min (160 Words @ 15s + 40 Phrases @ 10s)`).
+5. **System-Wide Alignment**:
+   - `js/api.js`: `calculateAutoDurationMinutes` and `calculateVocabUnifiedDurationMinutes` enforce the exact rates.
+   - `js/admin/tests-access.js`: Modal recalculation engine enforces the exact rates.
+   - `supabase/functions/start-test/index.ts`: Evaluates attempt deadline based on modality pacing for both unified and single-section tests.
+   - `js/test.js`: Section filter and runtime expiration calculations honor the modality pacing.
+

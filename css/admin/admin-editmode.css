@@ -68,6 +68,12 @@ body.global-edit-mode-on .student-inline-input,
 body.global-edit-mode-on .student-inline-select {
   display: block !important;
 }
+body.global-edit-mode-on .student-inline-pin-input {
+  font-family: var(--fm-font-mono, monospace) !important;
+  letter-spacing: 0.08em !important;
+  color: #38bdf8 !important;
+  text-align: center !important;
+}
 body:not(.global-edit-mode-on) .student-inline-input,
 body:not(.global-edit-mode-on) .student-inline-select {
   display: none !important;

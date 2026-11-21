@@ -400,12 +400,12 @@ import {
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261115_v518';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261120_v641';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261114_v465';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261114_v474';
 import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261114_v474';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261114_v512';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261121_v519';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261118_v600';
 import { renderModules } from './modules.js?v=20261106_v160';
@@ -415,8 +415,8 @@ import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal,
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
 import { renderClassesHub } from './classes-hub.js?v=20261117_v613';
 import { renderDashboard, renderAdminProfile, renderAdminSchedule, renderWorkRecords, renderCVGenerator } from './admin-deck.js?v=20261114_v474';
-import { openStudentFullEdit } from './student-management.js?v=20261114_v510';
-import { renderStudentsRegistration } from './student-registration.js?v=20261114_v494';
+import { openStudentFullEdit } from './student-management.js?v=20261120_v641';
+import { renderStudentsRegistration } from './student-registration.js?v=20261120_v640';
 
 if (typeof window !== 'undefined') {
   window.renderStudentsRegistration = renderStudentsRegistration;
@@ -1217,23 +1217,17 @@ if (typeof window !== 'undefined') {
         }
         area.dataset.currentClassId = classId || '';
 
-        // Background sweep to ensure expired in-progress attempts are authoritatively closed & evaluated
-        try {
-          const sb = await getSupabase();
-          await sb.rpc('auto_close_expired_attempts');
-        } catch (_) {}
-
         // Fetch ALL data relevant to this class and detailed test mapping
         // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
         let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
-          adminFetchAll('tests').catch(() => []),
+          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, payload, deleted_at, created_at').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
           adminFetchAll('levels').catch(() => []),
-          adminFetchAll('vocabulary_vault', 'id, target_level, theme_code, topic_code, word_type, deleted_at').catch(() => []),
-          adminFetchAll('attempts').catch(() => []),
+          adminFetchAll('vocabulary_vault', 'id, target_level, theme, theme_code, topic, topic_code, word_type, deleted_at').catch(() => []),
+          adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, correct_count, total_questions, percentage, effective_score, grade, is_best_score, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, is_remedial_unlocked, created_at, submitted_at').catch(() => []),
           adminFetchAll('institutions', 'id, name').catch(() => []),
           adminFetchAll('class_levels', 'class_id, level_id').catch(() => [])
         ]);
@@ -1335,9 +1329,8 @@ if (typeof window !== 'undefined') {
           if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
           const totalQ = Number(att?.total_questions || 0);
           const correctCount = Number(att?.correct_count || att?.score || 0);
-          if (totalQ > 0 && totalQ <= 20) return 'phrases';
-          if (totalQ > 20 && totalQ <= 45) return 'words';
-          if (correctCount > 15) return 'words';
+          if (totalQ > 0 && totalQ <= 40) return 'phrases';
+          if (totalQ > 40) return 'words';
           if (correctCount > 0 && correctCount <= 10) return 'phrases';
           return 'words';
         };
@@ -1927,7 +1920,7 @@ if (typeof window !== 'undefined') {
         const testTests = classTests.filter(a => a.test_type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || (a.test_subtype && a.test_subtype.includes('EXAM')) || (a.test_subtype && a.test_subtype.includes('TEST')) || /\b(EXAM|TEST)\b/i.test(a.title || ''));
 
         let classHubTabs = [
-          { id: 'attendance', icon: getSvgIcon('user', 14), val: activeBatchStudents.length, label: 'Students Grade and Score' },
+          { id: 'attendance', icon: getSvgIcon('user', 14), val: activeBatchStudents.length, label: 'Students Grade and Rate' },
           { id: 'test-sessions', icon: getSvgIcon('clock', 14), val: 4, label: 'Test Sessions' },
           { id: 'tests', icon: getSvgIcon('clipboard', 14), val: classTests.length, label: 'Class Tests' },
           { id: 'analytics', icon: getSvgIcon('trending-up', 14), val: 'Insights', label: 'Test Analytics' }
@@ -1957,6 +1950,7 @@ if (typeof window !== 'undefined') {
                 </div>
               ` : `
                 <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
+                  <div id="class-attendance-top-panel" class="class-attendance-top-panel"></div>
                   <div id="class-attendance-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
                 </div>
               `))}
@@ -1966,6 +1960,91 @@ if (typeof window !== 'undefined') {
         area.innerHTML = html;
 
         // Authoritative Lower Panel Sync for Class Hub (Phase 419 Universal 5-Panel Architecture)
+        const themeNames = {};
+        const topicNames = {};
+        const themeGroups = {};
+        classTests.forEach(asm => {
+          const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
+          const tc = (rawTheme || 'A').toUpperCase();
+          if (!themeGroups[tc]) themeGroups[tc] = [];
+          themeGroups[tc].push(asm);
+
+          const parts = (asm.title || '').split(' - ');
+          const nameAfterDash = parts.length > 1 ? parts.slice(1).join(' - ').trim() : '';
+          const isExam = asm.test_type === 'exam' || /EXAM/i.test(asm.shell_code || asm.title || '');
+
+          if (asm.payload?.theme_name) {
+            themeNames[tc] = asm.payload.theme_name.trim();
+          } else if (isExam && nameAfterDash) {
+            themeNames[tc] = nameAfterDash;
+          }
+
+          const rawTopCode = asm.payload?.topic_code || (asm.shell_code ? asm.shell_code.split('-')[2] : '');
+          const topCode = String(rawTopCode || '').toUpperCase();
+          if (topCode) {
+            if (asm.payload?.topic_name) {
+              topicNames[topCode] = asm.payload.topic_name.trim();
+            } else if (!isExam && nameAfterDash) {
+              topicNames[topCode] = nameAfterDash;
+            }
+          }
+        });
+
+        // Vault fallbacks if any theme or topic name is missing
+        (allVault || []).forEach(v => {
+          const tc = String(v.theme_code || '').toUpperCase();
+          if (tc && v.theme && !themeNames[tc]) themeNames[tc] = v.theme.trim();
+          const topCode = String(v.topic_code || '').toUpperCase();
+          if (topCode && v.topic && !topicNames[topCode]) topicNames[topCode] = v.topic.trim();
+        });
+
+        const sortedThemes = Object.keys(themeGroups).sort();
+        if (sortedThemes.length === 0) sortedThemes.push('A', 'B', 'C', 'D');
+
+        const themeBtnColors = {
+          'A': { border: 'var(--quad-a, #ff2d87)', bg: 'var(--quad-a, #ff2d87)', text: '#ffffff', glow: 'rgba(255,45,135,0.45)' },
+          'B': { border: 'var(--grade-d, #FF8C00)', bg: 'var(--grade-d, #FF8C00)', text: '#0f172a', glow: 'rgba(255,140,0,0.45)' },
+          'C': { border: 'var(--grade-b, #95ff00)', bg: 'var(--grade-b, #95ff00)', text: '#0f172a', glow: 'rgba(149,255,0,0.45)' },
+          'D': { border: 'var(--quad-d, #C084FC)', bg: 'var(--quad-d, #C084FC)', text: '#0f172a', glow: 'rgba(192,132,252,0.45)' }
+        };
+
+        // Render Top Panel for Theme Navigation (Sticking to the far right edge per user request)
+        const renderAttendanceTopPanel = () => {
+          const topPanelEl = document.getElementById('class-attendance-top-panel');
+          if (!topPanelEl) return;
+          const currentTheme = window._classAttendanceThemeFilter || 'ALL';
+          const isOverviewActive = currentTheme === 'ALL' || currentTheme === 'OVERVIEW';
+
+          const btnBaseStyle = 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; box-sizing: border-box !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important;';
+
+          // 1. Overview Button (Tactical Cyan #38bdf8)
+          const overviewStyle = isOverviewActive
+            ? `${btnBaseStyle} width: 140px; background: #0284c7 !important; border: 1px solid #38bdf8 !important; color: #ffffff !important; box-shadow: 0 0 10px rgba(56,189,248,0.45) !important;`
+            : `${btnBaseStyle} width: 140px; background: transparent !important; border: 1px solid #38bdf8 !important; color: #38bdf8 !important;`;
+          const overviewBtnHtml = `<button type="button" class="btn btn-sm btn-top-panel-theme ${isOverviewActive ? 'active' : ''}" onclick="window.switchClassAttendanceTheme('ALL')" style="${overviewStyle}" title="Master Overview (All Themes 5-Pillar Matrix)">OVERVIEW</button>`;
+
+          // 2. Theme Buttons (A, B, C, D)
+          const themeButtonsHtml = sortedThemes.map(tc => {
+            const isThemeActive = currentTheme === tc;
+            const colCfg = themeBtnColors[tc] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
+            const tName = themeNames[tc] ? `${tc} - ${themeNames[tc]}` : `THEME ${tc}`;
+            const themeStyle = isThemeActive
+              ? `${btnBaseStyle} width: 160px; min-width: 140px; max-width: 180px; overflow: hidden !important; text-overflow: ellipsis !important; background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
+              : `${btnBaseStyle} width: 160px; min-width: 140px; max-width: 180px; overflow: hidden !important; text-overflow: ellipsis !important; background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+            return `<button type="button" class="btn btn-sm btn-top-panel-theme ${isThemeActive ? 'active' : ''}" onclick="window.switchClassAttendanceTheme('${tc}')" style="${themeStyle}" title="${tName} (General Overview &amp; Topic Access)">${tName}</button>`;
+          }).join('');
+
+          topPanelEl.innerHTML = `
+            <div class="attendance-top-panel-left" style="display:inline-flex; align-items:center; gap:8px;">
+              <span style="font-size:12px; font-weight:700; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.04em;">THEME NAVIGATION</span>
+            </div>
+            <div class="attendance-theme-top-group" style="display:inline-flex; align-items:center; gap:8px; margin-left:auto;">
+              ${overviewBtnHtml}
+              ${themeButtonsHtml}
+            </div>
+          `;
+        };
+
         const syncClassHubLowerPanel = (activeTab) => {
           if (activeTab === 'attendance') {
             const leftHtml = `
@@ -1977,6 +2056,59 @@ if (typeof window !== 'undefined') {
             const isRemedialOn = Boolean(window._classRemedialEditMode);
             const isForgivenOn = Boolean(window._classForgivenEditMode);
 
+            const currentTheme = window._classAttendanceThemeFilter || 'ALL';
+            const currentTopic = window._classAttendanceTopicFilter || 'ALL';
+            const isThemeOverview = currentTheme === 'ALL' || currentTheme === 'OVERVIEW';
+
+            let centerHtml = '';
+            if (isThemeOverview) {
+              centerHtml = `
+                <div class="attendance-topic-subpanel-group" style="display:inline-flex; align-items:center; gap:8px;">
+                  <span style="font-size:11px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:0.04em;">Select a theme above to inspect topic progress</span>
+                </div>
+              `;
+            } else {
+              // Dedicated Theme Selected: Render 3-5 Topic Buttons for active theme
+              const asmsInTheme = themeGroups[currentTheme] || [];
+              const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
+              const rawTCodes = taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || ''));
+              let tCodes = Array.from(new Set(rawTCodes.filter(Boolean)));
+              if (tCodes.length === 0) {
+                tCodes = taskAsmsInTheme.map((a, idx) => `${currentTheme}${idx + 1}`);
+              }
+              tCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+
+              const colCfg = themeBtnColors[currentTheme] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
+              const isTopicAllActive = currentTopic === 'ALL' || currentTopic === 'OVERVIEW';
+
+              // 1. Theme Overview Button in Sub Panel
+              const topicOverviewStyle = isTopicAllActive
+                ? `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important; background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
+                : `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; transition: all 0.15s ease !important; background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+
+              const topicOverviewBtn = `<button type="button" class="btn btn-sm btn-subpanel-topic ${isTopicAllActive ? 'active' : ''}" onclick="window.switchClassAttendanceTopic('ALL')" style="${topicOverviewStyle}" title="Theme ${currentTheme} Topics Overview">OVERVIEW</button>`;
+
+              // 2. Individual Topic Buttons (e.g. A1, A2, A3, A4)
+              const topicBtnsHtml = tCodes.map(topCode => {
+                const isTopActive = !isTopicAllActive && currentTopic.toUpperCase() === topCode.toUpperCase();
+                const topName = topicNames[topCode.toUpperCase()] || topicNames[topCode] || '';
+                const label = topName ? `${topCode} - ${topName}` : `TOPIC ${topCode}`;
+
+                const topBtnStyle = isTopActive
+                  ? `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; max-width: 175px !important; overflow: hidden !important; text-overflow: ellipsis !important; transition: all 0.15s ease !important; background: ${colCfg.bg} !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.text} !important; box-shadow: 0 0 10px ${colCfg.glow} !important;`
+                  : `height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 10px !important; font-size: 11px !important; font-weight: 700 !important; font-family: var(--fm-font-sans, Inter, sans-serif) !important; border-radius: 4px !important; cursor: pointer !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; text-transform: uppercase !important; letter-spacing: 0.03em !important; white-space: nowrap !important; max-width: 175px !important; overflow: hidden !important; text-overflow: ellipsis !important; transition: all 0.15s ease !important; background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
+
+                return `<button type="button" class="btn btn-sm btn-subpanel-topic ${isTopActive ? 'active' : ''}" onclick="window.switchClassAttendanceTopic('${topCode}')" style="${topBtnStyle}" title="${label} (Inspect 7x7 Words &amp; Phrases)">${label}</button>`;
+              }).join('');
+
+              centerHtml = `
+                <div class="attendance-topic-subpanel-group" style="display:inline-flex; align-items:center; justify-content:center; gap:8px;">
+                  ${topicOverviewBtn}
+                  ${topicBtnsHtml}
+                </div>
+              `;
+            }
+
             // 1. Manual / Edit Mode Button (Cyan #38bdf8 / #0284c7)
             const manualBtnStyle = isManualOn
               ? 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
@@ -1987,7 +2119,6 @@ if (typeof window !== 'undefined') {
             const manualBtnHtml = `<button type="button" class="btn btn-sm" id="btn-subpanel-manual" style="${manualBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${manualBtnLabel}</button>`;
 
             // 2. Remedial Button (Pure Yellow #FFFF00 / Grade R)
-            // Fixed width: 155px (stable anti-shift width based on wider "Done Remedi (R)")
             const remedialBtnStyle = isRemedialOn
               ? 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--grade-c); border: 1px solid var(--grade-c); color: #0f172a; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(255,255,0,0.45); transition: all 0.15s ease;'
               : 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid var(--grade-c); color: var(--grade-c); padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
@@ -1997,7 +2128,6 @@ if (typeof window !== 'undefined') {
             const remedialBtnHtml = `<button type="button" class="btn btn-sm" id="btn-subpanel-remedial" style="${remedialBtnStyle}" title="Toggle Remedial Table Mode (Grade R - Yellow, Cap 60%)">${remedialBtnLabel}</button>`;
 
             // 3. Forgiven Button (Pure Red #FF0000 / Grade F)
-            // Fixed width: 155px (stable anti-shift width based on wider "Done Forgive (F)")
             const forgivenBtnStyle = isForgivenOn
               ? 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: var(--grade-e); border: 1px solid var(--grade-e); color: #ffffff; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(255,0,0,0.45); transition: all 0.15s ease;'
               : 'width: 155px; min-width: 155px; max-width: 155px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid var(--grade-e); color: var(--grade-e); padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
@@ -2013,7 +2143,7 @@ if (typeof window !== 'undefined') {
                 ${forgivenBtnHtml}
               </div>
             `;
-            setBottomInfobar(leftHtml, rightHtml);
+            setBottomInfobar(leftHtml, rightHtml, centerHtml);
           } else if (activeTab === 'tests') {
             const leftHtml = `
               <div class="class-tests-summary-cluster" style="display:inline-flex; align-items:center; gap:12px; font-size:12px; color:#94a3b8; font-weight:600;">
@@ -2067,6 +2197,27 @@ if (typeof window !== 'undefined') {
               </div>
             `;
             setBottomInfobar(leftHtml, rightHtml);
+          }
+        };
+
+        window.syncClassHubLowerPanel = syncClassHubLowerPanel;
+        window.renderAttendanceTopPanel = renderAttendanceTopPanel;
+
+        window.switchClassAttendanceTheme = (targetTheme) => {
+          window._classAttendanceThemeFilter = targetTheme;
+          window._classAttendanceTopicFilter = 'ALL';
+          renderAttendanceTopPanel();
+          syncClassHubLowerPanel('attendance');
+          if (typeof window.renderAttendanceGridMatrix === 'function') {
+            window.renderAttendanceGridMatrix(targetTheme);
+          }
+        };
+
+        window.switchClassAttendanceTopic = (targetTopic) => {
+          window._classAttendanceTopicFilter = targetTopic;
+          syncClassHubLowerPanel('attendance');
+          if (typeof window.renderAttendanceGridMatrix === 'function') {
+            window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
           }
         };
 
@@ -2226,7 +2377,7 @@ if (typeof window !== 'undefined') {
               },
               {
                 key: 'minScore',
-                label: 'PASS SCORE',
+                label: 'PASS RATE',
                 sortable: true,
                 width: '95px',
                 render: (val, row) => {
@@ -2366,7 +2517,7 @@ if (typeof window !== 'undefined') {
                 const origVal = parseFloat(passInput.dataset.originalVal) || 60;
                 const rawVal = parseFloat(passInput.value);
                 if (isNaN(rawVal) || rawVal < 1 || rawVal > 100) {
-                  showToast('Passing score percentage must be between 1% and 100%', 'error');
+                  showToast('Passing rate percentage must be between 1% and 100%', 'error');
                   passInput.value = origVal;
                   return;
                 }
@@ -2376,10 +2527,10 @@ if (typeof window !== 'undefined') {
                   passInput.disabled = true;
                   await updateTestPassingScore(testId, newVal);
                   passInput.dataset.originalVal = newVal;
-                  showToast(`Passing score successfully updated to ${newVal}%`, 'success');
+                  showToast(`Passing rate successfully updated to ${newVal}%`, 'success');
                 } catch (err) {
                   console.error(err);
-                  showToast('Failed to update passing score: ' + err.message, 'error');
+                  showToast('Failed to update passing rate: ' + err.message, 'error');
                   passInput.value = origVal;
                 } finally {
                   passInput.disabled = false;
@@ -2500,12 +2651,7 @@ if (typeof window !== 'undefined') {
           // Dynamically compute theme headers and colSpans from actual classTests
           const themeCounts = {};
           const themeAsmCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
-          const themeNames = {
-            'A': 'WORKPLACE',
-            'B': 'TOURISM',
-            'C': 'CCU',
-            'D': 'HIGH-FREQUENCY'
-          };
+          const themeNames = {};
 
           classTests.forEach(asm => {
             const isTest = isWeeklyExam(asm);
@@ -2514,9 +2660,19 @@ if (typeof window !== 'undefined') {
             const colSpan = isTest ? 2 : 1;
             themeCounts[themeCode] = (themeCounts[themeCode] || 0) + colSpan;
             if (themeAsmCounts[themeCode] !== undefined) themeAsmCounts[themeCode]++;
-            if (asm.payload?.theme_name && !themeNames[themeCode]) {
-              themeNames[themeCode] = asm.payload.theme_name.toUpperCase();
+
+            const parts = (asm.title || '').split(' - ');
+            const nameAfterDash = parts.length > 1 ? parts.slice(1).join(' - ').trim() : '';
+            if (asm.payload?.theme_name) {
+              themeNames[themeCode] = asm.payload.theme_name.trim();
+            } else if (isTest && nameAfterDash) {
+              themeNames[themeCode] = nameAfterDash;
             }
+          });
+
+          (allVault || []).forEach(v => {
+            const tc = String(v.theme_code || '').toUpperCase();
+            if (tc && v.theme && !themeNames[tc]) themeNames[tc] = v.theme.trim();
           });
 
           // Update theme filter pills labels with accurate test counts
@@ -2662,6 +2818,53 @@ if (typeof window !== 'undefined') {
             };
           };
 
+          window.onMatrixRepRateChange = (studentId, themeCode, topicCode, component, repIdx, taskId, attemptId, totalQ, valStr) => {
+            if (!window._manualInputState) {
+              window._manualInputState = { activeStudentIds: new Set(), drafts: {} };
+            }
+            if (!window._manualInputState.drafts[studentId]) {
+              window._manualInputState.drafts[studentId] = {};
+            }
+            const draftKey = `rep_${taskId}_${component}_${repIdx}`;
+            const input = document.querySelector(`.input-matrix-rep-rate-${studentId}-${themeCode.toLowerCase()}-${topicCode.toLowerCase()}-${component}-${repIdx}`);
+            const origPctStr = input?.dataset?.originalPct ?? '';
+
+            if (!valStr || valStr.trim() === '') {
+              const isDirty = origPctStr !== '';
+              window._manualInputState.drafts[studentId][draftKey] = {
+                type: 'repetition',
+                taskId,
+                themeCode,
+                topicCode,
+                component,
+                repIdx,
+                attemptId: attemptId || null,
+                pct: null,
+                totalQ,
+                isDirty
+              };
+              return;
+            }
+
+            const valNum = Number(valStr);
+            const clampedPct = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
+            const isDirty = origPctStr === '' || Number(origPctStr) !== clampedPct;
+
+            window._manualInputState.drafts[studentId][draftKey] = {
+              type: 'repetition',
+              taskId,
+              themeCode,
+              topicCode,
+              component,
+              repIdx,
+              attemptId: attemptId || null,
+              pct: clampedPct,
+              totalQ,
+              rawScore: Math.round(totalQ * (clampedPct / 100)),
+              isDirty
+            };
+          };
+
           window.saveRowManualTaskInput = async (studentId, themeCode, maxTasks) => {
             if (isTutorRole()) {
               if (typeof showToast === 'function') showToast('Permission denied: Tutor accounts cannot manually modify student tasks.', 'warning');
@@ -2706,6 +2909,7 @@ if (typeof window !== 'undefined') {
                     reason: `Manual Task Progress Input: ${earnedVal}/${maxTasks}`
                   });
 
+                  if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
                   if (typeof showToast === 'function') showToast(`✓ Theme ${themeCode} task progress (${earnedVal}/${maxTasks}) saved successfully!`, 'success');
                 } catch (err) {
                   console.error('Save manual task progress error:', err);
@@ -2822,7 +3026,7 @@ if (typeof window !== 'undefined') {
             }
 
             if (dirtyTestIds.length > 0) {
-              if (typeof showLoading === 'function') showLoading('Saving exam score...');
+              if (typeof showLoading === 'function') showLoading('Saving exam rate...');
               try {
                 const testActions = dirtyTestIds.map(tId => {
                   const d = studentDraft[tId];
@@ -2847,10 +3051,10 @@ if (typeof window !== 'undefined') {
                   reason: 'Score Edit'
                 });
 
-                if (typeof showToast === 'function') showToast('✓ Exam score saved successfully!', 'success');
+                if (typeof showToast === 'function') showToast('✓ Exam rate saved successfully!', 'success');
               } catch (err) {
-                console.error('Save exam score error:', err);
-                if (typeof showToast === 'function') showToast('Failed to save score: ' + (err.message || err), 'error');
+                console.error('Save exam rate error:', err);
+                if (typeof showToast === 'function') showToast('Failed to save rate: ' + (err.message || err), 'error');
                 if (typeof hideLoading === 'function') hideLoading();
                 return;
               } finally {
@@ -2878,7 +3082,10 @@ if (typeof window !== 'undefined') {
             } else {
               window._manualInputState.activeStudentIds.add(studentId);
               if (typeof renderAttendanceGridMatrix === 'function') {
-                renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                if (typeof renderAttendanceTopPanel === 'function') {
+            renderAttendanceTopPanel();
+          }
+          renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
               }
               setTimeout(() => {
                 const selector = testId
@@ -3001,7 +3208,10 @@ if (typeof window !== 'undefined') {
               const visibleStudents = studentsGridData || [];
               visibleStudents.forEach(s => window._manualInputState.activeStudentIds.add(s.id));
               if (typeof renderAttendanceGridMatrix === 'function') {
-                renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+                if (typeof renderAttendanceTopPanel === 'function') {
+            renderAttendanceTopPanel();
+          }
+          renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
               }
               if (typeof showToast === 'function') showToast('Manual input mode ACTIVE for all students.', 'info');
             }
@@ -3027,6 +3237,7 @@ if (typeof window !== 'undefined') {
             const drafts = window._manualInputState?.drafts || {};
             const studentIds = Object.keys(drafts);
             const updatesByStudent = [];
+            const repetitionActions = [];
 
             studentIds.forEach(sId => {
               const studentDraft = drafts[sId] || {};
@@ -3034,7 +3245,10 @@ if (typeof window !== 'undefined') {
               const testActions = [];
 
               dirtyKeys.forEach(k => {
-                if (k.startsWith('task_')) {
+                if (k.startsWith('rep_')) {
+                  const d = studentDraft[k];
+                  repetitionActions.push({ studentId: sId, ...d });
+                } else if (k.startsWith('task_')) {
                   const d = studentDraft[k];
                   const parts = k.replace('task_', '').split('_');
                   const tc = d?.themeCode || parts[0];
@@ -3114,6 +3328,58 @@ if (typeof window !== 'undefined') {
                 console.error('Batch save score error:', err);
                 if (typeof showToast === 'function') showToast('Failed to save scores: ' + (err.message || err), 'error');
                 throw err;
+              } finally {
+                if (typeof hideLoading === 'function') hideLoading();
+              }
+            }
+
+            if (repetitionActions.length > 0) {
+              if (typeof showLoading === 'function') showLoading(`Saving ${repetitionActions.length} repetition score(s)...`);
+              try {
+                const sb = await getSupabase();
+                for (const item of repetitionActions) {
+                  if (item.pct !== null) {
+                    const g = typeof calculateGrade === 'function' ? calculateGrade(item.pct) : (typeof getGrade === 'function' ? getGrade(item.pct) : 'C');
+                    const now = new Date().toISOString();
+                    if (item.attemptId) {
+                      await sb.from('attempts').update({
+                        percentage: item.pct,
+                        score: item.rawScore,
+                        grade: g,
+                        status: 'evaluated',
+                        updated_at: now
+                      }).eq('id', item.attemptId);
+                    } else {
+                      await sb.from('attempts').insert({
+                        student_id: item.studentId,
+                        test_id: item.taskId,
+                        total_questions: item.totalQ,
+                        score: item.rawScore,
+                        percentage: item.pct,
+                        grade: g,
+                        status: 'evaluated',
+                        started_at: now,
+                        submitted_at: now,
+                        created_at: now,
+                        forgiven_reason: `MANUAL_REPS: 1/1 ${String(item.component || 'words').toUpperCase()}`
+                      });
+                    }
+                  } else if (item.attemptId) {
+                    await sb.from('attempts').update({
+                      percentage: 0,
+                      score: 0,
+                      grade: 'E',
+                      status: 'evaluated',
+                      updated_at: new Date().toISOString()
+                    }).eq('id', item.attemptId);
+                  }
+                }
+                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof showToast === 'function') showToast(`✓ ${repetitionActions.length} repetition score(s) saved!`, 'success');
+              } catch (repErr) {
+                console.error('Repetition save error:', repErr);
+                if (typeof showToast === 'function') showToast('Failed to save repetition attempts: ' + (repErr.message || repErr), 'error');
+                throw repErr;
               } finally {
                 if (typeof hideLoading === 'function') hideLoading();
               }
@@ -3529,6 +3795,45 @@ if (typeof window !== 'undefined') {
               row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
             });
 
+            // Check active theme view mode
+            const isOverviewMode = !selectedTheme || selectedTheme === 'ALL' || selectedTheme === 'OVERVIEW';
+
+            // Dynamically extract themeNames and topicNames from classTests and allVault
+            const themeNames = {};
+            const topicNames = {};
+            classTests.forEach(asm => {
+              const rawTc = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : '');
+              const tc = String(rawTc || '').toUpperCase();
+              const parts = (asm.title || '').split(' - ');
+              const nameAfterDash = parts.length > 1 ? parts.slice(1).join(' - ').trim() : '';
+              const isExam = asm.test_type === 'exam' || /EXAM/i.test(asm.shell_code || asm.title || '');
+
+              if (tc) {
+                if (asm.payload?.theme_name) {
+                  themeNames[tc] = asm.payload.theme_name.trim();
+                } else if (isExam && nameAfterDash) {
+                  themeNames[tc] = nameAfterDash;
+                }
+              }
+
+              const rawTopCode = asm.payload?.topic_code || (asm.shell_code ? asm.shell_code.split('-')[2] : '');
+              const topCode = String(rawTopCode || '').toUpperCase();
+              if (topCode) {
+                if (asm.payload?.topic_name) {
+                  topicNames[topCode] = asm.payload.topic_name.trim();
+                } else if (!isExam && nameAfterDash) {
+                  topicNames[topCode] = nameAfterDash;
+                }
+              }
+            });
+
+            (allVault || []).forEach(v => {
+              const tc = String(v.theme_code || '').toUpperCase();
+              if (tc && v.theme && !themeNames[tc]) themeNames[tc] = v.theme.trim();
+              const topCode = String(v.topic_code || '').toUpperCase();
+              if (topCode && v.topic && !topicNames[topCode]) topicNames[topCode] = v.topic.trim();
+            });
+
             // Dynamic super-headers: STUDENTS DATA (2 cols: BATCH & STUDENT NAME), active themes, and OVERALL (3 cols) at the far right
             const dynamicSuperHeaders = [
               { label: 'STUDENTS DATA', colSpan: 2, className: 'super-hdr super-hdr-identity super-hdr-students-data' }
@@ -3541,29 +3846,70 @@ if (typeof window !== 'undefined') {
               'D': 'super-hdr super-hdr-theme super-hdr-theme-d'
             };
 
-            sortedActiveThemes.forEach(tc => {
-              const tName = themeNames[tc] ? ` (${themeNames[tc]})` : '';
-              const asmsInTheme = themeGroups[tc] || [];
-              const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
-              const hasPhrasesInTheme = isVocab || taskAsmsInTheme.some(a => a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
-              let tCodes = [];
-              if (hasPhrasesInTheme) {
-                tCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || '1'))));
-              } else {
-                tCodes = taskAsmsInTheme.map((a, idx) => String(a.payload?.topic_code || (idx + 1)));
-              }
-              const numTaskCols = hasPhrasesInTheme ? (tCodes.length * 2) : Math.max(1, tCodes.length);
-              const colSpan = numTaskCols + 4;
-              dynamicSuperHeaders.push({
-                label: `THEME ${tc}${tName}`,
-                colSpan,
-                className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
+            const selectedTopic = window._classAttendanceTopicFilter || 'ALL';
+            const isTopicOverview = selectedTopic === 'ALL' || selectedTopic === 'OVERVIEW';
+
+            if (isOverviewMode) {
+              // Master Overview Super-Headers (5 cols per active theme + 3 cols OVERALL)
+              sortedActiveThemes.forEach(tc => {
+                const tName = themeNames[tc] ? ` (${themeNames[tc].toUpperCase()})` : '';
+                dynamicSuperHeaders.push({
+                  label: `THEME ${tc}${tName}`,
+                  colSpan: 5,
+                  className: themeColorClasses[tc] || `super-hdr super-hdr-theme super-hdr-theme-${tc.toLowerCase()}`
+                });
               });
-            });
+              dynamicSuperHeaders.push({ label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall' });
+            } else {
+              const activeThemeCode = sortedActiveThemes.includes(selectedTheme) ? selectedTheme : (sortedActiveThemes[0] || 'A');
+              const asmsInTheme = themeGroups[activeThemeCode] || [];
+              const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
+              const tName = themeNames[activeThemeCode] ? ` (${themeNames[activeThemeCode].toUpperCase()})` : '';
 
-            dynamicSuperHeaders.push({ label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall' });
+              const rawTCodes = taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || ''));
+              let tCodes = Array.from(new Set(rawTCodes.filter(Boolean)));
+              if (tCodes.length === 0) {
+                tCodes = taskAsmsInTheme.map((a, idx) => `${activeThemeCode}${idx + 1}`);
+              }
+              tCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-            // Build dynamic test and exam columns across all active themes (Progress | Score | Points | Grade)
+              if (isTopicOverview) {
+                // Mode 2: General Theme Overview (1 summary column per topic)
+                dynamicSuperHeaders.push({
+                  label: `THEME ${activeThemeCode}${tName} - TOPICS OVERVIEW`,
+                  colSpan: tCodes.length,
+                  className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`
+                });
+              } else {
+                // Mode 3: Detailed 7x7 Progress for Single Selected Topic
+                const targetTopCode = selectedTopic.toUpperCase();
+                const matchingTasks = taskAsmsInTheme.filter(a =>
+                  String(a.payload?.topic_code || '').toUpperCase() === targetTopCode ||
+                  (a.shell_code && a.shell_code.includes(targetTopCode))
+                );
+                const hasPhrasesInTopic = isVocab || matchingTasks.some(a =>
+                  a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')
+                );
+                const topName = topicNames[targetTopCode] || topicNames[selectedTopic] || '';
+                const superHdrText = topName
+                  ? `TOPIC ${targetTopCode}: ${topName.toUpperCase()}`
+                  : `TOPIC ${targetTopCode}`;
+
+                dynamicSuperHeaders.push({
+                  label: superHdrText,
+                  colSpan: hasPhrasesInTopic ? 14 : 7,
+                  className: themeColorClasses[activeThemeCode] || `super-hdr super-hdr-theme super-hdr-theme-${activeThemeCode.toLowerCase()}`
+                });
+              }
+
+              dynamicSuperHeaders.push({
+                label: `THEME ${activeThemeCode}${tName} EXAM`,
+                colSpan: 4,
+                className: `${themeColorClasses[activeThemeCode] || 'super-hdr super-hdr-theme'} super-hdr-exam`
+              });
+            }
+
+            // Build dynamic test and exam columns across active theme(s) (Progress | Score | Points | Grade)
             const dynamicAsmCols = [];
             window._themeTaskAsmsMap = window._themeTaskAsmsMap || {};
 
@@ -3571,242 +3917,33 @@ if (typeof window !== 'undefined') {
               const asmsInTheme = themeGroups[tc] || [];
               const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
               window._themeTaskAsmsMap[tc] = taskAsmsInTheme;
+            });
+
+            const targetThemesToRender = isOverviewMode
+              ? sortedActiveThemes
+              : [sortedActiveThemes.includes(selectedTheme) ? selectedTheme : (sortedActiveThemes[0] || 'A')];
+
+            targetThemesToRender.forEach(tc => {
+              const asmsInTheme = themeGroups[tc] || [];
+              const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
               const examAsms = asmsInTheme.filter(isWeeklyExam);
               const examAsm = examAsms[0];
               const totalQ = Number(examAsm?.total_questions || (examAsm ? getAsmExpectedMax(examAsm) : 120)) || 120;
 
-              const hasPhrasesInTheme = isVocab || taskAsmsInTheme.some(a => a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
-              let topicCodes = [];
-              if (hasPhrasesInTheme) {
-                topicCodes = Array.from(new Set(taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || '1'))));
-              } else {
-                topicCodes = taskAsmsInTheme.map((a, idx) => String(a.payload?.topic_code || (idx + 1)));
+              const rawTopicCodes = taskAsmsInTheme.map(a => String(a.payload?.topic_code || a.shell_code?.split('-')[2] || ''));
+              let topicCodes = Array.from(new Set(rawTopicCodes.filter(Boolean)));
+              if (topicCodes.length === 0) {
+                topicCodes = taskAsmsInTheme.map((a, idx) => `${tc}${idx + 1}`);
               }
               topicCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-              // 1. Theme Formative TASK Columns
-              if (topicCodes.length > 0) {
-                if (hasPhrasesInTheme) {
-                  // Dual columns: Words (W) and Phrases (P) per topic (1W, 1P, 2W, 2P, 3W, 3P, 4W, 4P)
-                  topicCodes.forEach((topCode, topIdx) => {
-                    const topicNum = topCode.replace(/^[A-Za-z]+/, '') || String(topIdx + 1);
-
-                    // Words Column (e.g. 1W, 2W, 3W, 4W)
-                    dynamicAsmCols.push({
-                      key: `theme_${tc}_topic_${topCode}_words_task`,
-                      className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}-words`,
-                      width: '28px',
-                      minWidth: '22px',
-                      headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Words Repetitions (0–${targetReps})`,
-                      title: `Topic ${topicNum} Words`,
-                      label: `${topicNum}W`,
-                      shortLabel: `${topicNum}W`,
-                      microLabel: `${topicNum}W`,
-                      sortable: true,
-                      align: 'center',
-                      render: (val, row) => {
-                        const isManualMode = Boolean(window._classManualScoreEditMode);
-                        const reps = row[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
-
-                        if (isManualMode) {
-                          const taskDraftKey = `task_${tc}_${topCode}_words`;
-                          const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
-                          const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
-                          return `
-                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                              <input type="number" min="0" max="${targetReps}" step="1"
-                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-words"
-                                     data-student-id="${row.id}"
-                                     data-theme-code="${tc}"
-                                     data-topic-code="${topCode}"
-                                     data-component="words"
-                                     data-target-reps="${targetReps}"
-                                     data-original-reps="${reps}"
-                                     value="${displayReps}"
-                                     placeholder="0"
-                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value, 'words')"
-                                     onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps}, 'words');}}"
-                                     onclick="event.stopPropagation();"
-                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
-                            </div>
-                          `;
-                        }
-
-                        if (reps >= targetReps) {
-                          return `
-                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Words: ${reps}/${targetReps} Repetitions Completed">
-                              <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
-                                ${reps}
-                              </span>
-                            </div>
-                          `;
-                        }
-
-                        if (reps > 0) {
-                          return `
-                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Words: ${reps}/${targetReps} Repetitions in Progress">
-                              <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
-                                ${reps}
-                              </span>
-                            </div>
-                          `;
-                        }
-
-                        return `
-                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Words: 0/${targetReps} Repetitions">
-                            <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
-                          </div>
-                        `;
-                      }
-                    });
-
-                    // Phrases Column (e.g. 1P, 2P, 3P, 4P)
-                    dynamicAsmCols.push({
-                      key: `theme_${tc}_topic_${topCode}_phrases_task`,
-                      className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}-phrases`,
-                      width: '28px',
-                      minWidth: '22px',
-                      headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Phrases Repetitions (0–${targetReps})`,
-                      title: `Topic ${topicNum} Phrases`,
-                      label: `${topicNum}P`,
-                      shortLabel: `${topicNum}P`,
-                      microLabel: `${topicNum}P`,
-                      sortable: true,
-                      align: 'center',
-                      render: (val, row) => {
-                        const isManualMode = Boolean(window._classManualScoreEditMode);
-                        const reps = row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
-
-                        if (isManualMode) {
-                          const taskDraftKey = `task_${tc}_${topCode}_phrases`;
-                          const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
-                          const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
-                          return `
-                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                              <input type="number" min="0" max="${targetReps}" step="1"
-                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-phrases"
-                                     data-student-id="${row.id}"
-                                     data-theme-code="${tc}"
-                                     data-topic-code="${topCode}"
-                                     data-component="phrases"
-                                     data-target-reps="${targetReps}"
-                                     data-original-reps="${reps}"
-                                     value="${displayReps}"
-                                     placeholder="0"
-                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value, 'phrases')"
-                                     onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps}, 'phrases');}}"
-                                     onclick="event.stopPropagation();"
-                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
-                            </div>
-                          `;
-                        }
-
-                        if (reps >= targetReps) {
-                          return `
-                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Phrases: ${reps}/${targetReps} Repetitions Completed">
-                              <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
-                                ${reps}
-                              </span>
-                            </div>
-                          `;
-                        }
-
-                        if (reps > 0) {
-                          return `
-                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Phrases: ${reps}/${targetReps} Repetitions in Progress">
-                              <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
-                                ${reps}
-                              </span>
-                            </div>
-                          `;
-                        }
-
-                        return `
-                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}) Phrases: 0/${targetReps} Repetitions">
-                            <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
-                          </div>
-                        `;
-                      }
-                    });
-                  });
-                } else {
-                  // Standard single topic column (1, 2, 3, 4...) for non-vocabulary classes
-                  topicCodes.forEach((topCode, topIdx) => {
-                    const topicNum = topCode.replace(/^[A-Za-z]+/, '') || String(topIdx + 1);
-                    dynamicAsmCols.push({
-                      key: `theme_${tc}_topic_${topCode}_task`,
-                      className: `col-asm col-task col-theme-topic-task col-theme-topic-task-${tc.toLowerCase()} col-theme-topic-task-${tc.toLowerCase()}-${topCode.toLowerCase()}`,
-                      width: '28px',
-                      minWidth: '22px',
-                      headerTitle: `Theme ${tc} Topic ${topicNum} (${topCode}) Repetitions (0–${targetReps})`,
-                      title: `Topic ${topicNum}`,
-                      label: topicNum,
-                      shortLabel: topicNum,
-                      microLabel: topicNum,
-                      sortable: true,
-                      align: 'center',
-                      render: (val, row) => {
-                        const isManualMode = Boolean(window._classManualScoreEditMode);
-                        const reps = row[`theme_${tc}_topic_${topCode}_reps`] || 0;
-
-                        if (isManualMode) {
-                          const taskDraftKey = `task_${tc}_${topCode}`;
-                          const topicDraft = window._manualInputState?.drafts?.[row.id]?.[taskDraftKey];
-                          const displayReps = topicDraft?.reps != null ? topicDraft.reps : (reps > 0 ? reps : '');
-                          return `
-                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
-                              <input type="number" min="0" max="${targetReps}" step="1"
-                                     class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}"
-                                     data-student-id="${row.id}"
-                                     data-theme-code="${tc}"
-                                     data-topic-code="${topCode}"
-                                     data-target-reps="${targetReps}"
-                                     data-original-reps="${reps}"
-                                     value="${displayReps}"
-                                     placeholder="0"
-                                     oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${targetReps}, this.value)"
-                                     onkeydown="if(event.key==='Enter'){this.blur(); if(typeof window.saveRowManualTopicTaskInput==='function'){window.saveRowManualTopicTaskInput('${row.id}', '${tc}', '${topCode}', ${targetReps});}}"
-                                     onclick="event.stopPropagation();"
-                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 1px;">
-                            </div>
-                          `;
-                        }
-
-                        if (reps >= targetReps) {
-                          return `
-                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): ${reps}/${targetReps} Repetitions Completed">
-                              <span class="asm-rep-badge rep-complete" style="font-size:12px; font-weight:700; color:var(--grade-a); font-variant-numeric:tabular-nums;">
-                                ${reps}
-                              </span>
-                            </div>
-                          `;
-                        }
-
-                        if (reps > 0) {
-                          return `
-                            <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): ${reps}/${targetReps} Repetitions in Progress">
-                              <span class="asm-rep-badge" style="font-size:12px; font-weight:600; color:#38bdf8; font-variant-numeric:tabular-nums;">
-                                ${reps}
-                              </span>
-                            </div>
-                          `;
-                        }
-
-                        return `
-                          <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Topic ${topicNum} (${topCode}): 0/${targetReps} Repetitions">
-                            <span class="asm-dot" style="font-size:12px; font-weight:700; color:rgba(255,255,255,0.22);">&middot;</span>
-                          </div>
-                        `;
-                      }
-                    });
-                  });
-                }
-              } else {
+              // 1. In Overview Mode: render single summary TASK column; in Detail Mode: render 7x7 attempt rate columns per topic
+              if (isOverviewMode) {
                 dynamicAsmCols.push({
                   key: `theme_${tc}_task`,
                   className: `col-asm col-task col-theme-task col-theme-task-${tc.toLowerCase()}`,
                   width: '50px',
-                  minWidth: '38px',
+                  minWidth: '40px',
                   headerTitle: `Theme ${tc} Tasks (Completed / Max Required)`,
                   title: `Theme ${tc} Tasks`,
                   label: 'TASK',
@@ -3815,18 +3952,366 @@ if (typeof window !== 'undefined') {
                   sortable: true,
                   align: 'center',
                   render: (val, row) => {
+                    const isManualMode = Boolean(window._classManualScoreEditMode);
                     const earned = row[`theme_${tc}_task_progress`] || 0;
                     const maxT = row[`theme_${tc}_task_max`] || 0;
                     const isComplete = Boolean(row[`theme_${tc}_task_completed`]);
+
+                    if (isManualMode && maxT > 0) {
+                      const taskKey = `task_${tc}`;
+                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
+                      const displayVal = currentDraft?.earned != null ? currentDraft.earned : earned;
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                          <input type="number" min="0" max="${maxT}" step="1"
+                                 class="input-matrix-task-progress input-matrix-task-progress-${row.id}-${tc.toLowerCase()}"
+                                 data-student-id="${row.id}"
+                                 data-theme-code="${tc}"
+                                 data-max-tasks="${maxT}"
+                                 data-original-earned="${earned}"
+                                 value="${displayVal}"
+                                 placeholder="${maxT}"
+                                 oninput="window.onMatrixTaskChange('${row.id}', '${tc}', ${maxT}, this.value)"
+                                 onkeydown="if(event.key==='Enter'){this.blur();}"
+                                 onclick="event.stopPropagation();"
+                                 style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#38bdf8; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                        </div>
+                      `;
+                    }
+
                     if (maxT === 0) return '<span class="asm-dot" style="font-size:12px; font-weight:700;" title="No tasks required">&middot;</span>';
                     const color = isComplete ? 'var(--grade-a)' : (earned > 0 ? '#38bdf8' : '#64748b');
                     return `
-                      <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center;" title="Theme ${tc} Tasks Progress: ${earned}/${maxT}${isComplete ? ' (Completed)' : ' (Incomplete)'}">
+                      <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                           ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                           title="Theme ${tc} Tasks Progress: ${earned}/${maxT}${isComplete ? ' (Completed)' : ' (Incomplete)'} - Double click to edit">
                         <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:500; color:${color}; font-variant-numeric:tabular-nums;">
                           ${earned}/${maxT}
                         </span>
                       </div>
                     `;
+                  }
+                });
+              } else if (isTopicOverview) {
+                // Mode 2: General Theme Overview (1 summary column per topic in active theme)
+                topicCodes.forEach((topCode, topIdx) => {
+                  const matchingTasks = taskAsmsInTheme.filter(a =>
+                    String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
+                    (a.shell_code && a.shell_code.includes(topCode))
+                  );
+                  const topName = topicNames[topCode.toUpperCase()] || topicNames[topCode] || '';
+                  const hasPhrases = isVocab || matchingTasks.some(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+                  const maxTopicReps = targetReps * (hasPhrases ? 2 : 1);
+                  const isEndCol = topIdx === topicCodes.length - 1;
+
+                  dynamicAsmCols.push({
+                    key: `theme_${tc}_topic_${topCode}_summary`,
+                    className: `col-asm col-task col-theme-topic-summary col-theme-topic-${tc.toLowerCase()}${isEndCol ? ' col-theme-topic-att-end' : ''}`,
+                    width: '65px',
+                    minWidth: '55px',
+                    headerTitle: `Topic ${topCode}: ${topName} (Click to inspect 7x7 detailed attempts)`,
+                    title: topCode,
+                    label: topCode,
+                    shortLabel: topCode,
+                    microLabel: topCode,
+                    sortable: true,
+                    align: 'center',
+                    render: (val, row) => {
+                      const isManualMode = Boolean(window._classManualScoreEditMode);
+                      let earned = 0;
+                      if (hasPhrases) {
+                        earned = (row[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0);
+                      } else {
+                        earned = row[`theme_${tc}_topic_${topCode}_reps`] || 0;
+                      }
+
+                      if (isManualMode && maxTopicReps > 0) {
+                        const taskKey = `task_${tc}_${topCode}`;
+                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
+                        const displayVal = currentDraft?.reps != null ? currentDraft.reps : earned;
+                        return `
+                          <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                            <input type="number" min="0" max="${maxTopicReps}" step="1"
+                                   class="input-matrix-topic-reps input-matrix-topic-reps-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}"
+                                   data-student-id="${row.id}"
+                                   data-theme-code="${tc}"
+                                   data-topic-code="${topCode}"
+                                   data-target-reps="${maxTopicReps}"
+                                   data-original-reps="${earned}"
+                                   value="${displayVal}"
+                                   placeholder="${maxTopicReps}"
+                                   oninput="window.onMatrixTopicTaskChange('${row.id}', '${tc}', '${topCode}', ${maxTopicReps}, this.value)"
+                                   onkeydown="if(event.key==='Enter'){this.blur();}"
+                                   onclick="event.stopPropagation();"
+                                   style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#38bdf8; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                          </div>
+                        `;
+                      }
+
+                      const isComplete = earned >= maxTopicReps && maxTopicReps > 0;
+                      const color = isComplete ? 'var(--grade-a)' : (earned > 0 ? '#38bdf8' : '#64748b');
+                      return `
+                        <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                             onclick="event.stopPropagation(); window.switchClassAttendanceTopic('${topCode}');"
+                             ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                             title="Topic ${topCode} (${topName}): ${earned}/${maxTopicReps} reps completed - Click to inspect 7x7 detailed attempts">
+                          <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:700; color:${color}; font-variant-numeric:tabular-nums;">
+                            ${earned}/${maxTopicReps}
+                          </span>
+                        </div>
+                      `;
+                    }
+                  });
+                });
+              } else if (topicCodes.length > 0) {
+                // Mode 3: Detailed 7x7 Progress for Single Selected Topic
+                const targetTopCode = selectedTopic.toUpperCase();
+                const topicCodesToRender = topicCodes.includes(targetTopCode) ? [targetTopCode] : [topicCodes[0]];
+
+                // Topic Repetitions Helper to partition Words vs Phrases accurately in 7x7 system
+                const getTopicAttemptsForComp = (studentAttsList, mTasks, compType) => {
+                  const comp = compType === 'phrases' ? 'phrases' : 'words';
+                  const explicitPhrasesTask = mTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+                  const explicitWordsTask = mTasks.find(a => !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+
+                  if (comp === 'phrases' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
+                    const atts = (studentAttsList || []).filter(a =>
+                      (a.test_id || a.Test_id) === explicitPhrasesTask.id &&
+                      ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+                    );
+                    atts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
+                    return { task: explicitPhrasesTask, taskId: explicitPhrasesTask.id, attempts: atts };
+                  }
+
+                  if (comp === 'words' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
+                    const atts = (studentAttsList || []).filter(a =>
+                      (a.test_id || a.Test_id) === explicitWordsTask.id &&
+                      ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+                    );
+                    atts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
+                    return { task: explicitWordsTask, taskId: explicitWordsTask.id, attempts: atts };
+                  }
+
+                  // Unified or single task fallback:
+                  const task = explicitWordsTask || mTasks[0];
+                  const taskId = task?.id || '';
+                  const atts = (studentAttsList || []).filter(a => {
+                    if ((a.test_id || a.Test_id) !== taskId) return false;
+                    const st = String(a.status || '').toLowerCase();
+                    if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return false;
+                    const sec = typeof getAttemptSection === 'function' ? getAttemptSection(a) : 'words';
+                    return comp === 'phrases' ? sec === 'phrases' : sec !== 'phrases';
+                  });
+                  atts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
+                  return { task, taskId, attempts: atts };
+                };
+
+                topicCodesToRender.forEach((topCode, topIdx) => {
+                  const matchingTasks = taskAsmsInTheme.filter(a =>
+                    String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
+                    (a.shell_code && a.shell_code.includes(topCode))
+                  );
+                  const phrasesTask = matchingTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+                  const hasPhrasesInTopic = isVocab || Boolean(phrasesTask) || matchingTasks.some(a =>
+                    a.payload?.is_unified || a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')
+                  );
+
+                  // 7 Columns for Words: W1, W2, W3, W4, W5, W6, W7
+                  for (let rep = 1; rep <= 7; rep++) {
+                    const repIdx = rep - 1;
+                    const isEndCol = !hasPhrasesInTopic && rep === 7;
+                    dynamicAsmCols.push({
+                      key: `theme_${tc}_topic_${topCode}_words_att_${repIdx}`,
+                      className: `col-asm col-task col-theme-topic-att col-theme-topic-att-${tc.toLowerCase()} col-rep-${rep} col-comp-words${isEndCol ? ' col-theme-topic-att-end' : ''}`,
+                      headerTitle: `Topic ${topCode} Words - Attempt ${rep} (Rate %)`,
+                      title: `W${rep}`,
+                      label: `W${rep}`,
+                      shortLabel: `W${rep}`,
+                      microLabel: `W${rep}`,
+                      sortable: true,
+                      align: 'center',
+                      render: (val, row) => {
+                        const isManualMode = Boolean(window._classManualScoreEditMode);
+                        const { task, taskId, attempts } = getTopicAttemptsForComp(row.allAttempts, matchingTasks, 'words');
+                        const att = attempts[repIdx];
+                        const totalQ = Number(att?.total_questions || getAsmExpectedMax(task) || 10);
+                        const rawScore = att ? Number(att.score ?? 0) : null;
+                        const origPct = att != null
+                          ? Math.round(Number(att.percentage ?? (totalQ > 0 ? (rawScore / totalQ) * 100 : 0)))
+                          : (repIdx < (row[`theme_${tc}_topic_${topCode}_words_reps`] || 0) ? 70 : null);
+
+                        const draftKey = `rep_${taskId}_words_${repIdx}`;
+                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[draftKey];
+                        const displayPct = currentDraft?.pct != null ? currentDraft.pct : origPct;
+
+                        if (isManualMode) {
+                          const displayVal = displayPct != null ? displayPct : '';
+                          return `
+                            <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                              <input type="number" min="0" max="100"
+                                     class="input-matrix-rep-rate input-matrix-rep-rate-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-words-${repIdx}"
+                                     data-student-id="${row.id}"
+                                     data-theme-code="${tc}"
+                                     data-topic-code="${topCode}"
+                                     data-component="words"
+                                     data-rep-idx="${repIdx}"
+                                     data-task-id="${taskId}"
+                                     data-attempt-id="${att?.id || ''}"
+                                     data-total-q="${totalQ}"
+                                     data-original-pct="${origPct != null ? origPct : ''}"
+                                     value="${displayVal}"
+                                     placeholder="%"
+                                     oninput="window.onMatrixRepRateChange('${row.id}', '${tc}', '${topCode}', 'words', ${repIdx}, '${taskId}', '${att?.id || ''}', ${totalQ}, this.value)"
+                                     onkeydown="if(event.key==='Enter'){this.blur();}"
+                                     onclick="event.stopPropagation();"
+                                     style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#38bdf8; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                            </div>
+                          `;
+                        }
+
+                        if (att) {
+                          const pct = origPct;
+                          const rateColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+                          const gradeSym = String(att.grade || (typeof calculateGrade === 'function' ? calculateGrade(pct) : 'C')).trim();
+
+                          return `
+                            <div class="asm-cell-rep-rate" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                 onclick="event.stopPropagation(); if(typeof window.showStudentTopicAttemptsModal==='function') window.showStudentTopicAttemptsModal('${row.id}', '${escapeHtml(row.displayName)}', '${tc}', '${topCode}', 'words', '${taskId}');"
+                                 ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                                 title="Topic ${topCode} Words Attempt #${rep}: ${rawScore}/${totalQ} (${pct}% Grade ${gradeSym}) - Click to inspect all attempts, double-click to edit">
+                              <span style="font-size:12px; font-weight:700; color:${rateColor}; font-variant-numeric:tabular-nums;">
+                                ${pct}%
+                              </span>
+                            </div>
+                          `;
+                        }
+
+                        // Waived / Manual pass fallback: if reps passed, render passing rate (70%)
+                        const wordsRepsPassed = row[`theme_${tc}_topic_${topCode}_words_reps`] || 0;
+                        if (repIdx < wordsRepsPassed) {
+                          const rateColor = 'var(--grade-c)';
+                          return `
+                            <div class="asm-cell-rep-rate" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                 onclick="event.stopPropagation(); if(typeof window.showStudentTopicAttemptsModal==='function') window.showStudentTopicAttemptsModal('${row.id}', '${escapeHtml(row.displayName)}', '${tc}', '${topCode}', 'words', '${taskId}');"
+                                 ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                                 title="Topic ${topCode} Words Repetition #${rep}: Passed (Waived/Approved) - Double-click to edit">
+                              <span style="font-size:12px; font-weight:700; color:${rateColor}; font-variant-numeric:tabular-nums;">
+                                70%
+                              </span>
+                            </div>
+                          `;
+                        }
+
+                        return `
+                          <div class="asm-cell-rep-rate" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                               onclick="event.stopPropagation(); if(typeof window.showStudentTopicAttemptsModal==='function') window.showStudentTopicAttemptsModal('${row.id}', '${escapeHtml(row.displayName)}', '${tc}', '${topCode}', 'words', '${taskId}');"
+                               ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                               title="Topic ${topCode} Words Attempt #${rep}: Not attempted yet - Double-click to edit">
+                            <span style="font-size:12px; font-weight:600; color:#64748b;">—</span>
+                          </div>
+                        `;
+                      }
+                    });
+                  }
+
+                  // 7 Columns for Phrases: P1..P7 (Rendered whenever topic contains phrases or in vocabulary classes)
+                  if (hasPhrasesInTopic) {
+                    for (let rep = 1; rep <= 7; rep++) {
+                      const repIdx = rep - 1;
+                      const isEndCol = rep === 7;
+                      dynamicAsmCols.push({
+                        key: `theme_${tc}_topic_${topCode}_phrases_att_${repIdx}`,
+                        className: `col-asm col-task col-theme-topic-att col-theme-topic-att-${tc.toLowerCase()} col-rep-${rep} col-comp-phrases${isEndCol ? ' col-theme-topic-att-end' : ''}`,
+                        headerTitle: `Topic ${topCode} Phrases - Attempt ${rep} (Rate %)`,
+                        title: `P${rep}`,
+                        label: `P${rep}`,
+                        shortLabel: `P${rep}`,
+                        microLabel: `P${rep}`,
+                        sortable: true,
+                        align: 'center',
+                        render: (val, row) => {
+                          const isManualMode = Boolean(window._classManualScoreEditMode);
+                          const { task, taskId, attempts } = getTopicAttemptsForComp(row.allAttempts, matchingTasks, 'phrases');
+                          const att = attempts[repIdx];
+                          const totalQ = Number(att?.total_questions || getAsmExpectedMax(task) || 10);
+                          const rawScore = att ? Number(att.score ?? 0) : null;
+                          const origPct = att != null
+                            ? Math.round(Number(att.percentage ?? (totalQ > 0 ? (rawScore / totalQ) * 100 : 0)))
+                            : (repIdx < (row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) ? 70 : null);
+
+                          const draftKey = `rep_${taskId}_phrases_${repIdx}`;
+                          const currentDraft = window._manualInputState?.drafts?.[row.id]?.[draftKey];
+                          const displayPct = currentDraft?.pct != null ? currentDraft.pct : origPct;
+
+                          if (isManualMode) {
+                            const displayVal = displayPct != null ? displayPct : '';
+                            return `
+                              <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                                <input type="number" min="0" max="100"
+                                       class="input-matrix-rep-rate input-matrix-rep-rate-${row.id}-${tc.toLowerCase()}-${topCode.toLowerCase()}-phrases-${repIdx}"
+                                       data-student-id="${row.id}"
+                                       data-theme-code="${tc}"
+                                       data-topic-code="${topCode}"
+                                       data-component="phrases"
+                                       data-rep-idx="${repIdx}"
+                                       data-task-id="${taskId}"
+                                       data-attempt-id="${att?.id || ''}"
+                                       data-total-q="${totalQ}"
+                                       data-original-pct="${origPct != null ? origPct : ''}"
+                                       value="${displayVal}"
+                                       placeholder="%"
+                                       oninput="window.onMatrixRepRateChange('${row.id}', '${tc}', '${topCode}', 'phrases', ${repIdx}, '${taskId}', '${att?.id || ''}', ${totalQ}, this.value)"
+                                       onkeydown="if(event.key==='Enter'){this.blur();}"
+                                       onclick="event.stopPropagation();"
+                                       style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--quad-d, #C084FC); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                              </div>
+                            `;
+                          }
+
+                          if (att) {
+                            const pct = origPct;
+                            const rateColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#ffffff';
+                            const gradeSym = String(att.grade || (typeof calculateGrade === 'function' ? calculateGrade(pct) : 'C')).trim();
+
+                            return `
+                              <div class="asm-cell-rep-rate" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                   onclick="event.stopPropagation(); if(typeof window.showStudentTopicAttemptsModal==='function') window.showStudentTopicAttemptsModal('${row.id}', '${escapeHtml(row.displayName)}', '${tc}', '${topCode}', 'phrases', '${taskId}');"
+                                   ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                                   title="Topic ${topCode} Phrases Attempt #${rep}: ${rawScore}/${totalQ} (${pct}% Grade ${gradeSym}) - Click to inspect all attempts, double-click to edit">
+                                <span style="font-size:12px; font-weight:700; color:${rateColor}; font-variant-numeric:tabular-nums;">
+                                  ${pct}%
+                                </span>
+                              </div>
+                            `;
+                          }
+
+                          // Waived / Manual pass fallback: if reps passed, render passing rate (70%)
+                          const phrasesRepsPassed = row[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0;
+                          if (repIdx < phrasesRepsPassed) {
+                            const rateColor = 'var(--grade-c)';
+                            return `
+                              <div class="asm-cell-rep-rate" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                   onclick="event.stopPropagation(); if(typeof window.showStudentTopicAttemptsModal==='function') window.showStudentTopicAttemptsModal('${row.id}', '${escapeHtml(row.displayName)}', '${tc}', '${topCode}', 'phrases', '${taskId}');"
+                                   ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                                   title="Topic ${topCode} Phrases Repetition #${rep}: Passed (Waived/Approved) - Double-click to edit">
+                                <span style="font-size:12px; font-weight:700; color:${rateColor}; font-variant-numeric:tabular-nums;">
+                                  70%
+                                </span>
+                              </div>
+                            `;
+                          }
+
+                          return `
+                            <div class="asm-cell-rep-rate" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
+                                 onclick="event.stopPropagation(); if(typeof window.showStudentTopicAttemptsModal==='function') window.showStudentTopicAttemptsModal('${row.id}', '${escapeHtml(row.displayName)}', '${tc}', '${topCode}', 'phrases', '${taskId}');"
+                                 ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
+                                 title="Topic ${topCode} Phrases Attempt #${rep}: Not attempted yet - Double-click to edit">
+                              <span style="font-size:12px; font-weight:600; color:#64748b;">—</span>
+                            </div>
+                          `;
+                        }
+                      });
+                    }
                   }
                 });
               }
@@ -3890,7 +4375,7 @@ if (typeof window !== 'undefined') {
                     return `
                       <span class="asm-score asm-score-test test-score-theme-pct"
                             style="color:${cellColor}; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
-                            title="Theme ${tc} Exam Score: ${scoreVal}%">
+                            title="Theme ${tc} Exam Rate: ${scoreVal}%">
                         ${scoreVal}%
                       </span>
                     `;
@@ -4117,7 +4602,7 @@ if (typeof window !== 'undefined') {
                   // Normal Display State:
                   if (isRem) {
                     return `
-                      <div style="display:flex; align-items:center; justify-content:center;" title="Remedial (Grade R, score capped at 60%)">
+                      <div style="display:flex; align-items:center; justify-content:center;" title="Remedial (Grade R, rate capped at 60%)">
                         <span class="status-badge-rem" style="color:var(--grade-c); font-weight:700; font-size:12px;">R</span>
                       </div>
                     `;
@@ -4202,6 +4687,74 @@ if (typeof window !== 'undefined') {
                   const pB = Number(b.progressPct ?? 0);
                   if (pA !== pB) return pB - pA;
                   return (a.displayName || a.name || '').localeCompare(b.displayName || b.name || '', undefined, { numeric: true });
+                }
+                if (key && key.includes('_summary')) {
+                  const parts = key.split('_');
+                  const tc = parts[1];
+                  const topCode = parts[3];
+                  const earnedA = (a[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (a[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (a[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                  const earnedB = (b[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (b[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (b[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                  if (earnedA !== earnedB) return (earnedA - earnedB) * dir;
+                }
+                if (key && key.includes('_att_')) {
+                  const keyParts = key.split('_');
+                  const tc = keyParts[1];
+                  const topCode = keyParts[3];
+                  const compType = keyParts[4];
+                  const repIdx = parseInt(keyParts[6], 10);
+
+                  const getAttPct = (student) => {
+                    const asmsInTheme = themeGroups[tc] || [];
+                    const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
+                    const matchingTasks = taskAsmsInTheme.filter(a =>
+                      String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
+                      (a.shell_code && a.shell_code.includes(topCode))
+                    );
+                    const comp = compType === 'phrases' ? 'phrases' : 'words';
+                    const explicitPhrasesTask = matchingTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+                    const explicitWordsTask = matchingTasks.find(a => !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+
+                    let targetTaskId = '';
+                    let studentAtts = [];
+
+                    if (comp === 'phrases' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
+                      targetTaskId = explicitPhrasesTask.id;
+                      studentAtts = (student.allAttempts || []).filter(a =>
+                        (a.test_id || a.Test_id) === targetTaskId &&
+                        ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+                      );
+                    } else if (comp === 'words' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
+                      targetTaskId = explicitWordsTask.id;
+                      studentAtts = (student.allAttempts || []).filter(a =>
+                        (a.test_id || a.Test_id) === targetTaskId &&
+                        ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+                      );
+                    } else {
+                      targetTaskId = (explicitWordsTask || matchingTasks[0])?.id || '';
+                      studentAtts = (student.allAttempts || []).filter(a => {
+                        if ((a.test_id || a.Test_id) !== targetTaskId) return false;
+                        const st = String(a.status || '').toLowerCase();
+                        if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return false;
+                        const sec = typeof getAttemptSection === 'function' ? getAttemptSection(a) : 'words';
+                        return comp === 'phrases' ? sec === 'phrases' : sec !== 'phrases';
+                      });
+                    }
+
+                    studentAtts.sort((x, y) => new Date(x.created_at || x.submitted_at || 0) - new Date(y.created_at || y.submitted_at || 0));
+                    const att = studentAtts[repIdx];
+                    if (att) {
+                      const totalQ = Number(att.total_questions || 10);
+                      const rawScore = Number(att.score ?? 0);
+                      return Number(att.percentage ?? (totalQ > 0 ? (rawScore / totalQ) * 100 : 0));
+                    }
+                    const repsPassed = student[`theme_${tc}_topic_${topCode}_${comp}_reps`] || 0;
+                    if (repIdx < repsPassed) return 70;
+                    return -1;
+                  };
+
+                  const pctA = getAttPct(a);
+                  const pctB = getAttPct(b);
+                  if (pctA !== pctB) return (pctA - pctB) * dir;
                 }
                 return null;
               },
@@ -4304,7 +4857,7 @@ if (typeof window !== 'undefined') {
                       if (isTest && isPctCol) {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Score: ${avgPct}%">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Rate: ${avgPct}%">${avgPct}%</span>
                           </td>
                         `;
                       } else if (isTest && isPtsCol) {
@@ -4316,7 +4869,7 @@ if (typeof window !== 'undefined') {
                       } else {
                         cellsHtml += `
                           <td class="text-center ${col.className || ''}">
-                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Task Score: ${avgPct}% (${count} students)">${avgPct}%</span>
+                            <span style="color:${avgCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Task Rate: ${avgPct}% (${count} students)">${avgPct}%</span>
                           </td>
                         `;
                       }
@@ -4324,6 +4877,106 @@ if (typeof window !== 'undefined') {
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
                           <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="Unattempted">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.includes('_summary')) {
+                    const parts = col.key.split('_');
+                    const tc = parts[1];
+                    const topCode = parts[3];
+                    let repsSum = 0;
+                    filteredData.forEach(s => {
+                      repsSum += (s[`theme_${tc}_topic_${topCode}_words_reps`] || 0) + (s[`theme_${tc}_topic_${topCode}_phrases_reps`] || 0) + (s[`theme_${tc}_topic_${topCode}_reps`] || 0);
+                    });
+                    if (totalStudents > 0 && repsSum > 0) {
+                      const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:#38bdf8; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Topic ${topCode} Reps: ${avgReps}">${avgReps}</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span class="asm-dot" style="color:rgba(255,255,255,0.22); font-weight:700; font-size:12px; line-height:1;" title="0 Reps">&middot;</span>
+                        </td>
+                      `;
+                    }
+                  } else if (col.key && col.key.startsWith('theme_') && col.key.includes('_att_')) {
+                    const keyParts = col.key.split('_');
+                    const tc = keyParts[1];
+                    const topCode = keyParts[3];
+                    const compType = keyParts[4]; // 'words' or 'phrases'
+                    const repIdx = parseInt(keyParts[6], 10);
+
+                    const asmsInTheme = themeGroups[tc] || [];
+                    const taskAsmsInTheme = asmsInTheme.filter(a => !isWeeklyExam(a));
+                    const matchingTasks = taskAsmsInTheme.filter(a =>
+                      String(a.payload?.topic_code || '').toUpperCase() === topCode.toUpperCase() ||
+                      (a.shell_code && a.shell_code.includes(topCode))
+                    );
+                    const comp = compType === 'phrases' ? 'phrases' : 'words';
+                    const explicitPhrasesTask = matchingTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
+                    const explicitWordsTask = matchingTasks.find(a => !(a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || '')));
+
+                    let targetTaskId = '';
+                    let count = 0;
+                    let sumPct = 0;
+
+                    filteredData.forEach(s => {
+                      let studentAtts = [];
+                      if (comp === 'phrases' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
+                        targetTaskId = explicitPhrasesTask.id;
+                        studentAtts = (s.allAttempts || []).filter(a =>
+                          (a.test_id || a.Test_id) === targetTaskId &&
+                          ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+                        );
+                      } else if (comp === 'words' && explicitPhrasesTask && explicitWordsTask && explicitPhrasesTask.id !== explicitWordsTask.id) {
+                        targetTaskId = explicitWordsTask.id;
+                        studentAtts = (s.allAttempts || []).filter(a =>
+                          (a.test_id || a.Test_id) === targetTaskId &&
+                          ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
+                        );
+                      } else {
+                        targetTaskId = (explicitWordsTask || matchingTasks[0])?.id || '';
+                        studentAtts = (s.allAttempts || []).filter(a => {
+                          if ((a.test_id || a.Test_id) !== targetTaskId) return false;
+                          const st = String(a.status || '').toLowerCase();
+                          if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return false;
+                          const sec = typeof getAttemptSection === 'function' ? getAttemptSection(a) : 'words';
+                          return comp === 'phrases' ? sec === 'phrases' : sec !== 'phrases';
+                        });
+                      }
+
+                      studentAtts.sort((a, b) => new Date(a.created_at || a.submitted_at || 0) - new Date(b.created_at || b.submitted_at || 0));
+                      const att = studentAtts[repIdx];
+                      if (att) {
+                        const totalQ = Number(att.total_questions || 10);
+                        const rawScore = Number(att.score ?? 0);
+                        const pct = Math.round(Number(att.percentage ?? (totalQ > 0 ? (rawScore / totalQ) * 100 : 0)));
+                        count++;
+                        sumPct += pct;
+                      } else {
+                        const repsPassed = s[`theme_${tc}_topic_${topCode}_${comp}_reps`] || 0;
+                        if (repIdx < repsPassed) {
+                          count++;
+                          sumPct += 70;
+                        }
+                      }
+                    });
+
+                    if (count > 0) {
+                      const avgPct = Math.round(sumPct / count);
+                      const avgColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgPct) : '#ffffff';
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Attempt Rate: ${avgPct}% (${count} students)">${avgPct}%</span>
+                        </td>
+                      `;
+                    } else {
+                      cellsHtml += `
+                        <td class="text-center ${col.className || ''}">
+                          <span style="color:#64748b; font-size:12px;">—</span>
                         </td>
                       `;
                     }
@@ -4396,7 +5049,7 @@ if (typeof window !== 'undefined') {
                       const avgScoreCol = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgThemeScore) : (TOPSCORE_COLORS?.C || 'var(--grade-c)');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
-                          <span style="color:${avgScoreCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Score: ${avgThemeScore}%">${avgThemeScore}%</span>
+                          <span style="color:${avgScoreCol}; font-weight:600; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg Theme ${tc} Rate: ${avgThemeScore}%">${avgThemeScore}%</span>
                         </td>
                       `;
                     } else {
@@ -4592,7 +5245,7 @@ if (typeof window !== 'undefined') {
                     return `
                       <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; width:100%; display:flex; align-items:center; gap:2px; cursor:pointer;"
                            onclick="event.stopPropagation(); if (typeof window.showStudentDossierModal === 'function') window.showStudentDossierModal('${row.id}');"
-                           title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;[Remedial] Student has remedial score' : ''}&#10;Click to view official academic report">
+                           title="${escapeHtml(origName)}&#10;PIN: ${escapeHtml(row.pin)}${row.hasRemedial ? '&#10;[Remedial] Student has remedial rate' : ''}&#10;Click to view official academic report">
                         <span style="color:var(--clr-text-1); font-size:12px; font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;">
                           ${escapeHtml(matrixName)}
                         </span>
@@ -4601,83 +5254,85 @@ if (typeof window !== 'undefined') {
                   }
                 },
                 ...dynamicAsmCols,
-                {
-                  key: 'progressPct',
-                  label: 'DONE',
-                  shortLabel: 'DONE',
-                  microLabel: 'DONE',
-                  headerTitle: 'Overall Completion Rate % (Exams & Activities Completed)',
-                  title: 'Overall Completion Rate %',
-                  className: 'col-overall col-overall-prog',
-                  sortable: true,
-                  align: 'center',
-                  width: '45px',
-                  minWidth: '36px',
-                  render: (val, row) => {
-                    const progVal = Number(row.progressPct ?? 0);
-                    const progColor = ((row.completedExamCount > 0 || row.completedCount > 0) && typeof getGradeColorByScore === 'function')
-                      ? getGradeColorByScore(progVal)
-                      : 'var(--clr-text-3)';
-                    const tip = row.progressTooltip || `${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)`;
-                    return `
-                      <div style="color:${progColor}; font-size:12px; font-weight:400; font-variant-numeric:tabular-nums; line-height:1;" title="${escapeHtml(tip)}">${row.progressPct}%</div>
-                    `;
-                  }
-                },
-                {
-                  key: 'totalEarnedScore',
-                  label: 'PTS',
-                  shortLabel: 'PTS',
-                  microLabel: 'PTS',
-                  className: 'col-overall col-overall-pts',
-                  sortable: true,
-                  align: 'center',
-                  width: '42px',
-                  minWidth: '34px',
-                  render: (val, row) => {
-                    const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
-                    if (!isExamTaken && (!val || val === 0)) {
-                      return '<span class="text-muted" style="font-size:12px;">—</span>';
+                ...(isOverviewMode ? [
+                  {
+                    key: 'progressPct',
+                    label: 'DONE',
+                    shortLabel: 'DONE',
+                    microLabel: 'DONE',
+                    headerTitle: 'Overall Completion Rate % (Exams & Activities Completed)',
+                    title: 'Overall Completion Rate %',
+                    className: 'col-overall col-overall-prog',
+                    sortable: true,
+                    align: 'center',
+                    width: '45px',
+                    minWidth: '36px',
+                    render: (val, row) => {
+                      const progVal = Number(row.progressPct ?? 0);
+                      const progColor = ((row.completedExamCount > 0 || row.completedCount > 0) && typeof getGradeColorByScore === 'function')
+                        ? getGradeColorByScore(progVal)
+                        : 'var(--clr-text-3)';
+                      const tip = row.progressTooltip || `${row.completedCount}/${row.totalClassTests} Activities Done (${row.progressPct}%)`;
+                      return `
+                        <div style="color:${progColor}; font-size:12px; font-weight:400; font-variant-numeric:tabular-nums; line-height:1;" title="${escapeHtml(tip)}">${row.progressPct}%</div>
+                      `;
                     }
-                    const scoreColor = (typeof getGradeColorByScore === 'function')
-                      ? getGradeColorByScore(row.averageScorePct)
-                      : '#ffffff';
-                    // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
-                    const displayScore = Math.round(Number(val || 0)).toString();
-                    return `
-                      <div style="font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor} !important;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
-                        ${displayScore}
-                      </div>
-                    `;
-                  }
-                },
-                {
-                  key: 'grade',
-                  label: 'GRADE',
-                  shortLabel: 'GRD',
-                  microLabel: 'GRD',
-                  className: 'col-overall col-overall-grade',
-                  sortable: true,
-                  align: 'center',
-                  width: '32px',
-                  minWidth: '26px',
-                  render: (val, row) => {
-                    if (!row.grade || row.grade === '—' || row.grade === '-') {
-                      return '<span class="text-muted" style="font-size:12px;" title="No exams completed">&mdash;</span>';
+                  },
+                  {
+                    key: 'totalEarnedScore',
+                    label: 'PTS',
+                    shortLabel: 'PTS',
+                    microLabel: 'PTS',
+                    className: 'col-overall col-overall-pts',
+                    sortable: true,
+                    align: 'center',
+                    width: '42px',
+                    minWidth: '34px',
+                    render: (val, row) => {
+                      const isExamTaken = (row.completedExamCount || row.completedWeeklyCount || 0) > 0;
+                      if (!isExamTaken && (!val || val === 0)) {
+                        return '<span class="text-muted" style="font-size:12px;">—</span>';
+                      }
+                      const scoreColor = (typeof getGradeColorByScore === 'function')
+                        ? getGradeColorByScore(row.averageScorePct)
+                        : '#ffffff';
+                      // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
+                      const displayScore = Math.round(Number(val || 0)).toString();
+                      return `
+                        <div style="font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor} !important;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
+                          ${displayScore}
+                        </div>
+                      `;
                     }
-                    const isGradeS = row.grade === 'S' || row.grade === '★';
-                    if (isGradeS) {
-                      return `<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star); font-size:12px; font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Exam Grade ★ (100% Excellent)">★</span>`;
+                  },
+                  {
+                    key: 'grade',
+                    label: 'GRADE',
+                    shortLabel: 'GRD',
+                    microLabel: 'GRD',
+                    className: 'col-overall col-overall-grade',
+                    sortable: true,
+                    align: 'center',
+                    width: '32px',
+                    minWidth: '26px',
+                    render: (val, row) => {
+                      if (!row.grade || row.grade === '—' || row.grade === '-') {
+                        return '<span class="text-muted" style="font-size:12px;" title="No exams completed">&mdash;</span>';
+                      }
+                      const isGradeS = row.grade === 'S' || row.grade === '★';
+                      if (isGradeS) {
+                        return `<span class="grid-grade-val grid-grade-star" style="color:var(--grade-star); font-size:12px; font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Exam Grade ★ (100% Excellent)">★</span>`;
+                      }
+                      const cleanGrade = String(row.grade || '').trim().toUpperCase();
+                      const gradeColor = (typeof getGradeColorByScore === 'function')
+                        ? getGradeColorByScore(row.averageScorePct)
+                        : (row.gradeColor || '#94a3b8');
+                      return `
+                        <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:12px; line-height:1;" title="Exam Grade ${cleanGrade}">${cleanGrade}</span>
+                      `;
                     }
-                    const cleanGrade = String(row.grade || '').trim().toUpperCase();
-                    const gradeColor = (typeof getGradeColorByScore === 'function')
-                      ? getGradeColorByScore(row.averageScorePct)
-                      : (row.gradeColor || '#94a3b8');
-                    return `
-                      <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:12px; line-height:1;" title="Exam Grade ${cleanGrade}">${cleanGrade}</span>
-                    `;
                   }
-                }
+                ] : [])
               ]
             });
 
@@ -4825,6 +5480,9 @@ if (typeof window !== 'undefined') {
             });
           }
 
+          if (typeof renderAttendanceTopPanel === 'function') {
+            renderAttendanceTopPanel();
+          }
           renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
 
           if (window._attendanceResizeHandler) {
@@ -4858,6 +5516,299 @@ if (typeof window !== 'undefined') {
         };
         window.syncClassHubLowerPanel = syncClassHubLowerPanel;
         window.renderAttendanceGridMatrix = renderAttendanceGridMatrix;
+
+        window.showStudentTopicAttemptsModal = async function(studentId, studentName, themeCode, topicCode, component, targetTaskId) {
+          const tc = String(themeCode || '').trim().toUpperCase();
+          const comp = String(component || 'words').toLowerCase();
+          const compLabel = comp === 'phrases' ? 'Phrases' : 'Words';
+
+          // Quadrant color mapping
+          const quadColors = {
+            'A': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.A) || '#ff2d87',
+            'B': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.B) || '#FF8C00',
+            'C': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.C) || '#95ff00',
+            'D': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.D) || '#C084FC'
+          };
+          const themeColor = quadColors[tc] || '#38bdf8';
+
+          // Find task info from current class hub context or fallback
+          const contextTests = window._currentClassHubContext?.classTests || [];
+          let currentTask = contextTests.find(t => t.id === targetTaskId);
+          if (!currentTask) {
+            const topicMatches = contextTests.filter(t => String(t.payload?.topic_code || '').toUpperCase() === String(topicCode).toUpperCase() || (t.shell_code && t.shell_code.includes(topicCode)));
+            if (comp === 'phrases') {
+              currentTask = topicMatches.find(t => t.payload?.category === 'phrases' || /PHRASE/i.test(t.shell_code || t.title || '')) || topicMatches[0];
+            } else {
+              currentTask = topicMatches.find(t => !(t.payload?.category === 'phrases' || /PHRASE/i.test(t.shell_code || t.title || ''))) || topicMatches[0];
+            }
+          }
+          const taskId = currentTask?.id || targetTaskId || '';
+          const taskTitle = currentTask?.title || `Theme ${tc} Topic ${topicCode} ${compLabel}`;
+          const taskCode = currentTask?.shell_code || `TOPIC-${topicCode}-${compLabel.toUpperCase()}`;
+          const expectedMaxQ = (typeof getAsmExpectedMax === 'function' ? getAsmExpectedMax(currentTask) : (Number(currentTask?.payload?.total_questions || currentTask?.total_questions || 10))) || 10;
+          const targetReps = 7;
+
+          // Collect attempts from memory context
+          const memoryAttempts = (window._currentClassHubContext?.allAttempts || []).filter(a => {
+            if (a.student_id !== studentId) return false;
+            if (taskId && (a.test_id === taskId || a.Test_id === taskId)) return true;
+            if (currentTask && (a.test_id === currentTask.id || a.Test_id === currentTask.id)) return true;
+            return false;
+          });
+
+          // Fetch freshest attempts directly from Supabase DB to ensure 100% accuracy
+          let studentAttempts = [...memoryAttempts];
+          try {
+            const sb = await getSupabase();
+            if (sb && (taskId || studentId)) {
+              let q = sb.from('attempts')
+                .select('id, test_id, score, total_questions, percentage, grade, status, started_at, submitted_at, created_at, forgiven_reason, is_forgiven')
+                .eq('student_id', studentId);
+              if (taskId) {
+                q = q.eq('test_id', taskId);
+              }
+              const { data: dbAtts } = await q.order('created_at', { ascending: true });
+              if (dbAtts && dbAtts.length > 0) {
+                studentAttempts = dbAtts;
+              }
+            }
+          } catch (err) {
+            console.warn('Error fetching fresh attempts for modal:', err);
+          }
+
+          // Filter only valid submitted / evaluated attempts matching requested component (words vs phrases)
+          const validAttempts = studentAttempts.filter(a => {
+            const st = String(a.status || '').toLowerCase();
+            if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return false;
+            const sec = typeof getAttemptSection === 'function' ? getAttemptSection(a) : 'words';
+            return comp === 'phrases' ? sec === 'phrases' : sec !== 'phrases';
+          });
+
+          // Find best attempt
+          let bestAttempt = null;
+          validAttempts.forEach(a => {
+            const aTotal = Number(a.total_questions || expectedMaxQ);
+            const aScore = Number(a.score ?? 0);
+            const aPct = Number(a.percentage ?? (aTotal > 0 ? (aScore / aTotal) * 100 : 0));
+            if (!bestAttempt) {
+              bestAttempt = { ...a, total: aTotal, score: aScore, pct: aPct };
+            } else {
+              const bScoreDiff = aScore - bestAttempt.score;
+              if (bScoreDiff > 0 || (bScoreDiff === 0 && aPct > bestAttempt.pct)) {
+                bestAttempt = { ...a, total: aTotal, score: aScore, pct: aPct };
+              }
+            }
+          });
+
+          const completedReps = validAttempts.length;
+          const isTargetReached = completedReps >= targetReps;
+
+          // Remove any existing modal
+          const existing = document.getElementById('student-topic-attempts-modal-backdrop');
+          if (existing) existing.remove();
+
+          // Helper: format date
+          function formatAttemptDate(dateStr) {
+            if (!dateStr) return '—';
+            try {
+              const d = new Date(dateStr);
+              if (isNaN(d.getTime())) return dateStr;
+              const day = String(d.getDate()).padStart(2, '0');
+              const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+              const month = months[d.getMonth()];
+              const year = d.getFullYear();
+              const hours = String(d.getHours()).padStart(2, '0');
+              const mins = String(d.getMinutes()).padStart(2, '0');
+              return `${day} ${month} ${year}, ${hours}:${mins}`;
+            } catch (_) {
+              return dateStr;
+            }
+          }
+
+          // Create Backdrop
+          const backdrop = document.createElement('div');
+          backdrop.id = 'student-topic-attempts-modal-backdrop';
+          backdrop.className = 'modal-backdrop-custom';
+          backdrop.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(5,8,15,0.78);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;animation:fadeIn 0.15s ease-out;';
+
+          backdrop.innerHTML = `
+            <div class="topic-attempts-dialog" style="max-width:820px; width:94vw; max-height:80vh; background:#0f172a; border:1.5px solid rgba(255,255,255,0.16); border-radius:12px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 25px 60px -15px rgba(0,0,0,0.85);">
+              <!-- Standardized 60px Title Area (§1.5.1 Centered Title & Perimeter Border) -->
+              <div class="modal-header title-area" style="height:60px !important; min-height:60px !important; max-height:60px !important; padding:0 20px !important; border-bottom:1.5px solid rgba(255,255,255,0.16) !important; display:flex !important; align-items:center !important; justify-content:center !important; text-align:center !important; background:#1e293b !important; box-sizing:border-box !important; flex-shrink:0 !important; margin:0 !important;">
+                <div style="display:inline-flex; align-items:center; gap:10px;">
+                  <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:${themeColor}; box-shadow:0 0 10px ${themeColor}; flex-shrink:0;"></span>
+                  <h3 class="modal-title" style="margin:0 !important; font-family:var(--fm-font-display,'Inter',sans-serif) !important; font-size:16px !important; font-weight:800 !important; color:#ffffff !important; line-height:1 !important; letter-spacing:0.04em !important; text-transform:uppercase !important;">
+                    THEME ${escapeHtml(tc)} · TOPIC ${escapeHtml(topicCode)} ${escapeHtml(compLabel).toUpperCase()} — ATTEMPT DETAILS
+                  </h3>
+                </div>
+              </div>
+
+              <!-- Scrollable Body (§1.5.3 Single-Screen Max Height Limit) -->
+              <div class="modal-body" style="flex:1; overflow-y:auto; padding:20px 24px; background:#090d16; display:flex; flex-direction:column; gap:16px;">
+                <!-- Header Summary Card -->
+                <div style="background:#131c2e; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:16px 20px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px;">
+                  <div style="display:flex; flex-direction:column; gap:4px; min-width:200px;">
+                    <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em;">Student</div>
+                    <div style="font-family:var(--fm-font-display,'Inter',sans-serif); font-size:16px; font-weight:800; color:#ffffff;">
+                      ${escapeHtml(studentName)}
+                    </div>
+                    <div style="font-size:12px; color:#94a3b8; font-weight:500;">
+                      ${escapeHtml(taskTitle)} <span style="color:#64748b;">(${escapeHtml(taskCode)})</span>
+                    </div>
+                  </div>
+
+                  <!-- Quick Stats Strip -->
+                  <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                    <!-- Repetitions Progress -->
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px;">
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Repetitions</span>
+                      <span style="font-family:var(--fm-font-display,'Inter',sans-serif); font-size:16px; font-weight:800; color:${isTargetReached ? 'var(--grade-a)' : (completedReps > 0 ? '#38bdf8' : '#94a3b8')}; font-variant-numeric:tabular-nums;">
+                        ${completedReps} / ${targetReps}
+                      </span>
+                    </div>
+
+                    <!-- Best Rate -->
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px;">
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase;">Best Rate</span>
+                      <span style="font-family:var(--fm-font-display,'Inter',sans-serif); font-size:16px; font-weight:800; color:${bestAttempt ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(bestAttempt.pct) : '#ffffff') : '#94a3b8'}; font-variant-numeric:tabular-nums;">
+                        ${bestAttempt ? `${Math.round(bestAttempt.pct)}%` : '—'}
+                      </span>
+                    </div>
+
+                    <!-- Best Grade Badge -->
+                    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:8px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:6px;">
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:2px;">Grade</span>
+                      ${(() => {
+                        if (!bestAttempt) return '<span style="color:#64748b; font-size:16px;">—</span>';
+                        const gSym = String(bestAttempt.grade || (typeof calculateGrade === 'function' ? calculateGrade(bestAttempt.pct) : 'C')).trim();
+                        const gColor = typeof getGradeColor === 'function' ? getGradeColor(gSym) : (TOPSCORE_COLORS[gSym] || '#94a3b8');
+                        return `<span class="grade-circle" style="display:inline-flex; width:26px; height:26px; border-radius:50%; align-items:center; justify-content:center; font-family:var(--fm-font-display,'Inter',sans-serif); font-weight:900; font-size:12px; color:#0f172a; background:${gColor}; box-shadow:0 1px 4px rgba(0,0,0,0.3);">${escapeHtml(gSym)}</span>`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Attempts Table Section -->
+                <div style="border:1px solid rgba(255,255,255,0.08); border-radius:8px; overflow:hidden; background:#0f172a;">
+                  <table class="topic-attempts-table" style="width:100%; border-collapse:collapse;">
+                    <thead>
+                      <tr>
+                        <th style="width:60px; text-align:center;">ATTEMPT</th>
+                        <th style="text-align:left; padding-left:16px;">SUBMISSION TIME</th>
+                        <th style="width:90px; text-align:center;">ITEMS</th>
+                        <th style="width:80px; text-align:center;">RATE</th>
+                        <th style="width:80px; text-align:center;">PTS</th>
+                        <th style="width:70px; text-align:center;">GRD</th>
+                        <th style="width:120px; text-align:center;">STATUS</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${validAttempts.length > 0 ? validAttempts.map((att, idx) => {
+                        const totalQ = Number(att.total_questions || expectedMaxQ);
+                        const rawScore = Number(att.score ?? 0);
+                        const pctVal = Number(att.percentage ?? (totalQ > 0 ? Math.round((rawScore / totalQ) * 100) : 0));
+                        const roundedPts = Math.round(rawScore);
+                        const gradeSym = String(att.grade || (typeof calculateGrade === 'function' ? calculateGrade(pctVal) : 'C')).trim();
+                        const gradeBg = typeof getGradeColor === 'function' ? getGradeColor(gradeSym) : (TOPSCORE_COLORS[gradeSym] || '#94a3b8');
+                        const rateColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pctVal) : '#ffffff';
+                        const isBest = bestAttempt && att.id === bestAttempt.id;
+                        const dateFormatted = formatAttemptDate(att.submitted_at || att.created_at);
+
+                        return `
+                          <tr class="${isBest ? 'is-best-attempt' : ''}">
+                            <td style="font-weight:700; color:#ffffff;">
+                              #${idx + 1}
+                              ${isBest ? '<span style="font-size:12px; font-weight:800; padding:1px 5px; border-radius:3px; background:rgba(0,192,0,0.2); border:1px solid var(--grade-a); color:var(--grade-a); margin-left:4px;">BEST</span>' : ''}
+                            </td>
+                            <td style="text-align:left; padding-left:16px; color:#cbd5e1; font-size:12px;">
+                              ${escapeHtml(dateFormatted)}
+                            </td>
+                            <td style="font-weight:600; color:#ffffff;">
+                              ${rawScore} / ${totalQ}
+                            </td>
+                            <td style="font-weight:700; color:${rateColor};">
+                              ${pctVal}%
+                            </td>
+                            <td style="font-weight:700; color:${rateColor};">
+                              ${roundedPts}
+                            </td>
+                            <td>
+                              <span class="grade-circle" style="display:inline-flex; width:24px; height:24px; border-radius:50%; align-items:center; justify-content:center; font-family:var(--fm-font-display,'Inter',sans-serif); font-weight:900; font-size:12px; color:#0f172a; background:${gradeBg};">
+                                ${escapeHtml(gradeSym)}
+                              </span>
+                            </td>
+                            <td>
+                              <span style="display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12px; color:var(--grade-a);">
+                                ${getSvgIcon('check-circle', 13)} COMPLETED
+                              </span>
+                            </td>
+                          </tr>
+                        `;
+                      }).join('') : `
+                        <tr>
+                          <td colspan="7" style="padding:36px 20px; text-align:center; color:#64748b; font-style:italic;">
+                            No submitted attempts recorded yet for ${escapeHtml(studentName)} on this topic component.
+                          </td>
+                        </tr>
+                      `}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Standardized 60px CTA Area (§1.5.2 & §1.5.4 Centered Single Button SSOT) -->
+              <div class="modal-footer cta-area" style="height:60px !important; min-height:60px !important; max-height:60px !important; border-top:1.5px solid rgba(255,255,255,0.16) !important; display:flex !important; align-items:center !important; justify-content:center !important; background:#0f172a !important; flex-shrink:0 !important; margin:0 !important; padding:0 24px !important;">
+                <button type="button" id="btn-close-topic-attempts-modal" style="height:36px; padding:0 36px; border-radius:6px; font-family:var(--fm-font-sans,'Inter',sans-serif); font-size:14px; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.22); color:#f8fafc; cursor:pointer; transition:all 0.15s ease;">
+                  CLOSE
+                </button>
+              </div>
+            </div>
+          `;
+
+          // Close modal function
+          function closeModal() {
+            backdrop.remove();
+            document.removeEventListener('keydown', handleKeyDown);
+          }
+
+          function handleKeyDown(e) {
+            if (e.key === 'Escape') {
+              closeModal();
+            }
+          }
+
+          // Attach listeners
+          backdrop.addEventListener('click', (e) => {
+            if (e.target === backdrop) closeModal();
+          });
+
+          const closeBtn = backdrop.querySelector('#btn-close-topic-attempts-modal');
+          if (closeBtn) {
+            closeBtn.onclick = (e) => {
+              e.stopPropagation();
+              closeModal();
+            };
+          }
+
+          document.addEventListener('keydown', handleKeyDown);
+          document.body.appendChild(backdrop);
+        };
+
+        window.toggleAttendanceManualEditMode = (forceState = null) => {
+          const btn = document.getElementById('btn-subpanel-manual');
+          if (btn) {
+            btn.click();
+          } else if (forceState !== null) {
+            window._classManualScoreEditMode = Boolean(forceState);
+            if (window._classManualScoreEditMode) {
+              document.body.classList.add('class-manual-edit-on');
+            } else {
+              document.body.classList.remove('class-manual-edit-on');
+            }
+            if (typeof window.syncClassHubLowerPanel === 'function') window.syncClassHubLowerPanel('attendance');
+            if (typeof window.renderAttendanceGridMatrix === 'function') window.renderAttendanceGridMatrix(window._classAttendanceThemeFilter || 'ALL');
+          }
+        };
 
         // Delegated listener for the 3 Sub Panel Action Buttons: Manual (Cyan), Remedi (Yellow), Forgive (Red)
         if (!window._classHubSubpanelDelegationBound) {
@@ -5133,7 +6084,7 @@ if (typeof window !== 'undefined') {
         sessionStorage.setItem('topscore_current_class_context', JSON.stringify(window.currentClassContext));
       } catch (_) {}
       const title = `${cname} - ${lname}`;
-      const subtitle = program && institution ? `${institution} ➔ ${program}` : 'Manage tests and vocabulary for this class';
+      const subtitle = program && institution ? `${institution} → ${program}` : 'Manage tests and vocabulary for this class';
 
       area.innerHTML = `
         <div class="section-header">
@@ -6355,7 +7306,7 @@ if (typeof window !== 'undefined') {
       if (typeof window.showStudentDossierModal === 'function') {
         return window.showStudentDossierModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261114_v496');
+      const sm = await import('./student-management.js?v=20261120_v641');
       if (typeof sm.showStudentDossierModal === 'function') {
         return sm.showStudentDossierModal(studentId);
       }

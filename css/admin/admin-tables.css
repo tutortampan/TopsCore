@@ -2024,6 +2024,202 @@ th.col-theme-task {
   box-shadow: 0 0 10px rgba(var(--quad-d-rgb, 192, 132, 252), 0.3);
 }
 
+/* Top Panel Theme Navigation (Phase 420 Dual-Level Theme & Topic Architecture) */
+.class-attendance-top-panel {
+  display: flex !important;
+  align-items: center !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 40px !important;
+  line-height: 40px !important;
+  padding: 0 10px !important;
+  margin: 0 10px 10px 10px !important;
+  background: #0f172a !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  box-sizing: border-box !important;
+}
+
+.attendance-theme-top-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: auto !important; /* Sticking to the far right edge per user instruction */
+}
+
+.btn-top-panel-theme {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-top-panel-theme:hover {
+  filter: brightness(1.18) !important;
+}
+
+/* Sub Panel Dynamic Topic Navigation */
+.attendance-topic-subpanel-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+.btn-subpanel-topic {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  white-space: nowrap !important;
+  max-width: 175px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-subpanel-topic:hover {
+  filter: brightness(1.18) !important;
+}
+
+/* Sub Panel Theme Switcher 5-Button Cluster (Phase 455 SSOT) */
+.attendance-theme-subpanel-group {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  flex-wrap: nowrap !important;
+}
+
+.btn-subpanel-theme {
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  line-height: 28px !important;
+  width: 160px !important;
+  min-width: 150px !important;
+  max-width: 180px !important;
+  box-sizing: border-box !important;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-subpanel-theme:hover {
+  filter: brightness(1.18) !important;
+}
+
+/* 7x7 Attempt Rate Columns in Dedicated Theme Matrix */
+.col-theme-topic-att {
+  min-width: 48px !important;
+  max-width: 58px !important;
+  width: 52px !important;
+  text-align: center !important;
+  padding: 4px 2px !important;
+  font-variant-numeric: tabular-nums !important;
+}
+
+/* Boundary between Words (W7) and Phrases (P1) */
+.col-rep-7.col-comp-words {
+  border-right: 1.5px solid rgba(255, 255, 255, 0.18) !important;
+}
+
+/* End of Topic Boundary (after P7, or after W7 if no phrases) */
+.col-rep-7.col-comp-phrases,
+.col-theme-topic-att-end {
+  border-right: 2px solid rgba(255, 255, 255, 0.28) !important;
+}
+
+/* Distinct Header Colors for Words (W1..W7) and Phrases (P1..P7) */
+th.col-comp-words {
+  color: #38bdf8 !important;
+}
+
+th.col-comp-phrases {
+  color: #c084fc !important;
+}
+
+.asm-cell-rep-rate {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  font-variant-numeric: tabular-nums !important;
+  cursor: pointer !important;
+  transition: transform 0.1s ease !important;
+}
+
+.asm-cell-rep-rate:hover {
+  transform: scale(1.12) !important;
+}
+
+/* Inline Editable Repetition Inputs in Class Hub (Rule 2.10) */
+body.class-manual-edit-on td.col-theme-topic-att {
+  padding: 0 !important;
+}
+
+body.class-manual-edit-on .input-matrix-rep-rate {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 28px !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  padding: 0 2px !important;
+  font-variant-numeric: tabular-nums !important;
+  border-radius: 0 !important;
+  box-sizing: border-box !important;
+}
+
+body.class-manual-edit-on .input-matrix-rep-rate:focus {
+  background: rgba(56, 189, 248, 0.14) !important;
+  box-shadow: inset 0 0 0 1px #38bdf8 !important;
+}
+
 /* Docked Summary Row (★ CLASS & BATCH AVERAGE) */
 tfoot.datagrid-tfoot,
 #class-attendance-grid tfoot.datagrid-tfoot {
@@ -2869,6 +3065,13 @@ body.global-edit-mode-on .student-inline-score-input {
 
 .student-inline-score-input {
   -moz-appearance: textfield;
+}
+
+body.global-edit-mode-on .student-inline-pin-input {
+  font-family: var(--fm-font-mono, monospace) !important;
+  letter-spacing: 0.08em !important;
+  color: #38bdf8 !important;
+  text-align: center !important;
 }
 
 /* ============================================================

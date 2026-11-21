@@ -136,7 +136,7 @@ export async function callEdgeFunction(functionName, payload) {
   }
   const sb = await getSupabase();
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
 
   try {
     const { data: sessionData } = await sb.auth.getSession();
@@ -170,11 +170,17 @@ export async function callEdgeFunction(functionName, payload) {
     return data;
   } catch (err) {
     clearTimeout(timeoutId);
-    if (err.status === 404 || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.name === 'TypeError') {
+    if (err.name === 'AbortError' || err.status === 404 || err.message?.includes('Failed to fetch') || err.message?.includes('NetworkError') || err.name === 'TypeError') {
       markEdgeFunctionOffline(functionName);
     }
     if (err.name === 'AbortError') {
-      throw new Error("AI Evaluation timed out. Your answer is saved, please refresh and try submitting again.");
+      if (functionName === 'evaluate-test') {
+        throw new Error("AI Evaluation timed out. Your answer is saved, please refresh and try submitting again.");
+      } else {
+        const timeoutErr = new Error(`Edge function ${functionName} timed out after 8s (fallback activated)`);
+        timeoutErr.status = 504;
+        throw timeoutErr;
+      }
     }
     throw err;
   }

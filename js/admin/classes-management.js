@@ -112,7 +112,7 @@ export async function renderClasses(area) {
     adminFetchAll('levels', '*'),
     adminFetchAll('modules', '*')
   ]);
-  
+
   institutions = (institutions || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   programs = (programs || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   classes = (classes || []).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -126,7 +126,7 @@ export async function renderClasses(area) {
     <div class="workspace-split" style="display:flex; height:100%; width:100%; overflow:hidden;">
       <!-- Left Panel -->
       <div id="class-sidebar" style="width:260px; border-right:1px solid var(--clr-border); background:var(--clr-surface); display:flex; flex-direction:column; flex-shrink:0;">
-        
+
         <!-- Tab Bar -->
         <div style="display:flex; border-bottom:1px solid var(--clr-border); flex-shrink:0;">
           <button id="tab-btn-classes" style="flex:1; padding:0.6rem 0; font-size: 12px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; background:var(--clr-primary); color:#fff; border:none; cursor:pointer; border-radius:0; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
@@ -160,7 +160,7 @@ export async function renderClasses(area) {
           </div>
         </div>
       </div>
-      
+
       <!-- Main Canvas -->
       <div id="class-detail-container" style="flex:1; overflow-y:auto; background:var(--clr-bg-1);">
         <div class="empty-state" style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--clr-text-muted);">
@@ -277,7 +277,7 @@ export async function renderClasses(area) {
 
   // ── Build Org Tree ──
   const listContainer = document.getElementById('org-tree-list');
-  
+
   if (!institutions.length) {
     listContainer.innerHTML = '<div class="text-muted text-sm text-center" style="padding:1rem;">No institutions found. Create one to begin.</div>';
   } else {
@@ -339,7 +339,7 @@ export async function renderClasses(area) {
             cls.institutions = { name: inst.name };
             renderClassDetail(cls);
           };
-          
+
           if (currentSelectedClass?.id === cls.id) {
             clsNode.querySelector('.cls-node').style.background = 'var(--clr-primary-light, rgba(0, 112, 243, 0.05))';
             cls.programs     = { name: prog.name };
@@ -350,7 +350,7 @@ export async function renderClasses(area) {
       });
     });
   }
-  
+
   function clearActiveNodes() {
     document.querySelectorAll('.tree-node').forEach(n => n.style.background = 'transparent');
   }
@@ -426,9 +426,9 @@ function renderProgramDetail(prog, inst) {
   document.getElementById('btn-add-class').onclick = () => {
     const modalEl = document.getElementById('add-class-modal');
     if (!modalEl) return showToast("Modal element not found", "error");
-    
+
     document.getElementById('add-class-name').value = '';
-    
+
     const programSelect = document.getElementById('add-class-program-id');
     if (programSelect) {
       programSelect.innerHTML = `<option value="${prog.id}" data-inst="${inst.id}" selected>${prog.name}</option>`;
@@ -458,24 +458,24 @@ function renderProgramDetail(prog, inst) {
     newSaveBtn.addEventListener('click', async () => {
       const name = document.getElementById('add-class-name').value.trim();
       const checkedLevels = Array.from(document.querySelectorAll('input[name="class_levels[]"]:checked')).map(cb => cb.value);
-      
+
       if (!name) return showToast('Class name is required', 'error');
       if (checkedLevels.length === 0) return showToast('Please select at least one Level', 'error');
 
       try {
         newSaveBtn.disabled = true;
         newSaveBtn.textContent = 'Saving...';
-        
+
         const primary_level_id = checkedLevels[0];
-        const newClass = await adminInsert('classes', { 
-          name, 
-          program_id: prog.id, 
-          institution_id: prog.institution_id || null, 
-          level_id: primary_level_id, 
-          status: 'active', 
-          is_active: true 
+        const newClass = await adminInsert('classes', {
+          name,
+          program_id: prog.id,
+          institution_id: prog.institution_id || null,
+          level_id: primary_level_id,
+          status: 'active',
+          is_active: true
         });
-        
+
         if (newClass && newClass.id) {
           const classLevelsPayload = checkedLevels.map(lvlId => ({
             class_id: newClass.id,
@@ -484,11 +484,11 @@ function renderProgramDetail(prog, inst) {
           const sb = await import('../supabase.js?v=20261103_v105').then(m => m.getSupabase());
           await sb.from('class_levels').insert(classLevelsPayload);
         }
-        
+
         showToast('Class created successfully!', 'success');
         modalEl.classList.add('hidden');
         renderClasses(currentArea); // Update the Org Hub list
-        
+
         // Zero-Reload Sidebar Update & Selection
         if (window.loadSidebarClasses && newClass && newClass.id) {
            window.loadSidebarClasses(newClass.id);
@@ -551,7 +551,7 @@ function renderClassDetail(cls) {
            <button class="btn btn-danger btn-sm edit-mode-only" id="btn-del-active-class">Delete</button>
         </div>
       </div>
-      
+
       <!-- 3-TAB NAVIGATION -->
       <div style="display:flex; gap:2rem; margin-top:2rem; border-bottom:1px solid transparent;">
         <div class="workspace-tab active" data-tab="learning-path" style="padding-bottom:0.75rem; cursor:pointer; font-weight:600; color:var(--clr-primary); border-bottom:2px solid var(--clr-primary); font-size: 16px;">Learning Path & Tests</div>
@@ -607,7 +607,7 @@ function renderClassDetail(cls) {
         return;
       }
     }
-    
+
     try {
       showToast(`Generating ${type}...`, 'info');
       const payload = {
@@ -616,14 +616,14 @@ function renderClassDetail(cls) {
         programId: cls.program_id,
         institutionId: cls.institutions?.id
       };
-      
+
       let res;
       if (type === 'words') {
         res = await autoGenerateWordsTests(payload);
       } else {
         res = await autoGeneratePhrasesTests(payload);
       }
-      
+
       showToast(`Success: Created ${res.tasks || 0} Tasks, ${res.exams || 0} Exams. Updated ${res.updated || 0}.`, 'success');
       loadClassLearningPath(cls.id); // Refresh view
     } catch (e) {
@@ -638,7 +638,7 @@ function renderClassDetail(cls) {
   // Tab Switching Logic
   const tabs = container.querySelectorAll('.workspace-tab');
   const contents = container.querySelectorAll('.tab-content');
-  
+
   tabs.forEach(tab => {
     tab.addEventListener('click', () => {
       // reset tabs
@@ -650,13 +650,13 @@ function renderClassDetail(cls) {
       });
       // hide contents
       contents.forEach(c => c.style.display = 'none');
-      
+
       // activate tab
       tab.style.fontWeight = '600';
       tab.style.color = 'var(--clr-primary)';
       tab.style.borderBottom = '2px solid var(--clr-primary)';
       tab.classList.add('active');
-      
+
       const targetId = 'class-' + tab.dataset.tab + '-container';
       document.getElementById(targetId).style.display = 'block';
     });
@@ -669,9 +669,9 @@ function renderClassDetail(cls) {
 export async function loadClassLearningPath(classId) {
   const container = document.getElementById('class-learning-path-container');
   if (!container) return;
-  
+
   container.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--clr-text-muted);">Loading Learning Path...</div>';
-  
+
   try {
     const filters = { class_id: classId };
     if (window._selectedLevelId && window._selectedLevelId !== 'no-level') {
@@ -679,7 +679,7 @@ export async function loadClassLearningPath(classId) {
     }
     const testsRaw = await adminFetchAll('tests', '*, prerequisite_test_id(id, name, title, shell_code), levels!level_id(id, name)', filters);
     const tests = testsRaw.sort((a, b) => (a.display_order ?? a.order_index ?? 999) - (b.display_order ?? b.order_index ?? 999));
-    
+
     if (!tests || tests.length === 0) {
       container.innerHTML = `
          <div class="empty-state" style="padding:3rem; text-align:center;">
@@ -689,7 +689,7 @@ export async function loadClassLearningPath(classId) {
          </div>`;
       return;
     }
-    
+
     let taskCount = 0;
     let quizCount = 0;
     let examCount = 0;
@@ -703,7 +703,7 @@ export async function loadClassLearningPath(classId) {
 
       const isExam = catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam');
       const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
-      
+
       if (isTryout) {
         tryoutCount++;
       } else if (isExam) {
@@ -741,10 +741,10 @@ export async function loadClassLearningPath(classId) {
       const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
       const isTask = !isExam && !isTryout;
       const isQuiz = isTask;
-      
+
       const _isDyn = r?.payload?.is_dynamic_shell;
       const _vaultQ = r?.payload?.snapshot_question_count || r?.payload?.total_questions || 0;
-      
+
       return {
         id: r.id,
         title: r.title,
@@ -810,7 +810,7 @@ export async function loadClassLearningPath(classId) {
       ],
       sortComparator: (sortKey, direction, a, b) => {
         if (sortKey === 'title' || sortKey === 'TITLE' || sortKey === 'order') {
-          return direction === 'asc' 
+          return direction === 'asc'
             ? (a.display_order ?? a.order ?? 0) - (b.display_order ?? b.order ?? 0)
             : (b.display_order ?? b.order ?? 0) - (a.display_order ?? a.order ?? 0);
         }
@@ -829,7 +829,7 @@ export async function loadClassLearningPath(classId) {
             return `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-weight:500; white-space:nowrap;">${row.order}</span>`;
           }
         },
-        { 
+        {
           // Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY)
           key: 'title', label: 'TITLE', sortable: true, align: 'left', minWidth: '240px',
           render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
@@ -870,7 +870,7 @@ export async function loadClassLearningPath(classId) {
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.timeLimit} min</div>`
         },
         {
-          key: 'minScore', label: 'PASS SCORE', sortable: true, align: 'center', width: '95px',
+          key: 'minScore', label: 'PASS RATE', sortable: true, align: 'center', width: '95px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.minScore}%</div>`
         },
         {
@@ -961,7 +961,7 @@ window._toggleClassTestPublish = async (testId, currentStatus) => {
   try {
     await window.adminUpdate('tests', testId, { status: newStatus });
     window.showToast(`Test ${newStatus}.`, 'success');
-    
+
     // Attempt to reload the current class learning path if possible
     const classSel = document.getElementById('class-select');
     if (classSel && classSel.value) {

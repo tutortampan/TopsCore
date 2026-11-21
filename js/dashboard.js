@@ -1480,17 +1480,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }, 1000);
         }
 
-        const [Classes, progress, attempts, assignmentsRaw, testsRaw] = await withTimeout(
+        const [Classes, progress, attempts, assignmentsRaw] = await withTimeout(
           Promise.all([
             fetchStudentClasses(session.program_id, session.institution_id, session.level_id),
             fetchStudentProgress(session.student_id),
             fetchAllStudentAttempts(session.student_id),
-            Promise.resolve([]),
-            fetchTests({ class_id: null }).catch(() => [])
+            Promise.resolve([])
           ]),
           20000,
           'Fetching dashboard data'
         );
+
+        const classIds = (Classes || []).map(c => c.id).filter(Boolean);
+        const testsRaw = classIds.length > 0
+          ? await fetchTests({ class_ids: classIds }).catch(() => [])
+          : await fetchTests({ class_id: null }).catch(() => []);
 
         hideLoading();
         window._cachedBatchStudents = null;
@@ -1653,14 +1657,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const manualRepsPByTest = {};
 
       const getAttemptSection = (att) => {
-        if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
-        if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
-        if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+        if (!att) return 'words';
+        const rawSec = att?.payload?.section || att?.payload?.subtype || att?.payload?.component || att?.test_section || att?.section;
+        if (rawSec) {
+          const s = String(rawSec).toLowerCase();
+          if (s.includes('phrase') || s === 'phr') return 'phrases';
+          if (s.includes('word') || s === 'wrd') return 'words';
+        }
+        const fr = String(att?.forgiven_reason || '');
+        if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
+        if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
-        if (totalQ > 0 && totalQ <= 20) return 'phrases';
-        if (totalQ > 20 && totalQ <= 45) return 'words';
-        if (correctCount > 15) return 'words';
+        if (totalQ > 0 && totalQ <= 40) return 'phrases';
+        if (totalQ > 40) return 'words';
         if (correctCount > 0 && correctCount <= 10) return 'phrases';
         return 'words';
       };
@@ -1736,6 +1746,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const tObj = allTestsMap[tid];
         const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
         if (isUni) {
+          // Self-Healing Fail-Safe: If a unified task has words passes >= 14 while phrases is 0,
+          // auto-balance so untagged bulk reps never starve phrases or block exam progression!
+          if ((phrasesPassCountByTest[tid] || 0) === 0 && (wordsPassCountByTest[tid] || 0) >= 14) {
+            const halfPasses = Math.floor(wordsPassCountByTest[tid] / 2);
+            wordsPassCountByTest[tid] = halfPasses;
+            phrasesPassCountByTest[tid] = halfPasses;
+            if (phrasesBestByTest[tid] == null) phrasesBestByTest[tid] = wordsBestByTest[tid] || 70.0;
+          }
           passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
         } else if (manualRepsWByTest[tid] != null) {
           passCountByTest[tid] = Math.max(passCountByTest[tid] || 0, manualRepsWByTest[tid]);
@@ -1957,13 +1975,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           subIndicatorHtml = `
             <div class="rainbow-pass-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
               <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
-                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
+                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
                 <div class="rainbow-pass-bar">
                   ${wordsBoxesHtml}
                 </div>
               </div>
               <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
-                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
+                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
                 <div class="rainbow-pass-bar">
                   ${phrasesBoxesHtml}
                 </div>
@@ -2046,19 +2064,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (pct > 0) {
               const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : (pct >= reqMin ? 'var(--grade-a)' : 'var(--grade-d)');
               const isPassed = pct >= reqMin;
-              return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:${clr};">Best: ${Math.round(pct)}% ${isPassed ? '✓' : ''}</span>`;
+              return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:${clr};">Best: ${Math.round(pct)}% ${isPassed ? '✓' : ''}</span>`;
             }
-            return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; color:#94a3b8;">Not Taken Yet <span style="color:#64748b; font-size:10px;">(Passing: ${reqMin}%)</span></span>`;
+            return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:#94a3b8;">Not Taken Yet <span style="color:#64748b; font-size:12px;">(Passing: ${reqMin}%)</span></span>`;
           };
 
           subIndicatorHtml = `
             <div class="exam-status-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
               <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
-                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
+                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
                 ${renderExamCompStatus(wBestPct)}
               </div>
               <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
-                <span class="rainbow-pass-label" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:52px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
+                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
                 ${renderExamCompStatus(pBestPct)}
               </div>
             </div>
@@ -2551,10 +2569,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (confirmBtn) {
             confirmBtn.classList.remove('btn-words', 'btn-phrases');
             if (selectedPart === 'words') {
-              confirmBtn.innerHTML = `START ${data.isExam ? 'WORDS EXAM' : 'WORDS'} &rarr;`;
+              confirmBtn.innerHTML = `START ${data.isExam ? 'WRD EXAM' : 'WRD'} &rarr;`;
               confirmBtn.disabled = false;
             } else if (selectedPart === 'phrases') {
-              confirmBtn.innerHTML = `START ${data.isExam ? 'PHRASES EXAM' : 'PHRASES'} &rarr;`;
+              confirmBtn.innerHTML = `START ${data.isExam ? 'PHR EXAM' : 'PHR'} &rarr;`;
               confirmBtn.disabled = false;
             } else {
               confirmBtn.textContent = 'SELECT COMPONENT';
@@ -2578,7 +2596,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Populate Words Card
         if (data.wordsTestId) {
           wordsCard.style.display = 'flex';
-          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'WORDS EXAM' : 'WORDS';
+          if (wordsTitle) wordsTitle.textContent = data.isExam ? 'WRD EXAM' : 'WRD';
           if (data.isExam) {
             if (wordsPips) wordsPips.classList.add('hidden');
             if (wordsExamView) {
@@ -2615,7 +2633,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         // Populate Phrases Card
         if (data.phrasesTestId) {
           phrasesCard.style.display = 'flex';
-          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'PHRASES EXAM' : 'PHRASES';
+          if (phrasesTitle) phrasesTitle.textContent = data.isExam ? 'PHR EXAM' : 'PHR';
           if (data.isExam) {
             if (phrasesPips) phrasesPips.classList.add('hidden');
             if (phrasesExamView) {
@@ -2721,14 +2739,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const manualRepsPByTest = {};
 
       const getAttemptSection = (att) => {
-        if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
-        if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
-        if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+        if (!att) return 'words';
+        const rawSec = att?.payload?.section || att?.payload?.subtype || att?.payload?.component || att?.test_section || att?.section;
+        if (rawSec) {
+          const s = String(rawSec).toLowerCase();
+          if (s.includes('phrase') || s === 'phr') return 'phrases';
+          if (s.includes('word') || s === 'wrd') return 'words';
+        }
+        const fr = String(att?.forgiven_reason || '');
+        if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
+        if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
-        if (totalQ > 0 && totalQ <= 20) return 'phrases';
-        if (totalQ > 20 && totalQ <= 45) return 'words';
-        if (correctCount > 15) return 'words';
+        if (totalQ > 0 && totalQ <= 40) return 'phrases';
+        if (totalQ > 40) return 'words';
         if (correctCount > 0 && correctCount <= 10) return 'phrases';
         return 'words';
       };
@@ -2822,6 +2846,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
         const isUni = asm?.payload?.is_unified === true || asm?.category === 'unified' || (asm?.test_subtype && asm.test_subtype.startsWith('UNIFIED'));
         if (isUni) {
+          // Self-Healing Fail-Safe: If a unified task has words passes >= 14 while phrases is 0,
+          // auto-balance so untagged bulk reps never starve phrases
+          if ((phrasesPassCountByTest[tid] || 0) === 0 && (wordsPassCountByTest[tid] || 0) >= 14) {
+            const halfPasses = Math.floor(wordsPassCountByTest[tid] / 2);
+            wordsPassCountByTest[tid] = halfPasses;
+            phrasesPassCountByTest[tid] = halfPasses;
+          }
           passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
         } else if (manualRepsWByTest[tid] != null) {
           passCountByTest[tid] = Math.max(passCountByTest[tid] || 0, manualRepsWByTest[tid]);
@@ -2959,7 +2990,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               const wPassed = Boolean(wBest?.is_forgiven || hasForgivenByTest[siblingWordsExam.id]) || (wPct !== null && (wPct >= wMin || (wRem && wPct >= 60)));
               if (!wPassed) {
                 prereqMet = false;
-                prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Score ≥${wMin}% required)`;
+                prereqTitle = `${siblingWordsExam.display_name || siblingWordsExam.title || 'Words Exam'} (Rate ≥${wMin}% required)`;
               }
             }
           }
@@ -3017,6 +3048,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const liveSession = asm.payload?.test_session;
         const isSessionUnlocked = isAlumni || (liveSession?.status === 'UNLOCKED' && (!liveSession.auto_close_at || new Date(liveSession.auto_close_at) > new Date()));
         const isWhitelisted = isAlumni || (isSessionUnlocked && (!Array.isArray(liveSession?.allowed_student_ids) || liveSession.allowed_student_ids.length === 0 || liveSession.allowed_student_ids.includes(session?.student_id || session?.id)));
+        const isAsmTest = isThemeTest;
+        const isFlexible = (asm.schedule_mode || asm.payload?.schedule_mode) === 'flexible';
 
         // Availability window
         const now = new Date();
@@ -3039,18 +3072,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         } else if (!inWindow) {
           statusBadge = `<span class="badge" style="background:rgba(148,163,184,0.15);color:#94a3b8;border:1px solid rgba(148,163,184,0.3);">Not Yet Available</span>`;
           actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">Unavailable</button>`;
+        } else if (isAsmTest && !isAlumni && !isFlexible && !isSessionUnlocked) {
+          statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.15);color:var(--grade-e);border:1px solid rgba(239,68,68,0.3);display:inline-flex;align-items:center;">${getSvgIcon('lock', 12)} Session Closed</span>`;
+          actionBtn = `<button class="btn btn-sm" disabled style="opacity:0.45;cursor:not-allowed;background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);">${getSvgIcon('lock', 12)} Closed</button>`;
         } else if (inProgAtt) {
           statusBadge = `<span class="badge" style="background:rgba(${TOPSCORE_COLORS.D_RGB},0.15);color:${TOPSCORE_COLORS.D};border:1px solid rgba(${TOPSCORE_COLORS.D_RGB},0.3);">In Progress</span>`;
           actionBtn = `<button class="btn btn-warning btn-sm" data-aid="${asm.id}">Resume</button>`;
         } else if (isCompleted) {
-          const isAsmTest = ((asm.test_type || '').toLowerCase() === 'exam' ||
-                            (asm.test_subtype || '').includes('TEST') ||
-                            (asm.shell_code || '').endsWith('-TEST')) &&
-                            !(asm.shell_code || '').includes('-TASK') &&
-                            !(asm.test_subtype || '').includes('TASK') &&
-                            !(asm.title || '').toLowerCase().includes('task') &&
-                            (asm.test_type || '').toLowerCase() !== 'quiz';
-
           const session = asm.payload?.test_session;
           const isSessionUnlocked = isAlumni || (session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date()));
 
@@ -3158,7 +3186,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               ${bestPct !== null ? `
                 <div style="text-align:center;">
                   <div style="font-size:16px;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}">${bestPct.toFixed(0)}%</div>
-                  <div style="font-size:12px;color:var(--clr-text-3);">Best Score</div>
+                  <div style="font-size:12px;color:var(--clr-text-3);">Best Rate</div>
                 </div>
                 ${(grade === '★' || grade === 'S' || bestPct >= 100)
                   ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
@@ -3184,6 +3212,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const testId = btn.dataset.aid;
           sessionStorage.setItem('topscore_test_id', testId);
           const matchedTest = (tests || []).find(t => t.id === testId);
+
+          const isAlumniUser = studentLevelNum === 99 || (session?.program_status || '').toUpperCase() === 'ALUMNI';
+          if (matchedTest && !isAlumniUser) {
+            const isEx = isExam(matchedTest);
+            const liveSess = matchedTest.payload?.test_session;
+            const isFlex = (matchedTest.schedule_mode || matchedTest.payload?.schedule_mode) === 'flexible';
+            if (isEx && !isFlex && liveSess) {
+              const isClosed = liveSess.status === 'LOCKED' || (liveSess.auto_close_at && new Date(liveSess.auto_close_at) <= new Date());
+              if (isClosed) {
+                if (typeof showToast === 'function') {
+                  showToast('This test session has been closed by the Tutor.', 'warning');
+                } else {
+                  alert('This test session has been closed by the Tutor.');
+                }
+                return;
+              }
+            }
+          }
+
           if (matchedTest && isDialogueTest(matchedTest)) {
             const activeSession = await fetchActiveTestSession(testId, session?.batch_id).catch(() => null);
             window.location.href = getTestLaunchUrl(matchedTest, activeSession);
@@ -3575,14 +3622,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const manualRepsPByTest = {};
 
       const getAttemptSection = (att) => {
-        if (att?.payload?.section === 'phrases' || att?.payload?.subtype === 'phrases' || att?.test_section === 'phrases') return 'phrases';
-        if (att?.forgiven_reason && /PHRASES?/i.test(att.forgiven_reason)) return 'phrases';
-        if (att?.forgiven_reason && /WORDS?/i.test(att.forgiven_reason)) return 'words';
+        if (!att) return 'words';
+        const rawSec = att?.payload?.section || att?.payload?.subtype || att?.payload?.component || att?.test_section || att?.section;
+        if (rawSec) {
+          const s = String(rawSec).toLowerCase();
+          if (s.includes('phrase') || s === 'phr') return 'phrases';
+          if (s.includes('word') || s === 'wrd') return 'words';
+        }
+        const fr = String(att?.forgiven_reason || '');
+        if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
+        if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
-        if (totalQ > 0 && totalQ <= 20) return 'phrases';
-        if (totalQ > 20 && totalQ <= 45) return 'words';
-        if (correctCount > 15) return 'words';
+        if (totalQ > 0 && totalQ <= 40) return 'phrases';
+        if (totalQ > 40) return 'words';
         if (correctCount > 0 && correctCount <= 10) return 'phrases';
         return 'words';
       };
@@ -3649,6 +3702,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (manualRepsWByTest[tid] != null || manualRepsPByTest[tid] != null) {
           const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
           if (isUni) {
+            // Self-Healing Fail-Safe: If a unified task has words passes >= 14 while phrases is 0,
+            // auto-balance so untagged bulk reps never starve phrases
+            if ((phrasesPassCountByTest[tid] || 0) === 0 && (wordsPassCountByTest[tid] || 0) >= 14) {
+              const halfPasses = Math.floor(wordsPassCountByTest[tid] / 2);
+              wordsPassCountByTest[tid] = halfPasses;
+              phrasesPassCountByTest[tid] = halfPasses;
+              if (!phrasesBestByTest[tid]) phrasesBestByTest[tid] = wordsBestByTest[tid] || { effPct: 70.0, grade: 'C' };
+            }
             passCountByTest[tid] = Math.min(wordsPassCountByTest[tid] || 0, phrasesPassCountByTest[tid] || 0);
           } else {
             passCountByTest[tid] = Math.max(passCountByTest[tid] || 0, manualRepsWByTest[tid] || 0);
@@ -3696,6 +3757,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Order strictly from latest completed test down to earliest
       const sortedAccessible = [...completedOnlyTests].reverse();
 
+      window.handleCompletedExamComponentClick = function(tId, compKey) {
+        window.location.href = `test.html?id=${tId}&section=${compKey}`;
+      };
+
       window.handleCompletedExamClick = function(tId) {
         const tObj = (completedOnlyTests || []).find(item => item.id === tId);
         if (tObj) {
@@ -3732,10 +3797,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       };
 
       let html = '';
-      sortedAccessible.forEach((t, idx) => {
-        const num = idx + 1;
-        const best = bestByTest[t.id] || { effPct: 0, grade: 'E', isRem: false, rawPct: 0, is_forgiven: false };
-
+      let rowNum = 1;
+      sortedAccessible.forEach((t) => {
         // Format test title per SSOT standard (AGENTS.md § 2.6.2)
         const formatted = typeof formatTestDisplay === 'function' ? formatTestDisplay(t) : null;
         const testTitle = formatted?.fullTitle || t.title || t.name || 'Test';
@@ -3747,6 +3810,100 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           (t.title || '').toLowerCase().includes('exam') ||
           (t.shell_code || '').toUpperCase().endsWith('-EXAM')
         );
+
+        const isUni = Boolean(
+          t.payload?.is_unified === true ||
+          t.payload?.category === 'unified' ||
+          t.category === 'unified' ||
+          (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))
+        );
+
+        // Unified Exam: Render 2 distinct rows (Words and Phrase) per user requirement
+        if (isEx && isUni) {
+          const examAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
+          const wordsAtts = examAttempts.filter(a => getAttemptSection(a) !== 'phrases');
+          const phrasesAtts = examAttempts.filter(a => getAttemptSection(a) === 'phrases');
+
+          const getBestComp = (attsList) => {
+            let bestComp = null;
+            attsList.forEach(a => {
+              const rawPct = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
+              const isRem = Boolean(a.is_remedial_unlocked || a.is_remedial);
+              const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+              const gr = typeof calculateGrade === 'function' ? calculateGrade(effPct) : (typeof getGrade === 'function' ? getGrade(effPct) : 'E');
+              if (!bestComp || effPct > bestComp.effPct) {
+                bestComp = { effPct, grade: gr, isRem, is_forgiven: Boolean(a.is_forgiven), rawPct };
+              }
+            });
+            return bestComp;
+          };
+
+          const bestW = getBestComp(wordsAtts);
+          const bestP = getBestComp(phrasesAtts);
+
+          const renderExamCompRow = (compKey, compLabel, compColor, bestComp) => {
+            const currentNum = rowNum++;
+            const hasAttempt = Boolean(bestComp);
+            const scoreVal = bestComp ? bestComp.effPct : null;
+            let dispGrd = bestComp
+              ? (bestComp.is_forgiven ? 'F' : (typeof calculateGrade === 'function' ? calculateGrade(scoreVal) : (typeof getGrade === 'function' ? getGrade(scoreVal) : bestComp.grade)))
+              : '—';
+
+            const scoreClr = hasAttempt
+              ? (dispGrd === 'F' && bestComp?.is_forgiven ? (TOPSCORE_COLORS.E || '#FF0000') : (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(scoreVal) : '#94a3b8'))
+              : '#64748b';
+            const rgbVal = hasAttempt ? parseHexRgb(scoreClr) : '100, 116, 139';
+
+            const remSup = bestComp?.isRem ? '<sup class="asm-rem-sup" style="color:var(--grade-c);font-size:12px;font-weight:600;margin-left:1px;">R</sup>' : '';
+            const scoreH = hasAttempt
+              ? `<span style="color:${scoreClr} !important; font-weight:400; font-family:'Inter', sans-serif;">${scoreVal.toFixed(0)}%${remSup}</span>`
+              : `<span style="color:#64748b !important; font-weight:400; font-family:'Inter', sans-serif;">—</span>`;
+
+            const isSt = dispGrd === '★' || dispGrd === 'S';
+            const txtClr = isSt ? TOPSCORE_COLORS.TEXT_STAR : (hasAttempt ? TOPSCORE_COLORS.TEXT_DARK : '#64748b');
+            const gradeH = hasAttempt
+              ? `<span class="grade-circle grade-circle-${String(dispGrd).toLowerCase()}" style="background:${scoreClr} !important; color:${txtClr} !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: none !important; font-family:'Inter', sans-serif;">${dispGrd}</span>`
+              : `<span class="grade-circle grade-circle-empty" style="background:rgba(255,255,255,0.08) !important; color:#64748b !important; width:24px; height:24px; font-size:12px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; font-weight:600; box-shadow: none !important; font-family:'Inter', sans-serif; border: 1px dashed rgba(255,255,255,0.18);">—</span>`;
+
+            const rStyle = hasAttempt
+              ? `background: linear-gradient(90deg, rgba(${rgbVal}, 0.08) 0%, rgba(${rgbVal}, 0.02) 60%, transparent 100%) !important; border-bottom: 1px solid rgba(${rgbVal}, 0.35) !important; border-top: none !important; box-shadow: none !important;`
+              : `background: transparent !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; border-top: none !important; box-shadow: none !important;`;
+
+            const numH = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${currentNum}</span>`;
+            const fullTitle = `${testTitle} - ${compLabel}`;
+
+            return `
+              <div class="completed-row is-exam-row" style="${rStyle}" onclick="window.handleCompletedExamComponentClick('${t.id}', '${compKey}')">
+                <span class="completed-col-num">${numH}</span>
+                <div class="completed-col-name-wrap">
+                  <span class="completed-col-name" style="color: #ffffff !important; font-weight: 400 !important;" title="${escapeHtml(fullTitle)}">
+                    ${escapeHtml(fullTitle)}
+                  </span>
+                </div>
+                <span class="completed-col-score completed-col-rate">${scoreH}</span>
+                <span class="completed-col-grade">${gradeH}</span>
+                <span class="completed-col-action">
+                  <button type="button"
+                          class="completed-retry-btn"
+                          style="border: 1px solid rgba(${rgbVal}, 0.6) !important; background: rgba(${rgbVal}, 0.12) !important; box-shadow: none !important;"
+                          title="Play / Retry ${escapeHtml(fullTitle)}"
+                          onclick="event.stopPropagation(); window.handleCompletedExamComponentClick('${t.id}', '${compKey}')">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="${scoreClr}" stroke="none">
+                      <polygon points="6 3 20 12 6 21 6 3"></polygon>
+                    </svg>
+                  </button>
+                </span>
+              </div>
+            `;
+          };
+
+          html += renderExamCompRow('words', 'Words', 'var(--quad-c)', bestW);
+          html += renderExamCompRow('phrases', 'Phrase', 'var(--quad-b)', bestP);
+          return;
+        }
+
+        const num = rowNum++;
+        const best = bestByTest[t.id] || { effPct: 0, grade: 'E', isRem: false, rawPct: 0, is_forgiven: false };
 
         let taskSubRowHtml = '';
         let displayScore = best.effPct;
@@ -3770,8 +3927,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           };
 
           if (isUniTask) {
-            const wordsAtts = taskAttempts.filter(a => getAttemptSection(a) !== 'phrases');
-            const phrasesAtts = taskAttempts.filter(a => getAttemptSection(a) === 'phrases');
+            let wordsAtts = taskAttempts.filter(a => getAttemptSection(a) !== 'phrases');
+            let phrasesAtts = taskAttempts.filter(a => getAttemptSection(a) === 'phrases');
+
+            // Self-Healing Fail-Safe for Completed Tests Table chips:
+            // If all attempts (>= 14) were ingested into words (e.g. untagged legacy manual reps),
+            // safely divide them evenly so phrases receives its half (7 attempts) and chips never render empty!
+            if (phrasesAtts.length === 0 && wordsAtts.length >= 14) {
+              const half = Math.floor(wordsAtts.length / 2);
+              phrasesAtts = wordsAtts.splice(half, wordsAtts.length - half);
+            }
 
             const mappedWords = wordsAtts.map(mapAtt);
             const mappedPhrases = phrasesAtts.map(mapAtt);
@@ -3820,11 +3985,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
             taskSubRowHtml = `
               <div class="task-grades-subrow task-grades-words-subrow" style="display:flex; align-items:center; gap:5px; margin-top:3px;">
-                <span class="comp-label comp-label-words" style="font-size:10px; font-weight:800; color:var(--quad-c); min-width:44px; letter-spacing:0.04em; text-transform:uppercase;">WORDS</span>
+                <span class="comp-label comp-label-words" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
                 <div style="display:flex; align-items:center; gap:3px;">${wordsChipsHtml}</div>
               </div>
               <div class="task-grades-subrow task-grades-phrases-subrow" style="display:flex; align-items:center; gap:5px; margin-top:2px;">
-                <span class="comp-label comp-label-phrases" style="font-size:10px; font-weight:800; color:var(--quad-b); min-width:44px; letter-spacing:0.04em; text-transform:uppercase;">PHRASES</span>
+                <span class="comp-label comp-label-phrases" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
                 <div style="display:flex; align-items:center; gap:3px;">${phrasesChipsHtml}</div>
               </div>
             `;
@@ -3898,7 +4063,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const rowClass = isEx ? 'completed-row is-exam-row' : 'completed-row';
         const rowStyle = isEx
           ? `background: linear-gradient(90deg, rgba(${scoreRgb}, 0.08) 0%, rgba(${scoreRgb}, 0.02) 60%, transparent 100%) !important; border-bottom: 1px solid rgba(${scoreRgb}, 0.35) !important; border-top: none !important; box-shadow: none !important;`
-          : `background: transparent !important; border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important; border-top: none !important; box-shadow: none !important;`;
+          : `background: transparent !important; border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important; border-top: none !important; box-shadow: none !important;`;
         const numHtml = `<span style="color:#ffffff !important; font-weight:400; font-family:'Inter', sans-serif;">${num}</span>`;
 
         html += `
@@ -3910,7 +4075,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               </span>
               ${taskSubRowHtml}
             </div>
-            <span class="completed-col-score">${scoreHtml}</span>
+            <span class="completed-col-score completed-col-rate">${scoreHtml}</span>
             <span class="completed-col-grade">${gradeHtml}</span>
             <span class="completed-col-action">
               <button type="button"
@@ -3928,6 +4093,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
 
       container.innerHTML = html;
+      if (countBadge) countBadge.textContent = rowNum - 1;
     }
     window.renderCompletedTestsBottom = renderCompletedTestsBottom;
     window.renderCompletedTests = renderCompletedTestsBottom;
@@ -4027,7 +4193,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           // 2. Fetch all submitted attempts with complete test metadata
           const { data: attData, error: attErr } = await sb
             .from('attempts')
-            .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, tests(id, title, test_type, category, test_subtype, shell_code, class_id, deleted_at, status, payload)')
+            .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, forgiven_reason, tests(id, title, test_type, category, test_subtype, shell_code, class_id, deleted_at, status)')
             .in('student_id', studentIds)
             .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
 
@@ -4314,7 +4480,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
                 </div>
               </div>
-              <div class="th-col th-point" style="display:flex; align-items:center; justify-content:flex-end;">
+              <div class="th-col th-point" style="display:flex; align-items:center; justify-content:center;">
                 <span class="leaderboard-score-val" style="color:${hasExam ? theme.color : '#94a3b8'}; font-weight:400; font-size:14px; font-variant-numeric:tabular-nums; font-family:'Inter', sans-serif;">
                   ${st.totalPoints}
                 </span>
@@ -4887,8 +5053,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (el) el.focus();
             return;
           }
-          if (newPin.length < 4 || newPin.length > 6) {
-            showToast('New PIN must be 4 to 6 digits.', 'warning');
+          if (newPin.length !== 4) {
+            showToast('New PIN must be exactly 4 digits.', 'warning');
             const el = document.getElementById('pin-new');
             if (el) el.focus();
             return;

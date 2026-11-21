@@ -181,6 +181,15 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
 ## 2.7 Module Progression & Prerequisites
 Dynamic prerequisites supporting 0 to N parent modules with minimum score thresholds. Report cards store HIGHEST score. Global average counts unattempted available modules as 0.
 
+### 2.7.1 Repetitive Mastery & Synchronization Safeguards (SSOT)
+- **Struktur Repetisi Terpadu 7×7**: Setiap tugas topik terpadu (*Unified Topic Task*) memerlukan 14 repetisi tuntas: **7 repetisi Words** dan **7 repetisi Phrases**.
+- **Invarian Kolom Attempt Query**: Seluruh query yang membaca data `attempts` (pada `api.js` dan `dashboard.js`) **WAJIB MENYERTAKAN** kolom `forgiven_reason`, `is_manual_override`, `forgiven_by`, dan `forgiven_at` agar metadata dispensasi dan repetisi manual selalu terbaca 100% konsisten antara admin dan dashboard siswa.
+- **Symmetric Backend Partitioning (`adminApplyForgiven`)**: Penginputan nilai atau repetisi manual gabungan (> 7, misal 14) pada Unified Tasks **WAJIB SECARA OTOMATIS DIPECAH SECARA SIMETRIS** menjadi:
+  - 7 repetisi `WORDS` (50 butir soal, passing minimal 70% / Grade C, tag `[Admin] MANUAL_REPS: 7/7 WORDS`).
+  - 7 repetisi `PHRASES` (10 butir soal, passing minimal 70% / Grade C, tag `[Admin] MANUAL_REPS: 7/7 PHRASES`).
+- **Self-Healing Balancer Invariant (Anti-Blockage Guard)**: Jika terdapat kegagalan pelabelan manual atau attempt tak bertag pada Unified Task di mana kelulusan Words $\ge 14$ sementara Phrases bernilai 0, sistem evaluasi kelulusan di `dashboard.js` (pada Next Assignment Hero Card, Leaderboard Standings, dan Completed Tests Table) **SECARA OTOMATIS MENYEIMBANGKAN** separuh repetisi tersebut ke Phrases (7 Words + 7 Phrases). Menjamin mutlak nol kasus frase hilang, nol chip kosong melompong, dan ruang ujian terbuka seketika (*Zero Exam Blockage*).
+- **Automated Verification**: Seluruh proteksi ini dikunci dan diverifikasi oleh suite pengujian otomatis `scripts/test_repetitive_mastery_safeguards.mjs` yang terintegrasi langsung ke dalam `npm run test:fast`.
+
 ## 2.8 Overall score
 Average of all Tests that are available/takeable under current rules and completed by the Student.
 
@@ -279,15 +288,27 @@ Page refresh resumes existing attempt; network drops do not create duplicates. D
 ## 2.16 Timer
 Server-authoritative timer: client visual countdown is UI only. Server validates deadline on save/submit.
 
-### 2.16.1 Standar Durasi & Pacing Ujian SSOT (Words 10s & Phrases 20s Invariant)
-- **Standar Pacing Otomatis Baku**:
-  - **Per Word**: **10 detik** per kata / soal.
-  - **Per Phrase**: **20 detik** per frasa / idiom / kalimat.
-- **Formula Durasi Otomatis Saat Generate**:
-  - Words: $\lceil (\text{Jumlah Kata} \times 10) / 60 \rceil$ menit (misal 40 kata = 7 menit, 80 kata = 14 menit, 120 kata = 20 menit).
-  - Phrases: $\lceil (\text{Jumlah Frasa} \times 20) / 60 \rceil$ menit (misal 10 frasa = 4 menit, 20 frasa = 7 menit, 40 frasa = 14 menit).
+### 2.16.1 Standar Durasi & Pacing Ujian SSOT (Modality-Specific Pacing Invariant per DECISION-063)
+- **Standar Pacing Otomatis Baku Khusus Vocabulary Class**:
+  - **Per Kata (Words)**:
+    - **Spoken**: **10 detik** per kata / soal.
+    - **Written**: **15 detik** per kata / soal (memperhitungkan pengetikan dan pengejaan).
+    - **Selection (Multiple Choice)**: **10 detik** per kata / soal.
+  - **Per Frasa (Phrases)**:
+    - **Spoken**: **20 detik** per frasa / idiom / kalimat (artikulasi kalimat lengkap).
+    - **Selection (Multiple Choice)**: **10 detik** per frasa / soal (membaca & memilih 1 dari 5 opsi).
+    - **Written**: **20 detik** per frasa / kalimat.
+- **Formula Durasi Ujian Terpadu (Unified Exam Benchmark)**:
+  $$\text{Durasi (menit)} = \left\lceil \frac{(\text{Jumlah Kata} \times \text{Pace Kata}) + (\text{Jumlah Frasa} \times \text{Pace Frasa})}{60} \right\rceil$$
+  - Contoh Ujian 200 Soal (160 Words Written @ 15s + 40 Phrases Selection @ 10s):
+    $$(160 \times 15\text{s}) + (40 \times 10\text{s}) = 2.400\text{s} + 400\text{s} = 2.800\text{s} \longrightarrow \mathbf{47\text{ menit}}.$$
+  - Contoh Ujian 200 Soal (160 Words Spoken @ 10s + 40 Phrases Spoken @ 20s):
+    $$(160 \times 10\text{s}) + (40 \times 20\text{s}) = 1.600\text{s} + 800\text{s} = 2.400\text{s} \longrightarrow \mathbf{40\text{ menit}}.$$
+  - Words Task (40 soal): Spoken = **7 menit**, Written = **10 menit**.
+  - Phrases Task (10 soal): Spoken = **4 menit**, Selection = **2 menit**.
+- **Mutlak Nol Pengali Arbitrer**: Dilarang keras menggunakan rumus lama arbitrer seperti `totalQ * 1.5` yang menghasilkan waktu 300 menit (5 jam) atau membatasi input durasi di `max="180"`.
 - **Hak Override Manual Tutor (Tutor Manual Duration Override Authority)**:
-  - Pacing otomatis 10s/word dan 20s/phrase menjadi patokan baku (*default benchmark*) saat membuat tes.
+  - Durasi terhitung otomatis tampil secara reaktif di modal buka sesi saat tutor mengganti pilihan modul Words/Phrases (`Auto: 47 min (...)`).
   - Tutor/Admin memiliki wewenang penuh untuk menentukan durasi secara manual (`working_duration_minutes`) jika kelas/sesi membutuhkan waktu khusus. Jika diset manual, nilai manual tutor selalu diutamakan (*precedence*).
 
 ## 2.17 Historical snapshot without Test Versions

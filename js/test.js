@@ -1168,6 +1168,36 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
         // Server time gate: Enforce WITA window check for schedule_mode === 'fixed'
         const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI';
+
+        // Session Lock Gate: Enforce closed session lock for formal exams
+        const isExamSubtype = (testData?.test_subtype || '').toUpperCase().includes('TEST') || (testData?.test_subtype || '').toUpperCase().includes('EXAM');
+        const isExamShell = (testData?.shell_code || '').toUpperCase().endsWith('-TEST') || (testData?.shell_code || '').toUpperCase().endsWith('-EXAM');
+        const isExamTitle = ((testData?.title || '').toLowerCase().includes('test') || (testData?.title || '').toLowerCase().includes('exam')) && !(testData?.title || '').toLowerCase().includes('task');
+        const isFormalExam = ((testData?.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
+                             !(testData?.shell_code || '').toUpperCase().includes('-TASK') &&
+                             !(testData?.test_subtype || '').toUpperCase().includes('TASK') &&
+                             !(testData?.title || '').toLowerCase().includes('task') &&
+                             !(testData?.test_type || '').toLowerCase().includes('task') &&
+          !(testData?.test_type || '').toLowerCase().includes('quiz');
+
+        const liveSession = testData?.payload?.test_session;
+        if (!isAlumni && isFormalExam && liveSession) {
+          const isSessClosed = liveSession.status === 'LOCKED' || (liveSession.auto_close_at && new Date(liveSession.auto_close_at) <= new Date());
+          if (isSessClosed) {
+            const main = document.getElementById('test-main');
+            if (main) {
+              main.innerHTML = `
+                <div class="glass-panel text-center p-5 mx-auto" style="max-width:500px;margin-top:10vh;">
+                  <h2 class="fw-800 text-xl mb-3" style="color:var(--grade-e);">${getSvgIcon('lock', 20)} Session Closed</h2>
+                  <p class="text-sm" style="color:var(--clr-text-2);">This test session has been closed by the Tutor. Access is locked.</p>
+                  <button class="btn btn-primary mt-4" onclick="window.location.href='dashboard.html'">Return to Dashboard</button>
+                </div>
+              `;
+            }
+            hideLoading();
+            return;
+          }
+        }
         if (!isAlumni && testData?.schedule_mode === 'manual' && testData?.is_unlocked === false) {
           const main = document.getElementById('test-main');
           if (main) {
@@ -1203,14 +1233,27 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
 
 
+        // Helper function for robust phrase row detection
+        const isPhraseRowUnified = (r) => {
+          const snap = (typeof r?.question_snapshot === 'string')
+            ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })()
+            : (r?.question_snapshot || {});
+          const cat = (r?.category || snap?.category || '').toLowerCase();
+          const sec = (snap?.test_section || snap?.section_id || '').toLowerCase();
+          const lbl = (snap?.section_label || '').toLowerCase();
+          const top = (snap?.topic || '').toLowerCase();
+          const wt = (snap?.word_type || r?.question_type_snapshot || '').toLowerCase();
+          return sec === 'phrases' || cat === 'phrases' || lbl.includes('phrase') || top.includes('phrase') || ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
+        };
+
         // Question order shuffle (if random, default in TopsCore)
         const orderSetting = String(testData?.question_order || testData?.payload?.question_order || 'random').toLowerCase();
         if (orderSetting === 'random' && allAnswerRows.length > 1) {
-          const hasTwoSections = allAnswerRows.some(r => r.question_snapshot?.test_section === 'words') &&
-                                allAnswerRows.some(r => r.question_snapshot?.test_section === 'phrases');
+          const hasTwoSections = allAnswerRows.some(r => !isPhraseRowUnified(r)) &&
+                                allAnswerRows.some(r => isPhraseRowUnified(r));
           if (hasTwoSections) {
-            const wordRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
-            const phraseRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
+            const wordRows = allAnswerRows.filter(r => !isPhraseRowUnified(r));
+            const phraseRows = allAnswerRows.filter(r => isPhraseRowUnified(r));
             const shuffledWords = shuffleWithSeed(wordRows, (attemptData?.id || testId) + '_words');
             const shuffledPhrases = shuffleWithSeed(phraseRows, (attemptData?.id || testId) + '_phrases');
             allAnswerRows = [...shuffledWords, ...shuffledPhrases];
@@ -1222,22 +1265,35 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
         // Section / Component Filter for Unified Tests (Option B: Words or Phrases selection)
         requestedSection = (urlParams.get('section') || urlParams.get('part') || requestedSection || '').toLowerCase();
-        const hasTwoSections = allAnswerRows.some(r => r.question_snapshot?.test_section === 'words') &&
-                              allAnswerRows.some(r => r.question_snapshot?.test_section === 'phrases');
+        const hasTwoSections = allAnswerRows.some(r => !isPhraseRowUnified(r)) &&
+                              allAnswerRows.some(r => isPhraseRowUnified(r));
 
         const applySectionFilter = async (sectionKey) => {
           if (sectionKey === 'words') {
-            allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section !== 'phrases');
+            allAnswerRows = allAnswerRows.filter(r => !isPhraseRowUnified(r));
           } else if (sectionKey === 'phrases') {
-            allAnswerRows = allAnswerRows.filter(r => r.question_snapshot?.test_section === 'phrases');
+            allAnswerRows = allAnswerRows.filter(r => isPhraseRowUnified(r));
           }
           window.allAnswerRows = allAnswerRows;
           answerRows = allAnswerRows;
 
           if (attemptData) {
-            // Standar Pacing SSOT (DECISION-062): 10s per word & 20s per phrase (prioritizes tutor manual override if set)
+            // Standar Pacing SSOT (DECISION-063 Khusus Vocabulary Class):
+            // Words: 10s spoken / 15s written / 10s selection
+            // Phrases: 20s spoken / 10s selection / 20s written
             const manualDur = Number(testData?.working_duration_minutes || testData?.payload?.working_duration_minutes || 0);
-            const pace = sectionKey === 'phrases' ? 20 : 10;
+            const isPhraseSection = sectionKey === 'phrases';
+            const sessModes = testData?.payload?.test_session?.answering_modes;
+            const sessMode = testData?.payload?.test_session?.answering_mode;
+            const curMode = isPhraseSection
+              ? (sessModes?.phrases || sessMode || 'selection')
+              : (sessModes?.words || sessMode || 'written');
+            let pace = 10;
+            if (isPhraseSection) {
+              pace = (curMode === 'selection' || curMode === 'multiple_choice') ? 10 : 20;
+            } else {
+              pace = (curMode === 'written') ? 15 : 10;
+            }
             const autoCalcDur = Math.max(1, Math.ceil((allAnswerRows.length * pace) / 60));
             const sectionDur = manualDur > 0 ? manualDur : autoCalcDur;
             const startedAt = attemptData?.started_at ? new Date(attemptData.started_at) : new Date();
@@ -1248,9 +1304,16 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             if (attemptData.id) {
               try {
                 const sb = await getSupabase();
+                const secTag = sectionKey === 'phrases' ? '[SECTION: PHRASES]' : '[SECTION: WORDS]';
+                const curFr = String(attemptData.forgiven_reason || '');
+                const updatedFr = curFr.includes('[SECTION:')
+                  ? curFr.replace(/\[SECTION:\s*[A-Z]+\]/gi, secTag)
+                  : (curFr ? `${curFr} ${secTag}` : secTag);
+                attemptData.forgiven_reason = updatedFr;
                 await sb.from('attempts').update({
                   expires_at: attemptData.expires_at,
-                  total_questions: allAnswerRows.length
+                  total_questions: allAnswerRows.length,
+                  forgiven_reason: updatedFr
                 }).eq('id', attemptData.id);
               } catch (_) {}
             }
@@ -1544,7 +1607,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
               }
               if (confirmBtn) {
                 const isEx = isExam(testData);
-                confirmBtn.innerHTML = `START ${chosenPart === 'words' ? (isEx ? 'WORDS EXAM' : 'WORDS') : (isEx ? 'PHRASES EXAM' : 'PHRASES')} &rarr;`;
+                confirmBtn.innerHTML = `START ${chosenPart === 'words' ? (isEx ? 'WRD EXAM' : 'WRD') : (isEx ? 'PHR EXAM' : 'PHR')} &rarr;`;
               }
             };
 
@@ -1611,7 +1674,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                 const isPass = pa.is_forgiven || pct >= minReq;
                 const tQ = Number(pa.total_questions || 0);
                 const cC = Number(pa.correct_count || pa.score || 0);
-                const isPhr = (tQ > 0 && tQ <= 20) || (cC > 0 && cC <= 10 && tQ <= 20);
+                const fr = String(pa.forgiven_reason || '');
+                const isPhr = (tQ > 0 && tQ <= 40) || (cC > 0 && cC <= 10 && tQ <= 40) || /\b(phrases?|phr)\b/i.test(fr);
                 if (isPhr) {
                   if (isPass) pPasses++;
                   if (pBestPct == null || pct > pBestPct) pBestPct = pct;
@@ -1763,38 +1827,70 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
               return;
             }
 
-            // Real-time time extension detection from Tutor Live Controller
+            // Real-time time adjustment detection from Tutor Live Controller (both extensions & reductions)
             // Compares against _lastKnownServerExpMs to prevent false alarms on test startup
             if (att.expires_at) {
               const serverExp = new Date(att.expires_at).getTime();
               if (!_lastKnownServerExpMs) {
                 _lastKnownServerExpMs = serverExp;
-              } else if (serverExp > _lastKnownServerExpMs + 45000) {
-                const addedMinutes = Math.round((serverExp - _lastKnownServerExpMs) / 60000);
+              } else if (Math.abs(serverExp - _lastKnownServerExpMs) > 15000) {
+                const diffMinutes = Math.round((serverExp - _lastKnownServerExpMs) / 60000);
                 _lastKnownServerExpMs = serverExp;
                 attemptData.expires_at = att.expires_at;
                 const currentSec = (testsections && testsections[currentSectionIndex]) || null;
                 startTimer(currentSec);
-                showToast(`Your test time has been extended by the Tutor (+${addedMinutes} minutes)!`, 'success', 6000);
+                const toastMsg = diffMinutes > 0
+                  ? `Your test time has been extended by the Tutor (+${diffMinutes} minutes)!`
+                  : `Your test time has been adjusted by the Tutor (${diffMinutes} minutes).`;
+                showToast(toastMsg, 'info', 6000);
               }
             }
           }
 
-          // 2. Check if student was removed from test_session.allowed_student_ids
+          // 2. Check test session status, expiration, and attendance whitelist
           if (testId) {
             const { data: asm } = await sb.from('tests')
               .select('payload')
               .eq('id', testId)
               .maybeSingle();
             const sess = asm?.payload?.test_session;
-            if (sess && sess.status === 'UNLOCKED') {
-              const allowed = sess.allowed_student_ids || [];
-              if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
+            const isAlumniStudent = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI';
+
+            if (!isAlumniStudent && sess) {
+              // A. If Tutor closed/locked the session: Immediately eject and auto-submit!
+              if (sess.status === 'LOCKED') {
                 isTestActive = false;
-                clearInterval(_sessionHeartbeatTimer);
-                alert('Your access to this test session has been revoked by the Proctor/Tutor.');
+                if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
+                alert('This test session has been closed by the Proctor/Tutor. Submitting your answers now...');
+                try {
+                  await doSubmit('auto_submitted');
+                } catch (_) {}
                 window.location.href = 'dashboard.html';
                 return;
+              }
+
+              // B. If Session auto_close_at reached: Immediately eject and auto-submit!
+              if (sess.auto_close_at && new Date(sess.auto_close_at) <= new Date()) {
+                isTestActive = false;
+                if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
+                alert('The test session time has expired. Submitting your answers now...');
+                try {
+                  await doSubmit('auto_submitted');
+                } catch (_) {}
+                window.location.href = 'dashboard.html';
+                return;
+              }
+
+              // C. If student was removed from allowed_student_ids: Eject!
+              if (sess.status === 'UNLOCKED') {
+                const allowed = sess.allowed_student_ids || [];
+                if (Array.isArray(allowed) && allowed.length > 0 && !allowed.includes(session.student_id)) {
+                  isTestActive = false;
+                  if (_sessionHeartbeatTimer) clearInterval(_sessionHeartbeatTimer);
+                  alert('Your access to this test session has been revoked by the Proctor/Tutor.');
+                  window.location.href = 'dashboard.html';
+                  return;
+                }
               }
             }
           }
@@ -1922,8 +2018,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       });
     }
 
-    function nextSection() {
+    async function nextSection() {
       saveCurrentAnswer();
+      await syncLiveSessionModality(true);
       if (currentSectionIndex < testsections.length - 1) {
          startSection(currentSectionIndex + 1);
       } else {
@@ -2302,6 +2399,29 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     }
     window.getVirtualKeyboard = getVirtualKeyboard;
 
+    let _lastSessionCheckTime = 0;
+    async function syncLiveSessionModality(force = false) {
+      const now = Date.now();
+      // Throttle live check to at most once every 2 seconds for high responsiveness & low egress
+      if (!force && (now - _lastSessionCheckTime < 2000)) return;
+      _lastSessionCheckTime = now;
+      try {
+        const sb = await getSupabase();
+        if (!sb || !testId) return;
+        const { data } = await sb.from('tests')
+          .select('payload, answer_type')
+          .eq('id', testId)
+          .single();
+        if (data && data.payload?.test_session) {
+          if (!testData) testData = {};
+          if (!testData.payload) testData.payload = {};
+          testData.payload.test_session = data.payload.test_session;
+          if (data.answer_type) testData.answer_type = data.answer_type;
+        }
+      } catch (_) {}
+    }
+    window.syncLiveSessionModality = syncLiveSessionModality;
+
     // —— Render Question ——
     function renderQuestion(idx) {
       abortActiveSpeechSession();
@@ -2344,9 +2464,23 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (typeof snap === 'string') {
         try { snap = JSON.parse(snap); } catch { snap = { question_text: snap, answer_type: 'spoken' }; }
       }
-      let answerType = snap?.answer_type || row.answer_type || testData?.answer_type || testData?.payload?.answer_type || 'spoken';
+      const sessAnsweringMode = testData?.payload?.test_session?.answering_mode;
+      const sessModes = testData?.payload?.test_session?.answering_modes;
+      const isPhraseRow = (row?.category || snap?.category || '').toLowerCase() === 'phrases' ||
+                          /phrase/i.test(row?.topics?.name || snap?.topic || '') ||
+                          /phrase/i.test(snap?.section_label || '') ||
+                          snap?.test_section === 'phrases' ||
+                          snap?.section_id === 'phrases' ||
+                          (typeof requestedSection !== 'undefined' && requestedSection === 'phrases') ||
+                          (testsections && testsections[currentSectionIndex]?.id === 'phrases') ||
+                          ['expression', 'idiom', 'proverb', 'phrase'].includes((snap?.word_type || row?.question_type_snapshot || '').toLowerCase()) ||
+                          ((testData?.test_subtype || testData?.shell_code || '').toUpperCase().includes('PHRASE'));
+      const sessTargetMode = isPhraseRow ? (sessModes?.phrases || sessAnsweringMode) : (sessModes?.words || sessAnsweringMode);
+
+      let answerType = sessTargetMode || snap?.answer_type || row?.answer_type || testData?.answer_type || testData?.payload?.answer_type || 'spoken';
+
       if (testData?.answer_type === 'written' || (testData?.shell_code && testData.shell_code.endsWith('-WORDS-EXAM')) || (testData?.title && testData.title.toUpperCase().includes('WORDS EXAM'))) {
-        answerType = 'written';
+        answerType = sessTargetMode || 'written';
       }
       if (testData?.answer_type === 'description' || testData?.module === 'description' || testData?.module_type === 'POINT_AND_SPEAK' || snap?.module === 'description' || snap?.answer_type === 'description' || (testData?.title && testData.title.includes('Tell Me What You See'))) {
         answerType = 'description';
@@ -2604,10 +2738,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (bottomPrev) {
         const canGoPrev = (idx > 0) || (currentSectionIndex > 0);
         bottomPrev.disabled = !canGoPrev;
-        bottomPrev.onclick = () => {
+        bottomPrev.onclick = async () => {
           cancelMcAutoAdvance();
           abortActiveSpeechSession();
           saveCurrentAnswer();
+          await syncLiveSessionModality();
           if (idx > 0) {
             renderQuestion(idx - 1);
           } else if (currentSectionIndex > 0) {
@@ -2638,10 +2773,10 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             bottomNext.style.background = '';
             bottomNext.style.color = '';
             bottomNext.style.borderColor = '';
-            bottomNext.onclick = () => {
+            bottomNext.onclick = async () => {
               cancelMcAutoAdvance();
               abortActiveSpeechSession();
-              nextSection();
+              await nextSection();
             };
           }
         } else {
@@ -2650,10 +2785,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           bottomNext.style.background = '';
           bottomNext.style.color = '';
           bottomNext.style.borderColor = '';
-          bottomNext.onclick = () => {
+          bottomNext.onclick = async () => {
             cancelMcAutoAdvance();
             abortActiveSpeechSession();
             saveCurrentAnswer();
+            await syncLiveSessionModality();
             if (idx < answerRows.length - 1) {
               renderQuestion(idx + 1);
             }
@@ -2717,7 +2853,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         const chip = document.createElement('button');
         chip.className = 'speech-unanswered-chip' + (i === currentIdx ? ' current' : '');
         chip.textContent = i + 1;
-        chip.addEventListener('click', () => { saveCurrentAnswer(); renderQuestion(i); });
+        chip.addEventListener('click', async () => {
+          saveCurrentAnswer();
+          await syncLiveSessionModality();
+          renderQuestion(i);
+        });
         chipsEl.appendChild(chip);
       });
     }
@@ -2742,6 +2882,29 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     function renderMC(area, row, savedAnswer, snap = {}) {
       const rawOptions = parseSnapshotOptions(snap.options_snapshot || row.options_snapshot);
       let options = [...rawOptions];
+
+      // Dynamic Distractor Self-Healing:
+      // If snapshot options are empty (e.g. attempt initialized prior to modality selection),
+      // dynamically construct distractors from other questions in this attempt
+      if (options.length === 0) {
+        const accepted = snap?.accepted_answers || snap?.accepted_answers_snapshot || row?.accepted_answers_snapshot || row?.accepted_answers;
+        const correctOpt = Array.isArray(accepted) ? accepted[0] : (snap?.correct_answer || row?.correct_answer_snapshot || row?.correct_answer || '');
+        if (correctOpt) {
+          const pool = [];
+          (allAnswerRows || []).forEach(r => {
+            const s = typeof r.question_snapshot === 'string' ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })() : (r.question_snapshot || {});
+            const acc = s.accepted_answers || s.accepted_answers_snapshot || r.accepted_answers_snapshot || r.accepted_answers;
+            const cand = Array.isArray(acc) ? acc[0] : (s.correct_answer || r.correct_answer_snapshot || '');
+            if (cand && cand !== correctOpt && !pool.includes(cand)) {
+              pool.push(cand);
+            }
+          });
+          pool.sort(() => 0.5 - Math.random());
+          const distractors = pool.slice(0, 4);
+          options = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
+        }
+      }
+
       if (options.length > 5) {
         const correctOpt = snap?.correct_answer || row.correct_answer_snapshot || row.correct_answer;
         let correctItem = options.find(o => (typeof o === 'string' ? o : o.text || o.value) === correctOpt);
@@ -2985,7 +3148,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
       // Header Tag: Object number & target demonstrative
       const objBadge = document.createElement('div');
-      objBadge.style.cssText = 'position:absolute; top:6px; left:8px; z-index:10; font-size:11px; font-weight:800; color:#38bdf8; background:rgba(15, 23, 42, 0.85); border:1px solid rgba(56, 189, 248, 0.4); border-radius:6px; padding:2px 8px; pointer-events:none;';
+      objBadge.style.cssText = 'position:absolute; top:6px; left:8px; z-index:10; font-size:12px; font-weight:800; color:#38bdf8; background:rgba(15, 23, 42, 0.85); border:1px solid rgba(56, 189, 248, 0.4); border-radius:6px; padding:2px 8px; pointer-events:none;';
       objBadge.textContent = `Object #${snap?.display_order || questionIdx + 1} (${targetLabel})`;
       card1.appendChild(objBadge);
 
@@ -3018,14 +3181,14 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         <div style="width:42px; height:42px; border-radius:50%; background:rgba(56, 189, 248, 0.15); border:1.5px solid #38bdf8; display:flex; align-items:center; justify-content:center; color:#38bdf8;">
           ${getSvgIcon('camera', 22)}
         </div>
-        <div style="font-size:12.5px; font-weight:700; color:#f8fafc; text-align:center;">
+        <div style="font-size:12px; font-weight:700; color:#f8fafc; text-align:center;">
           Tap to Open Camera
         </div>
         <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-          <button type="button" class="btn-cam-open-trigger" style="padding:4px 12px; border-radius:6px; border:1px solid #38bdf8; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#fff; font-size:11.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
+          <button type="button" class="btn-cam-open-trigger" style="padding:4px 12px; border-radius:6px; border:1px solid #38bdf8; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
             ${getSvgIcon('camera', 13)} Take Photo
           </button>
-          <button type="button" class="btn-cam-upload-trigger" style="padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:11px; font-weight:600; cursor:pointer;">
+          <button type="button" class="btn-cam-upload-trigger" style="padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:12px; font-weight:600; cursor:pointer;">
             Upload
           </button>
         </div>
@@ -3049,13 +3212,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
       // Captured State Overlay (Badge & Retake button)
       const capturedBadge = document.createElement('div');
-      capturedBadge.style.cssText = 'position:absolute; top:6px; right:8px; z-index:10; font-size:10.5px; font-weight:800; color:var(--grade-a); background:rgba(15, 23, 42, 0.85); border:1px solid var(--grade-a); border-radius:6px; padding:2px 8px; display:none; pointer-events:none;';
-      capturedBadge.textContent = '✓ Captured';
+      capturedBadge.style.cssText = 'position:absolute; top:6px; right:8px; z-index:10; font-size:12px; font-weight:800; color:var(--grade-a); background:rgba(15, 23, 42, 0.85); border:1px solid var(--grade-a); border-radius:6px; padding:2px 8px; display:none; pointer-events:none;';
+      capturedBadge.innerHTML = `<span style="display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('check-circle', 12)} Captured</span>`;
       card1.appendChild(capturedBadge);
 
       const retakeBtn = document.createElement('button');
       retakeBtn.type = 'button';
-      retakeBtn.style.cssText = 'position:absolute; bottom:6px; right:8px; z-index:10; font-size:11px; font-weight:700; color:#fff; background:rgba(15, 23, 42, 0.85); border:1px solid rgba(255,255,255,0.25); border-radius:6px; padding:3px 8px; cursor:pointer; display:none; align-items:center; gap:4px;';
+      retakeBtn.style.cssText = 'position:absolute; bottom:6px; right:8px; z-index:10; font-size:12px; font-weight:700; color:#fff; background:rgba(15, 23, 42, 0.85); border:1px solid rgba(255,255,255,0.25); border-radius:6px; padding:3px 8px; cursor:pointer; display:none; align-items:center; gap:4px;';
       retakeBtn.innerHTML = `${getSvgIcon('camera', 12)} Retake`;
       card1.appendChild(retakeBtn);
 
@@ -3167,7 +3330,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
       // Header: Formula Pattern Pill
       const formulaPill = document.createElement('div');
-      formulaPill.style.cssText = 'font-size:11px; font-weight:800; color:#c084fc; letter-spacing:0.04em; background:rgba(192, 132, 252, 0.14); border:1px solid #c084fc; border-radius:6px; padding:2px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%; text-align:center;';
+      formulaPill.style.cssText = 'font-size:12px; font-weight:800; color:#c084fc; letter-spacing:0.04em; background:rgba(192, 132, 252, 0.14); border:1px solid #c084fc; border-radius:6px; padding:2px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%; text-align:center;';
       formulaPill.textContent = `Formula: ${formulaPattern}`;
       card2.appendChild(formulaPill);
 
@@ -3176,13 +3339,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       transcriptInput.id = `desc-transcript-${row.id}`;
       transcriptInput.placeholder = `Your answer will appear here... (e.g. ${placeholderExample})`;
       transcriptInput.value = savedAnswer || '';
-      transcriptInput.style.cssText = 'width:100%; flex:1; min-height:36px; border:none; outline:none; background:transparent; color:#ffffff !important; font-size:14.5px; font-weight:700; text-align:center; font-family:"Inter",sans-serif; resize:none; padding:4px 6px; box-sizing:border-box; line-height:1.35; margin:2px 0;';
+      transcriptInput.style.cssText = 'width:100%; flex:1; min-height:36px; border:none; outline:none; background:transparent; color:#ffffff !important; font-size:14px; font-weight:700; text-align:center; font-family:"Inter",sans-serif; resize:none; padding:4px 6px; box-sizing:border-box; line-height:1.35; margin:2px 0;';
       card2.appendChild(transcriptInput);
 
       // Bottom Live Validator Strip
       const validatorCard = document.createElement('div');
       validatorCard.id = `desc-validator-${row.id}`;
-      validatorCard.style.cssText = 'width:100%; border-radius:6px; padding:4px 8px; font-size:11px; line-height:1.25; box-sizing:border-box; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
+      validatorCard.style.cssText = 'width:100%; border-radius:6px; padding:4px 8px; font-size:12px; line-height:1.25; box-sizing:border-box; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;';
       card2.appendChild(validatorCard);
 
       main.appendChild(card2);
@@ -3210,7 +3373,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           validatorCard.style.background = 'rgba(255, 140, 0, 0.12)';
           validatorCard.style.border = '1px solid #ea580c';
           validatorCard.style.color = '#fed7aa';
-          validatorCard.innerHTML = `<span style="font-weight:700; color:#ea580c;">⚠ Notice:</span> ${escapeHtml(valRes.error)}`;
+          validatorCard.innerHTML = `<span style="font-weight:700; color:#ea580c;">Notice:</span> ${escapeHtml(valRes.error)}`;
         } else {
           hasTriggeredSuccess = false;
           card2.style.borderColor = 'rgba(255, 255, 255, 0.12)';
@@ -3245,7 +3408,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       // Language Select pill in top-right of Card 3
       const langSelect = document.createElement('select');
       langSelect.className = 'speech-lang-select';
-      langSelect.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:11px; font-weight:700; outline:none; height:24px; cursor:pointer;';
+      langSelect.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:12px; font-weight:700; outline:none; height:24px; cursor:pointer;';
       langSelect.innerHTML = `<option value="en-US">EN-US</option><option value="en-GB">EN-UK</option>`;
       card3.appendChild(langSelect);
 
@@ -3656,9 +3819,21 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
              if (typeof snap === 'string') {
                try { snap = JSON.parse(snap); } catch { snap = {}; }
              }
-             let answerType = snap?.answer_type || row.answer_type || testData?.answer_type || 'written';
+             const sessAnsweringMode = testData?.payload?.test_session?.answering_mode;
+             const sessModes = testData?.payload?.test_session?.answering_modes;
+             const isPhraseRow = (row?.category || snap?.category || '').toLowerCase() === 'phrases' ||
+                                 /phrase/i.test(row?.topics?.name || snap?.topic || '') ||
+                                 /phrase/i.test(snap?.section_label || '') ||
+                                 snap?.test_section === 'phrases' ||
+                                 snap?.section_id === 'phrases' ||
+                                 (typeof requestedSection !== 'undefined' && requestedSection === 'phrases') ||
+                                 (testsections && testsections[currentSectionIndex]?.id === 'phrases') ||
+                                 ['expression', 'idiom', 'proverb', 'phrase'].includes((snap?.word_type || row?.question_type_snapshot || '').toLowerCase()) ||
+                                 ((testData?.test_subtype || testData?.shell_code || '').toUpperCase().includes('PHRASE'));
+             const sessTargetMode = isPhraseRow ? (sessModes?.phrases || sessAnsweringMode) : (sessModes?.words || sessAnsweringMode);
+             let answerType = sessTargetMode || snap?.answer_type || row?.answer_type || testData?.answer_type || 'written';
              if (testData?.answer_type === 'written' || (testData?.shell_code && testData.shell_code.endsWith('-WORDS-EXAM')) || (testData?.title && testData.title.toUpperCase().includes('WORDS EXAM'))) {
-               answerType = 'written';
+               answerType = sessTargetMode || 'written';
              }
              if ((answerType === 'written' || answerType.includes('written')) && vk) {
                vk.style.display = 'flex';

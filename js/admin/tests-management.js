@@ -1294,7 +1294,7 @@ export async function renderTests(area) {
         <!-- 3. Prominent Drawer Action Button -->
         <button class="tac-drawer-action-btn" onclick="window._openTestPacingDrawer()">
           <span>${getSvgIcon('clock', 12)} Test Pacing &amp; Duration Drawer</span>
-          <span class="tac-drawer-arrow">➔</span>
+          <span class="tac-drawer-arrow">&rarr;</span>
         </button>
       </div>
 
@@ -1318,7 +1318,7 @@ export async function renderTests(area) {
                     ${questions.length} Bottlenecks
                   </span>
                   ${questions.length > 0 ? `
-                    
+
                   ` : ''}
                 </div>
               </div>
@@ -1602,7 +1602,7 @@ window.openTestGatewayModal = async () => {
       </div>
       <div class="modal-body p-4">
         <p class="text-muted text-sm mb-4">Select the syllabus hierarchy for this test: <strong>Institution &rarr; Program &rarr; Class &rarr; Level</strong>. The system will launch the corresponding module builder.</p>
-        
+
         <div class="form-group mb-3">
           <label class="form-label" style="font-weight:700;font-size: 12px;">1. Target Institution</label>
           <select id="gateway-inst-select" class="form-control" style="width:100%;">
@@ -1646,7 +1646,7 @@ window.openTestGatewayModal = async () => {
   function updatePrograms() {
     const instId = instSel.value;
     const progs = (allPrograms || []).filter(p => !instId || p.institution_id === instId);
-    progSel.innerHTML = progs.length > 0 
+    progSel.innerHTML = progs.length > 0
       ? progs.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('')
       : '<option value="">-- No Programs in this Institution --</option>';
     updateClasses();
@@ -1748,7 +1748,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
           <div class="card p-2 flex-1" style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px;">
             <div class="text-xs text-warning fw-700 uppercase">Speed-Runners Detected</div>
             <div class="text-xl fw-800 text-warning">${st.speedRunnersList.length}</div>
-            <div class="text-xs text-muted">&lt; 60s completion with failing score &lt; 40%</div>
+            <div class="text-xs text-muted">&lt; 60s completion with failing rate &lt; 40%</div>
           </div>
           <div class="card p-2 flex-1" style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); border-radius:8px;">
             <div class="text-xs fw-700 uppercase" style="color:#a5b4fc;">Students Monitored</div>
@@ -1797,7 +1797,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                     <th style="padding:6px 10px;">STUDENT</th>
                     <th style="padding:6px 10px;">TEST</th>
                     <th style="padding:6px 10px;">DURATION</th>
-                    <th style="padding:6px 10px;">SCORE</th>
+                    <th style="padding:6px 10px;">RATE</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1973,8 +1973,8 @@ window._openTestAnalyticsCardModal = function(cardKey) {
 
     bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:1rem;">
-        <p class="text-xs text-muted mb-0">Students with the highest retake volume. In TopsCore, remedial retakes are capped at 60% with Grade C and an &quot;R&quot; indicator beside score.</p>
-        
+        <p class="text-xs text-muted mb-0">Students with the highest retake volume. In TopsCore, remedial retakes are capped at 60% with Grade C and an &quot;R&quot; indicator beside rate.</p>
+
         <div style="max-height:260px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
           <table class="table w-100" style="margin:0; font-size:12px;">
             <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
@@ -1983,7 +1983,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                 <th style="padding:6px 10px;">STUDENT NAME</th>
                 <th style="padding:6px 10px;">TOTAL ATTEMPTS</th>
                 <th style="padding:6px 10px;">FIRST ATTEMPT</th>
-                <th style="padding:6px 10px;">HIGHEST SCORE</th>
+                <th style="padding:6px 10px;">HIGHEST RATE</th>
                 <th style="padding:6px 10px;">GROWTH DELTA</th>
               </tr>
             </thead>
@@ -2019,14 +2019,14 @@ window._openTestAnalyticsCardModal = function(cardKey) {
 
     bodyHtml = `
       <div style="display:flex; flex-direction:column; gap:0.8rem;">
-        <p class="text-xs text-muted mb-0">Complete difficulty ranking of all 40 curriculum tests sorted from lowest student average score (Toughest) to highest (Easiest).</p>
+        <p class="text-xs text-muted mb-0">Complete difficulty ranking of all 40 curriculum tests sorted from lowest student average rate (Toughest) to highest (Easiest).</p>
         <div style="max-height:420px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
           <table class="table w-100" style="margin:0; font-size:12px;">
             <thead style="background:rgba(15,23,42,0.9); position:sticky; top:0;">
               <tr>
                 <th style="padding:6px 10px; width:45px;">RANK</th>
                 <th style="padding:6px 10px;">TEST TITLE</th>
-                <th style="padding:6px 10px; width:100px;">AVG SCORE</th>
+                <th style="padding:6px 10px; width:100px;">AVG RATE</th>
                 <th style="padding:6px 10px; width:110px;">REMEDIAL RATE</th>
                 <th style="padding:6px 10px; width:90px;">SUBMISSIONS</th>
                 <th style="padding:6px 10px; width:110px;">CLASSIFICATION</th>
@@ -2330,7 +2330,7 @@ window._openTestCardDrawer = function(testId) {
         <div class="text-muted text-sm mt-1">Status: <strong class="${String(r?.status || '').toLowerCase() === 'published' ? 'badge-success' : 'badge-neutral'}" style="text-transform:uppercase;">${String(r?.status || '').toLowerCase() === 'published' ? 'PUBLISHED' : 'DRAFT'}</strong></div>
       </div>
       <hr style="border-color:var(--fm-border-subtle); margin:0;">
-      
+
       <div style="background:rgba(15,23,42,0.6); padding:0.75rem; border-radius:6px; border:1px solid rgba(255,255,255,0.06);">
         <div class="text-xs fw-700 text-info uppercase mb-2">${getSvgIcon('bar-chart', 12)} Real-Time Test Telemetry</div>
         <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
@@ -2342,7 +2342,7 @@ window._openTestCardDrawer = function(testId) {
           <strong class="fw-700">${r?.takersCount || 0} students</strong>
         </div>
         <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">
-          <span class="text-muted">Average Score:</span>
+          <span class="text-muted">Average Rate:</span>
           <strong>${getGradeBadge(r?.avgScoreVal)}</strong>
         </div>
         <div class="d-flex justify-between text-sm py-1 border-bottom-subtle">

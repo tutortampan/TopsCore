@@ -257,8 +257,8 @@ function openPurgeConfirmationModal(table, id, name, onComplete) {
           <input type="text" class="purge-confirm-input" id="purge-confirm-text" placeholder="CONFIRM" autocomplete="off" />
         </div>
 
-        <div style="display:flex;justify-content:flex-end;gap:0.75rem;">
-          <button class="btn btn-ghost btn-sm" id="btn-purge-cancel">Cancel</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:0.75rem;">
+          <button class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-purge-cancel">CLOSE</button>
           <button class="btn btn-danger btn-sm" id="btn-purge-execute" disabled style="opacity:0.5;cursor:not-allowed;display:inline-flex;align-items:center;gap:6px;">
             ${getSvgIcon('trash', 14)} Permanently Purge
           </button>
@@ -713,7 +713,7 @@ export async function renderDataHealth(container) {
             <div class="fw-700" style="font-size: 20px; color: var(--grade-e);" id="recal-metric-pass-fail">0</div>
           </div>
           <div class="glass-card p-3 text-center" style="border-left: 3px solid #38bdf8;">
-            <div class="text-xs text-muted mb-1">Score Increases</div>
+            <div class="text-xs text-muted mb-1">Rate Increases</div>
             <div class="fw-700" style="font-size: 20px; color: #38bdf8;" id="recal-metric-increases">0</div>
           </div>
         </div>
@@ -737,12 +737,12 @@ export async function renderDataHealth(container) {
               <tr>
                 <th class="text-left">PROGRAM</th>
                 <th class="text-left">STUDENT NAME</th>
-                <th class="text-center">OLD SCORE</th>
-                <th class="text-center">NEW SCORE</th>
-                <th class="text-center">OLD %</th>
-                <th class="text-center">NEW %</th>
-                <th class="text-center">OLD GRADE</th>
-                <th class="text-center">NEW GRADE</th>
+                <th class="text-center">OLD PTS</th>
+                <th class="text-center">NEW PTS</th>
+                <th class="text-center">OLD RATE</th>
+                <th class="text-center">NEW RATE</th>
+                <th class="text-center">OLD GRD</th>
+                <th class="text-center">NEW GRD</th>
                 <th class="text-center">STATUS CHANGE</th>
                 <th class="text-center">ANSWERS CHANGED</th>
               </tr>
@@ -767,7 +767,7 @@ export async function renderDataHealth(container) {
           <div>&bull; <b>Audit Trail:</b> An audit log entry will be permanently recorded.</div>
         </div>
         <div class="d-flex gap-3 justify-between">
-          <button class="btn btn-secondary" id="btn-recal-cancel" style="flex:1;">Cancel</button>
+          <button class="btn btn-secondary btn-modal-close-left" id="btn-recal-cancel" style="flex:1;">CLOSE</button>
           <button class="btn btn-tactical" id="btn-recal-confirm-run" style="flex:1; font-weight: 700;">${getSvgIcon('check-circle', 14)} Yes, Apply Changes</button>
         </div>
       </div>
@@ -999,7 +999,7 @@ export async function renderDataHealth(container) {
             } else if (isStatusFail) {
               statusBadge = '<span class="badge badge-danger fw-700">Pass &rarr; Fail</span>';
             } else if (item.isAffected) {
-              statusBadge = isScoreUp ? '<span class="badge badge-info">+ Score Up</span>' : '<span class="badge badge-warning">- Score Down</span>';
+              statusBadge = isScoreUp ? '<span class="badge badge-info">+ Rate Up</span>' : '<span class="badge badge-warning">- Rate Down</span>';
             }
 
             const changedAnswersCount = item.questions ? item.questions.filter(q => q.isAffected).length : 0;
@@ -1359,10 +1359,10 @@ export async function renderSettings(area) {
           <div style="color:var(--clr-primary, #38bdf8);">${getSvgIcon('lock', 22)}</div>
           <div>
             <h3 style="font-size: 16px;margin:0;color:var(--clr-text-1);font-weight:700;">Tutor Proctor Credentials</h3>
-            <div class="text-xs text-muted">Open/Close Exam &amp; Check Score Access</div>
+            <div class="text-xs text-muted">Open/Close Exam &amp; Check Rate Access</div>
           </div>
         </div>
-        <p class="text-xs text-muted mb-3">Tutor accounts are restricted strictly to opening/closing exam sessions and inspecting student score cards.</p>
+        <p class="text-xs text-muted mb-3">Tutor accounts are restricted strictly to opening/closing exam sessions and inspecting student rate cards.</p>
 
         <div class="form-group mb-3">
           <label class="form-label text-sm">Tutor Username</label>

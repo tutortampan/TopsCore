@@ -660,10 +660,12 @@ async function renderBulkImportView(container) {
           }
         }
 
-        const pinHash = await sha256(s.pin || '1234');
+        const pinVal = s.pin || '1234';
+        const pinHash = await sha256(pinVal);
 
         if (s.isExisting && s.existingId) {
           const updData = {
+            pin: pinVal,
             pin_hash: pinHash,
             is_active: true,
             deleted_at: null,
@@ -696,6 +698,7 @@ async function renderBulkImportView(container) {
             level_id: resolvedProgLevelId,
             gender: s.gender || null,
             birth_date: s.birthDate || null,
+            pin: pinVal,
             pin_hash: pinHash,
             is_active: true
           };
@@ -1125,6 +1128,7 @@ async function renderIndividualRegView(container) {
         birth_date: birthDate,
         province: 'Nusa Tenggara Barat',
         city: 'Kota Mataram',
+        pin: pin,
         pin_hash: pinHash,
         is_active: isActive
       };

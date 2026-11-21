@@ -701,15 +701,20 @@
       background: radial-gradient(ellipse 90% 70% at 50% 15%, rgba(var(--grade-c-rgb), 0.15), transparent 75%), #0f172a !important;
     }
 
-    /* 1. Top Identity: Centered Name & Academic Hierarchy */
+    /* 1. Top Identity: Centered Name & Academic Hierarchy (Full-Bleed Solid Title Area Header) */
     .result-identity-card .hero-identity-top {
+      margin: -10px -12px 4px -12px !important;
+      width: calc(100% + 24px) !important;
+      padding: 8px 12px !important;
+      background: var(--tier-color, #38bdf8) !important;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.25) !important;
+      box-sizing: border-box !important;
       display: flex !important;
       flex-direction: column !important;
       align-items: center !important;
       justify-content: center !important;
       text-align: center !important;
       gap: 2px !important;
-      width: 100% !important;
     }
 
     .result-identity-card .result-student-name-label,
@@ -717,7 +722,7 @@
       font-family: 'Inter', sans-serif !important;
       font-size: 20px !important;
       font-weight: 800 !important;
-      color: #f8fafc !important;
+      color: #ffffff !important;
       letter-spacing: 0.01em !important;
       white-space: nowrap !important;
       overflow: hidden !important;
@@ -727,6 +732,7 @@
       line-height: 1.2 !important;
       width: 100% !important;
       text-align: center !important;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
     }
 
     .result-identity-card .result-meta-wrapper,
@@ -737,9 +743,10 @@
       gap: 5px !important;
       font-family: var(--font-sans, 'Inter', sans-serif) !important;
       font-size: 12px !important;
-      font-weight: 600 !important;
-      color: var(--primary-tactical, #38bdf8) !important;
-      letter-spacing: 0.03em !important;
+      font-weight: 700 !important;
+      color: #ffffff !important;
+      letter-spacing: 0.04em !important;
+      text-shadow: none !important;
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
@@ -749,26 +756,42 @@
       width: 100% !important;
     }
     .result-identity-card .result-meta-wrapper .meta-sep {
-      opacity: 0.5 !important;
+      opacity: 0.7 !important;
       font-size: 12px !important;
-      color: #475569 !important;
+      color: rgba(255, 255, 255, 0.7) !important;
       -webkit-user-select: none !important;
       user-select: none !important;
     }
 
+    /* High-Contrast Adaptations on Bright Solid Tier Backgrounds (C, B, A, S/Star) */
+    .result-identity-card[data-tier="C"] .hero-student-name,
+    .result-identity-card[data-tier="B"] .hero-student-name,
+    .result-identity-card[data-tier="A"] .hero-student-name,
+    .result-identity-card[data-tier="S"] .hero-student-name,
+    .result-identity-card[data-tier="★"] .hero-student-name {
+      color: #0f172a !important;
+      text-shadow: none !important;
+    }
+
+    .result-identity-card[data-tier="C"] .hero-academic-meta,
+    .result-identity-card[data-tier="B"] .hero-academic-meta,
+    .result-identity-card[data-tier="A"] .hero-academic-meta,
+    .result-identity-card[data-tier="S"] .hero-academic-meta,
+    .result-identity-card[data-tier="★"] .hero-academic-meta {
+      color: rgba(15, 23, 42, 0.92) !important;
+    }
+
+    .result-identity-card[data-tier="C"] .meta-sep,
+    .result-identity-card[data-tier="B"] .meta-sep,
+    .result-identity-card[data-tier="A"] .meta-sep,
+    .result-identity-card[data-tier="S"] .meta-sep,
+    .result-identity-card[data-tier="★"] .meta-sep {
+      color: rgba(15, 23, 42, 0.55) !important;
+    }
+
     .result-identity-card .hero-card-divider,
     .result-identity-card .hero-name-divider {
-      display: block !important;
-      width: 100% !important;
-      height: 1px !important;
-      min-height: 1px !important;
-      max-height: 1px !important;
-      flex-shrink: 0 !important;
-      margin: 1px 0 3px 0 !important;
-      background: linear-gradient(90deg, transparent 0%, rgba(var(--tier-rgb, 234, 179, 8), 0.35) 50%, transparent 100%) !important;
-      border: none !important;
-      opacity: 1 !important;
-      visibility: visible !important;
+      display: none !important;
     }
 
     /* 2. Bottom Row: 3:4 Portrait Photo (Left) + Biodata Table (Right) */
@@ -1622,7 +1645,7 @@
       display: none;
     }
     .ans-filter-btn {
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 800;
       letter-spacing: 0.5px;
       padding: 4px 10px;
@@ -1667,8 +1690,9 @@
       transition: transform 0.15s ease, border-color 0.15s ease;
     }
     .desc-photo-thumb:hover {
-      transform: scale(1.03);
+      transform: none !important;
       border-color: var(--primary-tactical, #38bdf8);
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
     }
 
     /* 3. CTA Area / Modal Footer (Strict 60px Panel + Centered Single Button per Invariant 1.5.2 & 1.5.4) */

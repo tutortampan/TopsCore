@@ -825,7 +825,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       </div>
       <div id="import-preview-area"></div>
       <div class="d-flex gap-3 justify-between align-center mt-4 pt-3" id="import-action-row" style="border-top:1px solid rgba(255,255,255,0.08);">
-        <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-import-modal-2">Cancel</button>
+        <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="close-import-modal-2">CLOSE</button>
         <button type="button" class="btn btn-primary btn-sm" id="confirm-import-btn" style="display:none;align-items:center;gap:4px;">${getSvgIcon('check', 14)} Import Words</button>
       </div>
     </div>
@@ -1194,7 +1194,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
       <div class="d-flex gap-3 justify-between align-center mt-5 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
         <div class="d-flex gap-2">
-          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="builder-cancel-btn">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="builder-cancel-btn">CLOSE</button>
           <button type="button" class="btn btn-secondary btn-sm" id="builder-back-btn" style="display:none;">← Back</button>
         </div>
         <button type="button" class="btn btn-primary btn-sm" id="builder-next-btn">Next →</button>
@@ -2469,7 +2469,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
         const countMsg = topicCount ? `This will permanently delete ${topicCount} topic(s)${wordCount ? ` and ${wordCount} vocabulary item(s)` : ''} under this theme from Vault.` : 'This will permanently delete all topics and vocabulary items under this theme from Vault.';
 
-        if (!confirm(`⚠️ DANGER: Delete ENTIRE Theme "${thName}" (${thCode}) at Level ${lvl}?\n\n${countMsg}\n\nThis action cannot be undone. Continue?`)) return;
+        if (!confirm(`DANGER: Delete ENTIRE Theme "${thName}" (${thCode}) at Level ${lvl}?\n\n${countMsg}\n\nThis action cannot be undone. Continue?`)) return;
 
         try {
           showLoading('Deleting theme...');
@@ -2791,7 +2791,7 @@ function openThemeProgramAssignModal(themeCode, themeName, targetLevel, instProg
       </div>
 
       <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:16px; border-top:1px solid rgba(255,255,255,0.1); padding-top:12px;">
-        <button class="btn btn-secondary btn-sm btn-modal-close-left close-modal-btn">Cancel</button>
+        <button class="btn btn-secondary btn-sm btn-modal-close-left close-modal-btn">CLOSE</button>
         <button class="btn btn-primary btn-sm" id="btn-save-theme-assignments" style="background:var(--grade-a); border:none; font-weight:800; padding:0 14px;">Save Assignments</button>
       </div>
     </div>
@@ -3287,7 +3287,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <th class="col-bp-sep" style="padding: 7px 6px; font-weight: 800; color: #c084fc; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center;">PHRASES</th>
 
               <th style="padding: 7px 6px; font-weight: 800; color: #f8fafc; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">DURATION</th>
-              <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS SCORE</th>
+              <th style="padding: 7px 6px; font-weight: 800; color: var(--grade-c); text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">PASS RATE</th>
               <th style="padding: 7px 6px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.06);">FORMAT</th>
               <th class="col-bp-sep" style="padding: 7px 8px; font-weight: 800; color: var(--grade-a); text-transform: uppercase; font-size: 12px; width: 95px; text-align: center;">MODULE</th>
 
@@ -3876,7 +3876,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
                 ${topicOptions}
               </select>
             </div>
-            <div style="font-size: 16px; color:#94a3b8; align-self:flex-end; padding-bottom:6px;">➔</div>
+            <div style="font-size: 16px; color:#94a3b8; align-self:flex-end; padding-bottom:6px;">&rarr;</div>
             <div style="flex:1; min-width:180px;">
               <label class="text-xs text-muted d-block mb-1" for="manual-merge-target">Target Topic (Keeper)</label>
               <select id="manual-merge-target" class="form-control" style="font-size: 12px; padding:6px 8px; width:100%;">

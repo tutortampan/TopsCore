@@ -299,7 +299,7 @@ try {
         lightbox.innerHTML = `
           <div style="position:relative; max-width:92vw; max-height:86vh; display:flex; flex-direction:column; align-items:center;">
             <img id="photo-lightbox-img" src="" alt="Enlarged Photo Review" style="max-width:100%; max-height:76vh; border-radius:12px; border:1.5px solid rgba(255,255,255,0.25); box-shadow:0 10px 40px rgba(0,0,0,0.85); object-fit:contain;" />
-            <button type="button" id="photo-lightbox-close" style="margin-top:14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:#fff; font-size:13px; font-weight:800; padding:8px 24px; cursor:pointer;">CLOSE PREVIEW</button>
+            <button type="button" id="photo-lightbox-close" style="margin-top:14px; background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.3); border-radius:6px; color:#fff; font-size:14px; font-weight:800; padding:8px 24px; cursor:pointer;">CLOSE PREVIEW</button>
           </div>
         `;
         document.body.appendChild(lightbox);
@@ -491,9 +491,9 @@ try {
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:6px;">
                   <span style="font-weight:800; font-size:12px; color:#F8FAFC;">Object #${qNum}</span>
-                  <span style="font-size:10px; font-weight:800; color:#c084fc; background:rgba(192, 132, 252, 0.15); border:1px solid #c084fc; border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
+                  <span style="font-size:12px; font-weight:800; color:#c084fc; background:rgba(192, 132, 252, 0.15); border:1px solid #c084fc; border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
                 </div>
-                <span style="font-size:11px; font-weight:800; color:${statusColor}; background:${statusBg}; border:1px solid ${statusBorder}; border-radius:6px; padding:2px 8px;">
+                <span style="font-size:12px; font-weight:800; color:${statusColor}; background:${statusBg}; border:1px solid ${statusBorder}; border-radius:6px; padding:2px 8px;">
                   ${pointStr} PTS
                 </span>
               </div>
@@ -502,31 +502,31 @@ try {
                 ${photoUrl ? `
                   <div style="position:relative; width:72px; height:72px; flex-shrink:0;">
                     <img src="${escapeHtml(photoUrl)}" alt="Object #${qNum}" class="desc-photo-thumb" onclick="window.previewPhotoInModal('${escapeHtml(photoUrl)}')" title="Click to enlarge" />
-                    <div style="position:absolute; bottom:3px; right:3px; background:rgba(15,23,42,0.85); border-radius:3px; padding:1px 4px; font-size:8px; font-weight:800; color:#38bdf8; pointer-events:none;">ZOOM</div>
+                    <div style="position:absolute; bottom:3px; right:3px; background:rgba(15,23,42,0.85); border-radius:3px; padding:1px 4px; font-size:12px; font-weight:800; color:#38bdf8; pointer-events:none;">ZOOM</div>
                   </div>
                 ` : `
-                  <div class="desc-photo-placeholder" style="width:72px; height:72px; flex-shrink:0; border-radius:8px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b; font-size:9px; text-align:center; padding:2px;">
+                  <div class="desc-photo-placeholder" style="width:72px; height:72px; flex-shrink:0; border-radius:8px; background:rgba(255,255,255,0.03); border:1px dashed rgba(255,255,255,0.15); display:flex; flex-direction:column; align-items:center; justify-content:center; color:#64748b; font-size:12px; text-align:center; padding:2px;">
                     ${getSvgIcon('camera', 16)}
                     <span style="margin-top:2px;">No Photo</span>
                   </div>
                 `}
 
                 <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:3px;">
-                  <div style="font-size:10.5px; color:#94a3b8; font-weight:600;">Spoken Sentence:</div>
-                  <div style="font-size:12.5px; font-weight:700; color:${studentAns ? '#FFFFFF' : '#64748b'}; font-style:${studentAns ? 'normal' : 'italic'}; line-height:1.35; word-break:break-word;">
+                  <div style="font-size:12px; color:#94a3b8; font-weight:600;">Spoken Sentence:</div>
+                  <div style="font-size:14px; font-weight:700; color:${studentAns ? '#FFFFFF' : '#64748b'}; font-style:${studentAns ? 'normal' : 'italic'}; line-height:1.35; word-break:break-word;">
                     ${studentAns ? `"${escapeHtml(studentAns)}"` : 'No sentence recorded'}
                   </div>
 
                   ${valRes.valid ? `
-                    <div style="background:rgba(0, 192, 0, 0.12); border:1px solid var(--grade-a); border-radius:6px; padding:4px 6px; font-size:11px; color:#f8fafc; margin-top:2px; line-height:1.3;">
-                      <span style="font-weight:800; color:var(--grade-a);">✔ Royal Order:</span> ${valRes.adjectives.map(adj => `<span style="color:#95ff00; font-weight:700;">${escapeHtml(adj.word)}</span> <span style="color:#94a3b8; font-size:10px;">(${escapeHtml(adj.category)})</span>`).join(' <span style="color:#64748b;">→</span> ')}
+                    <div style="background:rgba(0, 192, 0, 0.12); border:1px solid var(--grade-a); border-radius:6px; padding:4px 6px; font-size:12px; color:#f8fafc; margin-top:2px; line-height:1.3;">
+                      <span style="font-weight:800; color:var(--grade-a); display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('check-circle', 14)} Royal Order:</span> ${valRes.adjectives.map(adj => `<span style="color:#95ff00; font-weight:700;">${escapeHtml(adj.word)}</span> <span style="color:#94a3b8; font-size:12px;">(${escapeHtml(adj.category)})</span>`).join(' <span style="color:#64748b;">→</span> ')}
                     </div>
                   ` : studentAns ? `
-                    <div style="background:rgba(255, 140, 0, 0.1); border:1px solid #ea580c; border-radius:6px; padding:4px 6px; font-size:11px; color:#fed7aa; margin-top:2px; line-height:1.3;">
-                      <span style="font-weight:800; color:#ea580c;">⚠ Grammar:</span> ${escapeHtml(valRes.error)}
+                    <div style="background:rgba(255, 140, 0, 0.1); border:1px solid #ea580c; border-radius:6px; padding:4px 6px; font-size:12px; color:#fed7aa; margin-top:2px; line-height:1.3;">
+                      <span style="font-weight:800; color:#ea580c;">Grammar:</span> ${escapeHtml(valRes.error)}
                     </div>
                   ` : `
-                    <div style="background:rgba(56, 189, 248, 0.06); border:1px solid rgba(56, 189, 248, 0.2); border-radius:6px; padding:4px 6px; font-size:10.5px; color:#94a3b8; margin-top:2px;">
+                    <div style="background:rgba(56, 189, 248, 0.06); border:1px solid rgba(56, 189, 248, 0.2); border-radius:6px; padding:4px 6px; font-size:12px; color:#94a3b8; margin-top:2px;">
                       Pattern: <span style="color:#38bdf8; font-weight:700;">${targetFormula}</span>
                     </div>
                   `}
@@ -677,7 +677,7 @@ try {
 
           btnRemidi.onclick = async () => {
             if (isRemedial) return;
-            if (!confirm('Apply REMEDIAL status to this test (maximum score capped at 60% / Grade R)?')) return;
+            if (!confirm('Apply REMEDIAL status to this test (maximum rate capped at 60% / Grade R)?')) return;
             try {
               showLoading();
               await labelAttemptRemedial(attempt.id, true, 60);
@@ -693,10 +693,10 @@ try {
 
           btnForgive.onclick = async () => {
             if (isForgiven) return;
-            if (!confirm('Grant SCORE EXEMPTION (FORGIVE) on this test so the student fulfills prerequisites for the next curriculum module?')) return;
+            if (!confirm('Grant GRADE EXEMPTION (FORGIVE) on this test so the student fulfills prerequisites for the next curriculum module?')) return;
             try {
               showLoading();
-              await labelAttemptForgiven(attempt.id, 'Test Score Exemption by Tutor');
+              await labelAttemptForgiven(attempt.id, 'Test Grade Exemption by Tutor');
               showToast('Status successfully changed: FORGIVEN (Grade F)', 'success');
               setTimeout(() => window.location.reload(), 300);
             } catch (err) {
@@ -781,23 +781,104 @@ try {
         const targetReps = testSettings?.taskRepetitions != null ? Math.max(1, Number(testSettings.taskRepetitions)) : (isVocabClass ? 7 : 1);
         const minScore = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || Number(testSettings?.taskMinScore) || 50;
 
+        // Determine current attempt component (words vs phrases)
+        const urlSection = (urlParams.get('section') || urlParams.get('part') || '').toLowerCase();
+        const getAttemptComp = (att) => {
+          if (!att) return 'words';
+          const raw = att?.payload?.section || att?.payload?.subtype || att?.test_section || att?.section;
+          if (raw) {
+            const s = String(raw).toLowerCase();
+            if (s.includes('phrase') || s === 'phr') return 'phrases';
+            if (s.includes('word') || s === 'wrd') return 'words';
+          }
+          const fr = String(att?.forgiven_reason || '');
+          if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
+          if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
+          const tq = Number(att?.total_questions || 0);
+          const correctCount = Number(att?.correct_count || att?.score || 0);
+          if (tq > 0 && tq <= 40) return 'phrases';
+          if (tq > 40) return 'words';
+          if (correctCount > 0 && correctCount <= 10) return 'phrases';
+          return 'words';
+        };
+
+        let currentComp = (urlSection === 'words' || urlSection === 'phrases') ? urlSection : null;
+        if (!currentComp && Array.isArray(answers) && answers.length > 0) {
+          const answeredRows = answers.filter(a => a.student_answer != null && a.student_answer !== '');
+          const hasWordsAns = answeredRows.some(a => a.question_snapshot?.test_section === 'words');
+          const hasPhrasesAns = answeredRows.some(a => a.question_snapshot?.test_section === 'phrases');
+          if (hasWordsAns && !hasPhrasesAns) currentComp = 'words';
+          else if (hasPhrasesAns && !hasWordsAns) currentComp = 'phrases';
+        }
+        if (!currentComp) currentComp = getAttemptComp(attempt);
+
         // Map pass counts & completion status across all published tests in this class
+        const wordsBestByTest = {};
+        const phrasesBestByTest = {};
+        const wordsPassCountByTest = {};
+        const phrasesPassCountByTest = {};
         const passCountByTest = {};
         const isPassedByTest = {};
-        (published || []).forEach(t => {
-          if (isExam(t)) {
-            const score = bestMap[t.id];
-            const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
-            const isRem = Boolean(isRemedialByTest[t.id]);
-            isPassedByTest[t.id] = Boolean((score != null && (score >= req || (isRem && score >= 60))) || isForgivenByTest[t.id]);
+
+        // Merge all student attempts including current attempt
+        const combinedAtts = [...(allAtts || [])];
+        if (attempt && !combinedAtts.some(a => a.id === attempt.id)) {
+          combinedAtts.push(attempt);
+        }
+
+        combinedAtts.forEach(a => {
+          const aid = a.test_id || a.Test_id;
+          if (!aid) return;
+          const st = String(a.status || '').toLowerCase();
+          if (!['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(st)) return;
+
+          const p = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
+          const tObj = published.find(t => t.id === aid) || (aid === curAsm?.id ? curAsm : null);
+          const tMin = Number(tObj?.minimum_required_score) || Number(tObj?.payload?.min_score) || (isExam(tObj) ? 60 : minScore);
+          const isPass = Boolean(a.is_forgiven || (a.is_remedial_unlocked || a.is_remedial ? p >= 60 : p >= tMin));
+
+          const sec = getAttemptComp(a);
+          if (sec === 'phrases') {
+            if (phrasesBestByTest[aid] == null || p > phrasesBestByTest[aid]) phrasesBestByTest[aid] = p;
+            if (isPass) phrasesPassCountByTest[aid] = (phrasesPassCountByTest[aid] || 0) + 1;
           } else {
-            const tMin = Number(t.minimum_required_score) || Number(t.payload?.min_score) || minScore;
-            const passes = (allAtts || []).filter(at =>
-              at.test_id === t.id &&
-              (at.is_forgiven || Boolean(at.is_remedial_unlocked || at.is_remedial) || parseFloat(at.percentage || 0) >= tMin || parseFloat(at.effective_score || 0) >= tMin)
-            ).length;
-            passCountByTest[t.id] = passes;
-            isPassedByTest[t.id] = Boolean(passes >= targetReps || isForgivenByTest[t.id]);
+            if (wordsBestByTest[aid] == null || p > wordsBestByTest[aid]) wordsBestByTest[aid] = p;
+            if (isPass) wordsPassCountByTest[aid] = (wordsPassCountByTest[aid] || 0) + 1;
+          }
+        });
+
+        // Compute authoritative completion for all published tests
+        (published || []).forEach(t => {
+          const isUni = Boolean(t.payload?.is_unified || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED')));
+          const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || (isExam(t) ? 60 : minScore);
+
+          if (isExam(t)) {
+            if (isUni) {
+              const wScore = wordsBestByTest[t.id];
+              const pScore = phrasesBestByTest[t.id];
+              const isRem = Boolean(isRemedialByTest[t.id]);
+              const wPass = (wScore != null && (wScore >= req || (isRem && wScore >= 60))) || Boolean(isForgivenByTest[t.id]);
+              const pPass = (pScore != null && (pScore >= req || (isRem && pScore >= 60))) || Boolean(isForgivenByTest[t.id]);
+              isPassedByTest[t.id] = Boolean((wPass && pPass) || isForgivenByTest[t.id]);
+            } else {
+              const score = bestMap[t.id];
+              const isRem = Boolean(isRemedialByTest[t.id]);
+              isPassedByTest[t.id] = Boolean((score != null && (score >= req || (isRem && score >= 60))) || isForgivenByTest[t.id]);
+            }
+          } else {
+            if (isUni) {
+              const wPasses = wordsPassCountByTest[t.id] || 0;
+              const pPasses = phrasesPassCountByTest[t.id] || 0;
+              passCountByTest[t.id] = Math.min(wPasses, pPasses);
+              isPassedByTest[t.id] = Boolean((wPasses >= targetReps && pPasses >= targetReps) || isForgivenByTest[t.id]);
+            } else {
+              const passes = (allAtts || []).filter(at =>
+                (at.test_id === t.id || at.Test_id === t.id) &&
+                (at.is_forgiven || Boolean(at.is_remedial_unlocked || at.is_remedial) || parseFloat(at.percentage || 0) >= req || parseFloat(at.effective_score || 0) >= req)
+              ).length;
+              passCountByTest[t.id] = passes;
+              isPassedByTest[t.id] = Boolean(passes >= targetReps || isForgivenByTest[t.id]);
+            }
           }
         });
 
@@ -807,70 +888,123 @@ try {
 
         let nextTest = null;
         let actionTag = 'GO TO NEXT TEST:';
+        let nextCustomTitle = null;
+        let targetUrl = null;
 
-        // Find the true earliest uncompleted test in curriculum linear order
-        const earliestUncompleted = published.find(t => !isPassedByTest[t.id]);
-        const curIndex = published.findIndex(t => t.id === curAsm?.id);
-        const earliestIndex = earliestUncompleted ? published.findIndex(t => t.id === earliestUncompleted.id) : -1;
+        const curIsUni = Boolean(curAsm?.payload?.is_unified || curAsm?.category === 'unified' || (curAsm?.test_subtype && curAsm.test_subtype.startsWith('UNIFIED')));
+        const examReq = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || 60;
+        const curWordsPass = (wordsBestByTest[curAsm?.id] != null && wordsBestByTest[curAsm?.id] >= examReq) || Boolean(isForgivenByTest[curAsm?.id]);
+        const curPhrasesPass = (phrasesBestByTest[curAsm?.id] != null && phrasesBestByTest[curAsm?.id] >= examReq) || Boolean(isForgivenByTest[curAsm?.id]);
 
-        if (earliestIndex !== -1 && earliestIndex < curIndex) {
-          // CRITICAL PREREQUISITE DEFICIT GUARD:
-          // Student took a downstream test (e.g. C3), but an earlier prerequisite task (e.g. C2)
-          // has not completed required repetitions (e.g. 6/7 passes).
-          // We MUST NOT loop on the downstream task because startTest will reject with 403 PREREQUISITE_NOT_MET!
-          // Direct student immediately to the unfulfilled prerequisite task!
-          nextTest = earliestUncompleted;
-          const prereqPasses = passCountByTest[earliestUncompleted.id] || 0;
-          actionTag = `COMPLETE PREREQUISITE (${prereqPasses}/${targetReps}):`;
-        } else if (!curIsExam && targetReps > 1 && currentPassCount < targetReps) {
-          // 1. REPETITIVE DRILL LOOP: Current task has all prerequisites fulfilled, continue drill to targetReps
-          nextTest = curAsm;
-          if (currentAttemptPassed) {
-            actionTag = `CONTINUE THE DRILL (${currentPassCount}/${targetReps}):`;
-          } else {
-            actionTag = `RETRY THE DRILL (${currentPassCount}/${targetReps}):`;
+        // 1. DUAL-COMPONENT INTRA-EXAM NAVIGATION GATE:
+        // When completing Words Exam or Phrase Exam, if the other counterpart component is not yet passed,
+        // MUST immediately direct to the remaining component ("Phrase Exam" or "Words Exam") rather than "Completed"!
+        if (curIsExam && curIsUni) {
+          if (currentComp === 'words' && !curPhrasesPass) {
+            nextTest = curAsm;
+            actionTag = 'NEXT EXAM COMPONENT:';
+            nextCustomTitle = 'Phrase Exam';
+            targetUrl = `test.html?id=${curAsm.id}&section=phrases`;
+          } else if (currentComp === 'phrases' && !curWordsPass) {
+            nextTest = curAsm;
+            actionTag = 'NEXT EXAM COMPONENT:';
+            nextCustomTitle = 'Words Exam';
+            targetUrl = `test.html?id=${curAsm.id}&section=words`;
           }
-        } else {
-          // 2. Current drill completed (or Exam completed): Advance to next sibling task, next topic task, or next exam
-          actionTag = 'ADVANCE TO NEXT TASK:';
+        } else if (curIsExam && !curIsUni && curThemeCode) {
+          // Check paired sibling exam in the same theme (e.g. separate Words Exam and Phrase Exam)
+          const siblingExam = published.find(a =>
+            isExam(a) &&
+            a.id !== curAsm?.id &&
+            String(a.payload?.theme_code || '').toUpperCase() === String(curThemeCode).toUpperCase()
+          );
+          if (siblingExam && !isPassedByTest[siblingExam.id]) {
+            const sibIsPhrases = /phrase/i.test(siblingExam.title || '') || siblingExam.payload?.category === 'phrases';
+            nextTest = siblingExam;
+            actionTag = 'NEXT EXAM COMPONENT:';
+            nextCustomTitle = sibIsPhrases ? 'Phrase Exam' : 'Words Exam';
+            targetUrl = `test.html?id=${siblingExam.id}`;
+          }
+        }
 
-          if (curThemeCode && !curIsExam && curTopicCode) {
-            // Task: Sibling component in same topic (e.g. phrases) needs balancing to target repetitions
-            const siblingTask = published.find(a =>
-              !isExam(a) &&
-              a.id !== curAsm?.id &&
-              String(a.payload?.theme_code || '').toUpperCase() === String(curThemeCode).toUpperCase() &&
-              String(a.payload?.topic_code || '') === String(curTopicCode)
-            );
-            if (siblingTask) {
-              const sibMin = Number(siblingTask.minimum_required_score) || Number(siblingTask.payload?.min_score) || minScore;
-              const siblingPassCount = passCountByTest[siblingTask.id] || 0;
-              if (siblingPassCount < targetReps) {
-                nextTest = siblingTask;
+        if (!nextTest) {
+          // Find the true earliest uncompleted test in curriculum linear order
+          const earliestUncompleted = published.find(t => !isPassedByTest[t.id]);
+          const curIndex = published.findIndex(t => t.id === curAsm?.id);
+          const earliestIndex = earliestUncompleted ? published.findIndex(t => t.id === earliestUncompleted.id) : -1;
+
+          if (earliestIndex !== -1 && earliestIndex < curIndex) {
+            // CRITICAL PREREQUISITE DEFICIT GUARD:
+            // Direct student immediately to the unfulfilled prerequisite task!
+            nextTest = earliestUncompleted;
+            const prereqPasses = passCountByTest[earliestUncompleted.id] || 0;
+            actionTag = `COMPLETE PREREQUISITE (${prereqPasses}/${targetReps}):`;
+          } else if (!curIsExam && targetReps > 1 && currentPassCount < targetReps) {
+            // 2. REPETITIVE DRILL LOOP: Current task has all prerequisites fulfilled, continue drill to targetReps
+            nextTest = curAsm;
+            if (curIsUni) {
+              const curWPasses = wordsPassCountByTest[curAsm?.id] || 0;
+              const curPPasses = phrasesPassCountByTest[curAsm?.id] || 0;
+              if (currentComp === 'words' && curPPasses < targetReps) {
+                actionTag = 'NEXT TASK COMPONENT:';
+                nextCustomTitle = 'Phrases Task';
+                targetUrl = `test.html?id=${curAsm.id}&section=phrases`;
+              } else if (currentComp === 'phrases' && curWPasses < targetReps) {
+                actionTag = 'NEXT TASK COMPONENT:';
+                nextCustomTitle = 'Words Task';
+                targetUrl = `test.html?id=${curAsm.id}&section=words`;
+              } else if (currentAttemptPassed) {
+                actionTag = `CONTINUE THE DRILL (${currentPassCount}/${targetReps}):`;
+              } else {
+                actionTag = `RETRY THE DRILL (${currentPassCount}/${targetReps}):`;
+              }
+            } else if (currentAttemptPassed) {
+              actionTag = `CONTINUE THE DRILL (${currentPassCount}/${targetReps}):`;
+            } else {
+              actionTag = `RETRY THE DRILL (${currentPassCount}/${targetReps}):`;
+            }
+          } else {
+            // 3. Current drill completed (or Exam completed): Advance to next sibling task, next topic task, or next exam
+            actionTag = 'ADVANCE TO NEXT TASK:';
+
+            if (curThemeCode && !curIsExam && curTopicCode) {
+              // Task: Sibling component in same topic (e.g. phrases) needs balancing to target repetitions
+              const siblingTask = published.find(a =>
+                !isExam(a) &&
+                a.id !== curAsm?.id &&
+                String(a.payload?.theme_code || '').toUpperCase() === String(curThemeCode).toUpperCase() &&
+                String(a.payload?.topic_code || '') === String(curTopicCode)
+              );
+              if (siblingTask) {
+                const sibMin = Number(siblingTask.minimum_required_score) || Number(siblingTask.payload?.min_score) || minScore;
+                const siblingPassCount = passCountByTest[siblingTask.id] || 0;
+                if (siblingPassCount < targetReps) {
+                  nextTest = siblingTask;
+                }
               }
             }
-          }
 
-          if (!nextTest && curIsExam && curThemeCode) {
-            // Exam: Sibling exam in the same theme
-            const siblingExam = published.find(a =>
-              isExam(a) &&
-              a.id !== curAsm?.id &&
-              String(a.payload?.theme_code || '').toUpperCase() === String(curThemeCode).toUpperCase()
-            );
-            if (siblingExam && !isPassedByTest[siblingExam.id]) {
-              nextTest = siblingExam;
+            if (!nextTest && curIsExam && curThemeCode) {
+              // Exam: Sibling exam in the same theme
+              const siblingExam = published.find(a =>
+                isExam(a) &&
+                a.id !== curAsm?.id &&
+                String(a.payload?.theme_code || '').toUpperCase() === String(curThemeCode).toUpperCase()
+              );
+              if (siblingExam && !isPassedByTest[siblingExam.id]) {
+                nextTest = siblingExam;
+              }
             }
-          }
 
-          if (!nextTest) {
-            // Find next uncompleted test in published list
-            nextTest = published.find(a => !isPassedByTest[a.id]);
-          }
+            if (!nextTest) {
+              // Find next uncompleted test in published list
+              nextTest = published.find(a => !isPassedByTest[a.id]);
+            }
 
-          // If nextTest is an exam and student just failed this same exam, label as RETAKE
-          if (nextTest && isExam(nextTest) && nextTest.id === curAsm?.id && !currentAttemptPassed) {
-            actionTag = 'RETAKE THE EXAM:';
+            // If nextTest is an exam and student just failed this same exam, label as RETAKE
+            if (nextTest && isExam(nextTest) && nextTest.id === curAsm?.id && !currentAttemptPassed) {
+              actionTag = 'RETAKE THE EXAM:';
+            }
           }
         }
         if (!nextTest) {
@@ -885,13 +1019,14 @@ try {
 
         const isTest = isExam(nextTest);
         const nextFormatted = formatTestDisplay(nextTest);
-        const nextName = nextFormatted.fullTitle || 'Next Test';
+        const nextName = nextCustomTitle || nextFormatted.fullTitle || 'Next Test';
         const safeAttemptPct = (() => {
           const raw = Math.min(100.0, Math.max(0.0, parseFloat(attempt.percentage || 0)));
           const eff = attempt.effective_score != null ? parseFloat(attempt.effective_score) : raw;
           return (eff <= 100.0 && eff >= 0.0) ? eff : raw;
         })();
         const gradeColor = getGradeColorByScore(safeAttemptPct);
+        const launchTargetUrl = targetUrl || `test.html?id=${nextTest.id}`;
 
         if (!isTest) {
           container.innerHTML = `
@@ -903,14 +1038,20 @@ try {
           document.getElementById('btn-next-milestone').onclick = () => {
             sessionStorage.setItem('topscore_test_id', nextTest.id);
             sessionStorage.removeItem('topscore_attempt_id');
-            window.location.href = `test.html?id=${nextTest.id}`;
+            window.location.href = launchTargetUrl;
           };
         } else {
-          const activeSession = await fetchActiveTestSession(nextTest.id, batchId).catch(() => null);
+          // If continuing counterpart component of the SAME exam, session is already actively unlocked
+          const isSameExamComponent = (nextTest.id === curAsm?.id);
+          const activeSession = isSameExamComponent
+            ? { is_unlocked: true }
+            : await fetchActiveTestSession(nextTest.id, batchId).catch(() => null);
           const isUnlocked = activeSession?.is_unlocked === true;
-          const isWhitelisted = !activeSession?.allowed_student_ids ||
-                                activeSession.allowed_student_ids.length === 0 ||
-                                activeSession.allowed_student_ids.includes(targetStudentId);
+          const isWhitelisted = isSameExamComponent || (
+            !activeSession?.allowed_student_ids ||
+            activeSession.allowed_student_ids.length === 0 ||
+            activeSession.allowed_student_ids.includes(targetStudentId)
+          );
 
           if (isUnlocked && isWhitelisted) {
             container.innerHTML = `
@@ -922,7 +1063,7 @@ try {
             document.getElementById('btn-next-milestone').onclick = () => {
               sessionStorage.setItem('topscore_test_id', nextTest.id);
               sessionStorage.removeItem('topscore_attempt_id');
-              window.location.href = `test.html?id=${nextTest.id}`;
+              window.location.href = launchTargetUrl;
             };
           } else {
             container.innerHTML = `
@@ -942,7 +1083,7 @@ try {
       }
     }
 
-    
+
     // Synchronized Tier Glow Trigger: Ignites ALL panels when evaluation description reveals
     function activateTierGlow(gradeColor, rgbColor, currentTier, isGradeSOr100) {
       document.body.classList.add('tier-glow-active');
@@ -1141,8 +1282,11 @@ try {
         if (urlSection === 'words') activeSectionName = 'Words';
         else if (urlSection === 'phrases') activeSectionName = 'Phrases';
         else if (isUnified) {
-          if (attTotalQ > 0 && attTotalQ <= 20) activeSectionName = 'Phrases';
-          else if (attTotalQ > 20 && attTotalQ <= 45) activeSectionName = 'Words';
+          const fr = String(attempt.forgiven_reason || '');
+          if (/\b(phrases?|phr)\b/i.test(fr)) activeSectionName = 'Phrases';
+          else if (/\b(words?|wrd)\b/i.test(fr)) activeSectionName = 'Words';
+          else if (attTotalQ > 0 && attTotalQ <= 40) activeSectionName = 'Phrases';
+          else if (attTotalQ > 40) activeSectionName = 'Words';
         }
 
         if (isUnified && Array.isArray(answers) && answers.length > 0) {
@@ -1734,7 +1878,7 @@ try {
 
         // Render answer breakdown
         renderAnswers(answers, asmData);
-        
+
 
         // Attempt history (all attempts for this test)
         if (testId) {
@@ -1857,7 +2001,7 @@ try {
               <thead>
                 <tr style="border-bottom:1px solid var(--clr-border);">
                   <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">DATE</th>
-                  <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">SCORE</th>
+                  <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">RATE</th>
                   <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">GRADE</th>
                   <th style="padding:8px 12px;font-size:12px;color:#ffffff;text-align:left;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;position:sticky;top:0;z-index:10;background:#0f172a;box-shadow:0 1px 0 rgba(255,255,255,0.1);">ACTION</th>
                 </tr>

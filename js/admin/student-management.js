@@ -1,5 +1,5 @@
 import { openQuickAlumniGraduateModal } from './quick-score-wizards.js?v=20261115_v549';
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal, adminApplyForgiven } from '../api.js?v=20261114_v517';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal, adminApplyForgiven } from '../api.js?v=20261120_v640';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261112_v423';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261112_v423';
@@ -218,7 +218,7 @@ export async function renderStudents(area, options = {}) {
   const studentFilters = isAlumniPanel ? {} : (currentProgramId ? { program_id: currentProgramId } : {});
   const rawData = await adminFetchAll(
     'students',
-    'id, name, pin_hash, gender, birth_date, education, province, city, district, village, photo_url, photo_status, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
+    'id, name, pin, pin_hash, gender, birth_date, education, province, city, district, village, photo_url, photo_status, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
     studentFilters
   );
 
@@ -715,8 +715,8 @@ export async function renderStudents(area, options = {}) {
       progName: s.programs?.name || (s.program_id ? 'Unknown Program' : '—'),
       batchName: s.batches?.name || (s.batch_id ? 'Unknown Batch' : '— No Batch —'),
       levelName,
-      pin: s.pin || (s.pin_hash === '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' ? '1234' : '1234'),
-      pinDisplay: s.pin || (s.pin_hash === '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' ? '1234' : '1234'),
+      pin: s.pin || (s.pin_hash === '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' ? '1234' : '——'),
+      pinDisplay: s.pin || (s.pin_hash === '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4' ? '1234' : '——'),
       totalAssigned,
       completedTests: completedTestsCount,
       completedExamCount,
@@ -1163,7 +1163,7 @@ export async function renderStudents(area, options = {}) {
     const headers = [
       'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Gender', 'Age', 'DOB', 'Education',
       'Exam 1 (Theme A) Pts', 'Exam 2 (Theme B) Pts', 'Exam 3 (Theme C) Pts', 'Exam 4 (Theme D) Pts',
-      'Total Exam Pts', 'Score (%)', 'Grade', 'Status'
+      'Total Exam Pts', 'Rate (%)', 'Grade', 'Status'
     ];
     const rows = filteredGridData.map(s => {
       let e1 = '—', e2 = '—', e3 = '—', e4 = '—';
@@ -1189,7 +1189,7 @@ export async function renderStudents(area, options = {}) {
         'Exam 3 (Theme C) Pts': e3,
         'Exam 4 (Theme D) Pts': e4,
         'Total Exam Pts': s.totalEarnedScore ?? 0,
-        'Score (%)': s.overallScoreStr || '—',
+        'Rate (%)': s.overallScoreStr || '—',
         'Grade': s.globalGrade || '—',
         'Status': s.is_active !== false ? 'Active' : 'Inactive'
       };
@@ -1234,8 +1234,8 @@ export async function renderStudents(area, options = {}) {
         if (isForgiven) {
           actionHtml = `
             <div style="display:inline-flex; align-items:center; gap:4px;">
-              <span style="font-size:12px; color:var(--grade-e); font-weight:600; text-shadow:none;" title="Score Exemption: ${escapeHtml(r.forgiven_reason || 'Admin Exemption')}">FORGIVEN</span>
-              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size: 12px;" title="Revoke score exemption">↩️</button>
+              <span style="font-size:12px; color:var(--grade-e); font-weight:600; text-shadow:none;" title="Grade Exemption: ${escapeHtml(r.forgiven_reason || 'Admin Exemption')}">FORGIVEN</span>
+              <button class="btn btn-ghost btn-xs btn-prog-toggle-forgiven edit-mode-only" data-att-id="${attId}" style="padding:2px 6px; font-size: 12px;" title="Revoke grade exemption">${getSvgIcon('undo', 12)}</button>
             </div>
           `;
         } else if (isRem) {
@@ -1252,7 +1252,7 @@ export async function renderStudents(area, options = {}) {
                 ${getSvgIcon('target', 12)} Remedial
               </button>
               ${r.isExam ? `
-                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size: 12px; font-weight:700; background:var(--grade-e); color:#fff; border-radius:4px; display:inline-flex; align-items:center; gap:4px;" title="Exempt Score (Admin Override)">
+                <button class="btn btn-danger btn-xs btn-prog-grant-forgiven edit-mode-only" data-att-id="${attId}" data-test-id="${r.testId}" data-student-id="${rec.id}" style="padding:3px 8px; font-size: 12px; font-weight:700; background:var(--grade-e); color:#fff; border-radius:4px; display:inline-flex; align-items:center; gap:4px;" title="Exempt Grade (Admin Override)">
                   ${getSvgIcon('zap', 12)} Exempt
                 </button>
               ` : ''}
@@ -1336,7 +1336,7 @@ export async function renderStudents(area, options = {}) {
               <div class="fw-700" style="font-size: 16px;color:var(--clr-warning);">${rec.inProgressCount || 0}</div>
             </div>
             <div style="flex:1;min-width:100px;">
-              <div class="text-xs text-muted">Mastery Score</div>
+              <div class="text-xs text-muted">Mastery Rate</div>
               <div class="fw-700" style="font-size: 16px;color:${rec.overallColor || 'var(--clr-text-1)'};">${rec.overallScoreStr}</div>
             </div>
             <div style="flex:1;min-width:90px;">
@@ -1400,7 +1400,7 @@ export async function renderStudents(area, options = {}) {
                   <th class="text-left" style="padding:8px 12px;">TASK TITLE</th>
                   <th class="text-center" style="padding:8px 12px;width:120px;">LEVEL</th>
                   <th class="text-center" style="padding:8px 12px;width:120px;">STATUS</th>
-                  <th class="text-center" style="padding:8px 12px;width:110px;">TASK SCORE</th>
+                  <th class="text-center" style="padding:8px 12px;width:110px;">TASK RATE</th>
                   <th class="text-center" style="padding:8px 12px;width:160px;">ACTION / REMEDIAL</th>
                 </tr>
               </thead>
@@ -1463,10 +1463,10 @@ export async function renderStudents(area, options = {}) {
           return;
         }
         try {
-          showLoading('Memberikan dispensasi Skor F...');
+          showLoading('Applying Grade F exemption...');
           await labelAttemptForgiven(attId, reason.trim());
 
-          showToast('Score Exemption (Skor F) granted successfully.', 'success');
+          showToast('Grade Exemption (Grade F) granted successfully.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1476,7 +1476,7 @@ export async function renderStudents(area, options = {}) {
           }, 300);
         } catch (err) {
           console.error(err);
-          showToast('Failed to grant Score Exemption: ' + err.message, 'error');
+          showToast('Failed to grant Grade Exemption: ' + err.message, 'error');
         } finally {
           hideLoading();
         }
@@ -1487,12 +1487,12 @@ export async function renderStudents(area, options = {}) {
       btn.onclick = async (e) => {
         e.stopPropagation();
         const attId = btn.dataset.attId;
-        if (!confirm('Cabut status dispensasi Skor F (kembalikan ke penilaian normal)?')) return;
+        if (!confirm('Revoke Grade F exemption (return to normal evaluation)?')) return;
         try {
-          showLoading('Mencabut status Skor F...');
+          showLoading('Revoking Grade F exemption...');
           await labelAttemptNormal(attId);
 
-          showToast('↩️ Score exemption revoked.', 'success');
+          showToast('Grade exemption revoked.', 'success');
           modal.remove();
           if (typeof window.loadSection === 'function') {
             await window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
@@ -1850,7 +1850,7 @@ export async function renderStudents(area, options = {}) {
                   <div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;">
                     ${c.exams.map((ex, exIdx) => `
                       <div style="display:inline-flex;align-items:center;gap:2px;" title="${escapeHtml(ex.title)}">
-                        <span style="font-size:11px;font-weight:700;color:#64748b;">E${exIdx + 1}:</span>
+                        <span style="font-size:12px;font-weight:700;color:#64748b;">E${exIdx + 1}:</span>
                         <input type="number" min="0" max="${ex.maxQ}" step="1"
                                class="dossier-score-input"
                                data-student-id="${studentId}"
@@ -1999,7 +1999,7 @@ export async function renderStudents(area, options = {}) {
 
         <!-- Modal Footer CTA Area: CLOSE & EDIT MODE (Left) | Student Pager (Center) | Export to PDF (Right) -->
         <div class="modal-footer" style="height: 56px; min-height: 56px; max-height: 56px; padding: 10px 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.3); flex-shrink: 0; box-sizing: border-box;">
-          
+
           <!-- Pojok Kiri Bawah: CLOSE & EDIT MODE Buttons -->
           <div style="flex: 1; display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
             <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal" style="display: inline-flex !important; align-items: center; justify-content: center; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 22px; border-radius: 6px; cursor: pointer;">
@@ -2803,7 +2803,7 @@ export async function renderStudents(area, options = {}) {
             <button id="bulk-delete" class="btn btn-danger" style="flex:1;">Delete</button>
           </div>
 
-          <button id="bulk-cancel" class="btn btn-ghost" style="width:100%;color:var(--clr-text-3);">Cancel</button>
+          <button id="bulk-cancel" class="btn btn-secondary btn-modal-close-left" style="width:100%;">CLOSE</button>
         </div>
       `;
       document.body.appendChild(overlay);
@@ -2880,7 +2880,7 @@ export async function renderStudents(area, options = {}) {
             <h3 style="color:var(--grade-e);margin:0 0 0.5rem;">Delete ${selectedIds.length} Students?</h3>
             <p style="color:var(--clr-text-3);font-size: 12px;margin-bottom:1.5rem;">This will soft-delete all selected students. Their history will be preserved.</p>
             <div style="display:flex;gap:0.75rem;justify-content:center;">
-              <button id="c-no" class="btn btn-secondary">Cancel</button>
+              <button id="c-no" class="btn btn-secondary btn-modal-close-left">CLOSE</button>
               <button id="c-yes" class="btn btn-danger">Yes, Delete</button>
             </div>
           </div>`;
@@ -3343,13 +3343,27 @@ export async function renderStudents(area, options = {}) {
         width: '70px',
         minWidth: '65px',
         render: (row) => {
-          const pin = row.pin || row.pinDisplay || '1234';
+          const rawPin = row.pin || row.pinDisplay || '';
+          const hasPin = rawPin && rawPin !== '——';
+          const displayPin = hasPin ? rawPin : '——';
+          const pinColor = hasPin ? '#38bdf8' : '#64748b';
+          const valPin = hasPin ? rawPin : '';
           return `
-            <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
-              <span style="font-family:var(--fm-font-mono, monospace); font-size:12px; font-weight:600; color:#38bdf8; letter-spacing:0.08em; font-variant-numeric:tabular-nums;" title="Student Personal PIN: ${escapeHtml(pin)}">
-                ${escapeHtml(pin)}
+            <div class="student-cell-view" style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
+              <span style="font-family:var(--fm-font-mono, monospace); font-size:12px; font-weight:600; color:${pinColor}; letter-spacing:0.08em; font-variant-numeric:tabular-nums;" title="Student Personal PIN: ${escapeHtml(displayPin)}">
+                ${escapeHtml(displayPin)}
               </span>
             </div>
+            <input type="text"
+              class="student-inline-input student-inline-pin-input text-center"
+              data-id="${row.id}"
+              data-field="pin"
+              value="${escapeHtml(valPin)}"
+              placeholder="1234"
+              maxlength="10"
+              inputmode="numeric"
+              onclick="event.stopPropagation();"
+              style="text-align:center !important; font-family:var(--fm-font-mono, monospace) !important; font-size:12px; font-weight:600; letter-spacing:0.08em; color:#38bdf8 !important; width:100%; box-sizing:border-box;">
           `;
         }
       },
@@ -3575,6 +3589,17 @@ export async function renderStudents(area, options = {}) {
         updates.gender = value;
       } else if (field === 'name') {
         updates.name = value.trim();
+      } else if (field === 'pin') {
+        const trimmedPin = value.trim();
+        if (!trimmedPin) {
+          showToast('PIN cannot be empty', 'warning');
+          const s = filteredGridData.find(x => x.id === studentId);
+          target.value = (s?.pin && s.pin !== '——') ? s.pin : '1234';
+          return;
+        }
+        const pinHash = await sha256(trimmedPin);
+        updates.pin = trimmedPin;
+        updates.pin_hash = pinHash;
       } else if (field === 'birth_date') {
         updates.birth_date = value || null;
       } else if (field === 'province') {
@@ -3744,7 +3769,15 @@ export async function renderStudents(area, options = {}) {
         }
       }
 
-      const { error } = await sb.from('students').update(updates).eq('id', studentId);
+      let { error } = await sb.from('students').update(updates).eq('id', studentId);
+      if (error && error.message && error.message.includes('pin') && updates.pin) {
+        const hashOnly = { ...updates };
+        delete hashOnly.pin;
+        const retry = await sb.from('students').update(hashOnly).eq('id', studentId);
+        if (!retry.error) {
+          error = null;
+        }
+      }
       if (!error) {
         clearAdminCache('students');
         const cell = target.closest('td');
@@ -3760,6 +3793,16 @@ export async function renderStudents(area, options = {}) {
             s.displayName = updates.name;
             const viewEl = cell?.querySelector('.student-cell-view span');
             if (viewEl) viewEl.textContent = updates.name;
+          } else if (field === 'pin') {
+            s.pin = updates.pin;
+            s.pinDisplay = updates.pin;
+            s.pin_hash = updates.pin_hash;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              viewEl.textContent = updates.pin;
+              viewEl.style.color = '#38bdf8';
+              viewEl.setAttribute('title', `Student Personal PIN: ${updates.pin}`);
+            }
           } else if (field === 'birth_date') {
             s.birth_date = updates.birth_date;
             if (s.birth_date) {
@@ -3880,6 +3923,10 @@ export async function renderStudents(area, options = {}) {
           }
           showToast('Saved locally (Database column pending in Supabase)', 'warning', 3500);
         } else {
+          if (field === 'pin') {
+            const s = filteredGridData.find(x => x.id === studentId);
+            if (s) target.value = (s.pin && s.pin !== '——') ? s.pin : '';
+          }
           showToast('Failed to save: ' + error.message, 'error');
         }
       }
@@ -4006,9 +4053,9 @@ window.promoteStudentNextLevel = async function(rowOrId) {
 
     clearAdminCache('students');
     if (nextLevelNum === 0) {
-      showToast(`🎉 ${row.displayName} has graduated to ALUMNI (Level X)!`, 'success');
+      showToast(`${row.displayName} has graduated to ALUMNI (Level X)!`, 'success');
     } else {
-      showToast(`🚀 ${row.displayName} successfully promoted to ${targetLevel.name}!`, 'success');
+      showToast(`${row.displayName} successfully promoted to ${targetLevel.name}!`, 'success');
     }
 
     if (typeof window.loadSection === 'function') {
@@ -4061,7 +4108,7 @@ export function showPromotionRequirementsModal(students = []) {
           <strong style="color:#38bdf8;">Promotion Criteria:</strong>
           <ul style="margin:6px 0 0 16px; padding:0;">
             <li>Student must have completed <strong>all required exams</strong> for their current level.</li>
-            <li>Each exam score must meet the passing threshold: <strong>&ge; 60%</strong> (Grade C or above, or Admin Forgiven score exemption).</li>
+            <li>Each exam rate must meet the passing threshold: <strong>&ge; 60%</strong> (Grade C or above, or Admin Forgiven grade exemption).</li>
             <li>Alumni graduates cannot be promoted further.</li>
           </ul>
         </div>
@@ -4072,7 +4119,7 @@ export function showPromotionRequirementsModal(students = []) {
               <tr style="background:rgba(30,41,59,0.8); font-size:12px; color:#94a3b8; border-bottom:1px solid rgba(255,255,255,0.1);">
                 <th style="padding:8px 12px;">STUDENT</th>
                 <th style="padding:8px 12px; text-align:center;">LEVEL</th>
-                <th style="padding:8px 12px; text-align:center;">SCORE</th>
+                <th style="padding:8px 12px; text-align:center;">RATE</th>
                 <th style="padding:8px 12px; text-align:center;">STATUS</th>
               </tr>
             </thead>
@@ -4240,7 +4287,7 @@ window.openTransferBatchModal = async function(studentId) {
       </div>
 
       <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-        <button id="tb-cancel-btn" class="btn btn-secondary btn-modal-close-left">Cancel</button>
+        <button id="tb-cancel-btn" class="btn btn-secondary btn-modal-close-left">CLOSE</button>
         <button id="tb-save-btn" class="btn btn-tactical" style="font-weight:700;">
           Confirm Transfer
         </button>
@@ -4374,7 +4421,7 @@ window.openRepeatLevelModal = async function(studentId) {
       </div>
 
       <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-        <button id="rl-cancel-btn" class="btn btn-secondary btn-modal-close-left">Cancel</button>
+        <button id="rl-cancel-btn" class="btn btn-secondary btn-modal-close-left">CLOSE</button>
         <button id="rl-save-btn" class="btn btn-purple" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;">
           ${getSvgIcon('refresh', 14)} Confirm Re-enrollment
         </button>
@@ -4461,7 +4508,7 @@ function buildFullEditModal() {
       </div>
       <div id="bfe-body" style="padding:1.5rem;"></div>
       <div class="modal-footer" style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.5rem;border-top:1px solid var(--clr-border);">
-        <button class="btn btn-secondary btn-modal-close-left" id="bfe-cancel">Cancel</button>
+        <button class="btn btn-secondary btn-modal-close-left" id="bfe-cancel">CLOSE</button>
         <button class="btn btn-primary" id="bfe-save">Save Changes</button>
       </div>
     </div>
@@ -4550,7 +4597,7 @@ export async function openStudentFullEdit(student, onSaved) {
   const defAddress = getDefaultDistrictAndVillage(initialCity, canonicalProv);
   const initialDistrict = draftData?.district ?? (student?.district || defAddress.district);
   const initialVillage = draftData?.village ?? (student?.village || defAddress.village);
-  const initialPin = draftData?.pin || '';
+  const initialPin = draftData?.pin ?? (student?.pin || '');
   const initialBatchId = draftData?.batch_id ?? (student?.batch_id || '');
   const initialLevelId = draftData?.level_id ?? (student?.level_id || '');
   const initialActive = draftData?.is_active ?? (student?.is_active !== false);
@@ -4842,7 +4889,13 @@ export async function openStudentFullEdit(student, onSaved) {
       photo_url:      currentPhotoUrl || null,
     };
     const pinVal = document.getElementById('bfe-pin').value.trim();
-    if (pinVal) payload.pin_hash = await sha256(pinVal);
+    if (pinVal) {
+      payload.pin_hash = await sha256(pinVal);
+      payload.pin = pinVal;
+    } else if (!student?.id) {
+      payload.pin = '1234';
+      payload.pin_hash = await sha256('1234');
+    }
 
     newSaveBtn.disabled = true;
     newSaveBtn.textContent = 'Saving...';

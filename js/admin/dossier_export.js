@@ -299,7 +299,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
         <div class="summary-item-val" style="font-size: 20px;">${escapeHtml(studentData.globalGrade || studentData.grade || '—')}</div>
       </div>
       <div>
-        <div class="summary-item-label">Mastery Score</div>
+        <div class="summary-item-label">Mastery Rate</div>
         <div class="summary-item-val">${studentData.overallScoreStr || (studentData.score != null ? `${studentData.score}%` : '—')}</div>
       </div>
       <div>
@@ -323,7 +323,7 @@ export function exportStudentDossier(studentData, educationList = [], skillsList
             <th style="width:65px; text-align:center;">TYPE</th>
             <th style="width:85px; text-align:center;">DATE</th>
             <th style="width:65px; text-align:center;">PTS</th>
-            <th style="width:60px; text-align:center;">SCORE</th>
+            <th style="width:60px; text-align:center;">RATE</th>
             <th style="width:50px; text-align:center;">GRADE</th>
           </tr>
         </thead>

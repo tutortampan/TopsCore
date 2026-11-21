@@ -232,10 +232,10 @@ export async function renderClassesHub(area) {
           console.warn('[ClassesHub] site_settings sync note:', syncErr);
         }
 
-        showToast(`Updated passing score to ${val}% for ${targetTests.length} ${type.toLowerCase()}(s).`, 'success');
+        showToast(`Updated passing rate to ${val}% for ${targetTests.length} ${type.toLowerCase()}(s).`, 'success');
         renderView();
       } catch (err) {
-        showToast('Failed to update passing score: ' + (err?.message || err), 'error');
+        showToast('Failed to update passing rate: ' + (err?.message || err), 'error');
       }
     };
 
@@ -266,7 +266,7 @@ export async function renderClassesHub(area) {
               </div>
             </div>
             <div style="margin-bottom:16px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:6px;">Minimum Required Passing Score (%):</label>
+              <label style="display:block;font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:6px;">Minimum Required Passing Rate (%):</label>
               <div style="display:flex;gap:8px;margin-bottom:10px;">
                 <button type="button" class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;padding:6px 0;background:${curScore === 60 ? 'rgba(255,255,0,0.2)' : 'rgba(255,255,255,0.05)'};border-color:${curScore === 60 ? 'var(--grade-c)' : 'rgba(255,255,255,0.1)'};color:${curScore === 60 ? 'var(--grade-c)' : '#f8fafc'};" onclick="document.getElementById('quick-score-input').value = 60;">60% (Grade C)</button>
                 <button type="button" class="btn btn-secondary btn-sm" style="flex:1;font-size:12px;padding:6px 0;background:${curScore === 70 ? 'rgba(56,189,248,0.2)' : 'rgba(255,255,255,0.05)'};border-color:${curScore === 70 ? '#38bdf8' : 'rgba(255,255,255,0.1)'};color:${curScore === 70 ? '#38bdf8' : '#f8fafc'};" onclick="document.getElementById('quick-score-input').value = 70;">70% (Task Pass)</button>
@@ -334,7 +334,7 @@ export async function renderClassesHub(area) {
         test.minimum_required_score = newScore;
         test.payload = updatedPayload;
 
-        showToast(`Passing score updated to ${newScore}%.`, 'success');
+        showToast(`Passing rate updated to ${newScore}%.`, 'success');
         window.closeQuickEditModal();
         renderView();
       } catch (err) {
@@ -368,14 +368,14 @@ export async function renderClassesHub(area) {
             </div>
             <div style="margin-bottom:16px;display:flex;flex-direction:column;gap:12px;">
               <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
-                <label style="display:block;font-size:12px;font-weight:600;color:#818cf8;margin-bottom:4px;">Set All ${taskCount} Tasks Passing Score (%):</label>
+                <label style="display:block;font-size:12px;font-weight:600;color:#818cf8;margin-bottom:4px;">Set All ${taskCount} Tasks Passing Rate (%):</label>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <input id="batch-task-score" type="number" min="1" max="100" value="70" class="form-control" style="font-size:12px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
                   <span style="font-size:12px;color:#cbd5e1;">% (Standard Formative Mastery)</span>
                 </div>
               </div>
               <div style="background:rgba(255,255,255,0.03);padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.06);">
-                <label style="display:block;font-size:12px;font-weight:600;color:#FF8C00;margin-bottom:4px;">Set All ${examCount} Exams Passing Score (%):</label>
+                <label style="display:block;font-size:12px;font-weight:600;color:#FF8C00;margin-bottom:4px;">Set All ${examCount} Exams Passing Rate (%):</label>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <input id="batch-exam-score" type="number" min="1" max="100" value="60" class="form-control" style="font-size:12px;font-weight:700;height:32px;background:rgba(0,0,0,0.3);width:90px;text-align:center;" />
                   <span style="font-size:12px;color:#cbd5e1;">% (Standard TopsCore Grade C)</span>
@@ -650,10 +650,10 @@ export async function renderClassesHub(area) {
           const taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
           taskHtml = `
             <span class="classes-hub-score-view" style="color:#818cf8;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
-              ${taskLabel} <span style="font-size:11px;opacity:0.75;font-weight:400;">(${tasks.length})</span>
+              ${taskLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${tasks.length})</span>
             </span>
             <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-              <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#818cf8;border:1px solid rgba(129,140,248,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="Set passing score for all ${tasks.length} tasks" />
+              <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#818cf8;border:1px solid rgba(129,140,248,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="Set passing rate for all ${tasks.length} tasks" />
               <span style="font-size:12px;color:#94a3b8;">%</span>
             </span>
           `;
@@ -671,10 +671,10 @@ export async function renderClassesHub(area) {
           const examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
           examHtml = `
             <span class="classes-hub-score-view" style="color:#FF8C00;font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
-              ${examLabel} <span style="font-size:11px;opacity:0.75;font-weight:400;">(${exams.length})</span>
+              ${examLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${exams.length})</span>
             </span>
             <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-              <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#FF8C00;border:1px solid rgba(255,140,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="Set passing score for all ${exams.length} exams" />
+              <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:#FF8C00;border:1px solid rgba(255,140,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="Set passing rate for all ${exams.length} exams" />
               <span style="font-size:12px;color:#94a3b8;">%</span>
             </span>
           `;
@@ -902,8 +902,8 @@ export async function renderClassesHub(area) {
                   <th style="width:210px;text-align:left;cursor:pointer;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
                   <th style="width:125px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
                   <th style="width:75px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Score">TASK PASS ${getSortIcon('task')}</th>
-                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Score">EXAM PASS ${getSortIcon('exam')}</th>
+                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
+                  <th style="width:95px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
                   <th style="width:85px;text-align:center;cursor:pointer;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
                   <th style="width:140px;text-align:right;">ACTIONS</th>
                 </tr>

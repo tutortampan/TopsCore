@@ -1,6 +1,6 @@
 /**
  * test_student_title_exclusivity.mjs
- * 
+ *
  * Authoritative Regression Suite for Rule 2.23 & ui-invariants Rule 2.8:
  * Standard Student Name (studentName) & Dashboard-Only Title (Mr. & Miss).
  */
@@ -79,7 +79,7 @@ console.log('  ✅ [PASS] js/conversation-room.js directly uses standard session
 
 // 3.4 Floating windows & Modals audit
 const testsAccessContent = fs.readFileSync('js/admin/tests-access.js', 'utf8');
-assert(testsAccessContent.includes('${studentName} • Theme'),
+assert(testsAccessContent.includes('${studentName} • Theme') || testsAccessContent.includes('${studentName} • ${theme.isNonVocab'),
   'Kick confirm modal must use standard studentName directly');
 assert(testsAccessContent.includes("if (nameEl) nameEl.textContent = `${studentName} (${alarmsList.length}x ALARMS)`") || testsAccessContent.includes("${studentName} • ${alarmsList.length}"),
   'Alarm detail modal must use standard studentName directly');

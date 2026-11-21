@@ -542,7 +542,7 @@ function openVocabErrorDetailModal(item) {
               <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left; color:#94a3b8; font-size: 12px;">
                 <th style="padding:6px 8px;">STUDENT NAME</th>
                 <th style="padding:6px 8px;">STUDENT ANSWER</th>
-                <th style="padding:6px 8px;">SCORE</th>
+                <th style="padding:6px 8px;">PTS</th>
                 <th style="padding:6px 8px;">EXAM</th>
               </tr>
             </thead>

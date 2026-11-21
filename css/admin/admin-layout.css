@@ -685,13 +685,13 @@ body {
 
 .bottom-infobar-right .btn,
 .bottom-infobar-right button {
-  height: 32px !important;
-  min-height: 32px !important;
-  max-height: 32px !important;
-  padding: 4px 10px !important;
+  height: 30px !important;
+  min-height: 30px !important;
+  max-height: 30px !important;
+  line-height: 28px !important;
+  padding: 0 12px !important;
   font-size: 12px !important;
   font-weight: 700 !important;
-  line-height: normal !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
   box-shadow: none !important;

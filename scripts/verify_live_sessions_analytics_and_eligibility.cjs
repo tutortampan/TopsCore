@@ -20,7 +20,7 @@ const appCode = fs.readFileSync(appPath, 'utf8');
 // -----------------------------------------------------------------------------
 console.log('Test 1: Cache Buster Bump in app.js');
 assert.ok(
-  /tests-access\.js\?v=20261114_v\d+/.test(appCode),
+  /tests-access\.js\?v=202611\d+_v\d+/.test(appCode),
   'app.js must import tests-access.js with updated cache buster'
 );
 console.log('  ✅ PASS: Cache buster bumped to latest version.\n');

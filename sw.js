@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v157';
+const CACHE_NAME = 'topscore-cache-option-a-v169';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -14,17 +14,17 @@ const ASSETS_TO_CACHE = [
   './css/style.css?v=20261119_v631',
   './css/dashboard.css?v=20261119_v631',
   './css/auth.css?v=20261028',
-  './css/test.css?v=20261115_v539',
+  './css/test.css?v=20261121_v555',
   './css/result.css?v=20261119_v631',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
-  './js/api.js?v=20261119_v630',
+  './js/api.js?v=20261121_v637',
   './js/auth.js?v=20261108_v162',
-  './js/dashboard.js?v=20261119_v630',
-  './js/test.js?v=20261117_v549',
+  './js/dashboard.js?v=20261121_v641',
+  './js/test.js?v=20261121_v558',
   './js/result.js?v=20261119_v631',
   './js/session.js?v=20261108_v162',
-  './js/supabase.js?v=20261028',
+  './js/supabase.js?v=20261121_v161',
   './js/indonesia-regions.js?v=20261117_v547',
   './js/grading.js?v=20261115_v545',
   './js/vendor/supabase.js',
