@@ -8,6 +8,8 @@ import { exportStudentDossier } from './dossier_export.js?v=20261106_v160';
 import { isTutorRole } from '../session.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { INDONESIA_REGIONS, PROVINCE_DISPLAY_MAP, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDefaultDistrictAndVillage, getDistrictsForCity, getVillagesForDistrict, canonicalizeRegencyName } from '../indonesia-regions.js?v=20261117_v547';
+import { getCertificatePredicate } from './exam-rules-engine.js';
+import { renderBatchAttendance } from './class-attendance.js?v=20261123_v677';
 
 if (typeof window !== 'undefined') {
   window.exportStudentDossier = exportStudentDossier;
@@ -201,6 +203,12 @@ export async function renderStudents(area, options = {}) {
     } catch(e) {}
   }
 
+  const isCampProgram = Boolean(
+    (currentProgram && (/camp/i.test(currentProgram.name || '') || (currentProgram.code && /camp/i.test(currentProgram.code)))) ||
+    (/camp/i.test(window._selectedProgramName || '')) ||
+    (allBatches && allBatches.find(b => b.id === window._filterBatchId && /camp/i.test(b.name || '')))
+  );
+
   // If still no batch selected, pick the first active batch of the active program
   if (!window._filterBatchId && currentProgramId && allBatches) {
     const firstActiveBatch = allBatches.find(b => b.program_id === currentProgramId && b.is_active !== false && !b.deleted_at);
@@ -215,40 +223,78 @@ export async function renderStudents(area, options = {}) {
   }
 
   // 2. Scoped Student Fetch (Filtered strictly by current active program, or all programs if in Alumni main panel)
+  // OPTIMIZATION: Exclude heavy base64 photo_url from bulk list queries (~85% egress reduction)
+  // Photos are fetched on-demand strictly when opening student profile, dossier, or edit modal
   const studentFilters = isAlumniPanel ? {} : (currentProgramId ? { program_id: currentProgramId } : {});
   const rawData = await adminFetchAll(
     'students',
-    'id, name, pin, pin_hash, gender, birth_date, education, province, city, district, village, photo_url, photo_status, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
+    'id, nis, name, pin, pin_hash, gender, birth_date, birthplace, education, province, city, district, village, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
     studentFilters
   );
 
   const studentIds = (rawData || []).filter(s => !s.deleted_at).map(s => s.id);
 
-  // 3. Scoped Attempts & Progress Fetch (Prunes 90%+ egress; only queries attempts of current cohort)
+  // Helper: Chunked cohort fetching to prevent massive unconstrained scans while respecting Supabase URL length
+  async function fetchInStudentChunks(table, select) {
+    if (!studentIds || studentIds.length === 0) return [];
+    const CHUNK_SIZE = 80;
+    if (studentIds.length <= CHUNK_SIZE) {
+      return adminFetchAll(table, select, { student_id: studentIds }).catch(() => []);
+    }
+    const chunks = [];
+    for (let i = 0; i < studentIds.length; i += CHUNK_SIZE) {
+      chunks.push(studentIds.slice(i, i + CHUNK_SIZE));
+    }
+    const chunkPromises = chunks.map(chunk =>
+      adminFetchAll(table, select, { student_id: chunk }).catch(() => [])
+    );
+    const chunkArrays = await Promise.all(chunkPromises);
+    return chunkArrays.flat();
+  }
+
+  // 3. Scoped Attempts & Progress Fetch (Prunes 90%+ egress; strictly scoped to current cohort)
   let allAttempts = [];
   let allProgress = [];
+  let allAcademicAssessments = [];
+  let allFinalExams = [];
   if (studentIds.length > 0) {
-    const [attRes, progRes] = await Promise.all([
-      adminFetchAll(
+    const [attRes, progRes, saaRes, sfeRes] = await Promise.all([
+      fetchInStudentChunks(
         'attempts',
-        'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, is_forgiven, forgiven_reason, forgiven_by, forgiven_at, is_remedial, tests(test_type, title, class_id)',
-        studentIds.length <= 150 ? { student_id: studentIds } : {}
-      ).catch(err => {
-        console.warn('[renderStudents] attempts fetch warning:', err);
-        return [];
-      }),
-      adminFetchAll(
+        'id, student_id, test_id, status, score, total_questions, percentage, effective_score, created_at, is_remedial_unlocked, is_forgiven, forgiven_reason, forgiven_by, forgiven_at, is_remedial, tests(test_type, title, class_id)'
+      ),
+      fetchInStudentChunks(
         'progress',
-        'id, student_id, class_id, unlocked_level, highest_score',
-        studentIds.length <= 150 ? { student_id: studentIds } : {}
-      ).catch(err => {
-        console.warn('[renderStudents] progress fetch warning:', err);
-        return [];
-      })
+        'id, student_id, class_id, unlocked_level, highest_score'
+      ),
+      fetchInStudentChunks(
+        'student_academic_assessments',
+        'id, student_id, batch_id, class_id, step_level, subject_code, assessment_type, assessment_key, raw_score, target_score, percentage, grade, notes'
+      ),
+      fetchInStudentChunks(
+        'student_final_examinations',
+        'id, student_id, batch_id, exam_date, examiner_name, examiner_fluency, examiner_pronunciation, examiner_idea, examiner_grammar, examiner_total, tutor_name, tutor_fluency, tutor_pronunciation, tutor_grammar, tutor_comprehension, tutor_total, practice_score, practice_predicate, speaking_score, speaking_predicate, vocab_score, vocab_predicate, pronunciation_score, pronunciation_predicate, grammar_score, grammar_predicate, final_score, certificate_predicate, certificate_nis, certificate_month, certificate_year, status, notes'
+      )
     ]);
     allAttempts = attRes || [];
     allProgress = progRes || [];
+    allAcademicAssessments = saaRes || [];
+    allFinalExams = sfeRes || [];
   }
+
+  const academicByStudent = new Map();
+  (allAcademicAssessments || []).forEach(item => {
+    if (!item.student_id) return;
+    if (!academicByStudent.has(item.student_id)) academicByStudent.set(item.student_id, new Map());
+    const sMap = academicByStudent.get(item.student_id);
+    const itemKey = `${item.step_level}:${item.subject_code}:${item.assessment_key}`;
+    sMap.set(itemKey, item);
+  });
+
+  const finalExamsByStudent = new Map();
+  (allFinalExams || []).forEach(fe => {
+    if (fe.student_id) finalExamsByStudent.set(fe.student_id, fe);
+  });
 
   const attemptsByStudent = new Map();
   (allAttempts || []).forEach(att => {
@@ -701,9 +747,77 @@ export async function renderStudents(area, options = {}) {
     const studentDistrict = (localDemographics.district || s.district || '').trim();
     const studentVillage = (localDemographics.village || s.village || '').trim();
 
+    const sAcademicMap = academicByStudent.get(s.id) || new Map();
+    const sFinalExam = finalExamsByStudent.get(s.id) || null;
+
+    // Build authoritative 3-Step academic assessment summaries
+    const stepSummaries = {};
+    [1, 2, 3].forEach(stepNum => {
+      // 1. Vocab NA (Strictly preserve existing system test attempts)
+      let naVocab = null;
+      const vocabCode = `CAMP-${stepNum}VOCAB`;
+      let vocabClass = null;
+      for (const c of classesMap.values()) {
+        if ((c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-') === vocabCode) {
+          vocabClass = c;
+          break;
+        }
+      }
+      if (vocabClass && perClassFinal.has(vocabClass.id)) {
+        const cs = perClassFinal.get(vocabClass.id);
+        const themeScores = Object.values(cs.themeScores || {}).filter(v => typeof v === 'number');
+        if (themeScores.length > 0) {
+          naVocab = Math.round((themeScores.reduce((a, b) => a + b, 0) / themeScores.length) * 100) / 100;
+        }
+      }
+      if (naVocab == null) {
+        const vKey = `${stepNum}:VOCABULARY:NA`;
+        const vObj = sAcademicMap.get(vKey);
+        if (vObj?.percentage != null) naVocab = Number(vObj.percentage);
+        else if (sFinalExam?.vocab_score != null && stepNum === 1) naVocab = Number(sFinalExam.vocab_score);
+      }
+
+      // 2. Storytelling NA
+      const storyKeys = ['W1', 'W2', 'W3', 'W4'].map(k => sAcademicMap.get(`${stepNum}:STORYTELLING:${k}`)).filter(x => x?.percentage != null);
+      const naStory = storyKeys.length > 0 ? Math.round((storyKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / storyKeys.length) * 100) / 100 : null;
+
+      // 3. Grammar NA
+      const gramKeys = ['U1', 'U2'].map(k => sAcademicMap.get(`${stepNum}:GRAMMAR:${k}`)).filter(x => x?.percentage != null);
+      const naGram = gramKeys.length > 0 ? Math.round((gramKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / gramKeys.length) * 100) / 100 : null;
+
+      // 4. 4th Subject NA
+      const fourthSubjCode = stepNum === 1 ? 'BASIC' : (stepNum === 2 ? 'GFS' : 'PRONUNCIATION');
+      const fourthKeys = ['U1', 'U2'].map(k => sAcademicMap.get(`${stepNum}:${fourthSubjCode}:${k}`)).filter(x => x?.percentage != null);
+      const naFourth = fourthKeys.length > 0 ? Math.round((fourthKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / fourthKeys.length) * 100) / 100 : null;
+
+      // 5. Speaking NA
+      const spkSubKeys = stepNum === 1 ? ['U1', 'U2', 'PRACTICE'] : (stepNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
+      const speakKeys = spkSubKeys.map(k => sAcademicMap.get(`${stepNum}:SPEAKING:${k}`)).filter(x => x?.percentage != null);
+      const naSpeak = speakKeys.length > 0 ? Math.round((speakKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / speakKeys.length) * 100) / 100 : null;
+
+      // Step Average & Predicate
+      const validNAs = [naVocab, naStory, naGram, naFourth, naSpeak].filter(v => typeof v === 'number');
+      const stepAvg = validNAs.length > 0 ? Math.round((validNAs.reduce((a, b) => a + b, 0) / validNAs.length) * 100) / 100 : null;
+      const predicate = stepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(stepAvg) : (stepAvg >= 90 ? 'EXCELLENT' : stepAvg >= 80 ? 'VERY GOOD' : stepAvg >= 70 ? 'GOOD' : stepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
+
+      stepSummaries[stepNum] = {
+        naVocab,
+        naStory,
+        naGram,
+        naFourth,
+        naSpeak,
+        stepAvg,
+        predicate
+      };
+    });
+
     const rowObj = {
       ...s,
+      academicMap: sAcademicMap,
+      finalExam: sFinalExam,
+      stepSummaries: stepSummaries,
       program_status: (isLevelX || isAlumni) ? 'ALUMNI' : (s.program_status || 'ACTIVE'),
+      birthplace: s.birthplace || '',
       province: studentProvince,
       city: studentCity,
       district: studentDistrict,
@@ -757,6 +871,36 @@ export async function renderStudents(area, options = {}) {
         });
       }
     });
+
+    // Flatten Camp Raport & Final Exam metrics onto rowObj for sorting & searching
+    [1, 2, 3].forEach(stepNum => {
+      const sum = stepSummaries[stepNum];
+      if (sum) {
+        rowObj[`_camp_sum_${stepNum}_avg`] = sum.stepAvg ?? -1;
+        rowObj[`_camp_sum_${stepNum}_prd`] = sum.predicate ?? '';
+        rowObj[`_camp_vcb_${stepNum}_na`] = sum.naVocab ?? -1;
+        rowObj[`_camp_stt_${stepNum}_na`] = sum.naStory ?? -1;
+        rowObj[`_camp_grm_${stepNum}_na`] = sum.naGram ?? -1;
+        rowObj[`_camp_fourth_${stepNum}_na`] = sum.naFourth ?? -1;
+        rowObj[`_camp_spk_${stepNum}_na`] = sum.naSpeak ?? -1;
+      }
+    });
+    if (sFinalExam) {
+      rowObj['_fe_ex_tot'] = sFinalExam.examiner_total ?? -1;
+      rowObj['_fe_tu_tot'] = sFinalExam.tutor_total ?? -1;
+      rowObj['_fe_prc'] = sFinalExam.practice_score ?? -1;
+      rowObj['_fe_prc_prd'] = sFinalExam.practice_predicate ?? '';
+      rowObj['_fe_cum_spk'] = sFinalExam.speaking_score ?? -1;
+      rowObj['_fe_cum_vcb'] = sFinalExam.vocab_score ?? -1;
+      rowObj['_fe_cum_prn'] = sFinalExam.pronunciation_score ?? -1;
+      rowObj['_fe_cum_grm'] = sFinalExam.grammar_score ?? -1;
+      rowObj['_fe_cert_final'] = sFinalExam.final_score ?? -1;
+      rowObj['_fe_cert_prd'] = sFinalExam.certificate_predicate ?? '';
+      rowObj['_fe_cert_nis'] = sFinalExam.certificate_nis ?? '';
+      rowObj['_fe_cert_mo'] = sFinalExam.certificate_month ?? '';
+      rowObj['_fe_cert_yr'] = sFinalExam.certificate_year ?? -1;
+      rowObj['_fe_cert_stat'] = sFinalExam.status ?? '';
+    }
 
     return rowObj;
   });
@@ -961,17 +1105,84 @@ export async function renderStudents(area, options = {}) {
       }
     }
 
+    if (isCampProgram) {
+      if (!window._raportPage) {
+        try {
+          window._raportPage = parseInt(localStorage.getItem('topscore_student_raport_page') || '1', 10);
+        } catch (_) {
+          window._raportPage = 1;
+        }
+        if (![1, 2, 3].includes(window._raportPage)) window._raportPage = 1;
+      }
+      if (!window._attendancePage) {
+        try {
+          window._attendancePage = parseInt(localStorage.getItem('topscore_student_attendance_page') || '1', 10);
+        } catch (_) {
+          window._attendancePage = 1;
+        }
+        if (![1, 2, 3].includes(window._attendancePage)) window._attendancePage = 1;
+      }
+    }
+
+    const activeRaportTabId = `raport-${window._raportPage || 1}`;
+    const activeAttendanceTabId = `attendance-${window._attendancePage || 1}`;
     const currentTabId = (currentBatchStatus === 'active')
-      ? (window._studentRosterTab === 'raport' ? 'raport' : 'data')
+      ? (window._studentRosterTab === 'attendance'
+          ? (isCampProgram ? activeAttendanceTabId : 'attendance')
+          : (window._studentRosterTab === 'final-exam'
+              ? 'final-exam'
+              : (window._studentRosterTab === 'raport' ? (isCampProgram ? activeRaportTabId : 'raport') : 'data')))
       : (currentBatchStatus === 'hold_inactive' ? 'inactive' : currentBatchStatus);
+
+    window._switchRaportPage = (pageNum) => {
+      window._raportPage = Number(pageNum) || 1;
+      try {
+        localStorage.setItem('topscore_student_raport_page', String(window._raportPage));
+      } catch (_) {}
+      if (window._studentRosterTab !== 'raport') {
+        window._studentRosterTab = 'raport';
+        try { localStorage.setItem('topscore_student_roster_tab', 'raport'); } catch (_) {}
+      }
+      renderStudents(area, { isAlumniPanel });
+    };
+
+    window._switchAttendancePage = (pageNum) => {
+      window._attendancePage = Number(pageNum) || 1;
+      try {
+        localStorage.setItem('topscore_student_attendance_page', String(window._attendancePage));
+      } catch (_) {}
+      if (window._studentRosterTab !== 'attendance') {
+        window._studentRosterTab = 'attendance';
+        try { localStorage.setItem('topscore_student_roster_tab', 'attendance'); } catch (_) {}
+      }
+      renderStudents(area, { isAlumniPanel });
+    };
 
     window._switchStudentRosterTab = (tabId) => {
       if (tabId === 'data') {
         window._studentRosterTab = 'data';
         window._filterBatchStatus = 'active';
-      } else if (tabId === 'raport') {
+      } else if (tabId === 'raport' || tabId === 'raport-1' || tabId === 'raport-2' || tabId === 'raport-3') {
         window._studentRosterTab = 'raport';
         window._filterBatchStatus = 'active';
+        if (tabId === 'raport-1') window._raportPage = 1;
+        else if (tabId === 'raport-2') window._raportPage = 2;
+        else if (tabId === 'raport-3') window._raportPage = 3;
+        try {
+          localStorage.setItem('topscore_student_raport_page', String(window._raportPage || 1));
+        } catch (_) {}
+      } else if (tabId === 'final-exam') {
+        window._studentRosterTab = 'final-exam';
+        window._filterBatchStatus = 'active';
+      } else if (tabId === 'attendance' || tabId === 'attendance-1' || tabId === 'attendance-2' || tabId === 'attendance-3') {
+        window._studentRosterTab = 'attendance';
+        window._filterBatchStatus = 'active';
+        if (tabId === 'attendance-1') window._attendancePage = 1;
+        else if (tabId === 'attendance-2') window._attendancePage = 2;
+        else if (tabId === 'attendance-3') window._attendancePage = 3;
+        try {
+          localStorage.setItem('topscore_student_attendance_page', String(window._attendancePage || 1));
+        } catch (_) {}
       } else if (tabId === 'inactive' || tabId === 'hold_inactive') {
         window._filterBatchStatus = 'inactive';
       } else if (tabId === 'all') {
@@ -986,12 +1197,24 @@ export async function renderStudents(area, options = {}) {
     window._switchStudentRosterStatus = window._switchStudentRosterTab;
 
     if (window.setTopbarTabs) {
-      window.setTopbarTabs([
+      const topTabs = [
         { id: 'data', icon: getSvgIcon('user', 14), label: 'Students Data', val: activeCount, valColor: 'var(--clr-accent-1, #38bdf8)' },
-        { id: 'raport', icon: getSvgIcon('award', 14), label: "Student's Raport", val: activeCount, valColor: 'var(--grade-b)' },
+        ...(isCampProgram ? [
+          { id: 'raport-1', icon: getSvgIcon('award', 14), label: "1st Raport", val: '1st', valColor: (window._raportPage === 1 && window._studentRosterTab === 'raport') ? 'var(--grade-b)' : '#94a3b8' },
+          { id: 'raport-2', icon: getSvgIcon('award', 14), label: "2nd Raport", val: '2nd', valColor: (window._raportPage === 2 && window._studentRosterTab === 'raport') ? 'var(--grade-b)' : '#94a3b8' },
+          { id: 'raport-3', icon: getSvgIcon('award', 14), label: "3rd Raport", val: '3rd', valColor: (window._raportPage === 3 && window._studentRosterTab === 'raport') ? 'var(--grade-b)' : '#94a3b8' },
+          { id: 'final-exam', icon: getSvgIcon('check-circle', 14), label: "Final Exam & Certificate", val: 'FINAL', valColor: (window._studentRosterTab === 'final-exam') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' },
+          { id: 'attendance-1', icon: getSvgIcon('clock', 14), label: "1st Attendance", val: '1st', valColor: (window._attendancePage === 1 && window._studentRosterTab === 'attendance') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' },
+          { id: 'attendance-2', icon: getSvgIcon('clock', 14), label: "2nd Attendance", val: '2nd', valColor: (window._attendancePage === 2 && window._studentRosterTab === 'attendance') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' },
+          { id: 'attendance-3', icon: getSvgIcon('clock', 14), label: "3rd Attendance", val: '3rd', valColor: (window._attendancePage === 3 && window._studentRosterTab === 'attendance') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' }
+        ] : [
+          { id: 'raport', icon: getSvgIcon('award', 14), label: "Student's Raport", val: activeCount, valColor: 'var(--grade-b)' },
+          { id: 'attendance', icon: getSvgIcon('clock', 14), label: 'Batch Attendance', val: activeCount, valColor: 'var(--primary-tactical, #38bdf8)' }
+        ]),
         { id: 'inactive', icon: getSvgIcon('alert-circle', 14), label: 'Inactive', val: inactiveCount, valColor: 'var(--grade-e)' },
         { id: 'all', icon: getSvgIcon('users', 14), label: 'All Students', val: totalCount, valColor: '#94a3b8' }
-      ], currentTabId, 'window._switchStudentRosterTab');
+      ];
+      window.setTopbarTabs(topTabs, currentTabId, 'window._switchStudentRosterTab');
     }
   }
 
@@ -1064,7 +1287,25 @@ export async function renderStudents(area, options = {}) {
       <button type="button" class="btn btn-tactical btn-sm" id="btn-add-student-direct" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Register New Student">${getSvgIcon('plus', 14)} Add Student</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btn-import-students-direct" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Import Students from Excel / CSV">${getSvgIcon('upload', 14)} Import Excel / CSV</button>
     </div>`;
-    window.setBottomInfobar(leftHtml, rightHtml);
+
+    const isRaportTabActive = (window._studentRosterTab === 'raport');
+    const isFinalExamActive = (window._studentRosterTab === 'final-exam');
+    let centerHtml = '';
+    if (isRaportTabActive && isCampProgram) {
+      centerHtml = `
+      <div class="raport-page-switcher" style="display:inline-flex;align-items:center;gap:4px;background:#0b1324;border:1.5px solid #334155;border-radius:6px;padding:2px 6px;height:30px;box-sizing:border-box;">
+        <span style="font-size:12px;font-weight:800;color:#94a3b8;letter-spacing:0.04em;margin-right:2px;">RAPORT:</span>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(1);" style="height:24px;line-height:22px;padding:0 8px;font-size:12px;font-weight:800;border-radius:4px;cursor:pointer;transition:all 0.15s ease;${window._raportPage === 1 ? 'background:var(--grade-b);color:#0f172a;border:none;box-shadow:0 0 8px rgba(149,255,0,0.4);' : 'background:transparent;color:#94a3b8;border:1px solid #334155;'}" title="1st Level Raport (5 Classes)">1st</button>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(2);" style="height:24px;line-height:22px;padding:0 8px;font-size:12px;font-weight:800;border-radius:4px;cursor:pointer;transition:all 0.15s ease;${window._raportPage === 2 ? 'background:var(--grade-b);color:#0f172a;border:none;box-shadow:0 0 8px rgba(149,255,0,0.4);' : 'background:transparent;color:#94a3b8;border:1px solid #334155;'}" title="2nd Level Raport (5 Classes)">2nd</button>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(3);" style="height:24px;line-height:22px;padding:0 8px;font-size:12px;font-weight:800;border-radius:4px;cursor:pointer;transition:all 0.15s ease;${window._raportPage === 3 ? 'background:var(--grade-b);color:#0f172a;border:none;box-shadow:0 0 8px rgba(149,255,0,0.4);' : 'background:transparent;color:#94a3b8;border:1px solid #334155;'}" title="3rd Level Raport (5 Classes)">3rd</button>
+      </div>`;
+    } else if (isFinalExamActive) {
+      centerHtml = `
+      <div style="display:inline-flex;align-items:center;gap:6px;background:#0b1324;border:1.5px solid #334155;border-radius:6px;padding:2px 10px;height:30px;box-sizing:border-box;">
+        <span style="font-size:12px;font-weight:800;color:var(--primary-tactical, #38bdf8);letter-spacing:0.04em;">FINAL EXAM & CERTIFICATE</span>
+      </div>`;
+    }
+    window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
 
     // Direct synchronous button bindings (No requestAnimationFrame async gap)
     const toggleEditBtn = document.getElementById('btn-toggle-roster-edit-mode');
@@ -1161,7 +1402,7 @@ export async function renderStudents(area, options = {}) {
     }
 
     const headers = [
-      'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Gender', 'Age', 'DOB', 'Education',
+      'Institution', 'Program', 'Batch', 'Current Level', 'Student Name', 'Gender', 'Birthplace', 'DOB', 'Age', 'Education',
       'Exam 1 (Theme A) Pts', 'Exam 2 (Theme B) Pts', 'Exam 3 (Theme C) Pts', 'Exam 4 (Theme D) Pts',
       'Total Exam Pts', 'Rate (%)', 'Grade', 'Status'
     ];
@@ -1181,8 +1422,9 @@ export async function renderStudents(area, options = {}) {
         'Current Level': s.levelName || '—',
         'Student Name': s.displayName || s.name || '—',
         'Gender': (s.gender || '').toUpperCase() || '—',
-        'Age': s.ageDisplay || '—',
+        'Birthplace': s.birthplace || '—',
         'DOB': formatBirthDate(s.birth_date),
+        'Age': s.ageDisplay || '—',
         'Education': formatLastEducation(s.education),
         'Exam 1 (Theme A) Pts': e1,
         'Exam 2 (Theme B) Pts': e2,
@@ -1213,9 +1455,17 @@ export async function renderStudents(area, options = {}) {
   };
 
   // Detailed Modal for Curriculum Breakdown (40 Tests Pacing)
-  window.showStudentProgressDetails = function(studentId) {
+  window.showStudentProgressDetails = async function(studentId) {
     const rec = (filteredGridData || gridData || []).find(d => d.id === studentId);
     if (!rec) return;
+    // On-demand photo fetch for detail modal
+    if (!rec.photo_url && rec.id) {
+      try {
+        const sb = await getSupabase();
+        const { data: pData } = await sb.from('students').select('photo_url').eq('id', rec.id).single();
+        if (pData?.photo_url) rec.photo_url = pData.photo_url;
+      } catch (_) {}
+    }
     const existing = document.getElementById('prog-details-modal');
     if (existing) existing.remove();
 
@@ -1531,7 +1781,7 @@ export async function renderStudents(area, options = {}) {
         let st = null;
         try {
           const res = await sb.from('students')
-            .select('id, name, gender, birth_date, education, province, city, district, village, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
+            .select('id, nis, name, gender, birth_date, birthplace, education, province, city, district, village, is_active, photo_url, level_id, batch_id, program_id, institution_id, programs!program_id(name), institutions!institution_id(name), batches!batch_id(name), levels!level_id(name)')
             .eq('id', studentId)
             .single();
           st = res.data;
@@ -1539,9 +1789,11 @@ export async function renderStudents(area, options = {}) {
         if (st) {
           rec = {
             id: st.id,
+            nis: st.nis || '',
             name: st.name,
             displayName: cleanStudentName(st.name),
             gender: st.gender,
+            birthplace: st.birthplace || '',
             birth_date: st.birth_date,
             education: st.education,
             province: st.province || (st.is_active !== false ? 'Nusa Tenggara Barat' : ''),
@@ -1626,18 +1878,31 @@ export async function renderStudents(area, options = {}) {
       return parts.length > 0 ? parts.join(', ') : '—';
     }
 
-    // Fetch attempts joining classes and levels for transcript table (stateless & low-egress)
+    // Fetch attempts, academic assessments, and final exams for transcript table (stateless & low-egress)
     let studentAttempts = [];
+    let studentAcademicAssessments = [];
+    let studentFinalExam = null;
     try {
       const sb = await getSupabase();
-      const { data: atts } = await sb.from('attempts')
-        .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial, is_remedial_unlocked, tests(id, title, test_type, shell_code, class_id, level_id, classes(id, name, code), levels(id, name, level_number))')
-        .eq('student_id', studentId)
-        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
-        .order('submitted_at', { ascending: true });
-      studentAttempts = atts || [];
+      const [attsRes, saaRes, sfeRes] = await Promise.all([
+        sb.from('attempts')
+          .select('id, test_id, score, total_questions, percentage, grade, submitted_at, status, is_remedial, is_remedial_unlocked, tests(id, title, test_type, shell_code, class_id, level_id, classes(id, name, code), levels(id, name, level_number))')
+          .eq('student_id', studentId)
+          .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+          .order('submitted_at', { ascending: true }),
+        sb.from('student_academic_assessments')
+          .select('*')
+          .eq('student_id', studentId),
+        sb.from('student_final_examinations')
+          .select('*')
+          .eq('student_id', studentId)
+          .maybeSingle()
+      ]);
+      studentAttempts = attsRes?.data || [];
+      studentAcademicAssessments = saaRes?.data || [];
+      studentFinalExam = sfeRes?.data || null;
     } catch(err) {
-      console.warn('Error fetching attempts for dossier:', err);
+      console.warn('Error fetching data for dossier:', err);
     }
 
     // Helper: isExam check (strictly exams only, no tasks/quizzes)
@@ -1790,10 +2055,356 @@ export async function renderStudents(area, options = {}) {
       console.warn('Error augmenting dossier curriculum classes:', err);
     }
 
+    // Augment with non-vocab academic assessments (Storytelling, Grammar, 4th Subject, Speaking)
+    if (studentAcademicAssessments && studentAcademicAssessments.length > 0) {
+      const acadGroups = new Map();
+      studentAcademicAssessments.forEach(item => {
+        const key = `${item.step_level}:${item.subject_code}`;
+        if (!acadGroups.has(key)) acadGroups.set(key, []);
+        acadGroups.get(key).push(item);
+      });
+
+      acadGroups.forEach((items, key) => {
+        const [lvlNumStr, subjCode] = key.split(':');
+        const lvlNum = parseInt(lvlNumStr, 10) || 1;
+        const ord = lvlNum === 1 ? '1st' : lvlNum === 2 ? '2nd' : '3rd';
+        let className = `Camp ${ord} ${subjCode}`;
+        if (subjCode === 'STORYTELLING') className = `Camp ${ord} Storytelling`;
+        else if (subjCode === 'GRAMMAR') className = `Camp ${ord} Grammar`;
+        else if (subjCode === 'BASIC') className = `Camp 1st Basic English`;
+        else if (subjCode === 'GFS') className = `Camp 2nd Grammar for Speaking`;
+        else if (subjCode === 'PRONUNCIATION') className = `Camp 3rd Pronunciation`;
+        else if (subjCode === 'SPEAKING') className = `Camp ${ord} Speaking`;
+
+        const pseudoClassId = items[0]?.class_id || `acad_${key.toLowerCase()}`;
+        const exList = items.map(a => ({
+          pts: Math.round(Number(a.raw_score || 0)),
+          maxQ: Math.round(Number(a.target_score || 10)),
+          effPct: Number(a.percentage || 0),
+          testId: a.id,
+          attemptId: a.id,
+          hasAttempt: true,
+          title: a.assessment_key
+        }));
+
+        byClass.set(pseudoClassId, {
+          id: pseudoClassId,
+          name: className,
+          levelName: `${ord} Step`,
+          levelNumber: lvlNum,
+          exams: exList
+        });
+      });
+    }
+
+    // Detect Camp Student (CEC / Camp Program or has academic assessments)
+    const isCampStudent = Boolean(
+      (rec.progName && /camp/i.test(rec.progName)) ||
+      (rec.instName && /cec/i.test(rec.instName)) ||
+      (studentAcademicAssessments && studentAcademicAssessments.length > 0)
+    );
+
+    // Build academicMap (key: "step_level:subject_code:assessment_key")
+    const academicMap = rec.academicMap || new Map();
+    if (studentAcademicAssessments && studentAcademicAssessments.length > 0) {
+      studentAcademicAssessments.forEach(item => {
+        academicMap.set(`${item.step_level}:${item.subject_code}:${item.assessment_key}`, item);
+      });
+      rec.academicMap = academicMap;
+    }
+
+    // Helper: Vocab Week Score (Strictly preserve existing system test attempts)
+    function getVocabWeekScore(stepNum, weekCode) {
+      const wNorm = String(weekCode || '').toUpperCase().trim();
+      const tc = wNorm.replace('W1', 'A').replace('W2', 'B').replace('W3', 'C').replace('W4', 'D');
+      const wKey = tc === 'A' ? 'W1' : tc === 'B' ? 'W2' : tc === 'C' ? 'W3' : tc === 'D' ? 'W4' : wNorm;
+
+      if (rec.perClassFinal) {
+        for (const [cId, clsData] of rec.perClassFinal.entries()) {
+          const cls = (typeof classesMap !== 'undefined' ? classesMap.get(cId) : null);
+          const cCode = (cls?.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-');
+          if (cCode === `CAMP-${stepNum}VOCAB`) {
+            if (clsData.themeScores && typeof clsData.themeScores[tc] === 'number') {
+              return clsData.themeScores[tc];
+            }
+          }
+        }
+      }
+
+      const directAcad = academicMap.get(`${stepNum}:VOCABULARY:${wKey}`) || academicMap.get(`${stepNum}:VOCABULARY:${tc}`);
+      if (directAcad?.percentage != null) return Number(directAcad.percentage);
+
+      const matchingAtts = studentAttempts.filter(att => {
+        const t = att.tests;
+        if (!t) return false;
+        const cCode = (t.classes?.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-');
+        const lvl = t.levels?.level_number || 1;
+        const isVocab = cCode === `CAMP-${stepNum}VOCAB` || (lvl === stepNum && /vocab/i.test(t.classes?.name || ''));
+        if (!isVocab) return false;
+        const shell = (t.shell_code || '').toUpperCase();
+        const theme = t.payload?.theme_code || (shell.includes(`-${tc}-`) || shell.startsWith(`${stepNum}${tc}-`) ? tc : null);
+        return theme === tc;
+      });
+      if (matchingAtts.length > 0) {
+        let bestPct = 0;
+        matchingAtts.forEach(a => {
+          const p = Number(a.percentage || a.score || 0);
+          if (p > bestPct) bestPct = p;
+        });
+        return bestPct;
+      }
+      return null;
+    }
+
+    // Ensure stepSummaries exists
+    if (!rec.stepSummaries || Object.keys(rec.stepSummaries).length === 0) {
+      rec.stepSummaries = {};
+      [1, 2, 3].forEach(stepNum => {
+        let naVocab = null;
+        const vocabPcts = ['A', 'B', 'C', 'D'].map(tc => getVocabWeekScore(stepNum, tc)).filter(p => typeof p === 'number');
+        if (vocabPcts.length > 0) {
+          naVocab = Math.round((vocabPcts.reduce((a, b) => a + b, 0) / vocabPcts.length) * 100) / 100;
+        }
+
+        const storyKeys = ['W1', 'W2', 'W3', 'W4'].map(k => academicMap.get(`${stepNum}:STORYTELLING:${k}`)).filter(x => x?.percentage != null);
+        const naStory = storyKeys.length > 0 ? Math.round((storyKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / storyKeys.length) * 100) / 100 : null;
+
+        const gramKeys = ['U1', 'U2'].map(k => academicMap.get(`${stepNum}:GRAMMAR:${k}`)).filter(x => x?.percentage != null);
+        const naGram = gramKeys.length > 0 ? Math.round((gramKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / gramKeys.length) * 100) / 100 : null;
+
+        const fourthSubjCode = stepNum === 1 ? 'BASIC' : (stepNum === 2 ? 'GFS' : 'PRONUNCIATION');
+        const fourthKeys = ['U1', 'U2'].map(k => academicMap.get(`${stepNum}:${fourthSubjCode}:${k}`)).filter(x => x?.percentage != null);
+        const naFourth = fourthKeys.length > 0 ? Math.round((fourthKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / fourthKeys.length) * 100) / 100 : null;
+
+        const spkSubKeys = stepNum === 1 ? ['U1', 'U2', 'PRACTICE'] : (stepNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
+        const speakKeys = spkSubKeys.map(k => academicMap.get(`${stepNum}:SPEAKING:${k}`)).filter(x => x?.percentage != null);
+        const naSpeak = speakKeys.length > 0 ? Math.round((speakKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / speakKeys.length) * 100) / 100 : null;
+
+        const validNAs = [naVocab, naStory, naGram, naFourth, naSpeak].filter(v => typeof v === 'number');
+        const stepAvg = validNAs.length > 0 ? Math.round((validNAs.reduce((a, b) => a + b, 0) / validNAs.length) * 100) / 100 : null;
+        const predicate = stepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(stepAvg) : (stepAvg >= 90 ? 'EXCELLENT' : stepAvg >= 80 ? 'VERY GOOD' : stepAvg >= 70 ? 'GOOD' : stepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
+
+        rec.stepSummaries[stepNum] = {
+          naVocab,
+          naStory,
+          naGram,
+          naFourth,
+          naSpeak,
+          stepAvg,
+          predicate
+        };
+      });
+    }
+
+    // Determine active steps for Camp student
+    const activeCampSteps = [1, 2, 3].filter(st => {
+      const sObj = rec.stepSummaries?.[st];
+      if (sObj && sObj.stepAvg != null) return true;
+      if (studentAcademicAssessments && studentAcademicAssessments.some(a => Number(a.step_level) === st)) return true;
+      const sLvl = Number(rec.studentLevelNum || rec.level_number || 1);
+      return sLvl >= st;
+    });
+    if (activeCampSteps.length === 0) activeCampSteps.push(1);
+
+    // Build Camp Raport Tables (5 Core Classes per step)
+    const campRaportHtml = isCampStudent ? activeCampSteps.map(stepNum => {
+      const ord = stepNum === 1 ? '1st' : (stepNum === 2 ? '2nd' : '3rd');
+      const sObj = rec.stepSummaries?.[stepNum] || {};
+      const stepAvg = sObj.stepAvg;
+      const predicate = sObj.predicate || '—';
+      const predColor = predicate === 'EXCELLENT' ? '#c084fc' : (predicate === 'VERY GOOD' ? '#22c55e' : (predicate === 'GOOD' ? '#95ff00' : (predicate === 'ENOUGH' ? '#eab308' : '#ff2d87')));
+
+      const fourthSubjCode = stepNum === 1 ? 'BASIC' : (stepNum === 2 ? 'GFS' : 'PRONUNCIATION');
+      const fourthSubjName = stepNum === 1 ? 'Basic English' : (stepNum === 2 ? 'Grammar for Speaking' : 'Pronunciation');
+      const fourthTarget = stepNum === 1 ? 15 : (stepNum === 2 ? 20 : 25);
+      const spkSubKeys = stepNum === 1 ? ['U1', 'U2', 'PRACTICE'] : (stepNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
+
+      const subjects = [
+        {
+          name: 'Vocabulary',
+          code: 'VOCABULARY',
+          classCode: `CAMP-${stepNum}VOCAB`,
+          isSystemVocab: true,
+          na: sObj.naVocab,
+          items: ['W1', 'W2', 'W3', 'W4'].map(k => {
+            const p = getVocabWeekScore(stepNum, k);
+            return { key: k, label: k, raw: p != null ? Math.round(p) : null, max: 100, pct: p, isPct: true };
+          })
+        },
+        {
+          name: 'Storytelling',
+          code: 'STORYTELLING',
+          classCode: `CAMP-${stepNum}STORY`,
+          isSystemVocab: false,
+          na: sObj.naStory,
+          items: ['W1', 'W2', 'W3', 'W4'].map(k => {
+            const item = academicMap.get(`${stepNum}:STORYTELLING:${k}`);
+            return { key: k, label: k, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 5, pct: item?.percentage != null ? Number(item.percentage) : null };
+          })
+        },
+        {
+          name: 'Grammar',
+          code: 'GRAMMAR',
+          classCode: `CAMP-${stepNum}GRMMR`,
+          isSystemVocab: false,
+          na: sObj.naGram,
+          items: ['U1', 'U2'].map(k => {
+            const item = academicMap.get(`${stepNum}:GRAMMAR:${k}`);
+            return { key: k, label: k, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 15, pct: item?.percentage != null ? Number(item.percentage) : null };
+          })
+        },
+        {
+          name: fourthSubjName,
+          code: fourthSubjCode,
+          classCode: `CAMP-${stepNum}${fourthSubjCode}`,
+          isSystemVocab: false,
+          na: sObj.naFourth,
+          items: ['U1', 'U2'].map(k => {
+            const item = academicMap.get(`${stepNum}:${fourthSubjCode}:${k}`);
+            return { key: k, label: k, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: fourthTarget, pct: item?.percentage != null ? Number(item.percentage) : null };
+          })
+        },
+        {
+          name: 'Speaking',
+          code: 'SPEAKING',
+          classCode: `CAMP-${stepNum}SPEAK`,
+          isSystemVocab: false,
+          na: sObj.naSpeak,
+          items: spkSubKeys.map(k => {
+            const item = academicMap.get(`${stepNum}:SPEAKING:${k}`);
+            const label = k === 'PRACTICE' ? 'Practice' : k;
+            return { key: k, label, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 25, pct: item?.percentage != null ? Number(item.percentage) : null };
+          })
+        }
+      ];
+
+      const stepRowsHtml = subjects.map(sub => {
+        const hasScores = sub.items.some(it => it.pct != null);
+        let subNa = sub.na;
+        if (subNa == null && hasScores) {
+          const validPcts = sub.items.map(it => it.pct).filter(p => typeof p === 'number');
+          if (validPcts.length > 0) subNa = Math.round((validPcts.reduce((a, b) => a + b, 0) / validPcts.length) * 100) / 100;
+        }
+
+        const grade = subNa != null ? ((typeof getGrade === 'function') ? getGrade(subNa) : (subNa >= 90 ? 'A' : subNa >= 80 ? 'B' : subNa >= 60 ? 'C' : subNa >= 30 ? 'D' : 'E')) : '—';
+        const displayGrade = (grade === 'S' || grade === '★') ? '★' : grade;
+        const gradeColor = subNa != null ? getExamGradeColor(displayGrade) : '#64748b';
+        const rateColor = subNa != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(subNa) : gradeColor) : '#64748b';
+        const predicateDesc = subNa != null ? getExamGradeDescription(displayGrade, subNa) : 'Not Attempted';
+
+        const normalPillsHtml = sub.items.map(it => {
+          if (it.isPct) {
+            return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${it.label}: <strong style="margin-left:3px;color:${it.pct != null ? (it.pct >= 60 ? '#16a34a' : '#dc2626') : '#64748b'};">${it.pct != null ? `${Math.round(it.pct)}%` : '—'}</strong></span>`;
+          }
+          return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${it.label}: <strong style="margin-left:3px;color:${it.pct != null ? (it.pct >= 60 ? '#16a34a' : '#dc2626') : '#64748b'};">${it.raw != null ? `${it.raw}/${it.max}` : '—'}</strong></span>`;
+        }).join('');
+
+        const editInputsHtml = sub.isSystemVocab
+          ? `<span style="font-size:11px;font-weight:700;color:#64748b;font-style:italic;">System Attempts (Read-Only)</span>`
+          : `<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;">
+              ${sub.items.map(it => `
+                <div style="display:inline-flex;align-items:center;gap:2px;" title="${escapeHtml(sub.name + ' ' + it.label)}">
+                  <span style="font-size:11px;font-weight:700;color:#64748b;">${it.label}:</span>
+                  <input type="number" min="${sub.code === 'STORYTELLING' ? 1 : 0}" max="${it.max}" step="${sub.code === 'STORYTELLING' ? 0.1 : 1}"
+                         class="dossier-academic-input"
+                         data-student-id="${studentId}"
+                         data-step="${stepNum}"
+                         data-subject="${sub.code}"
+                         data-key="${it.key}"
+                         data-target="${it.max}"
+                         value="${it.raw != null ? it.raw : ''}"
+                         placeholder="${it.max}"
+                         style="width:${it.max > 99 ? '52px' : '44px'};height:26px;font-size:12px;font-weight:700;text-align:center;color:#0f172a;background:#f8fafc;border:1.5px solid #38bdf8;border-radius:4px;padding:1px 2px;font-variant-numeric:tabular-nums;"
+                         onclick="event.stopPropagation();">
+                  <span style="font-size:11px;color:#64748b;font-weight:600;">/${it.max}</span>
+                </div>
+              `).join('')}
+            </div>`;
+
+        return `
+          <tr style="border-bottom: 1px solid #e2e8f0;" data-step="${stepNum}" data-subject="${sub.code}">
+            <td style="padding: 10px 14px; font-weight: 700; color: #0f172a; font-size: 14px; line-height: 1.35;">
+              ${escapeHtml(sub.name)}
+              <span style="display:block;font-size:11px;color:#64748b;font-weight:600;font-family:monospace;">${escapeHtml(sub.classCode)}</span>
+            </td>
+            <td style="padding: 10px 10px; text-align: center;">
+              <div class="dossier-normal-view">
+                ${normalPillsHtml}
+              </div>
+              <div class="dossier-edit-view" style="display:none; align-items:center; justify-content:center;">
+                ${editInputsHtml}
+              </div>
+            </td>
+            <td class="cell-dossier-na" style="padding: 10px 10px; text-align: center; font-size: 15px; font-weight: 800; color: ${rateColor}; font-variant-numeric: tabular-nums;">
+              <span class="dossier-na-val">${subNa != null ? `${Math.round(subNa)}%` : '—'}</span>
+            </td>
+            <td class="cell-dossier-grade" style="padding: 10px 8px; text-align: center;">
+              <span class="grade-circle dossier-grade-badge" style="display: inline-flex; width: 30px; height: 30px; border-radius: 50%; align-items: center; justify-content: center; font-family: var(--fm-font-display, 'Inter', sans-serif); font-weight: 900; font-size: 15px; color: #0f172a; background: ${gradeColor}; box-shadow: 0 1px 4px rgba(0,0,0,0.14);">
+                ${displayGrade}
+              </span>
+            </td>
+            <td class="cell-dossier-pred" style="padding: 10px 12px; font-weight: 600; color: #1e293b; font-size: 13px; line-height: 1.35;">
+              <span class="dossier-pred-val">${escapeHtml(predicateDesc)}</span>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      return `
+        <div class="step-transcript-block" style="margin-top: 18px; margin-bottom: 22px;" data-step-container="${stepNum}">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 2px solid #0f172a;">
+            <h3 style="margin: 0; font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 15px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em;">
+              ${ord.toUpperCase()} STEP ACADEMIC REPORT
+            </h3>
+            <span style="font-size: 13px; font-weight: 700; color: #64748b;">
+              Step Average: <strong class="step-header-avg" style="color: #0f172a; font-size: 15px;">${stepAvg != null ? `${Math.round(stepAvg)}%` : '—'}</strong>
+              <span class="step-header-pred" style="margin-left: 6px; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 800; color: #ffffff; background: ${predColor};">${predicate}</span>
+            </span>
+          </div>
+          <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+            <thead>
+              <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                <th style="width: 26%; text-align: left; padding: 10px 14px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">SUBJECT</th>
+                <th style="width: 40%; text-align: center; padding: 10px 10px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">ASSESSMENT BREAKDOWN</th>
+                <th style="width: 11%; text-align: center; padding: 10px 10px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">NA</th>
+                <th style="width: 9%; text-align: center; padding: 10px 8px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">GRADE</th>
+                <th style="width: 14%; text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">PREDICATE</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${stepRowsHtml}
+            </tbody>
+            <tfoot>
+              <tr style="background: #f8fafc; border-top: 2px solid #cbd5e1; font-weight: 700;">
+                <td colspan="2" style="padding: 10px 14px; text-align: right; font-size: 13px; color: #334155; text-transform: uppercase; font-weight: 800;">${ord.toUpperCase()} STEP AVERAGE:</td>
+                <td class="step-footer-avg" style="padding: 10px 10px; text-align: center; font-size: 15px; font-weight: 900; color: #0f172a;">${stepAvg != null ? `${Math.round(stepAvg)}%` : '—'}</td>
+                <td colspan="2" class="step-footer-pred" style="padding: 10px 12px; text-align: left;">
+                  <span style="display:inline-block;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:900;color:#ffffff;background:${predColor};">${predicate}</span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+    }).join('') : '';
+
     const classList = Array.from(byClass.values());
-    // Sort classes by Level Number ascending, then Class Name
+    function getDossierModalityOrder(name = '') {
+      const n = name.toLowerCase();
+      if (n.includes('vocab')) return 1;
+      if (n.includes('story')) return 2;
+      if (n.includes('grammar for') || n.includes('gfors')) return 4;
+      if (n.includes('grammar')) return 3;
+      if (n.includes('basic')) return 4;
+      if (n.includes('pronun')) return 4;
+      if (n.includes('speak')) return 5;
+      return 6;
+    }
     classList.sort((a, b) => {
       if (a.levelNumber !== b.levelNumber) return a.levelNumber - b.levelNumber;
+      const ordA = getDossierModalityOrder(a.name);
+      const ordB = getDossierModalityOrder(b.name);
+      if (ordA !== ordB) return ordA - ordB;
       return a.name.localeCompare(b.name);
     });
 
@@ -1890,6 +2501,66 @@ export async function renderStudents(area, options = {}) {
       </tr>
     `;
 
+    // Academic Step Summaries Block
+    let stepSummariesHtml = '';
+    const recSummaries = rec.stepSummaries || {};
+    const validSummarySteps = [1, 2, 3].filter(st => recSummaries[st]?.stepAvg != null);
+    if (validSummarySteps.length > 0) {
+      stepSummariesHtml = `
+        <div style="margin-top:24px;padding:18px 20px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:8px;">
+          <h4 style="margin:0 0 14px;font-size:15px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;">Academic Step Summaries</h4>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:14px;">
+            ${validSummarySteps.map(st => {
+              const sObj = recSummaries[st];
+              const ord = st === 1 ? '1st' : st === 2 ? '2nd' : '3rd';
+              const pColor = sObj.predicate === 'EXCELLENT' ? '#c084fc' : (sObj.predicate === 'VERY GOOD' ? '#22c55e' : (sObj.predicate === 'GOOD' ? '#95ff00' : (sObj.predicate === 'ENOUGH' ? '#eab308' : '#ff2d87')));
+              return `
+                <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                  <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;">${ord} Step Average</span>
+                  <div style="display:flex;align-items:baseline;justify-content:space-between;">
+                    <span style="font-size:22px;font-weight:900;color:#0f172a;font-variant-numeric:tabular-nums;">${Math.round(sObj.stepAvg)}%</span>
+                    <span style="font-size:11px;font-weight:800;color:${pColor};background:rgba(15,23,42,0.06);padding:3px 8px;border-radius:4px;">${sObj.predicate}</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Final Exam Transcript Card (if exists)
+    let finalExamHtml = '';
+    const fe = studentFinalExam || rec.finalExam;
+    if (fe && (fe.practice_score != null || fe.speaking_score != null || fe.certificate_nis)) {
+      finalExamHtml = `
+        <div style="margin-top:20px;padding:18px 20px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+            <h4 style="margin:0;font-size:15px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;">Final Examination & Certificate Transcript</h4>
+            <span style="font-family:monospace;font-size:12px;font-weight:700;color:#0284c7;background:rgba(2,132,199,0.08);padding:4px 10px;border-radius:4px;border:1px solid rgba(2,132,199,0.2);">${fe.certificate_nis || 'CEC/M/...'}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:12px;">
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+              <span style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Final Practice</span>
+              <strong style="font-size:16px;color:#0f172a;font-variant-numeric:tabular-nums;">${fe.practice_score ?? '—'} <span style="font-size:12px;font-weight:600;color:#64748b;">(${fe.practice_predicate || '—'})</span></strong>
+            </div>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+              <span style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Speaking (Cumulative)</span>
+              <strong style="font-size:16px;color:#0f172a;font-variant-numeric:tabular-nums;">${fe.speaking_score ?? '—'}</strong>
+            </div>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+              <span style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Vocabulary (Cumulative)</span>
+              <strong style="font-size:16px;color:#0f172a;font-variant-numeric:tabular-nums;">${fe.vocab_score ?? '—'}</strong>
+            </div>
+            <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+              <span style="font-size:11px;font-weight:700;color:#64748b;display:block;margin-bottom:4px;">Grammar (Cumulative)</span>
+              <strong style="font-size:16px;color:#0f172a;font-variant-numeric:tabular-nums;">${fe.grammar_score ?? '—'}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
     backdrop.innerHTML = `
       <div class="student-dossier-dialog" style="max-width: 860px; width: 94vw; max-height: 94vh;">
         <!-- Standardized 60px Title Area (§1.5.1 Centered Title & Zero Subtitle Clutter Invariant) -->
@@ -1937,11 +2608,11 @@ export async function renderStudents(area, options = {}) {
                   <strong style="color: #0f172a; text-transform: capitalize; font-weight: 600;">${escapeHtml(rec.gender || '—')}</strong>
                 </div>
 
-                <!-- Row 3: Date of Birth -->
+                <!-- Row 3: Place & Date of Birth -->
                 <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Date of Birth</span>
+                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Place, DOB</span>
                   <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.birth_date || '—')}</strong>
+                  <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.birthplace ? `${rec.birthplace}, ${rec.birth_date || '—'}` : (rec.birth_date || '—'))}</strong>
                 </div>
 
                 <!-- Row 4: Age -->
@@ -1975,24 +2646,29 @@ export async function renderStudents(area, options = {}) {
               </div>
             </div>
 
-            <!-- 4. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
-            <div class="level-transcript-block" style="margin-top: 10px;">
-              <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
-                <thead>
-                  <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-                    <th style="width: 16%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">LEVEL</th>
-                    <th style="width: 32%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">CLASS NAME</th>
-                    <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">PTS</th>
-                    <th style="width: 10%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">RATE</th>
-                    <th style="width: 10%; text-align: center; padding: 12px 10px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE</th>
-                    <th style="width: 18%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE DESCRIPTION</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${rowsHtml}
-                </tbody>
-              </table>
-            </div>
+            ${isCampStudent ? campRaportHtml : `
+              <!-- 4. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
+              <div class="level-transcript-block" style="margin-top: 10px;">
+                <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+                  <thead>
+                    <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                      <th style="width: 16%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">LEVEL</th>
+                      <th style="width: 32%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">CLASS NAME</th>
+                      <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">PTS</th>
+                      <th style="width: 10%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">RATE</th>
+                      <th style="width: 10%; text-align: center; padding: 12px 10px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE</th>
+                      <th style="width: 18%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE DESCRIPTION</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${rowsHtml}
+                  </tbody>
+                </table>
+              </div>
+
+              ${stepSummariesHtml}
+            `}
+            ${finalExamHtml}
 
           </div>
         </div>
@@ -2124,111 +2800,290 @@ export async function renderStudents(area, options = {}) {
     // Direct Inline Score Edit inside Student Academic Report
     backdrop.addEventListener('change', async (e) => {
       const target = e.target;
-      if (!target.matches('.dossier-score-input')) return;
 
-      const sId = target.dataset.studentId;
-      const cId = target.dataset.classId;
-      const tId = target.dataset.testId;
-      const maxQ = Number(target.dataset.maxQ) || 120;
-      const valStr = (target.value || '').trim();
+      // 1. Handle Academic Assessment Input (Storytelling, Grammar, 4th Subject, Speaking)
+      if (target.matches('.dossier-academic-input')) {
+        const sId = target.dataset.studentId;
+        const stepLevel = parseInt(target.dataset.step, 10);
+        const subjectCode = target.dataset.subject;
+        const assessmentKey = target.dataset.key;
+        const targetScore = Number(target.dataset.target) || 10;
+        const valStr = (target.value || '').trim();
 
-      if (!sId || !cId || !tId) return;
+        if (!sId || !stepLevel || !subjectCode || !assessmentKey) return;
+        if (valStr === '') return;
 
-      if (valStr === '') return;
+        const valNum = Number(valStr);
+        if (isNaN(valNum)) {
+          if (typeof showToast === 'function') showToast('Please enter a valid numeric score.', 'warning');
+          return;
+        }
 
-      const valNum = Number(valStr);
-      if (isNaN(valNum)) {
-        if (typeof showToast === 'function') showToast('Please enter a valid numeric score.', 'warning');
+        const minVal = subjectCode === 'STORYTELLING' ? 1 : 0;
+        const clampedRaw = Math.max(minVal, valNum);
+        const percentage = targetScore > 0 ? Math.round((clampedRaw / targetScore) * 10000) / 100 : 0;
+        const grade = typeof calculateGrade === 'function' ? calculateGrade(percentage) : (percentage >= 90 ? 'A' : percentage >= 80 ? 'B' : percentage >= 60 ? 'C' : percentage >= 30 ? 'D' : 'E');
+
+        target.value = clampedRaw;
+
+        try {
+          if (typeof showLoading === 'function') showLoading('Saving academic score...');
+          const sb = await getSupabase();
+          const payload = {
+            student_id: sId,
+            batch_id: rec.batch_id,
+            step_level: stepLevel,
+            subject_code: subjectCode,
+            assessment_key: assessmentKey,
+            raw_score: clampedRaw,
+            target_score: targetScore,
+            percentage: percentage,
+            grade: grade,
+            assessed_by: 'Academic Desk'
+          };
+          const { error } = await sb.from('student_academic_assessments')
+            .upsert(payload, { onConflict: 'student_id,step_level,subject_code,assessment_key' });
+          if (error) throw error;
+
+          hasDossierEdits = true;
+          if (typeof clearAdminCache === 'function') clearAdminCache('student_academic_assessments');
+
+          // Update in-memory academicMap
+          academicMap.set(`${stepLevel}:${subjectCode}:${assessmentKey}`, {
+            raw_score: clampedRaw,
+            target_score: targetScore,
+            percentage: percentage,
+            grade: grade
+          });
+
+          // Live update the row pills, NA, Grade, and Predicate
+          const tr = target.closest('tr');
+          if (tr) {
+            const inputsInRow = Array.from(tr.querySelectorAll('.dossier-academic-input'));
+            let pctSum = 0;
+            let count = 0;
+            inputsInRow.forEach(inp => {
+              const v = (inp.value || '').trim();
+              if (v !== '') {
+                const raw = Number(v) || 0;
+                const tgt = Number(inp.dataset.target) || 10;
+                pctSum += tgt > 0 ? (raw / tgt) * 100 : 0;
+                count++;
+              }
+            });
+            const subNa = count > 0 ? Math.round((pctSum / count) * 100) / 100 : null;
+            const subGrade = subNa != null ? ((typeof getGrade === 'function') ? getGrade(subNa) : 'C') : '—';
+            const subDisplayGrade = (subGrade === 'S' || subGrade === '★') ? '★' : subGrade;
+            const subColor = subNa != null ? getExamGradeColor(subDisplayGrade) : '#64748b';
+            const subRateColor = subNa != null ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(subNa) : subColor) : '#64748b';
+            const subDesc = subNa != null ? getExamGradeDescription(subDisplayGrade, subNa) : 'Not Attempted';
+
+            const naEl = tr.querySelector('.dossier-na-val');
+            if (naEl) {
+              naEl.textContent = subNa != null ? `${Math.round(subNa)}%` : '—';
+              naEl.style.color = subRateColor;
+            }
+            const gradeEl = tr.querySelector('.dossier-grade-badge');
+            if (gradeEl) {
+              gradeEl.textContent = subDisplayGrade;
+              gradeEl.style.background = subColor;
+            }
+            const predEl = tr.querySelector('.dossier-pred-val');
+            if (predEl) predEl.textContent = subDesc;
+
+            // Update normal view pills
+            const normalView = tr.querySelector('.dossier-normal-view');
+            if (normalView) {
+              normalView.innerHTML = inputsInRow.map(inp => {
+                const k = inp.dataset.key;
+                const v = (inp.value || '').trim();
+                const tgt = Number(inp.dataset.target) || 10;
+                const raw = v !== '' ? Number(v) : null;
+                const p = raw != null && tgt > 0 ? Math.round((raw / tgt) * 100) : null;
+                const label = k === 'PRACTICE' ? 'Practice' : k;
+                return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${label}: <strong style="margin-left:3px;color:${p != null ? (p >= 60 ? '#16a34a' : '#dc2626') : '#64748b'};">${raw != null ? `${raw}/${tgt}` : '—'}</strong></span>`;
+              }).join('');
+            }
+          }
+
+          // Live update Step Average & Predicate in table header and tfoot
+          const stepContainer = target.closest('[data-step-container]');
+          if (stepContainer) {
+            const naVals = [];
+            stepContainer.querySelectorAll('tbody tr').forEach(row => {
+              const text = row.querySelector('.dossier-na-val')?.textContent?.trim() || '';
+              if (text && text !== '—') {
+                const num = parseFloat(text.replace('%', ''));
+                if (!isNaN(num)) naVals.push(num);
+              }
+            });
+            const newStepAvg = naVals.length > 0 ? Math.round((naVals.reduce((a, b) => a + b, 0) / naVals.length) * 100) / 100 : null;
+            const newPred = newStepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(newStepAvg) : (newStepAvg >= 90 ? 'EXCELLENT' : newStepAvg >= 80 ? 'VERY GOOD' : newStepAvg >= 70 ? 'GOOD' : newStepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
+            const newPredColor = newPred === 'EXCELLENT' ? '#c084fc' : (newPred === 'VERY GOOD' ? '#22c55e' : (newPred === 'GOOD' ? '#95ff00' : (newPred === 'ENOUGH' ? '#eab308' : '#ff2d87')));
+
+            const headerAvg = stepContainer.querySelector('.step-header-avg');
+            if (headerAvg) headerAvg.textContent = newStepAvg != null ? `${Math.round(newStepAvg)}%` : '—';
+            const headerPred = stepContainer.querySelector('.step-header-pred');
+            if (headerPred) {
+              headerPred.textContent = newPred;
+              headerPred.style.background = newPredColor;
+            }
+
+            const footerAvg = stepContainer.querySelector('.step-footer-avg');
+            if (footerAvg) footerAvg.textContent = newStepAvg != null ? `${Math.round(newStepAvg)}%` : '—';
+            const footerPred = stepContainer.querySelector('.step-footer-pred span');
+            if (footerPred) {
+              footerPred.textContent = newPred;
+              footerPred.style.background = newPredColor;
+            }
+
+            if (rec.stepSummaries && rec.stepSummaries[stepLevel]) {
+              rec.stepSummaries[stepLevel].stepAvg = newStepAvg;
+              rec.stepSummaries[stepLevel].predicate = newPred;
+            }
+          }
+
+          if (typeof showToast === 'function') showToast(`✓ ${subjectCode} ${assessmentKey} saved: ${clampedRaw}/${targetScore} (${percentage}%)`, 'success', 2000);
+        } catch (err) {
+          console.error('Error saving academic score:', err);
+          if (typeof showToast === 'function') showToast('Failed to save score: ' + (err.message || err), 'error');
+        } finally {
+          if (typeof hideLoading === 'function') hideLoading();
+        }
         return;
       }
 
-      const clampedPts = Math.round(Math.max(0, Math.min(maxQ, valNum)));
-      const pct = maxQ > 0 ? Math.round((clampedPts / maxQ) * 100) : 0;
-      const grade = typeof calculateGrade === 'function' ? calculateGrade(pct) : 'C';
+      // 2. Handle Final Examination Field Input
+      if (target.matches('.dossier-final-input')) {
+        const sId = target.dataset.studentId;
+        const field = target.dataset.field;
+        const val = (target.value || '').trim();
+        if (!sId || !field) return;
 
-      target.value = clampedPts;
+        try {
+          if (typeof showLoading === 'function') showLoading('Saving final exam detail...');
+          const sb = await getSupabase();
+          const { error } = await sb.from('student_final_examinations')
+            .update({ [field]: val })
+            .eq('student_id', sId);
+          if (error) throw error;
+          hasDossierEdits = true;
+          if (typeof showToast === 'function') showToast('✓ Final exam detail saved', 'success', 2000);
+        } catch (err) {
+          console.error('Error updating final exam field:', err);
+          if (typeof showToast === 'function') showToast('Failed to update final exam: ' + (err.message || err), 'error');
+        } finally {
+          if (typeof hideLoading === 'function') hideLoading();
+        }
+        return;
+      }
 
-      try {
-        if (typeof showLoading === 'function') showLoading('Saving score...');
-        await adminApplyForgiven({
-          classId: cId,
-          studentIds: [sId],
-          testActions: [{
-            testId: tId,
-            action: 'manual',
-            percentage: pct,
-            score: clampedPts,
-            grade
-          }],
-          forgivenBy: 'Mr. Top',
-          reason: 'Student Dossier Direct Edit'
-        });
+      // 3. Handle Standard / Non-Camp Exam Score Input
+      if (target.matches('.dossier-score-input')) {
+        const sId = target.dataset.studentId;
+        const cId = target.dataset.classId;
+        const tId = target.dataset.testId;
+        const maxQ = Number(target.dataset.maxQ) || 120;
+        const valStr = (target.value || '').trim();
 
-        hasDossierEdits = true;
-        if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+        if (!sId || !cId || !tId) return;
 
-        // Update the row display live
-        const tr = target.closest('tr');
-        if (tr) {
-          const inputsInRow = Array.from(tr.querySelectorAll('.dossier-score-input'));
-          let rowTotalPts = 0;
-          let rowTotalMaxQ = 0;
-          let rowPctSum = 0;
-          let count = 0;
-          inputsInRow.forEach(inp => {
-            const v = (inp.value || '').trim();
-            if (v !== '') {
-              const p = Number(v) || 0;
-              const m = Number(inp.dataset.maxQ) || 120;
-              rowTotalPts += p;
-              rowTotalMaxQ += m;
-              rowPctSum += (m > 0 ? (p / m) * 100 : 0);
-              count++;
-            }
-          });
-          const rowAvgPct = count > 0 ? Math.round(rowPctSum / count) : 0;
-          const rowGrade = count > 0 ? ((typeof getGrade === 'function') ? getGrade(rowAvgPct) : '—') : '—';
-          const rowDisplayGrade = (rowGrade === 'S' || rowGrade === '★') ? '★' : rowGrade;
-          const rowColor = count > 0 ? getExamGradeColor(rowDisplayGrade) : '#64748b';
-          const rowRateColor = count > 0 ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rowAvgPct) : rowColor) : '#64748b';
-          const rowDesc = count > 0 ? getExamGradeDescription(rowDisplayGrade, rowAvgPct) : 'Not Attempted';
+        if (valStr === '') return;
 
-          const normalView = tr.querySelector('.dossier-normal-view');
-          if (normalView) {
-            normalView.innerHTML = count > 0
-              ? (rowTotalMaxQ > 0 ? `${rowTotalPts} <span style="font-size: 14px; color: #64748b; font-weight: 400;">/ ${rowTotalMaxQ}</span>` : `${rowTotalPts}`)
-              : `<span style="color:#94a3b8;">—</span>`;
-          }
-          const sumPtsEl = tr.querySelector('.dossier-sum-pts');
-          if (sumPtsEl) sumPtsEl.textContent = rowTotalPts;
-
-          const rateVal = tr.querySelector('.dossier-rate-val');
-          if (rateVal) {
-            rateVal.textContent = count > 0 ? `${rowAvgPct}%` : '—';
-            rateVal.style.color = rowRateColor;
-          }
-
-          const gradeBadge = tr.querySelector('.dossier-grade-badge');
-          if (gradeBadge) {
-            gradeBadge.textContent = rowDisplayGrade;
-            gradeBadge.style.background = rowColor;
-          }
-
-          const descVal = tr.querySelector('.dossier-desc-val');
-          if (descVal) descVal.textContent = rowDesc;
+        const valNum = Number(valStr);
+        if (isNaN(valNum)) {
+          if (typeof showToast === 'function') showToast('Please enter a valid numeric score.', 'warning');
+          return;
         }
 
-        if (typeof showToast === 'function') showToast(`✓ Score saved: ${clampedPts} pts (${pct}%)`, 'success', 2000);
-      } catch (err) {
-        console.error('Error saving dossier score:', err);
-        if (typeof showToast === 'function') showToast('Failed to save score: ' + (err.message || err), 'error');
-      } finally {
-        if (typeof hideLoading === 'function') hideLoading();
+        const clampedPts = Math.round(Math.max(0, Math.min(maxQ, valNum)));
+        const pct = maxQ > 0 ? Math.round((clampedPts / maxQ) * 100) : 0;
+        const grade = typeof calculateGrade === 'function' ? calculateGrade(pct) : 'C';
+
+        target.value = clampedPts;
+
+        try {
+          if (typeof showLoading === 'function') showLoading('Saving score...');
+          await adminApplyForgiven({
+            classId: cId,
+            studentIds: [sId],
+            testActions: [{
+              testId: tId,
+              action: 'manual',
+              percentage: pct,
+              score: clampedPts,
+              grade
+            }],
+            forgivenBy: 'Mr. Top',
+            reason: 'Student Dossier Direct Edit'
+          });
+
+          hasDossierEdits = true;
+          if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+
+          // Update the row display live
+          const tr = target.closest('tr');
+          if (tr) {
+            const inputsInRow = Array.from(tr.querySelectorAll('.dossier-score-input'));
+            let rowTotalPts = 0;
+            let rowTotalMaxQ = 0;
+            let rowPctSum = 0;
+            let count = 0;
+            inputsInRow.forEach(inp => {
+              const v = (inp.value || '').trim();
+              if (v !== '') {
+                const p = Number(v) || 0;
+                const m = Number(inp.dataset.maxQ) || 120;
+                rowTotalPts += p;
+                rowTotalMaxQ += m;
+                rowPctSum += (m > 0 ? (p / m) * 100 : 0);
+                count++;
+              }
+            });
+            const rowAvgPct = count > 0 ? Math.round(rowPctSum / count) : 0;
+            const rowGrade = count > 0 ? ((typeof getGrade === 'function') ? getGrade(rowAvgPct) : '—') : '—';
+            const rowDisplayGrade = (rowGrade === 'S' || rowGrade === '★') ? '★' : rowGrade;
+            const rowColor = count > 0 ? getExamGradeColor(rowDisplayGrade) : '#64748b';
+            const rowRateColor = count > 0 ? (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(rowAvgPct) : rowColor) : '#64748b';
+            const rowDesc = count > 0 ? getExamGradeDescription(rowDisplayGrade, rowAvgPct) : 'Not Attempted';
+
+            const normalView = tr.querySelector('.dossier-normal-view');
+            if (normalView) {
+              normalView.innerHTML = count > 0
+                ? (rowTotalMaxQ > 0 ? `${rowTotalPts} <span style="font-size: 14px; color: #64748b; font-weight: 400;">/ ${rowTotalMaxQ}</span>` : `${rowTotalPts}`)
+                : `<span style="color:#94a3b8;">—</span>`;
+            }
+            const sumPtsEl = tr.querySelector('.dossier-sum-pts');
+            if (sumPtsEl) sumPtsEl.textContent = rowTotalPts;
+
+            const rateVal = tr.querySelector('.dossier-rate-val');
+            if (rateVal) {
+              rateVal.textContent = count > 0 ? `${rowAvgPct}%` : '—';
+              rateVal.style.color = rowRateColor;
+            }
+
+            const gradeBadge = tr.querySelector('.dossier-grade-badge');
+            if (gradeBadge) {
+              gradeBadge.textContent = rowDisplayGrade;
+              gradeBadge.style.background = rowColor;
+            }
+
+            const descVal = tr.querySelector('.dossier-desc-val');
+            if (descVal) descVal.textContent = rowDesc;
+          }
+
+          if (typeof showToast === 'function') showToast(`✓ Score saved: ${clampedPts} pts (${pct}%)`, 'success', 2000);
+        } catch (err) {
+          console.error('Error saving dossier score:', err);
+          if (typeof showToast === 'function') showToast('Failed to save score: ' + (err.message || err), 'error');
+        } finally {
+          if (typeof hideLoading === 'function') hideLoading();
+        }
       }
     });
 
     backdrop.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.target.matches('.dossier-score-input')) {
+      if (e.key === 'Enter' && (e.target.matches('.dossier-score-input') || e.target.matches('.dossier-academic-input') || e.target.matches('.dossier-final-input'))) {
         e.target.blur();
       }
     });
@@ -2337,6 +3192,102 @@ export async function renderStudents(area, options = {}) {
   const gridContainer = area.querySelector('#student-grid-container') || document.getElementById('student-grid-container');
   if (!gridContainer) return;
 
+  const CAMP_ATTENDANCE_CLASSES_BY_LEVEL = {
+    1: [
+      { suffix: '1BASIC', fallbackModality: 'BASIC', name: 'Camp 1st Basic English' },
+      { suffix: '1VOCAB', fallbackModality: 'VOCAB', name: 'Camp 1st Vocabulary' },
+      { suffix: '1STORY', fallbackModality: 'STORY', name: 'Camp 1st Storytelling' },
+      { suffix: '1GRAM', fallbackModality: 'GRMMR', name: 'Camp 1st Grammar' },
+      { suffix: '1SPEAK', fallbackModality: 'SPEAK', name: 'Camp 1st Speaking' }
+    ],
+    2: [
+      { suffix: '2GFS', fallbackModality: 'GFORS', name: 'Camp 2nd Grammar for Speaking' },
+      { suffix: '2VOCAB', fallbackModality: 'VOCAB', name: 'Camp 2nd Vocabulary' },
+      { suffix: '2STORY', fallbackModality: 'STORY', name: 'Camp 2nd Storytelling' },
+      { suffix: '2GRAM', fallbackModality: 'GRMMR', name: 'Camp 2nd Grammar' },
+      { suffix: '2SPEAK', fallbackModality: 'SPEAK', name: 'Camp 2nd Speaking' }
+    ],
+    3: [
+      { suffix: '3PRON', fallbackModality: 'PRONC', name: 'Camp 3rd Pronunciation' },
+      { suffix: '3VOCAB', fallbackModality: 'VOCAB', name: 'Camp 3rd Vocabulary' },
+      { suffix: '3STORY', fallbackModality: 'STORY', name: 'Camp 3rd Storytelling' },
+      { suffix: '3GRAM', fallbackModality: 'GRMMR', name: 'Camp 3rd Grammar' },
+      { suffix: '3SPEAK', fallbackModality: 'SPEAK', name: 'Camp 3rd Speaking' }
+    ]
+  };
+
+  function findCampAttendanceClass(levelNum, spec) {
+    const normSuffix = spec.suffix.toUpperCase();
+    for (const c of classesMap.values()) {
+      const code = (c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-');
+      if (code === `CAMP-${normSuffix}`) return c;
+    }
+    for (const c of classesMap.values()) {
+      const code = (c.code || '').toUpperCase();
+      if (code.endsWith(normSuffix) || code.includes(`-${normSuffix}`)) return c;
+    }
+    const levelOrdinal = levelNum === 1 ? '1st' : (levelNum === 2 ? '2nd' : '3rd');
+    for (const c of classesMap.values()) {
+      const name = (c.name || '').toLowerCase();
+      if (name.includes('camp') && name.includes(levelOrdinal)) {
+        if (spec.fallbackModality === 'VOCAB' && name.includes('vocab')) return c;
+        if (spec.fallbackModality === 'STORY' && name.includes('story')) return c;
+        if (spec.fallbackModality === 'GRMMR' && name.includes('grammar') && !name.includes('speaking')) return c;
+        if (spec.fallbackModality === 'BASIC' && name.includes('basic')) return c;
+        if (spec.fallbackModality === 'GFORS' && (name.includes('speaking') && name.includes('grammar') || name.includes('gfs'))) return c;
+        if (spec.fallbackModality === 'PRONC' && name.includes('pronun')) return c;
+        if (spec.fallbackModality === 'SPEAK' && name.includes('speaking') && !name.includes('grammar')) return c;
+      }
+    }
+    if (Array.isArray(allClasses)) {
+      for (const c of allClasses) {
+        const code = (c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-');
+        if (code === `CAMP-${normSuffix}`) return c;
+      }
+      for (const c of allClasses) {
+        const name = (c.name || '').toLowerCase();
+        if (name.includes('camp') && name.includes(levelOrdinal)) {
+          if (spec.fallbackModality === 'VOCAB' && name.includes('vocab')) return c;
+          if (spec.fallbackModality === 'STORY' && name.includes('story')) return c;
+          if (spec.fallbackModality === 'GRMMR' && name.includes('grammar') && !name.includes('speaking')) return c;
+          if (spec.fallbackModality === 'BASIC' && name.includes('basic')) return c;
+          if (spec.fallbackModality === 'GFORS' && (name.includes('speaking') && name.includes('grammar') || name.includes('gfs'))) return c;
+          if (spec.fallbackModality === 'PRONC' && name.includes('pronun')) return c;
+          if (spec.fallbackModality === 'SPEAK' && name.includes('speaking') && !name.includes('grammar')) return c;
+        }
+      }
+    }
+    return {
+      id: `camp_${spec.suffix.toLowerCase()}`,
+      name: spec.name,
+      code: `CAMP-${spec.suffix}`,
+      program_id: currentProgramId
+    };
+  }
+
+  if (window._studentRosterTab === 'attendance') {
+    let attendanceClasses = [];
+    if (isCampProgram) {
+      const attLvl = window._attendancePage || 1;
+      const targetSpecs = CAMP_ATTENDANCE_CLASSES_BY_LEVEL[attLvl] || CAMP_ATTENDANCE_CLASSES_BY_LEVEL[1];
+      attendanceClasses = targetSpecs.map(spec => findCampAttendanceClass(attLvl, spec));
+    }
+
+    await renderBatchAttendance(gridContainer, {
+      batchId: window._filterBatchId,
+      batchName: window._filterBatchName || currentProgram?.name || 'Batch',
+      programId: currentProgramId,
+      levelNumber: isCampProgram ? (window._attendancePage || 1) : 0,
+      students: filteredGridData,
+      batchClasses: attendanceClasses,
+      allClasses,
+      allBatches,
+      allLevels,
+      classesMap
+    });
+    return;
+  }
+
   // ── Per-Class Column Discovery (Phase 214 & Phase 237) ──────────────────────
   // Collect active class IDs belonging strictly to the active program / filtered student set,
   // then build dynamic columns for each.
@@ -2365,6 +3316,736 @@ export async function renderStudents(area, options = {}) {
     .map(cId => classesMap.get(cId))
     .filter(Boolean)
     .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+  // ── Camp 5-Class Fixed Raport Columns (1st, 2nd, 3rd Step) ───────────────────
+  // Sub-headers:
+  // Vocab: W1, W2, W3, W4, NA (existing system test attempts strictly preserved)
+  // Storytelling: W1, W2, W3, W4, NA (rubric 1-5, NA average percentage)
+  // Grammar: U1, U2, NA (points, NA average percentage)
+  // 4th Subject: U1, U2, NA (Step 1 Basic, Step 2 GFS, Step 3 Pronunciation)
+  // Speaking: U1, U2, PR/U3, NA (Step 1 has PR, Steps 2 & 3 have U3)
+  // Step Summary: AVG, PRD
+  function getCampRaportColDefs(stepNum = 1) {
+    const sNum = parseInt(stepNum, 10) || 1;
+    const fourthCode = sNum === 1 ? 'BASIC' : (sNum === 2 ? 'GFS' : 'PRONUNCIATION');
+    const gramTarget = sNum === 2 ? 30 : 15;
+    const fourthTarget = sNum === 1 ? 100 : (sNum === 2 ? 20 : 25);
+    const spkKeys = sNum === 1 ? ['U1', 'U2', 'PRACTICE'] : (sNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
+    const spkLabels = sNum === 1 ? ['U1', 'U2', 'PR'] : (sNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
+
+    const cols = [];
+
+    // 1. Vocabulary (5 cols: W1, W2, W3, W4, NA) - Read-only from DB test attempts
+    const vocabClassCode = `CAMP-${sNum}VOCAB`;
+    let vocabClass = null;
+    for (const c of classesMap.values()) {
+      if ((c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-') === vocabClassCode) {
+        vocabClass = c;
+        break;
+      }
+    }
+    const themeMap = { W1: 'A', W2: 'B', W3: 'C', W4: 'D' };
+    ['W1', 'W2', 'W3', 'W4'].forEach((wKey, idx) => {
+      const tc = themeMap[wKey];
+      cols.push({
+        key: `_camp_vcb_${sNum}_${wKey.toLowerCase()}`,
+        label: wKey,
+        shortLabel: wKey,
+        microLabel: wKey,
+        headerTitle: `Vocabulary Week ${idx + 1} (Exam ${tc})`,
+        sortable: true,
+        align: 'center',
+        width: '52px',
+        minWidth: '48px',
+        render: (row) => {
+          let score = null;
+          if (vocabClass && row.perClassFinal?.has(vocabClass.id)) {
+            const cs = row.perClassFinal.get(vocabClass.id);
+            if (cs?.themeScores && cs.themeScores[tc] != null) score = cs.themeScores[tc];
+          }
+          if (score == null) {
+            const itm = row.academicMap?.get(`${sNum}:VOCABULARY:${wKey}`);
+            if (itm?.percentage != null) score = itm.percentage;
+          }
+          const displayVal = score != null ? Math.round(score) : '—';
+          const color = score != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(score) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary ${wKey}: ${displayVal}%">${displayVal}</span>
+            </div>
+            <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+          `;
+        }
+      });
+    });
+    // Vocab NA
+    cols.push({
+      key: `_camp_vcb_${sNum}_na`,
+      label: 'NA',
+      shortLabel: 'NA',
+      microLabel: 'NA',
+      headerTitle: 'Vocabulary Final Score (NA)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naVocab;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary NA: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 2. Storytelling (5 cols: W1, W2, W3, W4, NA) - Rubric 1-5, NA is average %
+    ['W1', 'W2', 'W3', 'W4'].forEach((wKey, idx) => {
+      cols.push({
+        key: `_camp_stt_${sNum}_${wKey.toLowerCase()}`,
+        label: wKey,
+        shortLabel: wKey,
+        microLabel: wKey,
+        headerTitle: `Storytelling Week ${idx + 1} (Rubric 1-5)`,
+        sortable: true,
+        align: 'center',
+        width: '52px',
+        minWidth: '48px',
+        render: (row) => {
+          const itm = row.academicMap?.get(`${sNum}:STORYTELLING:${wKey}`);
+          const raw = itm?.raw_score != null ? itm.raw_score : '';
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 5) * 100 : null);
+          const displayVal = raw !== '' ? raw : '—';
+          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Storytelling ${wKey}: ${displayVal} / 5 (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-academic-input text-center"
+              data-student-id="${row.id}"
+              data-batch-id="${row.batch_id || ''}"
+              data-step="${sNum}"
+              data-subject="STORYTELLING"
+              data-type="WEEKLY_DEPOSIT"
+              data-key="${wKey}"
+              data-target="5"
+              min="0"
+              max="5"
+              step="0.5"
+              value="${raw}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+    // Storytelling NA
+    cols.push({
+      key: `_camp_stt_${sNum}_na`,
+      label: 'NA',
+      shortLabel: 'NA',
+      microLabel: 'NA',
+      headerTitle: 'Storytelling Final Score (NA)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naStory;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Storytelling NA: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 3. Grammar (3 cols: U1, U2, NA)
+    ['U1', 'U2'].forEach((uKey, idx) => {
+      cols.push({
+        key: `_camp_grm_${sNum}_${uKey.toLowerCase()}`,
+        label: uKey,
+        shortLabel: uKey,
+        microLabel: uKey,
+        headerTitle: `Grammar Exam ${idx + 1} (Max ${gramTarget})`,
+        sortable: true,
+        align: 'center',
+        width: '58px',
+        minWidth: '52px',
+        render: (row) => {
+          const itm = row.academicMap?.get(`${sNum}:GRAMMAR:${uKey}`);
+          const raw = itm?.raw_score != null ? itm.raw_score : '';
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / gramTarget) * 100 : null);
+          const displayVal = raw !== '' ? raw : '—';
+          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar ${uKey}: ${displayVal} / ${gramTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-academic-input text-center"
+              data-student-id="${row.id}"
+              data-batch-id="${row.batch_id || ''}"
+              data-step="${sNum}"
+              data-subject="GRAMMAR"
+              data-type="PERIODIC_EXAM"
+              data-key="${uKey}"
+              data-target="${gramTarget}"
+              min="0"
+              max="${gramTarget}"
+              step="1"
+              value="${raw}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+    // Grammar NA
+    cols.push({
+      key: `_camp_grm_${sNum}_na`,
+      label: 'NA',
+      shortLabel: 'NA',
+      microLabel: 'NA',
+      headerTitle: 'Grammar Final Score (NA)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naGram;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar NA: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 4. 4th Subject (3 cols: U1, U2, NA)
+    ['U1', 'U2'].forEach((uKey, idx) => {
+      cols.push({
+        key: `_camp_fourth_${sNum}_${uKey.toLowerCase()}`,
+        label: uKey,
+        shortLabel: uKey,
+        microLabel: uKey,
+        headerTitle: `${fourthCode} Exam ${idx + 1} (Max ${fourthTarget})`,
+        sortable: true,
+        align: 'center',
+        width: '58px',
+        minWidth: '52px',
+        render: (row) => {
+          const itm = row.academicMap?.get(`${sNum}:${fourthCode}:${uKey}`);
+          const raw = itm?.raw_score != null ? itm.raw_score : '';
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / fourthTarget) * 100 : null);
+          const displayVal = raw !== '' ? raw : '—';
+          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="${fourthCode} ${uKey}: ${displayVal} / ${fourthTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-academic-input text-center"
+              data-student-id="${row.id}"
+              data-batch-id="${row.batch_id || ''}"
+              data-step="${sNum}"
+              data-subject="${fourthCode}"
+              data-type="PERIODIC_EXAM"
+              data-key="${uKey}"
+              data-target="${fourthTarget}"
+              min="0"
+              max="${fourthTarget}"
+              step="1"
+              value="${raw}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+    // 4th Subject NA
+    cols.push({
+      key: `_camp_fourth_${sNum}_na`,
+      label: 'NA',
+      shortLabel: 'NA',
+      microLabel: 'NA',
+      headerTitle: `${fourthCode} Final Score (NA)`,
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naFourth;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="${fourthCode} NA: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 5. Speaking (4 cols: U1, U2, PR/U3, NA)
+    spkKeys.forEach((key, idx) => {
+      const lbl = spkLabels[idx];
+      cols.push({
+        key: `_camp_spk_${sNum}_${key.toLowerCase()}`,
+        label: lbl,
+        shortLabel: lbl,
+        microLabel: lbl,
+        headerTitle: `Speaking ${key} (Max 25)`,
+        sortable: true,
+        align: 'center',
+        width: '52px',
+        minWidth: '48px',
+        render: (row) => {
+          const itm = row.academicMap?.get(`${sNum}:SPEAKING:${key}`);
+          const raw = itm?.raw_score != null ? itm.raw_score : '';
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 25) * 100 : null);
+          const displayVal = raw !== '' ? raw : '—';
+          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking ${lbl}: ${displayVal} / 25 (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-academic-input text-center"
+              data-student-id="${row.id}"
+              data-batch-id="${row.batch_id || ''}"
+              data-step="${sNum}"
+              data-subject="SPEAKING"
+              data-type="${key === 'PRACTICE' ? 'PRACTICE' : 'PERIODIC_EXAM'}"
+              data-key="${key}"
+              data-target="25"
+              min="0"
+              max="25"
+              step="1"
+              value="${raw}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+    // Speaking NA
+    cols.push({
+      key: `_camp_spk_${sNum}_na`,
+      label: 'NA',
+      shortLabel: 'NA',
+      microLabel: 'NA',
+      headerTitle: 'Speaking Final Score (NA)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naSpeak;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking NA: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 6. Step Summary (2 cols: AVG, PRD)
+    cols.push({
+      key: `_camp_sum_${sNum}_avg`,
+      label: 'AVG',
+      shortLabel: 'AVG',
+      microLabel: 'AVG',
+      headerTitle: `Step ${sNum} Average Score (NA Total Step)`,
+      sortable: true,
+      align: 'center',
+      width: '60px',
+      minWidth: '55px',
+      render: (row) => {
+        const avg = row.stepSummaries?.[sNum]?.stepAvg;
+        const displayVal = avg != null ? Math.round(avg) : '—';
+        const color = avg != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avg) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Step ${sNum} Average: ${avg != null ? avg : '—'}">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+    cols.push({
+      key: `_camp_sum_${sNum}_prd`,
+      label: 'PRD',
+      shortLabel: 'PRD',
+      microLabel: 'PRD',
+      headerTitle: `Step ${sNum} Predicate`,
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '85px',
+      minWidth: '80px',
+      render: (row) => {
+        const prd = row.stepSummaries?.[sNum]?.predicate || '—';
+        const avg = row.stepSummaries?.[sNum]?.stepAvg;
+        const color = avg != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avg) : '#94a3b8';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.03em;" title="Predicate: ${prd}">${prd}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${prd}</div>
+        `;
+      }
+    });
+
+    return cols;
+  }
+
+  // ── Final Exam & Certificate Roster Columns ──────────────────────────────────
+  function getFinalExamColDefs() {
+    const cols = [];
+
+    // Helper for Examiner / Tutor numeric sub-column
+    const makeScoreCol = (key, label, title, field, maxVal = 25, isDivider = false) => ({
+      key,
+      label,
+      shortLabel: label,
+      microLabel: label,
+      headerTitle: title,
+      className: isDivider ? 'super-hdr-divider' : '',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '48px',
+      render: (row) => {
+        const fe = row.finalExam;
+        const val = fe?.[field] != null ? fe[field] : '';
+        const numVal = val !== '' ? Number(val) : null;
+        const displayVal = numVal != null ? numVal : '—';
+        const color = numVal != null ? 'var(--clr-text-1)' : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="${title}: ${displayVal}">${displayVal}</span>
+          </div>
+          <input type="number"
+            class="student-inline-input student-inline-final-input text-center"
+            data-student-id="${row.id}"
+            data-field="${field}"
+            min="0"
+            max="${maxVal}"
+            step="1"
+            value="${val}"
+            placeholder="—"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    // Helper for read-only total / computed sub-column
+    const makeReadOnlyCol = (key, label, title, getter, isDivider = false, width = '55px') => ({
+      key,
+      label,
+      shortLabel: label,
+      microLabel: label,
+      headerTitle: title,
+      className: isDivider ? 'super-hdr-divider' : '',
+      sortable: true,
+      align: 'center',
+      width,
+      minWidth: '48px',
+      render: (row) => {
+        const { val, color, fullText } = getter(row);
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color || 'var(--clr-text-1)'} !important;font-variant-numeric:tabular-nums;" title="${fullText || title}">${val}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${val}</div>
+        `;
+      }
+    });
+
+    // 1. Main Examiner (5 cols: FL, PR, ID, GR, TOT)
+    cols.push(makeScoreCol('_fe_ex_fl', 'FL', 'Main Examiner: Fluency (0-25)', 'examiner_fluency', 25));
+    cols.push(makeScoreCol('_fe_ex_pr', 'PR', 'Main Examiner: Pronunciation (0-25)', 'examiner_pronunciation', 25));
+    cols.push(makeScoreCol('_fe_ex_id', 'ID', 'Main Examiner: Idea (0-25)', 'examiner_idea', 25));
+    cols.push(makeScoreCol('_fe_ex_gr', 'GR', 'Main Examiner: Grammar (0-25)', 'examiner_grammar', 25));
+    cols.push(makeReadOnlyCol('_fe_ex_tot', 'TOT', 'Main Examiner Total (0-100)', (r) => {
+      const tot = r.finalExam?.examiner_total;
+      const display = tot != null ? Math.round(tot) : '—';
+      const c = tot != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(tot) : 'var(--clr-text-3)';
+      return { val: display, color: c, fullText: `Examiner Total: ${display}` };
+    }, true));
+
+    // 2. Speaking Tutor (5 cols: FL, PR, GR, CP, TOT)
+    cols.push(makeScoreCol('_fe_tu_fl', 'FL', 'Speaking Tutor: Fluency (0-25)', 'tutor_fluency', 25));
+    cols.push(makeScoreCol('_fe_tu_pr', 'PR', 'Speaking Tutor: Pronunciation (0-25)', 'tutor_pronunciation', 25));
+    cols.push(makeScoreCol('_fe_tu_gr', 'GR', 'Speaking Tutor: Grammar (0-25)', 'tutor_grammar', 25));
+    cols.push(makeScoreCol('_fe_tu_cp', 'CP', 'Speaking Tutor: Comprehension (0-25)', 'tutor_comprehension', 25));
+    cols.push(makeReadOnlyCol('_fe_tu_tot', 'TOT', 'Speaking Tutor Total (0-100)', (r) => {
+      const tot = r.finalExam?.tutor_total;
+      const display = tot != null ? Math.round(tot) : '—';
+      const c = tot != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(tot) : 'var(--clr-text-3)';
+      return { val: display, color: c, fullText: `Tutor Total: ${display}` };
+    }, true));
+
+    // 3. Final Practice (2 cols: PRC, PRD)
+    cols.push(makeReadOnlyCol('_fe_prc', 'PRC', 'Final Practice Composite Score', (r) => {
+      const p = r.finalExam?.practice_score;
+      const display = p != null ? Math.round(p) : '—';
+      const c = p != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(p) : 'var(--clr-text-3)';
+      return { val: display, color: c, fullText: `Practice Score: ${display}` };
+    }, false, '60px'));
+    cols.push(makeReadOnlyCol('_fe_prc_prd', 'PRD', 'Final Practice Predicate', (r) => {
+      const prd = r.finalExam?.practice_predicate || '—';
+      const p = r.finalExam?.practice_score;
+      const c = p != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(p) : '#94a3b8';
+      return { val: prd, color: c, fullText: `Practice Predicate: ${prd}` };
+    }, true, '75px'));
+
+    // 4. 4-Skill Cumulative (4 cols: SPK, VCB, PRN, GRM)
+    const skills = [
+      { key: '_fe_cum_spk', label: 'SPK', title: 'Speaking Cumulative Score', field: 'speaking_score' },
+      { key: '_fe_cum_vcb', label: 'VCB', title: 'Vocabulary Cumulative Score', field: 'vocab_score' },
+      { key: '_fe_cum_prn', label: 'PRN', title: 'Pronunciation Cumulative Score', field: 'pronunciation_score' },
+      { key: '_fe_cum_grm', label: 'GRM', title: 'Grammar Cumulative Score', field: 'grammar_score', isDivider: true }
+    ];
+    skills.forEach(sk => {
+      cols.push({
+        key: sk.key,
+        label: sk.label,
+        shortLabel: sk.label,
+        microLabel: sk.label,
+        headerTitle: sk.title,
+        className: sk.isDivider ? 'super-hdr-divider' : '',
+        sortable: true,
+        align: 'center',
+        width: '60px',
+        minWidth: '55px',
+        render: (row) => {
+          const val = row.finalExam?.[sk.field];
+          const display = val != null ? Math.round(val) : '—';
+          const c = val != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(val) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${c} !important;font-variant-numeric:tabular-nums;" title="${sk.title}: ${display}">${display}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-final-input text-center"
+              data-student-id="${row.id}"
+              data-field="${sk.field}"
+              min="0"
+              max="100"
+              step="1"
+              value="${val != null ? val : ''}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+
+    // 5. Certificate & Diploma (6 cols: FIN, PRD, NIS, MO, YR, STAT)
+    cols.push({
+      key: '_fe_cert_final',
+      label: 'FIN',
+      shortLabel: 'FIN',
+      microLabel: 'FIN',
+      headerTitle: 'Final Certificate Score (0-100)',
+      sortable: true,
+      align: 'center',
+      width: '60px',
+      minWidth: '55px',
+      render: (row) => {
+        const val = row.finalExam?.final_score;
+        const display = val != null ? Math.round(val) : '—';
+        const c = val != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(val) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${c} !important;font-variant-numeric:tabular-nums;" title="Final Score: ${display}">${display}</span>
+          </div>
+          <input type="number"
+            class="student-inline-input student-inline-final-input text-center"
+            data-student-id="${row.id}"
+            data-field="final_score"
+            min="0"
+            max="100"
+            step="0.1"
+            value="${val != null ? val : ''}"
+            placeholder="—"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    cols.push({
+      key: '_fe_cert_prd',
+      label: 'PRD',
+      shortLabel: 'PRD',
+      microLabel: 'PRD',
+      headerTitle: 'Certificate Predicate',
+      sortable: true,
+      align: 'center',
+      width: '85px',
+      minWidth: '80px',
+      render: (row) => {
+        const prd = row.finalExam?.certificate_predicate || '—';
+        const score = row.finalExam?.final_score;
+        const c = score != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(score) : '#94a3b8';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:11px;font-weight:700;color:${c};text-transform:uppercase;letter-spacing:0.03em;" title="Certificate Predicate: ${prd}">${prd}</span>
+          </div>
+          <input type="text"
+            class="student-inline-input student-inline-final-input text-center"
+            data-student-id="${row.id}"
+            data-field="certificate_predicate"
+            value="${escapeHtml(prd === '—' ? '' : prd)}"
+            placeholder="—"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    cols.push({
+      key: '_fe_cert_nis',
+      label: 'NIS',
+      shortLabel: 'NIS',
+      microLabel: 'NIS',
+      headerTitle: 'Certificate NIS Number',
+      sortable: true,
+      align: 'center',
+      width: '145px',
+      minWidth: '135px',
+      render: (row) => {
+        const nis = row.finalExam?.certificate_nis || '';
+        const display = nis || '—';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-family:var(--fm-font-mono, monospace);font-size:11px;font-weight:600;color:var(--clr-text-2);white-space:nowrap;" title="Certificate NIS: ${display}">${display}</span>
+          </div>
+          <input type="text"
+            class="student-inline-input student-inline-final-input text-center"
+            data-student-id="${row.id}"
+            data-field="certificate_nis"
+            value="${escapeHtml(nis)}"
+            placeholder="CEC/M/C.134.../XI/2026"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    cols.push({
+      key: '_fe_cert_mo',
+      label: 'MO',
+      shortLabel: 'MO',
+      microLabel: 'MO',
+      headerTitle: 'Certificate Month (Roman)',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const mo = row.finalExam?.certificate_month || '';
+        const display = mo || '—';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:11px;font-weight:600;color:var(--clr-text-2);" title="Certificate Month: ${display}">${display}</span>
+          </div>
+          <input type="text"
+            class="student-inline-input student-inline-final-input text-center"
+            data-student-id="${row.id}"
+            data-field="certificate_month"
+            value="${escapeHtml(mo)}"
+            placeholder="XI"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    cols.push({
+      key: '_fe_cert_yr',
+      label: 'YR',
+      shortLabel: 'YR',
+      microLabel: 'YR',
+      headerTitle: 'Certificate Year',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const yr = row.finalExam?.certificate_year || '';
+        const display = yr || '—';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:11px;font-weight:600;color:var(--clr-text-2);" title="Certificate Year: ${display}">${display}</span>
+          </div>
+          <input type="number"
+            class="student-inline-input student-inline-final-input text-center"
+            data-student-id="${row.id}"
+            data-field="certificate_year"
+            value="${yr}"
+            placeholder="2026"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    cols.push({
+      key: '_fe_cert_stat',
+      label: 'STAT',
+      shortLabel: 'STAT',
+      microLabel: 'STAT',
+      headerTitle: 'Certificate Status',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '80px',
+      minWidth: '75px',
+      render: (row) => {
+        const stat = (row.finalExam?.status || 'DRAFT').toUpperCase();
+        const colorMap = {
+          ISSUED: 'var(--grade-a)',
+          VERIFIED: 'var(--primary-tactical, #38bdf8)',
+          SUBMITTED: 'var(--grade-c)',
+          DRAFT: 'var(--clr-text-3)'
+        };
+        const c = colorMap[stat] || 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:11px;font-weight:700;color:${c};" title="Certificate Status: ${stat}">${stat}</span>
+          </div>
+          <select class="student-inline-select student-inline-final-select text-center"
+            data-student-id="${row.id}"
+            data-field="status"
+            onclick="event.stopPropagation();">
+            <option value="DRAFT" ${stat === 'DRAFT' ? 'selected' : ''}>DRAFT</option>
+            <option value="SUBMITTED" ${stat === 'SUBMITTED' ? 'selected' : ''}>SUBMITTED</option>
+            <option value="VERIFIED" ${stat === 'VERIFIED' ? 'selected' : ''}>VERIFIED</option>
+            <option value="ISSUED" ${stat === 'ISSUED' ? 'selected' : ''}>ISSUED</option>
+          </select>
+        `;
+      }
+    });
+
+    return cols;
+  }
 
   // Build dynamic per-class DataGrid column definitions
   const classColCountMap = new Map();
@@ -2538,7 +4219,7 @@ export async function renderStudents(area, options = {}) {
   });
 
   // Build superHeaders:
-  // - STUDENTS DATA (colspan 4: Level, Photo, Gender, Name for Data view; colspan 3: Level, Photo, Name for Raport view)
+  // - STUDENTS DATA (colspan 4: Level, Photo, Gender, Name for Data view; colspan 3: Level, Photo, Name for Raport / Final Exam view)
   // - DEMOGRAPHIC (colspan 3: DOB, Age, Education - Data view only)
   // - ADDRESS (colspan 4: Village, District, City/Regency, Province - Data view only)
   // - Active class super-headers (colspan across test/exam sub-columns - Raport view only)
@@ -2546,11 +4227,135 @@ export async function renderStudents(area, options = {}) {
   // - SECURITY (colspan 2: PIN & STATUS)
   // - Standalone Spanning headers: Status & Actions (rowspan="2", height 60px)
   const isRaportView = (window._studentRosterTab === 'raport');
+  const isFinalExamView = (window._studentRosterTab === 'final-exam');
 
   const buildSuperHeaders = () => {
     const sh = [];
 
-    if (isRaportView) {
+    if (isFinalExamView) {
+      // Group 1: STUDENTS DATA (Colspan 3: Level, Photo, Name)
+      sh.push({
+        label: 'STUDENTS DATA',
+        colSpan: 3,
+        className: 'super-hdr super-hdr-identity super-hdr-students-data',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 2: MAIN EXAMINER (Colspan 5: FL, PR, ID, GR, TOT)
+      sh.push({
+        label: 'MAIN EXAMINER',
+        colSpan: 5,
+        className: 'super-hdr',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 3: SPEAKING TUTOR (Colspan 5: FL, PR, GR, CP, TOT)
+      sh.push({
+        label: 'SPEAKING TUTOR',
+        colSpan: 5,
+        className: 'super-hdr',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 4: FINAL PRACTICE (Colspan 2: PRC, PRD)
+      sh.push({
+        label: 'FINAL PRACTICE',
+        colSpan: 2,
+        className: 'super-hdr',
+        style: 'background:#1e3a5f; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 5: 4-SKILL CUMULATIVE (Colspan 4: SPK, VCB, PRN, GRM)
+      sh.push({
+        label: '4-SKILL CUMULATIVE',
+        colSpan: 4,
+        className: 'super-hdr',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 6: CERTIFICATE & DIPLOMA (Colspan 6: FIN, PRD, NIS, MO, YR, STAT)
+      sh.push({
+        label: 'CERTIFICATE & DIPLOMA',
+        colSpan: 6,
+        className: 'super-hdr',
+        style: 'background:#1e3a5f; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 7: SECURITY (Colspan 2: PIN & STATUS)
+      sh.push({
+        label: 'SECURITY',
+        colSpan: 2,
+        className: 'super-hdr super-hdr-security',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35);'
+      });
+    } else if (isCampProgram && isRaportView) {
+      const pageNum = window._raportPage || 1;
+      const fourthName = pageNum === 1 ? 'BASIC ENGLISH' : (pageNum === 2 ? 'GRAMMAR FOR SPEAKING' : 'PRONUNCIATION');
+      // Group 1: STUDENTS DATA (Colspan 3: Level, Photo, Name)
+      sh.push({
+        label: 'STUDENTS DATA',
+        colSpan: 3,
+        className: 'super-hdr super-hdr-identity super-hdr-students-data',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 2: VOCABULARY (Colspan 5: W1, W2, W3, W4, NA)
+      sh.push({
+        label: 'VOCABULARY',
+        colSpan: 5,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 3: STORYTELLING (Colspan 5: W1, W2, W3, W4, NA)
+      sh.push({
+        label: 'STORYTELLING',
+        colSpan: 5,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 4: GRAMMAR (Colspan 3: U1, U2, NA)
+      sh.push({
+        label: 'GRAMMAR',
+        colSpan: 3,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 5: 4TH SUBJECT (Colspan 3: U1, U2, NA)
+      sh.push({
+        label: fourthName,
+        colSpan: 3,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 6: SPEAKING (Colspan: Step 1 = 4 [U1, U2, PR, NA], Step 2 = 3 [U1, U2, NA], Step 3 = 4 [U1, U2, U3, NA])
+      const spkColSpan = pageNum === 2 ? 3 : 4;
+      sh.push({
+        label: 'SPEAKING',
+        colSpan: spkColSpan,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 7: STEP SUMMARY (Colspan 2: AVG, PRD)
+      sh.push({
+        label: 'STEP SUMMARY',
+        colSpan: 2,
+        className: 'super-hdr super-hdr-overall',
+        style: 'background:#1e3a5f; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 8: SECURITY (Colspan 2: PIN & STATUS)
+      sh.push({
+        label: 'SECURITY',
+        colSpan: 2,
+        className: 'super-hdr super-hdr-security',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35);'
+      });
+    } else if (isRaportView) {
       // Group 1: STUDENTS DATA (Colspan 3: Level, Photo, Name)
       sh.push({
         label: 'STUDENTS DATA',
@@ -2603,10 +4408,10 @@ export async function renderStudents(area, options = {}) {
         style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
-      // Group 2: DEMOGRAPHIC (Colspan 3: DOB, Age, Education)
+      // Group 2: DEMOGRAPHIC (Colspan 4: Birthplace, DOB, Age, Education)
       sh.push({
         label: 'DEMOGRAPHIC',
-        colSpan: 3,
+        colSpan: 4,
         className: 'super-hdr super-hdr-demographic',
         style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
@@ -2635,13 +4440,13 @@ export async function renderStudents(area, options = {}) {
 
   studentGrid = new DataGrid({
     container: gridContainer,
-    tableId: isRaportView ? 'student_roster_raport_grid_v2' : 'student_roster_data_grid_v2',
+    tableId: isFinalExamView ? 'student_roster_final_exam_grid_v2' : (isRaportView ? 'student_roster_raport_grid_v2' : 'student_roster_data_grid_v2'),
     autoFitOnMount: false,
     data: filteredGridData,
     pageSize: 50,
     hideToolbar: true,
     tableLayout: 'fixed',
-    searchKeys: isRaportView ? ['levelName', 'displayName', 'name', 'pinDisplay', 'globalGrade'] : ['levelName', 'displayName', 'name', 'pinDisplay', 'province', 'city', 'district', 'village'],
+    searchKeys: (isRaportView || isFinalExamView) ? ['levelName', 'displayName', 'name', 'pinDisplay', 'globalGrade'] : ['levelName', 'displayName', 'name', 'pinDisplay', 'province', 'city', 'district', 'village'],
     initialSortKey: 'displayName',
     initialSortAsc: true,
     stickyActionCol: true,
@@ -2658,7 +4463,23 @@ export async function renderStudents(area, options = {}) {
         return direction === 'desc' ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
       }
 
-      if (sortKey === 'birth_date') {
+      if (sortKey.startsWith('_camp_') || sortKey.startsWith('_fe_')) {
+        const scA = a[sortKey] ?? -1;
+        const scB = b[sortKey] ?? -1;
+        if (typeof scA === 'number' && typeof scB === 'number') {
+          if (scA !== scB) return direction === 'asc' ? scA - scB : scB - scA;
+        } else {
+          const strA = String(scA).toLowerCase();
+          const strB = String(scB).toLowerCase();
+          if (strA !== strB) return direction === 'asc' ? strA.localeCompare(strB) : strB.localeCompare(strA);
+        }
+      }
+
+      if (sortKey === 'birthplace') {
+        const ba = (a.birthplace || '').toLowerCase();
+        const bb = (b.birthplace || '').toLowerCase();
+        if (ba !== bb) return direction === 'asc' ? ba.localeCompare(bb) : bb.localeCompare(ba);
+      } else if (sortKey === 'birth_date') {
         const da = a.birth_date ? new Date(a.birth_date).getTime() : 0;
         const db = b.birth_date ? new Date(b.birth_date).getTime() : 0;
         if (da !== db) return direction === 'asc' ? da - db : db - da;
@@ -2988,7 +4809,7 @@ export async function renderStudents(area, options = {}) {
         }
       },
       // 3. Gender (Mister / Miss, Placed Before Name After Photo, Data View Only, Inline Editable in Edit Mode)
-      ...(!isRaportView ? [{
+      ...((!isRaportView && !isFinalExamView) ? [{
         key: 'gender',
         label: 'GENDER',
         shortLabel: 'SEX',
@@ -3002,15 +4823,15 @@ export async function renderStudents(area, options = {}) {
           const g = (row.gender || '').trim().toLowerCase();
           const isM = g === 'male' || g === 'm';
           const isF = g === 'female' || g === 'f';
-          const titleText = isM ? 'Mister' : (isF ? 'Miss' : '—');
+          const titleText = isM ? 'Male' : (isF ? 'Female' : '—');
           const titleColor = isM ? '#38bdf8' : (isF ? '#c084fc' : 'var(--clr-text-3)');
           return `
             <div class="student-cell-view" style="white-space:nowrap !important;">
               <span style="color:${titleColor};font-size: 12px;font-weight:500;">${titleText}</span>
             </div>
             <select class="student-inline-select student-gender-select" data-id="${row.id}" data-field="gender" onclick="event.stopPropagation();">
-              <option value="male" ${isM ? 'selected' : ''}>Mister</option>
-              <option value="female" ${isF ? 'selected' : ''}>Miss</option>
+              <option value="male" ${isM ? 'selected' : ''}>Male</option>
+              <option value="female" ${isF ? 'selected' : ''}>Female</option>
             </select>
           `;
         }
@@ -3038,8 +4859,28 @@ export async function renderStudents(area, options = {}) {
         }
       },
       // Demographic & Address Columns (Data View Only)
-      ...(!isRaportView ? [
-        // 5. DOB (Date of Birth placed BEFORE Age per user directive)
+      ...((!isRaportView && !isFinalExamView) ? [
+        // 5. Birthplace (Place of Birth)
+        {
+          key: 'birthplace',
+          label: 'BIRTHPLACE',
+          title: 'Place of Birth',
+          sortable: true,
+          align: 'left',
+          width: '110px',
+          minWidth: '100px',
+          render: (row) => {
+            const bp = row.birthplace || '';
+            const display = bp || '—';
+            return `
+              <div class="student-cell-view" style="white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis;">
+                <span style="font-size: 12px;color:${bp ? 'var(--clr-text-2)' : 'var(--grade-c)'};font-weight:400;white-space:nowrap !important;" title="Place of Birth: ${display}">${escapeHtml(display)}</span>
+              </div>
+              <input type="text" class="student-inline-input" data-id="${row.id}" data-field="birthplace" value="${escapeHtml(bp)}" placeholder="Birthplace" onclick="event.stopPropagation();">
+            `;
+          }
+        },
+        // 6. DOB (Date of Birth placed BEFORE Age per user directive)
         {
         key: 'birth_date',
         label: 'DOB',
@@ -3248,8 +5089,12 @@ export async function renderStudents(area, options = {}) {
         }
       }
     ] : []),
-    // Dynamic Per-Class Columns (Raport View Only: 4 Theme Exams per active class)
-    ...(isRaportView ? (perClassColDefs.length > 0 ? perClassColDefs : [
+    // Final Exam Columns
+    ...(isFinalExamView ? getFinalExamColDefs() : []),
+    // Camp Raport Columns (1st, 2nd, 3rd Step)
+    ...((!isFinalExamView && isCampProgram && isRaportView) ? getCampRaportColDefs(window._raportPage || 1) : []),
+    // Non-Camp Dynamic Per-Class Columns (Raport View Only: 4 Theme Exams per active class)
+    ...((!isFinalExamView && !isCampProgram && isRaportView) ? (perClassColDefs.length > 0 ? perClassColDefs : [
       {
         key: 'completedTests',
         label: 'COMPLETED',
@@ -3278,8 +5123,8 @@ export async function renderStudents(area, options = {}) {
         `
       }
     ]) : []),
-    // Overall Performance Columns (Raport View Only)
-    ...(isRaportView ? [
+    // Non-Camp Overall Performance Columns (Raport View Only)
+    ...((!isFinalExamView && !isCampProgram && isRaportView) ? [
       {
         key: 'completionPct',
         label: 'DONE',
@@ -3323,7 +5168,8 @@ export async function renderStudents(area, options = {}) {
         minWidth: '55px',
         render: (row) => {
           const grd = row.globalGrade || '—';
-          const color = row.overallColor || '#94a3b8';
+          const isPending = grd === '—' || !row.overallColor;
+          const color = isPending ? '#64748b' : row.overallColor;
           return `
             <div style="display:flex;align-items:center;justify-content:center;">
               <span class="grade-circle" style="background:${color};color:#0f172a;font-weight:800;font-size:12px;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;" title="Overall Grade: ${grd}">${grd}</span>
@@ -3544,6 +5390,256 @@ export async function renderStudents(area, options = {}) {
       return;
     }
 
+    // Camp Academic Direct Inline Score Edit (Storytelling, Grammar, 4th Subject, Speaking)
+    if (target.matches('.student-inline-academic-input')) {
+      const studentId = target.dataset.studentId;
+      const batchId = target.dataset.batchId;
+      const stepLevel = parseInt(target.dataset.step, 10);
+      const subjectCode = target.dataset.subject;
+      const assessmentType = target.dataset.type || 'PERIODIC_EXAM';
+      const assessmentKey = target.dataset.key;
+      const targetScore = parseFloat(target.dataset.target) || 100;
+      const valStr = (target.value || '').trim();
+
+      if (!studentId || !stepLevel || !subjectCode || !assessmentKey) return;
+      const cell = target.closest('td');
+
+      let rawScore = null;
+      let percentage = null;
+      let grade = null;
+
+      if (valStr !== '') {
+        const num = parseFloat(valStr);
+        if (isNaN(num)) {
+          showToast('Please enter a valid numeric score.', 'warning');
+          return;
+        }
+        rawScore = Math.max(0, Math.min(targetScore, num));
+        percentage = targetScore > 0 ? Math.round((rawScore / targetScore) * 100 * 100) / 100 : 0;
+        grade = typeof calculateGrade === 'function' ? calculateGrade(percentage) : (percentage >= 80 ? 'A' : (percentage >= 60 ? 'C' : 'E'));
+        target.value = rawScore;
+      }
+
+      try {
+        const sb = (await import('../supabase.js?v=20261106_v140')).getSupabase ? await (await import('../supabase.js?v=20261106_v140')).getSupabase() : null;
+        if (!sb) { showToast('Database connection failed', 'error'); return; }
+
+        const payload = {
+          student_id: studentId,
+          batch_id: batchId || window._filterBatchId,
+          step_level: stepLevel,
+          subject_code: subjectCode,
+          assessment_type: assessmentType,
+          assessment_key: assessmentKey,
+          raw_score: rawScore,
+          target_score: targetScore,
+          percentage: percentage,
+          grade: grade,
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await sb.from('student_academic_assessments').upsert(payload, {
+          onConflict: 'student_id,step_level,subject_code,assessment_key'
+        });
+
+        if (error) {
+          console.error('Save academic assessment error:', error);
+          showToast('Failed to save score: ' + error.message, 'error');
+          return;
+        }
+
+        // Visual feedback: green cell highlight
+        if (cell) {
+          const origBg = cell.style.background;
+          cell.style.background = 'rgba(0, 192, 0, 0.25)';
+          setTimeout(() => { cell.style.background = origBg; }, 600);
+          const viewSpan = cell.querySelector('.student-cell-view span');
+          if (viewSpan) {
+            viewSpan.textContent = rawScore != null ? rawScore : '—';
+            viewSpan.style.color = percentage != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(percentage) : 'var(--clr-text-3)';
+          }
+        }
+
+        // Update in-memory row data
+        const s = filteredGridData.find(x => x.id === studentId);
+        if (s) {
+          if (!s.academicMap) s.academicMap = new Map();
+          const mapKey = `${stepLevel}:${subjectCode}:${assessmentKey}`;
+          s.academicMap.set(mapKey, payload);
+
+          // Re-calculate step summary for this student
+          const sum = s.stepSummaries?.[stepLevel];
+          if (sum) {
+            if (subjectCode === 'STORYTELLING') {
+              const storyKeys = ['W1', 'W2', 'W3', 'W4'].map(k => s.academicMap.get(`${stepLevel}:STORYTELLING:${k}`)).filter(x => x?.percentage != null);
+              sum.naStory = storyKeys.length > 0 ? Math.round((storyKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / storyKeys.length) * 100) / 100 : null;
+            } else if (subjectCode === 'GRAMMAR') {
+              const gramKeys = ['U1', 'U2'].map(k => s.academicMap.get(`${stepLevel}:GRAMMAR:${k}`)).filter(x => x?.percentage != null);
+              sum.naGram = gramKeys.length > 0 ? Math.round((gramKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / gramKeys.length) * 100) / 100 : null;
+            } else if (['BASIC', 'GFS', 'PRONUNCIATION'].includes(subjectCode)) {
+              const fourthKeys = ['U1', 'U2'].map(k => s.academicMap.get(`${stepLevel}:${subjectCode}:${k}`)).filter(x => x?.percentage != null);
+              sum.naFourth = fourthKeys.length > 0 ? Math.round((fourthKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / fourthKeys.length) * 100) / 100 : null;
+            } else if (subjectCode === 'SPEAKING') {
+              const spkSubKeys = stepLevel === 1 ? ['U1', 'U2', 'PRACTICE'] : (stepLevel === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
+              const speakKeys = spkSubKeys.map(k => s.academicMap.get(`${stepLevel}:SPEAKING:${k}`)).filter(x => x?.percentage != null);
+              sum.naSpeak = speakKeys.length > 0 ? Math.round((speakKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / speakKeys.length) * 100) / 100 : null;
+            }
+            const validNAs = [sum.naVocab, sum.naStory, sum.naGram, sum.naFourth, sum.naSpeak].filter(v => typeof v === 'number');
+            sum.stepAvg = validNAs.length > 0 ? Math.round((validNAs.reduce((a, b) => a + b, 0) / validNAs.length) * 100) / 100 : null;
+            sum.predicate = sum.stepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(sum.stepAvg) : (sum.stepAvg >= 90 ? 'EXCELLENT' : sum.stepAvg >= 80 ? 'VERY GOOD' : sum.stepAvg >= 70 ? 'GOOD' : sum.stepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
+
+            // Also update the row in grid if rendered
+            const tr = cell?.closest('tr');
+            if (tr) {
+              const naSubjCell = tr.querySelector(`td[data-col-key="_camp_${subjectCode === 'STORYTELLING' ? 'stt' : subjectCode === 'GRAMMAR' ? 'grm' : subjectCode === 'SPEAKING' ? 'spk' : 'fourth'}_${stepLevel}_na"] .student-cell-view span`);
+              const naVal = subjectCode === 'STORYTELLING' ? sum.naStory : subjectCode === 'GRAMMAR' ? sum.naGram : subjectCode === 'SPEAKING' ? sum.naSpeak : sum.naFourth;
+              if (naSubjCell) {
+                naSubjCell.textContent = naVal != null ? Math.round(naVal) : '—';
+                naSubjCell.style.color = naVal != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(naVal) : 'var(--clr-text-3)';
+              }
+              const avgCell = tr.querySelector(`td[data-col-key="_camp_sum_${stepLevel}_avg"] .student-cell-view span`);
+              if (avgCell) {
+                avgCell.textContent = sum.stepAvg != null ? Math.round(sum.stepAvg) : '—';
+                avgCell.style.color = sum.stepAvg != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(sum.stepAvg) : 'var(--clr-text-3)';
+              }
+              const prdCell = tr.querySelector(`td[data-col-key="_camp_sum_${stepLevel}_prd"] .student-cell-view span`);
+              if (prdCell) {
+                prdCell.textContent = sum.predicate || '—';
+                prdCell.style.color = sum.stepAvg != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(sum.stepAvg) : '#94a3b8';
+              }
+            }
+          }
+        }
+
+        showToast(`Saved: ${rawScore != null ? rawScore : '—'} (${percentage != null ? Math.round(percentage) + '%' : '—'})`, 'success', 2000);
+      } catch (err) {
+        console.error('Inline academic edit error:', err);
+        showToast('Error saving: ' + err.message, 'error');
+      }
+      return;
+    }
+
+    // Final Exam Direct Inline Edit
+    if (target.matches('.student-inline-final-input, .student-inline-final-select')) {
+      const studentId = target.dataset.studentId;
+      const field = target.dataset.field;
+      const valStr = (target.value || '').trim();
+
+      if (!studentId || !field) return;
+      const cell = target.closest('td');
+
+      try {
+        const sb = (await import('../supabase.js?v=20261106_v140')).getSupabase ? await (await import('../supabase.js?v=20261106_v140')).getSupabase() : null;
+        if (!sb) { showToast('Database connection failed', 'error'); return; }
+
+        const s = filteredGridData.find(x => x.id === studentId);
+        const fe = s?.finalExam || { student_id: studentId, batch_id: s?.batch_id || window._filterBatchId };
+
+        let updateVal = valStr;
+        if (target.type === 'number') {
+          updateVal = valStr === '' ? null : parseFloat(valStr);
+        }
+        fe[field] = updateVal;
+
+        // Auto-recalculate composite fields
+        const exFlu = Number(fe.examiner_fluency || 0);
+        const exPrn = Number(fe.examiner_pronunciation || 0);
+        const exIda = Number(fe.examiner_idea || 0);
+        const exGrm = Number(fe.examiner_grammar || 0);
+        const exTot = Math.round((exFlu + exPrn + exIda + exGrm) * 100) / 100;
+        fe.examiner_total = exTot;
+
+        const tuFlu = Number(fe.tutor_fluency || 0);
+        const tuPrn = Number(fe.tutor_pronunciation || 0);
+        const tuGrm = Number(fe.tutor_grammar || 0);
+        const tuCmp = Number(fe.tutor_comprehension || 0);
+        const tuTot = Math.round((tuFlu + tuPrn + tuGrm + tuCmp) * 100) / 100;
+        fe.tutor_total = tuTot;
+
+        const prcScore = (exTot > 0 || tuTot > 0) ? Math.round(((exTot + tuTot) / 2) * 100) / 100 : null;
+        const prcPrd = prcScore != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(prcScore) : (prcScore >= 90 ? 'EXCELLENT' : prcScore >= 80 ? 'VERY GOOD' : prcScore >= 70 ? 'GOOD' : prcScore >= 60 ? 'ENOUGH' : 'LESS')) : null;
+
+        fe.practice_score = prcScore;
+        fe.practice_predicate = prcPrd;
+
+        // Note: Do NOT include examiner_total or tutor_total in the upsert payload (GENERATED ALWAYS AS columns in PG)
+        const payload = {
+          student_id: studentId,
+          batch_id: fe.batch_id || window._filterBatchId,
+          examiner_name: fe.examiner_name || null,
+          examiner_fluency: fe.examiner_fluency != null ? Number(fe.examiner_fluency) : 0,
+          examiner_pronunciation: fe.examiner_pronunciation != null ? Number(fe.examiner_pronunciation) : 0,
+          examiner_idea: fe.examiner_idea != null ? Number(fe.examiner_idea) : 0,
+          examiner_grammar: fe.examiner_grammar != null ? Number(fe.examiner_grammar) : 0,
+          tutor_name: fe.tutor_name || null,
+          tutor_fluency: fe.tutor_fluency != null ? Number(fe.tutor_fluency) : 0,
+          tutor_pronunciation: fe.tutor_pronunciation != null ? Number(fe.tutor_pronunciation) : 0,
+          tutor_grammar: fe.tutor_grammar != null ? Number(fe.tutor_grammar) : 0,
+          tutor_comprehension: fe.tutor_comprehension != null ? Number(fe.tutor_comprehension) : 0,
+          practice_score: fe.practice_score,
+          practice_predicate: fe.practice_predicate,
+          speaking_score: fe.speaking_score != null ? Number(fe.speaking_score) : null,
+          speaking_predicate: fe.speaking_predicate || null,
+          vocab_score: fe.vocab_score != null ? Number(fe.vocab_score) : null,
+          vocab_predicate: fe.vocab_predicate || null,
+          pronunciation_score: fe.pronunciation_score != null ? Number(fe.pronunciation_score) : null,
+          pronunciation_predicate: fe.pronunciation_predicate || null,
+          grammar_score: fe.grammar_score != null ? Number(fe.grammar_score) : null,
+          grammar_predicate: fe.grammar_predicate || null,
+          final_score: fe.final_score != null ? Number(fe.final_score) : null,
+          certificate_predicate: fe.certificate_predicate || null,
+          certificate_nis: fe.certificate_nis || null,
+          certificate_month: fe.certificate_month || null,
+          certificate_year: fe.certificate_year ? parseInt(fe.certificate_year, 10) : 2026,
+          status: fe.status || 'DRAFT',
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await sb.from('student_final_examinations').upsert(payload, {
+          onConflict: 'student_id'
+        });
+
+        if (error) {
+          console.error('Save final exam error:', error);
+          showToast('Failed to save final exam: ' + error.message, 'error');
+          return;
+        }
+
+        // Visual feedback
+        if (cell) {
+          const origBg = cell.style.background;
+          cell.style.background = 'rgba(0, 192, 0, 0.25)';
+          setTimeout(() => { cell.style.background = origBg; }, 600);
+          const viewSpan = cell.querySelector('.student-cell-view span');
+          if (viewSpan) {
+            viewSpan.textContent = updateVal != null ? updateVal : '—';
+          }
+        }
+
+        // Update in-memory row data & computed cells in DOM
+        if (s) {
+          s.finalExam = fe;
+          const tr = cell?.closest('tr');
+          if (tr) {
+            const exTotCell = tr.querySelector('td[data-col-key="_fe_ex_tot"] .student-cell-view span');
+            if (exTotCell) exTotCell.textContent = exTot != null ? Math.round(exTot) : '—';
+            const tuTotCell = tr.querySelector('td[data-col-key="_fe_tu_tot"] .student-cell-view span');
+            if (tuTotCell) tuTotCell.textContent = tuTot != null ? Math.round(tuTot) : '—';
+            const prcCell = tr.querySelector('td[data-col-key="_fe_prc"] .student-cell-view span');
+            if (prcCell) prcCell.textContent = prcScore != null ? Math.round(prcScore) : '—';
+            const prcPrdCell = tr.querySelector('td[data-col-key="_fe_prc_prd"] .student-cell-view span');
+            if (prcPrdCell) prcPrdCell.textContent = prcPrd || '—';
+          }
+        }
+
+        showToast('Final Exam record updated.', 'success', 2000);
+      } catch (err) {
+        console.error('Inline final exam edit error:', err);
+        showToast('Error saving: ' + err.message, 'error');
+      }
+      return;
+    }
+
     if (target.matches('.student-inline-input, .student-inline-select')) {
       const studentId = target.dataset.id;
       const field = target.dataset.field;
@@ -3600,6 +5696,8 @@ export async function renderStudents(area, options = {}) {
         const pinHash = await sha256(trimmedPin);
         updates.pin = trimmedPin;
         updates.pin_hash = pinHash;
+      } else if (field === 'birthplace') {
+        updates.birthplace = value ? value.trim() : null;
       } else if (field === 'birth_date') {
         updates.birth_date = value || null;
       } else if (field === 'province') {
@@ -3803,6 +5901,13 @@ export async function renderStudents(area, options = {}) {
               viewEl.style.color = '#38bdf8';
               viewEl.setAttribute('title', `Student Personal PIN: ${updates.pin}`);
             }
+          } else if (field === 'birthplace') {
+            s.birthplace = updates.birthplace;
+            const viewEl = cell?.querySelector('.student-cell-view span');
+            if (viewEl) {
+              viewEl.textContent = updates.birthplace || '—';
+              viewEl.style.color = updates.birthplace ? 'var(--clr-text-2)' : 'var(--grade-c)';
+            }
           } else if (field === 'birth_date') {
             s.birth_date = updates.birth_date;
             if (s.birth_date) {
@@ -3857,7 +5962,7 @@ export async function renderStudents(area, options = {}) {
             const viewEl = cell?.querySelector('.student-cell-view span');
             if (viewEl) {
               const newG = updates.gender;
-              viewEl.textContent = newG === 'male' ? 'Mister' : newG === 'female' ? 'Miss' : '—';
+              viewEl.textContent = newG === 'male' ? 'Male' : newG === 'female' ? 'Female' : '—';
               viewEl.style.color = newG === 'male' ? '#38bdf8' : newG === 'female' ? '#c084fc' : 'var(--clr-text-3)';
             }
           } else if (field === 'education') {
@@ -4037,8 +6142,12 @@ window.promoteStudentNextLevel = async function(rowOrId) {
 
     // Auto-activate class for target level in student's program if needed
     const progId = row.program_id || currentProgramId;
-    if (nextLevelNum !== 0 && progId && targetLevel?.id) {
+    if (nextLevelNum !== 0 && nextLevelNum !== 99 && progId && targetLevel?.id) {
       await sb.from('classes').update({ is_active: true }).eq('program_id', progId).eq('level_id', targetLevel.id);
+    }
+    // Safeguard: Check if batch or previous classes have 0 active students
+    if (typeof window.syncActiveCohortsAndClasses === 'function') {
+      window.syncActiveCohortsAndClasses();
     }
 
     await sb.from('audit_logs').insert({
@@ -4194,6 +6303,12 @@ window.promoteAllEligibleStudents = async function() {
       if (progId) {
         await sb.from('classes').update({ is_active: true }).eq('program_id', progId).eq('level_id', targetLvl.id);
       }
+    } else if (targetLvl && nextNum === 99) {
+      // Cohort completed and all students graduated to Alumni: mark batch completed/inactive
+      await sb.from('batches').update({ current_level_id: targetLvl.id, is_active: false }).eq('id', window._filterBatchId);
+    }
+    if (typeof window.syncActiveCohortsAndClasses === 'function') {
+      window.syncActiveCohortsAndClasses();
     }
   }
 
@@ -4581,6 +6696,7 @@ export async function openStudentFullEdit(student, onSaved) {
 
   const initialName = draftData?.name ?? (student?.name || '');
   const initialGender = draftData?.gender ?? (student?.gender || '');
+  const initialBirthplace = draftData?.birthplace ?? (student?.birthplace || '');
   const initialBirth = draftData?.birth_date ?? (student?.birth_date || '');
   const initialProvince = draftData?.province ?? (student?.province || 'Nusa Tenggara Barat');
   let canonicalProv = initialProvince;
@@ -4602,6 +6718,16 @@ export async function openStudentFullEdit(student, onSaved) {
   const initialLevelId = draftData?.level_id ?? (student?.level_id || '');
   const initialActive = draftData?.is_active ?? (student?.is_active !== false);
   let currentPhotoUrl = draftData?.photo_url ?? (student?.photo_url || '');
+  if (!currentPhotoUrl && student?.id) {
+    try {
+      const sb = await getSupabase();
+      const { data: pData } = await sb.from('students').select('photo_url').eq('id', student.id).single();
+      if (pData?.photo_url) {
+        currentPhotoUrl = pData.photo_url;
+        student.photo_url = pData.photo_url;
+      }
+    } catch (_) {}
+  }
 
   // Build options for address dropdowns
   const provKeys = (typeof INDONESIA_REGIONS !== 'undefined') ? Object.keys(INDONESIA_REGIONS).sort((a, b) => a.localeCompare(b, 'en')) : [];
@@ -4662,6 +6788,11 @@ export async function openStudentFullEdit(student, onSaved) {
             <option value="male" ${initialGender === 'male' ? 'selected' : ''}>Mister (Male)</option>
             <option value="female" ${initialGender === 'female' ? 'selected' : ''}>Miss (Female)</option>
           </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Birthplace (Tempat Lahir)</label>
+          <input class="form-control" id="bfe-birthplace" value="${escHtml(initialBirthplace)}" placeholder="e.g. Praya, Mataram">
         </div>
 
         <div class="form-group">
@@ -4876,6 +7007,7 @@ export async function openStudentFullEdit(student, onSaved) {
     const payload = {
       name,
       gender:         document.getElementById('bfe-gender').value || null,
+      birthplace:     document.getElementById('bfe-birthplace')?.value.trim() || null,
       birth_date:     document.getElementById('bfe-birth').value  || null,
       province:       document.getElementById('bfe-province')?.value.trim() || null,
       city:           document.getElementById('bfe-city')?.value.trim() || null,

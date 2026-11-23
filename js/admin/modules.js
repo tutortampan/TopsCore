@@ -1,14 +1,14 @@
 import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 
 export const OFFICIAL_MODULES = [
-  { id: 'm1', key: 'description', name: 'Description (m1)', icon: 'target', desc: 'Visual context, pronouns, and image description.' },
-  { id: 'm2', key: 'recognition', name: 'Vocabulary Mastery - Recognition', icon: 'check-circle', desc: 'Standardized multiple choice for vocabulary precision.' },
-  { id: 'm3', key: 'spoken',      name: 'Vocabulary Mastery - Spoken',      icon: 'mic', desc: 'Phonetic analysis & pronunciation accuracy evaluation.' },
-  { id: 'm4', key: 'written',     name: 'Vocabulary Mastery - Written',     icon: 'edit', desc: 'Rigorous target lexicon typing, spelling, and meaning verification.' },
-  { id: 'm5', key: 'speech',      name: 'Speech (m5)',      icon: 'award', desc: 'Formal 5-pillar speaking performance assessment.' },
-  { id: 'm6', key: 'monologue',   name: 'Monologue (m6)',   icon: 'book-open', desc: 'Independent 3–5 minute narrative continuity speech.' },
-  { id: 'm7', key: 'dialogue',    name: 'Dialogue (m7)',    icon: 'users', desc: 'Live pair conversation room evaluated via WebRTC interaction.' },
-  { id: 'm8', key: 'interview',   name: 'Interview (m8)',   icon: 'activity', desc: 'Guided sequential conversational Q&A responsiveness.' }
+  { id: 'm1', key: 'description', name: 'Description & Structure', icon: 'target', desc: 'Visual context, pronouns, and sentence mechanics.' },
+  { id: 'm2', key: 'recognition', name: 'Vocabulary Recognition',  icon: 'check-circle', desc: 'Standardized multiple choice for vocabulary precision.' },
+  { id: 'm3', key: 'spoken',      name: 'Spoken Vocabulary',       icon: 'mic', desc: 'Phonetic analysis & pronunciation accuracy evaluation.' },
+  { id: 'm4', key: 'written',     name: 'Written Vocabulary',      icon: 'edit', desc: 'Rigorous target lexicon typing, spelling, and meaning verification.' },
+  { id: 'm5', key: 'speech',      name: 'Public Speech',           icon: 'award', desc: 'Formal 5-pillar speaking performance assessment.' },
+  { id: 'm6', key: 'monologue',   name: 'Storytelling Monologue',  icon: 'book-open', desc: 'Independent 3–5 minute narrative continuity speech.' },
+  { id: 'm7', key: 'dialogue',    name: 'Interactive Dialogue',    icon: 'users', desc: 'Live pair conversation room evaluated via WebRTC interaction.' },
+  { id: 'm8', key: 'interview',   name: 'Conversational Interview', icon: 'activity', desc: 'Guided sequential conversational Q&A responsiveness.' }
 ];
 
 export const CLASS_DISCIPLINES = [

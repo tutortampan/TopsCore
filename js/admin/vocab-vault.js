@@ -3215,10 +3215,10 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
               <!-- Generation Blueprint Split: Pass Score -->
               <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
-                <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: ${getGradeColorByScore(taskScore)}; font-variant-numeric: tabular-nums;">${taskScore}%</span>
+                <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: var(--grade-c, ${getGradeColorByScore(taskScore)}); font-variant-numeric: tabular-nums;">${taskScore}%</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
                   <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid var(--primary-tactical, #38bdf8); border-radius:4px; padding:0 3px; text-align:center;">
-                  <span style="font-size: 12px; color:${getGradeColorByScore(taskScore)}; font-weight:600;">%</span>
+                  <span style="font-size: 12px; color:var(--grade-c, ${getGradeColorByScore(taskScore)}); font-weight:600;">%</span>
                 </span>
               </td>
 

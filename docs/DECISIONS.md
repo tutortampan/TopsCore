@@ -34,7 +34,7 @@ Store student identification using internal primary key (UUID). Student login pa
 ## DECISION-003 — Exam Class Availability & Display Naming Formula
 
 Date: 2026-09-09
-Status: ACCEPTED
+Status: SUPERSEDED by DECISION-006 & DECISION-008 (Level-Centric Auto-Assignment) and DECISION-077 (Unified 4-Letter Program Prefix, Harmonized Class & Test SKU Standards, and Strict Hyphenated Room Codes)
 
 ### Context
 Rule 2.5 allows an Exam to be assigned to multiple Classes within the same Program via `exam_classes` (many-to-many).
@@ -127,7 +127,7 @@ Status: ACCEPTED
    - The frontend submit handler incorporates graceful fallback: if the database schema cache rejects `class_id`, the level is saved without crashing.
 
 
-## DECISION-002 - Level-Centric Auto-Assignment
+## DECISION-008 — Level-Centric Auto-Assignment
 
 Date: 2026-09-26
 Status: ACCEPTED
@@ -167,38 +167,10 @@ All assessment creation must pass through a centralized Single-Door Workflow ins
 
 ---
 
-## DECISION-012 — Harmonious Tier Color Palette & Sparkling Gold Grade S Atmosphere
-
-Date: 2026-10-18
-Status: ACCEPTED
-
-### Context
-In previous releases, Grade S (100%) and Grade C (51-70%) shared ambiguous amber/gold color tones (`#f59e0b` / `#d97706`), causing visual collision and diminishing the prestige of achieving a perfect 100% score. Additionally, student scores (%) and total points (PTS) were rendered in generic colors that did not convey the student's earned achievement tier.
-
-### Decision
-1. Adopt **Option 1 Harmonious Tier Palette**:
-   - **S (100%)**: Gold Champion (`#fbbf24`, shimmer `#fef08a`, glow `rgba(245, 158, 11, 0.65)`)
-   - **A (91–99%)**: Emerald Master (`#10b981`, glow `rgba(16, 185, 129, 0.45)`)
-   - **B (71–90%)**: Sky Diamond (`#06b6d4`, glow `rgba(6, 182, 212, 0.45)`)
-   - **C (51–70%)**: Warm Topaz (`#eab308`, glow `rgba(234, 179, 8, 0.35)`) — separated from S
-   - **D (31–50%)**: Flame Orange (`#f97316`, glow `rgba(249, 115, 22, 0.35)`)
-   - **E (11–30%)**: Rose Coral (`#f43f5e`, glow `rgba(244, 63, 94, 0.35)`)
-   - **F (0–10%)**: Crimson Alert (`#ef4444`, glow `rgba(239, 68, 68, 0.35)`)
-2. Synchronize Score (%) and Total Points (PTS) text and badge styling across the entire system (Admin Roster, Student Dashboard, and Result Page) with the student's tier color.
-3. Deliver a dynamic "Tier Badge Atmosphere" on Student Dashboard (`dashboard.html`) and Result Page (`result.html`) with ambient radial aura and glowing borders matching the tier.
-4. For Grade S (100%), implement prestige sparkling gold animations (`@keyframes gold-badge-sparkle` & `@keyframes gold-text-gleam`) featuring pulsing gold gradients and radiant multi-layered drop shadows.
-
-### Consequences
-- Centralized `GRADE_PALETTE`, `getGradeColor`, and `getGradeTheme` in `js/grading.js` and `js/api.js`.
-- Distinct, prestigious visual atmosphere where achieving Grade S feels like earning a champion's trophy badge.
-- Zero color collisions between S and C.
-
----
-
 ## DECISION-013 — Student Dashboard Avatar Scaling, Royal Title Mechanics, Glow Hierarchy, and Dual-Tab Dock Standings
 
 Date: 2026-10-18
-Status: ACCEPTED
+Status: ACCEPTED (Grade S symbol and gold color superseded by DECISION-020 and DECISION-070; Royal titles superseded by DECISION-053)
 
 ### Context
 Student dashboard engagement required visual dominance for student avatars, clear visual recognition for 100% scores (Grade S), healthy peer competition within the batch, and prestige gamification mechanics while maintaining a strict mobile zero-scroll budget (`100dvh`) and preserving `#bottom-ad-banner` (28px).
@@ -272,7 +244,7 @@ This wasted ~160px of vertical viewport height, pushing filter tabs and the main
 ## DECISION-015 — Ecosystem Naming Rebrand: Admin Panel to "Tutor's Room" and Student Panel to "Student's Lobby"
 
 Date: 2026-10-25
-Status: ACCEPTED
+Status: ACCEPTED (Student workspace naming "Student's Lobby" superseded by DECISION-044 in favor of "Student Gate" for login and "Class Hub" for dashboard)
 
 ### Context
 User explicitly directed to rebrand the administrative and student workspaces:
@@ -303,7 +275,7 @@ Previously, the admin console was titled "Top Office" and student dashboard was 
 ## DECISION-016 — Authoritative Solid Color Palette and 50px Bottom Banner Standardization
 
 Date: 2026-10-25
-Status: ACCEPTED
+Status: SUPERSEDED by DECISION-019, DECISION-020, and DECISION-070 regarding color palette, and AGENTS.md §0.2.3 regarding 40px Lower Panel
 
 ### Context
 User issued explicit non-negotiable directives:
@@ -340,13 +312,13 @@ Status: ACCEPTED
 User provided an architectural wireframe diagram specifying exact zero-scroll vertical dimensions and visual styling for the TopsCore Result Page across Student's View and Tutor's View:
 1. Realign components with fixed ergonomic heights: Header (50px), Student Metadata (150px, 1:1 with Student Dashboard), 2-Line Assessment Title (50px), Score/Grade Card (50px), Evaluation Word Card (50px), Action Bar [Next Milestone / Tutor Normal-Remidi] (50px), Navigation Button [Back to Lobby / Room] (30px), Answer Breakdown (30px), Bottom Banner (50px).
 2. The Metrics Table (Correct, Partial, Incorrect, Points) dynamically absorbs the remaining vertical viewport (`flex: 1 1 0px`).
-3. User explicitly mandated that the evaluation card must contain ONLY the exact single word without icons or extra phrases: `E=FAIL / D=LESS / C=ENOUGH / B=GOOD / A=VERY GOOD / STAR=EXCELLENT / R=REMEDIAL`.
+3. User explicitly mandated that the evaluation card must contain ONLY the exact single word without icons or extra phrases: `E=FAIL / D=LESS / C=ENOUGH / B=GOOD / A=VERY GOOD / STAR=EXCELLENT`.
 4. User evaluated a secondary proposal of percentage-based heights (15%-35%-15%-15%-10%-10%) and formally approved retaining the fixed ergonomic + dynamic metrics scoreboard model ("baik, biarkan saja").
 5. Container borders and radial backgrounds across all cards dynamically radiate the student's Grade tier color.
 
 ### Decision
 1. **Fixed Ergonomic Card Heights**: Standardize Title (50px), Score/Grade (50px), Evaluation Word (50px), Next Action / Remedial segmented buttons (50px), Back button (30px), and Breakdown button (30px).
-2. **Exact Word Evaluation**: `#result-motivation-msg` (`.result-evaluation-card`) renders text-only single words (`FAIL`, `LESS`, `ENOUGH`, `GOOD`, `VERY GOOD`, `EXCELLENT`, `REMEDIAL`) with glowing uppercase typography.
+2. **Exact Word Evaluation**: `#result-motivation-msg` (`.result-evaluation-card`) renders text-only single words (`FAIL`, `LESS`, `ENOUGH`, `GOOD`, `VERY GOOD`, `EXCELLENT`) with glowing uppercase typography. (Note: `REMEDIAL` is strictly an exam status and excluded per DECISION-018 and DECISION-041).
 3. **Dynamic Tier Border & Background Aura**: Card borders and backgrounds across all containers dynamically reflect `--tier-color` and `--tier-rgb`.
 4. **View Parity**: Student's view and Tutor's view maintain strictly identical card heights, 10px gaps, and typography.
 
@@ -368,12 +340,12 @@ User issued an explicit directive regarding grade-based evaluation wording:
 ### Decision
 1. **Official Component Name**: The evaluation word component is formally designated as **Achievement Status** (`achievement_status`).
 2. **Authoritative 6-Tier Values**:
-   - Grade E / F (0–19%): `FAIL`
-   - Grade D (20–39%): `LESS`
-   - Grade C (40–59%): `ENOUGH`
-   - Grade B (60–79%): `GOOD`
-   - Grade A (80–99%): `VERY GOOD`
-   - Grade S / STAR (100%): `EXCELLENT`
+   - Grade E (0–29%): `FAIL`
+   - Grade D (30–59%): `LESS`
+   - Grade C (60–79%): `ENOUGH`
+   - Grade B (80–89%): `GOOD`
+   - Grade A (90–99%): `VERY GOOD`
+   - Grade ★ / STAR (100%): `EXCELLENT`
 3. **Strict Remedial Exclusion**:
    - `REMEDIAL` is an exam status / condition, NOT an Achievement Status.
    - The Achievement Status card MUST NEVER display "REMEDIAL".
@@ -390,7 +362,7 @@ User issued an explicit directive regarding grade-based evaluation wording:
 ## DECISION-019 — Official Grading Scale & Remedial Max 60% Score Capping
 
 Date: 2026-10-26
-Status: SUPERSEDED by DECISION-028 regarding Star tier color (Ungu/Purple -> Green #22C55E); otherwise ACCEPTED (SUPERSEDES DECISION-016 tier color mappings & prior score thresholds)
+Status: ACCEPTED (Star tier color governed by DECISION-070 #c084fc; SUPERSEDES DECISION-016 tier color mappings & prior score thresholds)
 
 ### Context
 User provided the official Grading Scale diagram (tablet & printout specifications) with exact score intervals, predicate labels, and color gradients:
@@ -425,7 +397,7 @@ User provided the official Grading Scale diagram (tablet & printout specificatio
 ## DECISION-020 — Elimination of Grades "S", "F", and "R" in Favor of Canonical 6-Tier Scale (★, A, B, C, D, E)
 
 Date: 2026-10-27
-Status: SUPERSEDED by DECISION-028 regarding Star tier color (#A855F7 -> #22C55E); otherwise ACCEPTED (SUPERSEDES DECISION-019 regarding the letter representation of the 100% Star tier)
+Status: ACCEPTED (Star tier color governed by DECISION-070 #c084fc; SUPERSEDES DECISION-019 regarding the letter representation of the 100% Star tier)
 
 ### Context
 User requirement: "hilangkan grade 'S' dan 'F', serta 'R'".
@@ -460,7 +432,7 @@ User mandate:
    - Singular context: `Test`
    - Plural context: `Tests`
 3. Sub-categories strictly split into:
-   - `Quiz` (pl: `Quizzes`): Daily tasks, formative checks, phrase runner drills, quick-feedback items.
+   - `Quiz` (pl: `Quizzes`): Daily tasks, formative checks, phrase runner drills, quick-feedback items. (Note: The term "Quiz" was later permanently deprecated and replaced by "Task" per DECISION-039).
    - `Exam` (pl: `Exams`): Formal, scheduled, high-stakes, strictly-timed examinations.
 4. ZERO RESIDUE: No orphan tables, dead alias RPCs, deprecated columns, unused TypeScript interfaces, or residual UI strings containing "assessment".
 5. DATA PRESERVATION: 100% data preservation of all historical attempts (851 attempts, 44,566 attempt answers) and 40 live tests (32 quizzes + 8 exams).
@@ -500,7 +472,7 @@ User mandate:
 ## DECISION-022 — Weekly-Only Academic Scoring (SCORE, GRD, PTS) & Comprehensive PROG Leaderboard Ranking in Class Hub
 
 Date: 2026-10-27
-Status: ACCEPTED
+Status: ACCEPTED (Leaderboard sort order superseded by DECISION-024; left-panel scoring superseded by DECISION-032)
 
 ### Context
 In `admin.html#class-hub`, previous metric calculations aggregated all activities indiscriminately, allowing daily drills to dilute or inflate formal academic grades and overall mastery.
@@ -541,7 +513,7 @@ User requirements:
 ## DECISION-023 — Terminology Simplification (Quiz vs Exam) & Dynamic Weighted Exam-Only Scoring Architecture
 
 Date: 2026-10-28
-Status: ACCEPTED
+Status: ACCEPTED (Terminology 'Quiz' superseded by DECISION-039; scoring and sort order superseded by DECISION-024, DECISION-029 & DECISION-031)
 
 ### Context
 Previous implementations accumulated cluttered, conflicting terminology prefixes across the codebase ("Daily Quiz", "Daily Task", "Weekly Exam", "Theme Exam", "Theme TOT"). Furthermore, static slot ceilings (40, 10, 50) and unweighted averages leaked into point and score calculations, artificially capping student points on multi-section milestone exams and distorting class leaderboards.
@@ -578,15 +550,14 @@ Previous implementations accumulated cluttered, conflicting terminology prefixes
 
 ---
 
-## DECISION-024 — Points-First Leaderboard Hierarchy, Milestone Progression 0% Penalty & Admin Table Ergonomics
+## DECISION-024 — Points-First Leaderboard Hierarchy & Admin Table Ergonomics
 
 Date: 2026-10-28
-Status: ACCEPTED (Partially supersedes DECISION-023 Tier 1 sorting)
+Status: ACCEPTED (Partially supersedes DECISION-023 Tier 1 sorting; Point 2 regarding milestone 0% penalty superseded and eliminated by DECISION-029)
 
 ### Context
 1. **The Ranking Paradox**: Students with fewer exam points were ranking above students with vastly higher exam performance (e.g. Mr. Suke Ajai with 18 tasks / 143 pts was ranked above Miss Sofa Maria Ulfa with 17 tasks / 273.5 pts) because `PROG %` was previously evaluated as the primary sort key.
-2. **The Early-Stop Score Inflation**: A student who completed only Theme A (e.g. Mr. Pasya / Miss Risma with 90 pts out of 150) received 60% (Grade C) and stopped there, while students who advanced to harder subsequent themes (Theme B: 350 questions, Theme C: 600 questions) took risks on large question banks, resulting in lower scores or failing grades.
-3. **Admin Table Display Ergonomics**:
+2. **Admin Table Display Ergonomics**:
    - The "Mr." and "Miss" honorific titles took up horizontal column space in the Admin Class Hub matrix grid where screen real estate is at a premium.
    - Daily quizzes were displaying raw points (e.g. `40`, `10`), creating confusion because points are designed for weighted Milestone Exams, whereas quizzes are formative daily checks evaluated by percentage score.
 
@@ -599,57 +570,41 @@ Status: ACCEPTED (Partially supersedes DECISION-023 Tier 1 sorting)
      * **Tier 4 (Time-breaker)**: `lastSubmittedAt ASC` (Earliest timestamp wins).
      * **Tier 5 (Alphabetical)**: Student Clean Name ASC.
    - Updated default DataGrid sort key in Admin Class Hub to `initialSortKey: 'totalEarnedScore'` (PTS column sorted DESC by default).
-2. **Sequential Milestone Progression & Next Exam 0% Penalty**:
-   - Implemented authoritative `computeMilestoneExamMastery(examEntries, allClassExams)` in `js/grading.js`:
-     * Once a student successfully passes Milestone Theme $N$ ($\ge 60\%$), Milestone Theme $N+1$ is immediately queued into the active denominator with 0 earned points (even if ineligible or unattempted).
-     * This dynamically reduces the global score and grade for students who attempt to pause their learning after early milestones, maintaining fairness against students tackling subsequent exams.
-3. **Admin Table Ergonomics**:
+2. **Admin Table Ergonomics**:
    - **Clean Student Names**: Stripped `Mr.` and `Miss` honorifics from `displayName` in Admin Class Hub table using `cleanStudentName()` to maximize horizontal space. Student Dashboard retains honorifics in student-facing lobby views.
    - **Quiz Percentage Display**: Daily quiz matrix cells and class average summary cells display **Score (%)** (e.g. `100%`, `98%`, `70%`) with canonical grade color and remedial indicators, preserving points exclusively for Milestone Exams.
 
 ### Consequences
 - Eliminates the Suke Ajai ranking inversion: Miss Sofa Maria Ulfa (273.5 pts) is immediately ranked well above Mr. Suke Ajai (143 pts).
-- Pasya and students stopping after Theme A have Theme B queued at 0% ($90 / 500 = 18\%$, Grade E), accurately reflecting unfinished milestones.
 - 100% parity between Tutor's Room and Student's Lobby leaderboard sorting.
 - Clean, uncluttered student names and percentage-only daily quizzes in Admin Class Hub.
 
 ---
 
-## DECISION-025 — Automatic Background Auto-Close of Expired Attempts & Active Queued Milestone 0% Matrix Visualization
+## DECISION-025 — Automatic Background Auto-Close of Expired Attempts
 
 Date: 2026-10-28
-Status: ACCEPTED
+Status: ACCEPTED (Point 2 regarding 0% matrix visualization superseded and eliminated by DECISION-029 & DECISION-032)
 
 ### Context
 1. **Disconnected / Battery Dead In-Progress Attempts**: When a student's device dies, crashes, or loses power mid-exam (e.g., Ari Wahyu Darma on Test 29), the browser client timer ceases to exist, preventing the client from firing the final `submit-test` API request. This left the attempt record stalled indefinitely in `in_progress` status with an hourglass `⏳` icon in the Class Hub matrix, even long after its `expires_at` deadline had passed.
-2. **Matrix Visibility of Queued Active Milestone Exams**: While the global score calculation correctly penalized students who completed Theme $N$ by adding Theme $N+1$ to the denominator at 0 earned points, the individual exam columns in the table matrix rendered gray unattempted dots (`·`). This confused tutors because it wasn't visually obvious which specific exams were actively counting as `0%` and pulling down the student's score.
 
 ### Decision
 1. **Automated Background Sweep for Expired Attempts**:
    - Integrated `sb.rpc('auto_close_expired_attempts')` into the primary data access lifecycle (`loadClassDetails` / `renderClassHub` in `js/admin/app.js`, `adminFetchAll('attempts')`, and `fetchAllStudentAttempts(studentId)` in `js/api.js`).
    - Every time the Admin Class Hub loads or student data is queried, any expired `in_progress` attempts are automatically finalized and evaluated by `emergency_submit_attempt`, assigning full partial credit for all saved answers.
    - Added an explicit client-side expiry check in `js/admin/app.js`: any attempt with `att.expires_at < new Date()` is never displayed with the `⏳` hourglass icon.
-2. **Queued Milestone Matrix Visualization (Red 0% & 0 Pts)**:
-   - Enhanced `computeMilestoneExamMastery()` in `js/grading.js` to return `includedThemeCodes` and `includedExamIds`.
-   - In `renderAttendanceGridMatrix()` in `js/admin/app.js`:
-     * For any unattempted exam belonging to an active or queued theme (`isQueued = row.includedExamIds.has(asm.id)`), the cell displays a distinct red `0%` (Score column) and red `0` (Points column).
-     * The theme total points column for that theme displays `0` pts rather than `-1` (unreached dot).
-     * Any unreached future themes (beyond the active queued milestone) remain clean gray dots (`·`).
 
 ### Consequences
 - Ari Wahyu Darma's attempt (138/200, 69%, Grade C) is immediately graded and displayed as 138 pts, elevating him to Rank #2 (470 pts) with zero `⏳` icons.
 - If any future student's battery dies or disconnection occurs, their attempt is automatically finalized upon the tutor opening the class.
-- Tutors can immediately distinguish between:
-  1. Completed exams (color-coded percentage & points).
-  2. Active/queued milestone exams that the student must take (red `0%` and `0` pts).
-  3. Unreached future themes (gray `·`).
 
 ---
 
 ## DECISION-026 — Strict Sequential Intra-Theme Exam Prerequisites (Words Exam Pass ≥60% Required for Phrases Exam)
 
 Date: 2026-10-28
-Status: ACCEPTED
+Status: SUPERSEDED by DECISION-043 (which established Parallel Peer Exam Flow allowing students to take Words Exam or Phrases Exam in any order within an unlocked theme)
 
 ### Context
 A tutor noticed that student Gagan Tara Deswari was able to take Test 18 (3B Phrases Exam: 60%ᴿ, 42 pts) despite having failed Test 17 (3B Words Exam: 59%, 164 pts, Grade D).
@@ -711,37 +666,10 @@ Investigation revealed:
 
 ---
 
-## DECISION-028 — Official Grading Scale Color Update: Star Tier (★ / 100%) Transition from Purple (#A855F7) to Green (#22C55E)
-
-Date: 2026-10-29
-Status: ACCEPTED (SUPERSEDES DECISION-019 and DECISION-020 regarding the color of the Star tier ★ / 100%)
-
-### Context
-User requirement: *"saya melihat ada aturan inti soal Grading Scale, masih ada warna UNGU,,, itu sudah diganti dengan HIJAU perbaiki"*.
-In the core TopsCore specifications (`AGENTS.md` §2.10, `ANTIGRAVITY_GUIDE.md`, `PRODUCT_SPEC.md`, `DATABASE.md`), the 100% Star tier (`★`) was previously documented with Purple (`#A855F7`). The user affirmed that the Star tier color has officially transitioned to Green (Hijau / `#22C55E`).
-
-### Decision
-1. Update `AGENTS.md` (Section 2.10 Official Grading Scale) table to specify:
-   `| ★ | Excellent | 100% | Hijau (Rich Green) | #22C55E |`
-2. Update `ANTIGRAVITY_GUIDE.md` to reflect `★ (100% - Hijau #22C55E)`.
-3. Update `docs/PRODUCT_SPEC.md` and `docs/DATABASE.md` to establish `#22C55E` as the authoritative color token for 100% / Star tier.
-4. Align all client styling, badges, SVG star vector gradients, drop-shadows, and fallback colors across:
-   - `css/style.css`, `css/result.css`, `css/dashboard.css`
-   - `js/grading.js`, `js/dashboard.js`, `js/result.js`
-   - `js/admin/class.js`, `js/admin/student-management.js`, `js/admin/tests-management.js`
-5. All Star tier / 100% / Grade S references strictly use Green (`#22C55E` / `rgba(34, 197, 94, ...)`) with vibrant green glows and gradients (`#86efac` -> `#22c55e` -> `#16a34a`).
-
-### Consequences
-- Absolute alignment between user specification, execution contract (`AGENTS.md`), developer guides, stylesheets, and JavaScript logic.
-- Preserves clean 6-tier grading scale (★, A, B, C, D, E) without introducing non-standard grades.
-- 100% passing test suites across all validation scripts.
-
----
-
-## DECISION-029 — Unified Vocab Scoring Engine (Single Model Across All Levels): Latest Active Theme Score & Grade with Cumulative Exam Points
+## DECISION-029 — Unified Vocab Scoring Engine (Single Model Across All Levels): Latest Active Theme Score & Grade
 
 Date: 2026-10-30
-Status: ACCEPTED (SUPERSEDES DECISION-024 regarding future milestone 0% penalty on global score)
+Status: ACCEPTED (SUPERSEDES DECISION-024 regarding future milestone 0% penalty on global score; Point 3 regarding cumulative points superseded and eliminated by DECISION-031)
 
 ### Context
 User requirement: *"Kita perlu bahas sosal penialian sekali lagi,,, saya lihat nilai siswa di kelas Vocab sangat rendah (D,C) saaya tidak mau membuat mereka tidak besemnagat,,, bagaimana kalau kita pakai nilai rata2 dari Exam terkahir yang mereka pakai untuk sebagai nilai global, apakah bisa? tapi sebelumnya kita atur dulu cara kita Scoring dan Grading degan maksmial dan 1 model untuk kelas vocab SEMUA LEVEL, yang menggunakan sistem quiz dan Exam /grill-me"*
@@ -755,53 +683,17 @@ Previously, when a student completed Theme A (150 pts max), passing it queued Th
 2. **Latest Active Theme for Global Score & Grade**:
    - The authoritative `computeMilestoneExamMastery()` evaluates the student's global `SCORE %` and `GRADE` strictly from their **Latest Active Theme** (`latestAttemptedTheme.scorePct`).
    - Removes the demotivating future milestone 0% penalty on Global Score (e.g. Pasya shows 60% Grade C instead of 18% Grade E; Sofa Maria Ulfa shows 47% Grade D instead of 31% Grade D).
-3. **Cumulative Global Points**:
-   - The left `PTS` column in Class Hub, Student Roster, and Student Dashboard displays the cumulative total points earned across ALL completed exams (e.g. Sofa = 273.5 pts, Suke = 143 pts, Pasya = 90 pts).
-4. **0-Exam Handling (Quiz-Only Students)**:
+3. **0-Exam Handling (Quiz-Only Students)**:
    - Students who completed only quizzes and 0 exams (e.g. Rifky Ahmad) display neutral `—` for Global Score, Grade, and PTS, preventing false quiz score inflation or unfair 0% E penalization.
    - Pacing is reflected cleanly in `TESTS` (e.g. `2/40`) and `PROG %` (`5%`).
-5. **Exact System-Wide Parity**:
+4. **Exact System-Wide Parity**:
    - Class Hub (`admin.html#class-hub`), Student Roster (`admin.html#students`), and Student Dashboard (`dashboard.html`) all use `computeMilestoneExamMastery()` with identical data queries (fetching full test metadata `test_type`, `shell_code`, `payload`, etc.).
-6. **Strict Unified Color Vault**:
-   - Master colors in `js/grading.js` (`TOPSCORE_COLORS`): ★ `#00c000ff` with white star, A `#00c000ff`, B `#95ff00ff`, C `#FFFF00`, D `#FF8C00`, E `#FF0000` (superseded by DECISION-030).
+5. **Strict Unified Color Vault**:
+   - Master colors in `js/grading.js` (`TOPSCORE_COLORS`): ★ `#c084fc` (Purple per DECISION-070), A `#00c000`, B `#95ff00`, C `#FFFF00`, D `#FF8C00`, E `#FF0000`.
 
 ### Consequences
 - Prevents artificial grade deflation while maintaining academic rigor.
 - Fully aligns Class Hub, Student Roster, and Student Dashboard.
-
----
-
-## DECISION-030 — User-Defined Official Color Palette: Star & Grade A (#00c000ff) and Grade B (#95ff00ff)
-
-Date: 2026-10-30
-Status: ACCEPTED (SUPERSEDES DECISION-028 regarding base hex values for Star, A, and B)
-
-### Context
-User requirement: *"2. palet warna saya yang rubah,,, saya pakai yang STAR dan A #00c000ff dan B #95ff00ff."*
-
-The user explicitly defined the primary color hex codes for the highest achievement tiers:
-- **Star Tier (★ / 100%)**: `#00c000ff` (Pure Rich Green with Alpha)
-- **Grade A (90% – 99%)**: `#00c000ff` (Pure Rich Green with Alpha, identical base to Star)
-- **Grade B (80% – 89%)**: `#95ff00ff` (Vibrant Electric Lime with Alpha)
-- **Grade C (60% – 79%)**: `#FFFF00` (Pure Yellow)
-- **Grade D (30% – 59%)**: `#FF8C00` (Dark Orange)
-- **Grade E (0% – 29%)**: `#FF0000` (Pure Red)
-
-### Decision
-1. Update `TOPSCORE_COLORS` and `GRADE_PALETTE` in `js/grading.js`:
-   - `STAR: '#00c000ff'`, `A: '#00c000ff'`, `CORRECT: '#00c000ff'`.
-   - `B: '#95ff00ff'`.
-   - RGB equivalents: `STAR_RGB = '0, 192, 0'`, `A_RGB = '0, 192, 0'`, `B_RGB = '149, 255, 0'`.
-2. Update CSS variables in `css/style.css`:
-   - `--grade-star: #00c000ff;` (RGB: `0, 192, 0`)
-   - `--grade-a: #00c000ff;` (RGB: `0, 192, 0`)
-   - `--grade-b: #95ff00ff;` (RGB: `149, 255, 0`)
-   - `--eval-correct: #00c000ff;`
-3. Update `AGENTS.md` Section 2.10 table and `scripts/verify_green_star_grading.mjs` test assertions.
-
-### Consequences
-- Absolute adherence to the product owner's explicit aesthetic decision per AGENTS.md §0 (Execution Authority Level 1: Direct User Requirements).
-- 100% PASS on all automated color vault verification tests.
 
 ---
 
@@ -1009,7 +901,7 @@ Empirical analysis of student errors showed two key pedagogical gaps:
 ### Decision
 1. **Phrase Progress Word-Counter**:
    - Questions with target phrases $\ge 2$ words dynamically render a real-time word counter: `✍️ X / Y words` for written mode and `🎙️ X / Y words` for spoken mode.
-   - Counter dynamically shifts from cyan (`#38bdf8`) to vibrant green (`--clr-success, #00c000ff`) when the target word count is fulfilled.
+   - Counter dynamically shifts from cyan (`#38bdf8`) to vibrant green (`--clr-success, #00c000`) when the target word count is fulfilled.
 2. **Immediate Post-Exam 3D Flashcard Recovery**:
    - On `result.html`, a dedicated `🗂️ FLASHCARD RECOVERY` action button dynamically activates if any questions were missed, timed out, or partially credited.
    - Launches an interactive 3D Flip Card modal presenting:
@@ -1050,7 +942,7 @@ Status: ACCEPTED
 
 ---
 
-## DECISION-039 — Universal Terminology Unification: Complete Elimination of 'Quiz' in Favor of 'Task', 7×7 Repetitive Mastery Engine, and Written Words Exam (>= 70%)
+## DECISION-039 — Universal Terminology Unification: Complete Elimination of 'Quiz' in Favor of 'Task', 7×7 Repetitive Mastery Engine, and Written Words Exam (>= 60%)
 
 Date: 2026-11-02
 Status: ACCEPTED
@@ -1074,13 +966,13 @@ Status: ACCEPTED
      - `3/7 & 4/7` $\rightarrow$ Pure Yellow / Grade C (`#FFFF00`, `var(--grade-c)`)
      - `5/7 & 6/7` $\rightarrow$ Electric Lime / Grade B (`#95ff00`, `var(--grade-b)`)
      - `7/7` $\rightarrow$ Pure Green / Grade A / Star (`#00c000`, `var(--grade-star)`)
-3. **Words Exam Written Mode & Minimum Passing Grade 70%**:
+3. **Words Exam Written Mode & Minimum Passing Grade 60%**:
    - Words Exam format transitions from speech-to-text to **Written (text input)**.
    - Written answer evaluation strictly enforces AGENTS.md Rule 2.13 (partial credit of 0.5 pt for typos $\le 2$ characters).
-   - The universal minimum passing score for all Vocabulary Exams is standardized to **≥ 70%** (blocking sequential progression to Phrases Exam if < 70%).
+   - The universal minimum passing score for Vocabulary Exams is standardized to **≥ 60%** (Grade C per DECISION-073 and AGENTS.md §2.4.1; the 70% threshold applies strictly to formative 7×7 Tasks).
 4. **Level-Scaffolded Vocabulary Curriculum**:
    - **Level 2 (`2nd Vocabulary`)**: Designed as a **Words-Only** curriculum (no phrases) with 2 initial Themes A & B, keeping cognitive load appropriate for incoming Batch 134.
-   - **Level 3 (`3rd Vocabulary`)**: Preserves the **separate Words and Phrases structure**, with Words Exam (Written $\ge 70\%$) sequentially unlocking Phrases Exam (Dropdown $\ge 70\%$) per theme.
+   - **Level 3 (`3rd Vocabulary`)**: Preserves the **separate Words and Phrases structure**, with Words Exam (Written $\ge 60\%$) sequentially unlocking Phrases Exam (Dropdown $\ge 60\%$) per theme.
 
 ### Consequences
 - Eliminates 100% of code branching and filter bugs related to `quiz` vs `task`.
@@ -1088,92 +980,6 @@ Status: ACCEPTED
 - Ensures seamless auto-assignment for Batch 134 under Rule 2.5 without cross-level interference.
 
 
-
-
----
-
-## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
-
-**Date:** 2026-11-21
-**Status:** Approved & Enforced
-
-### Context
-As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
-
-### Decision
-**Triple-Lock Gating Architecture** implemented across three layers:
-
-1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
-   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
-   - Modality rules apply identically across all levels of the same class type.
-   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
-
-2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
-   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
-   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
-   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
-   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
-
-3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
-   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
-   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
-   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
-
-### Bug Fix (included in this decision)
-- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
-
-### Inferensi Modality (Code-Based, No DB Column)
-The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
-
-### Not in Scope (Deferred)
-- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
-- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
-- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
-- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.
-
-
-
-
----
-
-## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
-
-**Date:** 2026-11-21
-**Status:** Approved & Enforced
-
-### Context
-As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
-
-### Decision
-**Triple-Lock Gating Architecture** implemented across three layers:
-
-1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
-   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
-   - Modality rules apply identically across all levels of the same class type.
-   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
-
-2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
-   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
-   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
-   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
-   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
-
-3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
-   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
-   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
-   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
-
-### Bug Fix (included in this decision)
-- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
-
-### Inferensi Modality (Code-Based, No DB Column)
-The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
-
-### Not in Scope (Deferred)
-- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
-- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
-- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
-- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.
 
 
 ---
@@ -1196,10 +1002,10 @@ Following a rigorous `/grill-me` architectural review with the Product Owner (Mr
    - `level_number = 1`: Tampilan `1st`, Deskripsi `1st Level`.
    - `level_number = 2`: Tampilan `2nd`, Deskripsi `2nd Level`.
    - `level_number = 3`: Tampilan `3rd`, Deskripsi `3rd Level`.
-   - `level_number = 0`: Tampilan `Alumni`, Deskripsi `Completed`.
+   - `level_number = 99`: Tampilan `X` (Alumni), Deskripsi `Completed` (per DECISION-058 & DECISION-074; Level 0 is dedicated to Non-Level programs per DECISION-066).
 2. **Empat Aksi Lifecycle Siswa (NEXT - HOLD - RETRY - REPEAT)**:
-   - `NEXT`: Siswa lulus semua Exam di level aktif $\ge 70\%$, memajukan `students.level_id` ke level berikutnya.
-   - `HOLD`: Siswa belum lulus (< 70%) atau belum menuntaskan 7×7 Task. Tombol kenaikan terkunci 🔒.
+   - `NEXT`: Siswa lulus semua Exam di level aktif $\ge 60\%$ (Grade C per DECISION-073 and AGENTS.md §2.4.1), memajukan `students.level_id` ke level berikutnya.
+   - `HOLD`: Siswa belum lulus (< 60%) atau belum menuntaskan 7×7 Task. Tombol kenaikan terkunci 🔒.
    - `RETRY`: Siswa mengulang ujian atau drill yang belum tuntas di level saat ini.
    - `REPEAT`: Siswa mengulang level dari awal, atau Alumni (Completed) yang mendaftar kembali memilih level masuk baru (`1st`, `2nd`, atau `3rd`) dengan riwayat kelulusan lama tetap diarsipkan.
 3. **Mekanisme Transfer Batch**:
@@ -1220,7 +1026,7 @@ Following a rigorous `/grill-me` architectural review with the Product Owner (Mr
    - Pengerjaan 7×7 Task instan tanpa jeda/cooldown.
 
 ### Consequences
-- Menghilangkan ambiguitas peran Level 0 (resmi menjadi status Alumni/Completed dengan Universal Access).
+- Menghilangkan ambiguitas peran tingkat kelulusan (Alumni resmi menjadi Level X / 99 dengan Universal Access per DECISION-058 & DECISION-074, sedangkan Level 0 didedikasikan untuk program tanpa jenjang per DECISION-066).
 - Memastikan pemisahan total konten kurikulum antar institusi klien tanpa duplikasi tabel.
 - Memberikan kontrol operasional penuh kepada tutor dan Mr. Top dalam mengelola kenaikan tingkat, remidi, perpindahan batch, dan pendaftaran ulang alumni.
 
@@ -1228,7 +1034,7 @@ Following a rigorous `/grill-me` architectural review with the Product Owner (Mr
 
 ---
 
-## DECISION-042 — Zero-Maintenance Dynamic Curriculum Test Auto-Provisioning & Synchronization from Vocabulary Vault
+## DECISION-040B — Zero-Maintenance Dynamic Curriculum Test Auto-Provisioning & Synchronization from Vocabulary Vault
 
 Date: 2026-11-03  
 Status: ACCEPTED  
@@ -1342,7 +1148,7 @@ Status: ACCEPTED
 3. **Synchronized Deferred Tier Glow across All 4 Panels**:
    - All 4 panels (`#result-identity-card`, `#result-Test-name-container`, `#result-metrics-composite-card`, `#result-motivation-msg`) remain clean dark slate (`rgba(255, 255, 255, 0.12)`) until `#result-motivation-msg` reveals.
    - Upon reveal, `activateTierGlow` simultaneously illuminates all 4 panels with `1.5px solid rgba(var(--tier-rgb), 0.75-0.85)`, glowing box shadows (`rgba(var(--tier-rgb), 0.35-0.50)`), and matching radial background auras:
-     - Star 100% / Grade A: **Pure Green (`#00c000ff`, `rgb(0, 192, 0)`)**.
+     - Star 100%: **Vibrant Purple (`#c084fc`, `rgb(192, 132, 252)`)** (per DECISION-070); Grade A: **Pure Green (`#00c000`, `rgb(0, 192, 0)`)**.
      - Grade C: **Pure Yellow (`#FFFF00`, `rgb(255, 255, 0)`)**.
      - Grade B: **Electric Lime (`#95ff00ff`, `rgb(149, 255, 0)`)**.
      - Grade D: **Dark Orange (`#FF8C00`, `rgb(255, 140, 0)`)**.
@@ -1512,7 +1318,7 @@ In the Organization screen, topbar tabs displayed generic strings `"Program (1)"
    - `curriculum-management.js` assigns `label: inst.name` and `title: inst.name` so that top tabs immediately reflect the institution identity (`TOP [1]`, `CEC [2]`).
 2. **Authoritative Full-Green Success & Active Palette**:
    - Explicitly defined `--clr-success-rgb: 0, 192, 0;` and `--clr-success-glow: rgba(0, 192, 0, 0.4);` in `css/style.css`.
-   - Updated `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, and program batch counters to pure green (`#00c000ff` text, `rgba(0, 192, 0, 0.15)` background, `1px solid rgba(0, 192, 0, 0.35)` border) with zero pink contamination.
+   - Updated `.badge-tag-ongoing`, `.badge-success`, `.btn-success`, and program batch counters to pure green (`#00c000` text, `rgba(0, 192, 0, 0.15)` background, `1px solid rgba(0, 192, 0, 0.35)` border) with zero pink contamination.
 3. **Streamlined Grade & Score Layout**:
    - Removed the `DISPLAY: FIT SCREEN / 100% SCROLL` switcher, pan buttons, and `Full Width` button.
    - Standardized the matrix on standard uncompressed 100% scale (`zoom: 1`) with smooth horizontal scrolling (`overflow-x: auto`), comfortable row heights ($\ge 22\text{px}$), and readable font sizes ($\ge 8.5\text{px}$).
@@ -1676,9 +1482,14 @@ Historically, `formatStudentName` in `js/api.js`, `updateStudentGender`, student
    - `updateStudentGender` only updates `gender: g`, never touching the `name` column.
    - `verifyStudentLogin` and `fetchStudentsByProgram` return standard student names (`name: student.name`).
    - `formatStudentName(name)` simply returns `name || ''`.
-3. **Frontend Presentation Screens**:
+3. **Frontend Presentation Screens & Batch Royal Titles (King & Queen)**:
    - Result screen (`js/result.js`), Test Room (`js/test.js`), Conversation Room (`js/conversation-room.js`), and Admin Console simply display standard `session.student_name` or `student.name`.
-   - Student Dashboard (`js/dashboard.js`) continues to dynamically add `Mr.` or `Miss` (or `King` / `Queen`) for its local greeting.
+   - **Student Dashboard (`dashboard.html` / `js/dashboard.js`) Title & Crown Mechanics**:
+     * In each batch, the male student with the highest score / points earns the title **`King`**.
+     * The female student with the highest score / points in that batch earns the title **`Queen`**.
+     * Both King and Queen receive the dynamic royal title prefix (`King <Name>` / `Queen <Name>`) across the dashboard header, welcome banner, profile modal, and standings list.
+     * Both King and Queen are awarded a glowing golden crown effect (`👑`, `.avatar-crown-badge`) floating directly above their photo avatar on the dashboard and profile modal.
+     * All other students in the batch retain the standard `Mr.` (male) or `Miss` (female) greeting without the crown effect.
 
 ---
 
@@ -1720,45 +1531,6 @@ When performing UI redesigns, styling modifications, or visual preflights, captu
 
 ---
 
-## DECISION-056 — Standardized Test Code (`shell_code`) and Test Name (`title`) Architecture
-
-Date: 2026-11-19  
-Status: ACCEPTED (Refined per User Directive: Eradicate `display_name`)
-
-### Context
-1. In earlier versions of TopsCore, test titles were generated as monolithic verbose strings (e.g. `2nd Vocabulary B2 Words Task - Podcast Interviewing & Discussion` or `2nd Vocabulary D Words Exam - COOKING CLASS`).
-2. When rendered on mobile devices (constrained to a 430px viewport), these 60+ character strings caused severe text wrapping and vertical crowding. Furthermore, they introduced information redundancy by repeatedly displaying the class name and level despite them already appearing in the sticky header.
-3. The presence of both `title` and `display_name` introduced architectural confusion and schema redundancy.
-4. Test codes (`shell_code`) previously had inconsistent legacy patterns (`1A1-WORDS-TASK`, `2D-WORDS-EXAM`, `3A1-TASK`), causing ambiguity and potential collisions across multiple classes and institutions in multi-tenant deployments.
-5. With the unification of Words and Phrases into single integrated topic packages (DECISION-034), retaining explicit "Words" or "Phrases" in the primary test title became obsolete and misleading.
-
-### Decision
-1. **Four-Segment Test Code Architecture (`shell_code`)**:
-   - Standard format: `PROGRAM-LEVEL_CLASS-CODE-TYPE` (15–16 characters).
-   - Segments:
-     - `PROGRAM`: 3-letter program abbreviation (e.g. `CMP`, `EVN`, `SHR`, `TMT`).
-     - `LEVEL_CLASS`: Pure level digit prefixed to 3-letter class abbreviation **without letter 'L'** (e.g. `3VCB`, `2VCB`, `2SPK`, `1STY`). Omitting 'L' prevents font confusion (`L1` vs `11` vs `I1`).
-     - `CODE`: Topic code for tasks (e.g. `A1`, `B2`, `D4`) or single theme letter for exams (e.g. `A`, `B`, `C`, `D`).
-     - `TYPE`: Strictly `TASK` or `EXAM`.
-   - Examples: `CMP-3VCB-A1-TASK`, `CMP-3VCB-A-EXAM`, `CMP-3VCB-D-EXAM`, `CMP-2VCB-B2-TASK`, `CMP-2SPK-A1-TASK`.
-
-2. **Test Name Standard (`title`) & Eradication of `display_name`**:
-   - Every test strictly has only two identifiers: **Test Code (`shell_code`)** and **Test Name (`title`)**. The auxiliary `display_name` concept is discarded permanently to eradicate ambiguity.
-   - Standard format: `[LEVEL_ORDINAL] [CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]`.
-   - Examples:
-     - Task: `2nd Vocabulary Task A1 - Greetings & Basics`, `2nd Vocabulary Task B1 - Podcast Hosting & Introduction`, `3rd Vocabulary Task A1 - Job Hunting & Application`.
-     - Exam: `2nd Vocabulary Exam D - Cooking Class`, `3rd Vocabulary Exam A - World of Work`.
-     - Speaking: `2nd Public Speaking Task A1 - Introduction & Delivery`.
-   - Layout 2 Baris di Card Dashboard (Mobile 430px - Zero Class Redundancy):
-     - Line 1: `Task A1` / `Exam A` (White, Bold, 14px - natural English flow without awkward "A Exam").
-     - Line 2: `Greetings & Basics` / `World of Work` / `Cooking Class` (High-contrast slate, 12px).
-   - Zero brackets `[ ]` and zero middle dots `·` — natural, flowing academic English.
-   - Strictly excludes "Words" and "Phrases" from display labels per DECISION-034.
-
-
-
----
-
 ## DECISION-057 — Student Dashboard Class-Scoped Architecture & Class Lobby Cumulative Access
 
 Date: 2026-11-19  
@@ -1788,7 +1560,7 @@ Status: ACCEPTED
 
 ---
 
-## DECISION-058 — Non-Level Programs Architecture (Level 0 / Tampilan '—') and Alumni Promotion to Level X
+## DECISION-058 — Non-Level Programs Architecture (Level 0) and Alumni Promotion to Level X (Superseded by DECISION-066 for Numeric '0' Display)
 
 Date: 2026-11-19  
 Status: ACCEPTED
@@ -1809,15 +1581,17 @@ Status: ACCEPTED
 2. **Level 0 Dedicated to Non-Level Programs**:
    - A dedicated entry is maintained in `levels` with `level_number: 0`, name: `'Non-Level'`, description: `'Program / Kelas tanpa jenjang (Unleveled)'`.
    - All classes, batches, and students in non-leveled programs (institution TOP) reference this Level 0 foreign key UUID.
-   - **Visual Display (`—`)**: In the UI table column `LVL` across all admin tables and student views, Level 0 renders as a clean dash **`—`** (`toShortLevel(0)` returns `'—'`). No numeric "0" is displayed to prevent tutor/student confusion.
+   - **Visual Display (`0`)**: Governed by DECISION-066 where Level 0 is universally displayed as numeric character **`0`** across all workstation tables and student views (dash `—` is strictly reserved for null/unassigned data).
    - **Promotion Gating**: Students in Non-Level programs have no `LEVEL UP` button because there are no subsequent levels to advance to.
 
-3. **Zero-Level Naming Omission Invariant (Dianggap Kosong)**:
-   - For all classes, tests, and SKU codes under non-leveled programs, the level ordinal segment is completely omitted:
-     - **Class Names**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (omits `1st`).
-     - **Class Codes**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (omits `1` from `EVN-1VOCAB`).
-     - **Test Titles**: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General` (omits `1st`).
-     - **Test Codes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM`, `EVN-VCB-G2-TASK` (omits `1` from `EVN-1VCB-...`).
+3. **Zero-Level Naming & Code Architecture**:
+   - **Class Names & Codes (Level Segment Omission)**: The level ordinal is omitted since curriculum is single-tier:
+     - Class Names: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (omits `1st`).
+     - Class Codes: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (omits `1` from `EVN-1VOCAB`).
+   - **Test Titles & Codes (Uniform Level-Prefixed per DECISION-061)**:
+     - Topic and theme codes use prefix `0` (`0G1`, `0G2`, `0A1`, `0G`, `0A`) for 100% uniformity across all curriculum levels:
+     - Task titles & codes: `Evnikom Vocabulary Task 0G1 - Time Name` (`EVN-VCB-0G1-TASK`).
+     - Exam titles & codes: `Evnikom Vocabulary Exam 0G - General` (`EVN-VCB-0G-EXAM`).
 
 ---
 
@@ -1913,37 +1687,6 @@ Status: ACCEPTED
    - Updated `theme_program_assignments` for Theme `G` to `target_level = 0` for Evnikom (`EEC`).
    - Cleaned up duplicate Theme `A` assignment from Evnikom, ensuring Theme `A` Level 1 is cleanly assigned to Camp.
    - Updated database test records in `tests` for Evnikom (`EVN-VCB-0G1-TASK`, `EVN-VCB-0G2-TASK`, `EVN-VCB-0G-EXAM`) and Sheraton (`SHR-VCB-0A1-TASK`, `SHR-VCB-0A-EXAM`).
-
-## DECISION-062 — Authoritative Test Duration & Pacing SSOT (Words 10s & Phrases 20s with Tutor Manual Override Authority)
-
-**Date:** 2026-11-19
-**Status:** Approved & Enforced
-
-### Context
-Standardizing test pacing across the platform is critical for consistent exam difficulty, equitable timer evaluation, and accurate auto-generation of assessment shells. Previously, arbitrary pacing formulas (15s, 20s, 30s) varied across different test generators and modalities.
-
-### Decision
-1. **Authoritative Standard Pacing (SSOT)**:
-   - **Per Word**: Strictly **10 seconds** per word/question.
-   - **Per Phrase**: Strictly **20 seconds** per phrase/question.
-2. **Auto-Generation & Blueprint Benchmark Formula**:
-   - `Words Task/Exam Duration (minutes)` = $\lceil (\text{Word Count} \times 10) / 60 \rceil$.
-     * Example: 40 Words Task $\rightarrow 40 \times 10 = 400\text{s} \rightarrow$ **7 minutes**.
-     * Example: 80 Words Exam $\rightarrow 80 \times 10 = 800\text{s} \rightarrow$ **14 minutes**.
-     * Example: 160 Words Exam $\rightarrow 160 \times 10 = 1600\text{s} \rightarrow$ **27 minutes**.
-   - `Phrases Task/Exam Duration (minutes)` = $\lceil (\text{Phrase Count} \times 20) / 60 \rceil$.
-     * Example: 10 Phrases Task $\rightarrow 10 \times 20 = 200\text{s} \rightarrow$ **4 minutes**.
-     * Example: 20 Phrases Exam $\rightarrow 20 \times 20 = 400\text{s} \rightarrow$ **7 minutes**.
-3. **Tutor Manual Duration Override Authority**:
-   - The auto-calculated benchmark serves as the authoritative default during generation and fallback runtime.
-   - Tutors and Admins retain explicit authority to set or override test durations manually (`working_duration_minutes`).
-   - If a manual duration $> 0$ is specified, it strictly takes precedence over the auto-calculated benchmark.
-4. **Implementation Across System**:
-   - `js/api.js` (`calculateAutoDurationMinutes`): rate defaults to 10s (words) and 20s (phrases), with `minMinutes = 1`.
-   - `supabase/functions/start-test/index.ts`: fallback pacing updated to 10s (words) and 20s (phrases), respecting `test.working_duration_minutes` first.
-   - `js/test.js` (`applySectionFilter`): computes section expiration using 10s/word and 20s/phrase unless a manual duration is configured.
-   - `js/admin/auto-gen-modal.js`: defaults wizard inputs to 10s/word and 20s/phrase, with real-time recalculation and manual duration input support.
-   - `js/admin/app.js`: table datagrid honors tutor manual duration before falling back to auto-calculation.
 
 ## DECISION-063 — Modality-Specific Pacing SSOT for Vocabulary Classes (Words: 10s Spoken / 15s Written; Phrases: 20s Spoken / 10s Selection)
 
@@ -2286,41 +2029,189 @@ The `classes` table has no `class_type` column. Modality is inferred exclusively
 
 ---
 
-## DECISION-075 — Triple-Lock Class Modality Gating & Cross-Class Module Isolation
+## DECISION-076 — Dual-Tier Institution Identity Architecture (Shortcode SSOT vs Institution Fullname)
 
-**Date:** 2026-11-21
-**Status:** Approved & Enforced
+Date: 2026-11-22
+Status: ACCEPTED
 
 ### Context
-As TopsCore expands beyond Vocabulary to Speaking, Storytelling, Basic English, and Grammar classes, the risk of module cross-contamination increases — an admin or backend call could inadvertently assign a Vocabulary module (M2/M3/M4) to a Speaking class, corrupting evaluation logic. Additionally, `detectClassDiscipline()` in `grading.js` contained a regex bug (`STY` instead of `STT`), and the auto-generate wizard was hardcoded to assume all classes are Vocabulary classes.
+TopsCore mengelola 2 institusi resmi:
+1. `CEC` (Cake English Course) — menaungi kurikulum berjenjang: Program Camp (Level 1–3).
+2. `TOP` — menaungi program intensif/vokasional non-level (Level 0): Program Evnikom, Sheraton, Tamata.
+
+Sebelumnya, nama panjang TOP belum diformalkan ("Top Optimal Program" kurang pas dan digantikan). Terdapat kebutuhan pemisahan ranah yang tegas antara nama singkatan (compact code) dan nama lengkap institusi (*Institution Fullname*) agar antarmuka tidak mengalami horizontal bloat atau truncation.
 
 ### Decision
-**Triple-Lock Gating Architecture** implemented across three layers:
+1. **Formalisasi Nama Resmi Institusi (SSOT)**:
+   - **CEC**: Standard Name: `CEC` | Full Name: **Cake English Course**
+   - **TOP**: Standard Name: `TOP` | Full Name: **Top Occupational Program**
+2. **General Default vs Explicit Full Name Rule**:
+   - **Default Umum di Seluruh Sistem**: Nama institusi di seluruh aplikasi (database `name`, form, dropdown, tabel, badge, login gate, metadata, kode) secara standar dan default adalah strictly **`CEC`** dan **`TOP`**.
+   - **Institution Full Name (On-Demand / Explicit Only)**: Nama panjang (*Cake English Course* dan *Top Occupational Program*) **HANYA** dimunculkan ketika diminta secara spesifik untuk menggunakan Institution Full Name (misal: dokumen cetak resmi/sertifikat kelulusan tertentu).
+3. **Database & API Alignment**:
+   - Tabel `institutions` di Supabase menyimpan `name = 'CEC' / 'TOP'`, `code = 'CEC' / 'TOP'`, dan kolom `full_name = 'Cake English Course' / 'Top Occupational Program'`.
+   - `MOCK_INSTITUTIONS` dan helper di `js/api.js` diselaraskan ke SSOT ini.
 
-1. **Lapis 1 — SSOT Contract** (`AGENTS.md` §2.5.3):
-   - New canonical section defining `Class Modality Inheritance & Strict Cross-Class Gating Invariant`.
-   - Modality rules apply identically across all levels of the same class type.
-   - Modality Color Identity SSOT: Vocabulary=`#95ff00`, Speaking=`#38bdf8`, Storytelling=`#FF8C00`, Basic/Grammar=`#c084fc`.
+### Consequences
+- Menghilangkan kerancuan nama institusi di seluruh sistem.
+- Menjaga kebersihan dan kekompakan tabel workstation admin (selalu menampilkan `CEC` / `TOP`).
+- Memberikan identitas formal dan profesional bagi siswa dan tutor saat melihat kartu profil, sertifikat, dan laporan resmi.
 
-2. **Lapis 2 — UI Gating** (`js/admin/auto-gen-modal.js`):
-   - Added `inferClassModality()` function (mirror of `detectClassDiscipline` without circular import).
-   - Modal header now shows color-coded **modality badge** (Lime/Cyan/Orange/Violet) when in class-scoped mode.
-   - Non-Vocabulary classes receive a prominent **orange warning notice** directing admin to manual test creation with the correct engine reference (M5/M6/M7 as appropriate).
-   - `isVocabularyModal` / `isNonVocabularyModal` flags available for future UI section rendering.
+---
 
-3. **Lapis 3 — Backend Guard** (`supabase/functions/evaluate-test/index.ts`):
-   - Added `inferDisciplineFromCode()` — server-side discipline inference from `classCode` in payload context.
-   - Added `validateModuleClassBinding()` — rejects mismatched module/class pairs with explicit error message.
-   - `routeEvaluation()` now accepts `classDiscipline` and enforces binding before scoring.
+## DECISION-077 — Unified 4-Letter Program Prefix, Harmonized Class & Test SKU Standards, and Strict Hyphenated Room Codes
 
-### Bug Fix (included in this decision)
-- **`grading.js` line 2480**: Regex `-(?:[0-9]*STY|STORY)` corrected to `-(?:[0-9]*STT|STORY)` to match Storytelling class codes that use `STT` (not the retired `STY`). This was a silent ghost that would have caused `detectClassDiscipline()` to return `'GENERAL'` for all coded Storytelling classes.
+Date: 2026-11-22  
+Status: ACCEPTED (Supersedes & Permanently Eradicates Obsolete DECISION-056)
 
-### Inferensi Modality (Code-Based, No DB Column)
-The `classes` table has no `class_type` column. Modality is inferred exclusively from `classes.code` using canonical abbreviation patterns (`VCB/VOCAB`, `SPK/SPEAK`, `STT/STORY`, `GRM/GRAM`, `BSC/BASIC`). `detectClassDiscipline()` in `grading.js` is the canonical source; `inferClassModality()` in `auto-gen-modal.js` is a local mirror.
+### Context
+1. Audit sistem menyeluruh menemukan inkonsistensi panjang karakter kode (1, 2, 3, 4, 5, 8 huruf) yang menimbulkan ambiguitas lintas tabel dan modul:
+   - Program codes di database memiliki panjang acak: `CAMP` (4), `EEC` (3), `SHERATON` (8), `TAMATA` (6).
+   - Class codes sebelumnya menggunakan awalan 3 huruf: `CMP-1BASIC`, `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB`.
+   - Test `shell_code` memiliki warisan tanpa awalan (`3A1-TASK`, `3A-EXAM`, `3A-PHRASES-EXAM`) serta awalan 3 huruf `CMP-3VCB-A1-TASK`.
+   - Room codes memiliki format bercampur: spasi (`Room 101`, `R 101`, `Hall A`, `Executive Hall A`), tanda hubung inkonsisten (`LAB-1`, `HALL-A`), dan kode acak.
+2. Sesuai arahan mutlak pengguna: *"setiap ada decision baru maka hapus decision lama agar tak jadi rancu"*, `DECISION-056` dihapus secara permanen dan seluruh ketetapannya diunifikasi secara tuntas dalam `DECISION-077`.
 
-### Not in Scope (Deferred)
-- Adding a `class_type` column to the `classes` table: not needed; code inference is sufficient and avoids a migration.
-- Graduated Difficulty Metadata per Level (`difficulty_tier`): deferred — not yet requested.
-- Inter-class Prerequisite Chain (Class-to-Class): deferred — not yet designed.
-- Modality-Specific Passing Grade in Database (`passing_grade` column): deferred.
+### Decision
+1. **Unifikasi Kode Program Baku (Strict 4 Letters SSOT)**:
+   - `CAMP`: Cake English Course Camp Program (Level 1, Level 2, Level 3).
+   - `EVNK`: Top Occupational Program — Evnikom English Class (Non-Level / Level 0).
+   - `SHRT`: Top Occupational Program — Sheraton Hospitality Program (Non-Level / Level 0).
+   - `TPTC`: Top Occupational Program — Tamata Persada Training Center (Non-Level / Level 0).
+   - Database `programs.code` dan konfigurasi aplikasi diselaraskan 100% ke 4 huruf ini.
+
+2. **Standardisasi Kode Kelas Semi-Long (`PROGRAM-LEVELCLASS` SSOT)**:
+   - Format: `[PROGRAM]-[LEVEL][MODALITY]` (tanpa spasi, tanpa huruf 'L').
+   - Kurikulum CEC Camp:
+     - Level 1: `CAMP-1BASIC`, `CAMP-1VOCAB`, `CAMP-1STORY`, `CAMP-1SPEAK`, `CAMP-1GRAM`
+     - Level 2: `CAMP-2GFS`, `CAMP-2VOCAB`, `CAMP-2STORY`, `CAMP-2SPEAK`, `CAMP-2GRAM`
+     - Level 3: `CAMP-3PRON`, `CAMP-3VOCAB`, `CAMP-3STORY`, `CAMP-3SPEAK`, `CAMP-3GRAM`
+   - Kurikulum TOP Non-Level (angka level ditiadakan per Zero-Level Omission Invariant):
+     - `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB`.
+
+3. **Standardisasi SKU & Kode Tes Simetris (`PROGRAM-LEVEL_CLASS-CODE-TYPE` SSOT)**:
+   - **Pemetaan 1:1 Modalitas Kelas $\leftrightarrow$ Singkatan Kode Tes**:
+     - `VOCAB` $\leftrightarrow$ `VCB`
+     - `BASIC` $\leftrightarrow$ `BSC`
+     - `STORY` $\leftrightarrow$ `STT` (strictly `STT`, dilarang `STY`)
+     - `SPEAK` $\leftrightarrow$ `SPK`
+     - `GRAM` $\leftrightarrow$ `GRM`
+     - `PRON` $\leftrightarrow$ `PRN`
+     - `GFS` $\leftrightarrow$ `GFS`
+   - **Contoh Resmi**:
+     - `CAMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
+     - `CAMP-3VCB-A-EXAM` (Camp Level 3 Vocabulary Theme A Exam)
+     - `CAMP-1BSC-A-EXAM` (Camp Level 1 Basic English Theme A Exam)
+     - `CAMP-1STT-A1-TASK` (Camp Level 1 Storytelling Topic A1 Task)
+     - `EVNK-VCB-0G1-TASK` (Evnikom Level 0 Vocabulary Topic 0G1 Task)
+     - `EVNK-VCB-0G-EXAM` (Evnikom Level 0 Vocabulary Theme 0G General Exam)
+     - `SHRT-VCB-0A1-TASK` (Sheraton Level 0 Vocabulary Topic 0A1 Task)
+     - `TPTC-VCB-0A1-TASK` (Tamata Level 0 Vocabulary Topic 0A1 Task)
+   - Seluruh baris di tabel database `tests.shell_code` dimigrasikan ke standar ini. Parser kode di `js/api.js` dan `js/grading.js` tetap mendukung pembacaan mundur (*backwards-compatible*) untuk awalan legacy `CMP-`.
+
+4. **Standardisasi Kode Ruangan (Strict Hyphenated Uppercase SSOT)**:
+   - Format baku: `[TIPE]-[NOMOR/ID]` (huruf kapital, tanpa spasi, tanda hubung tunggal).
+   - Ruang Kelas: `R-101`, `R-102`, `R-103`.
+   - Laboratorium Bahasa: `LAB-01`.
+   - Aula Pertemuan / Training: `HAL-0A`, `HAL-0B`, `HAL-0C`.
+   - Dilarang keras menggunakan format spasi (`Room 101`, `R 101`, `Hall A`, `Executive Hall A`), tanpa pemisah (`LAB1`, `HALLA`), atau huruf kecil (`r-101`). Seluruh tabel workstation admin (`ROOM`), dropdown edit mode, modal, dan penyimpanan LocalStorage diselaraskan ke kode kanonikal ini.
+
+5. **Pemusnahan Permanen Keputusan Usang (Obsolete Decision Eradication)**:
+   - `DECISION-056` yang sebelumnya mengatur kode 3 huruf dihapus seutuhnya dari `docs/DECISIONS.md`.
+
+### Consequences
+- Menghilangkan ambiguitas dan tumpang tindih seluruh kode identifikasi di TopsCore LMS.
+- Tampilan tabel workstation admin menjadi seragam, presisi, dan bersih dari inkonsistensi string ruangan atau kode kelas.
+- Hubungan database (foreign keys) tetap 100% utuh karena relasi mengikat pada UUID primer.
+- Dokumentasi dan aturan acuan bersih dari redundansi atau pertentangan keputusan lama vs baru.
+
+---
+
+## DECISION-078: Authoritative Multi-Level Assessment and Exam Regulation Architecture (Placement, 1st Step, 2nd Step, 3rd Step, Final Exam & Final Practice)
+
+### Date
+2026-11-22
+
+### Status
+Accepted & Enforced
+
+### Context
+Analisis komprehensif terhadap seluruh lembar kerja kurikulum (*NILAI TUTOR MATERI*, *TELLING STORY 1ST & 2ND STEP*, *LEMBAR NILAI EXAM*, *PLACEMENT TEST*, dan *KALKULASI NILAI AKHIR*) menetapkan perlunya acuan tunggal (SSOT) mengenai jumlah penilaian, dasar pengambilan nilai, tata cara evaluasi, dan 2 penilaian akhir (Final Exam & Final Practice).
+
+### Decision
+1. **Titik Penilaian & Distribusi per Level**:
+   - **Diagnostic Phase: Placement Test**: 3 Indikator (Speaking 0–25, Baseline Vocab target 30 kata, Baseline Grammar target 25 poin). Evaluasi tatap muka 1-on-1 saat kedatangan.
+   - **1st Step (Bulan ke-1 / Level 1)**: **52 Titik Data per Siswa** (12 Penilaian Akademik + 40 Sesi Presensi):
+     - Presensi: 40 sesi (Senin–Jumat, 2 sesi/hari = 10 sesi/minggu).
+     - Vocabulary Mastery: 4 kali (W1: 60–90 kata, W2: 120–210 kata, W3: 180–300 kata, W4: 240–450 kata kumulatif). Nilai di bawah target minimum memicu tanda merah.
+     - Grammar Mastery: 2 kali (W1: 8–15 poin, W2: 12–20 poin).
+     - Basic English Test: 2 kali (W1 & W2: skala 60–100 poin).
+     - Speaking Practice (Telling Story): 4 kali (W1, W2, W3, W4; 10–25 poin, rubrik skala 1–5).
+   - **2nd Step (Bulan ke-2 / Level 2)**: **51 Titik Data per Siswa** (11 Penilaian Akademik + 40 Sesi Presensi):
+     - Presensi: 40 sesi (2 sesi/hari).
+     - Vocabulary Mastery: 4 kali (W1: 75–120 kata, W2: 155–280 kata, W3: 235–440 kata, W4: 315–600 kata).
+     - Advanced Grammar: 2 kali (W1: 10–30 poin, W2: 17–30 poin).
+     - GFS (Grammar for Speaking): 2 kali (W1 & W2: 12–20 poin).
+     - Speaking Practice (Telling Story): 3 sesi utama (W1, W2, W3; 12–25 poin / rubrik 1–5).
+   - **3rd Step (Bulan ke-3 / Level 3)**: **11 Titik Nilai Akademik** (+ 40 Sesi Presensi):
+     - Vocabulary Mastery: 4 kali (W1: 90–150 kata, W2: 215–400 kata, W3: 340–650 kata, W4: 415–800 kata).
+     - Complex Grammar: 2 kali (W1 & W2: 8–15 poin).
+     - Pronunciation Mastery: 2 kali (W1 & W2: akurasi fonetik dan intonasi).
+     - Speaking Practice: 3 sesi (W1, W2, W3: tolak ukur kesiapan sebelum Ujian Akhir).
+
+2. **Arsitektur 2 Penilaian Akhir (Final Evaluations Architecture)**:
+   Evaluasi kelulusan akhir resmi terbagi menjadi **2 Penilaian Independen**:
+   - **1. Final Exam (Panel 1: Main Examiner / Penguji Utama)**:
+     - 4 Parameter: Fluency (25), Pronunciation (25), Idea/Content (25), Grammar (25).
+     - Skor Maksimal: **100 Poin**.
+   - **2. Final Practice (Panel 2: Speaking Tutor / Tutor Pendamping)**:
+     - 4 Parameter: Fluency (25), Pronunciation (25), Grammar (25), Comprehension (25).
+     - Skor Maksimal: **100 Poin**.
+   - Total Keseluruhan: **2 Panel Penguji / 8 Parameter Nilai**. Nilai akhir digabungkan untuk kalkulasi predikat kelulusan pada transkrip sertifikat.
+
+3. **Rubrik Acuan Baku Telling Story (Skala 1–5)**:
+   - 1: Poor (Sangat Kurang)
+   - 2: Fair (Kurang)
+   - 3: Good (Cukup)
+   - 4: Very Good (Baik)
+   - 5: Excellent (Istimewa)
+
+4. **Integrasi Sistem Workstation & Rute Admin**:
+   - Workstation modul baru: `js/admin/exam-rules.js` (Route: `admin.html#exam-rules` / `#assessment-rules`).
+   - Terdokumentasi pada `docs/EXAM_ASSESSMENT_REGULATIONS.md`.
+   - Terintegrasi pada sidebar navigasi Domain A (Admin) dan sub panel Curriculum Hub.
+
+### Consequences
+- Standar jumlah ujian, frekuensi, metrik target, dan tata cara penilaian di setiap step menjadi transparan dan selaras antara tutor, penguji, dan sistem automated evaluation.
+- Penilaian akhir memiliki kepastian pemisahan peran antara Penguji Utama (Final Exam Teori/Struktur) dan Speaking Tutor (Final Practice Praktik/Komunikasi).
+- Seluruh tampilan dan kalkulasi nilai di masa mendatang wajib merujuk pada SSOT ini.
+
+
+---
+
+## DECISION-079: Student Birthplace (Place of Birth) Architecture & Roster Integration
+
+### Date
+2026-11-23
+
+### Status
+Accepted & Enforced
+
+### Context
+User requirement: *"1. untuk tanggal ahir kita punya lokasinya sendiri, kita buatkan kolom untuk tempat lahir. namakan Birthplace. apakh itu maksudmu? kita coba 1 batch dulu samapai stabil"*.
+Previously, the `public.students` table maintained `birth_date` (Date of Birth / DOB), but lacked a dedicated column for Place of Birth (`birthplace`). Official graduation certificates, diplomas, and student dossiers require the standard Indonesian & international format: `[Birthplace], [Date of Birth]` (e.g. `PRAYA, 9TH DECEMBER 1984`).
+
+### Decision
+1. **Database Schema (`public.students`)**:
+   - Added column `birthplace TEXT NULL` via migration `20261123010000_add_birthplace_to_students.sql`.
+   - Verified active and queryable in Supabase PostgreSQL.
+2. **Batch 134 Pilot Harmonization**:
+   - Synchronized birthplace and birth date from `ANGKET SERTIFIKAT` (e.g., student `134001` Ayya Sofyandi Mzeth $\rightarrow$ `birthplace = 'PRAYA'`, `birth_date = '1984-12-09'`).
+3. **Admin Workstation Roster Table (`js/admin/student-management.js`)**:
+   - Added dedicated `BIRTHPLACE` column under `DEMOGRAPHIC` super-header (colspan updated from 3 to 4: `Birthplace`, `DOB`, `Age`, `Education`).
+   - Supports inline editing in Master Edit Mode with live auto-save and visual feedback.
+   - Integrated into student sorting (`sortComparator`), table export (`exportStudentsGradebook`), full edit modal (`bfe-birthplace`), and A4 printable Dossier (`Place, DOB`).
+
+### Consequences
+- Official certificate generation and student demographics have full access to both Place and Date of Birth with zero ambiguity.
+- Tested on Batch 134 as pilot with 100% backward compatibility and zero impact on other batches.

@@ -113,13 +113,21 @@ export async function renderClasses(area) {
   const addBtn = document.getElementById('programs-add-shortcut');
   if (addBtn) addBtn.onclick = () => window.openCrudModal('programs', null);
 
-  const gridData = filteredData.map(r => ({
-    id: r.id,
-    institutionName: r.institutions?.name || '-',
-    name: r.name,
-    status: r.is_active ? 'Active' : 'Inactive',
-    _raw: r
-  }));
+  const gridData = filteredData.map(r => {
+    let instShort = r.institutions?.code || r.institutions?.name || '-';
+    if (typeof instShort === 'string') {
+      const u = instShort.toUpperCase();
+      if (u.includes('CAKE') || u === 'CEC') instShort = 'CEC';
+      else if (u.includes('TOP') || u.includes('OCCUPATIONAL') || u.includes('OPTIMAL')) instShort = 'TOP';
+    }
+    return {
+      id: r.id,
+      institutionName: instShort,
+      name: r.name,
+      status: r.is_active ? 'Active' : 'Inactive',
+      _raw: r
+    };
+  });
 
   programsGrid = new (DataGrid || window.DataGrid)({
     container: 'programs-grid-container',

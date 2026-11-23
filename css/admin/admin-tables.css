@@ -12,8 +12,8 @@
 .table-wrap {
   width: 100%;
   max-width: 100%;
-  background: var(--fm-bg-panel, #0f172a);
-  border: 2px solid rgba(255, 255, 255, 0.28) !important;
+  background: var(--admin-surface-card, var(--fm-bg-panel, #0f172a));
+  border: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
   border-radius: var(--fm-radius-md, 8px);
   overflow-x: hidden !important;
   overflow-y: auto;
@@ -1008,28 +1008,31 @@ table td .pill-empty,
   width: 100% !important;
   display: block !important;
   position: relative;
+  background: var(--admin-surface-card, #0f172a) !important;
+  border: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
+  border-radius: var(--fm-radius-md, 8px) !important;
 }
 
 @supports (scrollbar-width: thin) {
   #class-attendance-grid .table-wrap {
     scrollbar-width: thin;
-    scrollbar-color: rgba(56, 189, 248, 0.6) rgba(15, 23, 42, 0.85);
+    scrollbar-color: var(--admin-scrollbar-thumb, rgba(255, 255, 255, 0.15)) transparent;
   }
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-  background: rgba(15, 23, 42, 0.85);
+  width: 5px;
+  height: 5px;
+  background: transparent;
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, #38bdf8, #818cf8);
-  border-radius: 4px;
+  background: var(--admin-scrollbar-thumb, rgba(255, 255, 255, 0.15));
+  border-radius: 3px;
 }
 
 #class-attendance-grid .table-wrap::-webkit-scrollbar-thumb:hover {
-  background: #38bdf8;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 body.sidebar-collapsed #admin-sidebar {
@@ -1372,7 +1375,7 @@ th.super-hdr-exam {
 
 /* Student Details Columns on the Left - Proportional Dynamic Column Allocation */
 #class-attendance-grid thead th.col-sticky {
-  background: #0b1120 !important;
+  background: var(--admin-header-bg, #0b1120) !important;
   position: sticky !important;
   top: 30px !important;
   z-index: 32 !important;
@@ -1380,17 +1383,17 @@ th.super-hdr-exam {
 }
 
 #class-attendance-grid tbody td.col-sticky {
-  background: #0d1527 !important;
+  background: var(--admin-surface-card, #0d1527) !important;
 }
 
 #class-attendance-grid tbody tr:hover td.col-sticky {
-  background: #1e293b !important;
+  background: var(--admin-row-hover, #1e293b) !important;
 }
 
 #class-attendance-grid tfoot td.col-sticky {
   position: sticky !important;
   bottom: 0 !important;
-  background: #0b1120 !important;
+  background: var(--admin-header-bg, #0b1120) !important;
   z-index: 25 !important;
 }
 
@@ -2733,7 +2736,8 @@ tfoot.datagrid-tfoot,
   max-height: 100% !important;
   box-sizing: border-box !important;
   position: relative !important;
-  border: 2px solid rgba(255, 255, 255, 0.28) !important;
+  background: var(--admin-surface-card, #0f172a) !important;
+  border: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
 }
 table.datagrid-table,
 .table-wrap table {
@@ -2835,15 +2839,17 @@ td.col-select {
 /* Subtle right gridline for internal data cells (excluding last-child perimeter) */
 body:not(.global-edit-mode-on):not(.class-manual-edit-on) .table-wrap table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
 body:not(.global-edit-mode-on):not(.class-manual-edit-on) .datagrid-table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
-body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .dashboard-academic-table td:not(:last-child) {
+  border-right: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
 }
 
 /* Subtle bottom gridline for intermediate data rows (excluding last-child bottom perimeter) */
 body:not(.global-edit-mode-on):not(.class-manual-edit-on) .table-wrap table tbody tr:not(:last-child) td,
 body:not(.global-edit-mode-on):not(.class-manual-edit-on) .datagrid-table tbody tr:not(:last-child) td,
-body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table tbody tr:not(:last-child) td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table tbody tr:not(:last-child) td,
+body:not(.global-edit-mode-on):not(.class-manual-edit-on) .dashboard-academic-table tbody tr:not(:last-child) td {
+  border-bottom: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.05)) !important;
 }
 
 /* 1. Thin vertical dividers for ALL table header cells (excluding super-header boundary dividers and last-child perimeter) */
@@ -2853,7 +2859,7 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console table t
 #class-attendance-grid thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
 #blueprint-matrix-table thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
 .datagrid-thead th:not(:last-child):not(.super-hdr):not(.super-hdr-divider):not([class*="super-hdr-"]):not(.col-sticky-last):not(.col-sticky-2):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
-  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-right: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.12)) !important;
 }
 
 /* Universal Thick Right Perimeter Border on the very last column across ALL rows (Perimeter Invariant) */
@@ -2881,7 +2887,7 @@ body:not(.global-edit-mode-on) #admin-console table td:last-child,
 #class-attendance-grid th.col-overall-grade,
 #class-attendance-grid td.col-overall-grade,
 #class-attendance-grid th.super-hdr-overall {
-  border-right: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-right: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 /* Universal Thick Left Perimeter Border on the first column (Perimeter Invariant) */
@@ -2905,7 +2911,7 @@ body:not(.global-edit-mode-on) #admin-console table td:first-child,
 #class-attendance-grid thead th.col-sticky-1,
 #class-attendance-grid tbody td.col-sticky-1,
 #class-attendance-grid tfoot td.col-sticky-1 {
-  border-left: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-left: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 /* Universal Thick Top Perimeter Border (Row 1 Header Invariant) */
@@ -2917,7 +2923,7 @@ body:not(.global-edit-mode-on) #admin-console table thead tr:first-child th,
 #class-attendance-grid thead tr:first-child th,
 #class-attendance-grid thead th.super-hdr,
 #class-attendance-grid thead th[rowspan="2"] {
-  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-top: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 /* Universal Thick Bottom Perimeter Border (Unbroken Table Bottom Invariant across ALL columns) */
@@ -2941,7 +2947,7 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .datagr
 .datagrid-table tbody tr:last-child td,
 #class-attendance-grid tr.datagrid-summary-row td,
 #class-attendance-grid tfoot tr:last-child td {
-  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 /* Universal Spanning Header & Sticky Column Left Border Guarantee */
@@ -2951,7 +2957,7 @@ body:not(.global-edit-mode-on):not(.class-manual-edit-on) #admin-console .datagr
 .datagrid-table td.col-sticky-right,
 #student-grid-container table th.datagrid-rowspan-2-header,
 #student-grid-container table th[rowspan="2"] {
-  border-left: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-left: 2px solid var(--admin-border-divider, rgba(255, 255, 255, 0.22)) !important;
 }
 
 /* ==========================================================================
@@ -3008,7 +3014,7 @@ th.super-th,
 th.super-hdr-divider,
 td.super-hdr-divider,
 .super-hdr-divider {
-  border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-right: 2px solid var(--admin-border-divider, rgba(255, 255, 255, 0.22)) !important;
 }
 
 /* 2. Thin horizontal divider between Super-Header (Row 1) and Sub-Header (Row 2) */
@@ -3018,7 +3024,7 @@ td.super-hdr-divider,
 #class-attendance-grid thead tr:nth-child(1) th.super-hdr:not([rowspan="2"]),
 #blueprint-matrix-table thead tr.bp-super-header-row th:not([rowspan="2"]),
 th.super-hdr:not([rowspan="2"]) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-bottom: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.12)) !important;
 }
 
 /* 3. Thick horizontal divider between Header and Table Body (Bottom of Thead) */
@@ -3029,7 +3035,7 @@ th.super-hdr:not([rowspan="2"]) {
 #access-tests-table thead th,
 .admin-standard-table thead th,
 .data-table thead th {
-  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 /* Two-Tier tables: Sub-header row (Row 2) AND Spanning Standalone Headers (rowspan="2") */
@@ -3043,7 +3049,7 @@ th.sub-hdr,
 .datagrid-thead tr.datagrid-super-header-row th.datagrid-rowspan-2-header,
 #class-attendance-grid thead tr:nth-child(1) th[rowspan="2"],
 .table-wrap table thead tr:nth-child(1) th[rowspan="2"] {
-  border-bottom: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-bottom: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 /* 4. Thick horizontal divider between Table Body and Footer / Summary Row (SSOT) */
@@ -3058,7 +3064,7 @@ th.sub-hdr,
 #class-attendance-grid tr.datagrid-summary-row td,
 tfoot td,
 tfoot th {
-  border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
+  border-top: 2px solid var(--admin-border-perimeter, rgba(255, 255, 255, 0.28)) !important;
 }
 
 .table-wrap table tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
@@ -3072,7 +3078,7 @@ tfoot th {
 #class-attendance-grid tr.datagrid-summary-row td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
 tfoot td:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]),
 tfoot th:not(:last-child):not(.super-hdr-divider):not(.col-bp-sep):not(.col-sticky-2):not(.col-sticky-last):not(.col-test-theme-grade):not([class*="col-test-theme-grade"]) {
-  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-right: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
 }
 
 /* ==========================================================================
@@ -3150,7 +3156,7 @@ th.super-th,
 th.super-hdr-divider,
 td.super-hdr-divider,
 .super-hdr-divider {
-  border-right: 2px solid rgba(255, 255, 255, 0.22) !important;
+  border-right: 2px solid var(--admin-border-divider, rgba(255, 255, 255, 0.22)) !important;
 }
 
 

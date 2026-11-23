@@ -1,6 +1,6 @@
 import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
-import { computeUnifiedScore, computeTopicPassLevel, detectClassDiscipline, isVocabularyClass } from '../grading.js?v=20261106_v160';
+import { computeUnifiedScore, computeTopicPassLevel, detectClassDiscipline, isVocabularyClass, isManualEvaluationClass, isCbtEvaluationClass } from '../grading.js?v=20261106_v160';
 import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261119_v633';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
@@ -400,31 +400,36 @@ import {
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
-import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261120_v641';
+import { renderStudents as _renderStudentsModule } from './student-management.js?v=20261123_v677';
 import { renderClasses as _renderClassesModule, loadClassLearningPath } from './classes-management.js?v=20261114_v465';
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261121_v665';
 import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261121_v665';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261121_v521';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261123_v678';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261121_v664';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderInterfaceSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261121_v665';
 import { renderSystemArchitecture } from './system-architecture.js?v=20261121_v656';
 import { renderSystemGlossary } from './system-glossary.js?v=20261121_v105';
+import { renderExamRules } from './exam-rules.js?v=20261122_v1';
 import { renderTableDesigns, initGlobalTableDimensions } from './table-designs.js?v=20261121_v106';
+import { renderClassMeetingsAttendance, getMeetingsConfigForClass } from './class-attendance.js?v=20261123_v678';
 import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261115_v528';
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
 import { renderClassesHub } from './classes-hub.js?v=20261121_v664';
 import { renderDashboard } from './admin-deck.js?v=20261121_v655';
-import { openStudentFullEdit } from './student-management.js?v=20261120_v641';
+import { openStudentFullEdit } from './student-management.js?v=20261123_v677';
 import { renderStudentsRegistration } from './student-registration.js?v=20261120_v640';
+import { renderAcademicGradebook } from './academic-gradebook.js?v=20261123_v678';
 
 if (typeof window !== 'undefined') {
+  window.renderAcademicGradebook = renderAcademicGradebook;
   window.renderStudentsRegistration = renderStudentsRegistration;
   window.openStudentFullEdit = openStudentFullEdit;
   window.renderSystemGlossary = renderSystemGlossary;
+  window.renderExamRules = renderExamRules;
 }
 
     // -- Primary Tab Switching Variables --
@@ -432,10 +437,12 @@ if (typeof window !== 'undefined') {
 
     // ——— ABCD Primary Architecture Section Titles ———
     const sectionTitles = {
-      dashboard: 'Executive Dashboard',
-      organization: 'Organization Structure',
+      dashboard: 'Attendance',
+      organization: 'Board',
+      board: 'Board',
       curriculum: 'Curriculum & Level Master',
       'classes-hub': 'Curriculum & Level Master',
+      'exam-rules': 'Exam Regulations', 'exam_rules': 'Exam Regulations', 'assessment-rules': 'Exam Regulations', 'assessment_rules': 'Exam Regulations', 'assessment-matrix': 'Exam Regulations',
       'class-hub': 'Class Hub',
       import_ai_tests: 'Import AI Tests',
       institutions: 'Batches', students: 'Students', alumni: 'Alumni', 'import-students': 'Students Registration', 'student-registration': 'Students Registration', 'students-registration': 'Students Registration', 'progress-view': 'Student Progress',
@@ -447,8 +454,9 @@ if (typeof window !== 'undefined') {
 
     // ABCD 4-Domain Mapping
     const sectionDomainMap = {
-      dashboard: 'ADMIN', organization: 'ADMIN',
+      dashboard: 'ADMIN', organization: 'ADMIN', board: 'ADMIN',
       'classes-hub': 'ADMIN', curriculum: 'ADMIN',
+      'exam-rules': 'ADMIN', 'exam_rules': 'ADMIN', 'assessment-rules': 'ADMIN', 'assessment_rules': 'ADMIN', 'assessment-matrix': 'ADMIN',
       institutions: 'BOARD', students: 'BOARD', alumni: 'BOARD', 'import-students': 'BOARD', 'student-registration': 'BOARD', 'students-registration': 'BOARD', 'progress-view': 'BOARD',
       Classes: 'CLASS', classes: 'CLASS', 'classes-org': 'CLASS', class_instances: 'CLASS', levels: 'CLASS', topics: 'CLASS', questions: 'CLASS', question_types: 'CLASS', 'import-questions': 'CLASS', 'export-questions': 'CLASS',
       tests: 'CLASS', 'test-access': 'CLASS', assignments: 'CLASS', results: 'CLASS', import_ai_tests: 'CLASS',
@@ -512,6 +520,7 @@ if (typeof window !== 'undefined') {
       'glossary': 'system-glossary',
 
       // Curriculum & Classes
+      'board': 'organization',
       'curriculum': 'classes-hub',
       'class-system': 'classes-hub',
       'discipline-governance': 'classes-hub',
@@ -681,19 +690,20 @@ if (typeof window !== 'undefined') {
 
     async function updateAdminKpiBanner() {
       try {
-        const [stds, asms, atts, profs] = await Promise.all([
+        const sb = await getSupabase();
+        const [stds, asms, attCountRes] = await Promise.all([
           adminFetchAll('students', 'id, deleted_at'),
           adminFetchAll('tests', 'id, status, deleted_at'),
-          adminFetchAll('attempts', 'id')
+          sb ? sb.from('attempts').select('*', { count: 'exact', head: true }) : Promise.resolve({ count: 0 })
         ]);
         const kpiAcad = document.getElementById('kpi-board');
         if (kpiAcad) kpiAcad.textContent = stds.filter(s => !s.deleted_at).length;
         const kpiChal = document.getElementById('kpi-class') || document.getElementById('kpi-tests');
         if (kpiChal) kpiChal.textContent = asms.filter(a => !a.deleted_at && a.status === 'published').length;
         const kpiDesk = document.getElementById('kpi-desk');
-        if (kpiDesk) kpiDesk.textContent = atts.length;
+        if (kpiDesk) kpiDesk.textContent = attCountRes?.count ?? 0;
         const kpiAdmin = document.getElementById('kpi-admin');
-        if (kpiAdmin) kpiAdmin.textContent = profs ? profs.length : 0;
+        if (kpiAdmin) kpiAdmin.textContent = 0;
       } catch (err) {
         console.warn('Could not refresh admin KPI banner:', err.message);
       }
@@ -788,6 +798,131 @@ if (typeof window !== 'undefined') {
       document.getElementById('admin-login-screen').classList.remove('hidden');
     });
 
+    function getActiveTenant() {
+      return sessionStorage.getItem('topscore_active_tenant') || 'ALL';
+    }
+
+    function isProgramInTenant(progName, instId, tenant) {
+      if (!tenant || tenant === 'ALL') return true;
+      const p = (progName || '').toLowerCase();
+      const isTop = instId === '637fea53-ca64-4e1c-8ff7-6fd4dbdd8260' || p.includes('evnikom') || p.includes('sheraton') || p.includes('tamata');
+      return tenant === 'TOP' ? isTop : !isTop;
+    }
+
+    function isClassInTenant(className, tenant) {
+      if (!tenant || tenant === 'ALL') return true;
+      const c = (className || '').toLowerCase();
+      const isTop = c.includes('evnikom') || c.includes('sheraton') || c.includes('tamata');
+      return tenant === 'TOP' ? isTop : !isTop;
+    }
+
+    function applyTenantFilter(tenant, userInitiated = false) {
+      sessionStorage.setItem('topscore_active_tenant', tenant);
+
+      // 1. Update body tenant class
+      document.body.classList.remove('tenant-all', 'tenant-cec', 'tenant-top');
+      if (tenant === 'CEC') {
+        document.body.classList.add('tenant-cec');
+      } else if (tenant === 'TOP') {
+        document.body.classList.add('tenant-top');
+      } else {
+        document.body.classList.add('tenant-all');
+      }
+
+      // 2. Update role chip in top header corner
+      const topRoleLabel = document.getElementById('sidebar-user-role-label');
+      if (topRoleLabel) {
+        const span = topRoleLabel.querySelector('.corner-main-label') || topRoleLabel;
+        if (tenant === 'CEC') span.textContent = 'CEC ADMIN';
+        else if (tenant === 'TOP') span.textContent = 'TOP ADMIN';
+        else span.textContent = 'SUPER ADMIN';
+      }
+
+      // 3. Update buttons active state
+      const buttons = document.querySelectorAll('.btn-tenant-toggle');
+      buttons.forEach(btn => btn.classList.toggle('active', btn.dataset.tenant === tenant));
+
+      // 4. Re-render/filter sidebar domains B & C
+      if (window.loadSidebarPrograms) window.loadSidebarPrograms();
+      if (window.loadSidebarClasses) window.loadSidebarClasses();
+
+      // 5. Section restriction / Auto-redirection
+      // 'dashboard' (Attendance) is accessible by both CEC and TOP regular admins
+      const forbiddenForRegular = ['classes-hub', 'organization', 'board', 'modules', 'interface-settings', 'system-glossary', 'settings', 'vocab_vault'];
+      const curSec = window._currentSection || window._activeSectionAlias || 'dashboard';
+
+      if (tenant !== 'ALL' && forbiddenForRegular.includes(curSec)) {
+        if (typeof window.loadSection === 'function') {
+          window.loadSection('dashboard', true);
+        }
+      } else if (userInitiated && typeof window.loadSection === 'function') {
+        window.loadSection(curSec, true);
+      }
+    }
+
+    function setupTenantSwitcher() {
+      const buttons = document.querySelectorAll('.btn-tenant-toggle');
+      if (!buttons.length) return;
+      const currentTenant = getActiveTenant();
+      applyTenantFilter(currentTenant, false);
+
+      buttons.forEach(b => {
+        b.onclick = () => {
+          const tenant = b.dataset.tenant || 'ALL';
+          applyTenantFilter(tenant, true);
+          if (typeof showToast === 'function') {
+            const label = tenant === 'ALL' ? 'SUPER ADMIN (ALL INSTITUTIONS)' : `${tenant} REGULAR ADMIN`;
+            showToast(`Mode switched: ${label}`, 'info');
+          }
+        };
+      });
+
+      const tutorRoomBtn = document.getElementById('sidebar-tutor-room-item');
+      if (tutorRoomBtn) {
+        tutorRoomBtn.onclick = (e) => {
+          e.preventDefault();
+          const tenant = getActiveTenant();
+          const url = 'tutor.html' + (tenant !== 'ALL' ? '?tenant=' + tenant : '');
+          window.open(url, '_blank');
+        };
+      }
+    }
+
+    function setupThemeSwitcher() {
+      const buttons = document.querySelectorAll('.btn-theme-toggle');
+      if (!buttons.length) return;
+      let currentTheme = localStorage.getItem('topscore_theme') || 'navy';
+      if (currentTheme === 'black') currentTheme = 'dark';
+
+      function apply(theme) {
+        if (!['light', 'navy', 'dark'].includes(theme)) theme = 'navy';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.body.setAttribute('data-theme', theme);
+        localStorage.setItem('topscore_theme', theme);
+
+        buttons.forEach(btn => {
+          if (btn.dataset.theme === theme) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+      }
+
+      apply(currentTheme);
+
+      buttons.forEach(b => {
+        b.onclick = () => {
+          const targetTheme = b.dataset.theme || 'navy';
+          apply(targetTheme);
+          if (typeof showToast === 'function') {
+            const labels = { light: 'Light Theme', navy: 'Navy Theme', dark: 'Dark Theme' };
+            showToast(`Theme switched: ${labels[targetTheme] || targetTheme}`, 'info');
+          }
+        };
+      });
+    }
+
     async function showConsole() {
       document.getElementById('admin-login-screen').classList.add('hidden');
       document.getElementById('admin-console').classList.remove('hidden');
@@ -808,6 +943,12 @@ if (typeof window !== 'undefined') {
         const span = topRoleLabel.querySelector('.corner-main-label') || topRoleLabel;
         span.textContent = isTutor ? 'TUTOR' : 'ADMIN';
       }
+
+      // Initialize Top Corner Tenant Switcher (ALL | CEC | TOP)
+      setupTenantSwitcher();
+
+      // Initialize Low Corner Theme Switcher (Light | Navy | Dark)
+      setupThemeSwitcher();
 
       if (!isTutor) {
         updateAdminKpiBanner();
@@ -846,7 +987,7 @@ if (typeof window !== 'undefined') {
       const savedParsed = parseHashRoute(savedSec);
       const savedTargetSec = aliasSectionMap[savedParsed.section] || savedParsed.section;
 
-      const isValidSection = (sec) => !!(sec && (sectionTitles[sec] || sec === 'students' || sec === 'class-hub' || sec === 'settings' || sec === 'vocab_vault' || sec === 'classes-hub' || sec === 'classes' || sec === 'institutions' || sec === 'modules' || sec === 'organization' || sec === 'curriculum' || sec === 'system-glossary' || sec === 'glossary'));
+      const isValidSection = (sec) => !!(sec && (sectionTitles[sec] || sec === 'students' || sec === 'class-hub' || sec === 'settings' || sec === 'vocab_vault' || sec === 'classes-hub' || sec === 'classes' || sec === 'institutions' || sec === 'modules' || sec === 'organization' || sec === 'board' || sec === 'curriculum' || sec === 'system-glossary' || sec === 'glossary'));
 
       if (isValidSection(targetSec)) {
         applySubRouteState(targetSec, parsed.subTab, parsed.params, parsed.section);
@@ -953,10 +1094,19 @@ if (typeof window !== 'undefined') {
       };
 
       const renderItems = (items) => {
+        const currentTenant = getActiveTenant();
+        let filteredByTenant = (items || []).filter(it => isProgramInTenant(it.program_name || it.name, it.institution_id, currentTenant));
+
         // Strictly filter to active batches only per user directive: "bagian ini hnaya tempilkan batch yang aktif saja, uyng tidak aktif sembunyikan"
-        const activeItems = (items || []).filter(it => it.is_active !== false);
+        const activeItems = filteredByTenant.filter(it => it.is_active !== false);
         // Strictly sort batches/programs alphabetically ascending (A-Z) with numeric support
         activeItems.sort((a, b) => (a.label || a.name || '').localeCompare(b.label || b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+
+        const alumniItem = document.getElementById('sidebar-alumni-item');
+        if (alumniItem) {
+          alumniItem.style.display = (currentTenant === 'TOP') ? 'none' : '';
+        }
+
         if (!activeItems || activeItems.length === 0) {
           container.innerHTML = `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 12px;">No active batches.</div>`;
           return;
@@ -985,6 +1135,7 @@ if (typeof window !== 'undefined') {
             (!matched.batch_id && it.program_id === matched.program_id)
           );
           const activeCls = isItemActive ? 'active' : '';
+          const itemTenant = isProgramInTenant(it.program_name, it.institution_id, 'TOP') ? 'TOP' : 'CEC';
           const usersSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`;
           html += `
             <div class="admin-nav-item sidebar-program-item ${activeCls}"
@@ -993,6 +1144,7 @@ if (typeof window !== 'undefined') {
                  data-program-name="${escapeHtml(it.program_name || it.name || '')}"
                  data-batch-name="${escapeHtml(it.batch_name || '')}"
                  data-sidebar-label="${escapeHtml(it.label || it.name || '')}"
+                 data-tenant="${itemTenant}"
                  data-sub="students">
               <span class="nav-icon">${usersSvg}</span>
               <span>${escapeHtml(it.label || it.name || '')}</span>
@@ -1039,14 +1191,16 @@ if (typeof window !== 'undefined') {
 
       // 2. Fetch fresh programs and batches from server (stale-while-revalidate)
       try {
-        const [programs, batches] = await Promise.all([
+        const [programs, batches, students] = await Promise.all([
           adminFetchAll('programs', 'id, name, is_active, institution_id'),
-          adminFetchAll('batches', 'id, name, is_active, program_id, deleted_at').catch(() => [])
+          adminFetchAll('batches', 'id, name, is_active, program_id, deleted_at').catch(() => []),
+          adminFetchAll('students', 'id, batch_id, is_active, program_status, deleted_at').catch(() => [])
         ]);
 
         const validBatches = (batches || []).filter(b => !b.deleted_at);
-        // Only active batches per user directive: "bagian ini hnaya tempilkan batch yang aktif saja, uyng tidak aktif sembunyikan"
-        const activeBatches = validBatches.filter(b => b.is_active !== false);
+        const validStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false && s.program_status !== 'ALUMNI');
+        // Only active batches with at least 1 active non-alumni student per user directive
+        const activeBatches = validBatches.filter(b => b.is_active !== false && validStudents.some(s => s.batch_id === b.id));
 
         // Include active programs that have active batches (or active programs without batches)
         const activePrograms = (programs || []).filter(p => p.is_active !== false && (activeBatches.some(b => b.program_id === p.id) || !validBatches.some(b => b.program_id === p.id)));
@@ -1133,8 +1287,20 @@ if (typeof window !== 'undefined') {
       };
 
       const renderClasses = (classes) => {
-        const sortedClasses = (classes || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-        const activeId = window._selectedClassId || localStorage.getItem('topscore_selected_class_id') || sortedClasses[0]?.id;
+        const currentTenant = getActiveTenant();
+        let tenantClasses = (classes || []).filter(cls => isClassInTenant(cls.name, currentTenant) && cls.is_active !== false);
+        const sortedClasses = tenantClasses.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        let activeId = window._selectedClassId || localStorage.getItem('topscore_selected_class_id');
+
+        if (!sortedClasses.some(c => c.id === activeId) && sortedClasses.length > 0) {
+          activeId = sortedClasses[0].id;
+          window._selectedClassId = activeId;
+          window._selectedClassName = sortedClasses[0].name;
+          try {
+            localStorage.setItem('topscore_selected_class_id', activeId);
+            localStorage.setItem('topscore_selected_class_name', sortedClasses[0].name);
+          } catch(err) {}
+        }
 
         let html = `<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:6px;">`;
         if (sortedClasses.length === 0) {
@@ -1142,11 +1308,12 @@ if (typeof window !== 'undefined') {
         } else {
           sortedClasses.forEach(cls => {
             const isActive = (activeId === cls.id && (_currentSection === 'class-hub' || window._activeSectionAlias === 'class-hub')) ? 'active' : '';
+            const classTenant = isClassInTenant(cls.name, 'TOP') ? 'TOP' : 'CEC';
             const classSvg = (typeof getClassSvgIcon === 'function')
               ? getClassSvgIcon(cls.name, 14, 'currentColor')
               : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-svg-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
             html += `
-              <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}">
+              <div class="admin-nav-item sidebar-class-item ${isActive}" data-class-id="${cls.id}" data-class-name="${escapeHtml(cls.name)}" data-tenant="${classTenant}">
                 <span class="nav-icon">${classSvg}</span>
                 <span>${escapeHtml(cls.name)}</span>
               </div>
@@ -1160,7 +1327,7 @@ if (typeof window !== 'undefined') {
           window.sortAllSidebarDomains();
         }
 
-        if (!window._selectedClassId && sortedClasses.length > 0) {
+        if (sortedClasses.length > 0 && (!window._selectedClassId || !sortedClasses.some(c => c.id === window._selectedClassId))) {
           const selCls = sortedClasses.find(c => c.id === activeId) || sortedClasses[0];
           window._selectedClassId = selCls.id;
           window._selectedClassName = selCls.name;
@@ -1179,20 +1346,21 @@ if (typeof window !== 'undefined') {
         try {
           const cached = JSON.parse(localStorage.getItem('topscore_cached_sidebar_classes') || '[]');
           if (Array.isArray(cached) && cached.length > 0) {
-            renderClasses(cached);
+            renderClasses(cached.filter(c => c.is_active !== false));
           }
         } catch(e) {}
       }
 
-      // 2. Fetch fresh classes from server (stale-while-revalidate)
+      // 2. Fetch fresh classes from server (stale-while-revalidate with forceRefresh)
       try {
-        const classes = await adminFetchAll('classes', 'id, name, program_id', { is_active: true });
+        const classes = await adminFetchAll('classes', 'id, name, program_id, is_active', { is_active: true }, true);
         if (classes && classes.length > 0) {
-          classes.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
+          const activeClasses = classes.filter(c => c.is_active !== false);
+          activeClasses.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
           try {
-            localStorage.setItem('topscore_cached_sidebar_classes', JSON.stringify(classes));
+            localStorage.setItem('topscore_cached_sidebar_classes', JSON.stringify(activeClasses));
           } catch(err) {}
-          renderClasses(classes);
+          renderClasses(activeClasses);
         }
       } catch(err) {
         console.warn('[loadSidebarClasses] server fetch failed, using cache:', err);
@@ -1201,6 +1369,74 @@ if (typeof window !== 'undefined') {
     window.loadSidebarClasses = loadSidebarClasses;
     // Call immediately to hydrate sidebar classes with zero delay
     loadSidebarClasses();
+
+    // Automatic Deactivation Safeguard: Batches with 0 active students and Classes with 0 members
+    async function syncActiveCohortsAndClasses() {
+      try {
+        const sb = await getSupabase();
+        if (!sb) return;
+        const [
+          { data: classes },
+          { data: students },
+          { data: batches },
+          { data: classLevels }
+        ] = await Promise.all([
+          sb.from('classes').select('id, name, code, is_active, program_id, level_id'),
+          sb.from('students').select('id, batch_id, level_id, program_id, is_active, program_status, deleted_at'),
+          sb.from('batches').select('id, name, is_active, current_level_id, program_id, deleted_at'),
+          Promise.resolve(sb.from('class_levels').select('class_id, level_id')).catch(() => ({ data: [] }))
+        ]);
+
+        if (!classes || !students || !batches) return;
+
+        const activeStudents = students.filter(s => s.is_active && !s.deleted_at && s.program_status !== 'ALUMNI');
+        const batchMap = new Map(batches.map(b => [b.id, b]));
+
+        // 1. Check batches: If 0 active non-alumni students and currently is_active = true, deactivate
+        for (const b of batches) {
+          if (b.deleted_at) continue;
+          const activeCount = activeStudents.filter(s => s.batch_id === b.id).length;
+          if (activeCount === 0 && b.is_active) {
+            await sb.from('batches').update({ is_active: false }).eq('id', b.id);
+            b.is_active = false;
+          }
+        }
+
+        // 2. Check classes: If 0 eligible active students and currently is_active = true, deactivate; if gained members, activate
+        const classLevelPairs = new Set();
+        (classLevels || []).forEach(cl => {
+          if (cl.class_id && cl.level_id) classLevelPairs.add(cl.class_id + '_' + cl.level_id);
+        });
+
+        for (const cls of classes) {
+          const eligibleCount = activeStudents.filter(s => {
+            if (cls.program_id && s.program_id && s.program_id !== cls.program_id) return false;
+            const studentLevel = s.level_id || (s.batch_id ? batchMap.get(s.batch_id)?.current_level_id : null);
+            if (cls.level_id) {
+              if (studentLevel === cls.level_id) return true;
+              if (classLevelPairs.has(cls.id + '_' + studentLevel)) return true;
+              return false;
+            }
+            const classHasLevels = Array.from(classLevelPairs).some(pair => pair.startsWith(cls.id + '_'));
+            if (classHasLevels) {
+              return Boolean(studentLevel && classLevelPairs.has(cls.id + '_' + studentLevel));
+            }
+            return true;
+          }).length;
+
+          if (eligibleCount === 0 && cls.is_active) {
+            await sb.from('classes').update({ is_active: false }).eq('id', cls.id);
+          } else if (eligibleCount > 0 && !cls.is_active) {
+            await sb.from('classes').update({ is_active: true }).eq('id', cls.id);
+          }
+        }
+      } catch (e) {
+        console.warn('[syncActiveCohortsAndClasses] background check error:', e);
+      }
+    }
+    window.syncActiveCohortsAndClasses = syncActiveCohortsAndClasses;
+    // Run periodically / upon init without blocking UI
+    setTimeout(syncActiveCohortsAndClasses, 2500);
 
     window._classHubCache = window._classHubCache || {};
 
@@ -1227,15 +1463,15 @@ if (typeof window !== 'undefined') {
 
         // Fast in-memory check: if already showing or recently loaded, avoid full wipe spinner
         const cached = classId ? window._classHubCache[classId] : null;
-        const isFresh = cached && (Date.now() - cached.timestamp < 45000);
+        const isFresh = cached && (Date.now() - cached.timestamp < 120000);
         if (!isFresh && (!area.querySelector('#class-attendance-grid') || area.dataset.currentClassId !== classId)) {
           area.innerHTML = getLoadingStateHtml(`Loading Class Hub for ${className}...`);
         }
         area.dataset.currentClassId = classId || '';
 
-        // Fetch ALL data relevant to this class and detailed test mapping
-        // OPTIMIZATION: Flat students query without heavy nested joins (prevents 500 statement timeouts)
-        let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allAttempts, allInstitutions, allClassLevels] = await Promise.all([
+        // Fetch master tables relevant to this class and curriculum structure
+        // OPTIMIZATION: attempts query is deferred and strictly scoped to this class's tests (pruning 95%+ egress & avoiding 9x pagination loops)
+        let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
           adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at').catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
@@ -1243,10 +1479,14 @@ if (typeof window !== 'undefined') {
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
           adminFetchAll('levels').catch(() => []),
           adminFetchAll('vocabulary_vault', 'id, target_level, theme, theme_code, topic, topic_code, word_type, deleted_at').catch(() => []),
-          adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, correct_count, total_questions, percentage, effective_score, grade, is_best_score, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, is_remedial_unlocked, created_at, submitted_at').catch(() => []),
           adminFetchAll('institutions', 'id, name').catch(() => []),
           adminFetchAll('class_levels', 'class_id, level_id').catch(() => [])
         ]);
+
+        const currentTenant = getActiveTenant();
+        if (currentTenant !== 'ALL') {
+          allClasses = (allClasses || []).filter(c => isClassInTenant(c.name, currentTenant));
+        }
 
         if ((!classId || !allClasses.some(c => c.id === classId)) && allClasses && allClasses.length > 0) {
           const sorted = allClasses.slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -1264,6 +1504,26 @@ if (typeof window !== 'undefined') {
         const boardClassMap = {};
         (allClasses || []).forEach(c => { boardClassMap[c.id] = c; });
 
+        // Scoped attempts fetch strictly for tests of current class (ultra-lean single query instead of 8,827 rows)
+        const relevantTestIds = (allTests || []).filter(t => t.class_id === classId && !t.deleted_at).map(t => t.id);
+        let allAttempts = [];
+        if (relevantTestIds.length > 0) {
+          const CHUNK_SIZE = 80;
+          if (relevantTestIds.length <= CHUNK_SIZE) {
+            allAttempts = await adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, correct_count, total_questions, percentage, effective_score, grade, is_best_score, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, is_remedial_unlocked, created_at, submitted_at', { test_id: relevantTestIds }).catch(() => []);
+          } else {
+            const chunks = [];
+            for (let i = 0; i < relevantTestIds.length; i += CHUNK_SIZE) {
+              chunks.push(relevantTestIds.slice(i, i + CHUNK_SIZE));
+            }
+            const chunkPromises = chunks.map(chunk =>
+              adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, correct_count, total_questions, percentage, effective_score, grade, is_best_score, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, is_remedial_unlocked, created_at, submitted_at', { test_id: chunk }).catch(() => [])
+            );
+            const chunkResults = await Promise.all(chunkPromises);
+            allAttempts = chunkResults.flat();
+          }
+        }
+
         const classMap = {};
         (allPrograms || []).forEach(c => { classMap[c.id] = c; });
         const instMap = {};
@@ -1271,7 +1531,10 @@ if (typeof window !== 'undefined') {
         const levelMap = {};
         (allLevels || []).forEach(l => { levelMap[l.id] = l; });
 
-        const isVocab = currentClass ? isVocabularyClass(currentClass) : false;
+        const isManualClass = currentClass ? isManualEvaluationClass(currentClass) : false;
+        const isCbtClass = !isManualClass;
+        const isVocab = isCbtClass && (currentClass ? isVocabularyClass(currentClass) : false);
+        const discipline = currentClass ? detectClassDiscipline(currentClass) : 'GENERAL';
         const classLevelId = currentClass?.level_id;
         const classLevelRec = classLevelId ? (allLevels || []).find(l => l.id === classLevelId) : null;
         const detectedLvlMatch = String(currentClass?.code || currentClass?.name || '').match(/(\d+)/);
@@ -1965,17 +2228,32 @@ if (typeof window !== 'undefined') {
         const taskTests = classTests.filter(a => a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK' || (a.test_subtype && a.test_subtype.includes('QUIZ')) || (a.test_subtype && a.test_subtype.includes('TASK')) || /\b(QUIZ|TASK)\b/i.test(a.title || ''));
         const testTests = classTests.filter(a => a.test_type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || a.test_type === 'VOCAB_TEST' || a.test_type === 'PHRASE_TEST' || (a.test_subtype && a.test_subtype.includes('EXAM')) || (a.test_subtype && a.test_subtype.includes('TEST')) || /\b(EXAM|TEST)\b/i.test(a.title || ''));
 
-        let classHubTabs = [
-          { id: 'attendance', icon: getSvgIcon('user', 14), val: activeBatchStudents.length, label: 'Students Grade and Rate' },
-          { id: 'test-sessions', icon: getSvgIcon('clock', 14), val: 4, label: 'Test Sessions' },
-          { id: 'tests', icon: getSvgIcon('clipboard', 14), val: classTests.length, label: 'Class Tests' },
-          { id: 'analytics', icon: getSvgIcon('trending-up', 14), val: 'Insights', label: 'Test Analytics' }
-        ];
+        const totalMeetingsCount = (currentClass && isVocabularyClass(currentClass)) ? 24 : 20;
 
-        if (isTutorRole()) {
-          classHubTabs = classHubTabs.filter(t => t.id === 'test-sessions' || t.id === 'attendance');
+        let classHubTabs = [];
+        if (!isCbtClass) {
+          classHubTabs = [
+            { id: 'attendance', icon: getSvgIcon('clipboard', 14), val: activeBatchStudents.length, label: 'Student Grade' },
+            { id: 'class-attendance', icon: getSvgIcon('clock', 14), val: `${totalMeetingsCount} Meetings`, label: 'Student Attendance' },
+            { id: 'test-sessions', icon: getSvgIcon('calendar', 14), val: totalMeetingsCount, label: 'Class Sessions' }
+          ];
           if (window._classHubActiveTab === 'tests' || window._classHubActiveTab === 'analytics') {
-            window._classHubActiveTab = 'test-sessions';
+            window._classHubActiveTab = 'attendance';
+          }
+        } else {
+          classHubTabs = [
+            { id: 'attendance', icon: getSvgIcon('user', 14), val: activeBatchStudents.length, label: 'Students Grade and Rate' },
+            { id: 'class-attendance', icon: getSvgIcon('clock', 14), val: `${totalMeetingsCount} Meetings`, label: 'Class Attendance' },
+            { id: 'test-sessions', icon: getSvgIcon('clock', 14), val: 2, label: 'Class Sessions' },
+            { id: 'tests', icon: getSvgIcon('clipboard', 14), val: classTests.length, label: 'Class Tests' },
+            { id: 'analytics', icon: getSvgIcon('trending-up', 14), val: 'Insights', label: 'Test Analytics' }
+          ];
+
+          if (isTutorRole()) {
+            classHubTabs = classHubTabs.filter(t => t.id === 'test-sessions' || t.id === 'attendance' || t.id === 'class-attendance');
+            if (window._classHubActiveTab === 'tests' || window._classHubActiveTab === 'analytics') {
+              window._classHubActiveTab = 'test-sessions';
+            }
           }
         }
 
@@ -1986,7 +2264,9 @@ if (typeof window !== 'undefined') {
         let html = `
           <div style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden;">
             <div id="class-hub-tab-content" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden;">
-              ${window._classHubActiveTab === 'test-sessions' ? `
+              ${window._classHubActiveTab === 'class-attendance' ? `
+                <div id="class-meetings-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
+              ` : (window._classHubActiveTab === 'test-sessions' ? `
                 <div id="class-test-sessions-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
               ` : (window._classHubActiveTab === 'analytics' ? `
                 <div id="class-analytics-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
@@ -1998,7 +2278,7 @@ if (typeof window !== 'undefined') {
                 <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
                   <div id="class-attendance-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
                 </div>
-              `))}
+              `)))}
             </div>
           </div>
         `;
@@ -2221,12 +2501,12 @@ if (typeof window !== 'undefined') {
           } else if (activeTab === 'test-sessions') {
             const leftHtml = `
               <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
-                <span>Class Test Sessions &amp; Live Monitoring</span>
+                <span>Class Sessions (Attendance &amp; Progressive Exam)</span>
               </div>
             `;
             const rightHtml = `
               <div style="display:inline-flex; align-items:center; gap:8px;">
-                <span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size: 12px; font-weight:700;">● SESSIONS ACTIVE</span>
+                <span class="badge" style="background:rgba(56,189,248,0.12); color:#38bdf8; border:1px solid rgba(56,189,248,0.25); font-size: 12px; font-weight:700;">● SESSIONS READY</span>
               </div>
             `;
             setBottomInfobar(leftHtml, rightHtml);
@@ -2282,7 +2562,38 @@ if (typeof window !== 'undefined') {
         let renderAttendanceGridMatrix = null;
 
         // Render content depending on tab
-        if (window._classHubActiveTab === 'test-sessions') {
+        if (!isCbtClass && window._classHubActiveTab === 'attendance') {
+          const classAttContainer = document.getElementById('class-attendance-grid');
+          if (classAttContainer) {
+            window._currentClassStudents = activeBatchStudents;
+            await renderAcademicGradebook({
+              container: classAttContainer,
+              currentClass,
+              students: activeBatchStudents,
+              batchMap,
+              levelMap
+            });
+          }
+          return;
+        }
+
+        if (window._classHubActiveTab === 'class-attendance') {
+          const classAttContainer = document.getElementById('class-meetings-attendance-container');
+          if (classAttContainer) {
+            await renderClassMeetingsAttendance(classAttContainer, {
+              classId,
+              className,
+              currentClass,
+              batchId: window._selectedBatchId || null,
+              activeBatchStudents,
+              allBatches,
+              allLevels,
+              batchMap,
+              levelMap,
+              showPic: false
+            });
+          }
+        } else if (window._classHubActiveTab === 'test-sessions') {
           const testSessionContainer = document.getElementById('class-test-sessions-container');
           if (testSessionContainer) {
             await renderClassTestSessions(testSessionContainer, {
@@ -4684,7 +4995,7 @@ if (typeof window !== 'undefined') {
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(themePct) : '#ffffff';
                       return `
                         <span class="asm-score asm-score-test test-score-theme-total"
-                              style="color:${color} !important; font-weight:800; font-size:12px; font-variant-numeric:tabular-nums;"
+                              style="color:${color}; font-weight:800; font-size:12px; font-variant-numeric:tabular-nums;"
                               title="Theme ${tc} Accumulative Points: ${cleanTotal}">
                           ${cleanTotal}
                         </span>
@@ -4970,7 +5281,7 @@ if (typeof window !== 'undefined') {
 
                     return `
                       <span class="asm-score asm-score-test test-score-theme-total"
-                            style="color:${color} !important; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
+                            style="color:${color}; font-weight:500; font-size:12px; font-variant-numeric:tabular-nums;"
                             title="Theme ${tc} Total Exam Points: ${displayVal}">
                         ${displayVal}
                       </span>
@@ -5322,7 +5633,7 @@ if (typeof window !== 'undefined') {
                     const avgPtsColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(avgScore) : '#ffffff';
                     cellsHtml += `
                       <td class="col-overall col-overall-pts text-center">
-                        <div style="font-weight:700; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${avgPtsColor} !important;" title="Class Avg Exam Points: ${avgPts}">
+                        <div style="font-weight:700; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${avgPtsColor};" title="Class Avg Exam Points: ${avgPts}">
                           ${avgPts}
                         </div>
                       </td>
@@ -5940,7 +6251,7 @@ if (typeof window !== 'undefined') {
                       // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
                       const displayScore = Math.round(Number(val || 0)).toString();
                       return `
-                        <div style="font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor} !important;" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
+                        <div style="font-weight:400; font-size:12px; font-variant-numeric:tabular-nums; line-height:1; color:${scoreColor};" title="Total Exam Points (All Completed Exams): ${displayScore} pts">
                           ${displayScore}
                         </div>
                       `;
@@ -6890,6 +7201,14 @@ if (typeof window !== 'undefined') {
           section = 'class-hub';
         }
       }
+      const activeTenant = getActiveTenant();
+      if (activeTenant !== 'ALL') {
+        const allowedForRegularAdmin = ['class-hub', 'test-access', 'students', 'progress-view', 'alumni'];
+        if (!allowedForRegularAdmin.includes(section)) {
+          showToast(`Restricted: ${activeTenant} Regular Admin access is limited to Classes and Student Rosters.`, 'warning');
+          section = 'class-hub';
+        }
+      }
       const parsed = parseHashRoute(section);
       let rawSection = parsed.section || section;
       section = aliasSectionMap[rawSection] || rawSection;
@@ -6969,7 +7288,14 @@ if (typeof window !== 'undefined') {
       // Reset bottom infobar by default on section change
       if (window.setBottomInfobar) window.setBottomInfobar(null, null);
       const area = document.getElementById('admin-content-area');
-      area.innerHTML = getLoadingStateHtml('Loading...');
+      const isSwitchingToClassHub = section === 'class-hub';
+      const isSameSection = area.dataset.currentSection === section;
+      // Do not wipe area with blanket spinner if entering class-hub (it has intelligent fresh-cache rendering)
+      // or if re-rendering within the same section/subtab
+      if (!isSwitchingToClassHub && (!isSameSection || !area.children.length)) {
+        area.innerHTML = getLoadingStateHtml('Loading...');
+      }
+      area.dataset.currentSection = section;
 
 
       const addRecBtn = document.getElementById('add-record-btn');
@@ -6977,6 +7303,7 @@ if (typeof window !== 'undefined') {
 
       try {
         switch(section.toLowerCase()) {
+          case 'board':
           case 'organization':
           case 'curriculum-org':
             await renderCurriculum(area);
@@ -7110,6 +7437,13 @@ if (typeof window !== 'undefined') {
           case 'system_glossary':
           case 'glossary':
             await renderSystemGlossary(area);
+            break;
+          case 'exam-rules':
+          case 'exam_rules':
+          case 'assessment-rules':
+          case 'assessment_rules':
+          case 'assessment-matrix':
+            await renderExamRules(area);
             break;
           case 'student-registration':
           case 'students-registration':
@@ -7971,7 +8305,7 @@ if (typeof window !== 'undefined') {
       if (typeof window.showStudentDossierModal === 'function') {
         return window.showStudentDossierModal(studentId);
       }
-      const sm = await import('./student-management.js?v=20261120_v641');
+      const sm = await import('./student-management.js?v=20261123_v677');
       if (typeof sm.showStudentDossierModal === 'function') {
         return sm.showStudentDossierModal(studentId);
       }

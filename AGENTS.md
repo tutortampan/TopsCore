@@ -53,6 +53,13 @@ Sistem secara resmi mengenali shortcut instruksi cepat di chat untuk langsung me
 4. **`/check-color`** (atau `/audit-color`): Audit kepatuhan token warna Grade A/C/E & kontras teks via skill `color-auditor` (`npm run test:color-ssot`).
 5. **`/clean`** (atau `/hygiene`): Audit kebersihan repositori dan pembersihan file temporer via skill `workspace-hygiene` (`npm run check:hygiene`).
 
+### 0.2.3 Strict Top Element Invariant & Single Perimeter Ownership SSOT
+Setiap kali merancang, memodifikasi, atau merender tampilan di dalam workspace admin (`#admin-content-area` / `.admin-content`), agen WAJIB mematuhi 4 invarian mutlak:
+1. **Single Perimeter Ownership (Zero Nested / Double Padding)**: Kontainer induk `#admin-content-area` adalah SATU-SATUNYA pemilik `padding: 10px 10px 10px 10px !important;`. Seluruh modul, view, grid-wrapper, atau split-panel yang dirender ke dalamnya DILARANG KERAS menambahkan `padding: 10px` pada wrapper terluarnya (`<div style="padding:10px; ...">`). Penambahan padding anak menciptakan akumulasi gap 20px (Phantom Gap) yang merusak estetika dan melanggar presisi 10px.
+2. **Strict Top Element Invariant & Direct Ceiling Docking**: Elemen pertama (paling atas) di workspace container MUTLAK HANYA BOLEH berupa **Table Header (`thead` dari `.table-wrap`)** yang menempel langsung 10px dari Top Panel, ATAU **Active Interactive Card** (kartu dengan kontrol/tombol interaktif). DILARANG KERAS menyisipkan sub-header bar, banner judul tabel, bar info teks, badge strip, atau legend mengambang di atas tabel!
+3. **Sub Panel Monopoly for Legends & Triage**: Seluruh indikator status (Legend titik Full/Partial/Missed, Grade A/C/E), triage pills, summary akumulasi mingguan, dan tombol aksi WAJIB 100% berlabuh di **Sub Panel bawah (40px Lower Panel / `#admin-bottom-infobar`)** via fungsi kanonikal `window.setBottomInfobar(leftHtml, rightHtml, centerHtml)`. Dilarang menempatkan legend atau keterangan rekap di atas atau di sekitar datagrid.
+4. **100% English SSOT**: Seluruh teks antarmuka, judul tabel, label kolom, keterangan pekan ("Week 1–4", strictly bukan "Pekan..."), status kehadiran, dan tooltip WAJIB 100% berbahasa Inggris baku. Zero Indonesian text in UI.
+
 ## 0.3 Larangan Mutlak Tindakan Liar / Tanpa Permintaan (Strict Zero Unsolicited Action Invariant)
 Sistem dan AI coding agent MUTLAK DILARANG berinisiatif di luar batas perintah (detail operasional di [`.agents/rules/agent-workflow.md` §2.2](file:///.agents/rules/agent-workflow.md#22-strict-zero-unsolicited-action-invariant-no-unrequested-generation-modification-or-deletion)):
 1. **Dilarang Men-generate / Membuat (No Unsolicited Generation/Creation)**: Tidak boleh membuat file baru, folder baru, modul baru, aset, atau fitur tambahan apa pun yang TIDAK secara eksplisit diminta oleh pengguna.
@@ -93,14 +100,27 @@ STUDENT + CLASS
 - **ADMIN**: Manages Institutions, Programs, Classes, Levels, Batches, Students, Tests, Questions, Results, Site Settings, Security, and Audit Logs.
 - **STUDENT**: Logs in via INSTITUTION + PROGRAM + Name + personal PIN. Can view assigned Classes, unlocked Levels, take published Tests, answer questions, resume attempts, view Results and Progress. Students MUST NOT be trusted to calculate scores, progression, or timer state.
 
+## 1.5 Institutions & Dual-Tier Identity Architecture (SSOT)
+TopsCore mengelola 2 institusi pendidikan resmi:
+1. **CEC** (Shortcode: `CEC` | Fullname: `Cake English Course` | Tenant Badge: `.tenant-cec`)
+   - Menyelenggarakan kurikulum berjenjang: Program **Camp** (Level 1, Level 2, Level 3).
+2. **TOP** (Shortcode: `TOP` | Fullname: `Top Occupational Program` | Tenant Badge: `.tenant-top`)
+   - Menyelenggarakan program pelatihan intensif/vokasi/hospitality non-level (Level 0): Program **Evnikom**, **Sheraton**, dan **Tamata**.
+
+### 1.5.1 Dual-Tier Display Invariant (Default Singkatan vs Explicit Fullname SSOT)
+- **Aturan Baku Umum (General Default — STRICT)**:
+  Secara umum di seluruh sistem TopsCore (database primary name, form, dropdown, filter, kolom tabel, badge, login gate, metadata, dan SKU tes/kelas), nama institusi **SECARA STANDAR DAN DEFAULT TETAP `CEC` DAN `TOP`**.
+- **Institution Full Name (On-Demand / Explicit Only)**:
+  Nama panjang institusi (*Cake English Course* dan *Top Occupational Program*) **HANYA** ditampilkan atau digunakan saat ada instruksi atau kebutuhan eksplisit untuk menggunakan **Institution Full Name** (misal: dokumen resmi kelulusan/sertifikat tertentu, dossier cetak resmi, atau kartu profil legal saat diminta). Di luar permintaan eksplisit tersebut, selalu gunakan **`CEC`** dan **`TOP`**.
+
 ---
 
 # 2. NON-NEGOTIABLE BUSINESS RULES
 
 ## 2.1 Admin primary navigation & ABCD System
 The admin navigation uses the **ABCD System** hierarchy with dedicated 4-pillar quadrant colors:
-1. `A — ADMIN` (Executive Dashboard, Profiles, Curriculum & Level Master, Organization) — **Electric Pink (`#ff2d87` / `var(--quad-a)`)**
-2. `B — BOARD` (Batches, Rosters, Progress, Student Attendance) — **Dark Orange (`#FF8C00` / `var(--grade-d)` / `var(--quad-b)`)**
+1. `A — ADMIN` (Attendance, Curriculum, Board, Tutor Desk) — **Electric Pink (`#ff2d87` / `var(--quad-a)`)**
+2. `B — BATCH` (Batches, Rosters, Progress, Student Attendance, Alumni) — **Dark Orange (`#FF8C00` / `var(--grade-d)` / `var(--quad-b)`)**
 3. `C — CLASS` (Active Classes, Learning Sessions, Rosters, Class Tests) — **Electric Lime (`#95ff00` / `var(--grade-b)` / `var(--quad-c)`)**
 4. `D — DATA` (Vocabulary Vault, Item Banks, Modules, System Settings, Audit Logs) — **Tactical Cyan (`#38bdf8` / `var(--primary-tactical)` / `var(--quad-d)`)**
 
@@ -131,10 +151,10 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
 - **Tampilan Visual Kolom Level (`0`)**: Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`).
 - **Aturan Penamaan Kelas & Kode Kelas (Zero-Level Omission Invariant)**: Pada program tanpa jenjang, segmen level ordinal pada nama kelas dan kode kelas ditiadakan karena kurikulumnya tidak bertingkat:
   - **Nama Kelas**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (dilarang menggunakan `1st`).
-  - **Kode Kelas**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).
-- **Aturan Penamaan & Kode Tes Level 0 (Uniform Level-Prefixed SSOT per DECISION-061)**: Selaras dengan kurikulum berjenjang (`1...`, `2...`, `3...`), kode tema dan topik pada Level 0 wajib ber-prefix angka **`0`** (`0G1`, `0G2`, `0A1`, `0G`, `0A`) untuk menjaga keseragaman format kode di seluruh modul:
+  - **Kode Kelas**: `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).
+- **Aturan Penamaan & Kode Tes Level 0 (Uniform Level-Prefixed SSOT per DECISION-061 & DECISION-077)**: Selaras dengan kurikulum berjenjang (`1...`, `2...`, `3...`), kode tema dan topik pada Level 0 wajib ber-prefix angka **`0`** (`0G1`, `0G2`, `0A1`, `0G`, `0A`) untuk menjaga keseragaman format kode di seluruh modul:
   - **Judul Tes**: `Evnikom Vocabulary Task 0G1 - Time Name`, `Evnikom Vocabulary Exam 0G - General`, `Sheraton Vocabulary Task 0A1 - Pre-Test`.
-  - **Kode Tes**: `EVN-VCB-0G1-TASK`, `EVN-VCB-0G-EXAM`, `SHR-VCB-0A1-TASK`.
+  - **Kode Tes**: `EVNK-VCB-0G1-TASK`, `EVNK-VCB-0G-EXAM`, `SHRT-VCB-0A1-TASK`, `TPTC-VCB-0A1-TASK`.
 - **Peniadaan Tombol Promosi**: Siswa pada program Non-Level tidak memiliki tombol `LEVEL UP` karena kurikulum mereka adalah program tunggal selesai (*single-tier completion*).
 - **Status Alumni Institusi TOP**: Siswa pada program institusi TOP (Evnikom, Sheraton, Tamata) yang telah menyelesaikan seluruh kurikulum programnya **resmi berstatus ALUMNI (`program_status = 'ALUMNI'`)**, karena tata kelola institusi TOP berbeda dengan CEC (Camp yang bertingkat Level 1–3). Alumni institusi TOP dapat mengakses kembali untuk meninjau (*review*) kelas-kelas yang telah mereka selesaikan sesuai programnya.
 - **Alumni Resmi Menjadi Level X (Grade X / Simbol `X`)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, badge bertuliskan **`X`**, `program_status = 'ALUMNI'`). Warna badge Level X di tabel workstation dan dashboard secara dinamis mengikuti nilai kelulusan akhir siswa (Grade Color SSOT), membebaskan warna ungu (`#c084fc`) secara eksklusif untuk Nilai 100% (Grade Star ★). Alumni mutlak TIDAK menggunakan angka level 0.
@@ -143,17 +163,19 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
 Tests (Tasks & Exams) are created within a Class. Because that Class belongs to a Level, the system automatically assigns the test to any Batch/Student that has unlocked that Level. Batches inherit tests automatically based on their current Level.
 
 ### 2.5.1 Class Code Standard Formula (PROGRAM-LEVELCLASS SSOT)
-- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CMP-3VOCAB`, `CMP-1BASIC`, `CMP-2SPEAK`, `CMP-1STORY`, `CMP-2GRAM`).
-- **Daftar Singkatan Resmi Kelas (Class Modality Standard)**:
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CAMP-3VOCAB`, `CAMP-1BASIC`, `CAMP-2SPEAK`, `CAMP-1STORY`, `CAMP-2GRAM`).
+- **Daftar Singkatan Resmi Kelas (Universal 5-Letter Class Modality Standard)**:
   - Vocabulary: **`VOCAB`** (Kode Tes: **`VCB`**)
   - Speaking: **`SPEAK`** (Kode Tes: **`SPK`**)
   - Storytelling: **`STORY`** (Kode Tes: **`STT`** — strictly `STT`, dilarang `STY`)
-  - Grammar: **`GRAM`** (Kode Tes: **`GRM`**)
-  - Basic: **`BASIC`** (Kode Tes: **`BSC`**)
-- **Segmen 1 (PROGRAM)**: Singkatan 3-huruf resmi program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
+  - Grammar: **`GRMMR`** (Kode Tes: **`GRM`**)
+  - Basic English: **`BASIC`** (Kode Tes: **`BSC`** — strictly 1st Step only)
+  - Grammar for Speaking: **`GFORS`** (Kode Tes: **`GFS`** — 2nd Step)
+  - Pronunciation: **`PRONC`** (Kode Tes: **`PRN`** — 3rd Step)
+- **Segmen 1 (PROGRAM)**: Singkatan 4-huruf resmi program belajar (`CAMP` untuk Camp, `EVNK` untuk Evnikom, `SHRT` untuk Sheraton, `TPTC` untuk Tamata).
 - **Separator**: Tanda hubung (`-`).
 - **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (misal `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
-- **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Pada program yang tidak memiliki jenjang (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB`). Dilarang mencantumkan angka 1 (`EVN-1VOCAB`).
+- **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**: Pada program yang tidak memiliki jenjang (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB`). Dilarang mencantumkan angka 1 (`EVNK-1VOCAB`).
 - **Item Bank Namespace Isolation**: Setiap butir soal di bank soal (*Item Bank*) wajib terikat pada metadata `class_type` / `modality` dan `level` yang bersangkutan. Soal Vocabulary murni berada di bank VCB, soal Storytelling di bank STT, dan soal Speaking di bank SPK; mutlak dilarang mencampur bank soal antar modalitas kelas yang berbeda.
 - **Invarian Format**: Disimpan di database `classes.code` dan ditampilkan seragam pada tabel workstation, modal, dan export.
 
@@ -181,33 +203,102 @@ Tests (Tasks & Exams) are created within a Class. Because that Class belongs to 
   - Kode mengandung `STT` atau `STORY` → `STORYTELLING`
   - Kode mengandung `GRM` atau `GRAM` → `GRAMMAR`
   - Kode mengandung `BSC` atau `BASIC` → `BASIC`
+  - Kode mengandung `PRN` atau `PRON` → `PRONUNCIATION`
+  - Kode mengandung `GFS` → `GFS`
   - Tidak dikenali → fallback `VOCABULARY` (safe default, logged as warning)
   - Fungsi canonical: `detectClassDiscipline()` di `js/grading.js` adalah satu-satunya referensi inference; `inferClassModality()` di `auto-gen-modal.js` adalah mirror lokal tanpa import circular.
 - **Modality Color Identity SSOT** (di seluruh permukaan UI):
   - Vocabulary: Electric Lime `#95ff00` (`var(--grade-b)`)
   - Speaking: Tactical Cyan `#38bdf8` (`var(--primary-tactical)`)
   - Storytelling: Dark Orange `#FF8C00` (`var(--grade-d)`)
-  - Basic / Grammar: Violet `#c084fc` (Grade Star reserved color)
+  - Basic English / Grammar / GFS / Pronunciation: Violet `#c084fc` (`var(--grade-star)` — Unified Structure & Mechanics color)
+
+### 2.5.4 Room Code Standard Formula (Strict Hyphenated Uppercase SSOT per DECISION-077)
+- **Formula Baku Ruangan**: `[TIPE]-[NOMOR/ID]` (Uppercase, zero-space, single hyphen).
+- **Ruang Kelas (Classrooms)**: `R-101`, `R-102`, `R-103`.
+- **Laboratorium Bahasa (Language Labs)**: `LAB-01`.
+- **Aula & Hall (Assembly/Training Halls)**: `HAL-0A`, `HAL-0B`, `HAL-0C`.
+- **Invarian Format**: Dilarang keras menggunakan format spasi (`R 101`, `Hall A`, `Executive Hall A`), format tanpa pemisah (`LAB1`, `HALLA`), atau huruf kecil (`r-101`). Pada kolom tabel admin workstation (`ROOM`), dropdown edit mode, modal, dan export, seluruh ruangan wajib dirender dengan kode kanonikal ini secara seragam dan konsisten.
+
+### 2.5.5 Tutor Code Standard Formula (Strict 3-Letter Uppercase SSOT per DECISION-078)
+- **Formula Baku Tutor**: `T-[3-HURUF]` (Prefix `T-` diikuti tepat 3 huruf kapital singkatan nama/panggilan tutor, zero-space, single hyphen).
+- **Invarian Format**: Dilarang menggunakan angka (seperti `T-01`), spasi (`T TOP`), atau huruf kecil (`t-top`).
+- **Daftar Kode Resmi Tutor**:
+  - Mr. Top (Taufan Hadi): **`T-TOP`**
+  - Mr. Amrul (Muhammad Amrullah): **`T-AMR`**
+  - Miss Elysa (Elysa Supiani): **`T-ELY`**
+  - Miss Nizan (Nizan): **`T-NIZ`**
+  - Miss Amel (Amelia): **`T-AME`**
+  - Miss Cita (Cita): **`T-CIT`**
+  - Miss Siti (Siti Qori' Atun Hizbaeni - TOP): **`T-QOR`**
+- **Tampilan Antarmuka & Pemilihan Tutor**: Kode tutor secara khusus diperuntukkan bagi sistem dan tabel `FACULTY & TUTORS` (kolom `CODE`, 55px monospace bold `#f8fafc`). Untuk dropdown pemilihan tutor pada jadwal/Academic Classes Matrix, tampilan tetap menggunakan nama/nickname tutor (`Mr. Top`, `Miss Elysa`, `Mr. Amrul`, `Miss Siti`) agar ramah pengguna (*clean & friendly callouts*), serta didukung input field uppercase pada modal Add & Edit Tutor.
+
+### 2.5.6 Universal Table Column Ordering & Zero Header-Repetition Invariant (SSOT per DECISION-079)
+1. **Aturan Baku Penempatan Kolom KODE (Code Column Positioning Invariant)**:
+   - **Tabel Berkolom Nomor/Urutan (`#`, `NO`, `LVL`)**: Kolom yang memuat **KODE (`CODE`, `CLASS CODE`, `TEST CODE`)** WAJIB diletakkan **TEPAT SETELAH kolom penomoran tersebut** sebelum kolom nama (`[NO / LVL] | [CODE] | [NAME] | ...`).
+   - **Tabel Tanpa Kolom Nomor**: Kolom **`CODE`** WAJIB diletakkan sebagai **kolom pertama (paling kiri)** di tabel tersebut (`[CODE] | [NAME] | ...`).
+   - **Penerapan Resmi**:
+     - *Academic Classes Matrix*: `LVL | CODE | CLASS NAME | DAY | START | END | ROOM | TUTOR | STD | RATE | STATUS`.
+     - *Faculty & Tutors*: `CODE | PIC | NAME | DoB | AGE | ACT`.
+     - *Camp Rooms & Venues*: `CODE | ROOM NAME | CAP | TYPE | ACT`.
+2. **Zero Header-Repetition in Data Cells (Header/Data Non-Redundancy SSOT)**:
+   - Dilarang keras mengulang teks atau kata yang sudah tercantum di judul header kolom ke dalam isi sel data tabel.
+   - **Penerapan Resmi pada Kolom BATCH**: Jika header kolom tabel adalah **`BATCH`**, maka isi sel kolom mutlak hanya menampilkan angka/nama pengenal murni (`135`, `134`, `123`, `EV-07`), DILARANG menambahkan awalan kata "Batch" (`Batch 135`, `Batch 134`) karena menciptakan redundansi visual (*visual clutter*). Seluruh awalan `Batch ` wajib di-strip secara konsisten.
+
+### 2.5.7 Authoritative Multi-Level Assessment & Exam Regulations (SSOT per DECISION-078)
+Sistem evaluasi akademik TopsCore LMS mengikat pada struktur titik pengujian dan 2 penilaian akhir resmi (dokumentasi lengkap di `docs/EXAM_ASSESSMENT_REGULATIONS.md` dan modul workstation `admin.html#exam-rules`):
+1. **Diagnostic Phase (Placement Test)**:
+   - 3 Indikator Baseline: Speaking (0–25), Vocabulary Baseline (Target awal: 30 kata), Grammar Baseline (Target awal: 25 poin).
+   - Diujikan 1 kali di awal masuk camp melalui wawancara langsung 1-on-1 dengan penguji.
+2. **1st Step (Bulan ke-1 / Level 1) — Total 52 Titik Data**:
+   - Presensi Harian: 40 sesi (Senin–Jumat, 2 sesi/hari = 10 sesi/minggu).
+   - Vocabulary Mastery (Target Kumulatif): 4 kali (W1: 60–90 kata, W2: 120–210 kata, W3: 180–300 kata, W4: 240–450 kata). Evaluasi mingguan; capaian di bawah target minimum ditandai merah.
+   - Grammar Mastery: 2 kali (W1: 8–15 poin, W2: 12–20 poin).
+   - Basic English Test: 2 kali (W1 & W2: skala 60–100).
+   - Speaking Practice (Telling Story): 4 kali (W1, W2, W3, W4; 10–25 poin, rubrik skala 1–5).
+3. **2nd Step (Bulan ke-2 / Level 2) — Total 51 Titik Data**:
+   - Presensi Harian: 40 sesi (2 sesi/hari).
+   - Vocabulary Mastery (Intermediate): 4 kali (W1: 75–120 kata, W2: 155–280 kata, W3: 235–440 kata, W4: 315–600 kata). Pemantauan repeater terisolasi.
+   - Advanced Grammar Mastery: 2 kali (W1: 10–30 poin, W2: 17–30 poin).
+   - GFS (Grammar for Speaking): 2 kali (W1 & W2: 12–20 poin). Mengukur penerapan tata bahasa langsung dalam percakapan.
+   - Speaking Practice (Telling Story): 3 sesi utama (W1, W2, W3; 12–25 poin / rubrik 1–5).
+4. **3rd Step (Bulan ke-3 / Level 3) — Total 11 Titik Nilai Akademik (+ 40 Sesi Presensi)**:
+   - Vocabulary Mastery (Advanced / Tertinggi): 4 kali (W1: 90–150 kata, W2: 215–400 kata, W3: 340–650 kata, W4: 415–800 kata).
+   - Complex Grammar Mastery: 2 kali (W1 & W2: 8–15 poin).
+   - Pronunciation Mastery: 2 kali (W1 & W2: ketepatan bunyi fonetik dan intonasi kata).
+   - Speaking Practice: 3 sesi (W1, W2, W3: evaluasi kelancaran dan tolak ukur kesiapan Ujian Akhir).
+5. **Dual Final Evaluations (2 Penilaian Akhir Independen — Total 8 Parameter)**:
+   - **1. Final Exam (Panel 1: Main Examiner / Penguji Utama)**:
+     - 4 Parameter: Fluency (25), Pronunciation (25), Idea/Content (25), Grammar (25). Maksimal: **100 Poin**.
+   - **2. Final Practice (Panel 2: Speaking Tutor / Tutor Pendamping)**:
+     - 4 Parameter: Fluency (25), Pronunciation (25), Grammar (25), Comprehension (25). Maksimal: **100 Poin**.
+   - Evaluasi tatap muka individual dengan topik/pertanyaan spontan; penilaian kedua panel bersifat independen tanpa saling mempengaruhi, dihitung rata-rata untuk sertifikat kelulusan.
+6. **Rubrik Baku Telling Story (Skala 1–5)**:
+   - 1 = Poor (Sangat Kurang), 2 = Fair (Kurang), 3 = Good (Cukup), 4 = Very Good (Baik), 5 = Excellent (Istimewa).
 
 ## 2.6 Test Naming & Code Standard Formula (SSOT)
 Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku: **Test Code (`shell_code`)** dan **Test Name (`title`)**. Istilah `display_name` ditiadakan secara permanen agar tidak menimbulkan ambiguitas dan tumpang tindih.
 
 ### 2.6.1 Test Code Formula (`shell_code` — Machine & Admin SKU)
-- **Formula Baku 4-Blok Simetris**: `PROGRAM-LEVEL_CLASS-CODE-TYPE`
-- **Segmen 1 (PROGRAM)**: Singkatan resmi 3-huruf program belajar (misal `CMP` untuk Camp, `EVN` untuk Evnikom, `SHR` untuk Sheraton, `TMT` untuk Tamata).
+- **Formula Baku 4-Blok Simetris**: `PROGRAM-LEVEL_CLASS-CODE-TYPE` (SSOT per DECISION-077)
+- **Segmen 1 (PROGRAM)**: Singkatan resmi 4-huruf program belajar (`CAMP` untuk Camp, `EVNK` untuk Evnikom, `SHRT` untuk Sheraton, `TPTC` untuk Tamata).
 - **Segmen 2 (LEVEL_CLASS)**: Angka level belajar langsung digabung dengan 3-huruf singkatan kelas **tanpa huruf 'L'** (misal `3VCB` untuk Level 3 Vocabulary, `2VCB` untuk Level 2 Vocabulary, `2SPK` untuk Speaking, `1STT` untuk Storytelling [strictly `STT`]). Meniadakan huruf 'L' mencegah kerancuan tipografi font (seperti `L1` vs `11` vs `I1`). Pada program Non-Level (Level 0), segmen level pada singkatan kelas ditiadakan sehingga murni 3-huruf (`VCB`, `SPK`), sedangkan nomor level `0` disematkan pada segmen kode (Segmen 3: `0G1`, `0G`, `0A1`).
 - **Segmen 3 (CODE)**:
   - Untuk Task: Kode tema dan nomor topik (misal `A1`, `A2`, `B1`, ..., `D4`, atau `0G1`, `0G2`, `0A1` untuk Level 0).
   - Untuk Exam: Huruf tema tunggal (misal `A`, `B`, `C`, `D`, atau `0G`, `0A` untuk Level 0).
 - **Segmen 4 (TYPE)**: Strictly `TASK` atau `EXAM`.
 - **Contoh Resmi**:
-  - `CMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
-  - `CMP-3VCB-A-EXAM` (Camp Level 3 Vocabulary Theme A Exam)
-  - `CMP-3VCB-D-EXAM` (Camp Level 3 Vocabulary Theme D Exam)
-  - `CMP-2VCB-B2-TASK` (Camp Level 2 Vocabulary Topic B2 Task)
-  - `CMP-2SPK-A1-TASK` (Camp Level 2 Speaking Topic A1 Task)
-  - `EVN-VCB-0G1-TASK` (Evnikom Level 0 Vocabulary Topic 0G1 Task)
-  - `EVN-VCB-0G-EXAM` (Evnikom Level 0 Vocabulary General 0G Exam)
+  - `CAMP-3VCB-A1-TASK` (Camp Level 3 Vocabulary Topic A1 Task)
+  - `CAMP-3VCB-A-EXAM` (Camp Level 3 Vocabulary Theme A Exam)
+  - `CAMP-3VCB-D-EXAM` (Camp Level 3 Vocabulary Theme D Exam)
+  - `CAMP-2VCB-B2-TASK` (Camp Level 2 Vocabulary Topic B2 Task)
+  - `CAMP-2SPK-A1-TASK` (Camp Level 2 Speaking Topic A1 Task)
+  - `CAMP-1BSC-A-EXAM` (Camp Level 1 Basic English Theme A Exam)
+  - `CAMP-1STT-A1-TASK` (Camp Level 1 Storytelling Topic A1 Task)
+  - `EVNK-VCB-0G1-TASK` (Evnikom Level 0 Vocabulary Topic 0G1 Task)
+  - `EVNK-VCB-0G-EXAM` (Evnikom Level 0 Vocabulary General 0G Exam)
+  - `SHRT-VCB-0A1-TASK` (Sheraton Level 0 Vocabulary Topic 0A1 Task)
+  - `TPTC-VCB-0A1-TASK` (Tamata Level 0 Vocabulary Topic 0A1 Task)
 
 ### 2.6.2 Test Name Formula (`title` SSOT)
 - **Formula Baku Terpadu (Natural English Flow)**:
@@ -434,12 +525,19 @@ All table columns, labels, titles, and metrics must display 100% in full without
 - Fitur cetak (print report, diagnostic summary, evaluasi) DILARANG berada di halaman hasil siswa (`result.html`).
 - Seluruh fitur cetak resmi hanya boleh ada dan diakses melalui **Room** (Admin Console / Tutors Room / Live Room).
 
-## 2.30 Universal Table Cell Regular Weight Invariant (Aturan Konten Baris Tabel Wajib Regular 400 & Inter Font)
-- **Zero Bold in Table Content**: Di seluruh sistem (Admin Workstation Datagrid, Student Dashboard Standings & Completed Tests, Modal Tables), seluruh huruf dan angka di dalam baris tabel (teks, nama siswa, peringkat, nilai poin PTS, persentase) **MUTLAK MENGGUNAKAN `font-weight: 400` (Regular) dan font `Inter`**. Huruf tebal (`700`, `800`, `900`) dilarang keras di dalam sel baris tabel. Detail spesifikasi dan pengecualian header diatur dalam [`.agents/rules/ui-invariants.md` §2.0 & §4.1](file:///.agents/rules/ui-invariants.md#41-dimensi-tabel-baku--native-display-lock-universal-table-standardization-protocol--construction-blueprint).
+## 2.30 Enterprise Table Typography & Weight Hierarchy (SSOT Skala Ketebalan Huruf Tabel)
+- **Skala Ketebalan Huruf Tabel Baku (Enterprise Weight Scale)**:
+  1. **Sub-Header (Baris 2)**: **`font-weight: 400` (Regular, strictly not bold)** untuk seluruh label sub-kolom.
+  2. **Isi Sel Normal (Standard Data Cells)**: **`font-weight: 500` (Inter Medium)** untuk angka, poin PTS, persentase rate %, dan teks status sel agar terbaca jernih, tajam, dan tidak pudar di tema gelap maupun terang.
+  3. **Kolom Identitas / Sticky Key (Student Name, Batch Name, Code)**: **`font-weight: 600` (Inter SemiBold)** untuk penegasan pemindaian visual tanpa mendominasi header.
+  4. **Super-Header (Baris 1) & Judul Section**: **`font-weight: 700` (Inter Bold)** untuk hirarki induk kelompok.
+  5. **Brand Hero & Landmark (Level 0 / 30px Hero)**: **`font-weight: 800`–`900` (ExtraBold/Black)**.
+- **Larangan Huruf Tebal Liar di Dalam Sel Data**: Dilarang keras menggunakan huruf tebal liar (`700`, `800`, `900`) pada sel-sel data angka atau teks umum baris tabel. Detail di [`.agents/rules/ui-invariants.md` §2.0, §4.1 & §4.11](file:///.agents/rules/ui-invariants.md#41-dimensi-tabel-baku--native-display-lock-universal-table-standardization-protocol--construction-blueprint).
 
 ## 2.31 Zero Table Capsule & Zero Table Glow Invariant (Isi Tabel Bebas Kapsul & Nol Glow SSOT)
-- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel**: Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, modal tables) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`). Status hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
-- **Mutlak Nol Glow di Seluruh Sistem**: Dilarang keras menggunakan efek glow, text-shadow, atau box-shadow pada teks maupun sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur per [`.agents/rules/ui-invariants.md` §4.9](file:///.agents/rules/ui-invariants.md#49-zero-table-capsule--zero-table-glow-invariant-ssot).
+- **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel**: Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, modal tables) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill (`background: transparent !important;`), border kotak kapsul (`.badge { border: none !important; }`), maupun padding badge (`padding: 0 !important;`). Status hanya boleh direpresentasikan melalui warna font teks tipografi (`color: ...`).
+- **Ketegasan Garis Pembatas Kisi Sel (Adaptive Dual-Layer Gridlines)**: Larangan border kotak di atas khusus melarang elemen badge/kapsul di dalam sel, TETAPI sel tabel (`td`) itu sendiri **WAJIB memiliki garis pembatas kisi adaptif (Adaptive Dual-Layer Gridlines)** berupa `border-bottom` dan `border-right` halus antar-sel yang menyesuaikan secara cerdas per tema (`#e2e8f0` di Light, `#2d2d2d` di Charcoal Dark, `rgba(255, 255, 255, 0.05)` di Navy, dengan `:last-child { border-right: none; }`).
+- **Mutlak Nol Glow di Seluruh Sistem**: Dilarang keras menggunakan efek glow, text-shadow, atau box-shadow pada teks maupun sel tabel (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`). Teks wajib terbaca tegas, bersih (*crisp*), kontras tinggi, dan bebas blur per [`.agents/rules/ui-invariants.md` §4.9 & §4.13](file:///.agents/rules/ui-invariants.md#49-zero-table-capsule--zero-table-glow-invariant-ssot).
 
 ## 2.32 Standardized 50px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`)
 - **Strict 50px Height Lock**: Tinggi banner bawah di seluruh antarmuka aplikasi terkunci mati tepat **`50px`** (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box !important;`).
@@ -456,7 +554,7 @@ All table columns, labels, titles, and metrics must display 100% in full without
 
 ## 2.34 Universal Two-Tier Themed Headers Architecture (Dark Surface with Category-Themed Colored Fonts Across All Tables SSOT)
 - **Universal Two-Tier Themed Headers across ALL Tables in TopsCore (Font Saja Yang Berwarna)**:
-  - Setiap tabel di seluruh sistem TopsCore (baik `#class-attendance-grid`, `student_roster_raport_grid_v2`, `student_roster_data_grid_v2`, `#blueprint-matrix-table`, `#vault-table`, maupun tabel modular/dinamis lainnya) yang memiliki dua tingkat header (Baris 1 Super-Header dan Baris 2 Sub-Header) **WAJIB menerapkan latar belakang gelap pekat solid (`#0b1120` atau `#0f172a`) dengan HANYA FONT/TEKS YANG BERWARNA**.
+  - Setiap tabel di seluruh sistem TopsCore (baik `#class-attendance-grid`, `student_roster_raport_grid_v2`, `student_roster_data_grid_v2`, `#blueprint-matrix-table`, `#vault-table`, maupun tabel modular/dinamis lainnya) yang memiliki dua tingkat header (Baris 1 Super-Header dan Baris 2 Sub-Header) **WAJIB menerapkan latar belakang gelap pekat solid (`#0b1120`, `#0f172a`, atau `#212121` di Charcoal) dengan HANYA FONT/TEKS YANG BERWARNA**, dan format pembingkaian gelap ini **BERLAKU SERAGAM DI SEMUA TEMA TERMASUK LIGHT MODE** (Solid Dark Header Framing with Category-Themed Fonts).
   - Dilarang menggunakan blok latar belakang neon/terang solid yang berat dan menyilaukan mata pada tema gelap (*no full bright solid background blocks*).
   - Sub-Header pada Baris 2 **MUTLAK MENGIKUTI 100% warna font/teks Super-Header induknya** di atas kanvas latar belakang gelap pekat yang sama.
 - **Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant)**:
@@ -497,6 +595,62 @@ Setiap kali sistem melakukan pengurutan (*sorting*), menampilkan daftar modul pe
   3. **Panel Samping Kiri (Sidebar / Left Navigation)**: Jarak tepi kiri elemen/kartu/tabel ke sidebar terkunci tepat **10px** (`padding-left: 10px;`).
   4. **Panel Samping Kanan (Tepi Layar / Right Viewport Edge)**: Jarak tepi kanan elemen/kartu/tabel ke batas kanan monitor terkunci tepat **10px** (`padding-right: 10px;`).
 - **Workspace Full-Perimeter Consistency**: Seluruh container workspace (`.admin-content`, `#mockup-table-canvas-wrap`, dsb.) wajib menerapkan `padding: 10px 10px 10px 10px !important; box-sizing: border-box !important; gap: 10px !important;` untuk menjamin kerapian simetris dan mutlak bebas dari jarak rapat 0px maupun gap ganda liar (20px–30px). Detail teknis di [`.agents/rules/ui-invariants.md` §1.2](file:///.agents/rules/ui-invariants.md#12-universal-10px-container-gap--4-way-panel-perimeter-invariant-ssot).
+
+## 2.38 Faculty & Staff Identity Card Standards (Tutor & Staff ID Badge SSOT)
+- **Arsitektur Kartu Tanda Pengenal (Physical ID Badge Style)**:
+  - Seluruh kartu pengenal pengajar (Tutor), instruktur, dan staf di TopsCore wajib mengadopsi format **Kartu Tanda Pengenal Fisik**:
+    - **Lanyard Clip Notch**: Lubang klip gantungan tali kartu di bagian atas tengah kartu.
+    - **Avatar / Profil**: Ukuran 44px–48px dengan border aksen gender dan status dot online.
+    - **Bidang Data Wajib**: `NAME`, `GENDER`, `DOB / AGE` (tanggal lahir + kalkulasi usia otomatis, e.g. `14 May 1995 (31 yrs)`), `ADDRESS` (alamat domisili/asal), `ASSIGNED CLASSES`, dan status tugas live.
+    - **Security Stamp & Barcode**: Monospace ID stamp (`TC-CEC-TUTOR-###` / `TC-TOP-INST-###`) dan barcode visual.
+- **Standar Pembeda Institusi (CEC vs TOP)**:
+  - 🏛️ **CEC Campus Faculty Card (`.tenant-cec`)**: Header tag Tactical Cyan (`#38bdf8`) dengan badge `CEC ACADEMIC FACULTY`. Menampilkan jenjang level mengajar (`Level 1`, `Level 2`, `Level 3`) dan modalitas kurikulum. Lembaga: **Cake English Course**.
+  - 🏨 **TOP Corporate Instructor Card (`.tenant-top`)**: Header tag Dark Orange (`#ff8c00`) dengan badge `TOP CORPORATE INSTRUCTOR`. Menampilkan penugasan program korporat (*Evnikom*, *Sheraton*, *Tamata*), fokus hospitality/perhotelan, dan penanda Level 0 (Non-Level). Lembaga: **Top Occupational Program**.
+- **Aturan Baku Aksen Warna Gender (Gender Color Accent SSOT)**:
+  - 🍏 **Tutor & Staf Pria (Male — `.gender-male`)**:
+    - Aksen: **Electric Lime (`#95ff00` / `var(--grade-b)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch glow, dan badge gender.
+    - Kontras teks: Wajib **Dark Slate (`#0f172a`)** tebal (Inter 800) pada background Lime.
+  - 🌸 **Tutor & Staf Wanita (Female — `.gender-female`)**:
+    - Aksen: **Electric Pink (`#ff2d87` / `var(--quad-a)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch glow, dan badge gender.
+    - Kontras teks: Wajib **Crisp White (`#ffffff`)** tebal (Inter 800) pada background Pink.
+- Rujukan teknis lengkap dikodifikasi dalam [`.agents/rules/ui-invariants.md` §5.5](file:///.agents/rules/ui-invariants.md#55-faculty--staff-identity-card-standards-tutor--staff-id-badge-ssot).
+
+## 2.39 Universal 3-Theme Spectrum Architecture & Adaptive Gridlines SSOT
+Sistem antarmuka TopsCore LMS mengelola 3 tema resmi yang didukung secara natif dan konsisten:
+1. **Navy Mode (`data-theme="navy"`)**:
+   - Canvas Viewport: `#090D16` (Deep Navy Abyssal)
+   - Cards & Surface: `#0F172A` (Slate Card)
+   - Table Headers: `#0F172A` (Solid Slate Framing)
+   - Subtle Gridlines: `rgba(255, 255, 255, 0.05)`
+2. **Charcoal / Black OLED Mode (`data-theme="dark"`)**:
+   - Canvas Viewport: `#141414` / `#161616` (Pure Obsidian Charcoal)
+   - Cards & Surface: `#212121` (Zinc Elevated Card)
+   - Table Headers: `#2a2a2a` (Charcoal Neutral Framing)
+   - Subtle Gridlines: `#2d2d2d` (antara sel `td`) & `#383838` (border kartu)
+3. **Tiered Grey Light Mode (`data-theme="light"`)**:
+   - Canvas Viewport: `#eef2f6` (Soft Calm Slate — Level 0 depth yang meniadakan efek silau 100% white void)
+   - Cards & Table Paper: `#ffffff` (Pure Crisp White Paper card — Level 1 elevation dengan border pembatas `#cbd5e1`)
+   - Sidebar & Framing: `#1e293b` (Sleek Light Charcoal / Slate Gray — lebih terang dan nyaman dibandingkan hitam pekat)
+   - Table Headers & Framing: `#1e293b` (Solid Light Charcoal Framing dengan font berwarna per kategori tema)
+   - Subtle Gridlines: `#cbd5e1` (antara sel `td`)
+- **Pilar ke-13 Datagrid SSOT — Adaptive Dual-Layer Table Gridlines & Boundary Dividers**:
+  Di seluruh tema, setiap sel data tabel (`td`) wajib memiliki garis kisi adaptif: `border-bottom: 1px solid var(--admin-border-subtle)` dan `border-right: 1px solid var(--admin-border-subtle)` dengan `td:last-child { border-right: none !important; }`. Pembatas antar-grup kategori (Super-Header Dividers / `.super-hdr-divider` dan `.col-sticky-2`) wajib menggunakan garis kontras tegas 2px: `var(--admin-border-divider)` (`#94a3b8` di Light, `#52525b` di Charcoal Dark, `rgba(255, 255, 255, 0.22)` di Navy). Garis tepi perimeter luar tabel wajib menggunakan `var(--admin-border-perimeter)` (`#64748b` di Light, `#52525b` di Charcoal Dark, `rgba(255, 255, 255, 0.28)` di Navy). Saat Master Edit Mode aktif, garis ini menguat menjadi garis putih tegas khas Excel (`var(--admin-border-active)` / `rgba(255, 255, 255, 0.45)`).
+- **Universal Semantic Data Colors Invariant (Statuses, Percentages & Tactical Actions)**:
+  Di SELURUH tabel sistem (Student Roster, Dashboard Matrix, Classes Hub, Board, Class Attendance):
+  1. **Status Kolom (`STATUS`)**: Wajib berwarna semantik baku, DILARANG dipaksa menjadi hitam atau pudar.
+     - `Active` / `ACTIVE`: Green (`#16a34a` di Light / `var(--grade-a)` `#00c000` di Dark/Navy).
+     - `Inactive` / `INACTIVE`: Red (`#dc2626` di Light / `var(--grade-e)` `#ef4444` di Dark/Navy).
+     - `Hold` / `HOLD` / `STANDBY`: Amber/Yellow (`#d97706` di Light / `var(--grade-c)` `#FFFF00` di Dark/Navy).
+     - `Alumni` / `ALUMNI`: Purple (`#7c3aed` di Light / `var(--quad-d)` `#c084fc` di Dark/Navy).
+     - `Ongoing` / `Live`: Tactical Cyan (`#0284c7` di Light / `#38bdf8` di Dark/Navy).
+     - `Completed`: Green (`#16a34a` di Light / `var(--grade-a)` di Dark/Navy).
+  2. **Nilai Persentase (`RATE`, `DONE %`, `WRD %`, `PHR %`, `TASK %`, `ACC`)**:
+     - $\ge 80\%$: Hijau (`#16a34a` / `var(--grade-a)`).
+     - $60\% - 79\%$: Kuning/Amber (`#d97706` / `var(--grade-c)`).
+     - $< 60\%$: Merah (`#dc2626` / `var(--grade-e)`).
+  3. **Tombol Promosi Level (`.btn-level-up-cell`)**: Menampilkan kapsul hijau taktis interaktif (`#dcfce7` bg / `#15803d` border & teks di Light Mode; `rgba(34, 197, 94, 0.18)` bg / `#4ade80` di Dark/Navy Mode).
+- **Flat Enterprise Precision (Zero Standby Neon Aura & Flat Elevation)**:
+  Standby buttons, badges, dan cards berstatus mutlak flat (`box-shadow: none !important; text-shadow: none !important;`). Pada Light Mode, kartu kerja menggunakan elevasi mikro `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`. Pendaran cahaya hanya diperbolehkan secara terkontrol pada interaksi aktif (:hover / :active) tombol CTA primer.
 
 ---
 

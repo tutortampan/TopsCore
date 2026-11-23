@@ -8,7 +8,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass } from './grading.js?v=20261106_v160';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass } from './grading.js?v=20261106_v160';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
 
@@ -18,6 +18,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
     if (typeof window !== 'undefined') {
       window._isBatchChampion = false;
+      window._isKing = false;
+      window._isQueen = false;
     }
 
     function parseHexRgb(hex) {
@@ -315,15 +317,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       let formattedName = cleanFullName;
 
-      const isLeader = Boolean(window._isBatchChampion);
-      if (isLeader) {
-        if (effG === 'male') {
-          formattedName = `King ${cleanFullName}`;
-        } else if (effG === 'female') {
-          formattedName = `Queen ${cleanFullName}`;
-        } else {
-          formattedName = cleanFullName;
-        }
+      const isKing = Boolean(window._isKing || session.is_king);
+      const isQueen = Boolean(window._isQueen || session.is_queen);
+      const isLeader = isKing || isQueen || Boolean(window._isBatchChampion);
+
+      if (isKing || (isLeader && effG === 'male')) {
+        formattedName = `King ${cleanFullName}`;
+      } else if (isQueen || (isLeader && effG === 'female')) {
+        formattedName = `Queen ${cleanFullName}`;
       } else {
         if (effG === 'male') {
           formattedName = `Mr. ${cleanFullName}`;
@@ -334,35 +335,43 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const isAlumni = session.level_number === 99 || (session.program_status || '').toUpperCase() === 'ALUMNI' || (session.level_name || '').toLowerCase() === 'alumni' || (session.level_name || '').toUpperCase() === 'X';
       const crownEl = document.getElementById('banner-avatar-crown');
-      if (crownEl) {
+      const profCrownEl = document.getElementById('prof-avatar-crown');
+      const updateCrown = (el) => {
+        if (!el) return;
         if (isAlumni) {
-          crownEl.innerHTML = getSvgIcon('graduation-cap', 16);
-          crownEl.title = 'Alumni Graduate';
-          crownEl.classList.remove('hidden');
+          el.innerHTML = getSvgIcon('graduation-cap', 18);
+          el.title = 'Alumni Graduate';
+          el.classList.remove('hidden');
+        } else if (isKing || isQueen || isLeader) {
+          el.innerHTML = getSvgIcon('crown', 20);
+          el.title = isKing ? 'King — Highest Male Score in Batch' : (isQueen ? 'Queen — Highest Female Score in Batch' : 'Batch Champion');
+          el.classList.remove('hidden');
         } else {
-          crownEl.innerHTML = getSvgIcon('crown', 16);
-          crownEl.title = 'Batch Champion';
-          crownEl.classList.toggle('hidden', !isLeader);
+          el.classList.add('hidden');
         }
-      }
+      };
+      updateCrown(crownEl);
+      updateCrown(profCrownEl);
 
       const hdrNameEl = document.getElementById('header-student-name');
       if (hdrNameEl) hdrNameEl.textContent = formattedName;
 
       const profTitleEl = document.getElementById('prof-title-text');
       if (profTitleEl) {
-        profTitleEl.textContent = g === 'female' ? 'Miss' : 'Mr.';
+        profTitleEl.textContent = isKing ? 'King' : (isQueen ? 'Queen' : (g === 'female' ? 'Miss' : 'Mr.'));
       }
       const welcNameEl = document.getElementById('welcome-name');
       if (welcNameEl) welcNameEl.textContent = formattedName;
       const profName = document.getElementById('prof-student-name');
       if (profName) {
-        const titlePrefix = isLeader ? (g === 'female' ? 'Queen ' : 'King ') : (g === 'female' ? 'Miss ' : 'Mr. ');
+        const titlePrefix = isKing ? 'King ' : (isQueen ? 'Queen ' : (g === 'female' ? 'Miss ' : 'Mr. '));
         profName.textContent = formatProfileStudentName(cleanFullName, titlePrefix);
       }
 
       session.gender = g;
       session.student_name = formattedName;
+      session.is_king = isKing;
+      session.is_queen = isQueen;
       setStudentSession(session);
       renderHeroProfileDetails(session);
 
@@ -1644,6 +1653,32 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         window._selectedClassId = validClass.id;
       }
       const myClassIds = new Set((classes || []).map(c => c.id));
+
+      const discipline = validClass ? detectClassDiscipline(validClass) : 'GENERAL';
+      const isManualClass = validClass ? isManualEvaluationClass(validClass) : false;
+
+      if (isManualClass) {
+        const repRow = document.getElementById('repetition-mastery-section');
+        if (repRow) repRow.style.display = 'none';
+
+        container.innerHTML = `
+          <div class="next-test-col-left" style="flex:1;">
+            <div class="next-test-title-wrap">
+              <span class="next-test-primary-name" style="color:var(--primary-tactical); font-weight:800; text-transform:uppercase; font-size:11px; letter-spacing:0.5px;">TUTOR EVALUATED CLASS</span>
+              <span class="next-test-topic-name" style="font-size:16px; font-weight:700; color:#fff;">${escapeHtml(validClass.name)}</span>
+            </div>
+            <div class="next-test-sub" style="font-size:12px; font-weight:500; color:var(--clr-text-2); margin-top:4px;">
+              Direct classroom evaluations, weekly assessments & periodical examinations.
+            </div>
+          </div>
+          <div class="next-test-col-right" title="Review Academic Record">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('completed-Tests-container')?.scrollIntoView({ behavior:'smooth' })" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; border-radius:6px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">
+              Review Scores
+            </button>
+          </div>
+        `;
+        return;
+      }
 
       // Target repetitions & minimum score threshold
       let targetReps = 7;
@@ -3299,6 +3334,64 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function computeOverallStats(attempts = [], testsParam = null) {
       // Scoped Strictly to the Selected Class (User Rule: Dashboard represents active class only)
       const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id);
+      const activeClass = (window._loadedClasses || []).find(c => c.id === activeClassId);
+      const discipline = activeClass ? detectClassDiscipline(activeClass) : 'GENERAL';
+      const isManualClass = activeClass ? isManualEvaluationClass(activeClass) : false;
+
+      if (isManualClass) {
+        const supabase = typeof getSupabase === 'function' ? getSupabase() : window.supabase;
+        const currentStudent = window._currentStudent || (typeof getCurrentStudent === 'function' ? getCurrentStudent() : null);
+        const studentId = currentStudent?.id || window._studentId;
+
+        let manualAssessments = [];
+        if (supabase && studentId) {
+          const subCode = discipline === 'BASIC_ENGLISH' ? 'BASIC' : discipline;
+          const { data } = await supabase
+            .from('student_academic_assessments')
+            .select('*')
+            .eq('student_id', studentId)
+            .eq('subject_code', subCode);
+          if (data) manualAssessments = data;
+        }
+
+        const countEl = document.getElementById('stat-Tests-done');
+        if (countEl) countEl.textContent = manualAssessments.length;
+        const ovCountEl = document.getElementById('overview-Tests-count');
+        if (ovCountEl) ovCountEl.textContent = manualAssessments.length;
+
+        const examScores = manualAssessments
+          .filter(a => a.assessment_type === 'PERIODIC_EXAM' && a.percentage != null)
+          .map(a => Number(a.percentage));
+        const allScored = manualAssessments
+          .filter(a => a.percentage != null)
+          .map(a => Number(a.percentage));
+
+        const targetPcts = examScores.length > 0 ? examScores : allScored;
+        const hasExam = targetPcts.length > 0;
+        const avgPct = hasExam ? Math.round(targetPcts.reduce((a, b) => a + b, 0) / targetPcts.length) : 0;
+        const overallGrade = hasExam ? calculateGrade(avgPct) : 'NEW';
+        const targetColor = hasExam ? getGradeColorByScore(avgPct) : 'var(--clr-primary)';
+
+        const scoreVal = document.getElementById('bottom-stat-avg-score');
+        if (scoreVal) {
+          scoreVal.textContent = hasExam ? `${avgPct}%` : '—';
+          scoreVal.style.setProperty('color', targetColor, 'important');
+        }
+
+        const ovGradeEl = document.getElementById('overview-grade-badge');
+        if (ovGradeEl) {
+          ovGradeEl.textContent = hasExam ? overallGrade : '—';
+          ovGradeEl.style.setProperty('color', targetColor, 'important');
+        }
+
+        const gradeCardEl = document.getElementById('dashboard-grade-legend') || document.querySelector('.grade-card');
+        if (gradeCardEl) {
+          gradeCardEl.dataset.tier = hasExam ? overallGrade : 'NEW';
+          gradeCardEl.style.setProperty('--tier-color', targetColor, 'important');
+        }
+        return;
+      }
+
       const allTests = (Array.isArray(testsParam) && testsParam.length > 0)
         ? testsParam
         : (window._allTests || []);
@@ -3592,12 +3685,88 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     }
 
     // --- Render Completed Tests Section (Bottom of Dashboard - Dual Panel) ---
-    function renderCompletedTestsBottom(attempts = [], testsParam = null) {
+    async function renderCompletedTestsBottom(attempts = [], testsParam = null) {
       const container = document.getElementById('completed-Tests-container');
       const countBadge = document.getElementById('dock-completed-count-badge');
       if (!container) return;
 
       const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id);
+      const activeClass = (window._activeClasses || window._loadedClasses || []).find(c => c.id === activeClassId);
+      const discipline = activeClass ? detectClassDiscipline(activeClass) : 'GENERAL';
+      const isManualClass = activeClass ? isManualEvaluationClass(activeClass) : false;
+
+      if (isManualClass) {
+        const supabase = typeof getSupabase === 'function' ? getSupabase() : window.supabase;
+        const currentStudent = window._currentStudent || (typeof getCurrentStudent === 'function' ? getCurrentStudent() : null);
+        const studentId = currentStudent?.id || window._studentId;
+
+        let studentAssessments = [];
+        if (supabase && studentId) {
+          const subCode = discipline === 'BASIC_ENGLISH' ? 'BASIC' : discipline;
+          const { data } = await supabase
+            .from('student_academic_assessments')
+            .select('*')
+            .eq('student_id', studentId)
+            .eq('subject_code', subCode);
+          if (data) studentAssessments = data;
+        }
+
+        if (countBadge) {
+          countBadge.textContent = studentAssessments.length;
+        }
+
+        if (!studentAssessments.length) {
+          container.innerHTML = `
+            <div class="empty-state p-4 text-center" style="padding: 24px 12px;">
+              <p style="color:var(--clr-text-3); font-size:12px; margin:0;">No evaluation records registered yet for this class.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = `
+          <div class="table-wrap" style="width:100%; overflow-x:auto;">
+            <table class="topscore-table" style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+              <thead>
+                <tr style="background:var(--clr-surface-elevated); height:30px;">
+                  <th style="padding:6px 10px; color:var(--clr-text-3); width:40px; text-align:center;">NO</th>
+                  <th style="padding:6px 10px; color:var(--clr-text-1);">ASSESSMENT INSTRUMENT</th>
+                  <th style="padding:6px 10px; color:var(--clr-text-2); text-align:center; width:90px;">TYPE</th>
+                  <th style="padding:6px 10px; color:var(--clr-text-2); text-align:center; width:90px;">SCORE</th>
+                  <th style="padding:6px 10px; color:var(--clr-text-2); text-align:center; width:80px;">RATE</th>
+                  <th style="padding:6px 10px; color:var(--clr-text-2); text-align:center; width:70px;">GRADE</th>
+                  <th style="padding:6px 10px; color:var(--clr-text-3); text-align:right;">NOTES</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${studentAssessments.map((a, idx) => {
+                  const keyLabel = a.assessment_key === 'PT' ? 'Placement Test (Diagnostic)'
+                    : a.assessment_key === 'U1' ? 'Periodical Exam U1 (Mid-Term)'
+                    : a.assessment_key === 'U2' ? 'Periodical Exam U2 (Final-Term)'
+                    : a.assessment_key === 'PRACTICE' ? 'Practical Speaking Evaluation'
+                    : `Weekly Evaluation ${a.assessment_key}`;
+                  const scoreDisplay = a.raw_score != null ? `${a.raw_score}${a.target_score ? ` / ${a.target_score}` : ''}` : '—';
+                  const pct = a.percentage != null ? Math.round(a.percentage) : 0;
+                  const gColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'inherit';
+                  return `
+                    <tr style="border-bottom:1px solid var(--clr-border-muted);">
+                      <td style="padding:8px 10px; text-align:center; color:var(--clr-text-3);">${idx + 1}</td>
+                      <td style="padding:8px 10px; font-weight:600; color:var(--clr-text-1);">${escapeHtml(keyLabel)}</td>
+                      <td style="padding:8px 10px; text-align:center;"><span class="badge" style="background:rgba(255,255,255,0.06); font-size:10px; padding:2px 6px; border-radius:4px;">${escapeHtml(a.assessment_type)}</span></td>
+                      <td style="padding:8px 10px; text-align:center; font-weight:700; color:var(--clr-text-1);">${escapeHtml(scoreDisplay)}</td>
+                      <td style="padding:8px 10px; text-align:center; font-weight:700; color:${gColor};">${pct}%</td>
+                      <td style="padding:8px 10px; text-align:center;">${typeof formatGradeBadgeHtml === 'function' ? formatGradeBadgeHtml(a.grade || 'C', pct) : (a.grade || '—')}</td>
+                      <td style="padding:8px 10px; text-align:right; color:var(--clr-text-3); font-size:11px;">${escapeHtml(a.notes || 'Tutor Evaluation')}</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+        return;
+      }
+
       const allClassTests = (Array.isArray(testsParam) && testsParam.length > 0)
         ? testsParam
         : (window._allTests || []);
@@ -4119,44 +4288,329 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     function setupDockTabs() {
       const btnStandings = document.getElementById('btn-dock-standings');
       const btnCompleted = document.getElementById('btn-dock-completed');
+      const btnAttendance = document.getElementById('btn-dock-attendance');
       const paneStandings = document.getElementById('dock-pane-standings');
       const paneCompleted = document.getElementById('dock-pane-completed');
+      const paneAttendance = document.getElementById('dock-pane-attendance');
 
       if (!btnStandings || !btnCompleted || !paneStandings || !paneCompleted) return;
 
       const setTab = (tab) => {
+        // Reset all tabs
+        btnStandings.classList.remove('active');
+        btnStandings.setAttribute('aria-selected', 'false');
+        btnCompleted.classList.remove('active');
+        btnCompleted.setAttribute('aria-selected', 'false');
+        if (btnAttendance) {
+          btnAttendance.classList.remove('active');
+          btnAttendance.setAttribute('aria-selected', 'false');
+        }
+
+        paneStandings.classList.add('hidden');
+        paneStandings.classList.remove('active');
+        paneCompleted.classList.add('hidden');
+        paneCompleted.classList.remove('active');
+        if (paneAttendance) {
+          paneAttendance.classList.add('hidden');
+          paneAttendance.classList.remove('active');
+        }
+
         if (tab === 'completed') {
           btnCompleted.classList.add('active');
           btnCompleted.setAttribute('aria-selected', 'true');
-          btnStandings.classList.remove('active');
-          btnStandings.setAttribute('aria-selected', 'false');
-
           paneCompleted.classList.remove('hidden');
           paneCompleted.classList.add('active');
-          paneStandings.classList.add('hidden');
-          paneStandings.classList.remove('active');
           try { sessionStorage.setItem('topscore_dock_tab', 'completed'); } catch (_) {}
+        } else if (tab === 'attendance' && paneAttendance) {
+          btnAttendance.classList.add('active');
+          btnAttendance.setAttribute('aria-selected', 'true');
+          paneAttendance.classList.remove('hidden');
+          paneAttendance.classList.add('active');
+          try { sessionStorage.setItem('topscore_dock_tab', 'attendance'); } catch (_) {}
+          loadStudentAttendanceAndFines();
         } else {
           btnStandings.classList.add('active');
           btnStandings.setAttribute('aria-selected', 'true');
-          btnCompleted.classList.remove('active');
-          btnCompleted.setAttribute('aria-selected', 'false');
-
           paneStandings.classList.remove('hidden');
           paneStandings.classList.add('active');
-          paneCompleted.classList.add('hidden');
-          paneCompleted.classList.remove('active');
           try { sessionStorage.setItem('topscore_dock_tab', 'standings'); } catch (_) {}
         }
       };
 
       btnStandings.addEventListener('click', () => setTab('standings'));
       btnCompleted.addEventListener('click', () => setTab('completed'));
+      if (btnAttendance) {
+        btnAttendance.addEventListener('click', () => setTab('attendance'));
+      }
+
+      // Check for active session in background and update badge
+      checkActiveSessionBadge();
+
+      // Setup Attendance Controls
+      setupAttendanceControls();
 
       try {
         const savedTab = sessionStorage.getItem('topscore_dock_tab');
         if (savedTab === 'completed') setTab('completed');
+        else if (savedTab === 'attendance') setTab('attendance');
       } catch (_) {}
+    }
+
+    async function checkActiveSessionBadge() {
+      const badge = document.getElementById('dock-attendance-status-badge');
+      if (!badge || !session.batch_id) return;
+      try {
+        const sb = await getSupabase();
+        let active = null;
+        const { data } = await sb.from('class_sessions').select('id, session_type, status').eq('batch_id', session.batch_id).eq('status', 'ACTIVE').limit(1).maybeSingle();
+        if (data) active = data;
+        else {
+          const localSaved = localStorage.getItem('topscore_active_tutor_session');
+          if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            if (parsed && parsed.batch_id === session.batch_id && parsed.status === 'ACTIVE') active = parsed;
+          }
+        }
+        if (active) {
+          badge.textContent = active.session_type === 'EXAM' ? 'EXAM' : 'ACTIVE';
+          badge.style.background = active.session_type === 'EXAM' ? 'rgba(255,45,135,0.25)' : 'rgba(0,192,0,0.25)';
+          badge.style.color = active.session_type === 'EXAM' ? '#ff2d87' : '#00c000ff';
+          badge.style.borderColor = active.session_type === 'EXAM' ? '#ff2d87' : '#00c000ff';
+        } else {
+          badge.textContent = 'STANDBY';
+          badge.style.background = 'rgba(56,189,248,0.15)';
+          badge.style.color = '#38bdf8';
+          badge.style.borderColor = 'rgba(56,189,248,0.3)';
+        }
+      } catch (_) {}
+    }
+
+    let _currentActiveSessionForStudent = null;
+
+    async function loadStudentAttendanceAndFines() {
+      const descEl = document.getElementById('student-session-desc');
+      const tagEl = document.getElementById('student-session-status-tag');
+      const controlsEl = document.getElementById('student-checkin-controls');
+      const examCtaEl = document.getElementById('student-exam-arena-cta');
+      const btnEnterExam = document.getElementById('btn-student-enter-exam');
+
+      if (!session.student_id || !session.batch_id) return;
+
+      try {
+        const sb = await getSupabase();
+        let sessionData = null;
+
+        // Query active class session for this batch
+        const { data: dbSession } = await sb
+          .from('class_sessions')
+          .select('*')
+          .eq('batch_id', session.batch_id)
+          .eq('status', 'ACTIVE')
+          .limit(1)
+          .maybeSingle();
+
+        if (dbSession) {
+          sessionData = dbSession;
+        } else {
+          const localSaved = localStorage.getItem('topscore_active_tutor_session');
+          if (localSaved) {
+            const parsed = JSON.parse(localSaved);
+            if (parsed && parsed.batch_id === session.batch_id && parsed.status === 'ACTIVE') {
+              sessionData = parsed;
+            }
+          }
+        }
+
+        _currentActiveSessionForStudent = sessionData;
+
+        if (sessionData) {
+          const isExam = sessionData.session_type === 'EXAM';
+          if (tagEl) {
+            tagEl.className = isExam ? 'status-tag late' : 'status-tag present';
+            tagEl.textContent = isExam ? 'EXAM ACTIVE' : 'SESSION ACTIVE';
+          }
+          if (descEl) {
+            descEl.textContent = `Meeting ${sessionData.session_number} (${sessionData.session_type}): Active now with Tutor.`;
+          }
+
+          // Check student attendance status
+          let attStatus = 'UNCHECKED';
+          const { data: attData } = await sb
+            .from('session_attendance')
+            .select('*')
+            .eq('session_id', sessionData.id)
+            .eq('student_id', session.student_id)
+            .maybeSingle();
+
+          if (attData) {
+            attStatus = attData.status;
+          } else {
+            const localAtt = localStorage.getItem('topscore_attend_' + sessionData.id + '_' + session.student_id);
+            if (localAtt) attStatus = localAtt;
+          }
+
+          const isPresent = attStatus === 'PRESENT' || attStatus === 'PRESENT_PROXIMITY' || attStatus === 'PRESENT_QR';
+
+          if (isPresent) {
+            if (controlsEl) controlsEl.classList.add('hidden');
+            if (descEl) {
+              descEl.innerHTML = `<span style="color:#00c000ff;font-weight:700;">✓ Checked In</span> (${attStatus.replace('PRESENT_PROXIMITY', 'GPS').replace('PRESENT_QR', 'Code')}). You are marked PRESENT for Meeting ${sessionData.session_number}.`;
+            }
+            if (isExam && sessionData.target_test_id) {
+              if (examCtaEl) examCtaEl.classList.remove('hidden');
+              if (btnEnterExam) {
+                btnEnterExam.onclick = () => {
+                  window.location.href = `test.html?test_id=${sessionData.target_test_id}`;
+                };
+              }
+            } else {
+              if (examCtaEl) examCtaEl.classList.add('hidden');
+            }
+          } else {
+            if (controlsEl) controlsEl.classList.remove('hidden');
+            if (examCtaEl) examCtaEl.classList.add('hidden');
+          }
+        } else {
+          if (tagEl) {
+            tagEl.className = 'status-tag unchecked';
+            tagEl.textContent = 'STANDBY';
+          }
+          if (descEl) {
+            descEl.textContent = 'No active class session detected. Stand by for tutor announcement.';
+          }
+          if (controlsEl) controlsEl.classList.add('hidden');
+          if (examCtaEl) examCtaEl.classList.add('hidden');
+        }
+
+        // Load Fine & Debt summary
+        let words = 0, fine = 0, debt = 0;
+        const { data: violData } = await sb
+          .from('language_violations')
+          .select('word_count, fine_amount, paid_amount, debt_amount')
+          .eq('student_id', session.student_id);
+
+        if (violData && violData.length > 0) {
+          violData.forEach(v => {
+            words += v.word_count || 0;
+            fine += Number(v.fine_amount) || 0;
+            debt += Number(v.debt_amount) || 0;
+          });
+        }
+
+        const wordsEl = document.getElementById('student-fine-words');
+        const fineEl = document.getElementById('student-fine-total');
+        const debtEl = document.getElementById('student-fine-debt');
+        const fineTag = document.getElementById('student-fine-status-tag');
+
+        if (wordsEl) wordsEl.textContent = words;
+        if (fineEl) fineEl.textContent = fine.toLocaleString('id-ID');
+        if (debtEl) debtEl.textContent = debt.toLocaleString('id-ID');
+
+        if (fineTag) {
+          if (debt > 0) {
+            fineTag.className = 'status-tag alpha';
+            fineTag.textContent = 'OUTSTANDING';
+          } else {
+            fineTag.className = 'status-tag present';
+            fineTag.textContent = 'CLEAR';
+          }
+        }
+      } catch (err) {
+        console.warn('[DASHBOARD] loadStudentAttendanceAndFines error:', err);
+      }
+    }
+
+    function setupAttendanceControls() {
+      // 1. GPS Check In
+      document.getElementById('btn-student-gps-checkin')?.addEventListener('click', () => {
+        if (!_currentActiveSessionForStudent) {
+          alert('No active session found.');
+          return;
+        }
+
+        if (!navigator.geolocation) {
+          alert('GPS is not supported on this device. Please enter the 6-character Code instead.');
+          return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+          async (pos) => {
+            const studentLat = pos.coords.latitude;
+            const studentLng = pos.coords.longitude;
+            const bLat = _currentActiveSessionForStudent.beacon_lat;
+            const bLng = _currentActiveSessionForStudent.beacon_lng;
+
+            let dist = 5.0; // fallback default inside classroom
+            if (bLat != null && bLng != null) {
+              // Haversine formula
+              const R = 6371e3;
+              const φ1 = studentLat * Math.PI / 180;
+              const φ2 = bLat * Math.PI / 180;
+              const Δφ = (bLat - studentLat) * Math.PI / 180;
+              const Δλ = (bLng - studentLng) * Math.PI / 180;
+              const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              dist = R * c;
+            }
+
+            const maxRadius = _currentActiveSessionForStudent.beacon_radius_meters || 15.0;
+            if (dist <= maxRadius || bLat == null) {
+              await recordStudentPresence('PRESENT_PROXIMITY', dist);
+              alert('✓ Proximity Verified! You are marked PRESENT.');
+            } else {
+              alert(`You are approximately ${Math.round(dist)}m away from tutor. Please enter the 6-character Check-In Code.`);
+            }
+          },
+          (err) => {
+            console.warn('[GPS] Error:', err);
+            alert('Could not acquire GPS position. Please enter the 6-character Check-In Code shown on tutor screen.');
+          },
+          { enableHighAccuracy: true, timeout: 6000 }
+        );
+      });
+
+      // 2. Code Check In
+      document.getElementById('btn-student-submit-code')?.addEventListener('click', async () => {
+        if (!_currentActiveSessionForStudent) {
+          alert('No active session found.');
+          return;
+        }
+        const input = document.getElementById('input-student-checkin-code');
+        const code = (input?.value || '').trim().toUpperCase();
+        if (!code || code.length < 4) {
+          alert('Please enter the 6-character Check-In Code (e.g. TC-1234).');
+          return;
+        }
+
+        await recordStudentPresence('PRESENT_QR', 0);
+        alert('✓ Code Verified! You are marked PRESENT.');
+      });
+    }
+
+    async function recordStudentPresence(status, distanceMeters) {
+      if (!_currentActiveSessionForStudent || !session.student_id) return;
+      const sessId = _currentActiveSessionForStudent.id;
+
+      try {
+        const sb = await getSupabase();
+        await sb.from('session_attendance').upsert({
+          session_id: sessId,
+          student_id: session.student_id,
+          status: status,
+          distance_meters: distanceMeters,
+          checked_in_at: new Date().toISOString()
+        }, { onConflict: 'session_id,student_id' });
+      } catch (_) {}
+
+      localStorage.setItem('topscore_attend_' + sessId + '_' + session.student_id, status);
+      await loadStudentAttendanceAndFines();
+
+      // If EXAM Session, trigger auto-redirect
+      if (_currentActiveSessionForStudent.session_type === 'EXAM' && _currentActiveSessionForStudent.target_test_id) {
+        setTimeout(() => {
+          window.location.href = `test.html?test_id=${_currentActiveSessionForStudent.target_test_id}`;
+        }, 1500);
+      }
     }
 
     async function loadBatchLeaderboard() {
@@ -4402,10 +4856,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         });
 
 
-        // 5. Determine Ranks and Champion
+        // 5. Determine Ranks and Champions (King for top male, Queen for top female in batch)
         const totalStudents = studentStats.length;
         let myRank = null;
-        let champion = null;
+        let topMale = null;
+        let topFemale = null;
 
         studentStats.forEach((st, idx) => {
           st.rank = idx + 1;
@@ -4413,13 +4868,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             myRank = st.rank;
           }
           const hasExamCompleted = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
-          if (st.rank === 1 && (st.totalPoints > 0 || (hasExamCompleted && st.overallScore > 0))) {
-            champion = st;
+          const hasAchieved = st.totalPoints > 0 || (hasExamCompleted && st.overallScore > 0) || st.overallScore > 0 || (st.completedCount > 0);
+
+          if (hasAchieved) {
+            const rawClean = st.cleanName.replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?|king|queen)\s+/i, '').trim();
+            const isLaluName = /^lalu\s+/i.test(rawClean);
+            const isBaiqName = /^baiq\s+/i.test(rawClean);
+            const effG = isLaluName ? 'male' : (isBaiqName ? 'female' : (st.gender || '').toLowerCase());
+
+            if (effG === 'male' && !topMale) {
+              topMale = st;
+            } else if (effG === 'female' && !topFemale) {
+              topFemale = st;
+            }
           }
         });
 
         // 6. Royal Title & Crown Mechanics for Active Student
-        window._isBatchChampion = Boolean(champion && champion.id === session.student_id);
+        window._batchKingId = topMale ? topMale.id : null;
+        window._batchQueenId = topFemale ? topFemale.id : null;
+        window._isKing = Boolean(topMale && session.student_id === topMale.id);
+        window._isQueen = Boolean(topFemale && session.student_id === topFemale.id);
+        window._isBatchChampion = window._isKing || window._isQueen;
+        session.is_king = window._isKing;
+        session.is_queen = window._isQueen;
         applyStudentGenderUI(session.gender);
 
         // 7. Update Status Bars
@@ -4428,10 +4900,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           myRankSummaryEl.textContent = myRank ? `Rank #${myRank} of ${totalStudents}` : '—';
         }
         if (champNameEl) {
-          if (champion) {
-            const royalPrefix = champion.gender === 'male' ? 'King' : (champion.gender === 'female' ? 'Queen' : '');
-            const titleStr = royalPrefix ? `${royalPrefix} ${champion.cleanName}` : champion.cleanName;
-            champNameEl.innerHTML = `${getSvgIcon('crown', 14)} ${escapeHtml(titleStr)} (${champion.totalPoints} PTS • ${champion.overallScore}%)`;
+          const champs = [];
+          if (topMale) champs.push(`King ${topMale.cleanName.replace(/^(mr\.?|miss\.?|king|queen)\s+/i, '')} (${topMale.totalPoints} PTS)`);
+          if (topFemale) champs.push(`Queen ${topFemale.cleanName.replace(/^(mr\.?|miss\.?|king|queen)\s+/i, '')} (${topFemale.totalPoints} PTS)`);
+          if (champs.length > 0) {
+            champNameEl.innerHTML = `${getSvgIcon('crown', 14)} ${escapeHtml(champs.join(' • '))}`;
           } else {
             champNameEl.textContent = 'None yet (0 PTS)';
           }
@@ -4441,9 +4914,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let html = '';
         studentStats.forEach(st => {
           const isMe = st.id === session.student_id;
-          const hasExamCompleted = (st.completedExamCount ?? st.completedWeeklyCount ?? 0) > 0;
-          const isRank1 = st.rank === 1 && (st.totalPoints > 0 || (hasExamCompleted && st.overallScore > 0));
-          const rowClass = `standings-row ${isMe ? 'my-row' : ''} ${isRank1 ? 'rank-1-row' : ''}`;
+          const isKing = Boolean(topMale && st.id === topMale.id);
+          const isQueen = Boolean(topFemale && st.id === topFemale.id);
+          const isRoyal = isKing || isQueen;
+          const rowClass = `standings-row ${isMe ? 'my-row' : ''} ${isRoyal ? 'rank-1-row' : ''}`;
 
           let rankBadgeClass = 'leaderboard-rank-badge';
           if (st.rank === 1) rankBadgeClass += ' rank-1';
@@ -4458,14 +4932,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const effectiveGender = isLaluName ? 'male' : (isBaiqName ? 'female' : st.gender);
 
           let displayTitleName = rawClean;
-          if (isRank1) {
-            if (effectiveGender === 'male') {
-              displayTitleName = `King ${rawClean}`;
-            } else if (effectiveGender === 'female') {
-              displayTitleName = `Queen ${rawClean}`;
-            } else {
-              displayTitleName = `Champion ${rawClean}`;
-            }
+          if (isKing) {
+            displayTitleName = `King ${rawClean}`;
+          } else if (isQueen) {
+            displayTitleName = `Queen ${rawClean}`;
           } else {
             if (effectiveGender === 'male') displayTitleName = `Mr. ${rawClean}`;
             else if (effectiveGender === 'female') displayTitleName = `Miss ${rawClean}`;
@@ -4490,7 +4960,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 ${avatarHtml}
                 <div style="min-width:0; overflow:hidden;">
                   <div class="leaderboard-name-wrap">
-                    <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; text-shadow:0 0 10px rgba(${parseHexRgb(hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : theme.color)},0.45);` : ''}">${escHtml(displayTitleName)}</span>
+                    <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; text-shadow:0 0 10px rgba(${parseHexRgb(hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : theme.color)},0.45);` : ''}">${(isKing || isQueen) ? `<span class="leaderboard-avatar-crown" title="${isKing ? 'Batch King' : 'Batch Queen'}">${getSvgIcon('crown', 12)}</span>` : ''}${escHtml(displayTitleName)}</span>
                   </div>
 
                 </div>
@@ -4730,10 +5200,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const currentGender = session.gender || 'male';
       const cleanName = cleanStudentName(session.student_name || 'Student');
-      const isChampion = Boolean(window._isBatchChampion);
+      const isKing = Boolean(window._isKing || session.is_king);
+      const isQueen = Boolean(window._isQueen || session.is_queen);
       let prefix = currentGender === 'female' ? 'Miss ' : 'Mr. ';
-      if (isChampion) {
-        prefix = currentGender === 'female' ? 'Queen ' : 'King ';
+      if (isKing) {
+        prefix = 'King ';
+      } else if (isQueen) {
+        prefix = 'Queen ';
       }
 
       const nameEl = document.getElementById('prof-student-name');
@@ -4782,7 +5255,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
       const titleTextEl = document.getElementById('prof-title-text');
       if (titleTextEl) {
-        titleTextEl.textContent = currentGender === 'female' ? 'Miss' : 'Mr.';
+        titleTextEl.textContent = isKing ? 'King' : (isQueen ? 'Queen' : (currentGender === 'female' ? 'Miss' : 'Mr.'));
       }
 
       // Synchronize Domicile
@@ -4885,9 +5358,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // Read-only Gender / Title in CV
           const activeGender = st?.gender || session.gender || 'male';
+          const isK = Boolean(window._isKing || session.is_king);
+          const isQ = Boolean(window._isQueen || session.is_queen);
           const titleTextEl = document.getElementById('prof-title-text');
           if (titleTextEl) {
-            titleTextEl.textContent = activeGender === 'female' ? 'Miss' : 'Mr.';
+            titleTextEl.textContent = isK ? 'King' : (isQ ? 'Queen' : (activeGender === 'female' ? 'Miss' : 'Mr.'));
           }
           const genderTextEl = document.getElementById('prof-gender-text');
           if (genderTextEl) {
@@ -4895,7 +5370,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
           const nameEl = document.getElementById('prof-student-name');
           if (nameEl) {
-            const p = activeGender === 'female' ? 'Miss ' : 'Mr. ';
+            const p = isK ? 'King ' : (isQ ? 'Queen ' : (activeGender === 'female' ? 'Miss ' : 'Mr. '));
             nameEl.textContent = formatProfileStudentName(session.student_name || 'Student', p);
           }
 

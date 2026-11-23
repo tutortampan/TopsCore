@@ -28,10 +28,10 @@ async function verifyPrereqDeficitGuard() {
     });
 
     console.log(`Ayya status:`);
-    console.log(`  2C1: ${(ayyaPasses['2C1-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C1-TASK']) ?? 0}/7`);
-    console.log(`  2C2: ${(ayyaPasses['2C2-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C2-TASK']) ?? 0}/7`);
-    console.log(`  2C3: ${(ayyaPasses['2C3-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C3-TASK']) ?? 0}/7`);
-    console.log(`  2C4: ${(ayyaPasses['2C4-WORDS-TASK'] ?? ayyaPasses['CMP-2VCB-C4-TASK']) ?? 0}/7`);
+    console.log(`  2C1: ${(ayyaPasses['2C1-WORDS-TASK'] ?? ayyaPasses['CAMP-2VCB-C1-TASK'] ?? ayyaPasses['CMP-2VCB-C1-TASK']) ?? 0}/7`);
+    console.log(`  2C2: ${(ayyaPasses['2C2-WORDS-TASK'] ?? ayyaPasses['CAMP-2VCB-C2-TASK'] ?? ayyaPasses['CMP-2VCB-C2-TASK']) ?? 0}/7`);
+    console.log(`  2C3: ${(ayyaPasses['2C3-WORDS-TASK'] ?? ayyaPasses['CAMP-2VCB-C3-TASK'] ?? ayyaPasses['CMP-2VCB-C3-TASK']) ?? 0}/7`);
+    console.log(`  2C4: ${(ayyaPasses['2C4-WORDS-TASK'] ?? ayyaPasses['CAMP-2VCB-C4-TASK'] ?? ayyaPasses['CMP-2VCB-C4-TASK']) ?? 0}/7`);
     console.log(`  All tasks cleared? ${Object.values(ayyaPasses).every(p => p >= 7) ? '✅ YES' : '❌ NO'}`);
   } else {
     console.log('Ayya not in current environment, skipping live student verification.');
@@ -61,7 +61,7 @@ async function verifyPrereqDeficitGuard() {
   });
 
   const earliestUncompleted = tests.find(t => !isPassedByTest[t.id]);
-  const curAsm = tests.find(t => t.shell_code === '2C4-WORDS-TASK' || t.shell_code === 'CMP-2VCB-C4-TASK');
+  const curAsm = tests.find(t => t.shell_code === '2C4-WORDS-TASK' || t.shell_code === 'CAMP-2VCB-C4-TASK' || t.shell_code === 'CMP-2VCB-C4-TASK');
 
   const curIndex = tests.findIndex(t => t.id === curAsm?.id);
   const earliestIndex = tests.findIndex(t => t.id === earliestUncompleted?.id);
@@ -76,8 +76,8 @@ async function verifyPrereqDeficitGuard() {
   if (earliestIndex < curIndex) {
     const prereqPasses = passCountByTest[earliestUncompleted.id];
     console.log(`  Guard triggered: points to unfulfilled prerequisite ${earliestUncompleted.shell_code} (${prereqPasses}/7)`);
-    if (earliestUncompleted.shell_code !== '2C3-WORDS-TASK' && earliestUncompleted.shell_code !== 'CMP-2VCB-C3-TASK') {
-      throw new Error(`Expected earliest uncompleted to be 2C3-WORDS-TASK / CMP-2VCB-C3-TASK, got ${earliestUncompleted.shell_code}`);
+    if (earliestUncompleted.shell_code !== '2C3-WORDS-TASK' && earliestUncompleted.shell_code !== 'CAMP-2VCB-C3-TASK' && earliestUncompleted.shell_code !== 'CMP-2VCB-C3-TASK') {
+      throw new Error(`Expected earliest uncompleted to be 2C3-WORDS-TASK / CAMP-2VCB-C3-TASK / CMP-2VCB-C3-TASK, got ${earliestUncompleted.shell_code}`);
     }
   } else {
     throw new Error('Expected guard to trigger on 2C4 for unfulfilled 2C3 prerequisite!');

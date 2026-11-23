@@ -85,6 +85,507 @@ export function getTestThemeCode(t) {
 }
 
 /**
+ * Builds and evaluates themesData for class tests & eligibility
+ */
+export function buildClassThemesData(classTests = [], context = {}, selectedBatchId = null, activeBatchStudents = []) {
+  const currentClass = context.currentClass;
+  const className = context.className;
+  const allAttempts = context.allAttempts || [];
+  const discipline = detectClassDiscipline(currentClass || className);
+  const isVocab = discipline === 'VOCABULARY';
+
+  let themesData = [];
+
+  if (isVocab) {
+    const discoveredCodes = [...new Set(classTests.map(t => getTestThemeCode(t)).filter(Boolean))].sort();
+    const themeCodes = discoveredCodes.length > 0 ? discoveredCodes : ['A', 'B', 'C', 'D'];
+    if (!_selectedMatrixTheme || !themeCodes.includes(_selectedMatrixTheme)) {
+      _selectedMatrixTheme = themeCodes[0];
+    }
+
+    themesData = themeCodes.map(code => {
+      const palette = THEME_PALETTES[code] || DEFAULT_THEME_PALETTE;
+
+      const wordsTest = classTests.find(a => {
+        const pl = a.payload || {};
+        const tc = getTestThemeCode(a);
+        if (tc !== code) return false;
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        if (isTask) return false;
+        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+        if (!isExam) return false;
+        const isExplicitWords = subtype === 'WORDS_EXAM' || shell.includes('-WORDS-EXAM') || shell.includes('-WORDS-TEST') || title.includes('words exam') || title.includes('words test');
+        return isExplicitWords && !pl.is_unified && !pl.is_unified_test && !shell.match(/-[A-D]-EXAM$/);
+      });
+
+      const phrasesTest = classTests.find(a => {
+        const pl = a.payload || {};
+        const tc = getTestThemeCode(a);
+        if (tc !== code) return false;
+        const cat = (pl.category || '').toLowerCase();
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        if (isTask) return false;
+        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+        if (!isExam) return false;
+        const isExplicitPhrases = cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('-PHRASES-EXAM') || shell.includes('-PHRASE-EXAM') || shell.includes('-PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test');
+        return isExplicitPhrases && !pl.is_unified && !pl.is_unified_test && !shell.match(/-[A-D]-EXAM$/);
+      });
+
+      const examTest = classTests.find(a => {
+        const pl = a.payload || {};
+        const tc = getTestThemeCode(a);
+        if (tc !== code) return false;
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        if (isTask) return false;
+        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
+        if (!isExam) return false;
+        if (wordsTest && a.id === wordsTest.id) return false;
+        if (phrasesTest && a.id === phrasesTest.id) return false;
+        return true;
+      });
+
+      const tasks = classTests.filter(a => {
+        const pl = a.payload || {};
+        const tc = getTestThemeCode(a);
+        const type = (a.test_type || '').toLowerCase();
+        const subtype = (a.test_subtype || '').toUpperCase();
+        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
+        const title = (a.title || '').toLowerCase();
+        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
+        return tc === code && isTask;
+      }).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
+
+      let topicName = '';
+      const directTopicName = examTest?.topics?.name || wordsTest?.topics?.name || phrasesTest?.topics?.name || tasks[0]?.topics?.name || examTest?.payload?.topic_name || wordsTest?.payload?.topic_name;
+      if (directTopicName) {
+        topicName = directTopicName.trim();
+      } else if (examTest?.title) {
+        const m = examTest.title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : examTest.title;
+      } else if (wordsTest?.title) {
+        const m = wordsTest.title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : wordsTest.title;
+      } else if (phrasesTest?.title) {
+        const m = phrasesTest.title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : phrasesTest.title;
+      } else if (tasks.length > 0 && tasks[0].title) {
+        const m = tasks[0].title.match(/-\s*([^-\n]+)$/);
+        topicName = m ? m[1].trim() : `Theme ${code}`;
+      } else {
+        topicName = `Theme ${code} Curriculum`;
+      }
+
+      const now = Date.now();
+      const sessE = examTest?.payload?.test_session;
+      const sessW = wordsTest?.payload?.test_session;
+      const sessP = phrasesTest?.payload?.test_session;
+
+      const _sessIsLive = (s) => {
+        if (!s || s.status !== 'UNLOCKED') return false;
+        const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
+        return ac > now;
+      };
+
+      if (examTest && sessE && sessE.status === 'UNLOCKED') {
+        const ac = sessE.auto_close_at ? new Date(sessE.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(examTest.id).catch(err => console.warn('[Auto-sync] Close expired examTest notice:', err?.message || err));
+          sessE.status = 'LOCKED';
+        }
+      }
+      if (wordsTest && sessW && sessW.status === 'UNLOCKED') {
+        const ac = sessW.auto_close_at ? new Date(sessW.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(wordsTest.id).catch(err => console.warn('[Auto-sync] Close expired wordsTest notice:', err?.message || err));
+          sessW.status = 'LOCKED';
+        }
+      }
+      if (phrasesTest && sessP && sessP.status === 'UNLOCKED') {
+        const ac = sessP.auto_close_at ? new Date(sessP.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(phrasesTest.id).catch(err => console.warn('[Auto-sync] Close expired phrasesTest notice:', err?.message || err));
+          sessP.status = 'LOCKED';
+        }
+      }
+
+      const isLive = _sessIsLive(sessE) || _sessIsLive(sessW) || _sessIsLive(sessP);
+      const activeSess = (sessE && _sessIsLive(sessE)) ? sessE : ((sessW && _sessIsLive(sessW)) ? sessW : sessP);
+
+      let remainingMinutes = 0;
+      let liveBatchName = '';
+      let liveBatchId = null;
+      let allowedStudentIds = [];
+      let isRemedial = false;
+
+      if (isLive && activeSess) {
+        const autoClose = new Date(activeSess.auto_close_at).getTime();
+        remainingMinutes = Math.max(0, Math.ceil((autoClose - now) / 60000));
+        liveBatchId = activeSess.batch_id || null;
+        liveBatchName = context.batchMap?.[liveBatchId]?.name || activeSess.batch_name || 'Batch';
+        allowedStudentIds = activeSess.allowed_student_ids || [];
+        isRemedial = Boolean(activeSess.is_remedial);
+      }
+
+      const themeObj = {
+        code,
+        name: topicName,
+        color: palette.color,
+        bgRgba: palette.bgRgba,
+        borderRgba: palette.borderRgba,
+        wordsTest,
+        phrasesTest,
+        examTest,
+        tasks,
+        isLive,
+        remainingMinutes,
+        liveBatchName,
+        liveBatchId,
+        allowedStudentIds,
+        isRemedial
+      };
+
+      const normalEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest,
+        phrasesTest,
+        examTest,
+        classTests,
+        allAttempts,
+        mode: 'normal'
+      });
+      const eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
+
+      const remedialEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest,
+        phrasesTest,
+        examTest,
+        classTests,
+        allAttempts,
+        mode: 'remedial'
+      });
+      const eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
+
+      themeObj.eligibleNormalCount = eligibleNormalCount;
+      themeObj.eligibleRemedialCount = eligibleRemedialCount;
+      themeObj.batchTotalStudents = activeBatchStudents.length;
+
+      return themeObj;
+    });
+  } else {
+    // Non-vocabulary classes
+    const classExams = classTests.filter(t => {
+      const st = String(t.shell_code || '').toUpperCase();
+      const tt = String(t.test_type || '').toLowerCase();
+      return tt === 'exam' || st.endsWith('-EXAM') || st.includes('-EXAM-');
+    });
+    const candidateTests = classExams.length > 0 ? classExams : classTests;
+
+    themesData = candidateTests.map((t, idx) => {
+      const shell = String(t.shell_code || '').toUpperCase();
+      const codeMatch = shell.match(/-([A-Z0-9]+)-(?:EXAM|TASK|QUIZ)/);
+      const code = codeMatch ? codeMatch[1] : (String.fromCharCode(65 + idx));
+      const palette = THEME_PALETTES[code] || THEME_PALETTES['A'];
+
+      const now = Date.now();
+      const sess = t.payload?.test_session;
+      const _sessIsLive = (s) => {
+        if (!s || s.status !== 'UNLOCKED') return false;
+        const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
+        return ac > now;
+      };
+
+      if (sess && sess.status === 'UNLOCKED') {
+        const ac = sess.auto_close_at ? new Date(sess.auto_close_at).getTime() : 0;
+        if (ac && ac <= now) {
+          closeTestSession(t.id).catch(err => console.warn('[Auto-sync] Close expired test notice:', err?.message || err));
+          sess.status = 'LOCKED';
+        }
+      }
+
+      const isLive = _sessIsLive(sess);
+      let remainingMinutes = 0;
+      let liveBatchName = '';
+      let liveBatchId = null;
+      let allowedStudentIds = [];
+      let isRemedial = false;
+
+      if (isLive && sess) {
+        const autoClose = new Date(sess.auto_close_at).getTime();
+        remainingMinutes = Math.max(0, Math.ceil((autoClose - now) / 60000));
+        liveBatchId = sess.batch_id || null;
+        liveBatchName = context.batchMap?.[liveBatchId]?.name || sess.batch_name || 'Batch';
+        allowedStudentIds = sess.allowed_student_ids || [];
+        isRemedial = Boolean(sess.is_remedial);
+      }
+
+      const tasks = classTests.filter(other => {
+        if (other.id === t.id) return false;
+        const type = (other.test_type || '').toLowerCase();
+        const subtype = (other.test_subtype || '').toUpperCase();
+        const shellCode = (other.shell_code || '').toUpperCase();
+        return type === 'quiz' || type === 'task' || other.category === 'QUIZ' || other.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shellCode.includes('-QUIZ') || shellCode.includes('-TASK');
+      });
+
+      const themeObj = {
+        code,
+        name: t.title || `Exam ${code}`,
+        isNonVocab: true,
+        color: palette.color,
+        bgRgba: palette.bgRgba,
+        borderRgba: palette.borderRgba,
+        wordsTest: null,
+        phrasesTest: null,
+        examTest: t,
+        tasks,
+        duration: t.working_duration_minutes || 40,
+        totalQuestions: t.total_questions || (Array.isArray(t.questions) ? t.questions.length : 20),
+        moduleName: t.test_type || 'Exam Module',
+        isLive,
+        remainingMinutes,
+        liveBatchName,
+        liveBatchId,
+        allowedStudentIds,
+        isRemedial
+      };
+
+      const normalEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest: null,
+        phrasesTest: null,
+        examTest: t,
+        classTests,
+        allAttempts,
+        mode: 'normal'
+      });
+      themeObj.eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
+
+      const remedialEvals = evaluateStudentsEligibility({
+        students: activeBatchStudents,
+        theme: themeObj,
+        themeTasks: tasks,
+        wordsTest: null,
+        phrasesTest: null,
+        examTest: t,
+        classTests,
+        allAttempts,
+        mode: 'remedial'
+      });
+      themeObj.eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
+      themeObj.batchTotalStudents = activeBatchStudents.length;
+
+      return themeObj;
+    });
+  }
+
+  return themesData;
+}
+
+/**
+ * Renders Card 1: Regular Class Attendance Session (Golden Standard Harmonious Frame)
+ */
+function renderRegularAttendanceCard({
+  className,
+  meetingNum,
+  totalMeetings,
+  isLive,
+  liveCode,
+  activeBatchStudents,
+  presentCount,
+  uncheckedCount,
+  totalDebt
+}) {
+  const borderRgba = isLive ? 'rgba(34, 197, 94, 0.7)' : 'rgba(34, 197, 94, 0.35)';
+
+  const topBlock = `
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <!-- Line 1: Header + Live/Standby Badge -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 2px; line-height: 1.4;">
+        <span style="font-size: 12px; font-weight: 800; color: #4ade80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
+          <span style="color: #22c55e;">REGULAR CLASS</span> &bull; ATTENDANCE
+        </span>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          ${isLive ? `
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80;">
+              LIVE (ACTIVE)
+            </span>
+          ` : `
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15);">
+              STANDBY
+            </span>
+          `}
+        </div>
+      </div>
+
+      <!-- Line 2: Class Meeting Title -->
+      <div style="font-size: 12px; font-weight: 700; color: #93c5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
+        ${escapeHtml(className || 'General Class')} &bull; Meeting ${meetingNum} / ${totalMeetings}
+      </div>
+
+      <!-- Line 3: Standard 12px Metadata Box -->
+      <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; line-height: 1.5;">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+          <span style="color: #94a3b8; font-weight: 500;">Dynamic Code:</span>
+          <span style="color: #38bdf8; font-weight: 800; font-family: var(--fm-font-mono, monospace); letter-spacing: 0.08em;">${isLive ? liveCode : 'AUTO GENERATE'}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
+          <span style="color: #94a3b8; font-weight: 500;">Discipline &amp; QRIS:</span>
+          <span style="color: #ffffff; font-weight: 700;">GPS Active (10m) &bull; Rp ${totalDebt.toLocaleString('id-ID')} Unpaid</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  let row2Content = '';
+  let row3Content = '';
+
+  if (isLive) {
+    row2Content = `
+      <div style="height:36px;">
+        <button type="button" class="btn btn-wireframe-live-view btn-regular-live-view" style="width:100%; border:1px solid #16a34a; background:#16a34a; color:#ffffff; font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Regular Class Attendance Session is Live">
+          LIVE ATTENDANCE &bull; ${presentCount} PRESENT (${uncheckedCount} PENDING)
+        </button>
+      </div>
+    `;
+    row3Content = `
+      <div class="card-block-row-buttons" style="display:flex; gap:6px;">
+        <button type="button" class="btn btn-wireframe-beacon btn-toggle-beacon" style="flex:1; border:1px solid rgba(56,189,248,0.7); color:#38bdf8; background:rgba(56,189,248,0.06); font-weight:700; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;">
+          BEACON: 10m
+        </button>
+        <button type="button" class="btn btn-wireframe-code btn-copy-code" data-code="${liveCode}" style="flex:1; border:1px solid rgba(255,255,255,0.2); color:#ffffff; background:rgba(255,255,255,0.06); font-weight:700; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Copy 6-character check-in code">
+          CODE: ${liveCode}
+        </button>
+        <button type="button" class="btn btn-wireframe-close btn-close-regular-session" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:#fca5a5; background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); font-weight:800; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Close Active Attendance Session (Auto-Alpha Unchecked)">
+          CLOSE
+        </button>
+      </div>
+    `;
+  } else {
+    row2Content = `
+      <div class="card-block-row-buttons" style="display:flex; gap:10px;">
+        <button type="button" class="btn btn-wireframe-normal btn-start-regular-session" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.08); font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Start Regular Class Session with Live Attendance">
+          START CLASS (${activeBatchStudents.length} Students)
+        </button>
+      </div>
+    `;
+    row3Content = `
+      <div class="box-wireframe-standby">
+        STANDBY &bull; AWAITING CLASS START
+      </div>
+    `;
+  }
+
+  return `
+    <div class="theme-test-card-frame" style="height:250px !important; min-height:250px !important; max-height:250px !important; padding:12px 14px !important; box-sizing:border-box !important; border:1px solid ${borderRgba} !important; background:#0f172a !important; border-radius:8px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; overflow:hidden !important;">
+      <div class="theme-test-card-inner" style="height:100% !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; background:transparent !important; border:none !important; padding:0 !important; overflow:hidden !important;">
+        ${topBlock}
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          ${row2Content}
+          ${row3Content}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Renders Lower Table: Real-time Class Roster & Attendance Monitor Table
+ */
+function renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendanceMap, activeTheme, context, totalViolationsDebt = 0) {
+  const { allAttempts = [] } = context;
+  const examId = activeTheme?.examTest?.id || activeTheme?.wordsTest?.id;
+
+  const rowsHtml = activeBatchStudents.length === 0
+    ? `<tr><td colspan="5" style="padding:16px; text-align:center; color:#64748b; font-size:12px;">No students enrolled in this batch</td></tr>`
+    : activeBatchStudents.map((student, idx) => {
+        const attStatus = sessionAttendanceMap.get(student.id) || 'UNCHECKED';
+        const isPresent = String(attStatus).startsWith('PRESENT');
+        const isExcused = attStatus === 'EXCUSED';
+        const isSick = attStatus === 'SICK';
+        const isAbsent = attStatus === 'ABSENT';
+
+        const studAttempts = allAttempts.filter(a => a.student_id === student.id && (a.test_id === examId || (activeTheme?.tasks || []).some(t => t.id === a.test_id)));
+        let examScoreStr = 'Not Started';
+        let examScoreColor = '#64748b';
+        if (studAttempts.length > 0) {
+          const bestScore = Math.max(...studAttempts.map(a => Number(a.effective_score ?? a.percentage ?? 0)));
+          examScoreStr = `${bestScore.toFixed(0)}%`;
+          examScoreColor = bestScore >= 60 ? 'var(--grade-a, #86efac)' : 'var(--grade-e, #fca5a5)';
+        }
+
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
+            <td style="padding:6px 8px; text-align:center; color:#64748b; font-weight:700; width:40px;">${idx + 1}</td>
+            <td style="padding:6px 8px; color:#ffffff; font-weight:700; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(student.name)}">
+              ${escapeHtml(student.name)}
+            </td>
+            <td style="padding:6px 8px; text-align:center;">
+              <div style="display:inline-flex; gap:4px; align-items:center;">
+                <button type="button" class="btn-roster-att-pill ${isPresent ? 'active-present' : ''}" data-student-id="${student.id}" data-status="PRESENT" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isPresent ? '#16a34a' : 'rgba(255,255,255,0.15)'}; background:${isPresent ? '#16a34a' : 'transparent'}; color:${isPresent ? '#ffffff' : '#94a3b8'};" title="Mark Present">P</button>
+                <button type="button" class="btn-roster-att-pill ${isExcused ? 'active-excused' : ''}" data-student-id="${student.id}" data-status="EXCUSED" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isExcused ? '#0284c7' : 'rgba(255,255,255,0.15)'}; background:${isExcused ? '#0284c7' : 'transparent'}; color:${isExcused ? '#ffffff' : '#94a3b8'};" title="Mark Excused">E</button>
+                <button type="button" class="btn-roster-att-pill ${isSick ? 'active-sick' : ''}" data-student-id="${student.id}" data-status="SICK" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isSick ? '#ea580c' : 'rgba(255,255,255,0.15)'}; background:${isSick ? '#ea580c' : 'transparent'}; color:${isSick ? '#ffffff' : '#94a3b8'};" title="Mark Sick">S</button>
+                <button type="button" class="btn-roster-att-pill ${isAbsent ? 'active-absent' : ''}" data-student-id="${student.id}" data-status="ABSENT" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isAbsent ? '#dc2626' : 'rgba(255,255,255,0.15)'}; background:${isAbsent ? '#dc2626' : 'transparent'}; color:${isAbsent ? '#ffffff' : '#94a3b8'};" title="Mark Absent">A</button>
+              </div>
+            </td>
+            <td style="padding:6px 8px; text-align:center; font-weight:800; font-size:12px; color:${examScoreColor}; width:150px;">
+              ${examScoreStr}
+            </td>
+            <td style="padding:6px 8px; text-align:right; font-weight:700; font-size:12px; color:#cbd5e1; width:140px;">
+              Rp 0
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+  return `
+    <div class="card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+      <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; flex-shrink: 0;">
+        <span style="font-size: 12px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.04em;">
+          CLASS ROSTER &bull; LIVE ATTENDANCE MONITOR
+        </span>
+        <span style="font-size: 12px; color: #94a3b8; font-weight: 600;">
+          ${activeBatchStudents.length} Students Enrolled
+        </span>
+      </div>
+      <div class="analytics-table-wrap" style="flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; overflow-y: auto !important; position: relative !important; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+        <table class="table" style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed;">
+          <thead>
+            <tr style="background: #1e293b; border-bottom: 1px solid rgba(255,255,255,0.1);">
+              <th style="width: 40px; padding: 6px 8px; text-align: center; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">#</th>
+              <th style="width: 220px; padding: 6px 8px; text-align: left; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">STUDENT NAME</th>
+              <th style="padding: 6px 8px; text-align: center; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">ATTENDANCE STATUS</th>
+              <th style="width: 150px; padding: 6px 8px; text-align: center; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">EXAM PROGRESS</th>
+              <th style="width: 140px; padding: 6px 8px; text-align: right; color: #94a3b8; position: sticky; top: 0; background: #1e293b; z-index: 5;">DISCIPLINE FINE</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+/**
  * Main renderer inside Class Hub: Tab "Test Sessions"
  */
 export async function renderClassTestSessions(container, context = {}) {
@@ -146,338 +647,7 @@ export async function renderClassTestSessions(container, context = {}) {
   const discipline = detectClassDiscipline(currentClass || className);
   const isVocab = discipline === 'VOCABULARY';
 
-  let themesData = [];
-
-  if (isVocab) {
-    // Discover distinct theme codes present in this class's tests
-    const discoveredCodes = [...new Set(classTests.map(t => getTestThemeCode(t)).filter(Boolean))].sort();
-
-    const themeCodes = discoveredCodes.length > 0 ? discoveredCodes : ['A', 'B', 'C', 'D'];
-    if (!_selectedMatrixTheme || !themeCodes.includes(_selectedMatrixTheme)) {
-      _selectedMatrixTheme = themeCodes[0];
-    }
-
-    // Group class tests into Themes dynamically
-    themesData = themeCodes.map(code => {
-      const palette = THEME_PALETTES[code] || DEFAULT_THEME_PALETTE;
-
-      // Separate explicit Words Test (only if dedicated words exam, not the theme primary/unified exam)
-      const wordsTest = classTests.find(a => {
-        const pl = a.payload || {};
-        const tc = getTestThemeCode(a);
-        if (tc !== code) return false;
-        const type = (a.test_type || '').toLowerCase();
-        const subtype = (a.test_subtype || '').toUpperCase();
-        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-        const title = (a.title || '').toLowerCase();
-
-        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-        if (isTask) return false;
-
-        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-        if (!isExam) return false;
-
-        const isExplicitWords = subtype === 'WORDS_EXAM' || shell.includes('-WORDS-EXAM') || shell.includes('-WORDS-TEST') || title.includes('words exam') || title.includes('words test');
-        return isExplicitWords && !pl.is_unified && !pl.is_unified_test && !shell.match(/-[A-D]-EXAM$/);
-      });
-
-      // Separate explicit Phrases Test (only if dedicated phrases exam, not the theme primary/unified exam)
-      const phrasesTest = classTests.find(a => {
-        const pl = a.payload || {};
-        const tc = getTestThemeCode(a);
-        if (tc !== code) return false;
-        const cat = (pl.category || '').toLowerCase();
-        const type = (a.test_type || '').toLowerCase();
-        const subtype = (a.test_subtype || '').toUpperCase();
-        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-        const title = (a.title || '').toLowerCase();
-
-        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-        if (isTask) return false;
-
-        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-        if (!isExam) return false;
-
-        const isExplicitPhrases = cat === 'phrases' || subtype === 'PHRASE_EXAM' || subtype === 'PHRASE_TEST' || shell.includes('-PHRASES-EXAM') || shell.includes('-PHRASE-EXAM') || shell.includes('-PHRASES-TEST') || title.includes('phrases exam') || title.includes('phrases test');
-        return isExplicitPhrases && !pl.is_unified && !pl.is_unified_test && !shell.match(/-[A-D]-EXAM$/);
-      });
-
-      // Unified Exam Test or Primary Exam for this theme (DECISION-034 SSOT)
-      const examTest = classTests.find(a => {
-        const pl = a.payload || {};
-        const tc = getTestThemeCode(a);
-        if (tc !== code) return false;
-        const type = (a.test_type || '').toLowerCase();
-        const subtype = (a.test_subtype || '').toUpperCase();
-        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-        const title = (a.title || '').toLowerCase();
-
-        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-        if (isTask) return false;
-
-        const isExam = type === 'exam' || a.category === 'EXAM' || a.category === 'TEST' || subtype.includes('EXAM') || subtype.includes('TEST') || shell.endsWith('-EXAM') || shell.endsWith('-TEST') || title.includes('exam') || title.includes('test');
-        if (!isExam) return false;
-
-        if (wordsTest && a.id === wordsTest.id) return false;
-        if (phrasesTest && a.id === phrasesTest.id) return false;
-
-        return true;
-      });
-
-      const tasks = classTests.filter(a => {
-        const pl = a.payload || {};
-        const tc = getTestThemeCode(a);
-        const type = (a.test_type || '').toLowerCase();
-        const subtype = (a.test_subtype || '').toUpperCase();
-        const shell = (a.shell_code || pl.shell_code || '').toUpperCase();
-        const title = (a.title || '').toLowerCase();
-        const isTask = type === 'quiz' || type === 'task' || a.category === 'QUIZ' || a.category === 'TASK' || subtype.includes('QUIZ') || subtype.includes('TASK') || shell.includes('-QUIZ') || shell.includes('-TASK') || title.includes('quiz') || title.includes('task');
-        return tc === code && isTask;
-      }).sort((a, b) => (a.display_order || 0) - (b.display_order || 0));
-
-      // Dynamic Topic Name
-      let topicName = '';
-      const directTopicName = examTest?.topics?.name || wordsTest?.topics?.name || phrasesTest?.topics?.name || tasks[0]?.topics?.name || examTest?.payload?.topic_name || wordsTest?.payload?.topic_name;
-      if (directTopicName) {
-        topicName = directTopicName.trim();
-      } else if (examTest?.title) {
-        const m = examTest.title.match(/-\s*([^-\n]+)$/);
-        topicName = m ? m[1].trim() : examTest.title;
-      } else if (wordsTest?.title) {
-        const m = wordsTest.title.match(/-\s*([^-\n]+)$/);
-        topicName = m ? m[1].trim() : wordsTest.title;
-      } else if (phrasesTest?.title) {
-        const m = phrasesTest.title.match(/-\s*([^-\n]+)$/);
-        topicName = m ? m[1].trim() : phrasesTest.title;
-      } else if (tasks.length > 0 && tasks[0].title) {
-        const m = tasks[0].title.match(/-\s*([^-\n]+)$/);
-        topicName = m ? m[1].trim() : `Theme ${code}`;
-      } else {
-        topicName = `Theme ${code} Curriculum`;
-      }
-
-      // Check live state
-      const now = Date.now();
-      const sessE = examTest?.payload?.test_session;
-      const sessW = wordsTest?.payload?.test_session;
-      const sessP = phrasesTest?.payload?.test_session;
-
-      const _sessIsLive = (s) => {
-        if (!s || s.status !== 'UNLOCKED') return false;
-        const ac = s.auto_close_at ? new Date(s.auto_close_at).getTime() : 0;
-        return ac > now;
-      };
-
-      if (examTest && sessE && sessE.status === 'UNLOCKED') {
-        const ac = sessE.auto_close_at ? new Date(sessE.auto_close_at).getTime() : 0;
-        if (ac && ac <= now) {
-          closeTestSession(examTest.id).catch(err => console.warn('[Auto-sync] Close expired examTest notice:', err?.message || err));
-          sessE.status = 'LOCKED';
-        }
-      }
-      if (wordsTest && sessW && sessW.status === 'UNLOCKED') {
-        const ac = sessW.auto_close_at ? new Date(sessW.auto_close_at).getTime() : 0;
-        if (ac && ac <= now) {
-          closeTestSession(wordsTest.id).catch(err => console.warn('[Auto-sync] Close expired wordsTest notice:', err?.message || err));
-          sessW.status = 'LOCKED';
-        }
-      }
-      if (phrasesTest && sessP && sessP.status === 'UNLOCKED') {
-        const ac = sessP.auto_close_at ? new Date(sessP.auto_close_at).getTime() : 0;
-        if (ac && ac <= now) {
-          closeTestSession(phrasesTest.id).catch(err => console.warn('[Auto-sync] Close expired phrasesTest notice:', err?.message || err));
-          sessP.status = 'LOCKED';
-        }
-      }
-
-      const eLive = _sessIsLive(sessE);
-      const wLive = _sessIsLive(sessW);
-      const pLive = _sessIsLive(sessP);
-
-      let sess = null;
-      if (eLive) {
-        sess = sessE;
-      } else if (wLive && pLive) {
-        const wEnd = new Date(sessW.auto_close_at).getTime();
-        const pEnd = new Date(sessP.auto_close_at).getTime();
-        sess = wEnd >= pEnd ? sessW : sessP;
-      } else if (wLive) {
-        sess = sessW;
-      } else if (pLive) {
-        sess = sessP;
-      }
-
-      let isLive = false;
-      let remainingMinutes = 0;
-      let liveBatchId = null;
-      let liveBatchName = '';
-      let allowedStudentIds = [];
-      let isRemedial = false;
-
-      if (sess) {
-        const autoClose = new Date(sess.auto_close_at).getTime();
-        isLive = true;
-        remainingMinutes = Math.max(1, Math.ceil((autoClose - now) / 60000));
-        liveBatchId = sess.batch_id;
-        liveBatchName = batchMap[sess.batch_id]?.name || 'Batch ' + (sess.batch_id || '');
-        const eIds = (eLive ? (sessE.allowed_student_ids || []) : []);
-        const wIds = (wLive ? (sessW.allowed_student_ids || []) : []);
-        const pIds = (pLive ? (sessP.allowed_student_ids || []) : []);
-        allowedStudentIds = [...new Set([...eIds, ...wIds, ...pIds])];
-        isRemedial = Boolean(sess.is_remedial);
-      }
-
-      // Evaluate Batch Readiness
-      const themeObj = {
-        code,
-        name: topicName,
-        color: palette.color,
-        bgRgba: palette.bgRgba,
-        borderRgba: palette.borderRgba,
-        wordsTest,
-        phrasesTest,
-        examTest,
-        tasks,
-        isNonVocab: false,
-        isLive,
-        remainingMinutes,
-        liveBatchId,
-        liveBatchName,
-        allowedStudentIds,
-        isRemedial,
-        unlockedAt: sess?.unlocked_at || null
-      };
-      const normalEvals = evaluateStudentsEligibility({
-        students: activeBatchStudents,
-        theme: themeObj,
-        themeTasks: tasks,
-        wordsTest,
-        phrasesTest,
-        examTest,
-        classTests,
-        allAttempts,
-        mode: 'normal'
-      });
-      const eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
-
-      const remedialEvals = evaluateStudentsEligibility({
-        students: activeBatchStudents,
-        theme: themeObj,
-        themeTasks: tasks,
-        wordsTest,
-        phrasesTest,
-        examTest,
-        classTests,
-        allAttempts,
-        mode: 'remedial'
-      });
-      const eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
-
-      themeObj.eligibleNormalCount = eligibleNormalCount;
-      themeObj.eligibleRemedialCount = eligibleRemedialCount;
-      themeObj.batchTotalStudents = activeBatchStudents.length;
-
-      return themeObj;
-    });
-  } else {
-    // Non-vocabulary classes (Basic English, Speaking, Storytelling, etc.):
-    // Operational units are the actual Tests/Exams of this class, not Vocabulary Themes!
-    const classExams = classTests.filter(t => {
-      const st = String(t.shell_code || '').toUpperCase();
-      const tt = String(t.test_type || '').toLowerCase();
-      return tt === 'exam' || st.endsWith('-EXAM') || st.includes('-EXAM-');
-    });
-    const candidateTests = classExams.length > 0 ? classExams : classTests;
-
-    themesData = candidateTests.map((t, idx) => {
-      const shell = String(t.shell_code || '').toUpperCase();
-      const codeMatch = shell.match(/-([A-Z0-9]+)-(?:EXAM|TASK|QUIZ)/);
-      const code = codeMatch ? codeMatch[1] : (String.fromCharCode(65 + idx));
-      const palette = THEME_PALETTES[code] || THEME_PALETTES['A'];
-
-      const now = Date.now();
-      const sess = t.payload?.test_session;
-      const isLive = Boolean(sess && sess.status === 'UNLOCKED' && new Date(sess.auto_close_at).getTime() > now);
-
-      if (sess && sess.status === 'UNLOCKED') {
-        const ac = sess.auto_close_at ? new Date(sess.auto_close_at).getTime() : 0;
-        if (ac && ac <= now) {
-          closeTestSession(t.id).catch(err => console.warn('[Auto-sync] Close expired test notice:', err?.message || err));
-          sess.status = 'LOCKED';
-        }
-      }
-
-      const remainingMinutes = isLive ? Math.max(1, Math.ceil((new Date(sess.auto_close_at).getTime() - now) / 60000)) : 0;
-      const liveBatchId = sess?.batch_id;
-      const liveBatchName = liveBatchId ? (batchMap[liveBatchId]?.name || 'Batch ' + liveBatchId) : '';
-      const allowedStudentIds = isLive ? (sess.allowed_student_ids || []) : [];
-      const isRemedial = isLive ? Boolean(sess.is_remedial) : false;
-
-      const tasks = classTests.filter(a => {
-        if (a.id === t.id) return false;
-        const aType = (a.test_type || '').toLowerCase();
-        const aShell = (a.shell_code || '').toUpperCase();
-        return aType === 'quiz' || aType === 'task' || aShell.includes('-TASK') || aShell.includes('-QUIZ');
-      });
-
-      const moduleName = t.payload?.module_name || (discipline === 'BASIC_ENGLISH' ? 'Description (Photo & Grammar)' : (t.test_type || 'Exam'));
-      const totalQuestions = t.payload?.questions?.length || t.total_questions || 20;
-      const duration = t.working_duration_minutes || 40;
-
-      const themeObj = {
-        code,
-        name: t.title,
-        examTest: t,
-        wordsTest: null,
-        phrasesTest: null,
-        tasks,
-        isNonVocab: true,
-        discipline,
-        moduleName,
-        totalQuestions,
-        duration,
-        color: palette.color,
-        bgRgba: palette.bgRgba,
-        borderRgba: palette.borderRgba,
-        isLive,
-        remainingMinutes,
-        liveBatchId,
-        liveBatchName,
-        allowedStudentIds,
-        isRemedial,
-        unlockedAt: sess?.unlocked_at || null
-      };
-
-      const normalEvals = evaluateStudentsEligibility({
-        students: activeBatchStudents,
-        theme: themeObj,
-        themeTasks: tasks,
-        wordsTest: null,
-        phrasesTest: null,
-        examTest: t,
-        classTests,
-        allAttempts,
-        mode: 'normal'
-      });
-      themeObj.eligibleNormalCount = normalEvals.filter(e => e.isEligible).length;
-
-      const remedialEvals = evaluateStudentsEligibility({
-        students: activeBatchStudents,
-        theme: themeObj,
-        themeTasks: tasks,
-        wordsTest: null,
-        phrasesTest: null,
-        examTest: t,
-        classTests,
-        allAttempts,
-        mode: 'remedial'
-      });
-      themeObj.eligibleRemedialCount = remedialEvals.filter(e => e.isEligible).length;
-      themeObj.batchTotalStudents = activeBatchStudents.length;
-
-      return themeObj;
-    });
-  }
+  const themesData = buildClassThemesData(classTests, context, _selectedBatchId, activeBatchStudents);
 
   // Count active sessions
   const liveCount = themesData.filter(t => t.isLive).length;
@@ -526,8 +696,82 @@ export async function renderClassTestSessions(container, context = {}) {
     window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
   }
 
-  // Pre-load Empirical Exam Analytics Data for all themes
-  const analyticsData = await loadThemeExamAnalyticsData(themesData, context);
+  // 1. Attendance & Active Regular Session Data
+  let activeRegularSession = null;
+  const sessionAttendanceMap = new Map();
+  let totalViolationsDebt = 0;
+  let currentMeetingNum = 1;
+  const totalMeetingsCount = currentClass?.total_meetings || 24;
+
+  try {
+    const sb = await getSupabase();
+    if (sb) {
+      // Check for active regular session
+      const { data: sessData } = await sb
+        .from('class_sessions')
+        .select('*')
+        .eq('class_id', classId)
+        .eq('batch_id', _selectedBatchId)
+        .eq('session_type', 'REGULAR')
+        .eq('status', 'ACTIVE')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (sessData) {
+        activeRegularSession = sessData;
+        currentMeetingNum = sessData.session_number || 1;
+
+        const { data: attData } = await sb
+          .from('session_attendance')
+          .select('student_id, status')
+          .eq('session_id', sessData.id);
+
+        (attData || []).forEach(r => sessionAttendanceMap.set(r.student_id, r.status));
+      } else {
+        const { data: latestSess } = await sb
+          .from('class_sessions')
+          .select('session_number')
+          .eq('class_id', classId)
+          .eq('batch_id', _selectedBatchId)
+          .order('session_number', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (latestSess?.session_number) {
+          currentMeetingNum = Math.min(totalMeetingsCount, latestSess.session_number + 1);
+        }
+      }
+
+      // Query language fines debt for active batch students
+      const sIds = activeBatchStudents.map(s => s.id).filter(Boolean);
+      if (sIds.length > 0) {
+        const { data: fineData } = await sb
+          .from('language_violations')
+          .select('fine_amount, paid_amount')
+          .in('student_id', sIds);
+        if (fineData) {
+          totalViolationsDebt = fineData.reduce((acc, f) => acc + Math.max(0, (f.fine_amount || 0) - (f.paid_amount || 0)), 0);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[ClassSessions] Non-blocking attendance query error:', err?.message || err);
+  }
+
+  const isRegularLive = Boolean(activeRegularSession);
+  const regularLiveCode = activeRegularSession?.payload?.dynamic_code || '6X9A2F';
+  let regularPresentCount = 0;
+  let regularUncheckedCount = 0;
+  activeBatchStudents.forEach(s => {
+    const st = sessionAttendanceMap.get(s.id) || 'UNCHECKED';
+    if (String(st).startsWith('PRESENT')) regularPresentCount++;
+    else regularUncheckedCount++;
+  });
+
+  // Progressive Next Stage Active Theme (Theme A -> B -> C -> D)
+  const activeTheme = themesData.find(t => t.isLive) ||
+    themesData.find(t => t.eligibleNormalCount > 0 || t.eligibleRemedialCount > 0) ||
+    themesData[0];
 
   container.innerHTML = `
     <div class="test-sessions-tab-wrapper" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden; padding: 2px 0 0;">
@@ -535,7 +779,7 @@ export async function renderClassTestSessions(container, context = {}) {
       <div style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 10px 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); flex-shrink: 0;">
         <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
           <span style="font-size: 12px; text-transform:uppercase; letter-spacing:0.08em; font-weight:800; color:var(--quad-c, #95ff00); display:flex; align-items:center; gap:5px;">
-            TEST SESSIONS
+            CLASS SESSIONS
           </span>
           <span style="color:rgba(255,255,255,0.2);">|</span>
           <span style="font-size: 16px; font-weight:800; color:#ffffff;">
@@ -570,14 +814,25 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
       </div>
 
-      <!-- Theme Cards Grid (Spacious & Compact Layout, Exact 10px Gap) -->
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; margin-bottom: 10px; flex-shrink: 0;">
-        ${themesData.map(theme => renderThemeCard(theme, context)).join('')}
+      <!-- Dual Harmonious Session Cards (Regular Attendance & Progressive Exam, Matching 250px Height & 10px Gap) -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0;">
+        ${renderRegularAttendanceCard({
+          className: className || currentClass?.name || 'General Class',
+          meetingNum: currentMeetingNum,
+          totalMeetings: totalMeetingsCount,
+          isLive: isRegularLive,
+          liveCode: regularLiveCode,
+          activeBatchStudents,
+          presentCount: regularPresentCount,
+          uncheckedCount: regularUncheckedCount,
+          totalDebt: totalViolationsDebt
+        })}
+        ${renderThemeCard(activeTheme, context)}
       </div>
 
-      <!-- Theme Exam Analytics Board (4-Column Zero-Capsule Table: TARGET | MISTAKE | COUNT | RATE) -->
-      <div id="theme-exam-analytics-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
-        ${renderThemeExamAnalyticsBoard(themesData, context, analyticsData)}
+      <!-- Class Roster & Live Attendance Monitor Table -->
+      <div id="class-roster-attendance-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
+        ${renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendanceMap, activeTheme, context, totalViolationsDebt)}
       </div>
     </div>
 
@@ -1026,7 +1281,7 @@ export async function renderClassTestSessions(container, context = {}) {
 /**
  * Loads empirical exam mistake analytics across themes
  */
-async function loadThemeExamAnalyticsData(themesData, context = {}) {
+export async function loadThemeExamAnalyticsData(themesData, context = {}) {
   // 1. If window._themeTop20 is already populated (from tests-management), format and return it
   if (window._themeTop20 && Object.keys(window._themeTop20).length > 0) {
     const formatted = {};
@@ -1131,20 +1386,24 @@ async function loadThemeExamAnalyticsData(themesData, context = {}) {
 
     const allAnswers = [];
     const CHUNK_SIZE = 50;
+    const chunkPromises = [];
     for (let i = 0; i < attemptIds.length; i += CHUNK_SIZE) {
       const chunk = attemptIds.slice(i, i + CHUNK_SIZE);
-      const { data: ansChunk, error: ansErr } = await sb.from('attempt_answers')
-        .select('attempt_id, student_answer, correct_answer_snapshot, is_correct, evaluation_result, question_snapshot')
-        .in('attempt_id', chunk)
-        .limit(1000);
-      if (ansErr) {
-        console.warn('[tests-access] Chunk fetch error:', ansErr.message);
-        break;
-      }
-      if (ansChunk && ansChunk.length > 0) {
-        allAnswers.push(...ansChunk);
-      }
+      chunkPromises.push(
+        sb.from('attempt_answers')
+          .select('attempt_id, student_answer, correct_answer_snapshot, is_correct, evaluation_result, question_snapshot')
+          .in('attempt_id', chunk)
+          .limit(1000)
+      );
     }
+    const chunkResults = await Promise.allSettled(chunkPromises);
+    chunkResults.forEach(res => {
+      if (res.status === 'fulfilled' && res.value?.data && Array.isArray(res.value.data)) {
+        allAnswers.push(...res.value.data);
+      } else if (res.status === 'rejected') {
+        console.warn('[tests-access] Chunk fetch error:', res.reason?.message || res.reason);
+      }
+    });
 
     const themeMaps = { A: {}, B: {}, C: {}, D: {} };
 
@@ -1225,7 +1484,7 @@ async function loadThemeExamAnalyticsData(themesData, context = {}) {
  * Renders an individual theme's 4-column analytics table (TARGET | MISTAKE | COUNT | RATE)
  * Strictly flat text, zero capsules, electric blue typography (#38bdf8) for Mistake, and Inverted Score Color for Error Rate
  */
-function renderThemeAnalyticsColumn(theme, questions = []) {
+export function renderThemeAnalyticsColumn(theme, questions = []) {
   const code = theme.code;
   const name = theme.name || `Theme ${code}`;
   const color = theme.color || '#38bdf8';
@@ -1243,11 +1502,11 @@ function renderThemeAnalyticsColumn(theme, questions = []) {
         const rateColor = typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(failRate) : 'var(--grade-e)';
 
         return `
-          <tr style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='transparent'">
-            <td style="padding:6px 8px; color:#ffffff; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:none;" title="${escapeHtml(target)}">${escapeHtml(target)}</td>
-            <td style="padding:6px 8px; color:#38bdf8; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:none;" title="${escapeHtml(cleanMistake)}">${escapeHtml(cleanMistake)}</td>
-            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:50px; text-shadow:none;">${failCount}</td>
-            <td style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:52px; text-shadow:none;" title="Error Rate: ${failRate}%">${failRate}%</td>
+          <tr class="analytics-data-row" style="border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;">
+            <td class="col-analytics-target" style="padding:6px 8px; color:var(--admin-text-main, #ffffff); font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:none;" title="${escapeHtml(target)}">${escapeHtml(target)}</td>
+            <td class="col-analytics-mistake" style="padding:6px 8px; color:var(--primary-tactical, #38bdf8); font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; white-space:nowrap !important; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:none;" title="${escapeHtml(cleanMistake)}">${escapeHtml(cleanMistake)}</td>
+            <td class="col-analytics-count" style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:50px; text-shadow:none;">${failCount}</td>
+            <td class="col-analytics-rate" style="padding:6px 4px; text-align:center; color:${rateColor}; font-weight:400; font-family:var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; font-variant-numeric:tabular-nums; border-bottom:1px solid rgba(255,255,255,0.06); width:52px; text-shadow:none;" title="Error Rate: ${failRate}%">${failRate}%</td>
           </tr>
         `;
       }).join('');
@@ -1256,11 +1515,11 @@ function renderThemeAnalyticsColumn(theme, questions = []) {
 
   return `
     <div class="card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid ${borderRgba}; border-radius: 8px; padding: 10px; box-sizing: border-box; display: flex; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.3); flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden;">
-      <div style="font-size: 12px; font-weight: 800; color: #ffffff; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; flex-shrink: 0;">
+      <div class="analytics-card-header" style="font-size: 12px; font-weight: 800; color: var(--admin-text-main, #ffffff); margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 6px; flex-shrink: 0;">
         <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; font-weight: 800; color: ${color};">
-          <span style="color: ${color};">${code}</span> - ${escapeHtml(name)} <span style="color: #94a3b8; font-weight: 600;">Analytics</span>
+          <span style="color: ${color};">${code}</span> - ${escapeHtml(name)} <span class="analytics-card-subtitle" style="color: var(--admin-text-muted, #94a3b8); font-weight: 600;">Analytics</span>
         </span>
-        <span style="font-size: 12px; color: #94a3b8; font-weight: normal; flex-shrink: 0;">${countLabel}</span>
+        <span class="analytics-card-count" style="font-size: 12px; color: var(--admin-text-muted, #94a3b8); font-weight: normal; flex-shrink: 0;">${countLabel}</span>
       </div>
       <div class="analytics-table-wrap" style="flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important; position: relative !important; border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
         <table class="table" style="width: 100%; border-collapse: collapse; font-size: 12px; display: table; margin: 0; table-layout: fixed;">
@@ -1284,7 +1543,7 @@ function renderThemeAnalyticsColumn(theme, questions = []) {
 /**
  * Renders the 4-Theme Exam Analytics Board with 4-Column Zero-Capsule Tables
  */
-function renderThemeExamAnalyticsBoard(themesData, context, analyticsData = {}) {
+export function renderThemeExamAnalyticsBoard(themesData, context, analyticsData = {}) {
   if (!themesData || themesData.length === 0) return '';
 
   return `
@@ -1305,6 +1564,14 @@ function renderBatchReadinessMatrix(students, themesData, context, _ignoredTheme
  * Renders a single unified Theme Card - 250px Zero-Overflow Glassmorphism with Standard 12px Font & 10px Gap
  */
 function renderThemeCard(theme, context) {
+  if (!theme) {
+    return `
+      <div class="panel-card" style="height: 250px; background: rgba(15, 23, 42, 0.7); border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; text-align: center;">
+        <span style="font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">No Active Theme Exam</span>
+        <span style="font-size: 11px; color: #64748b; margin-top: 4px;">This class does not have thematic exam milestones configured.</span>
+      </div>
+    `;
+  }
   const {
     code,
     name,
@@ -1626,6 +1893,96 @@ function bindTestSessionsEvents(container, themesData, context) {
     if (window.renderClassHub) {
       window.renderClassHub(document.getElementById('admin-content-area'));
     }
+  });
+
+  // 1b. Regular Attendance Session Events
+  container.querySelector('.btn-start-regular-session')?.addEventListener('click', async () => {
+    try {
+      const sb = await getSupabase();
+      const meetingNum = parseInt(context.currentMeetingNum || '1', 10);
+      const newSession = {
+        class_id: context.classId,
+        batch_id: _selectedBatchId,
+        session_number: meetingNum,
+        session_type: 'REGULAR',
+        status: 'ACTIVE',
+        beacon_radius_meters: 10.0,
+        started_at: new Date().toISOString()
+      };
+      if (sb) await sb.from('class_sessions').insert(newSession);
+      renderClassTestSessions(container, context);
+    } catch(err) {
+      console.error('[RegularSession] Error starting session:', err);
+      renderClassTestSessions(container, context);
+    }
+  });
+
+  container.querySelector('.btn-close-regular-session')?.addEventListener('click', async () => {
+    try {
+      const sb = await getSupabase();
+      if (sb) {
+        await sb.from('class_sessions')
+          .update({ status: 'CLOSED', closed_at: new Date().toISOString() })
+          .eq('class_id', context.classId)
+          .eq('batch_id', _selectedBatchId)
+          .eq('status', 'ACTIVE');
+      }
+      renderClassTestSessions(container, context);
+    } catch(err) {
+      console.error('[RegularSession] Error closing session:', err);
+      renderClassTestSessions(container, context);
+    }
+  });
+
+  container.querySelector('.btn-copy-code')?.addEventListener('click', (e) => {
+    const code = e.currentTarget.getAttribute('data-code');
+    if (code) {
+      navigator.clipboard?.writeText(code);
+      const orig = e.currentTarget.textContent;
+      e.currentTarget.textContent = 'COPIED!';
+      setTimeout(() => { e.currentTarget.textContent = orig; }, 1500);
+    }
+  });
+
+  // 1c. Class Roster Attendance Pills (P, E, S, A)
+  container.querySelectorAll('.btn-roster-att-pill').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const studentId = e.currentTarget.getAttribute('data-student-id');
+      const status = e.currentTarget.getAttribute('data-status');
+      const parent = e.currentTarget.parentElement;
+      parent.querySelectorAll('.btn-roster-att-pill').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = '#94a3b8';
+        b.style.borderColor = 'rgba(255,255,255,0.15)';
+      });
+      const colorMap = { PRESENT: '#16a34a', EXCUSED: '#0284c7', SICK: '#ea580c', ABSENT: '#dc2626' };
+      const selColor = colorMap[status] || '#16a34a';
+      e.currentTarget.style.background = selColor;
+      e.currentTarget.style.color = '#ffffff';
+      e.currentTarget.style.borderColor = selColor;
+
+      try {
+        const sb = await getSupabase();
+        if (sb) {
+          const { data: sess } = await sb.from('class_sessions')
+            .select('id')
+            .eq('class_id', context.classId)
+            .eq('batch_id', _selectedBatchId)
+            .eq('status', 'ACTIVE')
+            .maybeSingle();
+          if (sess) {
+            await sb.from('session_attendance').upsert({
+              session_id: sess.id,
+              student_id: studentId,
+              status: status,
+              checked_in_at: new Date().toISOString()
+            }, { onConflict: 'session_id, student_id' });
+          }
+        }
+      } catch (err) {
+        console.warn('[Attendance] Error saving status:', err);
+      }
+    });
   });
 
   // 2. Open Session Triggers

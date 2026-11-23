@@ -1946,5 +1946,288 @@ body.role-tutor .col-manual-input {
   display: none !important;
 }
 
+/* ==========================================================================
+   CLASS & BATCH ATTENDANCE MATRIX (20 & 24 Meetings, Week Dividers, Badges)
+   ========================================================================== */
+.attendance-grid-container {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+.attendance-grid-table-wrap {
+  flex: 1 1 0 !important;
+  min-height: 0 !important;
+  overflow: auto !important;
+  position: relative !important;
+}
+
+.attendance-grid-table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 12px !important;
+}
+
+.attendance-grid-table thead th {
+  position: sticky !important;
+  z-index: 10 !important;
+  box-sizing: border-box !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  user-select: none !important;
+}
+
+.attendance-grid-table thead tr:nth-child(1) th {
+  top: 0 !important;
+  height: 30px !important;
+  background: #111827 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.05em !important;
+  text-transform: uppercase !important;
+  text-align: center !important;
+}
+
+.attendance-grid-table thead tr:nth-child(2) th {
+  top: 30px !important;
+  height: 38px !important;
+  background: #0b1120 !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.25) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #94a3b8 !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  text-align: center !important;
+  padding: 2px 4px !important;
+}
+
+/* Frozen Identity Columns (Excel-style Left Pane Lock) */
+.attendance-grid-table .col-sticky-group-hdr {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 25 !important;
+  background: #0b1120 !important;
+  color: #ffffff !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15) !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.attendance-grid-table .att-col-lvl {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  left: 0 !important;
+}
+
+.attendance-grid-table .att-col-btc {
+  width: 48px !important;
+  min-width: 48px !important;
+  max-width: 48px !important;
+  left: 42px !important;
+}
+
+/* When Photo (PIC) is present (Student Roster) */
+.attendance-grid-table.with-pic .att-col-pic {
+  width: 42px !important;
+  min-width: 42px !important;
+  max-width: 42px !important;
+  left: 90px !important;
+}
+
+.attendance-grid-table.with-pic .att-col-name {
+  min-width: 180px !important;
+  max-width: 240px !important;
+  left: 132px !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.35) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+/* When Photo is omitted (Class Hub Table) */
+.attendance-grid-table.no-pic .att-col-name {
+  min-width: 180px !important;
+  max-width: 260px !important;
+  left: 90px !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.35) !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.attendance-grid-table thead th.col-sticky {
+  position: sticky !important;
+  z-index: 20 !important;
+  background: var(--admin-header-bg, #1e293b) !important;
+}
+
+.attendance-grid-table tbody td.col-sticky {
+  position: sticky !important;
+  z-index: 5 !important;
+  background: var(--admin-surface-card, #0b1120) !important;
+}
+
+.attendance-grid-table tbody tr:hover td.col-sticky {
+  background: var(--admin-row-hover, #131d31) !important;
+}
+
+/* Batch Multi-Class Weekly Recap Accents */
+.attendance-grid-table .col-subhdr-total {
+  background: #0f2744 !important;
+  color: #38bdf8 !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em !important;
+}
+
+.attendance-grid-table .col-cell-total {
+  background: rgba(56, 189, 248, 0.05) !important;
+  text-align: center !important;
+  font-weight: 700 !important;
+  color: #38bdf8 !important;
+}
+
+.attendance-grid-table tbody td {
+  height: 34px !important;
+  padding: 2px 6px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  font-size: 12px !important;
+  color: #f1f5f9 !important;
+  white-space: nowrap !important;
+  box-sizing: border-box !important;
+}
+
+.attendance-grid-table tbody tr:hover td {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* Strict Week Divider Border (Every 5 or 6 columns) */
+.attendance-grid-table .col-week-end {
+  border-right: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+.attendance-grid-table thead tr:nth-child(1) th.col-week-end,
+.attendance-grid-table thead tr:nth-child(2) th.col-week-end {
+  border-right: 2px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+/* Header Dynamic Timestamp */
+.hdr-meeting-num {
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+}
+
+.hdr-timestamp {
+  display: block !important;
+  font-size: 9px !important;
+  line-height: 1.1 !important;
+  color: #38bdf8 !important;
+  font-weight: 600 !important;
+  margin-top: 2px !important;
+}
+
+/* Status Badges in Cells (Color SSOT Compliant) */
+.att-cell-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 24px !important;
+  border-radius: 4px !important;
+  font-weight: 800 !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  transition: transform 0.1s ease, filter 0.15s ease !important;
+}
+
+.att-cell-badge:hover {
+  transform: scale(1.12) !important;
+  filter: brightness(1.2) !important;
+}
+
+.att-cell-badge.badge-p {
+  background: rgba(0, 192, 0, 0.2) !important;
+  color: var(--grade-a, #00c000) !important;
+  border: 1px solid rgba(0, 192, 0, 0.45) !important;
+}
+
+.att-cell-badge.badge-e {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: var(--primary-tactical, #38bdf8) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+}
+
+.att-cell-badge.badge-s {
+  background: rgba(255, 255, 0, 0.2) !important;
+  color: var(--grade-c, #ffff00) !important;
+  border: 1px solid rgba(255, 255, 0, 0.45) !important;
+}
+
+.att-cell-badge.badge-a {
+  background: rgba(255, 0, 0, 0.2) !important;
+  color: var(--grade-e, #ff0000) !important;
+  border: 1px solid rgba(255, 0, 0, 0.45) !important;
+}
+
+.att-cell-badge.badge-empty {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #475569 !important;
+  border: 1px dashed rgba(255, 255, 255, 0.12) !important;
+}
+
+.att-cell-badge.badge-empty:hover {
+  color: #94a3b8 !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Class Selector Bar in Batch Attendance View */
+.batch-att-class-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 8px 12px !important;
+  background: rgba(15, 23, 42, 0.6) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  overflow-x: auto !important;
+}
+
+.batch-att-class-btn {
+  height: 28px !important;
+  padding: 0 12px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #94a3b8 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.15s ease !important;
+}
+
+.batch-att-class-btn:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.batch-att-class-btn.active {
+  background: var(--grade-b, #95ff00) !important;
+  color: #060b18 !important;
+  border-color: var(--grade-b, #95ff00) !important;
+}
+
+
 
 

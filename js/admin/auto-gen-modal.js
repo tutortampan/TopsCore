@@ -72,7 +72,9 @@ export async function openAutoGenerateModal(options = {}) {
       if (/-([0-9]*BSC|BASIC)\b/.test(code) || /\bbasic(\s*english)?\b/.test(name)) return 'BASIC';
       if (/-([0-9]*SPK|SPEAK)\b/.test(code) || /\b(speaking|public\s*speaking)\b/.test(name)) return 'SPEAKING';
       if (/-([0-9]*STT|STORY)\b/.test(code) || /\b(storytelling|story)\b/.test(name)) return 'STORYTELLING';
-      if (/-([0-9]*GRM|GRAM)\b/.test(code) || /\bgrammar\b/.test(name)) return 'GRAMMAR';
+      if (/-([0-9]*GRM|GRAM|GRMMR)\b/.test(code) || /\bgrammar\b/.test(name)) return 'GRAMMAR';
+      if (/-([0-9]*PRN|PRON|PRONC)\b/.test(code) || /\bpronunciation\b/.test(name)) return 'PRONUNCIATION';
+      if (/-([0-9]*GFS|GFORS)\b/.test(code) || /\bgrammar\s*for\s*speaking\b/.test(name)) return 'GFS';
       return 'VOCABULARY'; // safe default
     }
     const classModality = inferClassModality(matchedClass);

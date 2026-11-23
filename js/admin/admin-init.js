@@ -348,6 +348,64 @@ export function initRecordDrawer() {
   };
 }
 
+export function initAdminTheme() {
+  const THEMES = ['light', 'navy', 'dark'];
+  const ICONS = { light: '☀️', navy: '🌊', dark: '🌑', black: '🌑' };
+  const NAMES = { light: 'Light Theme', navy: 'Navy Theme', dark: 'Dark Theme', black: 'Dark Theme' };
+
+  let saved = localStorage.getItem('topscore_theme');
+  if (saved === 'black') saved = 'dark';
+  if (!THEMES.includes(saved)) saved = 'navy';
+
+  function apply(theme) {
+    if (theme === 'black') theme = 'dark';
+    if (!THEMES.includes(theme)) theme = 'navy';
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('topscore_theme', theme);
+
+    // Update Theme Switcher Capsule buttons
+    const themeButtons = document.querySelectorAll('.btn-theme-toggle');
+    themeButtons.forEach(btn => {
+      const bTheme = btn.dataset.theme;
+      if (bTheme === theme) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    const iconEl = document.getElementById('admin-theme-icon');
+    if (iconEl) iconEl.textContent = ICONS[theme] || '🌊';
+    const btn = document.getElementById('admin-theme-toggle');
+    if (btn) btn.title = `Current Theme: ${NAMES[theme]} (Click to switch)`;
+  }
+
+  window.applyAdminTheme = apply;
+  apply(saved);
+
+  // Wire up theme capsule buttons
+  const themeButtons = document.querySelectorAll('.btn-theme-toggle');
+  themeButtons.forEach(btn => {
+    btn.onclick = () => {
+      const targetTheme = btn.dataset.theme || 'navy';
+      apply(targetTheme);
+      if (typeof window.showToast === 'function') {
+        window.showToast(`Theme switched: ${NAMES[targetTheme] || targetTheme}`, 'info');
+      }
+    };
+  });
+
+  document.getElementById('admin-theme-toggle')?.addEventListener('click', () => {
+    const current = document.body.getAttribute('data-theme') || 'navy';
+    const nextIdx = (THEMES.indexOf(current) + 1) % THEMES.length;
+    apply(THEMES[nextIdx]);
+  });
+}
+if (typeof window !== 'undefined') {
+  window.initAdminTheme = initAdminTheme;
+}
+
 export function unregisterAdminServiceWorker() {
   // Tutor's Room Admin Console must NEVER be cached by Service Worker
   if ('serviceWorker' in navigator) {
@@ -368,6 +426,7 @@ export function unregisterAdminServiceWorker() {
 if (typeof document !== 'undefined') {
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
+      initAdminTheme();
       initAuthGate();
       initGlobalEditModeToggle();
       initSidebarCache();
@@ -376,6 +435,7 @@ if (typeof document !== 'undefined') {
       unregisterAdminServiceWorker();
     });
   } else {
+    initAdminTheme();
     initAuthGate();
     initGlobalEditModeToggle();
     initSidebarCache();

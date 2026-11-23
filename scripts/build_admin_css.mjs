@@ -24,12 +24,14 @@ export function minifyCss(css) {
 }
 
 // Ordered list of modular stylesheets to preserve CSS cascade and specificity
+// admin-theme.css is placed at the end so universal theme overrides cleanly win the cascade
 const MODULE_FILES = [
   'admin-layout.css',
   'admin-tables.css',
   'admin-views.css',
   'admin-modals.css',
-  'admin-editmode.css'
+  'admin-editmode.css',
+  'admin-theme.css'
 ];
 
 export function buildCoreCssMin() {

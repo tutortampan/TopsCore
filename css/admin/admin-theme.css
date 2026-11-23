@@ -1,0 +1,1556 @@
+/* css/admin/admin-theme.css
+ * TopsCore LMS — Centralized Admin Theme & Visual Hierarchy Token Architecture
+ * Governs the 3 Universal Themes (Navy, Black, Light) & Dual-Opacity Binary (0.05 / 0.50)
+ * Scoped strictly to body.admin-body to guarantee 100% Student Portal & Tutor isolation.
+ */
+
+:root {
+  /* Global Dual-Opacity Standards */
+  --opacity-subtle: 0.05;
+  --opacity-active: 0.50;
+}
+
+/* ── 1. NAVY MODE (Default Calm Navy — Signature TopsCore) ── */
+body.admin-body,
+body.admin-body[data-theme="navy"] {
+  --admin-canvas-bg: #090d16;
+  --admin-surface-bg: #090d16;
+  --admin-surface-subtle: #0d1424;
+  --admin-surface-card: #0f172a;
+  
+  --admin-text-main: #f8fafc;
+  --admin-text-muted: #94a3b8;
+  --admin-text-dim: #64748b;
+  
+  --admin-border-subtle: rgba(255, 255, 255, 0.08);
+  --admin-border-active: rgba(255, 255, 255, 0.40);
+  --admin-border-divider: rgba(255, 255, 255, 0.22);
+  --admin-border-perimeter: rgba(255, 255, 255, 0.28);
+  
+  --admin-accent: #0284c7;
+  --admin-accent-hover: #0369a1;
+  --admin-accent-glow: transparent;
+  
+  --admin-header-bg: #0f172a;
+  --admin-header-height: 30px;
+  --admin-footer-height: 30px;
+  --topbar-tab-active-bg: #1e293b;
+  
+  --admin-row-hover: rgba(255, 255, 255, 0.05);
+  --admin-row-zebra: rgba(255, 255, 255, 0.02);
+  
+  --admin-scrollbar-thumb: rgba(255, 255, 255, 0.15);
+  --admin-scrollbar-track: transparent;
+  
+  --admin-input-bg: rgba(255, 255, 255, 0.03);
+  --admin-input-border: rgba(255, 255, 255, 0.08);
+  --admin-input-focus-border: #0284c7;
+}
+
+/* ── 2. BLACK / CHARCOAL MODERN MODE (Antigravity IDE & VS Code Dark Modern SSOT) ── */
+body.admin-body[data-theme="black"],
+body.admin-body[data-theme="dark"] {
+  --admin-canvas-bg: #141414;        /* Level 0: Outer Viewport Canvas (#141414 Deep Matte Charcoal) */
+  --admin-surface-bg: #181818;       /* Level 1: Workspace Canvas (#181818 Neutral Charcoal) */
+  --admin-surface-card: #212121;     /* Level 2: Workstation Cards & Editor BG (#212121 Elevated Charcoal) */
+  --admin-surface-subtle: #1c1c1c;   /* Level 2b: Subtle Row Zebra (#1c1c1c) */
+  
+  --admin-header-bg: #2a2a2a;        /* Level 3: Authoritative Header & Table Headers (#2a2a2a Matte Charcoal) */
+  --admin-header-height: 30px;
+  --admin-footer-height: 30px;
+  --topbar-tab-active-bg: #1c1c1c;
+  
+  --admin-input-bg: #242424;         /* Level 4: Inputs, Selects & Floating Menus (#242424) */
+  --admin-input-border: #383838;
+  --admin-input-focus-border: #38bdf8;
+  
+  --admin-text-main: #f3f4f6;        /* Crisp Soft White (No Halation / Anti-Glare) */
+  --admin-text-muted: #a1a1aa;       /* Zinc 400 */
+  --admin-text-dim: #71717a;         /* Zinc 500 */
+  
+  --admin-border-subtle: #383838;    /* Adaptive Table Gridlines & Card Borders (#383838) */
+  --admin-border-active: #404040;
+  --admin-border-divider: #52525b;
+  --admin-border-perimeter: #52525b;
+  
+  --admin-row-hover: #262626;
+  --admin-row-zebra: #1e1e1e;
+  
+  --admin-scrollbar-thumb: rgba(255, 255, 255, 0.18);
+  --admin-scrollbar-track: transparent;
+  
+  --admin-accent: #38bdf8;
+  --admin-accent-hover: #0284c7;
+  --admin-accent-glow: transparent;
+}
+
+/* ── 3. LIGHT MODE (Tiered Grey Canvas & Clean Excel Paper Table) ── */
+body.admin-body[data-theme="light"] {
+  /* Level 0: Outer Viewport Canvas (#eef2f6 Soft Calm Slate - Eliminates Blinding White Sea) */
+  --admin-canvas-bg: #eef2f6;
+  
+  /* Level 1: Workspace Canvas (#eef2f6 Soft Calm Slate - Anti-Glare) */
+  --admin-surface-bg: #eef2f6;
+  --admin-surface-card: #ffffff;     /* Level 2: Workstation Cards & Off-White Paper Table */
+  --admin-surface-subtle: #f8fafc;   /* Level 2b: Subtle Row Zebra (#f8fafc) */
+  
+  --admin-text-main: #0f172a;
+  --admin-text-muted: #475569;
+  --admin-text-dim: #64748b;
+  
+  --admin-border-subtle: #cbd5e1;    /* Adaptive Table Gridlines & Card Subtle Borders (#cbd5e1) */
+  --admin-border-active: #94a3b8;
+  --admin-border-divider: #94a3b8;   /* Prominent super-header divider Slate 400 */
+  --admin-border-perimeter: #64748b; /* Slate 500 table framing perimeter */
+  
+  --admin-accent: #0284c7;
+  --admin-accent-hover: #0369a1;
+  --admin-accent-glow: transparent;
+  
+  --admin-header-bg: #0f172a;        /* Framing remains dark across all themes per SSOT */
+  --admin-header-height: 30px;
+  --admin-footer-height: 30px;
+  --topbar-tab-active-bg: #1e293b;
+  
+  --admin-row-hover: #f1f5f9;
+  --admin-row-zebra: #f8fafc;
+  
+  --admin-scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --admin-scrollbar-track: transparent;
+  
+  --admin-input-bg: #ffffff;
+  --admin-input-border: #cbd5e1;
+  --admin-input-focus-border: #0284c7;
+
+  /* Grade & Score Contrast Calibration for Light Mode (WCAG High Contrast) */
+  --grade-star: #7e22ce;
+  --grade-star-rgb: 126, 34, 206;
+  --grade-star-glow: rgba(126, 34, 206, 0.35);
+
+  --grade-a: #15803d;
+  --grade-a-rgb: 21, 128, 61;
+
+  --grade-b: #15803d;
+  --grade-b-rgb: 21, 128, 61;
+
+  --grade-c: #b45309;
+  --grade-c-rgb: 180, 83, 9;
+
+  --grade-d: #c2410c;
+  --grade-d-rgb: 194, 65, 12;
+
+  --grade-e: #b91c1c;
+  --grade-e-rgb: 185, 28, 28;
+
+  --primary-tactical: #0284c7;
+  --primary-tactical-rgb: 2, 132, 199;
+  --fm-accent-tactical: #0284c7;
+  --brand-sky: #0284c7;
+
+  --quad-b: #c2410c;
+  --quad-c: #15803d;
+  --quad-d: #0284c7;
+
+  --clr-warning: var(--grade-c);
+  --clr-success: var(--grade-a);
+  --clr-danger: var(--grade-e);
+  --fm-accent-pitch: var(--grade-a);
+  --fm-accent-amber: var(--grade-c);
+  --fm-accent-crimson: var(--grade-e);
+}
+
+/* ── 4. THEME-SPECIFIC STRUCTURAL & PANEL BINDINGS ── */
+
+/* ── A. NAVY MODE (Default Signature Slate Navy) ── */
+body.admin-body,
+body.admin-body[data-theme="navy"] {
+  background-color: var(--admin-canvas-bg);
+}
+
+body.admin-body[data-theme="navy"] .admin-topbar,
+body.admin-body:not([data-theme]) .admin-topbar {
+  background: #0f172a !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="navy"] .admin-bottom-infobar,
+body.admin-body:not([data-theme]) .admin-bottom-infobar {
+  background: #0f172a !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f8fafc !important;
+}
+
+body.admin-body[data-theme="navy"] .admin-sidebar,
+body.admin-body:not([data-theme]) .admin-sidebar {
+  background: #090d16 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="navy"] #admin-content-area,
+body.admin-body:not([data-theme]) #admin-content-area,
+body.admin-body[data-theme="navy"] .admin-content,
+body.admin-body:not([data-theme]) .admin-content,
+body.admin-body[data-theme="navy"] .admin-main,
+body.admin-body:not([data-theme]) .admin-main {
+  background: #090d16 !important;
+}
+
+body.admin-body[data-theme="navy"] thead,
+body.admin-body:not([data-theme]) thead,
+body.admin-body[data-theme="navy"] thead th:not([class*="super-hdr-theme-"]),
+body.admin-body:not([data-theme]) thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="navy"] .table-wrap thead th:not([class*="super-hdr-theme-"]),
+body.admin-body:not([data-theme]) .table-wrap thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="navy"] .datagrid-table thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="navy"] .dashboard-academic-table thead th {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="navy"] thead th:last-child,
+body.admin-body:not([data-theme]) thead th:last-child {
+  border-right: none !important;
+}
+
+body.admin-body[data-theme="navy"] tbody td,
+body.admin-body:not([data-theme]) tbody td,
+body.admin-body[data-theme="navy"] .table-wrap td,
+body.admin-body:not([data-theme]) .table-wrap td,
+body.admin-body[data-theme="navy"] .datagrid-table td,
+body.admin-body:not([data-theme]) .datagrid-table td,
+body.admin-body[data-theme="navy"] .dashboard-academic-table td,
+body.admin-body:not([data-theme]) .dashboard-academic-table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+  font-weight: 500 !important;
+}
+
+body.admin-body[data-theme="navy"] td:last-child,
+body.admin-body:not([data-theme]) td:last-child {
+  border-right: none !important;
+}
+
+/* ── B. DARK / BLACK MODE (Antigravity IDE & VS Code Charcoal Modern SSOT) ── */
+body.admin-body[data-theme="dark"],
+body.admin-body[data-theme="black"] {
+  background-color: #141414 !important;
+}
+
+/* Panels Atas, Bawah, dan Utama Selaras Sempurna (#181818) */
+body.admin-body[data-theme="dark"] .admin-topbar,
+body.admin-body[data-theme="black"] .admin-topbar {
+  background: #181818 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="dark"] .admin-bottom-infobar,
+body.admin-body[data-theme="black"] .admin-bottom-infobar {
+  background: #181818 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  color: #f3f4f6 !important;
+}
+
+body.admin-body[data-theme="dark"] .admin-sidebar,
+body.admin-body[data-theme="black"] .admin-sidebar,
+body.admin-body[data-theme="dark"] .sidebar-corner-top,
+body.admin-body[data-theme="black"] .sidebar-corner-top,
+body.admin-body[data-theme="dark"] .sidebar-corner-bottom,
+body.admin-body[data-theme="black"] .sidebar-corner-bottom {
+  background: #141414 !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="dark"] #admin-content-area,
+body.admin-body[data-theme="black"] #admin-content-area,
+body.admin-body[data-theme="dark"] .admin-content,
+body.admin-body[data-theme="black"] .admin-content,
+body.admin-body[data-theme="dark"] .admin-main,
+body.admin-body[data-theme="black"] .admin-main {
+  background: #161616 !important;
+}
+
+/* Table Header in Dark Mode: Antigravity Elevated Charcoal (#2a2a2a) */
+body.admin-body[data-theme="dark"] thead,
+body.admin-body[data-theme="black"] thead,
+body.admin-body[data-theme="dark"] thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="black"] thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="dark"] .table-wrap thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="black"] .table-wrap thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="dark"] .datagrid-table thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="black"] .datagrid-table thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="dark"] .dashboard-academic-table thead th,
+body.admin-body[data-theme="black"] .dashboard-academic-table thead th {
+  background: #2a2a2a !important;
+  color: #f3f4f6 !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid #383838 !important;
+  border-right: 1px solid #383838 !important;
+}
+
+body.admin-body[data-theme="dark"] thead th:last-child,
+body.admin-body[data-theme="black"] thead th:last-child {
+  border-right: none !important;
+}
+
+/* Table Body & Cards in Dark Mode: Antigravity Canvas (#212121) */
+body.admin-body[data-theme="dark"] tbody td,
+body.admin-body[data-theme="black"] tbody td,
+body.admin-body[data-theme="dark"] .table-wrap td,
+body.admin-body[data-theme="black"] .table-wrap td,
+body.admin-body[data-theme="dark"] .datagrid-table td,
+body.admin-body[data-theme="black"] .datagrid-table td,
+body.admin-body[data-theme="dark"] .dashboard-academic-table td,
+body.admin-body[data-theme="black"] .dashboard-academic-table td {
+  background: #212121 !important;
+  color: #f3f4f6 !important;
+  border-bottom: 1px solid #2d2d2d !important;
+  border-right: 1px solid #2d2d2d !important;
+  font-weight: 500 !important;
+}
+
+body.admin-body[data-theme="dark"] td:last-child,
+body.admin-body[data-theme="black"] td:last-child {
+  border-right: none !important;
+}
+
+body.admin-body[data-theme="dark"] tr:nth-child(even) td,
+body.admin-body[data-theme="black"] tr:nth-child(even) td {
+  background: #1c1c1c !important;
+}
+
+body.admin-body[data-theme="dark"] tr:hover td,
+body.admin-body[data-theme="black"] tr:hover td {
+  background: #282828 !important;
+}
+
+body.admin-body[data-theme="dark"] .glass-card,
+body.admin-body[data-theme="black"] .glass-card,
+body.admin-body[data-theme="dark"] .deck-card,
+body.admin-body[data-theme="black"] .deck-card,
+body.admin-body[data-theme="dark"] .card,
+body.admin-body[data-theme="black"] .card,
+body.admin-body[data-theme="dark"] .table-wrap,
+body.admin-body[data-theme="black"] .table-wrap {
+  background: #212121 !important;
+  border: 1px solid #333333 !important;
+  box-shadow: none !important;
+}
+
+body.admin-body[data-theme="dark"] .topbar-tab-card.active,
+body.admin-body[data-theme="black"] .topbar-tab-card.active,
+body.admin-body[data-theme="dark"] .topbar-tab-folder.active,
+body.admin-body[data-theme="black"] .topbar-tab-folder.active {
+  background: #181818 !important;
+  border-bottom-color: #181818 !important;
+  color: #f3f4f6 !important;
+}
+
+body.admin-body[data-theme="dark"] .topbar-tab-card:not(.active),
+body.admin-body[data-theme="black"] .topbar-tab-card:not(.active) {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #a1a1aa !important;
+}
+
+body.admin-body[data-theme="dark"] .cta-area,
+body.admin-body[data-theme="black"] .cta-area,
+body.admin-body[data-theme="dark"] .modal-footer,
+body.admin-body[data-theme="black"] .modal-footer {
+  background: #181818 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="dark"] .bottom-locked-banner,
+body.admin-body[data-theme="black"] .bottom-locked-banner,
+body.admin-body[data-theme="dark"] .admin-locked-banner,
+body.admin-body[data-theme="black"] .admin-locked-banner {
+  background: #121212 !important;
+}
+
+/* ── C. LIGHT MODE (Dark Chrome Framing & Clean Excel Paper Canvas) ── */
+body.admin-body[data-theme="light"] {
+  background-color: #f1f5f9 !important;
+}
+
+/* 1. Framing Tetap Gelap (Top Bar, Sub Panel, Sidebar) — Light Charcoal / Slate Gray SSOT */
+body.admin-body[data-theme="light"] .admin-topbar {
+  background: #1e293b !important;
+  border-bottom: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.admin-body[data-theme="light"] .admin-bottom-infobar {
+  background: #1e293b !important;
+  border-top: 1px solid #334155 !important;
+  color: #f8fafc !important;
+}
+
+body.admin-body[data-theme="light"] .admin-sidebar,
+body.admin-body[data-theme="light"] .sidebar-corner-top,
+body.admin-body[data-theme="light"] .sidebar-corner-bottom {
+  background: #1e293b !important;
+  border-right: 1px solid #334155 !important;
+}
+
+body.admin-body[data-theme="light"] .sidebar-corner-top {
+  border-bottom: 1px solid #334155 !important;
+}
+
+body.admin-body[data-theme="light"] .sidebar-corner-bottom {
+  border-top: 1px solid #334155 !important;
+}
+
+body.admin-body[data-theme="light"] .admin-nav-item.active {
+  background: #334155 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+body.admin-body[data-theme="light"] .admin-nav-item:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+body.admin-body[data-theme="light"] .nav-domain-divider {
+  background: #334155 !important;
+}
+
+/* 2. Top Bar Tabs in Light Mode: Sleek Elevated Dark Tabs (No Glaring White Square) */
+body.admin-body[data-theme="light"] .topbar-tab-card.active,
+body.admin-body[data-theme="light"] .topbar-tab-folder.active {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  border-top: 2px solid #38bdf8 !important;
+  border-bottom-color: #1e293b !important;
+}
+
+body.admin-body[data-theme="light"] .topbar-tab-card:not(.active),
+body.admin-body[data-theme="light"] .topbar-tab-folder:not(.active) {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #94a3b8 !important;
+}
+
+/* 3. Table Header in Light Mode: Solid Light Charcoal Framing with White Text */
+body.admin-body[data-theme="light"] thead,
+body.admin-body[data-theme="light"] thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="light"] .table-wrap thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="light"] .datagrid-table thead th:not([class*="super-hdr-theme-"]),
+body.admin-body[data-theme="light"] .dashboard-academic-table thead th {
+  background: #1e293b !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border-bottom: 1px solid #334155 !important;
+  border-right: 1px solid #334155 !important;
+}
+
+body.admin-body[data-theme="light"] thead th:last-child {
+  border-right: none !important;
+}
+
+/* 4. Workspace Canvas (Soft Calm Light Slate #eef2f6 - Eliminates Blinding White Sea) */
+body.admin-body[data-theme="light"] #admin-content-area,
+body.admin-body[data-theme="light"] .admin-content,
+body.admin-body[data-theme="light"] .admin-main,
+body.admin-body[data-theme="light"] .workspace-container {
+  background: #eef2f6 !important;
+}
+
+/* 5. Cards & Table Wrapper (Crisp White Paper Card on Soft Canvas) */
+body.admin-body[data-theme="light"] .table-wrap,
+body.admin-body[data-theme="light"] .card,
+body.admin-body[data-theme="light"] .glass-card,
+body.admin-body[data-theme="light"] .deck-card,
+body.admin-body[data-theme="light"] .modal-box {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.admin-body[data-theme="light"] .glass-card h3,
+body.admin-body[data-theme="light"] .glass-card h3 span:first-child {
+  color: #0f172a !important;
+}
+
+/* 6. Table Data Rows & Cells in Light Mode: Clean White with Dark Slate Text & Adaptive Gridlines */
+body.admin-body[data-theme="light"] .dashboard-academic-table tbody,
+body.admin-body[data-theme="light"] .datagrid-table tbody,
+body.admin-body[data-theme="light"] .table-wrap tbody,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody {
+  background: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-academic-table td,
+body.admin-body[data-theme="light"] .datagrid-table td,
+body.admin-body[data-theme="light"] .table-wrap td,
+body.admin-body[data-theme="light"] table td,
+body.admin-body[data-theme="light"] #class-attendance-grid td {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  border-right: 1px solid #cbd5e1 !important;
+  font-weight: 500 !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-academic-table td:last-child,
+body.admin-body[data-theme="light"] .datagrid-table td:last-child,
+body.admin-body[data-theme="light"] .table-wrap td:last-child,
+body.admin-body[data-theme="light"] table td:last-child,
+body.admin-body[data-theme="light"] #class-attendance-grid td:last-child {
+  border-right: none !important;
+}
+
+/* 7. CRITICAL FIX: Sticky Columns in Light Mode (BATCH & STUDENT NAME Must Be White!) */
+body.admin-body[data-theme="light"] #class-attendance-grid tbody td.col-sticky,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody td.col-sticky-1,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody td.col-sticky-2,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody td.col-sticky-last,
+body.admin-body[data-theme="light"] .datagrid-table tbody td.col-sticky,
+body.admin-body[data-theme="light"] .datagrid-table tbody td.col-sticky-1,
+body.admin-body[data-theme="light"] .datagrid-table tbody td.col-sticky-2,
+body.admin-body[data-theme="light"] .table-wrap tbody td.col-sticky,
+body.admin-body[data-theme="light"] .table-wrap tbody td.col-sticky-1,
+body.admin-body[data-theme="light"] .table-wrap tbody td.col-sticky-2 {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] #class-attendance-grid tbody tr:nth-child(even) td.col-sticky,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody tr:nth-child(even) td.col-sticky-1,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody tr:nth-child(even) td.col-sticky-2,
+body.admin-body[data-theme="light"] .datagrid-table tbody tr:nth-child(even) td.col-sticky,
+body.admin-body[data-theme="light"] .datagrid-table tbody tr:nth-child(even) td.col-sticky-1,
+body.admin-body[data-theme="light"] .datagrid-table tbody tr:nth-child(even) td.col-sticky-2 {
+  background: #f8fafc !important;
+}
+
+body.admin-body[data-theme="light"] #class-attendance-grid tbody tr:hover td.col-sticky,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody tr:hover td.col-sticky-1,
+body.admin-body[data-theme="light"] #class-attendance-grid tbody tr:hover td.col-sticky-2,
+body.admin-body[data-theme="light"] .datagrid-table tbody tr:hover td.col-sticky,
+body.admin-body[data-theme="light"] .datagrid-table tbody tr:hover td.col-sticky-1,
+body.admin-body[data-theme="light"] .datagrid-table tbody tr:hover td.col-sticky-2 {
+  background: #f1f5f9 !important;
+}
+
+body.admin-body[data-theme="light"] #class-attendance-grid td.col-sticky-2,
+body.admin-body[data-theme="light"] .datagrid-table td.col-sticky-2 {
+  border-right: 2px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+body.admin-body[data-theme="light"] #class-attendance-grid td.col-sticky-2 *,
+body.admin-body[data-theme="light"] #class-attendance-grid td.col-sticky-1 *,
+body.admin-body[data-theme="light"] .datagrid-table td.col-sticky-2 *,
+body.admin-body[data-theme="light"] .datagrid-table td.col-sticky-1 * {
+  color: #0f172a !important;
+}
+
+/* 8. Zebra Rows & Hover in Light Mode */
+body.admin-body[data-theme="light"] tr:nth-child(even) td {
+  background: #f8fafc !important;
+}
+
+body.admin-body[data-theme="light"] tr:hover td {
+  background: #f1f5f9 !important;
+}
+
+/* 9. Docked Summary Footer in Light Mode (Dark Anchor Row with Crisp White Text) */
+body.admin-body[data-theme="light"] tfoot.datagrid-tfoot,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot.datagrid-tfoot,
+body.admin-body[data-theme="light"] tr.datagrid-summary-row td,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot td,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot td.col-sticky,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot td.col-sticky-1,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot td.col-sticky-2,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot td.col-sticky-last,
+body.admin-body[data-theme="light"] #class-attendance-grid tr.datagrid-summary-row td.col-sticky,
+body.admin-body[data-theme="light"] #class-attendance-grid tr.datagrid-summary-row td.col-sticky-1,
+body.admin-body[data-theme="light"] #class-attendance-grid tr.datagrid-summary-row td.col-sticky-2,
+body.admin-body[data-theme="light"] #class-attendance-grid tr.datagrid-summary-row td.col-sticky-last,
+body.admin-body[data-theme="light"] .table-wrap tfoot td,
+body.admin-body[data-theme="light"] .table-wrap tfoot td.col-sticky,
+body.admin-body[data-theme="light"] .table-wrap tfoot td.col-sticky-1,
+body.admin-body[data-theme="light"] .table-wrap tfoot td.col-sticky-2 {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border-top: 2px solid rgba(255, 255, 255, 0.22) !important;
+}
+
+body.admin-body[data-theme="light"] tr.datagrid-summary-row td *,
+body.admin-body[data-theme="light"] #class-attendance-grid tfoot td *,
+body.admin-body[data-theme="light"] .table-wrap tfoot td * {
+  color: #ffffff !important;
+}
+
+/* 10. Guard Neutral Data Text from Degradation in Light Mode (Preserve Semantic Colors) */
+body.admin-body[data-theme="light"] .dashboard-academic-table td span:not([title*="Conflict"]):not([title*="Clash"]):not([title*="Overcapacity"]):not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not([style*="color"]):not([class*="status"]):not([class*="pct"]):not([class*="percent"]):not([class*="rate"]):not([class*="metric"]):not([class*="score"]):not([class*="rep-"]):not([data-status]):not([data-pct-tier]):not(.btn-level-up-cell),
+body.admin-body[data-theme="light"] .datagrid-table td span:not([title*="Conflict"]):not([title*="Clash"]):not([title*="Overcapacity"]):not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not([style*="color"]):not([class*="status"]):not([class*="pct"]):not([class*="percent"]):not([class*="rate"]):not([class*="metric"]):not([class*="score"]):not([class*="rep-"]):not([data-status]):not([data-pct-tier]):not(.btn-level-up-cell),
+body.admin-body[data-theme="light"] .table-wrap td span:not([title*="Conflict"]):not([title*="Clash"]):not([title*="Overcapacity"]):not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not([style*="color"]):not([class*="status"]):not([class*="pct"]):not([class*="percent"]):not([class*="rate"]):not([class*="metric"]):not([class*="score"]):not([class*="rep-"]):not([data-status]):not([data-pct-tier]):not(.btn-level-up-cell),
+body.admin-body[data-theme="light"] #class-attendance-grid td span:not([title*="Conflict"]):not([title*="Clash"]):not([title*="Overcapacity"]):not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not([style*="color"]):not([class*="status"]):not([class*="pct"]):not([class*="percent"]):not([class*="rate"]):not([class*="metric"]):not([class*="score"]):not([class*="rep-"]):not([data-status]):not([data-pct-tier]):not(.btn-level-up-cell) {
+  color: #0f172a !important;
+}
+
+/* 10.1 High-Priority Light Mode Invariant: Guard against hardcoded light/white text on white table cells */
+body.admin-body[data-theme="light"] table td span[style*="#f8fafc" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn),
+body.admin-body[data-theme="light"] table td span[style*="#ffffff" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn),
+body.admin-body[data-theme="light"] table td span[style*="rgb(248, 250, 252)" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn),
+body.admin-body[data-theme="light"] table td span[style*="rgb(255, 255, 255)" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn),
+body.admin-body[data-theme="light"] table td div[style*="#f8fafc" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn):not([style*="background"]),
+body.admin-body[data-theme="light"] table td div[style*="#ffffff" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn):not([style*="background"]),
+body.admin-body[data-theme="light"] table td select,
+body.admin-body[data-theme="light"] table td input:not([type="checkbox"]):not([type="radio"]) {
+  color: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] table td span[style*="#94a3b8" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn),
+body.admin-body[data-theme="light"] table td div[style*="#94a3b8" i]:not([class*="grade-"]):not([class*="badge"]):not([class*="pill"]):not(.btn):not([style*="background"]) {
+  color: #475569 !important;
+}
+
+/* 11. Form Controls inside Modal Body in Light Mode */
+body.admin-body[data-theme="light"] .modal-box .form-control,
+body.admin-body[data-theme="light"] .modal-box input:not([type="checkbox"]):not([type="radio"]),
+body.admin-body[data-theme="light"] .modal-box select,
+body.admin-body[data-theme="light"] .modal-box textarea {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+body.admin-body[data-theme="light"] .modal-box .form-label,
+body.admin-body[data-theme="light"] .modal-box label {
+  color: #334155 !important;
+}
+
+/* ── 12. WCAG HIGH-CONTRAST CALIBRATION FOR LIGHT MODE (Phases 430 & 450) ── */
+
+/* A. Grade Badges & Grade Circles in Light Mode */
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-c,
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-r,
+body.admin-body[data-theme="light"] .form-pill.grade-c,
+body.admin-body[data-theme="light"] .form-pill.grade-r {
+  background: #b45309 !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-b,
+body.admin-body[data-theme="light"] .form-pill.grade-b {
+  background: #15803d !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-a,
+body.admin-body[data-theme="light"] .form-pill.grade-a {
+  background: #15803d !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15) !important;
+}
+
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-star,
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-★,
+body.admin-body[data-theme="light"] .grade-circle.grade-circle-s,
+body.admin-body[data-theme="light"] .badge-grade-star-s {
+  background: linear-gradient(135deg, #7e22ce 0%, #be185d 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 4px rgba(126, 34, 206, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.6) !important;
+}
+
+body.admin-body[data-theme="light"] .badge-level-1 {
+  background: rgba(21, 128, 61, 0.12) !important;
+  color: #15803d !important;
+  border-color: rgba(21, 128, 61, 0.3) !important;
+}
+
+body.admin-body[data-theme="light"] .badge-level-2 {
+  background: rgba(2, 132, 199, 0.12) !important;
+  color: #0284c7 !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+
+body.admin-body[data-theme="light"] .badge-level-3 {
+  background: rgba(126, 34, 206, 0.12) !important;
+  color: #7e22ce !important;
+  border-color: rgba(126, 34, 206, 0.3) !important;
+}
+
+/* B. Neon Text & Pale Color Contrast Recalibration in Light Mode */
+body.admin-body[data-theme="light"] td [style*="#FFFF00" i],
+body.admin-body[data-theme="light"] td[style*="#FFFF00" i],
+body.admin-body[data-theme="light"] td [style*="#ffff00" i],
+body.admin-body[data-theme="light"] td[style*="#ffff00" i],
+body.admin-body[data-theme="light"] td [style*="rgb(255, 255, 0)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(255, 255, 0)" i],
+body.admin-body[data-theme="light"] .card [style*="#FFFF00" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .card [style*="#ffff00" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .modal-box .modal-body [style*="#FFFF00" i],
+body.admin-body[data-theme="light"] .modal-box .modal-body [style*="#ffff00" i],
+body.admin-body[data-theme="light"] .bp-setting-badge[style*="#FFFF00" i],
+body.admin-body[data-theme="light"] .bp-setting-badge[style*="#ffff00" i] {
+  color: #b45309 !important;
+}
+
+body.admin-body[data-theme="light"] td [style*="#95ff00" i],
+body.admin-body[data-theme="light"] td[style*="#95ff00" i],
+body.admin-body[data-theme="light"] td [style*="#95FF00" i],
+body.admin-body[data-theme="light"] td[style*="#95FF00" i],
+body.admin-body[data-theme="light"] td [style*="rgb(149, 255, 0)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(149, 255, 0)" i],
+body.admin-body[data-theme="light"] .card [style*="#95ff00" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .card [style*="#95FF00" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .modal-box .modal-body [style*="#95ff00" i],
+body.admin-body[data-theme="light"] .modal-box .modal-body [style*="#95FF00" i] {
+  color: #15803d !important;
+}
+
+body.admin-body[data-theme="light"] td [style*="#c084fc" i],
+body.admin-body[data-theme="light"] td[style*="#c084fc" i],
+body.admin-body[data-theme="light"] td [style*="#C084FC" i],
+body.admin-body[data-theme="light"] td[style*="#C084FC" i],
+body.admin-body[data-theme="light"] td [style*="rgb(192, 132, 252)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(192, 132, 252)" i],
+body.admin-body[data-theme="light"] .card [style*="#c084fc" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .card [style*="#C084FC" i]:not(thead *):not(tfoot *) {
+  color: #7e22ce !important;
+}
+
+body.admin-body[data-theme="light"] td [style*="#00c000" i],
+body.admin-body[data-theme="light"] td[style*="#00c000" i],
+body.admin-body[data-theme="light"] td [style*="#00C000" i],
+body.admin-body[data-theme="light"] td[style*="#00C000" i],
+body.admin-body[data-theme="light"] td [style*="rgb(0, 192, 0)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(0, 192, 0)" i],
+body.admin-body[data-theme="light"] .card [style*="#00c000" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .card [style*="#00C000" i]:not(thead *):not(tfoot *) {
+  color: #15803d !important;
+}
+
+body.admin-body[data-theme="light"] td [style*="#ff8c00" i],
+body.admin-body[data-theme="light"] td[style*="#ff8c00" i],
+body.admin-body[data-theme="light"] td [style*="#FF8C00" i],
+body.admin-body[data-theme="light"] td[style*="#FF8C00" i],
+body.admin-body[data-theme="light"] td [style*="rgb(255, 140, 0)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(255, 140, 0)" i],
+body.admin-body[data-theme="light"] .card [style*="#ff8c00" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .card [style*="#FF8C00" i]:not(thead *):not(tfoot *) {
+  color: #c2410c !important;
+}
+
+body.admin-body[data-theme="light"] td [style*="#ff0000" i],
+body.admin-body[data-theme="light"] td[style*="#ff0000" i],
+body.admin-body[data-theme="light"] td [style*="#FF0000" i],
+body.admin-body[data-theme="light"] td[style*="#FF0000" i],
+body.admin-body[data-theme="light"] td [style*="rgb(255, 0, 0)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(255, 0, 0)" i],
+body.admin-body[data-theme="light"] .card [style*="#ff0000" i]:not(thead *):not(tfoot *),
+body.admin-body[data-theme="light"] .card [style*="#FF0000" i]:not(thead *):not(tfoot *) {
+  color: #b91c1c !important;
+}
+
+body.admin-body[data-theme="light"] td [style*="#38bdf8" i],
+body.admin-body[data-theme="light"] td[style*="#38bdf8" i],
+body.admin-body[data-theme="light"] td [style*="#38BDF8" i],
+body.admin-body[data-theme="light"] td[style*="#38BDF8" i],
+body.admin-body[data-theme="light"] td [style*="rgb(56, 189, 248)" i],
+body.admin-body[data-theme="light"] td[style*="rgb(56, 189, 248)" i],
+body.admin-body[data-theme="light"] .card [style*="#38bdf8" i]:not(thead *):not(tfoot *) {
+  color: #0284c7 !important;
+}
+
+/* C. Vocabulary Vault (#vocab_vault) Blueprint Matrix in Light Mode */
+body.admin-body[data-theme="light"] #blueprint-matrix-table tbody tr {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+body.admin-body[data-theme="light"] #blueprint-matrix-table tbody tr:nth-child(even) {
+  background: #f8fafc !important;
+}
+body.admin-body[data-theme="light"] #blueprint-matrix-table tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+body.admin-body[data-theme="light"] #blueprint-matrix-table td {
+  color: #0f172a !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+body.admin-body[data-theme="light"] #blueprint-matrix-table td.col-bp-sep {
+  border-right: 2px solid rgba(0, 0, 0, 0.14) !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(1) {
+  color: #0284c7 !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(2) {
+  color: #4338ca !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(3) {
+  color: #0f172a !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(4) {
+  color: #0f172a !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row .bp-count-total {
+  color: #0284c7 !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(6) span {
+  color: #334155 !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(7) span {
+  color: #6d28d9 !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(8) .bp-setting-badge {
+  color: #0f172a !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(9) .bp-setting-badge,
+body.admin-body[data-theme="light"] .blueprint-table-row .bp-setting-badge[style*="#FFFF00" i],
+body.admin-body[data-theme="light"] .blueprint-table-row .bp-setting-badge[style*="#ffff00" i] {
+  color: #b45309 !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row td:nth-child(10) span {
+  color: #0284c7 !important;
+}
+body.admin-body[data-theme="light"] .blueprint-table-row .badge-answer-type {
+  color: #15803d !important;
+}
+
+/* D. Modules Management (#modules) in Light Mode */
+body.admin-body[data-theme="light"] .module-card.card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+body.admin-body[data-theme="light"] .module-card .badge-area {
+  background: rgba(2, 132, 199, 0.08) !important;
+  border: 1.5px solid rgba(2, 132, 199, 0.25) !important;
+  box-shadow: 0 0 12px rgba(2, 132, 199, 0.12) !important;
+  color: #0284c7 !important;
+}
+body.admin-body[data-theme="light"] .module-card .title-area {
+  border-bottom: 1.5px solid rgba(0, 0, 0, 0.08) !important;
+}
+body.admin-body[data-theme="light"] .module-card .title-area h3 {
+  color: #0f172a !important;
+}
+body.admin-body[data-theme="light"] .module-card .title-area span {
+  color: #0284c7 !important;
+}
+body.admin-body[data-theme="light"] .module-card p {
+  color: #475569 !important;
+}
+body.admin-body[data-theme="light"] .module-card > div:nth-of-type(2) {
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+body.admin-body[data-theme="light"] .module-card > div:nth-of-type(2) span:first-child {
+  color: #475569 !important;
+}
+body.admin-body[data-theme="light"] .btn-toggle-disc-pill[data-disc="vocabulary"] {
+  color: #15803d !important;
+  background: rgba(21, 128, 61, 0.1) !important;
+  border-color: rgba(21, 128, 61, 0.3) !important;
+}
+body.admin-body[data-theme="light"] .btn-toggle-disc-pill[data-disc="speaking"] {
+  color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.1) !important;
+  border-color: rgba(2, 132, 199, 0.3) !important;
+}
+body.admin-body[data-theme="light"] .btn-toggle-disc-pill[data-disc="storytelling"] {
+  color: #c2410c !important;
+  background: rgba(194, 65, 12, 0.1) !important;
+  border-color: rgba(194, 65, 12, 0.3) !important;
+}
+body.admin-body[data-theme="light"] .btn-toggle-disc-pill[data-disc="grammar"] {
+  color: #7e22ce !important;
+  background: rgba(126, 34, 206, 0.1) !important;
+  border-color: rgba(126, 34, 206, 0.3) !important;
+}
+body.admin-body[data-theme="light"] .btn-toggle-disc-pill:not([style*="solid"]) {
+  color: #64748b !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px dashed rgba(0, 0, 0, 0.15) !important;
+}
+body.admin-body[data-theme="light"] .btn-configure-engine {
+  color: #0284c7 !important;
+  border-color: rgba(2, 132, 199, 0.4) !important;
+}
+
+/* E. System Glossary (#system-glossary) in Light Mode */
+body.admin-body[data-theme="light"] .system-glossary-workstation {
+  background: #f1f5f9 !important;
+}
+body.admin-body[data-theme="light"] .system-glossary-workstation .card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary thead tr {
+  background: #0f172a !important;
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary thead th {
+  color: #ffffff !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody tr {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody tr:nth-child(even) {
+  background: #f8fafc !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td {
+  border-right: 1px solid rgba(0, 0, 0, 0.06) !important;
+  color: #334155 !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(1) .badge {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td .glossary-term-name,
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(2) > div span {
+  color: #0f172a !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(2) button,
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(4) button,
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(5) button {
+  color: #64748b !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(2) > div:last-child {
+  background: rgba(2, 132, 199, 0.08) !important;
+  border: 1px solid rgba(2, 132, 199, 0.22) !important;
+  color: #0284c7 !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(2) > div:last-child span:first-child {
+  color: #475569 !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td.col-glossary-desc,
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(3) {
+  color: #334155 !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(4) > div {
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(4) span:last-of-type {
+  color: #0f172a !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(5) code {
+  color: #0284c7 !important;
+  background: rgba(2, 132, 199, 0.08) !important;
+  border: 1px solid rgba(2, 132, 199, 0.22) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary tbody td .glossary-ssot-ref,
+body.admin-body[data-theme="light"] #table-system-glossary tbody td:nth-child(6) span {
+  color: #0f172a !important;
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+body.admin-body[data-theme="light"] #table-system-glossary .input-inline-edit {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.16) !important;
+}
+
+/* F. Dashboard Academic Matrix: Faculty, Rooms & Batches Contrast */
+body.admin-body[data-theme="light"] .dashboard-academic-table td,
+body.admin-body[data-theme="light"] .faculty-table td,
+body.admin-body[data-theme="light"] .room-table td,
+body.admin-body[data-theme="light"] .dashboard-tutor-row td,
+body.admin-body[data-theme="light"] .dashboard-room-row td,
+body.admin-body[data-theme="light"] .dashboard-batch-row td {
+  color: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-tutor-row td.col-tutor-code,
+body.admin-body[data-theme="light"] .dashboard-room-row td.col-room-code,
+body.admin-body[data-theme="light"] .dashboard-tutor-row td:first-child,
+body.admin-body[data-theme="light"] .dashboard-room-row td:first-child,
+body.admin-body[data-theme="light"] .dashboard-batch-row td:first-child {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-tutor-row td span:first-child,
+body.admin-body[data-theme="light"] .dashboard-room-row td:nth-child(2),
+body.admin-body[data-theme="light"] .dashboard-batch-row td span {
+  color: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-tutor-row td span:last-child,
+body.admin-body[data-theme="light"] .dashboard-room-row td:nth-child(4) {
+  color: #334155 !important;
+}
+
+body.admin-body[data-theme="light"] .faculty-table button.btn-ghost,
+body.admin-body[data-theme="light"] .room-table button.btn-ghost {
+  color: #0f172a !important;
+  border: 1px solid rgba(0, 0, 0, 0.22) !important;
+}
+
+/* F. Dashboard Academic Matrix: Footers, Batches, Faculty & Rooms */
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot,
+body.admin-body[data-theme="light"] .faculty-table tfoot,
+body.admin-body[data-theme="light"] .room-table tfoot {
+  background: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot td,
+body.admin-body[data-theme="light"] .faculty-table tfoot td,
+body.admin-body[data-theme="light"] .room-table tfoot td {
+  color: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot td:first-child {
+  color: #94a3b8 !important;
+}
+
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot td[style*="#38bdf8" i],
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot td:nth-child(2),
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot td:nth-child(3),
+body.admin-body[data-theme="light"] .dashboard-academic-table tfoot td:nth-child(4) {
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+}
+
+/* Dashboard Batch Level Counts (1, 17, 24) on white paper rows */
+body.admin-body[data-theme="light"] .dashboard-batch-row td:nth-child(2) span,
+body.admin-body[data-theme="light"] .dashboard-batch-row td:nth-child(3) span,
+body.admin-body[data-theme="light"] .dashboard-batch-row td:nth-child(4) span {
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+}
+
+/* G. Board (#organization) Dual-Table Matrix & Student Counts Contrast */
+body.admin-body[data-theme="light"] .board-workspace-matrix .board-table-card,
+body.admin-body[data-theme="light"] .board-workspace-matrix .card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix thead tr {
+  background: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix thead th {
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix tbody tr {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix tbody tr:nth-child(even) {
+  background: #f8fafc !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix tbody td {
+  color: #0f172a !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+/* Student Count Column (STD: 1, 17, 24) in Board Matrix */
+body.admin-body[data-theme="light"] .board-workspace-matrix tbody td.col-board-std,
+body.admin-body[data-theme="light"] .board-workspace-matrix tbody td:nth-child(5) {
+  color: #0284c7 !important;
+  font-weight: 700 !important;
+}
+
+/* Board Docked Footers */
+body.admin-body[data-theme="light"] .board-workspace-matrix tfoot {
+  background: #090d16 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix tfoot td {
+  color: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .board-workspace-matrix tfoot td.col-board-std,
+body.admin-body[data-theme="light"] .board-workspace-matrix tfoot td:nth-child(5) {
+  color: #38bdf8 !important;
+  font-weight: 700 !important;
+}
+
+/* H. Test Sessions & Test Analytics Tables (#class-hub?tab=test-sessions & tab=analytics) */
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper .card,
+body.admin-body[data-theme="light"] #class-test-sessions-container .card,
+body.admin-body[data-theme="light"] .test-analytics-view .card,
+body.admin-body[data-theme="light"] #class-analytics-container .card,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container .card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper .card > div:first-child,
+body.admin-body[data-theme="light"] #class-test-sessions-container .card > div:first-child,
+body.admin-body[data-theme="light"] .test-analytics-view .card > div:first-child,
+body.admin-body[data-theme="light"] #class-analytics-container .card > div:first-child,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container .card > div:first-child {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper .analytics-table-wrap,
+body.admin-body[data-theme="light"] #class-test-sessions-container .analytics-table-wrap,
+body.admin-body[data-theme="light"] .test-analytics-view .analytics-table-wrap,
+body.admin-body[data-theme="light"] #class-analytics-container .analytics-table-wrap,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container .analytics-table-wrap {
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper table,
+body.admin-body[data-theme="light"] #class-test-sessions-container table,
+body.admin-body[data-theme="light"] .test-analytics-view table,
+body.admin-body[data-theme="light"] #class-analytics-container table,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container table {
+  background: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper thead tr,
+body.admin-body[data-theme="light"] #class-test-sessions-container thead tr,
+body.admin-body[data-theme="light"] .test-analytics-view thead tr,
+body.admin-body[data-theme="light"] #class-analytics-container thead tr,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container thead tr {
+  background: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper thead th,
+body.admin-body[data-theme="light"] #class-test-sessions-container thead th,
+body.admin-body[data-theme="light"] .test-analytics-view thead th,
+body.admin-body[data-theme="light"] #class-analytics-container thead th,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container thead th {
+  background: #0f172a !important;
+  color: #ffffff !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody tr,
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody tr,
+body.admin-body[data-theme="light"] .test-analytics-view tbody tr,
+body.admin-body[data-theme="light"] #class-analytics-container tbody tr,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody tr {
+  background: #ffffff !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody tr:nth-child(even),
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody tr:nth-child(even),
+body.admin-body[data-theme="light"] .test-analytics-view tbody tr:nth-child(even),
+body.admin-body[data-theme="light"] #class-analytics-container tbody tr:nth-child(even),
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody tr:nth-child(even) {
+  background: #f8fafc !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody tr:hover,
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody tr:hover,
+body.admin-body[data-theme="light"] .test-analytics-view tbody tr:hover,
+body.admin-body[data-theme="light"] #class-analytics-container tbody tr:hover,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody tr:hover {
+  background: #f1f5f9 !important;
+}
+
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody td,
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody td,
+body.admin-body[data-theme="light"] .test-analytics-view tbody td,
+body.admin-body[data-theme="light"] #class-analytics-container tbody td,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody td {
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+body.admin-body[data-theme="light"] .col-analytics-target,
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody td:first-child,
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody td:first-child,
+body.admin-body[data-theme="light"] .test-analytics-view tbody td:first-child,
+body.admin-body[data-theme="light"] #class-analytics-container tbody td:first-child,
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody td:first-child {
+  color: #0f172a !important;
+}
+
+body.admin-body[data-theme="light"] .col-analytics-mistake,
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody td:nth-child(2),
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody td:nth-child(2),
+body.admin-body[data-theme="light"] .test-analytics-view tbody td:nth-child(2),
+body.admin-body[data-theme="light"] #class-analytics-container tbody td:nth-child(2),
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody td:nth-child(2) {
+  color: #b91c1c !important;
+  font-weight: 500 !important;
+}
+
+body.admin-body[data-theme="light"] .col-analytics-count,
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody td:nth-child(3),
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody td:nth-child(3),
+body.admin-body[data-theme="light"] .test-analytics-view tbody td:nth-child(3),
+body.admin-body[data-theme="light"] #class-analytics-container tbody td:nth-child(3),
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody td:nth-child(3) {
+  font-weight: 600 !important;
+}
+
+body.admin-body[data-theme="light"] .col-analytics-rate,
+body.admin-body[data-theme="light"] .test-sessions-tab-wrapper tbody td:nth-child(4),
+body.admin-body[data-theme="light"] #class-test-sessions-container tbody td:nth-child(4),
+body.admin-body[data-theme="light"] .test-analytics-view tbody td:nth-child(4),
+body.admin-body[data-theme="light"] #class-analytics-container tbody td:nth-child(4),
+body.admin-body[data-theme="light"] #analytics-4col-matrix-container tbody td:nth-child(4) {
+  font-weight: 700 !important;
+}
+
+/* ── UNIVERSAL SLIM MUTED SCROLLBAR ── */
+body.admin-body *::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+  background: var(--admin-scrollbar-track) !important;
+}
+
+body.admin-body *::-webkit-scrollbar-thumb {
+  background: var(--admin-scrollbar-thumb) !important;
+  border-radius: 4px !important;
+}
+
+body.admin-body *::-webkit-scrollbar-thumb:hover {
+  background: var(--admin-text-muted) !important;
+}
+
+/* ── STRICT 30PX HEADER & FOOTER LOCKING INVARIANT ── */
+body.admin-body .dashboard-academic-table thead tr,
+body.admin-body .datagrid-table thead tr,
+body.admin-body .table-wrap thead tr,
+body.admin-body thead tr.super-header-row,
+body.admin-body thead tr.sub-header-row {
+  height: var(--admin-header-height) !important;
+  min-height: var(--admin-header-height) !important;
+  max-height: var(--admin-header-height) !important;
+}
+
+body.admin-body .dashboard-academic-table thead th,
+body.admin-body .datagrid-table thead th,
+body.admin-body .table-wrap thead th {
+  height: var(--admin-header-height) !important;
+  line-height: var(--admin-header-height) !important;
+  padding: 0 4px !important;
+}
+
+body.admin-body thead tr.sub-header-row {
+  top: var(--admin-header-height) !important;
+}
+
+body.admin-body tfoot tr,
+body.admin-body tfoot td,
+body.admin-body .datagrid-summary-row {
+  height: var(--admin-footer-height) !important;
+  min-height: var(--admin-footer-height) !important;
+  max-height: var(--admin-footer-height) !important;
+  line-height: var(--admin-footer-height) !important;
+}
+
+/* ── ZERO STACKED BOXES ("Kapsul dalam Kotak" Elimination) ── */
+body.admin-body .dashboard-academic-table td select,
+body.admin-body .dashboard-academic-table td input,
+body.admin-body .datagrid-table td select,
+body.admin-body .datagrid-table td input,
+body.admin-body .table-wrap td select,
+body.admin-body .table-wrap td input {
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 4px !important;
+  height: 100% !important;
+  width: 100% !important;
+  font-size: 12px !important;
+  font-family: 'Inter', sans-serif !important;
+  color: inherit !important;
+  box-sizing: border-box !important;
+}
+
+/* Edit Mode Excel Gridlines (0.50 Opacity SSOT) */
+body.admin-body.global-edit-mode-on .dashboard-academic-table th,
+body.admin-body.global-edit-mode-on .dashboard-academic-table td,
+body.admin-body.global-edit-mode-on .datagrid-table th,
+body.admin-body.global-edit-mode-on .datagrid-table td,
+body.admin-body.global-edit-mode-on .table-wrap th,
+body.admin-body.global-edit-mode-on .table-wrap td {
+  border-right: 1px solid var(--admin-border-active) !important;
+  border-bottom: 1px solid var(--admin-border-active) !important;
+}
+
+body.admin-body.global-edit-mode-on .dashboard-academic-table th:first-child,
+body.admin-body.global-edit-mode-on .dashboard-academic-table td:first-child,
+body.admin-body.global-edit-mode-on .datagrid-table th:first-child,
+body.admin-body.global-edit-mode-on .datagrid-table td:first-child,
+body.admin-body.global-edit-mode-on .table-wrap th:first-child,
+body.admin-body.global-edit-mode-on .table-wrap td:first-child {
+  border-left: 1px solid var(--admin-border-active) !important;
+}
+
+body.admin-body.global-edit-mode-on .dashboard-academic-table thead tr:first-child th,
+body.admin-body.global-edit-mode-on .datagrid-table thead tr:first-child th,
+body.admin-body.global-edit-mode-on .table-wrap thead tr:first-child th {
+  border-top: 1px solid var(--admin-border-active) !important;
+}
+
+body.admin-body.global-edit-mode-on td:focus-within {
+  background: var(--admin-row-hover) !important;
+}
+
+/* ── ZERO NEON AURA & FLAT ENTERPRISE PRECISION ── */
+body.admin-body .btn:not(:hover):not(:active),
+body.admin-body .badge:not(:hover),
+body.admin-body .glass-card,
+body.admin-body .deck-card,
+body.admin-body .card {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* In Light Mode, cards and tables have clean micro-shadow for soft paper depth */
+body.admin-body[data-theme="light"] .card,
+body.admin-body[data-theme="light"] .glass-card,
+body.admin-body[data-theme="light"] .deck-card,
+body.admin-body[data-theme="light"] .table-wrap {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* ── STANDARDIZED TYPOGRAPHY WEIGHT (INTER SSOT) ── */
+body.admin-body table td {
+  font-weight: 500 !important;
+}
+
+body.admin-body table td.font-semibold,
+body.admin-body table td strong,
+body.admin-body table td b,
+body.admin-body table td.col-sticky-2,
+body.admin-body table td.student-name-cell {
+  font-weight: 600 !important;
+}
+
+body.admin-body table th {
+  font-weight: 700 !important;
+}
+
+/* Sub-Headers (Row 2 underneath Super-Headers) strictly preserve Regular 400 per SSOT §4.1 */
+body.admin-body table th.sub-hdr,
+body.admin-body table th.datagrid-sub-header,
+body.admin-body table thead.has-super-headers tr:nth-child(2) th,
+body.admin-body #class-attendance-grid thead tr:nth-child(2) th {
+  font-weight: 400 !important;
+}
+
+/* ── LAYOUT PALETTE BINDING ACROSS THEMES ── */
+body.admin-body[data-theme="dark"],
+body.admin-body[data-theme="black"] {
+  --fm-bg-main: #161616;
+  --fm-bg-sidebar: #141414;
+  --fm-bg-topbar: #181818;
+  --fm-bg-panel: #212121;
+  --fm-border-subtle: #2d2d2d;
+}
+
+body.admin-body[data-theme="navy"] {
+  --fm-bg-main: #090D16;
+  --fm-bg-sidebar: #0F172A;
+  --fm-bg-topbar: #0F172A;
+  --fm-bg-panel: #0F172A;
+}
+
+body.admin-body[data-theme="light"] {
+  --fm-bg-main: #eef2f6;
+  --fm-bg-sidebar: #1e293b;
+  --fm-bg-topbar: #1e293b;
+  --fm-bg-panel: #ffffff;
+}
+
+/* ==========================================================================
+   UNIVERSAL ADAPTIVE TABLE DIVIDERS & SEMANTIC DATA COLORS (ALL THEMES SSOT)
+   ========================================================================== */
+
+/* 1. Super-Header Continuous Dividers & Sticky Boundary Columns across ALL Tables */
+.table-wrap table td.super-hdr-divider,
+.table-wrap table th.super-hdr-divider,
+.datagrid-table thead tr.datagrid-super-header-row th.super-hdr-divider,
+.datagrid-table thead th.super-hdr-divider,
+.datagrid-table tbody td.super-hdr-divider,
+.datagrid-table tfoot td.super-hdr-divider,
+.datagrid-table tr.datagrid-summary-row td.super-hdr-divider,
+#admin-console table th.super-hdr-divider,
+#admin-console table td.super-hdr-divider,
+#student-grid-container table th.super-hdr-divider,
+#student-grid-container table td.super-hdr-divider,
+#class-attendance-grid thead th.super-hdr-divider,
+#class-attendance-grid thead tr:nth-child(2) th.super-hdr-divider,
+#class-attendance-grid tbody td.super-hdr-divider,
+#class-attendance-grid tfoot td.super-hdr-divider,
+#class-attendance-grid tr.datagrid-summary-row td.super-hdr-divider,
+#blueprint-matrix-table thead tr:nth-child(2) th.super-hdr-divider,
+#blueprint-matrix-table th.col-bp-sep,
+#blueprint-matrix-table td.col-bp-sep,
+#vault-table th.super-hdr-divider,
+#vault-table td.super-hdr-divider,
+th.super-hdr-divider,
+td.super-hdr-divider,
+.super-hdr-divider,
+.col-sticky-2,
+td.col-sticky-2,
+th.col-sticky-2 {
+  border-right: 2px solid var(--admin-border-divider, rgba(255, 255, 255, 0.22)) !important;
+}
+
+body.admin-body[data-theme="light"] .super-hdr-divider,
+body.admin-body[data-theme="light"] td.super-hdr-divider,
+body.admin-body[data-theme="light"] th.super-hdr-divider,
+body.admin-body[data-theme="light"] .col-sticky-2,
+body.admin-body[data-theme="light"] td.col-sticky-2,
+body.admin-body[data-theme="light"] th.col-sticky-2 {
+  border-right: 2px solid #94a3b8 !important; /* Crisp Slate 400 neutral divider */
+}
+
+body.admin-body[data-theme="dark"] .super-hdr-divider,
+body.admin-body[data-theme="dark"] td.super-hdr-divider,
+body.admin-body[data-theme="dark"] th.super-hdr-divider,
+body.admin-body[data-theme="dark"] .col-sticky-2,
+body.admin-body[data-theme="dark"] td.col-sticky-2,
+body.admin-body[data-theme="dark"] th.col-sticky-2 {
+  border-right: 2px solid #52525b !important; /* Zinc 600 charcoal divider */
+}
+
+/* 2. Universal Semantic Status Indicators Across ALL Tables */
+.status-tag,
+.table-status-cell,
+[data-field="status"] {
+  font-weight: 600 !important;
+  font-size: 12px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.status-tag.status-active,
+.status-active,
+[data-status="active"],
+[data-status="Active"],
+[data-status="ACTIVE"] {
+  color: var(--grade-a) !important;
+  font-weight: 700 !important;
+}
+
+.status-tag.status-inactive,
+.status-inactive,
+[data-status="inactive"],
+[data-status="Inactive"],
+[data-status="INACTIVE"] {
+  color: var(--grade-e) !important;
+  font-weight: 700 !important;
+}
+
+.status-tag.status-hold,
+.status-hold,
+[data-status="hold"],
+[data-status="Hold"],
+[data-status="HOLD"],
+[data-status="standby"] {
+  color: var(--grade-c) !important;
+  font-weight: 700 !important;
+}
+
+.status-tag.status-alumni,
+.status-alumni,
+[data-status="alumni"],
+[data-status="Alumni"],
+[data-status="ALUMNI"] {
+  color: var(--quad-d) !important;
+  font-weight: 700 !important;
+}
+
+.status-tag.status-ongoing,
+.status-ongoing,
+[data-status="ongoing"],
+[data-status="Ongoing"] {
+  color: var(--primary-tactical, #38bdf8) !important;
+  font-weight: 700 !important;
+}
+
+.status-tag.status-completed,
+.status-completed,
+[data-status="completed"],
+[data-status="Completed"] {
+  color: var(--grade-a) !important;
+  font-weight: 700 !important;
+}
+
+/* 3. Universal Percentage Columns Across ALL Tables */
+.metric-pct,
+.pct-val,
+.std-score-pct,
+.asm-rep-badge {
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 700 !important;
+}
+
+.metric-pct.pct-high,
+.pct-high,
+[data-pct-tier="high"] {
+  color: var(--grade-a) !important;
+}
+
+.metric-pct.pct-mid,
+.pct-mid,
+[data-pct-tier="mid"] {
+  color: var(--grade-c) !important;
+}
+
+.metric-pct.pct-low,
+.pct-low,
+[data-pct-tier="low"] {
+  color: var(--grade-e) !important;
+}
+
+/* 4. LEVEL UP Interactive Tactical Button */
+.btn-level-up-cell {
+  background: rgba(34, 197, 94, 0.14) !important;
+  color: var(--grade-a) !important;
+  border: 1px solid rgba(34, 197, 94, 0.40) !important;
+  padding: 2px 8px !important;
+  border-radius: 4px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  line-height: 18px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.03em !important;
+  transition: all 0.15s ease !important;
+}
+
+.btn-level-up-cell:hover {
+  background: rgba(34, 197, 94, 0.25) !important;
+  border-color: var(--grade-a) !important;
+}
+
+.btn-level-up-cell svg {
+  stroke: currentColor !important;
+}
+
+body.admin-body[data-theme="light"] .btn-level-up-cell {
+  background: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #15803d !important;
+}
+
+body.admin-body[data-theme="light"] .btn-level-up-cell:hover {
+  background: #bbf7d0 !important;
+  border-color: #4ade80 !important;
+}
+

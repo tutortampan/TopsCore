@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v172';
+const CACHE_NAME = 'topscore-cache-option-a-v224';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -6,6 +6,7 @@ const ASSETS_TO_CACHE = [
   './test.html',
   './result.html',
   './offline.html',
+  './tutor.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -16,11 +17,13 @@ const ASSETS_TO_CACHE = [
   './css/auth.css?v=20261028',
   './css/test.css?v=20261121_v555',
   './css/result.css?v=20261119_v631',
+  './css/tutor.css?v=20261123_v50',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
   './js/api.js?v=20261121_v637',
   './js/auth.js?v=20261108_v162',
   './js/dashboard.js?v=20261121_v641',
+  './js/tutor.js?v=20261123_v50',
   './js/test.js?v=20261121_v558',
   './js/result.js?v=20261119_v631',
   './js/session.js?v=20261108_v162',
@@ -68,18 +71,40 @@ self.addEventListener('fetch', event => {
   // Bypass third-party origins (Google Fonts, CDNs) so browser loads them natively via <link> without Service Worker connect-src CSP restrictions
   if (url.origin !== self.location.origin) return;
 
-  // Bypass Service Worker entirely for Tutor's Room admin console and modules to ensure zero-stale cache
-  if (url.pathname.includes('admin') || url.pathname.includes('/admin/')) return;
+  // Bypass Service Worker entirely for Admin & Tutor console to ensure zero-stale cache
+  if (url.pathname.includes('admin') || url.pathname.includes('/admin/') || url.pathname.includes('tutor')) return;
 
   const isDoc = event.request.destination === 'document' || url.pathname.endsWith('.html');
-  const isScriptOrDoc = isDoc ||
-    event.request.destination === 'script' ||
-    event.request.destination === 'style' ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.css');
+  const isScript = event.request.destination === 'script' || url.pathname.endsWith('.js');
+  const isStyle = event.request.destination === 'style' || url.pathname.endsWith('.css');
+  const isVersionedStatic = (isScript || isStyle) && url.search.includes('v=');
+
+  if (isVersionedStatic) {
+    // Cache-first for versioned JS and CSS assets (?v=...)
+    // Versioned assets are immutable for that specific version tag, enabling instant zero-network page hydration
+    event.respondWith(
+      caches.match(event.request).then(cachedResponse => {
+        if (cachedResponse) return cachedResponse;
+        return fetch(event.request).then(response => {
+          if (response && response.status === 200 && response.type === 'basic' && event.request.url.startsWith('http')) {
+            const responseToCache = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+          }
+          return response;
+        });
+      }).catch(async () => {
+        const cached = await caches.match(event.request);
+        if (cached) return cached;
+        return new Response('', { status: 408, statusText: 'Network Failed or Offline' });
+      })
+    );
+    return;
+  }
+
+  const isScriptOrDoc = isDoc || isScript || isStyle;
 
   if (isScriptOrDoc) {
-    // Network-first for scripts and documents so bug fixes and updates propagate immediately
+    // Network-first for unversioned scripts, unversioned styles, and documents so bug fixes and updates propagate immediately
     event.respondWith(
       fetch(event.request).then(response => {
         if (response && response.status === 200 && response.type === 'basic' && event.request.url.startsWith('http')) {

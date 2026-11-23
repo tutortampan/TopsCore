@@ -27,6 +27,8 @@
     "test:ratios": "node scripts/test_unified_test_room_ratios.mjs",
     "preview:all": "node scripts/open_mobile_preview.mjs --all-screenshots",
     "test:rbac": "node scripts/test_tutor_role_rbac.mjs",
+    "test:tutor": "node scripts/test_tutor_attendance_lifecycle_e2e.mjs",
+    "test:attendance": "node scripts/test_class_attendance_matrix_spec.mjs",
     "test:vault": "node scripts/test_vocab_vault_and_edit_mode.mjs",
     "test:viewport-lock": "node scripts/test_viewport_lock_and_table_normalization.mjs",
     "test:lower-panel": "node scripts/test_lower_panel_and_dynamic_columns.mjs",

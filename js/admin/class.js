@@ -418,8 +418,9 @@ export async function renderCentralQuestionImport(area) {
 }
 
 export async function renderResults(area) {
+  const filterOpts = window._filterTestResults ? { test_id: window._filterTestResults } : { is_best_score: true };
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
-    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, percentage, effective_score, is_remedial_unlocked, created_at, submitted_at, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)'),
+    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, percentage, effective_score, is_remedial_unlocked, created_at, submitted_at, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)', filterOpts),
     adminFetchAll('institutions', 'id, name, is_active'),
     adminFetchAll('programs', 'id, name, is_active, institution_id'),
     adminFetchAll('batches', 'id, name, is_active, program_id')
@@ -601,7 +602,17 @@ export async function renderResults(area) {
       hideToolbar: true,
       searchKeys: ['students.name', 'tests.title', 'tests.shell_code', 'tests.test_type', 'students.programs.name', 'students.programs.institutions.name'],
       columns: [
-        { key: 'students.programs.institutions.name', label: 'INSTITUTION', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.institutions?.name || '&mdash;')}</span>` },
+        { key: 'students.programs.institutions.name', label: 'INSTITUTION', sortable: true, render: (v, r) => {
+            const raw = r.students?.programs?.institutions?.code || r.students?.programs?.institutions?.name || '—';
+            let shortInst = raw;
+            if (typeof raw === 'string') {
+              const u = raw.toUpperCase();
+              if (u.includes('CAKE') || u === 'CEC') shortInst = 'CEC';
+              else if (u.includes('TOP') || u.includes('OCCUPATIONAL') || u.includes('OPTIMAL')) shortInst = 'TOP';
+            }
+            return `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(shortInst)}</span>`;
+          }
+        },
         { key: 'students.programs.name', label: 'PROGRAM', sortable: true, render: (v, r) => `<span class="text-muted text-sm" style="font-size:12px;">${escapeHtml(r.students?.programs?.name || '&mdash;')}</span>` },
         { key: 'students.batches.name', label: 'BATCH', sortable: true, render: (v, r) => `<span class="text-sm fw-600" style="color:var(--clr-text-2); font-size:12px;">${escapeHtml(r.students?.batches?.name || 'Unassigned')}</span>` },
         { key: 'students.name', label: 'STUDENT NAME', sortable: true, render: (v, r) => `<span class="fw-600" style="color:var(--clr-text-1); font-size:12px;">${escapeHtml(r.students?.name || '&mdash;')}</span>` },

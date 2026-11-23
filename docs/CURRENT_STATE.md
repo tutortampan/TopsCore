@@ -1,9 +1,9 @@
 # CURRENT STATE — TOPSCORE LMS
 
 > **Purpose:** Single authoritative restart point across sessions and restarts.
-> **Last Updated:** 2026-11-21
-> **Current Milestone:** Phase 648 [COMPLETE] — System Glossary Workstation Panel (Domain D — DATA) & Hybrid Persistence (DECISION-069)
-> **Status:** READY FOR USER REVIEW (ALL TEST SUITES 100% GREEN)
+> **Last Updated:** 2026-11-22
+> **Current Milestone:** Phase 685 [COMPLETE] — Light Mode High-Contrast Table Text & Theme Harmonization
+> **Status:** READY FOR USER REVIEW (ALL 13 TABLE PILLARS & SUITES 100% GREEN)
 
 ---
 
@@ -11,7 +11,7 @@
 
 - **ABCD System Navigation & 4-Pillar Quadrant Colors**:
   - `A — ADMIN`: Electric Pink (`#ff2d87` / `var(--quad-a)`)
-  - `B — BOARD`: Dark Orange (`#FF8C00` / `var(--grade-d)`)
+  - `B — BATCH`: Dark Orange (`#FF8C00` / `var(--grade-d)`)
   - `C — CLASS`: Electric Lime (`#95ff00` / `var(--grade-b)`)
   - `D — DATA`: Tactical Cyan (`#38bdf8` / `var(--primary-tactical)`)
 
@@ -20,9 +20,11 @@
   - B Good (80%–89%): Electric Lime (`#95ff00`) | C Enough (60%–79%): Pure Yellow (`#ffff00`)
   - D Less (30%–59%): Dark Orange (`#ff8c00`) | E Fail (0%–29%): Pure Red (`#ff0000`)
 
-- **Test & Curriculum Identification SSOT**:
-  - Class Code: `PROGRAM-LEVELCLASS` (e.g. `CMP-3VOCAB`, `CMP-1BASIC`; Non-Level omit level: `EVN-VOCAB`).
-  - Test Code: `PROGRAM-LEVEL_CLASS-CODE-TYPE` (e.g. `CMP-3VCB-A1-TASK`, `CMP-3VCB-D-EXAM`).
+- **Test & Curriculum Identification SSOT (DECISION-077)**:
+  - Program Code: Strictly 4 letters (`CAMP`, `EVNK`, `SHRT`, `TPTC`).
+  - Class Code: `PROGRAM-LEVELCLASS` (e.g. `CAMP-3VOCAB`, `CAMP-1BASIC`; Non-Level omit level: `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB`).
+  - Test Code: `PROGRAM-LEVEL_CLASS-CODE-TYPE` (e.g. `CAMP-3VCB-A1-TASK`, `CAMP-3VCB-D-EXAM`, `CAMP-1BSC-A-EXAM`, `CAMP-1STT-A1-TASK`, `EVNK-VCB-0G1-TASK`, `SHRT-VCB-0A-EXAM`).
+  - Room Code: Strictly hyphenated uppercase zero-space (`R-101`, `R-102`, `R-103`, `LAB-01`, `HAL-0A`, `HAL-0B`, `HAL-0C`).
   - Test Name: `[LEVEL] [CLASS] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]`. Dashboard 2-line title via `formatTestDisplay()`.
 
 - **Repetitive Mastery & Curriculum Discipline Gating**:

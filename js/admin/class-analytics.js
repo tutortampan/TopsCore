@@ -7,6 +7,7 @@ import { getSupabase } from '../supabase.js';
 import { escapeHtml } from '../api.js';
 import { TOPSCORE_COLORS, getGradeColorByScore, getInvertedGradeColor } from '../grading.js';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
+import { buildClassThemesData, loadThemeExamAnalyticsData, renderThemeExamAnalyticsBoard } from './tests-access.js';
 
 /**
  * Calculates Damerau-Levenshtein distance between two strings
@@ -170,24 +171,28 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
     const attemptRecordMap = new Map();
     representativeAttempts.forEach(a => attemptRecordMap.set(a.id, a));
 
-    // Step 2: Fetch attempt_answers in chunked batches (50 attempt_ids per batch)
+    // Step 2: Fetch attempt_answers in chunked batches (50 attempt_ids per batch) in parallel
     // Pull only required columns (excluding massive accepted_answers_snapshot)
     let allAnswers = [];
     const CHUNK_SIZE = 50;
+    const chunkPromises = [];
     for (let i = 0; i < attemptIds.length; i += CHUNK_SIZE) {
       const chunk = attemptIds.slice(i, i + CHUNK_SIZE);
-      const { data: ansChunk, error: ansErr } = await sb.from('attempt_answers')
-        .select('id, attempt_id, question_id, student_answer, correct_answer_snapshot, score, is_correct, evaluation_result, question_snapshot')
-        .in('attempt_id', chunk);
-
-      if (ansErr) {
-        console.warn('[ClassAnalytics] Chunk fetch error, continuing with available data:', ansErr.message);
-        break;
-      }
-      if (ansChunk && ansChunk.length > 0) {
-        allAnswers.push(...ansChunk);
-      }
+      chunkPromises.push(
+        sb.from('attempt_answers')
+          .select('id, attempt_id, question_id, student_answer, correct_answer_snapshot, score, is_correct, evaluation_result, question_snapshot')
+          .in('attempt_id', chunk)
+      );
     }
+
+    const chunkResults = await Promise.allSettled(chunkPromises);
+    chunkResults.forEach(res => {
+      if (res.status === 'fulfilled' && res.value?.data && Array.isArray(res.value.data)) {
+        allAnswers.push(...res.value.data);
+      } else if (res.status === 'rejected') {
+        console.warn('[ClassAnalytics] Chunk fetch error, continuing with available data:', res.reason?.message || res.reason);
+      }
+    });
 
     // Aggregate by vocabulary target
     const vocabAggregation = new Map();
@@ -285,46 +290,46 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
     const totalIncorrectAll = items.reduce((s, i) => s + i.incorrectCount, 0);
     const avgErrorPct = totalAttemptsAll > 0 ? Math.round((totalIncorrectAll / totalAttemptsAll) * 100) : 0;
 
-    // Render View (DataGrid at top, Universal Lower Panel at bottom, 10px gap, 0px bottom banner gap)
+    // Load 4-Theme Missed Items Data per User SSOT Architecture
+    const themesData = buildClassThemesData(classTests, context);
+    const themeAnalyticsData = await loadThemeExamAnalyticsData(themesData, context);
+
+    // Update Bottom Infobar Sub-Panel
+    if (typeof window.setBottomInfobar === 'function') {
+      const totalMissedAcrossThemes = themesData.reduce((acc, t) => acc + (themeAnalyticsData[t.code]?.length || 0), 0);
+      const leftHtml = `
+        <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
+          <span>Class: <strong style="color:#ffffff;">${escapeHtml(className || 'Class Hub')}</strong></span>
+          <span>&bull;</span>
+          <span>Themes: <strong style="color:var(--quad-c, #95ff00);">${themesData.length} Themes</strong></span>
+        </div>
+      `;
+      const centerHtml = `
+        <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
+          <span style="color:#cbd5e1; font-weight:700;">Empirical Missed Items:</span>
+          <span style="color:var(--grade-e, #fca5a5); font-weight:800;">${totalMissedAcrossThemes} Questions Recorded</span>
+        </div>
+      `;
+      const rightHtml = `
+        <div style="display:inline-flex; align-items:center; gap:8px;">
+          <span class="badge" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); font-size:12px; font-weight:800;">
+            4-COLUMN MATRIX ACTIVE
+          </span>
+        </div>
+      `;
+      window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
+    }
+
+    // Render 4-Column Missed Items Tables Matrix Full Height Top to Bottom
     container.innerHTML = `
-      <div class="test-analytics-view" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden; gap:10px;">
-        <!-- DataGrid Container for Missed Vocabulary Items (Sits at the top directly under tabs) -->
-        <div id="class-analytics-datagrid-container" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
-
-        <!-- Universal Lower Panel (50px Height, docked at bottom flush with sidebar footer and locked banner) -->
-        <div class="workspace-lower-panel analytics-toolbar">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <!-- Mini Search Input -->
-            <div style="position:relative; width:160px;">
-              <input type="text" id="analytics-quick-search" placeholder="Filter word..."
-                     style="width:100%; height:30px; line-height:28px; background:#0b1120; border:1px solid rgba(255,255,255,0.18); color:#fff; border-radius:4px; padding:0 8px; font-size: 12px; outline:none; box-sizing:border-box;"
-                     autocomplete="off" />
-            </div>
-
-            <!-- Triage Pills with Official TopsCore Grading Colors -->
-            <div class="analytics-triage-pills" style="display:inline-flex; align-items:center; gap:6px;">
-              <button type="button" class="btn btn-sm btn-analytics-pill active" data-filter="all" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important;">
-                ${getSvgIcon('globe', 12)} All (${totalVocabCount})
-              </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="critical" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important; background:rgba(var(--grade-e-rgb, 255, 0, 0),0.15); color:var(--grade-e); border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0),0.35);">
-                <span class="status-dot dot-critical" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-e);margin-right:4px;"></span> Critical &gt;50% (${criticalCount})
-              </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="warning" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.15); color:var(--grade-c); border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35);">
-                <span class="status-dot dot-warning" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-c);margin-right:4px;"></span> Needs Attention (${warningCount})
-              </button>
-              <button type="button" class="btn btn-sm btn-analytics-pill" data-filter="safe" style="font-size: 12px; font-weight:700; height:30px !important; line-height:28px !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.15); color:var(--grade-a); border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.35);">
-                <span class="status-dot dot-safe" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grade-a);margin-right:4px;"></span> Safe (${safeCount})
-              </button>
-            </div>
-          </div>
-
-          <div style="display:flex; align-items:center; gap:12px; font-size: 12px; color:var(--clr-text-muted);">
-            <span>Class Error Average: <strong style="color:${typeof getInvertedGradeColor === 'function' ? getInvertedGradeColor(avgErrorPct) : (avgErrorPct >= 50 ? 'var(--grade-e)' : (avgErrorPct >= 25 ? 'var(--grade-c)' : 'var(--grade-a)'))}; font-size: 12px;">${avgErrorPct}%</strong></span>
-            <span>Total Evaluations: <strong style="color:var(--clr-text-1);">${totalAttemptsAll} attempts</strong></span>
-          </div>
+      <div class="test-analytics-view" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden;">
+        <!-- 4-Column Missed Items Analytics Board (Full Height Top to Bottom) -->
+        <div id="analytics-4col-matrix-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; overflow:hidden;">
+          ${renderThemeExamAnalyticsBoard(themesData, context, themeAnalyticsData)}
         </div>
       </div>
     `;
+    return;
 
     // DataGrid Configuration
     const gridColumns = [

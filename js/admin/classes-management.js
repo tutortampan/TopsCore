@@ -195,7 +195,9 @@ export async function renderClasses(area) {
   function buildFlatList(filter = '') {
     flatList.innerHTML = '';
     const lc = filter.toLowerCase();
-    const filtered = filter ? classes.filter(c => (c.name || '').toLowerCase().includes(lc)) : classes;
+    const isEditOn = typeof window.getGlobalEditMode === 'function' ? window.getGlobalEditMode() : false;
+    const baseClasses = isEditOn ? classes : classes.filter(c => c.is_active !== false);
+    const filtered = filter ? baseClasses.filter(c => (c.name || '').toLowerCase().includes(lc)) : baseClasses;
 
     if (!filtered.length) {
       flatList.innerHTML = '<div style="color:var(--clr-text-muted);font-size: 12px;text-align:center;padding:2rem 1rem;">No classes found</div>';
@@ -786,7 +788,7 @@ export async function loadClassLearningPath(classId) {
           onClick: async (ids) => {
             if (!confirm(`Publish ${ids.length} selected tests?`)) return;
             try {
-              for (const id of ids) await adminUpdate('tests', id, { status: 'PUBLISHED' });
+              await Promise.all(ids.map(id => adminUpdate('tests', id, { status: 'PUBLISHED' })));
               showToast(`Published ${ids.length} tests`, 'success');
               loadClassLearningPath(classId);
             } catch (e) {
@@ -799,7 +801,7 @@ export async function loadClassLearningPath(classId) {
           onClick: async (ids) => {
             if (!confirm(`Unpublish ${ids.length} selected tests?`)) return;
             try {
-              for (const id of ids) await adminUpdate('tests', id, { status: 'DRAFT' });
+              await Promise.all(ids.map(id => adminUpdate('tests', id, { status: 'DRAFT' })));
               showToast(`Set ${ids.length} test(s) to Draft`, 'success');
               loadClassLearningPath(classId);
             } catch (e) {

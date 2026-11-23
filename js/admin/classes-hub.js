@@ -13,9 +13,11 @@ import { detectClassDiscipline } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function renderClassesHub(area) {
-  area.innerHTML = typeof window.getLoadingStateHtml === 'function'
-    ? window.getLoadingStateHtml('Loading Curriculum Hub...')
-    : '<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">Loading Curriculum Hub...</p></div>';
+  if (!area.querySelector('.classes-hub-container') && !area.querySelector('.curriculum-hub-container')) {
+    area.innerHTML = typeof window.getLoadingStateHtml === 'function'
+      ? window.getLoadingStateHtml('Loading Curriculum Hub...')
+      : '<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">Loading Curriculum Hub...</p></div>';
+  }
 
   try {
     const [institutions, programs, classes, levels, classLevels, students, batches, tests, vaultWords] = await Promise.all([
@@ -37,7 +39,7 @@ export async function renderClassesHub(area) {
     const activeTests   = (tests       || []).filter(t => !t.deleted_at);
 
     const batchMap   = new Map((batches || []).filter(b => !b.deleted_at).map(b => [b.id, b]));
-    const activeStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false);
+    const activeStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false && s.program_status !== 'ALUMNI');
 
     // Live Vocabulary Vault target_level counts
     const vaultCountsByLevel = { 0: 0, 1: 0, 2: 0, 3: 0, total: 0 };
@@ -120,7 +122,7 @@ export async function renderClassesHub(area) {
         color: '#c084fc',
         description: 'One continuous tiered discipline sharing identical systemic rules across all levels (1st, 2nd, 3rd, Non-Level): 7×7 repetitive mastery, 4 themes (A–D), and exclusive Vocabulary Vault data binding.',
         levels: ['1st Level', '2nd Level', '3rd Level', 'Non-Level'],
-        skus: ['CMP-1VOCAB', 'CMP-2VOCAB', 'CMP-3VOCAB', 'EVN-VOCAB', 'SHR-VOCAB', 'TMT-VOCAB'],
+        skus: ['CAMP-1VOCAB', 'CAMP-2VOCAB', 'CAMP-3VOCAB', 'EVNK-VOCAB', 'SHRT-VOCAB', 'TPTC-VOCAB'],
         exclusiveModules: ['Vocabulary Mastery - Recognition (10s)', 'Vocabulary Mastery - Spoken (10s)', 'Vocabulary Mastery - Written (15s)'],
         dataSourceLabel: 'Vocabulary Vault (Direct DB Link)'
       },
@@ -132,7 +134,7 @@ export async function renderClassesHub(area) {
         color: '#38bdf8',
         description: 'Elementary English foundations: Grammar structure, sentence formation, and turn-based photo description.',
         levels: ['1st Level', 'Foundation'],
-        skus: ['CMP-1BASIC', 'EVN-BASIC', 'SHR-BASIC', 'TMT-BASIC'],
+        skus: ['CAMP-1BASIC', 'EVNK-BASIC', 'SHRT-BASIC', 'TPTC-BASIC'],
         exclusiveModules: ['Basic English - Description (M1)'],
         dataSourceLabel: 'Item Bank (Basic English Repository)'
       },
@@ -144,7 +146,7 @@ export async function renderClassesHub(area) {
         color: '#95ff00',
         description: 'Speech fluency, audio dialogue turn-taking, and pronunciation evaluation.',
         levels: ['2nd Level', 'Intermediate Speech'],
-        skus: ['CMP-2SPEAK', 'EVN-SPEAK', 'SHR-SPEAK', 'TMT-SPEAK'],
+        skus: ['CAMP-2SPEAK', 'EVNK-SPEAK', 'SHRT-SPEAK', 'TPTC-SPEAK'],
         exclusiveModules: ['Public Speaking (M5, M7)'],
         dataSourceLabel: 'Item Bank (Public Speaking Topics)'
       },
@@ -156,7 +158,7 @@ export async function renderClassesHub(area) {
         color: '#FF8C00',
         description: 'Story comprehension, audio narrative retelling, and contextual expression.',
         levels: ['1st Level', 'Narrative Performance'],
-        skus: ['CMP-1STORY', 'EVN-STORY', 'SHR-STORY', 'TMT-STORY'],
+        skus: ['CAMP-1STORY', 'EVNK-STORY', 'SHRT-STORY', 'TPTC-STORY'],
         exclusiveModules: ['Storytelling (M6)'],
         dataSourceLabel: 'Item Bank (Story Audio & Scripts)'
       },
@@ -568,21 +570,21 @@ export async function renderClassesHub(area) {
           ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">${escapeHtml(shortLvl)}</span>`
           : '<span class="text-xs text-muted">—</span>';
 
-        // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CMP-3VOCAB, CMP-1BASIC, EVN-VOCAB)
+        // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CAMP-3VOCAB, CAMP-1BASIC, EVNK-VOCAB)
         const getStandardClassCode = (c, levelObj, progObj) => {
           if (c.code) return c.code;
           const rawName = (c.name || '').toUpperCase();
-          let progAbbr = 'CMP';
+          let progAbbr = 'CAMP';
           if (rawName.includes('CAMP') || (progObj && (progObj.name || '').toUpperCase().includes('CAMP'))) {
-            progAbbr = 'CMP';
+            progAbbr = 'CAMP';
           } else if (rawName.includes('EVNIKOM') || (progObj && (progObj.name || '').toUpperCase().includes('EVNIKOM'))) {
-            progAbbr = 'EVN';
+            progAbbr = 'EVNK';
           } else if (rawName.includes('SHERATON') || (progObj && (progObj.name || '').toUpperCase().includes('SHERATON'))) {
-            progAbbr = 'SHR';
+            progAbbr = 'SHRT';
           } else if (rawName.includes('TAMATA') || (progObj && (progObj.name || '').toUpperCase().includes('TAMATA'))) {
-            progAbbr = 'TMT';
+            progAbbr = 'TPTC';
           } else if (progObj && progObj.code) {
-            progAbbr = progObj.code.slice(0, 3).toUpperCase();
+            progAbbr = progObj.code.length >= 4 ? progObj.code.slice(0, 4).toUpperCase() : progObj.code.toUpperCase();
           }
 
           let lNum = levelObj?.level_number;
@@ -653,7 +655,7 @@ export async function renderClassesHub(area) {
           const maxT = Math.max(...taskScores);
           const taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
           taskHtml = `
-            <span class="classes-hub-score-view" style="color:var(--task-color, var(--grade-b, #95ff00));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
+            <span class="classes-hub-score-view metric-pct" style="color:var(--task-color, var(--grade-b, #95ff00));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
               ${taskLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${tasks.length})</span>
             </span>
             <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
@@ -674,7 +676,7 @@ export async function renderClassesHub(area) {
           const maxE = Math.max(...examScores);
           const examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
           examHtml = `
-            <span class="classes-hub-score-view" style="color:var(--exam-color, var(--quad-a, #ff2d87));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
+            <span class="classes-hub-score-view metric-pct" style="color:var(--exam-color, var(--quad-a, #ff2d87));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
               ${examLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${exams.length})</span>
             </span>
             <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
@@ -700,7 +702,9 @@ export async function renderClassesHub(area) {
             </td>
             <!-- 4. LEVEL -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${levelHtml}</td>
-            <!-- 5. CLASS NAME -->
+            <!-- 5. CODE (Adjacent to Level & Identity before Class Name SSOT) -->
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
+            <!-- 6. CLASS NAME -->
             <td style="font-size:12px;white-space:nowrap;padding:8px 10px;">
               <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);cursor:pointer;transition:color 0.15s ease;"
                     onmouseover="this.style.color='#38bdf8'"
@@ -710,8 +714,6 @@ export async function renderClassesHub(area) {
                 ${escapeHtml(cls.name)}
               </span>
             </td>
-            <!-- 6. CODE -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
             <!-- 7. STUDENTS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${studentsHtml}</td>
             <!-- 8. SCOPE / MODALITY -->
@@ -724,7 +726,7 @@ export async function renderClassesHub(area) {
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${examHtml}</td>
             <!-- 12. STATUS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
-              <span style="cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
+              <span class="status-tag ${cls.is_active ? 'status-active' : 'status-inactive'}" data-status="${cls.is_active ? 'active' : 'inactive'}" style="cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
                 ${cls.is_active ? 'ACTIVE' : 'INACTIVE'}
               </span>
               <span class="edit-mode-only" style="margin-left:6px;gap:4px;display:none;">
@@ -808,6 +810,9 @@ export async function renderClassesHub(area) {
         // Sub Panel Right: Action buttons
         rightSubPanelHtml = `
           <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-color:#ff2d87;color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
+              ${getSvgIcon('award', 13)} Exam Rules ↗
+            </button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
               ${getSvgIcon('book-open', 14)} Open Vault
             </button>
@@ -838,6 +843,9 @@ export async function renderClassesHub(area) {
 
         rightSubPanelHtml = `
           <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-color:#ff2d87;color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
+              ${getSvgIcon('award', 13)} Exam Rules ↗
+            </button>
             <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
               ${editBtnLabel}
             </button>
@@ -871,6 +879,9 @@ export async function renderClassesHub(area) {
         // Master Directory Sub Panel Right: Controls
         rightSubPanelHtml = `
           <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-color:#ff2d87;color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
+              ${getSvgIcon('award', 13)} Exam Rules ↗
+            </button>
             <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
               ${getSvgIcon('book-open', 14)} Open Vault
             </button>
@@ -916,7 +927,7 @@ export async function renderClassesHub(area) {
       // Workstation Datagrid View (Strict 100vh lock, zero outer scrollbar)
       area.innerHTML = isVocab ? `
         <!-- VOCABULARY DISCIPLINE: Cards Top & Full-Width Datagrid Bottom (Workspace Dual-Zone Vertical Split) -->
-        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; height:100% !important; overflow:hidden !important; gap:10px; padding:10px; box-sizing:border-box; background:#090d16;">
+        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; height:100% !important; overflow:hidden !important; gap:10px; padding:0; box-sizing:border-box; background:#090d16;">
 
           <!-- TOP ROW: Vocabulary Governance 4-Card Deck (flex: 0 0 auto) -->
           <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1.05fr; gap:10px; flex:0 0 auto; box-sizing:border-box;">
@@ -1103,8 +1114,8 @@ export async function renderClassesHub(area) {
                 <col style="width:75px;">
                 <col style="width:95px;">
                 <col style="width:55px;">
-                <col style="width:170px;">
                 <col style="width:110px;">
+                <col style="width:170px;">
                 <col style="width:65px;">
                 <col style="width:185px;">
                 <col style="width:320px;">
@@ -1126,8 +1137,8 @@ export async function renderClassesHub(area) {
                   <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INST ${getSortIcon('institution')}</th>
                   <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
                   <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
-                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
                   <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
                   <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
                   <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
                   <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>
@@ -1145,7 +1156,7 @@ export async function renderClassesHub(area) {
         </div>
       ` : `
         <!-- NON-VOCAB / MASTER DIRECTORY: Full-width Datagrid View -->
-        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow:hidden !important; gap:0; padding:10px; box-sizing:border-box; background:#090d16;">
+        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow:hidden !important; gap:0; padding:0; box-sizing:border-box; background:#090d16;">
 
           <div class="table-wrap sticky-first" style="flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow-y:auto !important; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
             <table class="datagrid-table" style="width:100%; min-width:1355px; border-collapse:collapse; table-layout:fixed;">
@@ -1154,8 +1165,8 @@ export async function renderClassesHub(area) {
                 <col style="width:75px;">
                 <col style="width:95px;">
                 <col style="width:55px;">
-                <col style="width:170px;">
                 <col style="width:110px;">
+                <col style="width:170px;">
                 <col style="width:65px;">
                 <col style="width:185px;">
                 <col style="width:320px;">
@@ -1177,8 +1188,8 @@ export async function renderClassesHub(area) {
                   <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INSTITUTION ${getSortIcon('institution')}</th>
                   <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
                   <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
-                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
                   <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
                   <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
                   <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
                   <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>

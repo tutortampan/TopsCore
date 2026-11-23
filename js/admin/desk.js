@@ -812,18 +812,19 @@ export async function renderDataHealth(container) {
     }
   };
 
-  // Load Database Counts
+  // Load Database Counts (OPTIMIZATION: head-only count query avoids fetching 8,827 rows)
   const loadEntityCounts = async () => {
     try {
-      const [students, Tests, attempts] = await Promise.all([
+      const sb = typeof getSupabase === 'function' ? await getSupabase() : null;
+      const [students, Tests, attCountRes] = await Promise.all([
         adminFetchAll('students', 'id, deleted_at').catch(() => []),
         adminFetchAll('tests', 'id, deleted_at').catch(() => []),
-        adminFetchAll('attempts', 'id').catch(() => [])
+        sb ? sb.from('attempts').select('*', { count: 'exact', head: true }) : Promise.resolve({ count: 0 })
       ]);
 
       const activeStds = (students || []).filter(s => !s.deleted_at).length;
       const activeTests = (Tests || []).filter(e => !e.deleted_at).length;
-      const totalAttempts = (attempts || []).length;
+      const totalAttempts = attCountRes?.count ?? 0;
 
       const sEl = document.getElementById('metric-students');
       if (sEl) sEl.textContent = activeStds;

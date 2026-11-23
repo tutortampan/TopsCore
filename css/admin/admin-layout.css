@@ -149,7 +149,7 @@ body {
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 10px !important;
+  gap: 8px !important;
   border-bottom: 1px solid var(--fm-border-subtle) !important;
   background: var(--fm-bg-topbar) !important;
   flex-shrink: 0 !important;
@@ -420,6 +420,148 @@ body {
   flex-shrink: 0 !important;
 }
 
+/* Tenant Switcher Capsule in Sidebar Header (Top Corner Alongside Exit Button) */
+.tenant-switcher-capsule {
+  width: 100% !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  padding: 2px !important;
+  box-sizing: border-box !important;
+}
+
+.sidebar-corner-top .tenant-switcher-capsule {
+  flex: 1 1 0% !important;
+  min-width: 0 !important;
+  width: auto !important;
+}
+
+.btn-tenant-toggle {
+  flex: 1 1 0% !important;
+  height: 100% !important;
+  border: none !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.btn-tenant-toggle:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.btn-tenant-toggle.active {
+  background: var(--primary-tactical, #38bdf8) !important;
+  color: #060b18 !important;
+}
+
+.btn-tenant-toggle[data-tenant="CEC"].active {
+  background: var(--grade-b, #95ff00) !important;
+  color: #060b18 !important;
+}
+
+.btn-tenant-toggle[data-tenant="TOP"].active {
+  background: var(--grade-d, #FF8C00) !important;
+  color: #060b18 !important;
+}
+
+/* Theme Switcher Capsule in Sidebar Footer (40px Container Alignment: Light | Navy | Dark) */
+.theme-switcher-capsule {
+  width: 100% !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 3px !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 6px !important;
+  padding: 2px !important;
+  box-sizing: border-box !important;
+}
+
+.btn-theme-toggle {
+  flex: 1 1 0% !important;
+  height: 100% !important;
+  border: none !important;
+  border-radius: 4px !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+}
+
+.btn-theme-toggle:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.btn-theme-toggle.active {
+  background: var(--primary-tactical, #38bdf8) !important;
+  color: #060b18 !important;
+}
+
+.btn-theme-toggle[data-theme="light"].active {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.btn-theme-toggle[data-theme="navy"].active {
+  background: #0284c7 !important;
+  color: #ffffff !important;
+}
+
+.btn-theme-toggle[data-theme="dark"].active,
+.btn-theme-toggle[data-theme="black"].active {
+  background: #27272a !important;
+  color: #ffffff !important;
+}
+
+/* Multi-Tenant Regular Admin Mode Invariants (CEC vs TOP) */
+/* When in regular admin mode (CEC or TOP), Domain D disappears completely, and Domain A shows Administration & Tutor Desk */
+body.tenant-cec .nav-domain-group[data-domain="admin"] .admin-nav-item[data-sub="classes-hub"],
+body.tenant-cec .nav-domain-group[data-domain="admin"] .admin-nav-item[data-sub="organization"],
+body.tenant-top .nav-domain-group[data-domain="admin"] .admin-nav-item[data-sub="classes-hub"],
+body.tenant-top .nav-domain-group[data-domain="admin"] .admin-nav-item[data-sub="organization"],
+body.tenant-cec .nav-domain-group[data-domain="desk"],
+body.tenant-top .nav-domain-group[data-domain="desk"],
+body.tenant-cec #divider-c-d,
+body.tenant-top #divider-c-d {
+  display: none !important;
+}
+
+.btn-tenant-toggle[data-tenant="CEC"].active {
+  background: var(--grade-b, #95ff00) !important;
+  color: #060b18 !important;
+}
+
+.btn-tenant-toggle[data-tenant="TOP"].active {
+  background: var(--grade-d, #FF8C00) !important;
+  color: #060b18 !important;
+}
+
 .sidebar-corner-top .sidebar-corner-text,
 .sidebar-corner-bottom .sidebar-corner-text {
   flex: 1 1 auto !important;
@@ -550,11 +692,11 @@ body {
 
 .topbar-tab-card.active,
 .topbar-tab-folder.active {
-  background: var(--fm-bg-main, #090D16) !important;
+  background: var(--topbar-tab-active-bg, #1e293b) !important;
   color: #ffffff !important;
   border-color: rgba(99, 102, 241, 0.5) !important;
-  border-top: 2px solid var(--fm-accent-tactical, #6366f1) !important;
-  border-bottom: 1px solid var(--fm-bg-main, #090D16) !important;
+  border-top: 2px solid var(--fm-accent-tactical, #38bdf8) !important;
+  border-bottom: 1px solid var(--topbar-tab-active-bg, #1e293b) !important;
   box-shadow: none !important;
 }
 

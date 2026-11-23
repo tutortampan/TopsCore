@@ -2360,7 +2360,7 @@ export function formatTestDisplay(test) {
   // 3. Determine Level and Class Name
   const isLevel0 = test.levels?.level_number === 0 ||
                    String(test.levels?.name || '').toLowerCase().includes('non-level') ||
-                   shell.startsWith('EVN-') || shell.startsWith('SHR-') || shell.startsWith('TMT-') ||
+                   shell.startsWith('EVNK-') || shell.startsWith('EVN-') || shell.startsWith('SHRT-') || shell.startsWith('SHR-') || shell.startsWith('TPTC-') || shell.startsWith('TMT-') ||
                    /^(Evnikom|Sheraton|Tamata)/i.test(rawTitle) ||
                    /^(Evnikom|Sheraton|Tamata)/i.test(test.classes?.name || '');
 
@@ -2404,9 +2404,9 @@ export function formatTestDisplay(test) {
       }
     }
 
-    // Fallback from shell_code (e.g. "CMP-3VCB-...", "2B1-...", "3A-...")
+    // Fallback from shell_code (e.g. "CAMP-3VCB-...", "CMP-3VCB-...", "2B1-...", "3A-...")
     if (!levelOrdinal) {
-      const shellLvl = shell.match(/(?:CMP-)?([123])/);
+      const shellLvl = shell.match(/(?:CAMP-|CMP-)?([123])/);
       if (shellLvl) {
         const n = parseInt(shellLvl[1], 10);
         levelOrdinal = n === 1 ? '1st' : n === 2 ? '2nd' : n === 3 ? '3rd' : `${n}th`;
@@ -2471,7 +2471,7 @@ export function detectClassDiscipline(classObjOrName) {
   if (/\b(vocab|vocabulary)\b/i.test(name) || /-(?:[0-9]*VCB|VOCAB)\b/i.test(code)) {
     return 'VOCABULARY';
   }
-  if (/\b(basic\s*english|basic)\b/i.test(name) || /-(?:[0-9]*BAS|BASIC)\b/i.test(code)) {
+  if (/\b(basic\s*english|basic)\b/i.test(name) || /-(?:[0-9]*BAS|BASIC|BSC)\b/i.test(code)) {
     return 'BASIC_ENGLISH';
   }
   if (/\b(speaking|public\s*speaking)\b/i.test(name) || /-(?:[0-9]*SPK|SPEAK)\b/i.test(code)) {
@@ -2479,6 +2479,15 @@ export function detectClassDiscipline(classObjOrName) {
   }
   if (/\b(storytelling|story)\b/i.test(name) || /-(?:[0-9]*STT|STORY)\b/i.test(code)) {
     return 'STORYTELLING';
+  }
+  if (/\bgrammar\s*for\s*speaking\b/i.test(name) || /-(?:[0-9]*GFS|GFORS)\b/i.test(code)) {
+    return 'GFS';
+  }
+  if (/\bpronunciation\b/i.test(name) || /-(?:[0-9]*PRN|PRON|PRONC)\b/i.test(code)) {
+    return 'PRONUNCIATION';
+  }
+  if (/\bgrammar\b/i.test(name) || /-(?:[0-9]*GRM|GRAM|GRMMR)\b/i.test(code)) {
+    return 'GRAMMAR';
   }
   return 'GENERAL';
 }
@@ -2491,5 +2500,46 @@ export function detectClassDiscipline(classObjOrName) {
 export function isVocabularyClass(classObjOrName) {
   return detectClassDiscipline(classObjOrName) === 'VOCABULARY';
 }
+
+/**
+ * Strict boolean guard: is this class evaluated manually by tutors rather than online TopsCore CBT tests?
+ * - All Speaking, Storytelling, Grammar, GFS, Pronunciation classes are MANUAL
+ * - Vocabulary 1st Step (Vocab 1) is MANUAL (weekly word deposits W1..W4 + PT)
+ * - Vocabulary 2nd & 3rd Step + Non-level Vocab + Basic English are CBT
+ * @param {Object|string} classObjOrName
+ * @returns {boolean}
+ */
+export function isManualEvaluationClass(classObjOrName) {
+  if (!classObjOrName) return false;
+  const discipline = detectClassDiscipline(classObjOrName);
+  if (discipline === 'BASIC_ENGLISH') return false; // Basic English uses CBT Module M1
+
+  const name = typeof classObjOrName === 'string' ? classObjOrName : (classObjOrName.name || '');
+  const code = typeof classObjOrName === 'object' ? (classObjOrName.code || '') : '';
+  
+  if (discipline === 'VOCABULARY') {
+    // Vocab 1st Step is Manual per official curriculum rules
+    const isLevel1 = /\b1st\b|level\s*1|-1(?:VCB|VOCAB)/i.test(name) || /-1(?:VCB|VOCAB)/i.test(code);
+    return isLevel1;
+  }
+
+  return true;
+}
+
+export function isCbtEvaluationClass(classObjOrName) {
+  return !isManualEvaluationClass(classObjOrName);
+}
+
+// ── EXAM RULES & FINAL ASSESSMENT SSOT ENGINE ──
+export {
+  EXAM_RULES_SCHEMA,
+  getCertificatePredicate,
+  calculateWeeklyVocabPercentage,
+  calculateStepVocabAverage,
+  calculateSubjectCompositeScore,
+  calculateMainExaminerScore,
+  calculateSpeakingTutorScore,
+  generateStudentCertificateTranscript
+} from './admin/exam-rules-engine.js';
 
 

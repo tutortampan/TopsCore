@@ -19,7 +19,7 @@ Run the universal table standardization test:
 npm.cmd run test:table
 ```
 
-## The 11 Pillars of Table Standardization
+## The 13 Pillars of Table Standardization
 1. **Uniform 12px Font Size**: Table body cells and headers enforce 12px Inter.
 2. **Superscript Tag Standard (1.0em)**: Tags/ordinal numbers (`1st`, `2nd`, `3rd`, `th`) scaled cleanly at 1.0em.
 3. **Table Spatial Margins & Viewport Lock**: Strict 10px spacing around the table, zero outer page scroll.
@@ -31,3 +31,5 @@ npm.cmd run test:table
 9. **Universal Master Edit Mode White Excel Gridlines**: Clean `1px solid rgba(255, 255, 255, 0.12)` gridlines.
 10. **Universal Zero-Truncation Invariant**: Single-line non-wrapped text (`white-space: nowrap !important;`), zero ellipsis/clipping.
 11. **Level Promotion Passing Threshold**: Grade C (60%), Grade F (forgiven), or Grade R (remedial).
+12. **Super-Header & Sub-Header Exact Group Color Match**: Header borders and text themes matching parent quadrants.
+13. **Universal Zero False-Red & Code-After-Numbering Sequence**: Pending grades render neutral slate (`#64748b`), never red; entity codes immediately follow numbering before long descriptive titles; demographics enforce standard `Male`/`Female` (strictly zero `Mister`/`Miss`); legends dock in Sub Panel (`setBottomInfobar`).

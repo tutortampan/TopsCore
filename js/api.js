@@ -16,8 +16,8 @@ export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calcula
 // ============================================================
 
 const MOCK_INSTITUTIONS = [
-  { id: '11111111-1111-1111-1111-111111111111', name: 'General English Program' },
-  { id: '11111111-1111-1111-1111-222222222222', name: 'Academic English Program' }
+  { id: '11111111-1111-1111-1111-111111111111', code: 'CEC', name: 'CEC', full_name: 'Cake English Course' },
+  { id: '11111111-1111-1111-1111-222222222222', code: 'TOP', name: 'TOP', full_name: 'Top Occupational Program' }
 ];
 
 const MOCK_PROGRAMS = [
@@ -59,6 +59,37 @@ export function normalizeStudentNameForMatch(name) {
   if (!name) return '';
   const stripped = stripHonorific(name);
   return stripped.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Dual-Tier Institution Identity Architecture Helpers (SSOT per DECISION-076 & AGENTS.md §1.5)
+ * Tier 1: Shortcode (CEC / TOP) for dense workstation tables, metadata, SKU, compact badges.
+ * Tier 2: Fullname (Cake English Course / Top Occupational Program) for profile cards, certificates, modal headers.
+ */
+export function getInstitutionShortcode(inst) {
+  if (!inst) return '—';
+  if (typeof inst === 'string') {
+    const s = inst.trim().toUpperCase();
+    if (s.includes('CAKE') || s === 'CEC') return 'CEC';
+    if (s.includes('TOP') || s.includes('OCCUPATIONAL') || s.includes('OPTIMAL')) return 'TOP';
+    return inst;
+  }
+  if (inst.code) return inst.code.toUpperCase();
+  if (inst.name) return getInstitutionShortcode(inst.name);
+  return '—';
+}
+
+export function getInstitutionFullname(inst) {
+  if (!inst) return '—';
+  if (typeof inst === 'string') {
+    const s = inst.trim().toUpperCase();
+    if (s === 'CEC' || s.includes('CAKE')) return 'Cake English Course';
+    if (s === 'TOP' || s.includes('OCCUPATIONAL') || s.includes('OPTIMAL')) return 'Top Occupational Program';
+    return inst;
+  }
+  if (inst.code === 'CEC' || (inst.name && inst.name.toUpperCase().includes('CAKE'))) return 'Cake English Course';
+  if (inst.code === 'TOP' || (inst.name && (inst.name.toUpperCase().includes('OCCUPATIONAL') || inst.name.toUpperCase().includes('TOP')))) return 'Top Occupational Program';
+  return inst.name || inst.code || '—';
 }
 
 /**
@@ -252,16 +283,116 @@ function isPlaceholderUrl() {
 }
 
 const _apiCache = new Map();
-const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5-minute cache for static master records
+const DEFAULT_CACHE_TTL = 5 * 60 * 1000; // 5-minute in-memory cache for runtime lookups
+
+// ── Persistent Device LocalStorage Engine (Zero-Egress & Instant Multi-Device Boot) ──
+function _getPersistentStorage() {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) return window.localStorage;
+    if (typeof localStorage !== 'undefined') return localStorage;
+    if (typeof globalThis !== 'undefined' && globalThis.localStorage) return globalThis.localStorage;
+  } catch (_) {}
+  return null;
+}
+
+const MASTER_STORAGE_PREFIX = 'topscore_mc_';
+const MASTER_STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7-day weekly academic cycle (Ahad to Ahad)
+
+// Sunday (Ahad) boundary reset helper in WITA (UTC+8)
+function _isSundayExpired(cachedTimestamp, now = Date.now()) {
+  const age = now - cachedTimestamp;
+  if (age >= MASTER_STORAGE_TTL_MS) return true;
+
+  const WITA_OFFSET_MS = 8 * 60 * 60 * 1000;
+  const nowWita = new Date(now + WITA_OFFSET_MS);
+  const dayOfWeek = nowWita.getUTCDay(); // 0 is Sunday
+  
+  const sundayStartWita = new Date(nowWita);
+  sundayStartWita.setUTCDate(nowWita.getUTCDate() - dayOfWeek);
+  sundayStartWita.setUTCHours(0, 0, 0, 0);
+  const lastSundayTimestamp = sundayStartWita.getTime() - WITA_OFFSET_MS;
+
+  return cachedTimestamp < lastSundayTimestamp;
+}
+
+function _readMasterStorage(cacheKey) {
+  try {
+    const storage = _getPersistentStorage();
+    if (!storage) return null;
+    const raw = storage.getItem(MASTER_STORAGE_PREFIX + cacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.timestamp && parsed.data !== undefined) {
+      if (!_isSundayExpired(parsed.timestamp)) {
+        return parsed.data;
+      }
+      storage.removeItem(MASTER_STORAGE_PREFIX + cacheKey);
+    }
+  } catch (_) {}
+  return null;
+}
+
+export function refreshWeeklyDeviceCache() {
+  _clearMasterStorage();
+  _apiCache.clear();
+  clearAdminCache();
+  console.log('[TopsCore] Weekly device cache successfully refreshed!');
+}
+if (typeof window !== 'undefined') {
+  window.refreshWeeklyDeviceCache = refreshWeeklyDeviceCache;
+}
+
+function _writeMasterStorage(cacheKey, data) {
+  try {
+    const storage = _getPersistentStorage();
+    if (!storage || data === undefined) return;
+    storage.setItem(MASTER_STORAGE_PREFIX + cacheKey, JSON.stringify({
+      timestamp: Date.now(),
+      data
+    }));
+  } catch (_) {}
+}
+
+function _clearMasterStorage(table = null) {
+  try {
+    const storage = _getPersistentStorage();
+    if (!storage) return;
+    if (!table) {
+      const keysToRemove = [];
+      for (let i = 0; i < storage.length; i++) {
+        const k = storage.key(i);
+        if (k && k.startsWith(MASTER_STORAGE_PREFIX)) keysToRemove.push(k);
+      }
+      keysToRemove.forEach(k => storage.removeItem(k));
+    } else {
+      const normTable = (table || '').toLowerCase().replace('-', '_');
+      const targetPrefix = MASTER_STORAGE_PREFIX + normTable;
+      const keysToRemove = [];
+      for (let i = 0; i < storage.length; i++) {
+        const k = storage.key(i);
+        if (k && (k.startsWith(targetPrefix + '|') || k === targetPrefix || k.startsWith(targetPrefix + '_'))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach(k => storage.removeItem(k));
+    }
+  } catch (_) {}
+}
 
 export function clearApiCache(prefix = null, { keepPersistent = false } = {}) {
   if (!prefix) {
     _apiCache.clear();
     clearAdminCache();
-    if (!keepPersistent) _clearPersistentVaultCache();
+    if (!keepPersistent) {
+      _clearPersistentVaultCache();
+      _clearMasterStorage();
+    }
   } else {
     for (const key of _apiCache.keys()) {
       if (key.startsWith(prefix)) _apiCache.delete(key);
+    }
+    if (!keepPersistent) {
+      _clearMasterStorage(prefix);
     }
     if (prefix === 'tests' || prefix.startsWith('tests')) {
       clearAdminCache('tests');
@@ -278,8 +409,17 @@ async function withCache(key, fetcher, ttl = DEFAULT_CACHE_TTL) {
   if (cached && (now - cached.timestamp < ttl)) {
     return Array.isArray(cached.data) ? [...cached.data] : { ...cached.data };
   }
+  // Persistent device cache hit
+  const persistent = _readMasterStorage(key);
+  if (persistent !== null) {
+    _apiCache.set(key, { data: persistent, timestamp: now });
+    return Array.isArray(persistent) ? [...persistent] : { ...persistent };
+  }
   const data = await fetcher();
   _apiCache.set(key, { data, timestamp: now });
+  if (data) {
+    _writeMasterStorage(key, data);
+  }
   return Array.isArray(data) ? [...data] : { ...data };
 }
 
@@ -378,7 +518,7 @@ export async function fetchStudentsByProgram(programId, batchId = null, activeOn
       try {
         const sb = await getSupabase();
         let query = sb.from('students')
-          .select('id, name, gender, program_id, batch_id, is_active, batches!batch_id(id, is_active)')
+          .select('id, name, nis, gender, program_id, batch_id, is_active, batches!batch_id(id, is_active)')
           .eq('program_id', programId)
           .is('deleted_at', null);
         if (activeOnly) {
@@ -446,7 +586,7 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const sb = await getSupabase();
   const { data: student, error } = await sb
     .from('students')
-    .select('id, name, gender, pin_hash, is_active, program_id, institution_id, batch_id, level_id, batches(current_level_id)')
+    .select('id, name, nis, gender, pin_hash, is_active, program_id, institution_id, batch_id, level_id, batches(current_level_id)')
     .eq('id', studentId)
     .single();
 
@@ -478,6 +618,7 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
     success: true,
     student: {
       id: student.id,
+      nis: student.nis || null,
       name: student.name,
       gender: student.gender,
       batch_id: student.batch_id,
@@ -1042,7 +1183,7 @@ export const DEFAULT_DISCIPLINE_GOVERNANCE = {
       LEVEL_1: {
         levelNumber: 1,
         name: '1st Level',
-        sku: 'CMP-1VOCAB',
+        sku: 'CAMP-1VOCAB',
         scope: 'Words & Phrases',
         scopeShort: 'Words & Phrases',
         taskRepetitions: 14,
@@ -1061,7 +1202,7 @@ export const DEFAULT_DISCIPLINE_GOVERNANCE = {
       LEVEL_2: {
         levelNumber: 2,
         name: '2nd Level',
-        sku: 'CMP-2VOCAB',
+        sku: 'CAMP-2VOCAB',
         scope: '100% Words Only',
         scopeShort: '100% Words Only',
         taskRepetitions: 7,
@@ -1080,7 +1221,7 @@ export const DEFAULT_DISCIPLINE_GOVERNANCE = {
       LEVEL_3: {
         levelNumber: 3,
         name: '3rd Level',
-        sku: 'CMP-3VOCAB',
+        sku: 'CAMP-3VOCAB',
         scope: 'Words & Phrases',
         scopeShort: 'Words & Phrases',
         taskRepetitions: 14,
@@ -1099,7 +1240,7 @@ export const DEFAULT_DISCIPLINE_GOVERNANCE = {
       NON_LEVEL: {
         levelNumber: 0,
         name: 'Non-Level',
-        sku: 'EVN-VOCAB, SHR-VOCAB, TMT-VOCAB',
+        sku: 'EVNK-VOCAB, SHRT-VOCAB, TPTC-VOCAB',
         scope: 'Words & Phrases',
         scopeShort: 'Words & Phrases',
         taskRepetitions: 14,
@@ -2762,6 +2903,7 @@ export function clearAdminCache(table = null) {
     for (const key of _adminCache.keys()) {
       if (key.startsWith(normTable + '|')) _adminCache.delete(key);
     }
+    _clearMasterStorage(normTable);
     // Cross-table dependencies: if batches, programs, institutions or levels change,
     // clear students and progress caches which embed these related records
     if (['batches', 'programs', 'institutions', 'levels'].includes(normTable)) {
@@ -2770,6 +2912,7 @@ export function clearAdminCache(table = null) {
           _adminCache.delete(key);
         }
       }
+      _clearMasterStorage('classes');
     }
     if (normTable === 'programs' && typeof window !== 'undefined' && typeof window.loadSidebarPrograms === 'function') {
       window.loadSidebarPrograms();
@@ -2782,12 +2925,21 @@ export function clearAdminCache(table = null) {
     }
   } else {
     _adminCache.clear();
+    _clearMasterStorage();
     clearApiCache('vault');
     if (typeof window !== 'undefined') {
       if (typeof window.loadSidebarPrograms === 'function') window.loadSidebarPrograms();
       if (typeof window.loadSidebarClasses === 'function') window.loadSidebarClasses();
     }
   }
+}
+
+function _safeClone(val) {
+  if (val == null) return val;
+  if (typeof structuredClone === 'function') {
+    try { return structuredClone(val); } catch (_) {}
+  }
+  return JSON.parse(JSON.stringify(val));
 }
 
 const MASTER_TABLES_TTL = new Set([
@@ -2799,25 +2951,40 @@ const MASTER_TABLES_TTL = new Set([
   'modules',
   'site_settings',
   'vocabulary_vault',
-  'tests'
+  'tests',
+  'class_levels'
 ]);
-const MASTER_CACHE_DURATION_MS = 5 * 60 * 1000; // 5-minute TTL for high-frequency master catalogs
+const MASTER_CACHE_DURATION_MS = 5 * 60 * 1000; // 5-minute TTL for high-frequency in-memory catalogs
+const DYNAMIC_TABLES_TTL = 3 * 60 * 1000; // 3-minute TTL for student rosters and transactional records
 
 export async function adminFetchAll(table, select = '*', filters = {}, forceRefresh = false) {
   const normTable = (table || '').toLowerCase().replace('-', '_');
   const cacheKey = normTable + '|' + select + '|' + JSON.stringify(filters);
+  const isMasterTable = MASTER_TABLES_TTL.has(normTable);
 
   if (!forceRefresh && _adminCache.has(cacheKey)) {
     const entry = _adminCache.get(cacheKey);
-    const ttl = MASTER_TABLES_TTL.has(normTable) ? MASTER_CACHE_DURATION_MS : 30 * 1000;
+    const ttl = isMasterTable ? MASTER_CACHE_DURATION_MS : DYNAMIC_TABLES_TTL;
     if (entry && typeof entry === 'object' && entry.timestamp) {
       if (Date.now() - entry.timestamp < ttl) {
-        return JSON.parse(JSON.stringify(entry.data));
+        return _safeClone(entry.data);
       } else {
         _adminCache.delete(cacheKey);
       }
     } else if (entry) {
-      return JSON.parse(JSON.stringify(entry));
+      return _safeClone(entry);
+    }
+  }
+
+  // 2. Persistent device localStorage hit (Master tables, instant boot across devices, ~1ms)
+  if (!forceRefresh && isMasterTable) {
+    const persistentData = _readMasterStorage(cacheKey);
+    if (persistentData !== null) {
+      _adminCache.set(cacheKey, {
+        data: _safeClone(persistentData),
+        timestamp: Date.now()
+      });
+      return _safeClone(persistentData);
     }
   }
 
@@ -2833,7 +3000,10 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       'site_settings',
       'levels',
       'modules',
-      'class_levels'   // junction table — no deleted_at column
+      'class_levels',   // junction table — no deleted_at column
+      'student_academic_assessments',
+      'student_final_examinations',
+      'v_student_step_summaries'
     ];
     if (!noDeletedAtTables.includes(normTable)) {
       query = query.is('deleted_at', null);
@@ -2874,9 +3044,14 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
     }
 
     _adminCache.set(cacheKey, {
-      data: JSON.parse(JSON.stringify(allData || [])),
+      data: _safeClone(allData || []),
       timestamp: Date.now()
     });
+
+    if (isMasterTable && allData && allData.length > 0) {
+      _writeMasterStorage(cacheKey, allData);
+    }
+
     return allData || [];
   } catch (e) {
     console.warn(`adminFetchAll failed for ${table}:`, e.message);
@@ -3046,32 +3221,35 @@ export async function logCheatingEvent(studentId, testId, action, detail) {
 }
 
 export async function fetchTests(filters = {}) {
-  const sb = await getSupabase();
-  try {
-    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
-    if (filters.class_id) query = query.eq('class_id', filters.class_id);
-    if (filters.class_ids && Array.isArray(filters.class_ids)) {
-      if (filters.class_ids.length === 0) return [];
-      query = query.in('class_id', filters.class_ids);
-    }
-    if (filters.level_id) query = query.eq('level_id', filters.level_id);
-    if (filters.program_id) query = query.eq('program_id', filters.program_id);
-    if (!filters.include_deleted) {
-      query = query.is('deleted_at', null);
-    }
+  const cacheKey = 'tests|' + JSON.stringify(filters);
+  return withCache(cacheKey, async () => {
+    const sb = await getSupabase();
+    try {
+      let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
+      if (filters.class_id) query = query.eq('class_id', filters.class_id);
+      if (filters.class_ids && Array.isArray(filters.class_ids)) {
+        if (filters.class_ids.length === 0) return [];
+        query = query.in('class_id', filters.class_ids);
+      }
+      if (filters.level_id) query = query.eq('level_id', filters.level_id);
+      if (filters.program_id) query = query.eq('program_id', filters.program_id);
+      if (!filters.include_deleted) {
+        query = query.is('deleted_at', null);
+      }
 
-    const { data, error } = await query.order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
-    if (!error && data) {
-      return data.map(a => ({
-        ...a,
-        prerequisite_id: a.prerequisite_test_id || a.prerequisite_id,
-        prerequisite_test_id: a.prerequisite_test_id || a.prerequisite_id
-      }));
+      const { data, error } = await query.order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
+      if (!error && data) {
+        return data.map(a => ({
+          ...a,
+          prerequisite_id: a.prerequisite_test_id || a.prerequisite_id,
+          prerequisite_test_id: a.prerequisite_test_id || a.prerequisite_id
+        }));
+      }
+    } catch (err) {
+      console.warn('fetchTests fallback notice:', err.message);
     }
-  } catch (err) {
-    console.warn('fetchTests fallback notice:', err.message);
-  }
-  return [];
+    return [];
+  }, 2 * 60 * 1000);
 }
 
 export async function fetchAssignments(filters = {}) {
@@ -5695,12 +5873,17 @@ export async function upsertDynamicTestShell(config) {
   const isPhrase = category === 'phrases' || modulePrefix === 'PHRASE';
   const isUnified = category === 'unified' || modulePrefix === 'UNIFIED';
 
-  // Standardized Shell Code: PROGRAM-LEVEL_CLASS-CODE-TYPE (SSOT AGENTS.md § 2.6 / DECISION-056)
-  // e.g. CMP-3VCB-A1-TASK, CMP-3VCB-D-EXAM
+  // Standardized Shell Code: PROGRAM-LEVEL_CLASS-CODE-TYPE (SSOT AGENTS.md § 2.6 / DECISION-077)
+  // e.g. CAMP-3VCB-A1-TASK, CAMP-3VCB-D-EXAM
   const cleanTopCode = topicCode ? String(topicCode).replace(/^[A-Za-z]/, '') : '1';
   const cleanTitle = (topicName || themeName || '').replace(/["']/g, '').trim();
 
-  const progCode = (config.programCode || 'CMP').toUpperCase();
+  let rawProgCode = (config.programCode || 'CAMP').toUpperCase();
+  if (rawProgCode === 'CMP') rawProgCode = 'CAMP';
+  else if (rawProgCode === 'EVN' || rawProgCode === 'EEC') rawProgCode = 'EVNK';
+  else if (rawProgCode === 'SHR' || rawProgCode === 'SHERATON') rawProgCode = 'SHRT';
+  else if (rawProgCode === 'TMT' || rawProgCode === 'TAMATA') rawProgCode = 'TPTC';
+  const progCode = rawProgCode;
   const classShort = (config.classShort || (levelNum === 0 ? 'VCB' : `${levelNum}VCB`)).toUpperCase();
 
   const codeThemeTopic = levelNum === 0 ? `0${themeCode}${cleanTopCode}` : `${themeCode}${cleanTopCode}`;
@@ -5712,7 +5895,7 @@ export async function upsertDynamicTestShell(config) {
         ? (isTest ? `${progCode}-${classShort}-${codeThemeExam}-PHRASES-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-PHRASES-TASK`)
         : (isTest ? `${progCode}-${classShort}-${codeThemeExam}-WORDS-EXAM` : `${progCode}-${classShort}-${codeThemeTopic}-WORDS-TASK`));
 
-  // Standardized Test Name (SSOT AGENTS.md § 2.6 / DECISION-056):
+  // Standardized Test Name (SSOT AGENTS.md § 2.6 / DECISION-077):
   // Formula: [LEVEL_ORDINAL] [CLASS_NAME] [TASK/EXAM] [CODE] - [TOPIC/THEME_NAME]
   // On Level 0 (non-leveled), [LEVEL_ORDINAL] is omitted per Zero-Level Omission Invariant
   const ordinal = toOrdinal(levelNum);

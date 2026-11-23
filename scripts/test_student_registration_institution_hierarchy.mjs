@@ -91,11 +91,11 @@ async function runTestSuite() {
   const { getSupabase } = await import('../js/supabase.js');
   const sb = await getSupabase();
 
-  const { data: insts } = await sb.from('institutions').select('id, name');
+  const { data: insts } = await sb.from('institutions').select('id, name, code');
   const { data: progs } = await sb.from('programs').select('id, name, institution_id');
   const { data: classes } = await sb.from('classes').select('id, name, institution_id, program_id, is_active');
 
-  const topInst = insts.find(i => i.name === 'TOP');
+  const topInst = insts.find(i => i.code === 'TOP' || i.name === 'TOP' || (i.name && i.name.includes('Top Occupational')));
   assert(topInst, 'FAIL: Institution "TOP" not found in database');
 
   const topPrograms = progs.filter(p => p.institution_id === topInst.id);

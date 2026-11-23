@@ -536,7 +536,7 @@ function renderTableRows(items, isEdit) {
           <!-- 2. NAMA HEADER / ISTILAH -->
           <td style="padding:6px 8px; vertical-align:top; border-right:1px solid rgba(255,255,255,0.05); word-break:break-word; overflow-wrap:break-word; white-space:normal; box-sizing:border-box;">
             <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:4px;">
-              <span style="font-weight:800; color:#f8fafc; font-size:12px; letter-spacing:0.01em; line-height:1.3;">
+              <span class="glossary-term-name" style="font-weight:800; color:var(--admin-text-main, #f8fafc); font-size:12px; letter-spacing:0.01em; line-height:1.3;">
                 ${escHtml(item.term || '')}
               </span>
               <button type="button" class="btn-copy-term" data-copy-val="${escHtml(item.term || '')}" title="Salin nama header" style="background:none; border:none; padding:1px 3px; color:#64748b; cursor:pointer; border-radius:3px; display:inline-flex; align-items:center; flex-shrink:0;">
@@ -544,7 +544,7 @@ function renderTableRows(items, isEdit) {
               </button>
             </div>
             ${item.sample_val ? `
-              <div style="margin-top:4px; display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:#38bdf8; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); padding:1px 6px; border-radius:3px; max-width:100%; box-sizing:border-box;">
+              <div style="margin-top:4px; display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:var(--primary-tactical, #38bdf8); background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); padding:1px 6px; border-radius:3px; max-width:100%; box-sizing:border-box;">
                 <span style="color:#64748b; font-weight:700; flex-shrink:0;">Contoh:</span>
                 <span style="font-family:monospace; word-break:break-all;">${escHtml(item.sample_val)}</span>
               </div>
@@ -552,7 +552,7 @@ function renderTableRows(items, isEdit) {
           </td>
 
           <!-- 3. FUNGSI & CARA MEMBACA -->
-          <td style="padding:6px 8px; vertical-align:top; line-height:1.45; color:#cbd5e1; font-size:12px; border-right:1px solid rgba(255,255,255,0.05); word-break:break-word; overflow-wrap:break-word; white-space:normal; box-sizing:border-box;">
+          <td class="col-glossary-desc" style="padding:6px 8px; vertical-align:top; line-height:1.45; color:var(--admin-text-main, #cbd5e1); font-size:12px; border-right:1px solid rgba(255,255,255,0.05); word-break:break-word; overflow-wrap:break-word; white-space:normal; box-sizing:border-box;">
             ${escHtml(item.function_desc || '')}
           </td>
 
@@ -561,7 +561,7 @@ function renderTableRows(items, isEdit) {
             ${hasColor ? `
               <div style="display:inline-flex; align-items:center; justify-content:center; gap:5px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); padding:3px 6px; border-radius:4px;">
                 <span style="display:inline-block; width:12px; height:12px; border-radius:2px; background:${escHtml(hexColor)}; border:1px solid rgba(255,255,255,0.3); flex-shrink:0;"></span>
-                <span style="font-family:monospace; color:#f8fafc; font-size:12px; font-weight:700;">${escHtml(hexColor)}</span>
+                <span style="font-family:monospace; color:var(--admin-text-main, #f8fafc); font-size:12px; font-weight:700;">${escHtml(hexColor)}</span>
                 <button type="button" class="btn-copy-term" data-copy-val="${escHtml(hexColor)}" title="Salin kode hex" style="background:none; border:none; padding:1px; color:#64748b; cursor:pointer; display:inline-flex; align-items:center;">
                   ${getSvgIcon('copy', 10)}
                 </button>
@@ -575,7 +575,7 @@ function renderTableRows(items, isEdit) {
           <td style="padding:6px 8px; vertical-align:top; border-right:1px solid rgba(255,255,255,0.05); word-break:break-all; overflow-wrap:break-word; white-space:normal; box-sizing:border-box;">
             ${token && token !== '—' ? `
               <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:3px;">
-                <code style="font-family:monospace; font-size:12px; color:#38bdf8; background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); padding:2px 5px; border-radius:3px; word-break:break-all; display:inline-block; line-height:1.3;">
+                <code style="font-family:monospace; font-size:12px; color:var(--primary-tactical, #38bdf8); background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.2); padding:2px 5px; border-radius:3px; word-break:break-all; display:inline-block; line-height:1.3;">
                   ${escHtml(token)}
                 </code>
                 <button type="button" class="btn-copy-term" data-copy-val="${escHtml(token)}" title="Salin token" style="background:none; border:none; padding:1px 3px; color:#64748b; cursor:pointer; display:inline-flex; align-items:center; flex-shrink:0;">
@@ -589,7 +589,7 @@ function renderTableRows(items, isEdit) {
 
           <!-- 6. REFERENSI SSOT -->
           <td style="padding:6px 8px; vertical-align:top; word-break:break-word; overflow-wrap:break-word; white-space:normal; box-sizing:border-box;">
-            <span style="font-family:monospace; font-size:12px; font-weight:600; color:#94a3b8; background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:3px; border:1px solid rgba(255,255,255,0.07); display:inline-block; line-height:1.3;">
+            <span class="glossary-ssot-ref" style="font-family:monospace; font-size:12px; font-weight:600; color:var(--admin-text-main, #0f172a); background:rgba(255,255,255,0.04); padding:2px 6px; border-radius:3px; border:1px solid rgba(255,255,255,0.07); display:inline-block; line-height:1.3;">
               ${escHtml(ssotRef)}
             </span>
           </td>

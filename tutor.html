@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en" translate="no" class="notranslate">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="google" content="notranslate" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Tutor Desk — TOPS CORE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20261123_v42" />
+  <link rel="stylesheet" href="css/tutor.css?v=20261123_v50" />
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+</head>
+<body class="notranslate" data-theme="navy">
+
+  <div id="tutor-app-container">
+
+    <!-- Top Header Landmark: Bento 3-Panel Model (TIME | DAY | DATE) -->
+    <header class="tutor-header" id="tutor-top-header">
+      <div class="time-bento-grid" id="session-info-panel">
+        <div class="time-bento-card bento-time">
+          <span class="info-lbl">TIME</span>
+          <span class="info-val info-live-time" id="info-live-time">--:--:--</span>
+        </div>
+        <div class="time-bento-card bento-day">
+          <span class="info-lbl">DAY</span>
+          <span class="info-val info-live-day" id="info-live-day">---</span>
+        </div>
+        <div class="time-bento-card bento-date">
+          <span class="info-lbl">DATE</span>
+          <span class="info-val info-live-date" id="info-live-date">--/--/----</span>
+        </div>
+      </div>
+      <!-- Hidden Compatibility Hooks for Logic Engines -->
+      <span class="hidden" id="tutor-header-title" style="display:none !important;">CEC</span>
+      <span class="hidden" id="tutor-header-class-name" style="display:none !important;">Level 1 Basic English</span>
+      <span class="hidden" id="tutor-header-emblem" style="display:none !important;">🏫</span>
+      <span class="hidden" id="session-status-badge" style="display:none !important;"></span>
+      <span class="hidden" id="session-status-text" style="display:none !important;">STANDBY</span>
+    </header>
+
+    <!-- Floating In-App Toast Pill (5-Min Reminder & Alarm Notifications) -->
+    <div id="tutor-floating-toast" class="tutor-toast-pill hidden">
+      <span class="toast-icon" id="tutor-toast-icon">🔔</span>
+      <span class="toast-msg" id="tutor-toast-msg">Notification message</span>
+    </div>
+
+    <!-- Scrollable Blade Viewport -->
+    <main class="tutor-blade-container" id="tutor-blade-container">
+
+      <!-- BLADE 1: ATTENDANCE (Phase 1 Launcher & Phase 2 Arena) -->
+      <section id="blade-attendance" class="tutor-blade-pane" role="tabpanel" aria-labelledby="tab-btn-attendance">
+
+        <!-- ============================================================ -->
+        <!-- LAUNCHER SETUP CARD (Active when Standby)                    -->
+        <!-- ============================================================ -->
+        <div class="tutor-card" id="launcher-setup-card">
+          <span class="hidden" id="launcher-title-text">Level &amp; Class Selection</span>
+          <span class="hidden" id="launcher-institution-badge"></span>
+
+          <!-- Section 2: CEC 3 Level Cards (1st | 2nd | 3rd - Compact Height 48px) -->
+          <div class="tutor-field level-box" id="box-level-selector" style="margin-bottom:0;">
+            <div class="segmented-select-bar three-level-cards" id="level-segmented-bar">
+              <button type="button" class="btn-segment level-card lvl-1 active" data-level="1" id="btn-lvl-1" title="1st Level">
+                <span class="lvl-card-num">1st</span>
+                <span class="lvl-card-tag hidden" style="display:none !important;">Grade E</span>
+              </button>
+              <button type="button" class="btn-segment level-card lvl-2" data-level="2" id="btn-lvl-2" title="2nd Level">
+                <span class="lvl-card-num">2nd</span>
+                <span class="lvl-card-tag hidden" style="display:none !important;">Grade C</span>
+              </button>
+              <button type="button" class="btn-segment level-card lvl-3" data-level="3" id="btn-lvl-3" title="3rd Level">
+                <span class="lvl-card-num">3rd</span>
+                <span class="lvl-card-tag hidden" style="display:none !important;">Grade A</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Section A2: TOP Program Selection Bar (Evnikom, Sheraton, Tamata) -->
+          <div class="tutor-field hidden" id="box-top-program-selector" style="margin-bottom:0;">
+            <div class="segmented-select-bar" id="top-program-bar">
+              <button type="button" class="btn-segment active" data-program="EVNIKOM" id="btn-prog-evn">EVNIKOM</button>
+              <button type="button" class="btn-segment" data-program="SHERATON" id="btn-prog-shr">SHERATON</button>
+              <button type="button" class="btn-segment" data-program="TAMATA" id="btn-prog-tmt">TAMATA</button>
+            </div>
+          </div>
+
+          <!-- Section B: Persistent 5 Class Panels Matrix (CLASS | TIME | ROOM | TUTOR) -->
+          <div class="tutor-field" id="box-class-matrix" style="margin-bottom:0;">
+            <div class="class-columns-header">
+              <span class="col-hdr-class">CLASS</span>
+              <span class="col-hdr-time">TIME</span>
+              <span class="col-hdr-room">ROOM</span>
+              <span class="col-hdr-tutor">TUTOR</span>
+            </div>
+            <div class="class-matrix-grid" id="class-matrix-grid">
+              <!-- Dynamically rendered 5 vertical class cards -->
+            </div>
+          </div>
+
+          <!-- Section C: TUTOR CARD (SSOT: Gender Banner, White Background, 56x56 Photo Box, Aligned Metadata) -->
+          <div class="tutor-id-card-item" id="tutor-profile-card">
+            <!-- 1. Gender-Themed Title Area Banner (Nickname Only - Zero Pills) -->
+            <div class="tutor-card-banner gender-male" id="tutor-card-banner">
+              <span class="tutor-banner-nickname" id="tutor-card-name">Mr. Top</span>
+            </div>
+
+            <!-- 2. White Card Body Content (Photo + Name & DoB/AGE & Address) -->
+            <div class="tutor-card-body">
+              <!-- Left: Photo Box -->
+              <div class="tutor-photo-box" id="tutor-avatar-container" title="Photo managed strictly via Admin Panel">
+                <span id="tutor-avatar-initial">foto</span>
+                <img id="tutor-avatar-img" class="hidden" alt="Tutor Photo" />
+              </div>
+
+              <!-- Right: Metadata Rows with Colon Alignment -->
+              <div class="tutor-card-metadata">
+                <div class="meta-row">
+                  <span class="meta-lbl">Name</span>
+                  <span class="meta-sep">:</span>
+                  <span class="meta-val" id="tutor-demographics-name">Taufan Hadi Ahmad</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-lbl">DoB/AGE</span>
+                  <span class="meta-sep">:</span>
+                  <span class="meta-val" id="tutor-demographics-dob-age">07/11/87 (39)</span>
+                </div>
+                <div class="meta-row">
+                  <span class="meta-lbl">Address</span>
+                  <span class="meta-sep">:</span>
+                  <span class="meta-val" id="tutor-demographics-address">Jl. Brawijaya No. 12, Pare, Kediri</span>
+                </div>
+                <div class="meta-row" id="row-tutor-room">
+                  <span class="meta-lbl">Room</span>
+                  <span class="meta-sep">:</span>
+                  <span class="meta-val" id="tutor-demographics-room">R-01 (CEC Hall)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dual Mode Selector kept hidden for backward compatibility -->
+          <div class="dual-action-row hidden" id="dual-action-row" style="display:none !important;">
+            <button type="button" class="btn-start-regular active" id="btn-trigger-start-regular" data-mode="REGULAR">
+              REGULAR
+            </button>
+            <button type="button" class="btn-start-exam" id="btn-trigger-start-exam" data-mode="EXAM">
+              EXAM
+            </button>
+          </div>
+
+          <!-- Section F: Master Start Button (height: 50px - Single Master Action) -->
+          <button type="button" class="btn-launch-arena mode-regular" id="btn-start-class-master">
+            START CLASS
+          </button>
+
+        </div>
+
+
+        <!-- ============================================================ -->
+        <!-- PHASE 2: LIVE ACTIVE ARENA (Active after Start Session)       -->
+        <!-- ============================================================ -->
+        <div class="arena-live-view hidden" id="live-active-arena-card">
+          <!-- Full-Width Class Name Banner kept hidden for backward compatibility (Class Name now in Top Header) -->
+          <div class="session-name-panel-full hidden" id="panel-session-name" title="Active Class" style="display:none !important;">
+            <span class="status-pulse-dot"></span>
+            <span id="arena-header-title" class="arena-header-title-text">Level 3 Vocabulary</span>
+          </div>
+
+          <!-- 1. Meeting Number & Time Card Strip (Editable Meeting #) -->
+          <div class="arena-meeting-strip" id="arena-meeting-strip">
+            <div class="arena-mini-card meeting-card">
+              <span class="mini-card-lbl">MEETING</span>
+              <div class="meeting-edit-wrap">
+                <input type="number" id="arena-meeting-input" class="arena-meeting-input" min="1" max="50" value="1" title="Click or edit meeting number (penundaan kelas / kelas ganda)" />
+              </div>
+              <span class="hidden" id="arena-meeting-badge">Meeting 1</span>
+            </div>
+            <div class="arena-mini-card time-card">
+              <span class="mini-card-lbl">ELAPSED</span>
+              <div class="time-display-wrap">
+                <span class="session-time-icon">⏱</span>
+                <span class="arena-session-timer" id="arena-session-timer">00:00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Compatibility Hooks for Logic Engines (Kept Hidden) -->
+          <span class="hidden" id="arena-beacon-status"></span>
+          <span class="hidden" id="arena-dynamic-code"></span>
+          <span class="hidden" id="arena-qr-countdown"></span>
+          <span class="hidden" id="arena-mode-badge"></span>
+
+          <!-- 2. Middle: 4-Column Student Attendance Datagrid Table (Full Space & High Visibility) -->
+          <div class="arena-table-section">
+            <!-- 4-Box P E S A Summary Bar -->
+            <div class="attendance-summary-4bar" id="attendance-summary-4bar">
+              <div class="stat-pill stat-p" title="Present (Hadir)">
+                <span class="stat-letter">P</span>
+                <span class="stat-count" id="stat-count-p">0</span>
+              </div>
+              <div class="stat-pill stat-e" title="Excused (Izin)">
+                <span class="stat-letter">E</span>
+                <span class="stat-count" id="stat-count-e">0</span>
+              </div>
+              <div class="stat-pill stat-s" title="Sick (Sakit)">
+                <span class="stat-letter">S</span>
+                <span class="stat-count" id="stat-count-s">0</span>
+              </div>
+              <div class="stat-pill stat-a" title="Absent (Alpa / Belum Hadir)">
+                <span class="stat-letter">A</span>
+                <span class="stat-count" id="stat-count-a">0</span>
+              </div>
+              <span class="hidden" id="arena-level-number">1</span>
+              <span class="hidden" id="arena-student-count">0</span>
+              <span class="hidden" id="arena-present-counter">Present: 0</span>
+            </div>
+
+            <div class="attendance-table-wrap">
+              <table class="attendance-4col-table" id="table-attendance-matrix">
+                <thead>
+                  <tr>
+                    <th class="th-student-name">STUDENT NAME</th>
+                    <th class="th-status th-present" title="Present">PRS</th>
+                    <th class="th-status th-excused" title="Excused">EXC</th>
+                    <th class="th-status th-sick" title="Sick">SCK</th>
+                    <th class="th-status th-absent" title="Absent">ABS</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody-attendance-matrix">
+                  <!-- Dynamically rendered student rows with radio checks -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 3. Bottom Controls: Close | QRIS | Radar (Red | Neutral | Green - 3 Equal Boxes Side-by-Side) -->
+          <div class="arena-bottom-controls-bar" id="arena-bottom-controls-bar">
+            <!-- Box 1 (Left - Red): Close Session -->
+            <button type="button" class="btn-ctrl-box ctrl-close btn-close-session ghost-crimson" id="btn-arena-close-session" title="Close Active Session">
+              <span class="ctrl-title">CLOSE</span>
+            </button>
+
+            <!-- Box 2 (Center - Neutral): QRIS -->
+            <button type="button" class="btn-ctrl-box ctrl-qris btn-qris-trigger" id="btn-show-qris" title="Show Dynamic QRIS &amp; PIN for Students">
+              <span class="ctrl-title">QRIS</span>
+            </button>
+
+            <!-- Box 3 (Right - Green): GPS Radar -->
+            <button type="button" class="btn-ctrl-box ctrl-radar ctrl-beacon btn-beacon-trigger ghost-emerald" id="btn-toggle-beacon" title="Activate/Deactivate GPS Radar (10m)">
+              <span class="ctrl-title beacon-cta-title">RADAR</span>
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- BLADE 2: GRADE (Manual Score Entry Datagrid Matrix) -->
+      <section id="blade-grade" class="tutor-blade-pane hidden" role="tabpanel" aria-labelledby="tab-btn-grade">
+        <!-- Separate Top Control Panel: 3 Level Cards (1st | 2nd | 3rd) & Class Pills -->
+        <div class="tutor-card grade-top-panel" id="grade-top-panel">
+          <!-- Level Filter Bar (1st, 2nd, 3rd) -->
+          <div class="roster-level-filter-bar" id="grade-level-filter-bar" style="margin-bottom:0 !important;">
+            <button type="button" class="btn-level-pill lvl-1 active" data-level="1" id="btn-grade-lvl-1" title="1st Level">
+              <span class="lvl-card-num">1st</span>
+            </button>
+            <button type="button" class="btn-level-pill lvl-2" data-level="2" id="btn-grade-lvl-2" title="2nd Level">
+              <span class="lvl-card-num">2nd</span>
+            </button>
+            <button type="button" class="btn-level-pill lvl-3" data-level="3" id="btn-grade-lvl-3" title="3rd Level">
+              <span class="lvl-card-num">3rd</span>
+            </button>
+          </div>
+
+          <!-- Class Modality Selection Bar -->
+          <div class="grade-class-filter-bar" id="grade-class-filter-bar">
+            <!-- Dynamically populated with classes: VOCAB, BASIC, STORY, GRAMMAR, SPEAKING -->
+          </div>
+        </div>
+
+        <!-- Separate Scrollable Student Grade Datagrid Table Panel with Sticky Header -->
+        <div class="tutor-card grade-table-card" id="grade-datagrid-card" style="padding:10px !important;">
+          <div class="attendance-table-wrap grade-table-wrap">
+            <table class="attendance-4col-table grade-datagrid-table" id="table-grade-matrix">
+              <thead id="thead-grade-matrix">
+                <tr>
+                  <th class="th-student-name">STUDENT NAME</th>
+                  <!-- Dynamically rendered exam headers (PRE-TEST, EXAM 1, etc.) -->
+                </tr>
+              </thead>
+              <tbody id="tbody-grade-matrix">
+                <!-- Dynamically rendered student rows with score input cells -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- BLADE 3: FINES / ENGLISH AREA (Discipline & Fine Ledger) -->
+      <section id="blade-discipline" class="tutor-blade-pane hidden" role="tabpanel" aria-labelledby="tab-btn-discipline">
+        <!-- Separate Top Control Panel: 3 Level Cards (1st | 2nd | 3rd) & Fines KPI Summary -->
+        <div class="tutor-card fines-top-panel" id="fines-top-panel">
+          <!-- Level Filter Bar (1st, 2nd, 3rd) -->
+          <div class="roster-level-filter-bar" id="fines-level-filter-bar" style="margin-bottom:0 !important;">
+            <button type="button" class="btn-level-pill lvl-1 active" data-level="1" id="btn-fines-lvl-1" title="1st Level">
+              <span class="lvl-card-num">1st</span>
+            </button>
+            <button type="button" class="btn-level-pill lvl-2" data-level="2" id="btn-fines-lvl-2" title="2nd Level">
+              <span class="lvl-card-num">2nd</span>
+            </button>
+            <button type="button" class="btn-level-pill lvl-3" data-level="3" id="btn-fines-lvl-3" title="3rd Level">
+              <span class="lvl-card-num">3rd</span>
+            </button>
+          </div>
+
+          <!-- Fines KPI Summary Bar -->
+          <div class="fines-summary-bar" id="fines-summary-bar">
+            <div class="fines-kpi-pill kpi-total">
+              <span class="kpi-lbl">TOTAL</span>
+              <span class="kpi-val" id="kpi-total-fine">Rp 0</span>
+            </div>
+            <div class="fines-kpi-pill kpi-paid">
+              <span class="kpi-lbl">PAID</span>
+              <span class="kpi-val" id="kpi-total-paid">Rp 0</span>
+            </div>
+            <div class="fines-kpi-pill kpi-debt">
+              <span class="kpi-lbl">UNPAID</span>
+              <span class="kpi-val" id="kpi-total-debt">Rp 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Separate Scrollable Fines Datagrid Table Panel with Sticky Header -->
+        <div class="tutor-card fines-table-card" id="fines-datagrid-card" style="padding:10px !important;">
+          <div class="attendance-table-wrap fines-table-wrap">
+            <table class="attendance-4col-table fines-datagrid-table" id="table-fines-matrix">
+              <thead>
+                <tr>
+                  <th class="th-student-name" style="width:36%;">STUDENT NAME</th>
+                  <th class="th-fines-count" style="width:28%; text-align:center;">COUNT</th>
+                  <th class="th-fines-amount" style="width:18%; text-align:right;">AMOUNT</th>
+                  <th class="th-fines-paid" style="width:18%; text-align:right;">PAID</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-fines-matrix">
+                <!-- Dynamically rendered student rows with stepper & payment -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modals -->
+    <!-- 1. Close Session Confirmation Modal -->
+    <div class="tutor-modal-overlay hidden" id="modal-close-session" role="dialog" aria-modal="true">
+      <div class="tutor-modal-dialog">
+        <div class="tutor-modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          Close Class Session?
+        </div>
+        <div class="tutor-modal-body">
+          Closing this session will:
+          <ul style="margin:8px 0 0 18px;padding:0;">
+            <li>Auto-mark all unchecked students as <strong>ABSENT</strong>.</li>
+            <li>If Exam Session, auto-save student submissions (DECISION-065).</li>
+            <li>Lock dynamic attendance codes and record meeting logs.</li>
+          </ul>
+        </div>
+        <div class="tutor-modal-footer">
+          <button type="button" class="btn-modal-cancel" id="btn-cancel-close-modal">CLOSE</button>
+          <button type="button" class="btn-modal-confirm-close" id="btn-confirm-close-session">CLOSE SESSION</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. Target Exam Selection Modal (Pop-up 04 Golden Standard - Card Choice) -->
+    <div class="tutor-modal-overlay hidden" id="modal-select-exam" role="dialog" aria-modal="true" aria-labelledby="component-modal-title">
+      <div class="component-selector-modal-box">
+        <div class="component-selector-modal-header">
+          <h2 id="component-modal-title" class="component-selector-title">SELECT TARGET EXAM</h2>
+        </div>
+        <div class="component-selector-modal-body">
+          <div id="exam-modal-cards-container" class="component-selector-options-list">
+            <!-- Dynamically populated with .component-choice-card -->
+          </div>
+          <!-- Hidden fallback select for backward compatibility -->
+          <select class="hidden" id="select-modal-exam-target" style="display:none !important;"></select>
+        </div>
+        <div class="component-selector-modal-footer">
+          <button type="button" class="btn-modal-cancel" id="btn-cancel-select-exam">CLOSE</button>
+          <button type="button" class="btn-modal-confirm-pay" id="btn-confirm-start-exam" style="background:linear-gradient(135deg, #ea580c 0%, #c2410c 100%);">START EXAM &rarr;</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Payment Modal -->
+    <div class="tutor-modal-overlay hidden" id="modal-payment" role="dialog" aria-modal="true">
+      <div class="tutor-modal-dialog">
+        <div class="tutor-modal-title">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2">
+            <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+            <line x1="2" y1="10" x2="22" y2="10"></line>
+          </svg>
+          Record Fine Payment
+        </div>
+        <div class="tutor-modal-body">
+          <div style="font-weight:700;font-size:14px;color:#ffffff;margin-bottom:4px;" id="modal-pay-student-name">Student Name</div>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Outstanding Debt: <span id="modal-pay-current-debt" style="font-weight:800;color:var(--grade-e, #ff0000);">Rp 0</span></div>
+
+          <div class="tutor-field" style="margin-bottom:10px;">
+            <label class="tutor-label" for="modal-pay-amount">Payment Amount (Rp)</label>
+            <input type="number" id="modal-pay-amount" class="tutor-input" placeholder="Enter amount" min="1000" step="1000" />
+          </div>
+
+          <div class="tutor-field">
+            <label class="tutor-label">Payment Method</label>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <button type="button" class="mode-option-btn selected-regular" id="btn-pay-method-cash">CASH</button>
+              <button type="button" class="mode-option-btn" id="btn-pay-method-transfer">TRANSFER</button>
+            </div>
+          </div>
+        </div>
+        <div class="tutor-modal-footer">
+          <button type="button" class="btn-modal-cancel" id="btn-cancel-pay-modal">CLOSE</button>
+          <button type="button" class="btn-modal-confirm-pay" id="btn-confirm-payment">RECORD PAYMENT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Dynamic QRIS & Check-in PIN Modal (On-Demand) -->
+    <div class="tutor-modal-overlay hidden" id="modal-qris-display" role="dialog" aria-modal="true" aria-labelledby="qris-modal-title">
+      <div class="tutor-modal-dialog" style="max-width:340px; text-align:center;">
+        <div class="tutor-modal-title" id="qris-modal-title" style="justify-content:center; font-size:15px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">
+          STUDENT CHECK-IN QRIS
+        </div>
+        <div class="tutor-modal-body" style="display:flex; flex-direction:column; align-items:center; gap:12px; padding:16px 12px;">
+          <div class="dynamic-qr-box" style="width:200px; height:200px; background:#ffffff; border-radius:8px; padding:10px; display:flex; align-items:center; justify-content:center; box-sizing:border-box; box-shadow:0 4px 16px rgba(0,0,0,0.4);">
+            <canvas id="qr-canvas" width="180" height="180"></canvas>
+          </div>
+          <div style="background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:10px 16px; width:100%; box-sizing:border-box;">
+            <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">6-CHAR CHECK-IN PIN:</div>
+            <div id="modal-qris-pin-text" style="font-size:22px; font-weight:900; color:#38bdf8; font-family:monospace; letter-spacing:0.12em; margin:4px 0;">--</div>
+            <div id="modal-qris-countdown" style="font-size:11px; color:#cbd5e1; font-weight:600;">Rotating in 30s</div>
+          </div>
+        </div>
+        <div class="tutor-modal-footer" style="justify-content:center; padding:10px 16px;">
+          <button type="button" class="btn-modal-cancel" id="btn-close-qris-modal" style="width:100%; height:40px; font-size:13px; font-weight:800; border-radius:6px; text-transform:uppercase; letter-spacing:0.04em;">BACK TO ATTENDANCE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tri-Blade Tab Navigation (ATTENDANCE | GRADE | FINES) -->
+    <nav class="tutor-blade-tabs" id="tutor-nav-tabs" role="tablist">
+      <button type="button" class="blade-tab-btn active" id="tab-btn-attendance" role="tab" aria-selected="true" aria-controls="blade-attendance">
+        <span>ATTENDANCE</span>
+        <span class="tab-badge hidden" id="badge-present-count" style="display:none !important;">0</span>
+      </button>
+      <button type="button" class="blade-tab-btn" id="tab-btn-grade" role="tab" aria-selected="false" aria-controls="blade-grade">
+        <span>GRADE</span>
+      </button>
+      <button type="button" class="blade-tab-btn" id="tab-btn-discipline" role="tab" aria-selected="false" aria-controls="blade-discipline">
+        <span>FINES</span>
+        <span class="tab-badge" id="badge-debt-count">Rp 0</span>
+        <span class="hidden" style="display:none !important;">ENGLISH AREA</span>
+      </button>
+    </nav>
+
+    <!-- 50px Bottom Locked Banner -->
+    <div id="bottom-ad-banner" class="topscore-locked-banner">
+      <div class="banner-brand-wrap">
+        <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="js/tutor.js?v=20261123_v50"></script>
+</body>
+</html>

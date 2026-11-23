@@ -39,7 +39,13 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
   3. **Panel Samping Kiri (Sidebar / Left Navigation)**: Jarak tepi kiri elemen/kartu/tabel ke sidebar terkunci tepat **10px** (`padding-left: 10px;`).
   4. **Panel Samping Kanan (Tepi Layar / Right Viewport Edge)**: Jarak tepi kanan elemen/kartu/tabel ke batas kanan monitor terkunci tepat **10px** (`padding-right: 10px;`).
 - **Workspace Container Full-Perimeter Clearance**: Setiap container ruang kerja (`.admin-content`, `#mockup-table-canvas-wrap`, dialog container) konsisten menerapkan `padding: 10px 10px 10px 10px !important; box-sizing: border-box !important; gap: 10px !important;`.
+- **Single Perimeter Ownership SSOT (Zero Nested / Double Padding)**: Kontainer induk workspace (`#admin-content-area` / `.admin-content`) adalah SATU-SATUNYA pemilik `padding: 10px` perimeter ruang kerja. Modul, view, grid-wrapper, atau split-panel apa pun yang di-render ke dalamnya **DILARANG KERAS** menambahkan `padding: 10px` lagi pada elemen wrapper terluarnya (`<div style="padding:10px; ...">`). Penambahan padding anak menciptakan akumulasi padding ganda (10px + 10px = 20px Phantom Gap) yang merusak estetika dan melanggar presisi 10px.
 - **Zero Phantom Gaps**: Dilarang menggunakan margin ganda (20px–30px) atau jarak rapat 0px terhadap panel tepi. Seluruh perimeter dan celah internal seragam presisi 10px.
+- **Strict Top Element Invariant & Direct Ceiling Docking SSOT**:
+  Elemen pertama (paling atas) di dalam workspace container MUTLAK HANYA BOLEH salah satu dari dua entitas:
+  1. **Table Header (`thead` dari `.table-wrap`)** untuk tampilan tabel/datagrid. Header tabel wajib menempel langsung pada ceiling ruang kerja dengan jarak persis 10px dari Top Panel (diberikan oleh padding 10px container induk). DILARANG KERAS menyisipkan sub-header bar, banner judul tabel, bar info, badge strip, atau legend mengambang di atas tabel!
+  2. **Active Interactive Card** untuk tampilan dashboard/kontrol (kartu yang memiliki tombol aksi, filter dinamis, atau form interaktif). Dilarang membuat kartu statis yang hanya berisi teks keterangan atau info pasif di atas workspace.
+- **Sub Panel Monopoly for Legends, Triage & Summaries**: Seluruh indikator status (Legend titik Full/Partial/Missed, Grade A/C/E), triage pills, counter akumulasi mingguan, dan action buttons WAJIB 100% berlabuh di **Sub Panel bawah (40px Lower Panel / `#admin-bottom-infobar`)** via `window.setBottomInfobar(leftHtml, rightHtml, centerHtml)`. Dilarang menempatkan legend atau keterangan rekap di atas atau di sekitar datagrid.
 
 ### 1.3 Sub Panel (Lower Panel `.workspace-lower-panel`) Architecture & In-Panel 30px Button Invariant
 - **Official Terminology**: The term **"Sub Panel"** is the official designation for the Lower Panel (`.workspace-lower-panel` docked at the bottom of the workspace).
@@ -118,9 +124,9 @@ Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara 
 2. **Card Internal Padding (Strict 10px Lock)**: Jarak konten dalam kartu ke garis border luar tepat 10px.
 3. **Dual-Scale Typography Architecture**: Skala terpusat (12px, 14px, 16px, 20px, 30px, 40px); mutlak nol font sub-12px dan nol angka perantara liar (18px, 13px, 15px).
 4. **Punctuation & Zero-Truncation**: Titik dua wajib menempel ke kata tanpa spasi (`Label:` bukan `Label :`), teks tidak terpotong (*zero truncation/ellipsis*).
-5. **Color SSOT & Semantic Precision**: Menggunakan token resmi (`#38bdf8` Tactical Blue), dilarang menggunakan warna hijau Grade A pada status input belum terverifikasi.
+5. **Color SSOT & Semantic Precision**: Menggunakan token resmi (`#38bdf8` Tactical Blue, Grade Vault tokens), dilarang menggunakan warna hijau Grade A pada status input belum terverifikasi. Seluruh tema mematuhi arsitektur 3-Theme Spectrum (Navy, Charcoal Dark, Tiered Grey Light).
 6. **Language Purity (100% English)**: Seluruh label, judul, tombol, dan pesan instruksi wajib dalam bahasa Inggris murni (zero mixed languages).
-7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*).
+7. **Clutter & Redundancy Eradication**: Mutlak nol deskripsi redundan (*Zero Subtitle Clutter* & *Zero Description Clutter*) dan mutlak nol pendaran neon liar pada posisi standby (*Flat Enterprise Precision & Zero Standby Aura*).
 
 ### 1.8 Standardized 50px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`) (SSOT)
 Seluruh halaman sistem TopsCore LMS (Student Realm & Admin Realm) menerapkan banner bawah permanen terkunci (**Locked Base Banner**) dengan aturan baku mutlak:
@@ -163,6 +169,20 @@ Setiap kali sistem melakukan pengurutan (*sorting*), merender daftar modul, kart
 3. **Pengecualian**:
    - Hanya dikecualikan jika ada hierarki ordinal/numerik yang tegas dan mengikat (misal: urutan jenjang Level 1 $\rightarrow$ Level 2 $\rightarrow$ Level 3, urutan ranking juara 1 $\rightarrow$ 2 $\rightarrow$ 3, atau urutan topik kurikulum A1 $\rightarrow$ A2 $\rightarrow$ B1).
 
+### 1.11 Universal 3-Theme Spectrum Architecture (Navy, Charcoal Dark, Tiered Grey Light SSOT)
+TopsCore LMS menerapkan arsitektur 3-Theme Spectrum terstandarisasi di seluruh workstation admin dan antarmuka sistem:
+1. **Navy Mode (`data-theme="navy"`)**:
+   - Canvas: `#090D16` | Cards/Tables: `#0F172A` | Headers: `#0F172A` | Gridlines: `rgba(255, 255, 255, 0.05)`
+2. **Charcoal / Black OLED Mode (`data-theme="dark"`)**:
+   - Canvas: `#141414` / `#161616` | Cards/Tables: `#212121` | Headers: `#2a2a2a` | Gridlines: `#2d2d2d`
+3. **Tiered Grey Light Mode (`data-theme="light"`)**:
+   - Canvas: `#eef2f6` (Soft Calm Slate — Level 0 canvas yang nyaman di mata, bukan putih silau 100%)
+   - Cards & Table Paper: `#ffffff` (Elevated White Paper Card — Level 1 surface dengan border `#cbd5e1`)
+   - Sidebar & Headers: `#1e293b` (Sleek Light Charcoal / Slate Gray — lebih terang, modern, dan nyaman di mata)
+   - Gridlines: `#cbd5e1` (garis kisi antar-sel `td`)
+- **Universal Dark Header Framing Across All Themes**:
+  Header tabel dan sub-navbar konsisten mempertahankan latar belakang gelap (`#0f172a` / `#212121`) di SEMUA tema termasuk Light Mode, dengan teks/font yang berwarna sesuai kelompok kategori (Theme A Pink, Theme B Orange, Theme C Lime, Theme D Cyan). Hal ini menjamin keterbacaan, keteraturan visual, dan kekompakan CTA di seluruh spektrum tema.
+
 ---
 
 ## Bab 2: Tipografi & Skala Font Terpusat (Single-Font Architecture: Inter SSOT)
@@ -172,7 +192,7 @@ TopsCore LMS strictly governs typography through a pure Single-Font Architecture
 1. **`Inter`** (`--font-sans` / `--fm-font-sans` / `--font-display` / `--fm-font-display`):
    - **Exclusive Typeface**: The font **`Inter`** (`'Inter', sans-serif`) is the single authoritative typeface used throughout the entire application for all headers, titles, cards, hero metrics, datagrids, form controls, and CTAs.
    - **Eradication of Outfit**: The previous font `Outfit` is completely eradicated and forbidden from all parts of the system.
-   - **Weight Hierarchy**: Visual contrast and hierarchy are established exclusively through weights (`400` Regular for table data cells, `700` Bold for labels/subheadings, `800` Extra Bold for card headers and modal titles, `900` Black for brand hero titles and KPI landmarks).
+   - **Weight Hierarchy**: Visual contrast and hierarchy are established exclusively through weights (`400` Regular for sub-headers, `500` Medium for normal table data cells, `600` SemiBold for student names and sticky identifier columns, `700` Bold for super-headers, labels, and CTA buttons, `800` Extra Bold for card headers and modal titles, `900` Black for brand hero titles and KPI landmarks).
 2. **`JetBrains Mono` / Monospace** (`--font-mono` / `--fm-font-mono`):
    - **Role**: Technical, Security & Audit Data only (PIN verification displays, raw UUIDs, JSON logs).
 
@@ -228,27 +248,28 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 ### 3.3 Anti-Ambiguity Disambiguation Guard (12 System Truths)
 1. **Grade Star (★) vs Theme A Pink**: Grade Star (100% score) is strictly Vibrant Purple (`--grade-star: #c084fc` / `TOPSCORE_COLORS.STAR`), completely decoupled and distinct from Theme A Pink (`--quad-a: #ff2d87`). Never swap or merge them.
 2. **Student Name Scope**: Standard authentic name (`studentName`) system-wide; `Mr.` / `Miss` strictly exclusive to Student Dashboard greeting (Rule 2.23).
-3. **Sub-Header Typography**: Super-header baris 1 bold (700); Sub-header baris 2 **REGULAR (400, strictly NOT bold)**; Spanning standalone header 60px (`rowspan="2"`).
+3. **Sub-Header Typography**: Super-header baris 1 bold (700); Sub-header baris 2 **REGULAR (400, strictly NOT bold)**; Spanning standalone header 60px (`rowspan="2"`). Sel data tabel normal menggunakan weight 500 (Medium), dan nama siswa/kolom sticky menggunakan weight 600 (SemiBold).
 4. **Words vs Phrases & Task vs Exam Colors**: Words & TASK = Electric Lime (`#95ff00`, `var(--grade-b)`); Phrases & EXAM = Electric Pink (`#ff2d87`, `var(--quad-a)`). Konteks semantik dengan Grade B dibedakan secara visual melalui tipe elemen UI (chip/label teks vs badge rapor bulat). Pip 7 spektrum pelangi tetap menggunakan Ungu Spektrum (`#C084FC` / `--rainbow-step-7`).
 5. **Inverted Scale on Negative Metrics**: Error/timeout/fail rate $\le 10\%$ is Green Grade A, $>70\%$ is Red Grade E via `getInvertedGradeColor()`.
 6. **Regency vs City**: Regencies drop "Regency" (*East Lombok*); Cities retain "City" (*Mataram City*). Sequence: Village $\to$ District $\to$ Regency $\to$ Province.
 7. **Zero Star in Table Footers**: Table summaries dilarang ada bintang `★` (`CLASS AVERAGE`, bukan `★ CLASS AVERAGE`).
 8. **Continuous Neutral Dividers**: Super-header boundary vertical dividers from row 1 to footer are strictly thick 2px neutral (`rgba(255, 255, 255, 0.22)`), never colored.
 9. **Zero Emojis**: Dilarang unicode emojis di UI/tabel; strictly vector SVG icons via `getClassSvgIcon()`.
-10. **Zero Table Capsule & Zero Table Glow**: Seluruh isi sel tabel bebas kapsul, pill, badge, border, dan background-fill (status semantik hanya melalui warna font teks); mutlak nol glow, text-shadow, atau box-shadow di seluruh sel tabel (`AGENTS.md` §2.31 & §4.9).
-11. **Level 0 (Non-Level `—`) vs Alumni (Level X)**: `Level 0` (`level_number = 0`) adalah program tanpa jenjang (single-tier, misal institusi TOP). Ditampilkan di tabel sebagai strip bersih **`—`** (slate netral `#94A3B8`), BUKAN angka "0". `Level X` (`level_number = 99`) adalah Alumni kelulusan puncak setelah Level 3, ditampilkan sebagai simbol **`X`** ungu neon (`#C084FC` / `var(--quad-d)`). Alumni mutlak dilarang menggunakan angka 0.
+10. **Zero Table Capsule & Zero Table Glow**: Seluruh isi sel tabel bebas kapsul, pill, badge, border kotak kapsul, dan background-fill (status semantik hanya melalui warna font teks); mutlak nol glow, text-shadow, atau box-shadow di seluruh sel tabel (`AGENTS.md` §2.31 & §4.9). Sel data tabel (`td`) WAJIB memiliki garis pembatas kisi adaptif (Adaptive Dual-Layer Gridlines: `border-bottom` dan `border-right`, dengan `:last-child { border-right: none; }`).
+11. **Level 0 (Non-Level `0`) vs Alumni (Level X)**: `Level 0` (`level_number = 0`) adalah program tanpa jenjang (single-tier, misal institusi TOP). Ditampilkan di seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`). `Level X` (`level_number = 99`) adalah Alumni kelulusan puncak setelah Level 3, ditampilkan sebagai simbol **`X`** ungu neon (`#C084FC` / `var(--quad-d)`). Alumni mutlak dilarang menggunakan angka 0.
 12. **Zero-Level Omission Invariant**: Program tanpa jenjang (Level 0) wajib meniadakan seluruh segmen level pada nama kelas, kode kelas, judul tes, dan kode tes (`EVN-VOCAB`, `Evnikom Vocabulary G1 Task - Time Name`, `EVN-VCB-G1-TASK`).
 13. **Interface System (3-Pillar UI Governance SSOT)**: Seluruh kendali tema UI dipusatkan di panel **Interface System** (Domain D System Settings) dengan 3 sub-tab terpadu: *Colours & Palette*, *Typography & Texts*, serta *Surface & Chrome*. Seluruh perubahan dipropagasi secara realtime ke CSS variables (`:root`) dan dipersistensikan secara global ke `site_settings` serta `localStorage`.
 
 ### 3.4 Ghost-to-Solid-Glow Button Invariant (Aturan Baku Tombol TopsCore SSOT)
 Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem:
-1. **Standby / Inaktif = Ghost Outline Mode**:
+1. **Standby / Inaktif = Ghost Outline Mode & Flat Precision**:
    - Latar belakang transparan (`background: transparent`).
    - Garis tepi (*border*) tipis 1px dan teks menyala mengikuti warna semantik token yang dialokasikan (Cyan, Kuning, Merah, Hijau, Ungu, Pink).
-   - Mengeliminasi *visual noise* dan kejenuhan mata pada tema gelap kanvas `#090D16`.
-2. **Aktif / ON / Pressed = Solid Filled + Neon Glow Mode**:
+   - **Flat Enterprise Precision (Zero Standby Glow & Zero Heavy Shadow)**: Pada posisi standby/diam, tombol, badge, dan kartu MUTLAK BEBAS dari efek glow atau bayangan berat (`box-shadow: none !important; text-shadow: none !important;`). Pada Light Mode, kartu kerja menggunakan elevasi mikro `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`.
+   - Mengeliminasi *visual noise* dan kejenuhan mata pada semua tema.
+2. **Aktif / ON / Pressed = Solid Filled Mode**:
    - Latar terisi penuh warna padat sesuai alokasi token (`#0284c7` untuk Cyan, `var(--grade-c)` untuk Kuning, `var(--grade-e)` untuk Merah, `var(--grade-a)` untuk Hijau, `var(--quad-d)` untuk Ungu).
-   - Efek pendaran neon taktis: `box-shadow: 0 0 10px rgba(var(--token-rgb), 0.45)` sebagai penanda visual seketika bahwa mode sedang aktif berjalan.
+   - Efek iluminasi aktif terfokus hanya pada interaksi tombol CTA primer, tanpa pendaran berlebih (*no excessive glow bleed*).
 3. **Aturan Kontras Teks (Luminance Contrast)**:
    - Warna latar terang (Kuning `var(--grade-c)`, Hijau `var(--grade-a)`): Teks WAJIB gelap (**`#0F172A`**).
    - Warna latar pekat (Merah `var(--grade-e)`, Cyan `#0284c7`, Ungu `var(--quad-d)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
@@ -354,8 +375,10 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 
 ### 4.9 Zero Table Capsule & Zero Table Glow Invariant (SSOT)
 - **Larangan Mutlak Kapsul/Pill/Badge Pada Seluruh Isi Sel Tabel & Grid Data (No Capsule / Pill / Badge in Table Cells)**:
-  - Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, floating window tables, modal student lists `#modal-theme-open-session`, `#modal-theme-live-monitor`, dll.) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill/box (`background: transparent !important;`), border kotak (`border: none !important;`), maupun padding badge (`padding: 0 !important;`).
+  - Seluruh isi sel tabel (`table td`, `.datagrid-table td`, `.table-wrap td`, `.classes-hub-grid-row`, `.tree-grid-row`, `.matrix-table td`, floating window tables, modal student lists `#modal-theme-open-session`, `#modal-theme-live-monitor`, dll.) **MUTLAK TIDAK BOLEH** menggunakan kapsul, pill, badge, background fill/box (`background: transparent !important;`), border kotak kapsul (`.badge { border: none !important; }`), maupun padding badge (`padding: 0 !important;`).
   - **Yang Boleh Berwarna HANYA Font Teks Saja**: Arti semantik status (seperti `Active` hijau `var(--grade-a)`, `Inactive` merah `var(--grade-e)`, `Hold` kuning `var(--grade-c)`, `Published` hijau, `Draft` netral, `EXAM` orange, `TASK` indigo, status kesiapan ujian `Tasks Completed (Exam Ready)`, `Tasks Incomplete`, status eligibility, dll.) HANYA boleh direpresentasikan melalui warna font teks tipografi (`color: ...`). Font di dalam tabel tampil flat menyatu dengan baris tabel tanpa kapsul pembungkus.
+- **Ketegasan Garis Pembatas Kisi Sel (Adaptive Dual-Layer Gridlines)**:
+  - Larangan border kotak di atas khusus melarang elemen badge/kapsul di dalam sel, TETAPI sel tabel (`td`) itu sendiri **WAJIB memiliki garis pembatas kisi adaptif (Adaptive Dual-Layer Gridlines)** berupa `border-bottom` dan `border-right` tipis per tema (`#e2e8f0` di Light, `#2d2d2d` di Charcoal Dark, `rgba(255, 255, 255, 0.05)` di Navy, dengan `:last-child { border-right: none; }`).
 - **Mutlak Nol Glow (Zero Text-Shadow & Zero Box-Shadow) di Seluruh Sistem**:
   - Dilarang keras menggunakan efek GLOW, text-shadow, box-shadow, filter glow, atau pendaran neon apa pun pada teks maupun elemen di dalam isi sel tabel di SELURUH SISTEM (`text-shadow: none !important; box-shadow: none !important; filter: none !important;`).
   - Teks di dalam tabel wajib terbaca tegas, bersih (*crisp, matte*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
@@ -373,22 +396,22 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 
 ### 4.11 Universal Two-Tier Themed Headers Architecture (Dark Surface with Category-Themed Colored Fonts Across All Tables SSOT)
 - **Universal Two-Tier Themed Headers across ALL Tables in TopsCore (Font Saja Yang Berwarna)**:
-  - Setiap tabel di seluruh sistem TopsCore (baik `#class-attendance-grid`, `student_roster_raport_grid_v2`, `student_roster_data_grid_v2`, `#blueprint-matrix-table`, `#vault-table`, maupun tabel modular/dinamis lainnya) yang memiliki dua tingkat header (Baris 1 Super-Header dan Baris 2 Sub-Header) **WAJIB menerapkan latar belakang gelap pekat solid (`#0b1120` atau `#0f172a`) dengan HANYA FONT/TEKS YANG BERWARNA**.
+  - Setiap tabel di seluruh sistem TopsCore (baik `#class-attendance-grid`, `student_roster_raport_grid_v2`, `student_roster_data_grid_v2`, `#blueprint-matrix-table`, `#vault-table`, maupun tabel modular/dinamis lainnya) yang memiliki dua tingkat header (Baris 1 Super-Header dan Baris 2 Sub-Header) **WAJIB menerapkan latar belakang gelap pekat solid (`#0b1120`, `#0f172a`, atau `#212121`) dengan HANYA FONT/TEKS YANG BERWARNA**, dan format pembingkaian gelap ini **BERLAKU SERAGAM DI SEMUA TEMA TERMASUK LIGHT MODE** (Solid Dark Header Framing with Category-Themed Fonts).
   - Dilarang menggunakan blok latar belakang neon/terang solid yang berat dan menyilaukan mata pada tema gelap (*no full bright solid background blocks*).
-  - Sub-Header pada Baris 2 **MUTLAK MENGIKUTI 100% warna font/teks Super-Header induknya** di atas kanvas latar belakang gelap pekat yang sama.
+  - Sub-Header pada Baris 2 **MUTLAK MENGIKUTI 100% warna font/teks Super-Header induknya** di atas kanvas latar belakang gelap pekat yang sama dengan bobot font regular (`font-weight: 400 !important;`).
 - **Larangan Efek Opasitas Murky (Anti-Muddy Background SSOT)**:
-  - Latar belakang header wajib 100% solid opacity (`#0b1120` atau `#0f172a`) agar baris tabel yang di-scroll di bawahnya tidak tembus pandang (*no opacity bleed-through*). Dilarang keras menggunakan opasitas parsial (`rgba 0.5–0.9`).
+  - Latar belakang header wajib 100% solid opacity (`#0b1120`, `#0f172a`, atau `#212121`) agar baris tabel yang di-scroll di bawahnya tidak tembus pandang (*no opacity bleed-through*). Dilarang keras menggunakan opasitas parsial (`rgba 0.5–0.9`).
 - **Pemisah Antar-Baris & Garis Grid Excel (Crisp Excel Gridlines Invariant)**:
   - Garis horizontal 1px halus (`border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;`) membatasi Super-Header dan Sub-Header secara presisi.
   - Garis batas vertikal antar-kelompok kolom menggunakan border solid 2px (`border-right: 2px solid rgba(255, 255, 255, 0.22) !important;`).
 - **Pemetaan Warna Font Header & Sub-Header Kuadran/Kategori SSOT**:
-  - `STUDENTS DATA` / `CURRICULUM IDENTITY` (`BTC`, `STUDENT NAME`, `NO`, `INST`, `PROGRAM`, `LVL`, `CLASS NAME`, `CODE`, `STUDENTS`): Latar `#0b1120`, font putih bersih `#ffffff` atau slate `#94a3b8`, bold 800 (Row 1) & bold 700 (Row 2).
-  - `THEME A` / `PHRASES BREAKDOWN` & sub-kolomnya: Latar `#0b1120`, font Electric Pink `var(--quad-a, #ff2d87)`, bold 800 (Row 1) & bold 700 (Row 2), dengan efek glow lembut `text-shadow: 0 0 10px rgba(255, 45, 135, 0.35)`.
-  - `THEME B` / `PASSING STANDARDS` / `GENERATION BLUEPRINT` & sub-kolomnya: Latar `#0b1120`, font Dark Orange / Amber `var(--quad-b, #ff8c00)`, bold 800 (Row 1) & bold 700 (Row 2), dengan efek glow lembut `text-shadow: 0 0 10px rgba(255, 140, 0, 0.35)`.
-  - `THEME C` / `READINESS` / `METRICS SUMMARY` & sub-kolomnya: Latar `#0b1120`, font Electric Lime `var(--quad-c, #95ff00)`, bold 800 (Row 1) & bold 700 (Row 2), dengan efek glow lembut `text-shadow: 0 0 10px rgba(149, 255, 0, 0.35)`.
-  - `THEME D` / `ASSESSMENT ENGINE` / `WORDS BREAKDOWN` / `CURRICULUM TOPIC` & sub-kolomnya: Latar `#0b1120`, font Tactical Cyan `var(--quad-d, #38bdf8)`, bold 800 (Row 1) & bold 700 (Row 2), dengan efek glow lembut `text-shadow: 0 0 10px rgba(56, 189, 248, 0.35)`.
-  - `OVERALL` / `VOCABULARY POOL` (`DONE`, `PTS`, `GRD` / `ITEMS`, `WORDS`, `PHRASES`): Latar `#0b1120`, font Vibrant Star Purple `var(--grade-star, #c084fc)`, bold 800 (Row 1) & bold 700 (Row 2), dengan efek glow lembut `text-shadow: 0 0 10px rgba(192, 132, 252, 0.35)`.
-  - `DEMOGRAPHIC`, `ADDRESS`, `SECURITY`, `CLASSES`: Latar `#0b1120`, font putih bersih `#ffffff`, bold 800 (Row 1) & bold 700 (Row 2).
+  - `STUDENTS DATA` / `CURRICULUM IDENTITY` (`BTC`, `STUDENT NAME`, `NO`, `INST`, `PROGRAM`, `LVL`, `CLASS NAME`, `CODE`, `STUDENTS`): Latar `#0b1120` / `#0f172a`, font putih bersih `#ffffff` atau slate `#94a3b8`, bold 700 (Row 1) & regular 400 (Row 2).
+  - `THEME A` / `PHRASES BREAKDOWN` & sub-kolomnya: Latar `#0b1120` / `#0f172a`, font Electric Pink `var(--quad-a, #ff2d87)`, bold 700 (Row 1) & regular 400 (Row 2).
+  - `THEME B` / `PASSING STANDARDS` / `GENERATION BLUEPRINT` & sub-kolomnya: Latar `#0b1120` / `#0f172a`, font Dark Orange / Amber `var(--quad-b, #ff8c00)`, bold 700 (Row 1) & regular 400 (Row 2).
+  - `THEME C` / `READINESS` / `METRICS SUMMARY` & sub-kolomnya: Latar `#0b1120` / `#0f172a`, font Electric Lime `var(--quad-c, #95ff00)`, bold 700 (Row 1) & regular 400 (Row 2).
+  - `THEME D` / `ASSESSMENT ENGINE` / `WORDS BREAKDOWN` / `CURRICULUM TOPIC` & sub-kolomnya: Latar `#0b1120` / `#0f172a`, font Tactical Cyan `var(--quad-d, #38bdf8)`, bold 700 (Row 1) & regular 400 (Row 2).
+  - `OVERALL` / `VOCABULARY POOL` (`DONE`, `PTS`, `GRD` / `ITEMS`, `WORDS`, `PHRASES`): Latar `#0b1120` / `#0f172a`, font Vibrant Star Purple `var(--grade-star, #c084fc)`, bold 700 (Row 1) & regular 400 (Row 2).
+  - `DEMOGRAPHIC`, `ADDRESS`, `SECURITY`, `CLASSES`: Latar `#0b1120` / `#0f172a`, font putih bersih `#ffffff`, bold 700 (Row 1) & regular 400 (Row 2).
   - `EXAM` (Theme Exams): Super-Header Ujian (`THEME A EXAM`, `THEME B EXAM`, dst.) wajib 100% mengikuti warna kuadran tema induknya (Pink untuk Tema A, Oranye untuk Tema B, Lime untuk Tema C, Cyan untuk Tema D) dan SELARAS 100% dengan seluruh sub-header ujiannya (`WRD %`, `W-PTS`, `PHR %`, `P-PTS`, `ACC`, `GRD`, `STS` atau `RATE`, `PTS`, `GRD`, `STS`). Dilarang keras super-header ujian berwarna kuning sementara sub-headernya berwarna kuadran tema.
 - **Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant)**:
   - Setiap super-header dan seluruh sub-header di bawah kelompok kolom yang sama WAJIB memiliki warna font/teks yang 100% PERSIS SAMA (satu kelompok = satu warna identik).
@@ -401,6 +424,27 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - **Dimensi Seragam (Uniform 95px Button SSOT)**: Seluruh tombol navigasi tema/topik memiliki lebar tetap yang sama persis yaitu **95px** (`width: 95px !important; height: 30px !important;`) untuk keteraturan visual maksimal.
 - **Propagasi Otomatis di Tingkat Engine DataGrid (`js/admin/datagrid.js`)**:
   - Engine `DataGrid` secara otomatis menyalurkan gaya dan class tema (`col-subhdr-theme-*`, `col-subhdr-students-data`, `col-subhdr-demographic`, `col-subhdr-address`, `col-subhdr-security`, `col-subhdr-class`) dari `superHeaders` ke setiap anak kolom sub-header yang dinaunginya, menjamin konsistensi 100% di seluruh aplikasi.
+
+### 4.13 Pilar ke-13 Datagrid SSOT — Adaptive Dual-Layer Table Gridlines, Boundary Dividers & Semantic Colors
+- **Dual-Layer Subtle Borders in Normal Mode**:
+  Di seluruh tabel antarmuka workstation TopsCore LMS pada mode tampilan normal, setiap sel data (`table td`) wajib memiliki garis kisi tipis 1px horizontal (`border-bottom`) dan vertikal (`border-right`):
+  - **Navy Mode**: `border-bottom: 1px solid var(--admin-border-subtle); border-right: 1px solid var(--admin-border-subtle);` (`rgba(255, 255, 255, 0.08)`)
+  - **Charcoal Dark Mode**: `border-bottom: 1px solid var(--admin-border-subtle); border-right: 1px solid var(--admin-border-subtle);` (`#383838`)
+  - **Tiered Grey Light Mode**: `border-bottom: 1px solid var(--admin-border-subtle); border-right: 1px solid var(--admin-border-subtle);` (`#cbd5e1` Slate 300)
+  - Kolom terakhir pada setiap baris wajib meniadakan border kanan: `table td:last-child { border-right: none !important; }`.
+- **Super-Header Boundary Dividers & Sticky Column Dividers (2px Solid)**:
+  Pembatas antar-grup kategori (misal: kolom batas `STUDENTS DATA`, `DEMOGRAPHIC`, `ADDRESS`, `SECURITY`, serta kolom sticky `col-sticky-2`) wajib menggunakan garis pembatas 2px solid bersambung dari header hingga footer:
+  - **Navy Mode**: `border-right: 2px solid var(--admin-border-divider);` (`rgba(255, 255, 255, 0.22)`)
+  - **Charcoal Dark Mode**: `border-right: 2px solid var(--admin-border-divider);` (`#52525b` Zinc 600)
+  - **Tiered Grey Light Mode**: `border-right: 2px solid var(--admin-border-divider);` (`#94a3b8` Slate 400 — tegas dan kontras tinggi, dilarang transparan putih)
+- **Universal Table Perimeter Framing (2px Solid)**:
+  Garis tepi terluar tabel (first-child left, last-child right, top thead, bottom tfoot/tbody) wajib menggunakan `var(--admin-border-perimeter)` (`#64748b` di Light, `#52525b` di Charcoal Dark, `rgba(255, 255, 255, 0.28)` di Navy).
+- **Universal Semantic Column Colors Across All Tables (Statuses & Percentages)**:
+  1. **Status**: Wajib berwarna semantik (`.status-active` hijau `var(--grade-a)`, `.status-inactive` merah `var(--grade-e)`, `.status-hold` amber `var(--grade-c)`, `.status-alumni` ungu `var(--quad-d)`, `.status-ongoing` cyan `var(--primary-tactical)`). Dilarang dipaksa hitam pada Light Mode.
+  2. **Persentase**: Seluruh angka persentase (`RATE`, `DONE %`, `WRD %`, `PHR %`, `TASK %`, `ACC`) wajib berwarna grade-tier ($\ge 80\%$ hijau, $60\% - 79\%$ amber/kuning, $< 60\%$ merah).
+  3. **Tombol Promosi Level (`.btn-level-up-cell`)**: Menampilkan badge tombol hijau taktis interaktif dengan styling adaptif per tema.
+- **Intensified Excel Gridlines in Master Edit Mode**:
+  Saat Master Edit Mode diaktifkan (`body.global-edit-mode-on`), seluruh garis kisi bertransformasi menjadi garis putih tegas khas spreadsheet Excel (`border: 1px solid rgba(255, 255, 255, 0.45) !important;` / `var(--admin-border-active)`) dengan input dan dropdown borderless transparan per [AGENTS.md §2.22](file:///AGENTS.md#222-universal-master-edit-mode-white-excel-gridlines-invariant--sub-panel-edit-mode-standard).
 
 ---
 
@@ -470,6 +514,33 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Formula Resolusi**: Menggunakan helper resmi `formatTestDisplay(test)` (`line1` untuk Baris 1, `line2` untuk Baris 2) dan `formatTestTitleHtml(test)`.
 - **Invarian Eliminasi Truncation**: Pembagian 2 baris ini menjamin judul tes dapat terbaca utuh 100% pada koridor mobile 350px–430px tanpa terpotong elipsis (`...`).
 
+### 5.5 Faculty & Staff Identity Card Standards (Tutor & Staff ID Badge SSOT)
+- **Konsep & Arsitektur Kartu Tanda Pengenal (ID Badge Style)**:
+  - Seluruh kartu pengenal pengajar (Tutor), instruktur, dan staf di lingkungan TopsCore (baik pada panel dashboard admin, roster staff, maupun detail profil) WAJIB diformat dengan **estetika Kartu Tanda Pengenal Fisik (Physical ID Badge)**:
+    - **Lanyard Clip Notch**: Indikator slot gantungan tali lanyard di bagian atas tengah kartu (`width: 32px; height: 4px; border-radius: 2px;`).
+    - **Photo / Avatar Frame**: Avatar berukuran 44px–48px dengan border aksen gender dan status dot online.
+    - **Bidang Data Wajib**: `NAME`, `GENDER`, `DOB / AGE` (format tanggal lahir disertai kalkulasi usia otomatis, e.g. `14 May 1995 (31 yrs)`), `ADDRESS` (alamat asal/domisili), `ASSIGNED CLASSES`, dan status tugas live.
+    - **Security Stamp & Digital Barcode**: Nomor registrasi ID staf monospace (`TC-CEC-TUTOR-###` / `TC-TOP-INST-###`) dan strip barcode visual di bagian bawah kartu.
+- **Standar Pembeda Institusi: CEC vs TOP (Institutional Differentiation SSOT)**:
+  - 🏛️ **Kartu CEC Campus Faculty (`.tutor-id-card.tenant-cec`)**:
+    - **Header Tag**: **Tactical Cyan (`#38bdf8` / `var(--primary-tactical)`)** dengan badge `CEC ACADEMIC FACULTY`.
+    - **Spesialisasi Akademik**: Menampilkan penugasan jenjang level mengajar (`Level 1`, `Level 2`, `Level 3`) dan modalitas kelas (Vocabulary, Speaking, Storytelling, Basic, Grammar).
+  - 🏨 **Kartu TOP Corporate Instructor (`.tutor-id-card.tenant-top`)**:
+    - **Header Tag**: **Dark Orange (`#ff8c00` / `var(--quad-b)`)** dengan badge `TOP CORPORATE INSTRUCTOR`.
+    - **Spesialisasi Korporat**: Menampilkan penugasan program korporat (*Evnikom*, *Sheraton*, *Tamata*), fokus hospitality/perhotelan, dan penanda Level 0 (Non-Level).
+- **Aturan Baku Aksen Warna Gender (Gender Color Accent SSOT)**:
+  - 🍏 **Tutor & Staf Pria (Male — `.gender-male`)**:
+    - **Aksen Warna**: **Electric Lime (`#95ff00` / `var(--grade-b)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch glow, dan badge gender.
+    - **Kontras Teks Wajib**: Teks di dalam badge gender Lime WAJIB menggunakan warna **Dark Slate (`#0f172a`)** tebal (Inter 800) untuk menjamin keterbacaan tinggi.
+  - 🌸 **Tutor & Staf Wanita (Female — `.gender-female`)**:
+    - **Aksen Warna**: **Electric Pink (`#ff2d87` / `var(--quad-a)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch glow, dan badge gender.
+    - **Kontras Teks Wajib**: Teks di dalam badge gender Pink WAJIB menggunakan warna **Crisp White (`#ffffff`)** tebal (Inter 800).
+- **Spatial & Typography Invariants**:
+  - Padding internal kartu strictly **10px** (`padding: 10px !important`).
+  - Gap antar kartu strictly **10px** (`gap: 10px`).
+  - Tipografi 100% Inter (Nama 13px–14px Bold `#ffffff`, Label 11px `#94a3b8`, Value 11px–12px `#f8fafc`).
+  - Dilarang keras menggunakan warna abu-abu pudar untuk nama tutor; nama wajib kontras tinggi dan mudah diidentifikasi.
+
 ---
 
 ## Bab 6: DataGrid & Roster Table Architecture
@@ -490,9 +561,9 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
 - **Aktivasi Tombol Aksi NEXT di Roster**: Tombol `NEXT` di Sub Panel atau toolbar roster otomatis aktif (*enabled*) hanya saat seluruh siswa aktif dalam batch telah memenuhi batas kelulusan (lulus, remedial tuntas, atau dispensasi Grade F). Jika masih ada siswa yang belum tuntas, tombol dinonaktifkan (*disabled*) dengan tooltip alasan.
 
-### 6.5 Arsitektur Tampilan Level: Level 0 (Non-Level `—`), Level 1–3, dan Alumni (Level X) SSOT
+### 6.5 Arsitektur Tampilan Level: Level 0 (Non-Level `0`), Level 1–3, dan Alumni (Level X) SSOT
 - **Prinsip Identitas Level Resmi**:
-  1. **Level 0 (Non-Level Programs)**: Khusus untuk program yang sejak awal tidak memiliki jenjang bertahap (single-tier, misal seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata Persada). Pada seluruh tabel workstation admin (kolom `LVL`) dan dashboard siswa, Level 0 ditampilkan sebagai tanda strip bersih **`—`** (slate netral `#94a3b8`). Dilarang keras menampilkan angka 0 atau teks "L0" di layar agar tidak membingungkan siswa dan tutor.
+  1. **Level 0 (Non-Level Programs)**: Khusus untuk program yang sejak awal tidak memiliki jenjang bertahap (single-tier, misal seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata Persada). Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard siswa, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`). Dilarang keras menampilkan teks "L0" atau tanda strip pada entitas Level 0 yang valid.
   2. **Level 1–3 (Jenjang Reguler)**: Ditampilkan sebagai `1st`, `2nd`, `3rd` dengan tabular numbers tebal (`color: #f8fafc; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;`).
   3. **Level X (Alumni Graduation)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, `program_status = 'ALUMNI'`). Ditampilkan sebagai huruf **`X`** tebal berwarna ungu neon (`#c084fc` / `var(--quad-d)`). Alumni mutlak DILARANG menggunakan angka 0.
 - **In-Memory & Inline Master Edit Mode Select Control**:
@@ -515,4 +586,56 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Student Dashboard & Class Lobby Invariants**:
   - **Non-Level**: Badge Level pada header dashboard disembunyikan/ditiadakan (dianggap kosong), dan seluruh kelas program dapat diakses langsung.
   - **Alumni**: Mempertahankan *Lifetime Universal Access* ke seluruh kelas program di Class Lobby dan Dashboard, dengan badge bertuliskan **`ALUMNI`** / **`X`** dan aura ungu neon.
+
+### 6.6 Faculty & Tutor Identity Card Standards (2-Column Grid & Standardized Badge Geometry SSOT)
+- **2-Column Vertical Grid Layout**: On the Attendance Dashboard (Domain A, Right Panel 50%), tutor identity cards strictly render in a balanced **2-column grid** (`grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start;`). For CEC (6 tutors), this forms an elegant 3-row $\times$ 2-column matrix; for TOP (2 tutors), it forms 1 row $\times$ 2 columns.
+- **Pure White Background & High Contrast**: Card backgrounds strictly enforce **`#ffffff`** (`background: #ffffff !important; color: #0f172a !important;`), paired with dark text for maximum legibility.
+- **Gender-Themed Title Area Banners**:
+  - **Male**: Lime green header (`#95ff00`, border `#84cc16`), dark slate text (`#0f172a`), badge `MALE`.
+  - **Female**: Electric pink header (`#ff2d87`, border `#db2777`), crisp white text (`#ffffff`), badge `FEMALE`.
+- **Friendly Callout Nicknames**: Banners must feature the tutor's formal name alongside their friendly nickname in quotes (e.g. `"Mr. Top"`, `"Mr. Amrul"`, `"Miss Elysa"`, `"Miss Nizan"`, `"Miss Cita"`, `"Miss Amelia"`, `"Miss Siti"`).
+- **Physical ID Badge Geometry**:
+  - Banner height: ~28px (`padding: 6px 10px;`).
+  - Avatar frame: 38px $\times$ 38px rounded square with colored border.
+  - Structured metadata rows: DOB/Age, Address (truncated with hover tooltip), and assigned class chips.
+  - Bottom security stamp: Monospace ID serial (`TC-CEC-TUTOR-XXX` / `TC-TOP-INST-XXX`) and faux barcode glyphs.
+  - Total card height: ~156px–165px, enabling 3 rows to fit cleanly within the viewport height.
+
+### 6.7 Mobile Tutor Desk Workspace Invariants (Level Box, Class Schedule, Time Card & Time Colour SSOT)
+- **1. Level Box SSOT**:
+  - Dinamai resmi **`Level Box`** (analog dengan Gender Box pada modul registrasi).
+  - Menggunakan kartu kotak presisi persegi (**Square aspect-ratio 1:1**, `aspect-ratio: 1 / 1 !important;`).
+  - Strict 10px perimeter & 10px gap antar level cards (`gap: 10px !important;`).
+  - **Angka Murni Tanpa Huruf 'L' (Strict Zero "L" on Level)**: Tampilan nomor level HANYA angka murni: `1`, `2`, `3` (dan `0` untuk program non-level TOP). DILARANG KERAS mencantumkan huruf "L" (`L1`, `L2`, `L3` dilarang).
+  - Visual State: Redup saat inaktif (`opacity: 0.45; filter: grayscale(15%);`), menyala terang saat aktif dengan border 2px dan glow shadow Grade Color.
+- **2. Class Schedule Matrix SSOT**:
+  - Urutan 4 kolom baku: **`LVL`** (tengah, nomor murni) | **`CLASS`** (kiri, nama disiplin) | **`TUTOR`** (tengah, nama panggilan/nickname) | **`TIME`** (kanan, jam sesi).
+  - Header: `LVL` | `CLASS` | `TUTOR` | `TIME`.
+  - **Dynamic Responsive Sizing**: Kontainer 5 baris kelas (`.class-matrix-grid`) mengadopsi flex dinamis (`flex: 1 1 auto;`) sehingga kartu kelas menyesuaikan tinggi secara dinamis mengikuti sisa ruang vertikal layar tanpa scrollbar artifisial.
+- **3. Time Card & Time Colour SSOT**:
+  - Dinamai resmi **`Time Card`** (`.time-card` / `#time-card`).
+  - Terbagi rata menjadi 3 porsi setara (`grid-template-columns: repeat(3, 1fr)`).
+  - Tiga pilar waktu: **`TIME`** | **`DAY`** | **`DATE`**.
+  - **Aturan Baku Time Colour**: Warna teks waktu mengadopsi 3 variasi warna level yang terang dan kontras tinggi:
+    - **`TIME`**: Level 1 Merah Grade E (`#ff4d4d` / `var(--grade-e)`)
+    - **`DAY`**: Level 2 Kuning Grade C (`#ffe600` / `var(--grade-c)`)
+    - **`DATE`**: Level 3 Tactical Cyan Grade A (`#38bdf8` / `var(--primary-tactical)`)
+- **4. Button Invariants (Dual Mode & Master CTA)**:
+  - **Zero SVG Icons**: Seluruh tombol aksi peluncuran (`REGULAR`, `EXAM`, dan `START CLASS`) murni berupa teks tebal tanpa ikon SVG.
+  - **Strict 10px Spacing**: Jarak antar tombol `REGULAR` dan `EXAM` adalah 10px (`gap: 10px;`), jarak vertikal ke `START CLASS` adalah 10px, dan jarak bebas dari tombol terbawah ke batas banner 50px adalah persis 10px.
+  - **Master CTA Height**: Tombol utama `START CLASS` locked 50px (`height: 50px !important;`).
+
+### 6.8 Universal Table Column Ordering & Zero Header-Repetition in Data Cells SSOT
+- **1. Universal Code Column Positioning Invariant**:
+  - **Tabel Berkolom Nomor / Ordinal (`#`, `NO`, `LVL`)**: Seluruh kolom yang memuat kode sistem (`CODE`, `CLASS CODE`, `TEST CODE`) **WAJIB diletakkan tepat setelah kolom nomor/ordinal tersebut** sebelum kolom nama (`[NO / LVL] | [CODE] | [NAME] | ...`).
+  - **Tabel Tanpa Kolom Nomor**: Kolom **`CODE`** WAJIB diletakkan sebagai **kolom pertama (paling kiri)** di tabel tersebut (`[CODE] | [NAME] | ...`).
+  - **Penerapan Resmi**:
+    - *Academic Classes Matrix*: `LVL | CODE | CLASS NAME | DAY | START | END | ROOM | TUTOR | STD | RATE | STATUS`.
+    - *Faculty & Tutors*: `CODE | PIC | NAME | DoB | AGE | ACT`.
+    - *Camp Rooms & Venues*: `CODE | ROOM NAME | CAP | TYPE | ACT`.
+- **2. Zero Header-Repetition in Data Cells (Header/Data Non-Redundancy SSOT)**:
+  - Dilarang keras mengulang kata atau label yang sudah ada di header kolom ke dalam nilai sel data.
+  - **Penerapan Resmi pada Kolom BATCH**: Jika header kolom tabel adalah **`BATCH`**, maka isi sel kolom mutlak hanya menampilkan angka/nama pengenal murni (`135`, `134`, `123`, `EV-07`), DILARANG menambahkan awalan kata "Batch" (`Batch 135`, `Batch 134`) karena menciptakan redundansi visual (*visual clutter*). Seluruh awalan `Batch ` wajib di-strip secara konsisten.
+
+
 

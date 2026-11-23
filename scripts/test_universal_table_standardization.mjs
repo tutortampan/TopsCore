@@ -170,4 +170,26 @@ assert(agentsMd.includes('Aturan Keselarasan Warna Super Header dan Sub Header (
 assert(uiInvariantsMd.includes('Aturan Keselarasan Warna Super Header dan Sub Header (100% Exact Group Color Match Invariant)'), 'ui-invariants.md must codify 100% Exact Group Color Match Invariant');
 console.log('  ✅ Pillar 12 Passed: Super-Header & Sub-Header Exact Group Color Match Invariant strictly verified.');
 
-console.log('\n🎉 ALL 12 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');
+// 13. Pillar 13: Universal Zero False-Red & Code-After-Numbering Sequence Invariant
+console.log('▶ Checking Pillar 13: Zero False-Red & Code-After-Numbering Sequence Invariant...');
+const freshStudentMgmtJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'student-management.js'), 'utf-8');
+assert(!freshStudentMgmtJs.includes("const titleText = isM ? 'Mister' : (isF ? 'Miss'"), 'student-management.js must not render Mister / Miss in master table');
+assert(freshStudentMgmtJs.includes("const titleText = isM ? 'Male' : (isF ? 'Female'"), 'student-management.js must render Male / Female demographic');
+assert(freshStudentMgmtJs.includes("const isPending = grd === '—' || !row.overallColor;"), 'student-management.js must check isPending for overall grade circle');
+assert(freshStudentMgmtJs.includes("const color = isPending ? '#64748b' : row.overallColor;"), 'student-management.js must enforce slate #64748b on pending grades');
+
+const freshClassesHubJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'classes-hub.js'), 'utf-8');
+const codeIdx = freshClassesHubJs.indexOf("CODE ${getSortIcon('code')}");
+const nameIdx = freshClassesHubJs.indexOf("CLASS NAME ${getSortIcon('name')}");
+assert(codeIdx !== -1 && nameIdx !== -1 && codeIdx < nameIdx, 'classes-hub.js must place CODE before CLASS NAME in datagrid header');
+
+const freshClassAttendanceJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'class-attendance.js'), 'utf-8');
+assert(!freshClassAttendanceJs.includes("<!-- Sub Header Bar -->\n        <div style=\"display:flex; align-items:center; justify-content:space-between;"), 'class-attendance.js must not contain floating Sub Header Bar above table');
+assert(freshClassAttendanceJs.includes("window.setBottomInfobar(leftHtml, rightHtml);"), 'class-attendance.js must dock legend badges into setBottomInfobar');
+
+const freshAdminDeckJs = fs.readFileSync(path.join(rootDir, 'js', 'admin', 'admin-deck.js'), 'utf-8');
+assert(!freshAdminDeckJs.includes("icon: '🏛️'"), 'admin-deck.js must not contain 🏛️ icon in top tabs');
+assert(!freshAdminDeckJs.includes("icon: '🏨'"), 'admin-deck.js must not contain 🏨 icon in top tabs');
+console.log('  ✅ Pillar 13 Passed: Zero False-Red, Clean Demographics, and Code-After-Numbering sequence verified.');
+
+console.log('\n🎉 ALL 13 PILLARS OF UNIVERSAL TABLE STANDARDIZATION PASSED WITH 100% INTEGRITY!\n');

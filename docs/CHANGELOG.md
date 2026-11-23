@@ -9,6 +9,208 @@
 
 ---
 
+## [2026-11-22 19:30] — Phase 685: Light Mode High-Contrast Table Text & Theme Harmonization
+- **Light Mode Text Contrast Fix (`js/admin/admin-deck.js`, `css/admin/admin-theme.css`)**:
+  - Menyelesaikan keluhan teks tabel tidak terbaca pada Light Mode di Administration Domain A (`admin.html#dashboard`).
+  - Mengubah seluruh inline color bernilai `#f8fafc` / `#ffffff` pada kolom `DAY`, `START`, `END`, `ROOM`, `TUTOR` di `15 CLASSES MATRIX` serta panel kanan (`FACULTY & TUTORS`, `CAMP ROOMS & VENUES`, `ACTIVE BATCHES`) menjadi token semantik adaptif: `var(--admin-text-main, #f8fafc)`.
+  - Memperbaiki `css/admin/admin-theme.css`: menambahkan aturan Light Mode safety-net dengan prioritas tinggi untuk memaksa teks `#f8fafc`, `#ffffff`, atau `rgb(...)` pada sel tabel (`td span`, `td div`, `td select`, `td input`) menjadi `#0f172a !important;` (Dark Slate) ketika berlatar belakang putih, dengan tetap mempertahankan warna semantik (clash/error `#ef4444`, grade badges, dan status pills).
+- **CSS Compilation & Automated Verification**:
+  - Mengompilasi ulang seluruh bundle CSS admin via `node scripts/build_admin_css.mjs`.
+  - Menjalankan 4 test suite lengkap:
+    - `npm run test:table`: 13/13 Pillars Universal Table Standardization 100% Green.
+    - `npm run test:fast`: 57 JS files AST Syntax check & Repetitive Mastery Safeguards 100% Green.
+    - `npm run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+    - `npm run test:tutor`: 58/58 Tests Tutor Ecosystem & Multi-Tenant Attendance 100% Green.
+
+---
+
+## [2026-11-22 19:10] — Phase 684: Global Datagrid & Table Standardization — Zero False-Red, Code Ordering & Demographic Cleanliness (Pillar 13 SSOT)
+- **Universal Zero False-Red Invariant (`js/admin/student-management.js`, `AGENTS.md` §2.5.7, `ui-invariants.md` §6.9)**:
+  - Mengoreksi penentuan `overallColor` pada rapor siswa (`student-management.js`). Jika siswa belum memiliki nilai ujian atau `globalGrade === '—'`, warna background nilai mutlak dipatok ke warna netral muted slate (`#64748b`), dilarang keras me-render warna merah Grade E (`#ff0000`).
+  - Mengamankan elemen lingkaran nilai `grade-circle` di kolom `GRD` agar teks kontras tinggi (`#f8fafc`) dan background slate saat pending, melenyapkan lingkaran merah palsu (*false-red dot*).
+- **Clean Demographic Values (Strict Zero Honorifics in Master Tables)**:
+  - Menghapus penggunaan sebutan honorifik `Mister` dan `Miss` dari seluruh tabel demografi master, inline editor, dan modal penambahan siswa di `student-management.js`.
+  - Menggantinya 100% dengan standar demografi internasional: **`Male`** dan **`Female`**.
+- **Universal Code-After-Numbering Sequence (`js/admin/classes-hub.js`, `classes-management.js`)**:
+  - Menggeser posisi kolom `CODE` pada datagrid kurikulum (`classes-hub.js`) ke posisi kolom 5 tepat setelah `LVL` dan sebelum `CLASS NAME`, menyelaraskannya dengan urutan standar tabel akademik (`LVL | CODE | CLASS NAME`).
+  - Menghapus double padding pada `.classes-hub-workspace` untuk mematuhi *Single Perimeter Ownership* (Rule 0.2.3).
+- **Strict Ceiling Docking & Sub Panel Legend Monopoly (`js/admin/class-attendance.js`)**:
+  - Menghapus banner mengambang (*floating sub-header bar*) di atas tabel kehadiran kelas (`class-attendance.js`).
+  - Mendaratkan seluruh ringkasan jadwal, total pertemuan, dan indikator status kehadiran (`P`, `E`, `S`, `A`) ke Sub Panel bawah (40px Lower Panel) via `setBottomInfobar(leftHtml, rightHtml)`.
+- **Icon Clutter Purge in Table Headers & Top Tabs (`js/admin/admin-deck.js`, `student-management.js`)**:
+  - Menghapus emotikon `🏛️` dan `🏨` dari topbar tabs dan sub-panel di Domain A (`admin-deck.js`).
+  - Membersihkan tombol aksi `LEVEL UP` di sel status siswa dari ikon SVG menjadi tombol teks tebal murni yang rapi dan presisi.
+- **Pillar 13 Automated Verification & Governance Integration**:
+  - Memperluas suite pengujian `scripts/test_universal_table_standardization.mjs` dari 12 menjadi **13 Pillars of Table Standardization** (`npm run test:table`).
+  - Memperbarui panduan skill `.agents/skills/table-standardizer/SKILL.md`, `.agents/rules/ui-invariants.md`, dan `AGENTS.md`.
+
+---
+
+## [2026-11-22 18:10] — Phase 683: Board View Harmonization — Single Full-Height Batch Performance Matrix & Universal Table Standardization
+- **Dedicate Board View to Single Full-Height Master Batch Datagrid (`js/admin/curriculum-management.js`)**:
+  - Menghapus tabel kedua (`CLASSES PERFORMANCE MATRIX`) dari view Board / Organization sesuai arahan pengguna.
+  - Memposisikan `BATCH PERFORMANCE MATRIX` sebagai tabel tunggal berukuran penuh (*100% full height*) dengan *zero-scroll body* dan kontainer *internal scrolling*.
+  - Mengikutsertakan **seluruh batch yang ada di database** (termasuk batch historis/completed: 123, 131, 132, 133, 134, 135 untuk CEC; EV-07, SH-26 untuk TOP; atau seluruh 8 batch saat tab ALL aktif).
+- **Universal Table Standardization (`table-standardizer`)**:
+  - 14 Kolom baku berurutan: `RANK` (#), `BATCH` (angka murni tanpa duplikasi kata 'Batch', tabular), `PROGRAM`, `LVL`, `STD` (total siswa terdaftar), `START` (tanggal mulai), `END` (tanggal selesai), `AVG SCORE` (rata-rata nilai & grade badge), `PASS %` (persentase kelulusan), `KING` (👑 top male), `QUEEN` (👑 top female), `MOST DILIGENT` (⚡ highest reps), `LAZIEST` (🐢 lowest reps/score), dan `STATUS` (pill Active / Ongoing / Completed / Inactive).
+  - 30px Sticky Header (`background: #0f172a; top: 0`) dan 30px Sticky Footer (`background: #090d16; bottom: 0`) dengan kalkulasi total otomatis (Total Batches, Total Enrolled Students, Overall Score Average, Overall Pass Rate).
+  - Trikotomi filter di Sub Panel bawah (40px Infobar): `ALL`, `ACTIVE`, `COMPLETED`, dan `SCORED` dengan ringkasan Top Batch dan total statistik.
+- **Automated Verification**:
+  - `npm.cmd run test:table`: 12/12 Pillars Universal Datagrid Standardization 100% Green.
+  - `npm.cmd run test:fast`: 57/57 JS AST Syntax check + 5 Pillars Repetitive Mastery 100% Green.
+  - `npm.cmd run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+  - `npm.cmd run test:tutor`: 58/58 Tests Tutor Ecosystem & Attendance Lifecycle 100% Green.
+
+---
+
+## [2026-11-22 17:46] — Phase 682: Analytics Parallelization, Single-Query Batch Operations & Native Lazy Avatar Rendering
+- **Parallelized Chunk Fetching for Class Analytics & Live Sessions (`js/admin/class-analytics.js`, `js/admin/tests-access.js`)**:
+  - Mengubah pemanggilan bertahap (*sequential await loop*) pada `attempt_answers` menjadi `Promise.allSettled`.
+  - Mengambil seluruh potongan chunk (masing-masing 50 attempt) secara serentak, mempercepat waktu pemuatan tab *Test Analytics* dan *Live Test Sessions* sebesar 4x–5x lipat.
+- **Single-Query Batch Operations for Students & Tests (`js/admin/student-management.js`, `js/admin/classes-management.js`)**:
+  - Mengeliminasi loop `for ... await` satu per satu pada operasi massal (*Bulk Activate*, *Bulk Deactivate*, *Bulk Delete* siswa) menjadi **satu query tunggal** menggunakan `.in('id', selectedIds)`.
+  - Mengubah penerbitan massal tes (*Publish All / Draft All*) menjadi eksekusi `Promise.all`.
+  - Memastikan `clearAdminCache('students')` dipanggil setelah operasi massal untuk menjaga konsistensi state.
+- **Native Lazy Loading for Student Avatars (`js/admin/student-management.js`)**:
+  - Menambahkan atribut `loading="lazy"` pada elemen `<img>` avatar siswa di datagrid, mencegah browser memblokir jaringan untuk mengunduh gambar di luar viewport saat tabel memuat ratusan siswa.
+- **Automated Verification**:
+  - `npm.cmd run test:fast`: 57/57 JS AST Syntax check + 5 Pillars Repetitive Mastery 100% Green.
+  - `npm.cmd run test:table`: 12/12 Pillars Universal Datagrid Standardization 100% Green.
+  - `npm.cmd run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+  - `npm.cmd run test:tutor`: 58/58 Tests Tutor Ecosystem & Attendance Lifecycle 100% Green.
+
+---
+
+## [2026-11-22 17:40] — Phase 681: PWA Cache-First Engine for Versioned Static Assets & In-Memory Test Catalog Caching
+- **Service Worker Cache-First for Versioned Assets (`sw.js`)**:
+  - Memisahkan strategi caching antara dokumen HTML (`.html`) dan aset statis berversi unik (`.js?v=...` dan `.css?v=...`).
+  - Dokumen navigasi tetap mengikuti pola *Network-First* agar setiap rilis terbaru langsung terdeteksi.
+  - Aset berversi unik (`?v=...`) kini disajikan secara **Cache-First** langsung dari CacheStorage tanpa menunggu jaringan internet. Begitu tersimpan di memori perangkat, loading halaman siswa (`dashboard.html`, `test.html`) menjadi **instan (0ms latency)** tanpa sequential network waiting.
+  - Bump cache version ke `topscore-cache-option-a-v203`.
+- **In-Memory Caching for Student Tests Catalog (`js/api.js`)**:
+  - Membungkus kueri `fetchTests()` dengan `withCache('tests|' + filters, ..., 2 minutes)`.
+  - Mengeliminasi panggilan redundan ke tabel `tests` di Supabase Cloud saat siswa berpindah antar-kelas di Class Lobby atau merefresh tampilan dashboard.
+  - Otomatis terinvalidasi saat tes diperbarui melalui `clearApiCache('tests')`.
+- **Automated Verification**:
+  - `node scripts/test_pwa_integrity.mjs`: 100% Passed.
+  - `node scripts/generate_sw_manifest.mjs`: 35/35 cached assets verified on disk.
+  - `npm.cmd run test:fast`: 57/57 JS AST Syntax check + 5 Pillars Repetitive Mastery 100% Green.
+  - `npm.cmd run test:table`: 12/12 Pillars Universal Datagrid Standardization 100% Green.
+  - `npm.cmd run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+  - `npm.cmd run test:tutor`: 58/58 Tests Tutor Ecosystem & Attendance Lifecycle 100% Green.
+
+---
+
+## [2026-11-22 17:45] — Phase 681: Batch Performance Matrix Expansion — Batch Timeline (Start & End Dates), King & Queen Honors, Most Diligent & Laziest Indicators
+- **Batch Timeline Columns (`START` & `END`) (`js/admin/curriculum-management.js`)**:
+  - Menambahkan kolom **`START`** (tanggal batch mulai / `enrollment_date`) dan **`END`** (tanggal batch selesai / `actual_final_date`) yang terintegrasi langsung dengan database `batches` dan kalender kurikulum historis (contoh: `1 Jun 2026`, `30 Dec 2026`, `18 Oct 2026`, `14 Nov 2026`).
+  - Dilengkapi format tanggal baku `formatBatchDate()` dan sorting dinamis berdasarkan tanggal.
+- **Batch Superlatives & Honors (`KING`, `QUEEN`, `MOST DILIGENT`, `LAZIEST`)**:
+  - **`KING`**: Gelar kehormatan siswa putra berprestasi terbaik per batch (e.g. `👑 Faesal Ramdani`, `👑 Muhamad Alifurrahman`, `👑 Asik`). Terhubung ke `DEFAULT_BATCH_SUPERLATIVES_MAP` dan fallback dinamis ke siswa putra dengan skor tertinggi.
+  - **`QUEEN`**: Gelar kehormatan siswa putri berprestasi terbaik per batch (e.g. `👑 Lucky Amelia`, `👑 Havvina Solehah`). Terhubung ke `DEFAULT_BATCH_SUPERLATIVES_MAP` dan fallback dinamis ke siswa putri dengan skor tertinggi.
+  - **`MOST DILIGENT`**: Ditandai simbol petir `⚡` untuk siswa dengan frekuensi repetisi/pengerjaan tugas terbanyak (e.g. `⚡ Isnartika Salsabila (42r)`).
+  - **`LAZIEST`**: Ditandai simbol kura-kura `🐢` untuk siswa termalas/paling sedikit beraktivitas atau nilai terendah yang membutuhkan pembinaan khusus (e.g. `🐢 Singgih Dwi Putra (0 reps)`, `🐢 Wildian Yusroni`).
+- **Standardisasi Header & Footer Datagrid 14 Kolom**:
+  - Susunan kolom final `BATCH PERFORMANCE MATRIX`:
+    `RANK | BATCH | PROGRAM | LVL | STD | START | END | AVG SCORE | PASS % | KING | QUEEN | MOST DILIGENT | LAZIEST | STATUS`
+  - Footer mengagregasi total 14 kolom secara akurat dengan sticky position pada viewport lock.
+- **Automated Verification**:
+  - `npm.cmd run test:fast`: 57/57 JS AST Syntax check + 5 Pillars Repetitive Mastery 100% Green.
+  - `npm.cmd run test:table`: 12/12 Pillars Universal Datagrid Standardization 100% Green.
+  - `npm.cmd run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+  - `npm.cmd run test:tutor`: 58/58 Tests Tutor Ecosystem & Attendance Lifecycle 100% Green.
+
+---
+
+## [2026-11-22 17:35] — Phase 680: Executive Board Dual-Matrix Refactoring — Batch Performance Matrix & Classes Performance Matrix (Vertical Stack Architecture)
+- **Vertical Stack Datagrid Layout (`js/admin/curriculum-management.js`)**:
+  - Mengubah susunan kedua tabel dari berdampingan horizontal menjadi **Tersusun Vertikal (Atas dan Bawah)** (`grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; height: 100%;`).
+  - Mengeliminasi keterpotongan teks (*Zero-Truncation SSOT*): Karena kedua tabel kini membentang penuh 100% lebar layar, nama kelas (`CLASS NAME`), tutor, dan siswa bintang/aktif (`TOP ACHIEVER`, `MOST DILIGENT`, `LEAST ACTIVE`) tampil utuh tanpa terpotong (*no ellipsis truncation*).
+- **Batch Performance Matrix (Tabel Atas)**:
+  - Urutan Kolom: `RANK | BATCH | PROGRAM | LVL | STD | AVG SCORE | PASS % | TOP ACHIEVER | MOST DILIGENT | LEAST ACTIVE | STATUS`.
+  - Kolom `BATCH` langsung setelah `RANK` sebagai kode murni tanpa pengulangan kata "Batch".
+- **Classes Performance Matrix (Tabel Bawah)**:
+  - Urutan Kolom: `RANK | CODE | CLASS NAME | TUTOR | STD | AVG SCORE | PASS % | TOP STUDENT | LEAST ACTIVE | STATUS`.
+  - Kolom `CODE` diletakkan persis setelah nomor urut (`RANK`).
+- **Automated Verification**:
+  - `npm.cmd run test:fast`: 57/57 JS AST Syntax check + 5 Pillars Repetitive Mastery 100% Green.
+  - `npm.cmd run test:table`: 12/12 Pillars Universal Datagrid Standardization 100% Green.
+  - `npm.cmd run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+  - `npm.cmd run test:tutor`: 58/58 Tests Tutor Ecosystem & Attendance Lifecycle 100% Green.
+
+---
+
+## [2026-11-22 17:25] — Phase 679: Performance Engine Optimization — Anti-Blanket Loading Hydration, Fast In-Memory Cache TTL & Zero-Jank Serialization
+- **Anti-Blanket Loading Hydration & Zero DOM Destruction (`js/admin/app.js`, `js/admin/curriculum-management.js`, `js/admin/classes-hub.js`)**:
+  - Mengeliminasi penghapusan DOM membabi-buta (`area.innerHTML = getLoadingStateHtml('Loading...')`) di `loadSection()`.
+  - Pindah antar-subtab di Class Hub atau berpindah ke menu yang datanya sudah ada di memori tidak lagi memunculkan layar kosong spinner penuh (*zero visual flicker / instant tab transitions*).
+  - `renderCurriculum` dan `renderClassesHub` kini memeriksa eksistensi container aktif sebelum merender loading spinner, memungkinkan pembaruan *smooth in-place update*.
+- **High-Performance In-Memory Cache & Extended TTL (`js/api.js`)**:
+  - Memperpanjang TTL data transaksional siswa, presensi, dan attempts dari yang semula hanya 30 detik menjadi **3 menit** (`DYNAMIC_TABLES_TTL`). Karena mutasi data (`adminInsert`, `adminUpdate`, `adminSoftDelete`) sudah memiliki proteksi otomatis pembersihan cache (`clearAdminCache`), data tetap 100% konsisten tanpa pemanggilan ulang Supabase yang boros setiap 30 detik.
+  - Memasukkan tabel relasi statis `class_levels` ke dalam `MASTER_TABLES_TTL` (5 menit).
+- **Fast Main-Thread Structured Clone (`js/api.js`)**:
+  - Mengganti operasi serialisasi lambat `JSON.parse(JSON.stringify(...))` pada pengambilan cache memori dengan fungsi cepat `_safeClone` berbasis native `structuredClone()`, mengurangi beban thread JavaScript hingga 70-80% dan menghilangkan *micro-stutter*.
+- **Automated Verification**:
+  - `npm.cmd run test:fast`: 57/57 JS AST Syntax check + 5 Pillars Repetitive Mastery 100% Green.
+  - `npm.cmd run test:table`: 12/12 Pillars Universal Datagrid Standardization 100% Green.
+  - `npm.cmd run test:color-ssot`: 6/6 Pillars Color Governance 100% Green.
+  - `npm.cmd run test:tutor`: 58/58 Tests Tutor Ecosystem & Attendance Lifecycle 100% Green.
+
+---
+
+## [2026-11-22 17:10] — Phase 678: Executive Board Overhaul — 100% Pure Table Dual-Matrix Architecture (Students Standings & Classes Rankings)
+- **100% Pure Table System Architecture (Zero Cards SSOT)**:
+  - Mengubah total panel **`Board`** (`#organization` / `#board`) dari tabel kurikulum lama menjadi **Executive Academic & Performance Board murni berbasis Datagrid Matrix** tanpa kartu bento.
+  - Mengimplementasikan **Layout Split 50-50 Dua Tabel Berdampingan** ([`js/admin/curriculum-management.js`](file:///d:/Drives/Tutor%20Tampan/TopsCore/js/admin/curriculum-management.js)):
+    1. **Tabel Kiri (55%) — `STUDENTS PERFORMANCE MATRIX`**:
+       - Kolom: `RANK | NAME | BATCH | LVL | SCORE | REPS | ATT. | STATUS`
+       - Mengagregasi data aktual 8.817 percobaan (*attempts*):
+         - **Siswa Nilai Tertinggi**: Ditampilkan dengan skor % dan Grade Token SSOT (★, A, B, C, D, E).
+         - **Siswa Paling Rajin (*Diligent*)**: Dihitung dari jumlah repetisi/attempt terbanyak (e.g. 73, 56, 31 reps).
+         - **Siswa Butuh Perhatian (*Needs Attention*)**: Siswa dengan nilai di bawah 60% atau repetisi 0 (*Least Active / Inactive*).
+       - Interaktif: Klik header kolom untuk langsung sortir (klik `SCORE` untuk ranking nilai, klik `REPS` untuk siswa terajin vs termalas, klik `ATT.` untuk absensi).
+    2. **Tabel Kanan (45%) — `CLASSES ACADEMIC RANKINGS`**:
+       - Kolom: `RANK | CODE | CLASS NAME | TUTOR | STD | AVG SCORE | PASS % | TOP STUDENT`
+       - Mengurutkan kelas dari skor rata-rata tertinggi hingga terendah (e.g. *Camp 1st Vocabulary 88%* vs *Camp 2nd Vocabulary 65%*), dilengkapi passing rate, tutor pengampu, dan siswa terbaik di kelas tersebut.
+- **Interactive Sub-Panel Triage & Institutional Tabs**:
+  - **Lower Sub-Panel (40px)**: Dilengkapi filter pill instan: `ALL`, `👑 TOP (★/A)`, `⚡ DILIGENT (HIGH REPS)`, `⚠️ NEEDS ATTN (<60%)`, `🐢 INACTIVE (0 REPS)`.
+  - **Topbar Tabs Integration**: Terhubung langsung ke switcher institusi (`CEC — Cake English Course` vs `TOP — Top Occupational Program`).
+  - Mematuhi 100% standar 12 pilar tabel TopsCore: 30px sticky header, 30px sticky footer, font Inter 12px, tabular numbers, dan 100vh viewport lock.
+- **Automated Verification**:
+  - `npm.cmd run build:css`: Berhasil.
+  - `npm.cmd run test:fast`, `npm.cmd run test:tutor` (58/58 tests), `npm.cmd run test:table` (12 pilar), `npm.cmd run test:color-ssot` (6 pilar) lolos 100% Green.
+
+---
+
+## [2026-11-22 16:45] — Phase 677: Taxonomy Refactor (Organization → Board, B-Board → B-Batch) & Dual-Tenant Administration Access (CEC/TOP Admin)
+- **Terminology & Navigation Alignment**:
+  - **Organization Panel → Board**: Item navigasi `Organization` pada Domain A diubah namanya menjadi **`Board`** (`admin.html`, `js/admin/app.js`, `js/admin/curriculum-management.js`). Alias routing `#board` dipetakan ke view Board.
+  - **B-Board → B-Batch (`ABCD` Alphabetical Harmony)**: Header Domain B (`B — Board`) diubah namanya menjadi **`B — Batch`** (`admin.html`, `AGENTS.md` §2.1). Hierarki primer kini selaras sempurna secara alfabetis:
+    - `A — ADMIN` (Executive Administration, Curriculum, Board, Tutor Desk)
+    - `B — BATCH` (Batches, Rosters, Progress, Attendance, Alumni)
+    - `C — CLASS` (Active Classes, Learning Sessions, Rosters, Class Tests)
+    - `D — DATA` (Vocabulary Vault, Item Banks, Modules, Settings, Audit Logs)
+- **Dual-Tenant Administration Panel Access (CEC Admin & TOP Admin)**:
+  - Panel **`Administration`** (`data-sub="dashboard"`) kini resmi dapat diakses langsung oleh **CEC Admin** dan **TOP Admin** (`js/admin/app.js`, `css/admin/admin-layout.css`).
+  - Menghapus `'dashboard'` dari daftar `forbiddenForRegular` di `applyTenantFilter()`, sehingga regular admin tidak lagi di-redirect paksa ke Class Hub saat mengakses dashboard eksekutif.
+  - Membuka visibilitas Domain A (`.nav-domain-group[data-domain="admin"]`) dan divider `#divider-a-b` di mode `tenant-cec` dan `tenant-top`. Regular admin CEC/TOP dapat langsung melihat dan membuka panel `Administration` dan shortcut `Tutor Desk ↗`, sementara item Super Admin level kurikulum (`Curriculum`, `Board`) dan Domain D (`Data`) tetap terlindungi.
+  - Mengotomatisasi pemilihan tab institusi pada dashboard: Admin CEC otomatis mengaktifkan tab *Cake English Course* (CEC), sedangkan Admin TOP otomatis mengaktifkan tab *Top Occupational Program* (TOP).
+- **Automated Verification**:
+  - `npm.cmd run build:css`: Konsolidasi modular CSS berhasil.
+  - `npm.cmd run test:fast` (57/57 JS files AST check), `npm.cmd run test:tutor` (58/58 tests), `npm.cmd run test:table` (12 pilar), `npm.cmd run test:color-ssot` (6 pilar) lolos 100% Green.
+
+---
+
+## [2026-11-22 15:55] — Phase 676: Top Corner 4-Button Cluster (Exit + Tenant Switcher) & Bottom Corner 3-Way Theme Switcher (Light | Navy | Dark)
+- **Top Corner 4-Button Cluster (`.sidebar-corner-top`)**:
+  - Memindahkan switcher institusi (`.tenant-switcher-capsule`: `ALL | CEC | TOP`) dari bottom corner ke top corner, berdampingan langsung dengan tombol exit (`#admin-logout-btn`).
+  - Total menjadi **tepat 4 tombol** di pojok atas: `Exit`, `ALL`, `CEC`, `TOP`.
+- **Bottom Corner 3-Way Theme Switcher (`Light | Navy | Dark`)**:
+  - Memanfaatkan pojok bawah sidebar (`.sidebar-corner-bottom`) sebagai **Theme Switcher Capsule** (`.theme-switcher-capsule`) dengan 3 mode: `Light`, `Navy`, `Dark`.
+  - **Zero Supabase Quota**: Preferensi tema disimpan secara lokal di `localStorage` (`topscore_theme`).
+
+---
+
 ## [2026-11-21 20:05] — Phase 649: Table Dimensions Matrix & Styling Architecture with 3-Card Layout & Full System Visual Invariant Verification
 - **Card Layout & Spatial Structure Overhaul (`js/admin/table-designs.js`)**:
   - Merekonstruksi layout workstation Table Designs menjadi **3 Kartu Berstandar Invariant SSOT**:

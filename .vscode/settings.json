@@ -182,5 +182,9 @@
 
   // ─── GIT DISCIPLINE (Standing User Rule: No Auto Git Fetch/Commit) ──
   "git.autofetch": false,
-  "git.confirmSync": true
+  "git.confirmSync": true,
+  "workbench.colorTheme": "Visual Studio Light",
+  "window.autoDetectColorScheme": true,
+  "window.closeWhenEmpty": true,
+  "window.density.editorTabHeight": "compact"
 }
