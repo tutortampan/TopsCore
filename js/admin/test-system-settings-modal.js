@@ -99,7 +99,7 @@ export async function openTestSystemSettingsModal(options = {}) {
         box-shadow: 0 4px 14px rgba(192, 132, 252, 0.4); transition: all 0.15s ease; box-sizing: border-box;
       }
       #test-system-settings-modal .btn-cta-save:hover {
-        background: #d8b4fe !important; box-shadow: 0 0 16px rgba(192, 132, 252, 0.6) !important;
+        background: #d8b4fe !important; border: 1.5px solid #a855f7 !important;
       }
       #test-system-settings-modal .btn-cta-save:active {
         transform: translateY(1px);

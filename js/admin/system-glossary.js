@@ -279,7 +279,7 @@ function renderSubPanel(container, data, filteredData) {
       <!-- Edit Mode Toggle Button -->
       <button type="button" class="btn btn-sm" id="btn-toggle-glossary-edit" style="height:28px; line-height:26px; padding:0 10px; font-size:12px; font-weight:800; border-radius:4px; cursor:pointer; display:flex; align-items:center; gap:5px; ${
         _isEditMode 
-          ? 'background:#eab308; border:1px solid #facc15; color:#0f172a; box-shadow:0 0 10px rgba(234,179,8,0.4);' 
+          ? 'background:#eab308; border:1px solid #facc15; color:#0f172a;' 
           : 'background:#1e293b; border:1px solid #475569; color:#f8fafc;'
       }">
         ${getSvgIcon('edit-3', 12)} ${_isEditMode ? 'Exit' : 'Edit Mode'}

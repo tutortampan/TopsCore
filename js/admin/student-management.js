@@ -48,6 +48,24 @@ export function formatBirthDate(dob) {
   }
 }
 
+export function formatDobEnglish(dob) {
+  if (!dob) return '—';
+  if (typeof dob === 'string' && (dob.includes('ᵀᴴ') || dob.includes('ˢᵀ') || dob.includes('<sup>'))) return dob;
+  try {
+    const d = new Date(dob);
+    if (isNaN(d.getTime())) return String(dob);
+    const day = d.getDate();
+    const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+    let ord = 'TH';
+    if (day === 1 || day === 21 || day === 31) ord = 'ST';
+    else if (day === 2 || day === 22) ord = 'ND';
+    else if (day === 3 || day === 23) ord = 'RD';
+    return `${day}<sup>${ord}</sup> ${months[d.getMonth()]} ${d.getFullYear()}`;
+  } catch (_) {
+    return String(dob);
+  }
+}
+
 export const EDUCATION_OPTIONS = [
   { value: 'kindergarten', label: 'Kindergarten' },
   { value: 'elementary', label: 'Elementary School' },
@@ -795,8 +813,8 @@ export async function renderStudents(area, options = {}) {
       const speakKeys = spkSubKeys.map(k => sAcademicMap.get(`${stepNum}:SPEAKING:${k}`)).filter(x => x?.percentage != null);
       const naSpeak = speakKeys.length > 0 ? Math.round((speakKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / speakKeys.length) * 100) / 100 : null;
 
-      // Step Average & Predicate
-      const validNAs = [naVocab, naStory, naGram, naFourth, naSpeak].filter(v => typeof v === 'number');
+      // Step Average & Predicate (Basic English [Step 1] & GFS [Step 2] excluded from final grading formula)
+      const validNAs = (stepNum === 3 ? [naVocab, naStory, naGram, naFourth, naSpeak] : [naVocab, naStory, naGram, naSpeak]).filter(v => typeof v === 'number');
       const stepAvg = validNAs.length > 0 ? Math.round((validNAs.reduce((a, b) => a + b, 0) / validNAs.length) * 100) / 100 : null;
       const predicate = stepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(stepAvg) : (stepAvg >= 90 ? 'EXCELLENT' : stepAvg >= 80 ? 'VERY GOOD' : stepAvg >= 70 ? 'GOOD' : stepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
 
@@ -1124,14 +1142,8 @@ export async function renderStudents(area, options = {}) {
       }
     }
 
-    const activeRaportTabId = `raport-${window._raportPage || 1}`;
-    const activeAttendanceTabId = `attendance-${window._attendancePage || 1}`;
     const currentTabId = (currentBatchStatus === 'active')
-      ? (window._studentRosterTab === 'attendance'
-          ? (isCampProgram ? activeAttendanceTabId : 'attendance')
-          : (window._studentRosterTab === 'final-exam'
-              ? 'final-exam'
-              : (window._studentRosterTab === 'raport' ? (isCampProgram ? activeRaportTabId : 'raport') : 'data')))
+      ? (window._studentRosterTab || 'data')
       : (currentBatchStatus === 'hold_inactive' ? 'inactive' : currentBatchStatus);
 
     window._switchRaportPage = (pageNum) => {
@@ -1199,18 +1211,11 @@ export async function renderStudents(area, options = {}) {
     if (window.setTopbarTabs) {
       const topTabs = [
         { id: 'data', icon: getSvgIcon('user', 14), label: 'Students Data', val: activeCount, valColor: 'var(--clr-accent-1, #38bdf8)' },
+        { id: 'raport', icon: getSvgIcon('award', 14), label: "Student's Raport", val: activeCount, valColor: 'var(--grade-b)' },
+        { id: 'attendance', icon: getSvgIcon('clock', 14), label: 'Batch Attendance', val: activeCount, valColor: 'var(--primary-tactical, #38bdf8)' },
         ...(isCampProgram ? [
-          { id: 'raport-1', icon: getSvgIcon('award', 14), label: "1st Raport", val: '1st', valColor: (window._raportPage === 1 && window._studentRosterTab === 'raport') ? 'var(--grade-b)' : '#94a3b8' },
-          { id: 'raport-2', icon: getSvgIcon('award', 14), label: "2nd Raport", val: '2nd', valColor: (window._raportPage === 2 && window._studentRosterTab === 'raport') ? 'var(--grade-b)' : '#94a3b8' },
-          { id: 'raport-3', icon: getSvgIcon('award', 14), label: "3rd Raport", val: '3rd', valColor: (window._raportPage === 3 && window._studentRosterTab === 'raport') ? 'var(--grade-b)' : '#94a3b8' },
-          { id: 'final-exam', icon: getSvgIcon('check-circle', 14), label: "Final Exam & Certificate", val: 'FINAL', valColor: (window._studentRosterTab === 'final-exam') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' },
-          { id: 'attendance-1', icon: getSvgIcon('clock', 14), label: "1st Attendance", val: '1st', valColor: (window._attendancePage === 1 && window._studentRosterTab === 'attendance') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' },
-          { id: 'attendance-2', icon: getSvgIcon('clock', 14), label: "2nd Attendance", val: '2nd', valColor: (window._attendancePage === 2 && window._studentRosterTab === 'attendance') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' },
-          { id: 'attendance-3', icon: getSvgIcon('clock', 14), label: "3rd Attendance", val: '3rd', valColor: (window._attendancePage === 3 && window._studentRosterTab === 'attendance') ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8' }
-        ] : [
-          { id: 'raport', icon: getSvgIcon('award', 14), label: "Student's Raport", val: activeCount, valColor: 'var(--grade-b)' },
-          { id: 'attendance', icon: getSvgIcon('clock', 14), label: 'Batch Attendance', val: activeCount, valColor: 'var(--primary-tactical, #38bdf8)' }
-        ]),
+          { id: 'final-exam', icon: getSvgIcon('check-circle', 14), label: 'Final Exam', val: activeCount, valColor: 'var(--primary-tactical, #38bdf8)' }
+        ] : []),
         { id: 'inactive', icon: getSvgIcon('alert-circle', 14), label: 'Inactive', val: inactiveCount, valColor: 'var(--grade-e)' },
         { id: 'all', icon: getSvgIcon('users', 14), label: 'All Students', val: totalCount, valColor: '#94a3b8' }
       ];
@@ -1256,7 +1261,31 @@ export async function renderStudents(area, options = {}) {
     const eligibleStudents = filteredGridData.filter(s => s.isEligibleNext && !s.isAlumni && s.studentLevelNum !== 0 && s.studentLevelNum !== 99);
     const eligibleCount = eligibleStudents.length;
 
+    const isRaportTabActive = (window._studentRosterTab === 'raport');
+    const isFinalExamActive = (window._studentRosterTab === 'final-exam');
+    const isAttendanceTabActive = (window._studentRosterTab === 'attendance');
+
+    let levelSwitcherHtml = '';
+    if (isRaportTabActive && isCampProgram) {
+      levelSwitcherHtml = `
+      <div class="raport-page-switcher" style="display:inline-flex;align-items:stretch;height:32px;background:#0b1324;border:1px solid #334155;border-radius:6px;overflow:hidden;box-sizing:border-box;margin-right:8px;">
+        <span style="font-size:11px;font-weight:800;color:var(--primary-tactical, #38bdf8);letter-spacing:0.05em;display:flex;align-items:center;padding:0 8px;border-right:1px solid #334155;background:rgba(255,255,255,0.02);">RAPORT:</span>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(1);" style="border:none;border-right:1px solid #334155;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${window._raportPage === 1 ? 'background:var(--grade-b, #95ff00);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="1st Level Raport (5 Classes)">1st</button>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(2);" style="border:none;border-right:1px solid #334155;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${window._raportPage === 2 ? 'background:var(--grade-b, #95ff00);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="2nd Level Raport (5 Classes)">2nd</button>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(3);" style="border:none;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${window._raportPage === 3 ? 'background:var(--grade-b, #95ff00);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="3rd Level Raport (5 Classes)">3rd</button>
+      </div>`;
+    } else if (isAttendanceTabActive && isCampProgram) {
+      levelSwitcherHtml = `
+      <div class="attendance-page-switcher" style="display:inline-flex;align-items:stretch;height:32px;background:#0b1324;border:1px solid #334155;border-radius:6px;overflow:hidden;box-sizing:border-box;margin-right:8px;">
+        <span style="font-size:11px;font-weight:800;color:var(--primary-tactical, #38bdf8);letter-spacing:0.05em;display:flex;align-items:center;padding:0 8px;border-right:1px solid #334155;background:rgba(255,255,255,0.02);">ATTENDANCE:</span>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchAttendancePage==='function')window._switchAttendancePage(1);" style="border:none;border-right:1px solid #334155;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${window._attendancePage === 1 ? 'background:var(--primary-tactical, #38bdf8);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="1st Level Attendance">1st</button>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchAttendancePage==='function')window._switchAttendancePage(2);" style="border:none;border-right:1px solid #334155;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${window._attendancePage === 2 ? 'background:var(--primary-tactical, #38bdf8);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="2nd Level Attendance">2nd</button>
+        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchAttendancePage==='function')window._switchAttendancePage(3);" style="border:none;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${window._attendancePage === 3 ? 'background:var(--primary-tactical, #38bdf8);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="3rd Level Attendance">3rd</button>
+      </div>`;
+    }
+
     const leftHtml = `<div style="display:inline-flex;align-items:center;gap:8px;font-size: 12px;color:#94a3b8;font-weight:600;">
+      ${levelSwitcherHtml}
       <span>${currentBatchStatus === 'alumni' ? `${getSvgIcon('graduation-cap', 12)} Graduating Batch:` : 'Enrolled:'} <strong style="color:#f8fafc;">${count} Student${count !== 1 ? 's' : ''}</strong></span>
       ${currentBatchStatus === 'alumni' ? `<select id="select-alumni-batch-infobar" style="background:#1e293b;color:#f8fafc;border:1px solid #334155;border-radius:4px;padding:2px 8px;font-size: 12px;height:28px;min-width:170px;">
         <option value="all" ${(!window._alumniFilterBatchId || window._alumniFilterBatchId === 'all') ? 'selected' : ''}>All Graduating Batches</option>
@@ -1282,24 +1311,14 @@ export async function renderStudents(area, options = {}) {
     const rightHtml = `<div style="display:inline-flex;align-items:center;gap:8px;overflow-y:hidden;">
       <button type="button" class="btn btn-sm" id="btn-toggle-roster-edit-mode" style="${editBtnStyle}" title="Toggle Inline Edit Mode (Excel Gridlines)">${editBtnLabel}</button>
       ${currentBatchStatus !== 'alumni' ? `
-        <button type="button" class="btn btn-success btn-sm" id="btn-promote-all-eligible" style="${nextBtnStyle}height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="${nextBtnTitle}">${getSvgIcon('chevrons-up', 14)} LEVEL UP ALL (${eligibleCount} Eligible)</button>
+        <button type="button" class="btn btn-success btn-sm" id="btn-promote-all-eligible" style="${nextBtnStyle}height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="${nextBtnTitle}">${getSvgIcon('chevrons-up', 14)} ${isCampProgram ? 'STEP UP ALL' : 'LEVEL UP ALL'} (${eligibleCount} Eligible)</button>
       ` : ''}
       <button type="button" class="btn btn-tactical btn-sm" id="btn-add-student-direct" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Register New Student">${getSvgIcon('plus', 14)} Add Student</button>
       <button type="button" class="btn btn-secondary btn-sm" id="btn-import-students-direct" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 10px !important;font-size: 12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Import Students from Excel / CSV">${getSvgIcon('upload', 14)} Import Excel / CSV</button>
     </div>`;
 
-    const isRaportTabActive = (window._studentRosterTab === 'raport');
-    const isFinalExamActive = (window._studentRosterTab === 'final-exam');
     let centerHtml = '';
-    if (isRaportTabActive && isCampProgram) {
-      centerHtml = `
-      <div class="raport-page-switcher" style="display:inline-flex;align-items:center;gap:4px;background:#0b1324;border:1.5px solid #334155;border-radius:6px;padding:2px 6px;height:30px;box-sizing:border-box;">
-        <span style="font-size:12px;font-weight:800;color:#94a3b8;letter-spacing:0.04em;margin-right:2px;">RAPORT:</span>
-        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(1);" style="height:24px;line-height:22px;padding:0 8px;font-size:12px;font-weight:800;border-radius:4px;cursor:pointer;transition:all 0.15s ease;${window._raportPage === 1 ? 'background:var(--grade-b);color:#0f172a;border:none;box-shadow:0 0 8px rgba(149,255,0,0.4);' : 'background:transparent;color:#94a3b8;border:1px solid #334155;'}" title="1st Level Raport (5 Classes)">1st</button>
-        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(2);" style="height:24px;line-height:22px;padding:0 8px;font-size:12px;font-weight:800;border-radius:4px;cursor:pointer;transition:all 0.15s ease;${window._raportPage === 2 ? 'background:var(--grade-b);color:#0f172a;border:none;box-shadow:0 0 8px rgba(149,255,0,0.4);' : 'background:transparent;color:#94a3b8;border:1px solid #334155;'}" title="2nd Level Raport (5 Classes)">2nd</button>
-        <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchRaportPage==='function')window._switchRaportPage(3);" style="height:24px;line-height:22px;padding:0 8px;font-size:12px;font-weight:800;border-radius:4px;cursor:pointer;transition:all 0.15s ease;${window._raportPage === 3 ? 'background:var(--grade-b);color:#0f172a;border:none;box-shadow:0 0 8px rgba(149,255,0,0.4);' : 'background:transparent;color:#94a3b8;border:1px solid #334155;'}" title="3rd Level Raport (5 Classes)">3rd</button>
-      </div>`;
-    } else if (isFinalExamActive) {
+    if (isFinalExamActive) {
       centerHtml = `
       <div style="display:inline-flex;align-items:center;gap:6px;background:#0b1324;border:1.5px solid #334155;border-radius:6px;padding:2px 10px;height:30px;box-sizing:border-box;">
         <span style="font-size:12px;font-weight:800;color:var(--primary-tactical, #38bdf8);letter-spacing:0.04em;">FINAL EXAM & CERTIFICATE</span>
@@ -2180,7 +2199,8 @@ export async function renderStudents(area, options = {}) {
         const speakKeys = spkSubKeys.map(k => academicMap.get(`${stepNum}:SPEAKING:${k}`)).filter(x => x?.percentage != null);
         const naSpeak = speakKeys.length > 0 ? Math.round((speakKeys.reduce((acc, x) => acc + Number(x.percentage), 0) / speakKeys.length) * 100) / 100 : null;
 
-        const validNAs = [naVocab, naStory, naGram, naFourth, naSpeak].filter(v => typeof v === 'number');
+        // Step Average & Predicate (Basic English [Step 1] & GFS [Step 2] excluded from final grading formula)
+        const validNAs = (stepNum === 3 ? [naVocab, naStory, naGram, naFourth, naSpeak] : [naVocab, naStory, naGram, naSpeak]).filter(v => typeof v === 'number');
         const stepAvg = validNAs.length > 0 ? Math.round((validNAs.reduce((a, b) => a + b, 0) / validNAs.length) * 100) / 100 : null;
         const predicate = stepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(stepAvg) : (stepAvg >= 90 ? 'EXCELLENT' : stepAvg >= 80 ? 'VERY GOOD' : stepAvg >= 70 ? 'GOOD' : stepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
 
@@ -2226,10 +2246,20 @@ export async function renderStudents(area, options = {}) {
           classCode: `CAMP-${stepNum}VOCAB`,
           isSystemVocab: true,
           na: sObj.naVocab,
-          items: ['W1', 'W2', 'W3', 'W4'].map(k => {
-            const p = getVocabWeekScore(stepNum, k);
-            return { key: k, label: k, raw: p != null ? Math.round(p) : null, max: 100, pct: p, isPct: true };
-          })
+          items: [
+            {
+              key: 'PT',
+              label: 'PT',
+              raw: academicMap.get(`${stepNum}:VOCABULARY:PT`)?.raw_score != null ? Number(academicMap.get(`${stepNum}:VOCABULARY:PT`).raw_score) : null,
+              max: 30,
+              pct: academicMap.get(`${stepNum}:VOCABULARY:PT`)?.percentage != null ? Number(academicMap.get(`${stepNum}:VOCABULARY:PT`).percentage) : null,
+              isDiagnostic: true
+            },
+            ...['W1', 'W2', 'W3', 'W4'].map(k => {
+              const p = getVocabWeekScore(stepNum, k);
+              return { key: k, label: k, raw: p != null ? Math.round(p) : null, max: 100, pct: p, isPct: true };
+            })
+          ]
         },
         {
           name: 'Storytelling',
@@ -2248,10 +2278,20 @@ export async function renderStudents(area, options = {}) {
           classCode: `CAMP-${stepNum}GRMMR`,
           isSystemVocab: false,
           na: sObj.naGram,
-          items: ['U1', 'U2'].map(k => {
-            const item = academicMap.get(`${stepNum}:GRAMMAR:${k}`);
-            return { key: k, label: k, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 15, pct: item?.percentage != null ? Number(item.percentage) : null };
-          })
+          items: [
+            {
+              key: 'PT',
+              label: 'PT',
+              raw: academicMap.get(`${stepNum}:GRAMMAR:PT`)?.raw_score != null ? Number(academicMap.get(`${stepNum}:GRAMMAR:PT`).raw_score) : null,
+              max: 25,
+              pct: academicMap.get(`${stepNum}:GRAMMAR:PT`)?.percentage != null ? Number(academicMap.get(`${stepNum}:GRAMMAR:PT`).percentage) : null,
+              isDiagnostic: true
+            },
+            ...['U1', 'U2'].map(k => {
+              const item = academicMap.get(`${stepNum}:GRAMMAR:${k}`);
+              return { key: k, label: k, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 15, pct: item?.percentage != null ? Number(item.percentage) : null };
+            })
+          ]
         },
         {
           name: fourthSubjName,
@@ -2270,11 +2310,21 @@ export async function renderStudents(area, options = {}) {
           classCode: `CAMP-${stepNum}SPEAK`,
           isSystemVocab: false,
           na: sObj.naSpeak,
-          items: spkSubKeys.map(k => {
-            const item = academicMap.get(`${stepNum}:SPEAKING:${k}`);
-            const label = k === 'PRACTICE' ? 'Practice' : k;
-            return { key: k, label, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 25, pct: item?.percentage != null ? Number(item.percentage) : null };
-          })
+          items: [
+            {
+              key: 'PT',
+              label: 'PT',
+              raw: academicMap.get(`${stepNum}:SPEAKING:PT`)?.raw_score != null ? Number(academicMap.get(`${stepNum}:SPEAKING:PT`).raw_score) : null,
+              max: 25,
+              pct: academicMap.get(`${stepNum}:SPEAKING:PT`)?.percentage != null ? Number(academicMap.get(`${stepNum}:SPEAKING:PT`).percentage) : null,
+              isDiagnostic: true
+            },
+            ...spkSubKeys.map(k => {
+              const item = academicMap.get(`${stepNum}:SPEAKING:${k}`);
+              const label = k === 'PRACTICE' ? 'Practice' : k;
+              return { key: k, label, raw: item?.raw_score != null ? Number(item.raw_score) : null, max: 25, pct: item?.percentage != null ? Number(item.percentage) : null };
+            })
+          ]
         }
       ];
 
@@ -2282,7 +2332,7 @@ export async function renderStudents(area, options = {}) {
         const hasScores = sub.items.some(it => it.pct != null);
         let subNa = sub.na;
         if (subNa == null && hasScores) {
-          const validPcts = sub.items.map(it => it.pct).filter(p => typeof p === 'number');
+          const validPcts = sub.items.filter(it => !it.isDiagnostic).map(it => it.pct).filter(p => typeof p === 'number');
           if (validPcts.length > 0) subNa = Math.round((validPcts.reduce((a, b) => a + b, 0) / validPcts.length) * 100) / 100;
         }
 
@@ -2300,7 +2350,25 @@ export async function renderStudents(area, options = {}) {
         }).join('');
 
         const editInputsHtml = sub.isSystemVocab
-          ? `<span style="font-size:11px;font-weight:700;color:#64748b;font-style:italic;">System Attempts (Read-Only)</span>`
+          ? `<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;">
+              ${sub.items.map(it => it.isDiagnostic ? `
+                <div style="display:inline-flex;align-items:center;gap:2px;" title="${escapeHtml(sub.name + ' ' + it.label)}">
+                  <span style="font-size:11px;font-weight:700;color:#64748b;">${it.label}:</span>
+                  <input type="number" min="0" max="${it.max}" step="1"
+                         class="dossier-academic-input"
+                         data-student-id="${studentId}"
+                         data-step="${stepNum}"
+                         data-subject="${sub.code}"
+                         data-key="${it.key}"
+                         data-target="${it.max}"
+                         value="${it.raw != null ? it.raw : ''}"
+                         placeholder="${it.max}"
+                         style="width:44px;height:26px;font-size:12px;font-weight:700;text-align:center;color:#0f172a;background:#f8fafc;border:1.5px solid #38bdf8;border-radius:4px;padding:1px 2px;font-variant-numeric:tabular-nums;"
+                         onclick="event.stopPropagation();">
+                  <span style="font-size:11px;color:#64748b;font-weight:600;">/${it.max}</span>
+                </div>
+              ` : `<span style="font-size:11px;font-weight:700;color:#64748b;padding:0 4px;">${it.label}: ${it.raw != null ? `${it.raw}%` : '—'}</span>`).join('')}
+            </div>`
           : `<div style="display:flex;gap:4px;flex-wrap:wrap;justify-content:center;align-items:center;">
               ${sub.items.map(it => `
                 <div style="display:inline-flex;align-items:center;gap:2px;" title="${escapeHtml(sub.name + ' ' + it.label)}">
@@ -2366,7 +2434,7 @@ export async function renderStudents(area, options = {}) {
               <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
                 <th style="width: 26%; text-align: left; padding: 10px 14px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">SUBJECT</th>
                 <th style="width: 40%; text-align: center; padding: 10px 10px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">ASSESSMENT BREAKDOWN</th>
-                <th style="width: 11%; text-align: center; padding: 10px 10px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">NA</th>
+                <th style="width: 11%; text-align: center; padding: 10px 10px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">SCORE</th>
                 <th style="width: 9%; text-align: center; padding: 10px 8px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">GRADE</th>
                 <th style="width: 14%; text-align: left; padding: 10px 12px; font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">PREDICATE</th>
               </tr>
@@ -2561,116 +2629,306 @@ export async function renderStudents(area, options = {}) {
       `;
     }
 
+    // Certificate & Academic Transcript Evaluation
+    const certNis = (fe && fe.certificate_nis) || (rec.nis ? `CEC/M/C.${rec.nis}/${(fe && fe.certificate_month) || 'XI'}/${(fe && fe.certificate_year) || 2026}` : 'CEC/M/C.000000/XI/2026');
+    const certPredicates = [fe?.practice_predicate, fe?.speaking_predicate, fe?.vocab_predicate, fe?.pronunciation_predicate, fe?.grammar_predicate].filter(Boolean);
+    const hasLessPredicate = certPredicates.some(p => String(p).trim().toUpperCase() === 'LESS');
+    const isCertEligible = !hasLessPredicate && (fe?.practice_score != null || certPredicates.length >= 3);
+
+    const certificateViewHtml = `
+      <div id="dossier-certificate-view" style="display:none; width:100%; box-sizing:border-box;">
+        <!-- Status Notification Banner -->
+        ${hasLessPredicate ? `
+          <div style="background:#450a0a; border:1.5px solid #ef4444; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(239,68,68,0.2);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-size:22px;">⚠️</span>
+              <div>
+                <strong style="color:#fecaca; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">CERTIFICATE STATUS: LOCKED / RETAKE REQUIRED</strong>
+                <span style="color:#fca5a5; font-size:12px;">Student received a 'LESS' predicate. In accordance with TopsCore academic SSOT, certificate is withheld until the remedial examination achieves at least 'ENOUGH' (Grade C ≥ 60%).</span>
+              </div>
+            </div>
+            <span style="background:#ef4444; color:#ffffff; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">RETAKE REQUIRED</span>
+          </div>
+        ` : `
+          <div style="background:#052e16; border:1.5px solid #22c55e; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(34,197,94,0.15);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span style="font-size:22px;">✅</span>
+              <div>
+                <strong style="color:#bbf7d0; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">CERTIFICATE STATUS: VERIFIED & READY FOR ISSUANCE</strong>
+                <span style="color:#86efac; font-size:12px;">All evaluated competencies have achieved passing threshold. Official certificate authorized for printing and credentialing.</span>
+              </div>
+            </div>
+            <span style="background:#22c55e; color:#090d16; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">AUTHORIZED</span>
+          </div>
+        `}
+
+        <div id="student-certificate-sheet-wrap" style="display:flex; flex-direction:column; gap:28px;">
+          <!-- PAGE 1: OFFICIAL CERTIFICATE OF ACHIEVEMENT (A4 Landscape Ratio) -->
+          <div class="certificate-page-front" style="background:#fdfbf7; color:#0f172a; border-radius:8px; padding:40px 48px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:820px; margin:0 auto; box-sizing:border-box; border:2.5px solid #b45309; outline:8px solid #fef3c7; outline-offset:-14px; position:relative; font-family:'Times New Roman', Georgia, serif; text-align:center;">
+            
+            <!-- Legal Authority Header -->
+            <div style="margin-bottom:12px;">
+              <div style="font-family:'Inter', sans-serif; font-size:11px; font-weight:800; color:#78350f; letter-spacing:0.12em; text-transform:uppercase;">LEMBAGA KURSUS DAN PELATIHAN</div>
+              <h2 style="font-family:Georgia, serif; font-size:24px; font-weight:900; color:#0f172a; letter-spacing:0.06em; margin:4px 0 2px; text-transform:uppercase;">CAKE ENGLISH COURSE (CEC)</h2>
+              <div style="font-family:'Inter', sans-serif; font-size:10px; font-weight:700; color:#64748b; letter-spacing:0.03em;">Kampoeng Pare Mataram &bull; NPSN K5669268 &bull; No. P PAUD PNF 421.9/3768/Disdik.B2/XI/2022</div>
+              <div style="font-family:'Inter', sans-serif; font-size:10px; color:#64748b; margin-top:2px;">Jl. Abdul Kadir Munsyi No.16, Punia, Kec. Mataram, Kota Mataram, Nusa Tenggara Barat</div>
+              <hr style="border:none; border-top:1.5px solid #b45309; width:65%; margin:12px auto 14px;">
+            </div>
+
+            <!-- Certificate Title & Serial -->
+            <h1 style="font-family:Georgia, serif; font-size:28px; font-weight:900; color:#b45309; text-transform:uppercase; letter-spacing:0.08em; margin:8px 0 4px;">CERTIFICATE OF ACHIEVEMENT</h1>
+            <div style="font-family:monospace; font-size:12px; font-weight:800; color:#64748b; letter-spacing:0.05em; margin-bottom:16px;">Certificate No: ${escapeHtml(certNis)}</div>
+
+            <!-- Certification Body -->
+            <div style="font-family:Georgia, serif; font-style:italic; font-size:14px; color:#475569; margin-bottom:6px;">This is to certify that</div>
+            <h2 style="font-family:Georgia, serif; font-size:26px; font-weight:900; color:#0f172a; text-transform:uppercase; letter-spacing:0.04em; margin:6px 0 4px;">${escapeHtml(rec.displayName || rec.name)}</h2>
+            
+            <div style="font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:#334155; margin-bottom:14px;">
+              Place, Date of Birth: <strong>${escapeHtml(rec.birthplace || 'Mataram')}, ${formatDobEnglish(rec.birth_date)}</strong> &nbsp;|&nbsp; Religion: <strong>${escapeHtml(rec.religion || 'Islam')}</strong>
+            </div>
+
+            <p style="font-family:'Inter', sans-serif; font-size:13px; color:#334155; max-width:620px; margin:0 auto 16px; line-height:1.55;">
+              has successfully satisfied all educational requirements, practical immersion standards, and comprehensive competency examinations of the <strong>Cake English Course Immersion Program</strong>.
+            </p>
+
+            <!-- Standing Pill -->
+            <div style="display:inline-flex; align-items:center; gap:8px; background:#fffbeb; border:1.5px solid #fde68a; border-radius:6px; padding:6px 18px; margin:8px auto 20px;">
+              <span style="font-family:'Inter', sans-serif; font-size:12px; font-weight:700; color:#78350f; text-transform:uppercase;">Overall Standing:</span>
+              <strong style="font-family:Georgia, serif; font-size:16px; font-weight:900; color:#b45309; text-transform:uppercase;">${escapeHtml(fe?.practice_predicate || 'EXCELLENT')}</strong>
+            </div>
+
+            <div style="text-align:right; font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:#475569; margin-bottom:24px; padding-right:16px;">
+              Mataram, ${escapeHtml(fe?.certificate_month || 'XI')} ${escapeHtml(String(fe?.certificate_year || 2026))}
+            </div>
+
+            <!-- 3-Column Signatories Block -->
+            <div style="display:flex; justify-content:space-between; align-items:flex-end; padding:0 24px;">
+              <div style="text-align:center; width:190px;">
+                <div style="height:44px;"></div>
+                <strong style="font-family:'Inter', sans-serif; font-size:13px; font-weight:800; color:#0f172a; text-decoration:underline; display:block;">${escapeHtml(fe?.examiner_name || 'MR. SIGIT')}</strong>
+                <span style="font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#64748b;">Lead Examiner</span>
+              </div>
+
+              <div style="text-align:center; width:100px;">
+                <div style="width:72px; height:72px; border-radius:50%; border:2px dashed #b45309; margin:0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#b45309; font-family:'Inter', sans-serif; font-size:9px; font-weight:900; line-height:1.2;">
+                  <span>OFFICIAL</span>
+                  <span>SEAL</span>
+                  <span>CEC</span>
+                </div>
+              </div>
+
+              <div style="text-align:center; width:190px;">
+                <div style="height:44px;"></div>
+                <strong style="font-family:'Inter', sans-serif; font-size:13px; font-weight:800; color:#0f172a; text-decoration:underline; display:block;">DIREKTUR CEC</strong>
+                <span style="font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#64748b;">Course Director</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- PAGE 2: OFFICIAL ACADEMIC TRANSCRIPT (Back Side) -->
+          <div class="certificate-page-back" style="background:#ffffff; color:#0f172a; border-radius:8px; padding:36px 40px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:820px; margin:0 auto; box-sizing:border-box; border:1.5px solid #cbd5e1; font-family:var(--fm-font-sans, 'Inter', sans-serif);">
+            
+            <div style="text-align:center; border-bottom:2px solid #0f172a; padding-bottom:12px; margin-bottom:18px;">
+              <h2 style="font-family:var(--fm-font-display, 'Inter', sans-serif); font-size:22px; font-weight:900; color:#0f172a; margin:0 0 4px; text-transform:uppercase; letter-spacing:0.04em;">
+                OFFICIAL ACADEMIC TRANSCRIPT
+              </h2>
+              <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em;">
+                CAKE ENGLISH COURSE &bull; MATARAM ACADEMIC EVALUATION BOARD
+              </div>
+            </div>
+
+            <!-- Student Metadata Strip -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 16px; margin-bottom:18px; font-size:13px;">
+              <div><span style="color:#64748b; font-weight:600;">Full Name:</span> <strong style="color:#0f172a; text-transform:uppercase;">${escapeHtml(rec.displayName || rec.name)}</strong></div>
+              <div><span style="color:#64748b; font-weight:600;">Certificate NIS:</span> <strong style="color:#0284c7; font-family:monospace;">${escapeHtml(certNis)}</strong></div>
+              <div><span style="color:#64748b; font-weight:600;">Place, DOB:</span> <strong style="color:#0f172a;">${escapeHtml(rec.birthplace || 'Mataram')}, ${formatDobEnglish(rec.birth_date)}</strong></div>
+              <div><span style="color:#64748b; font-weight:600;">Program:</span> <strong style="color:#0f172a;">CEC Camp Intensive Program</strong></div>
+            </div>
+
+            <!-- 5 Modalities Evaluation Matrix -->
+            <table class="dossier-table" style="width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; margin-bottom:20px;">
+              <thead>
+                <tr style="background:#f1f5f9; border-top:1.5px solid #cbd5e1; border-bottom:2px solid #cbd5e1;">
+                  <th style="width:8%; text-align:center; padding:10px 8px; font-size:12px; font-weight:800; color:#0f172a;">NO</th>
+                  <th style="width:28%; text-align:left; padding:10px 12px; font-size:12px; font-weight:800; color:#0f172a; text-transform:uppercase;">COMPETENCY / MODALITY</th>
+                  <th style="width:36%; text-align:left; padding:10px 12px; font-size:12px; font-weight:800; color:#0f172a; text-transform:uppercase;">EVALUATION SCOPE</th>
+                  <th style="width:14%; text-align:center; padding:10px 10px; font-size:12px; font-weight:800; color:#0f172a; text-transform:uppercase;">SCORE</th>
+                  <th style="width:14%; text-align:center; padding:10px 10px; font-size:12px; font-weight:800; color:#0f172a; text-transform:uppercase;">PREDICATE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">1</td>
+                  <td style="padding:12px 12px; font-weight:800; color:#0f172a;">VOCABULARY</td>
+                  <td style="padding:12px 12px; font-size:12px; color:#475569;">Active Lexical Acquisition & Cumulative Retention</td>
+                  <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.vocab_score != null ? `${Math.round(fe.vocab_score)}%` : '—'}</td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.vocab_predicate || '—')}</span></td>
+                </tr>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">2</td>
+                  <td style="padding:12px 12px; font-weight:800; color:#0f172a;">SPEAKING</td>
+                  <td style="padding:12px 12px; font-size:12px; color:#475569;">Oral Discourse, Spontaneous Fluency & Interaction</td>
+                  <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.speaking_score != null ? `${Math.round(fe.speaking_score)}%` : '—'}</td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.speaking_predicate || '—')}</span></td>
+                </tr>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">3</td>
+                  <td style="padding:12px 12px; font-weight:800; color:#0f172a;">PRONUNCIATION</td>
+                  <td style="padding:12px 12px; font-size:12px; color:#475569;">Phonetic Articulation, Rhythm, Stress & Intonation</td>
+                  <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.pronunciation_score != null ? `${Math.round(fe.pronunciation_score)}%` : '—'}</td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.pronunciation_predicate || '—')}</span></td>
+                </tr>
+                <tr style="border-bottom:1px solid #e2e8f0;">
+                  <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">4</td>
+                  <td style="padding:12px 12px; font-weight:800; color:#0f172a;">GRAMMAR</td>
+                  <td style="padding:12px 12px; font-size:12px; color:#475569;">Structural Mechanics, Syntax & Sentence Architecture</td>
+                  <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.grammar_score != null ? `${Math.round(fe.grammar_score)}%` : '—'}</td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.grammar_predicate || '—')}</span></td>
+                </tr>
+                <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
+                  <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">5</td>
+                  <td style="padding:12px 12px; font-weight:800; color:#0f172a;">FINAL PRACTICE EXAM</td>
+                  <td style="padding:12px 12px; font-size:12px; color:#475569;">2-Panel Comprehensive Practical Interview</td>
+                  <td style="text-align:center; padding:12px 10px; font-weight:800; color:#0f172a;">${fe?.practice_score != null ? `${fe.practice_score}` : '—'}</td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:900; background:#b45309; color:#ffffff;">${escapeHtml(fe?.practice_predicate || '—')}</span></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Grading Legend Scale -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; font-size:11px; color:#475569;">
+              <strong style="color:#0f172a; margin-right:8px;">Grading Scale:</strong>
+              <span>96 – 100: <strong>EXCELLENT</strong> &bull; 90 – 95: <strong>VERY GOOD</strong> &bull; 80 – 89: <strong>GOOD</strong> &bull; 60 – 79: <strong>ENOUGH</strong> (Passing Grade C) &bull; &lt; 60: <strong>LESS</strong> (Remedial Required)</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    `;
+
     backdrop.innerHTML = `
       <div class="student-dossier-dialog" style="max-width: 860px; width: 94vw; max-height: 94vh;">
         <!-- Standardized 60px Title Area (§1.5.1 Centered Title & Zero Subtitle Clutter Invariant) -->
-        <div class="modal-header title-area dossier-modal-toolbar" style="height: 60px !important; min-height: 60px !important; max-height: 60px !important; padding: 0 16px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; background: #1E293B !important; box-sizing: border-box !important; flex-shrink: 0 !important; margin: 0 !important;">
-          <h3 class="modal-title" style="margin: 0 !important; font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 16px !important; font-weight: 800 !important; color: #ffffff !important; line-height: 1 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important; text-align: center !important;">
-            STUDENT ACADEMIC REPORT
+        <div class="modal-header title-area dossier-modal-toolbar" style="height: 60px !important; min-height: 60px !important; max-height: 60px !important; padding: 0 16px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex !important; align-items: center !important; justify-content: space-between !important; background: #1E293B !important; box-sizing: border-box !important; flex-shrink: 0 !important; margin: 0 !important;">
+          <h3 class="modal-title" style="margin: 0 !important; font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 15px !important; font-weight: 800 !important; color: #ffffff !important; line-height: 1 !important; letter-spacing: 0.05em !important; text-transform: uppercase !important;">
+            STUDENT DOSSIER
           </h3>
+          <!-- Segmented Control Tab Switcher -->
+          <div class="dossier-tab-control" style="display:inline-flex; background:#0f172a; border:1px solid #334155; border-radius:6px; padding:3px; gap:4px;">
+            <button type="button" id="tab-btn-raport" class="btn btn-sm" style="border:none; border-radius:4px; font-size:12px; font-weight:800; padding:5px 14px; cursor:pointer; background:var(--primary-tactical, #38bdf8); color:#090d16; transition:all 0.15s ease;">
+              REPORT CARD
+            </button>
+            <button type="button" id="tab-btn-certificate" class="btn btn-sm" style="border:none; border-radius:4px; font-size:12px; font-weight:800; padding:5px 14px; cursor:pointer; background:transparent; color:#94a3b8; transition:all 0.15s ease;">
+              OFFICIAL CERTIFICATE
+            </button>
+          </div>
         </div>
 
         <!-- Scrollable Document Area -->
         <div class="dossier-modal-scroll" style="padding: 24px; background: #060911;">
-          <div id="student-dossier-sheet" class="student-dossier-sheet student-raport-portrait" style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 36px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; font-family: var(--fm-font-sans, 'Inter', sans-serif);">
+          <div id="dossier-raport-view">
+            <div id="student-dossier-sheet" class="student-dossier-sheet student-raport-portrait" style="background: #ffffff; color: #0f172a; border-radius: 8px; padding: 36px 40px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; font-family: var(--fm-font-sans, 'Inter', sans-serif);">
 
-            <!-- 1. JUDUL HALAMAN: STUDENT REPORT CARD (32px Inter 900) -->
-            <div class="raport-header-title" style="text-align: center; border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 22px;">
-              <h1 style="font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 30px; font-weight: 900; color: #0f172a; margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-transform: uppercase;">
-                STUDENT REPORT CARD
-              </h1>
+              <!-- 1. JUDUL HALAMAN: STUDENT REPORT CARD (32px Inter 900) -->
+              <div class="raport-header-title" style="text-align: center; border-bottom: 2.5px solid #0f172a; padding-bottom: 14px; margin-bottom: 22px;">
+                <h1 style="font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 30px; font-weight: 900; color: #0f172a; margin: 0; line-height: 1.1; letter-spacing: -0.01em; text-transform: uppercase;">
+                  STUDENT REPORT CARD
+                </h1>
+              </div>
+
+              <!-- 2. PANEL BIODATA BERBARIS ATAS KE BAWAH DENGAN FOTO PASFOTO (UKURAN FOTO MENGIKUTI TEKS) -->
+              <div class="student-profile-panel profile-cv-card profile-cv-hero" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; gap: 24px; align-items: flex-start;">
+                <!-- Foto Siswa: Ukuran Tinggi Mengikuti Kolom Teks Secara Dinamis (Rasio 3:4) -->
+                <div id="raport-student-photo-box" style="height: 220px; width: 165px; border-radius: 8px; overflow: hidden; border: 2.5px solid #cbd5e1; flex-shrink: 0; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; position: relative;">
+                  ${rec.photo_url
+                    ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;">`
+                    : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;">`
+                  }
+                </div>
+
+                <!-- Stacked Biodata Rows: Rapat, Rapi & Berbaris Atas ke Bawah (Zero Gap Buatan) -->
+                <div class="profile-hero-meta-table" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
+
+                  <!-- Row 1: Full Name -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Full Name</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(rec.displayName || rec.name)}</strong>
+                  </div>
+
+                  <!-- Row 2: Sex / Gender -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Gender</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="color: #0f172a; text-transform: capitalize; font-weight: 600;">${escapeHtml(rec.gender || '—')}</strong>
+                  </div>
+
+                  <!-- Row 3: Place & Date of Birth -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Place, DOB</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.birthplace ? `${rec.birthplace}, ${rec.birth_date || '—'}` : (rec.birth_date || '—'))}</strong>
+                  </div>
+
+                  <!-- Row 4: Age -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Age</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.ageDisplay || '—')} yo</strong>
+                  </div>
+
+                  <!-- Row 5: Education -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Education</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(formatLastEducation(rec.education))}</strong>
+                  </div>
+
+                  <!-- Row 6: Address -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: baseline; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Address</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="color: #0f172a; font-weight: 600; line-height: 1.35;">${escapeHtml(formatFullStudentAddress(rec))}</strong>
+                  </div>
+
+                  <!-- Row 7: Course Data (Institusi Program Batch tanpa tanda pemisah strip/titik, font hitam) -->
+                  <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
+                    <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Course Data</span>
+                    <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
+                    <strong style="color: #0f172a; font-weight: 700; letter-spacing: 0.01em;">${escapeHtml(courseDataText)}</strong>
+                  </div>
+
+                </div>
+              </div>
+
+              ${isCampStudent ? campRaportHtml : `
+                <!-- 4. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
+                <div class="level-transcript-block" style="margin-top: 10px;">
+                  <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
+                    <thead>
+                      <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
+                        <th style="width: 16%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">LEVEL</th>
+                        <th style="width: 32%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">CLASS NAME</th>
+                        <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">PTS</th>
+                        <th style="width: 10%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">RATE</th>
+                        <th style="width: 10%; text-align: center; padding: 12px 10px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE</th>
+                        <th style="width: 18%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE DESCRIPTION</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      ${rowsHtml}
+                    </tbody>
+                  </table>
+                </div>
+
+                ${stepSummariesHtml}
+              `}
+              ${finalExamHtml}
+
             </div>
-
-            <!-- 2. PANEL BIODATA BERBARIS ATAS KE BAWAH DENGAN FOTO PASFOTO (UKURAN FOTO MENGIKUTI TEKS) -->
-            <div class="student-profile-panel profile-cv-card profile-cv-hero" style="background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 20px 24px; margin-bottom: 24px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); display: flex; gap: 24px; align-items: flex-start;">
-              <!-- Foto Siswa: Ukuran Tinggi Mengikuti Kolom Teks Secara Dinamis (Rasio 3:4) -->
-              <div id="raport-student-photo-box" style="height: 220px; width: 165px; border-radius: 8px; overflow: hidden; border: 2.5px solid #cbd5e1; flex-shrink: 0; background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: flex; align-items: center; justify-content: center; position: relative;">
-                ${rec.photo_url
-                  ? `<img src="${rec.photo_url}" onerror="this.onerror=null;this.src='${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}';" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;">`
-                  : `<img src="${generateAvatarDataUri(rec.displayName || rec.name, rec.gender)}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; display: block;">`
-                }
-              </div>
-
-              <!-- Stacked Biodata Rows: Rapat, Rapi & Berbaris Atas ke Bawah (Zero Gap Buatan) -->
-              <div class="profile-hero-meta-table" style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px;">
-
-                <!-- Row 1: Full Name -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Full Name</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="font-family: var(--fm-font-display, 'Inter', sans-serif); font-size: 16px; font-weight: 800; color: #0f172a;">${escapeHtml(rec.displayName || rec.name)}</strong>
-                </div>
-
-                <!-- Row 2: Sex / Gender -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Gender</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; text-transform: capitalize; font-weight: 600;">${escapeHtml(rec.gender || '—')}</strong>
-                </div>
-
-                <!-- Row 3: Place & Date of Birth -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Place, DOB</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.birthplace ? `${rec.birthplace}, ${rec.birth_date || '—'}` : (rec.birth_date || '—'))}</strong>
-                </div>
-
-                <!-- Row 4: Age -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Age</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; font-weight: 600; font-variant-numeric: tabular-nums;">${escapeHtml(rec.ageDisplay || '—')} yo</strong>
-                </div>
-
-                <!-- Row 5: Education -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Education</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; font-weight: 600;">${escapeHtml(formatLastEducation(rec.education))}</strong>
-                </div>
-
-                <!-- Row 6: Address -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: baseline; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Address</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; font-weight: 600; line-height: 1.35;">${escapeHtml(formatFullStudentAddress(rec))}</strong>
-                </div>
-
-                <!-- Row 7: Course Data (Institusi Program Batch tanpa tanda pemisah strip/titik, font hitam) -->
-                <div class="profile-hero-meta-row" style="display: flex; align-items: center; font-size: 16px; line-height: 1.4;">
-                  <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Course Data</span>
-                  <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
-                  <strong style="color: #0f172a; font-weight: 700; letter-spacing: 0.01em;">${escapeHtml(courseDataText)}</strong>
-                </div>
-
-              </div>
-            </div>
-
-            ${isCampStudent ? campRaportHtml : `
-              <!-- 4. TABEL NILAI KELAS: LEVEL | CLASS NAME | POINT | RATE | GRADE | GRADE DESCRIPTION -->
-              <div class="level-transcript-block" style="margin-top: 10px;">
-                <table class="dossier-table" style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-variant-numeric: tabular-nums;">
-                  <thead>
-                    <tr style="background: #f1f5f9; border-top: 1.5px solid #cbd5e1; border-bottom: 2px solid #cbd5e1;">
-                      <th style="width: 16%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">LEVEL</th>
-                      <th style="width: 32%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">CLASS NAME</th>
-                      <th style="width: 14%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">PTS</th>
-                      <th style="width: 10%; text-align: center; padding: 12px 12px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">RATE</th>
-                      <th style="width: 10%; text-align: center; padding: 12px 10px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE</th>
-                      <th style="width: 18%; text-align: left; padding: 12px 16px; font-size: 16px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.04em; font-family: var(--fm-font-sans, 'Inter', sans-serif);">GRADE DESCRIPTION</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${rowsHtml}
-                  </tbody>
-                </table>
-              </div>
-
-              ${stepSummariesHtml}
-            `}
-            ${finalExamHtml}
-
           </div>
+          ${certificateViewHtml}
         </div>
 
         <!-- Modal Footer CTA Area: CLOSE & EDIT MODE (Left) | Student Pager (Center) | Export to PDF (Right) -->
@@ -3112,10 +3370,120 @@ export async function renderStudents(area, options = {}) {
       };
     }
 
-    // Export PDF (Portrait A4)
+    // Export PDF Button & Segmented Tab Switcher Wiring
     const exportPdfBtn = backdrop.querySelector('#btn-export-pdf-dossier');
+    const tabBtnRaport = backdrop.querySelector('#tab-btn-raport');
+    const tabBtnCert = backdrop.querySelector('#tab-btn-certificate');
+    const raportView = backdrop.querySelector('#dossier-raport-view');
+    const certView = backdrop.querySelector('#dossier-certificate-view');
+    const toggleEditBtn = backdrop.querySelector('#btn-dossier-toggle-edit');
+
+    if (tabBtnRaport && tabBtnCert) {
+      tabBtnRaport.onclick = (e) => {
+        e.stopPropagation();
+        tabBtnRaport.style.background = 'var(--primary-tactical, #38bdf8)';
+        tabBtnRaport.style.color = '#090d16';
+        tabBtnCert.style.background = 'transparent';
+        tabBtnCert.style.color = '#94a3b8';
+        if (raportView) raportView.style.display = 'block';
+        if (certView) certView.style.display = 'none';
+        if (toggleEditBtn) toggleEditBtn.style.display = 'inline-flex';
+        if (exportPdfBtn) {
+          exportPdfBtn.innerHTML = `${getSvgIcon('download', 16)} Export to PDF`;
+          exportPdfBtn.disabled = false;
+          exportPdfBtn.style.opacity = '1';
+          exportPdfBtn.style.cursor = 'pointer';
+        }
+      };
+
+      tabBtnCert.onclick = (e) => {
+        e.stopPropagation();
+        tabBtnCert.style.background = 'var(--primary-tactical, #38bdf8)';
+        tabBtnCert.style.color = '#090d16';
+        tabBtnRaport.style.background = 'transparent';
+        tabBtnRaport.style.color = '#94a3b8';
+        if (raportView) raportView.style.display = 'none';
+        if (certView) certView.style.display = 'block';
+        if (toggleEditBtn) toggleEditBtn.style.display = 'none';
+        if (exportPdfBtn) {
+          if (hasLessPredicate) {
+            exportPdfBtn.innerHTML = `⚠️ Locked (Retake Required)`;
+            exportPdfBtn.disabled = true;
+            exportPdfBtn.style.opacity = '0.5';
+            exportPdfBtn.style.cursor = 'not-allowed';
+          } else {
+            exportPdfBtn.innerHTML = `${getSvgIcon('download', 16)} Print Certificate (PDF)`;
+            exportPdfBtn.disabled = false;
+            exportPdfBtn.style.opacity = '1';
+            exportPdfBtn.style.cursor = 'pointer';
+          }
+        }
+      };
+    }
+
+    // Export PDF (Portrait Raport vs Landscape Certificate)
     if (exportPdfBtn) {
       exportPdfBtn.onclick = async () => {
+        // A. If Certificate View is active
+        if (certView && certView.style.display !== 'none') {
+          if (hasLessPredicate) {
+            showToast('Certificate locked: Student has unfulfilled LESS predicate. Remedial required before issuance.', 'warning');
+            return;
+          }
+          const certWrap = backdrop.querySelector('#student-certificate-sheet-wrap');
+          if (!certWrap) return;
+
+          if (typeof window.html2pdf !== 'function') {
+            showToast('Loading PDF engine...', 'info');
+            try {
+              await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = './js/vendor/html2pdf.bundle.min.js?v=20261119_v1';
+                script.onload = resolve;
+                script.onerror = () => {
+                  const cdnScript = document.createElement('script');
+                  cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                  cdnScript.onload = resolve;
+                  cdnScript.onerror = reject;
+                  document.head.appendChild(cdnScript);
+                };
+                document.head.appendChild(script);
+              });
+            } catch (e) {
+              showToast('Failed to load PDF engine. Check connection or vendor files.', 'error');
+              return;
+            }
+          }
+
+          const safeStudentName = (rec.displayName || rec.name || 'Student').replace(/[^a-zA-Z0-9_-]/g, '_');
+          const filename = `CEC_Certificate_${safeStudentName}_${cleanBatch || 'General'}.pdf`;
+
+          showToast('Exporting Landscape Certificate & Transcript PDF...', 'info');
+          exportPdfBtn.disabled = true;
+          exportPdfBtn.style.opacity = '0.6';
+
+          try {
+            const opt = {
+              margin: [8, 10, 8, 10],
+              filename: filename,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+
+            await window.html2pdf().set(opt).from(certWrap).save();
+            showToast('Certificate & Transcript PDF downloaded!', 'success');
+          } catch (err) {
+            console.error('Certificate Export Error:', err);
+            showToast('Failed to export certificate PDF: ' + (err.message || err), 'error');
+          } finally {
+            exportPdfBtn.disabled = false;
+            exportPdfBtn.style.opacity = '1';
+          }
+          return;
+        }
+
+        // B. Otherwise export Portrait Report Card
         syncRaportPhotoHeight();
 
         if (typeof window.html2pdf !== 'function') {
@@ -3335,214 +3703,15 @@ export async function renderStudents(area, options = {}) {
 
     const cols = [];
 
-    // 1. Vocabulary (5 cols: W1, W2, W3, W4, NA) - Read-only from DB test attempts
-    const vocabClassCode = `CAMP-${sNum}VOCAB`;
-    let vocabClass = null;
-    for (const c of classesMap.values()) {
-      if ((c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-') === vocabClassCode) {
-        vocabClass = c;
-        break;
-      }
-    }
-    const themeMap = { W1: 'A', W2: 'B', W3: 'C', W4: 'D' };
-    ['W1', 'W2', 'W3', 'W4'].forEach((wKey, idx) => {
-      const tc = themeMap[wKey];
-      cols.push({
-        key: `_camp_vcb_${sNum}_${wKey.toLowerCase()}`,
-        label: wKey,
-        shortLabel: wKey,
-        microLabel: wKey,
-        headerTitle: `Vocabulary Week ${idx + 1} (Exam ${tc})`,
-        sortable: true,
-        align: 'center',
-        width: '52px',
-        minWidth: '48px',
-        render: (row) => {
-          let score = null;
-          if (vocabClass && row.perClassFinal?.has(vocabClass.id)) {
-            const cs = row.perClassFinal.get(vocabClass.id);
-            if (cs?.themeScores && cs.themeScores[tc] != null) score = cs.themeScores[tc];
-          }
-          if (score == null) {
-            const itm = row.academicMap?.get(`${sNum}:VOCABULARY:${wKey}`);
-            if (itm?.percentage != null) score = itm.percentage;
-          }
-          const displayVal = score != null ? Math.round(score) : '—';
-          const color = score != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(score) : 'var(--clr-text-3)';
-          return `
-            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary ${wKey}: ${displayVal}%">${displayVal}</span>
-            </div>
-            <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
-          `;
-        }
-      });
-    });
-    // Vocab NA
-    cols.push({
-      key: `_camp_vcb_${sNum}_na`,
-      label: 'NA',
-      shortLabel: 'NA',
-      microLabel: 'NA',
-      headerTitle: 'Vocabulary Final Score (NA)',
-      className: 'super-hdr-divider',
-      sortable: true,
-      align: 'center',
-      width: '55px',
-      minWidth: '50px',
-      render: (row) => {
-        const na = row.stepSummaries?.[sNum]?.naVocab;
-        const displayVal = na != null ? Math.round(na) : '—';
-        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
-        return `
-          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary NA: ${displayVal}%">${displayVal}</span>
-          </div>
-          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
-        `;
-      }
-    });
-
-    // 2. Storytelling (5 cols: W1, W2, W3, W4, NA) - Rubric 1-5, NA is average %
-    ['W1', 'W2', 'W3', 'W4'].forEach((wKey, idx) => {
-      cols.push({
-        key: `_camp_stt_${sNum}_${wKey.toLowerCase()}`,
-        label: wKey,
-        shortLabel: wKey,
-        microLabel: wKey,
-        headerTitle: `Storytelling Week ${idx + 1} (Rubric 1-5)`,
-        sortable: true,
-        align: 'center',
-        width: '52px',
-        minWidth: '48px',
-        render: (row) => {
-          const itm = row.academicMap?.get(`${sNum}:STORYTELLING:${wKey}`);
-          const raw = itm?.raw_score != null ? itm.raw_score : '';
-          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 5) * 100 : null);
-          const displayVal = raw !== '' ? raw : '—';
-          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
-          return `
-            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Storytelling ${wKey}: ${displayVal} / 5 (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
-            </div>
-            <input type="number"
-              class="student-inline-input student-inline-academic-input text-center"
-              data-student-id="${row.id}"
-              data-batch-id="${row.batch_id || ''}"
-              data-step="${sNum}"
-              data-subject="STORYTELLING"
-              data-type="WEEKLY_DEPOSIT"
-              data-key="${wKey}"
-              data-target="5"
-              min="0"
-              max="5"
-              step="0.5"
-              value="${raw}"
-              placeholder="—"
-              onclick="event.stopPropagation();">
-          `;
-        }
-      });
-    });
-    // Storytelling NA
-    cols.push({
-      key: `_camp_stt_${sNum}_na`,
-      label: 'NA',
-      shortLabel: 'NA',
-      microLabel: 'NA',
-      headerTitle: 'Storytelling Final Score (NA)',
-      className: 'super-hdr-divider',
-      sortable: true,
-      align: 'center',
-      width: '55px',
-      minWidth: '50px',
-      render: (row) => {
-        const na = row.stepSummaries?.[sNum]?.naStory;
-        const displayVal = na != null ? Math.round(na) : '—';
-        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
-        return `
-          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Storytelling NA: ${displayVal}%">${displayVal}</span>
-          </div>
-          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
-        `;
-      }
-    });
-
-    // 3. Grammar (3 cols: U1, U2, NA)
-    ['U1', 'U2'].forEach((uKey, idx) => {
-      cols.push({
-        key: `_camp_grm_${sNum}_${uKey.toLowerCase()}`,
-        label: uKey,
-        shortLabel: uKey,
-        microLabel: uKey,
-        headerTitle: `Grammar Exam ${idx + 1} (Max ${gramTarget})`,
-        sortable: true,
-        align: 'center',
-        width: '58px',
-        minWidth: '52px',
-        render: (row) => {
-          const itm = row.academicMap?.get(`${sNum}:GRAMMAR:${uKey}`);
-          const raw = itm?.raw_score != null ? itm.raw_score : '';
-          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / gramTarget) * 100 : null);
-          const displayVal = raw !== '' ? raw : '—';
-          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
-          return `
-            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar ${uKey}: ${displayVal} / ${gramTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
-            </div>
-            <input type="number"
-              class="student-inline-input student-inline-academic-input text-center"
-              data-student-id="${row.id}"
-              data-batch-id="${row.batch_id || ''}"
-              data-step="${sNum}"
-              data-subject="GRAMMAR"
-              data-type="PERIODIC_EXAM"
-              data-key="${uKey}"
-              data-target="${gramTarget}"
-              min="0"
-              max="${gramTarget}"
-              step="1"
-              value="${raw}"
-              placeholder="—"
-              onclick="event.stopPropagation();">
-          `;
-        }
-      });
-    });
-    // Grammar NA
-    cols.push({
-      key: `_camp_grm_${sNum}_na`,
-      label: 'NA',
-      shortLabel: 'NA',
-      microLabel: 'NA',
-      headerTitle: 'Grammar Final Score (NA)',
-      className: 'super-hdr-divider',
-      sortable: true,
-      align: 'center',
-      width: '55px',
-      minWidth: '50px',
-      render: (row) => {
-        const na = row.stepSummaries?.[sNum]?.naGram;
-        const displayVal = na != null ? Math.round(na) : '—';
-        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
-        return `
-          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar NA: ${displayVal}%">${displayVal}</span>
-          </div>
-          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
-        `;
-      }
-    });
-
-    // 4. 4th Subject (3 cols: U1, U2, NA)
-    ['U1', 'U2'].forEach((uKey, idx) => {
+    // 1. 4th Subject (Basic English [Step 1] / GFS [Step 2] / Pronunciation [Step 3]) - Di Kiri Kolom Vocab
+    ['EX-1', 'EX-2'].forEach((exLabel, idx) => {
+      const uKey = `U${idx + 1}`;
       cols.push({
         key: `_camp_fourth_${sNum}_${uKey.toLowerCase()}`,
-        label: uKey,
-        shortLabel: uKey,
-        microLabel: uKey,
-        headerTitle: `${fourthCode} Exam ${idx + 1} (Max ${fourthTarget})`,
+        label: exLabel,
+        shortLabel: exLabel,
+        microLabel: exLabel,
+        headerTitle: `${fourthCode} ${exLabel} (Max ${fourthTarget})`,
         sortable: true,
         align: 'center',
         width: '58px',
@@ -3555,7 +3724,7 @@ export async function renderStudents(area, options = {}) {
           const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
           return `
             <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="${fourthCode} ${uKey}: ${displayVal} / ${fourthTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="${fourthCode} ${exLabel}: ${displayVal} / ${fourthTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
             </div>
             <input type="number"
               class="student-inline-input student-inline-academic-input text-center"
@@ -3576,13 +3745,13 @@ export async function renderStudents(area, options = {}) {
         }
       });
     });
-    // 4th Subject NA
+    // 4th Subject SCORE
     cols.push({
       key: `_camp_fourth_${sNum}_na`,
-      label: 'NA',
-      shortLabel: 'NA',
-      microLabel: 'NA',
-      headerTitle: `${fourthCode} Final Score (NA)`,
+      label: 'SCORE',
+      shortLabel: 'SCORE',
+      microLabel: 'SCORE',
+      headerTitle: `${fourthCode} Final Score (SCORE)`,
       className: 'super-hdr-divider',
       sortable: true,
       align: 'center',
@@ -3594,22 +3763,342 @@ export async function renderStudents(area, options = {}) {
         const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
         return `
           <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="${fourthCode} NA: ${displayVal}%">${displayVal}</span>
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="${fourthCode} SCORE: ${displayVal}%">${displayVal}</span>
           </div>
           <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
         `;
       }
     });
 
-    // 5. Speaking (4 cols: U1, U2, PR/U3, NA)
+    // 2. Vocabulary (6 cols: PT, W1, W2, W3, W4, NA)
+    cols.push({
+      key: `_camp_vcb_${sNum}_pt`,
+      label: 'PT',
+      shortLabel: 'PT',
+      microLabel: 'PT',
+      headerTitle: 'Vocabulary Placement Test (Target 30 wds)',
+      sortable: true,
+      align: 'center',
+      width: '48px',
+      minWidth: '44px',
+      render: (row) => {
+        const itm = row.academicMap?.get(`${sNum}:VOCABULARY:PT`);
+        const raw = itm?.raw_score != null ? itm.raw_score : '';
+        const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 30) * 100 : null);
+        const displayVal = raw !== '' ? raw : '—';
+        const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary PT: ${displayVal} / 30 wds">${displayVal}</span>
+          </div>
+          <input type="number"
+            class="student-inline-input student-inline-academic-input text-center"
+            data-student-id="${row.id}"
+            data-batch-id="${row.batch_id || ''}"
+            data-step="${sNum}"
+            data-subject="VOCABULARY"
+            data-type="DIAGNOSTIC"
+            data-key="PT"
+            data-target="30"
+            min="0"
+            max="100"
+            step="1"
+            value="${raw}"
+            placeholder="—"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    const vocabClassCode = `CAMP-${sNum}VOCAB`;
+    let vocabClass = null;
+    for (const c of classesMap.values()) {
+      if ((c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-') === vocabClassCode) {
+        vocabClass = c;
+        break;
+      }
+    }
+    const themeMap = { W1: 'A', W2: 'B', W3: 'C', W4: 'D' };
+    ['EX-1', 'EX-2', 'EX-3', 'EX-4'].forEach((exLabel, idx) => {
+      const wKey = `W${idx + 1}`;
+      const tc = themeMap[wKey];
+      cols.push({
+        key: `_camp_vcb_${sNum}_${wKey.toLowerCase()}`,
+        label: exLabel,
+        shortLabel: exLabel,
+        microLabel: exLabel,
+        headerTitle: `Vocabulary ${exLabel} (Theme ${tc})`,
+        sortable: true,
+        align: 'center',
+        width: '52px',
+        minWidth: '48px',
+        render: (row) => {
+          let score = null;
+          if (vocabClass && row.perClassFinal?.has(vocabClass.id)) {
+            const cs = row.perClassFinal.get(vocabClass.id);
+            if (cs?.themeScores && cs.themeScores[tc] != null) score = cs.themeScores[tc];
+          }
+          if (score == null) {
+            const itm = row.academicMap?.get(`${sNum}:VOCABULARY:${wKey}`);
+            if (itm?.percentage != null) score = itm.percentage;
+          }
+          const displayVal = score != null ? Math.round(score) : '—';
+          const color = score != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(score) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary ${exLabel}: ${displayVal}%">${displayVal}</span>
+            </div>
+            <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+          `;
+        }
+      });
+    });
+    // Vocab SCORE
+    cols.push({
+      key: `_camp_vcb_${sNum}_na`,
+      label: 'SCORE',
+      shortLabel: 'SCORE',
+      microLabel: 'SCORE',
+      headerTitle: 'Vocabulary Final Score (SCORE)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naVocab;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Vocabulary SCORE: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 3. Storytelling (5 cols: EX-1, EX-2, EX-3, EX-4, SCORE) - Rubric 1-5, SCORE is average %
+    ['EX-1', 'EX-2', 'EX-3', 'EX-4'].forEach((exLabel, idx) => {
+      const wKey = `W${idx + 1}`;
+      cols.push({
+        key: `_camp_stt_${sNum}_${wKey.toLowerCase()}`,
+        label: exLabel,
+        shortLabel: exLabel,
+        microLabel: exLabel,
+        headerTitle: `Storytelling ${exLabel} (Rubric 1-5)`,
+        sortable: true,
+        align: 'center',
+        width: '52px',
+        minWidth: '48px',
+        render: (row) => {
+          const itm = row.academicMap?.get(`${sNum}:STORYTELLING:${wKey}`);
+          const raw = itm?.raw_score != null ? itm.raw_score : '';
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 5) * 100 : null);
+          const displayVal = raw !== '' ? raw : '—';
+          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Storytelling ${exLabel}: ${displayVal} / 5 (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-academic-input text-center"
+              data-student-id="${row.id}"
+              data-batch-id="${row.batch_id || ''}"
+              data-step="${sNum}"
+              data-subject="STORYTELLING"
+              data-type="WEEKLY_DEPOSIT"
+              data-key="${wKey}"
+              data-target="5"
+              min="0"
+              max="5"
+              step="0.5"
+              value="${raw}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+    // Storytelling SCORE
+    cols.push({
+      key: `_camp_stt_${sNum}_na`,
+      label: 'SCORE',
+      shortLabel: 'SCORE',
+      microLabel: 'SCORE',
+      headerTitle: 'Storytelling Final Score (SCORE)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naStory;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Storytelling SCORE: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 4. Grammar (4 cols: PT, U1, U2, NA)
+    cols.push({
+      key: `_camp_grm_${sNum}_pt`,
+      label: 'PT',
+      shortLabel: 'PT',
+      microLabel: 'PT',
+      headerTitle: 'Grammar Placement Test (Max 25 pts)',
+      sortable: true,
+      align: 'center',
+      width: '48px',
+      minWidth: '44px',
+      render: (row) => {
+        const itm = row.academicMap?.get(`${sNum}:GRAMMAR:PT`);
+        const raw = itm?.raw_score != null ? itm.raw_score : '';
+        const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 25) * 100 : null);
+        const displayVal = raw !== '' ? raw : '—';
+        const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar PT: ${displayVal} / 25 pts">${displayVal}</span>
+          </div>
+          <input type="number"
+            class="student-inline-input student-inline-academic-input text-center"
+            data-student-id="${row.id}"
+            data-batch-id="${row.batch_id || ''}"
+            data-step="${sNum}"
+            data-subject="GRAMMAR"
+            data-type="DIAGNOSTIC"
+            data-key="PT"
+            data-target="25"
+            min="0"
+            max="25"
+            step="1"
+            value="${raw}"
+            placeholder="—"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
+    ['EX-1', 'EX-2'].forEach((exLabel, idx) => {
+      const uKey = `U${idx + 1}`;
+      cols.push({
+        key: `_camp_grm_${sNum}_${uKey.toLowerCase()}`,
+        label: exLabel,
+        shortLabel: exLabel,
+        microLabel: exLabel,
+        headerTitle: `Grammar ${exLabel} (Max ${gramTarget})`,
+        sortable: true,
+        align: 'center',
+        width: '58px',
+        minWidth: '52px',
+        render: (row) => {
+          const itm = row.academicMap?.get(`${sNum}:GRAMMAR:${uKey}`);
+          const raw = itm?.raw_score != null ? itm.raw_score : '';
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / gramTarget) * 100 : null);
+          const displayVal = raw !== '' ? raw : '—';
+          const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+          return `
+            <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar ${exLabel}: ${displayVal} / ${gramTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+            </div>
+            <input type="number"
+              class="student-inline-input student-inline-academic-input text-center"
+              data-student-id="${row.id}"
+              data-batch-id="${row.batch_id || ''}"
+              data-step="${sNum}"
+              data-subject="GRAMMAR"
+              data-type="PERIODIC_EXAM"
+              data-key="${uKey}"
+              data-target="${gramTarget}"
+              min="0"
+              max="${gramTarget}"
+              step="1"
+              value="${raw}"
+              placeholder="—"
+              onclick="event.stopPropagation();">
+          `;
+        }
+      });
+    });
+    // Grammar SCORE
+    cols.push({
+      key: `_camp_grm_${sNum}_na`,
+      label: 'SCORE',
+      shortLabel: 'SCORE',
+      microLabel: 'SCORE',
+      headerTitle: 'Grammar Final Score (SCORE)',
+      className: 'super-hdr-divider',
+      sortable: true,
+      align: 'center',
+      width: '55px',
+      minWidth: '50px',
+      render: (row) => {
+        const na = row.stepSummaries?.[sNum]?.naGram;
+        const displayVal = na != null ? Math.round(na) : '—';
+        const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar SCORE: ${displayVal}%">${displayVal}</span>
+          </div>
+          <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
+        `;
+      }
+    });
+
+    // 5. Speaking (5 cols: PT, EX-1, EX-2, EX-3, SCORE)
+    cols.push({
+      key: `_camp_spk_${sNum}_pt`,
+      label: 'PT',
+      shortLabel: 'PT',
+      microLabel: 'PT',
+      headerTitle: 'Speaking Placement Test (Max 25 pts)',
+      sortable: true,
+      align: 'center',
+      width: '48px',
+      minWidth: '44px',
+      render: (row) => {
+        const itm = row.academicMap?.get(`${sNum}:SPEAKING:PT`);
+        const raw = itm?.raw_score != null ? itm.raw_score : '';
+        const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / 25) * 100 : null);
+        const displayVal = raw !== '' ? raw : '—';
+        const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
+        return `
+          <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
+            <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking PT: ${displayVal} / 25 pts">${displayVal}</span>
+          </div>
+          <input type="number"
+            class="student-inline-input student-inline-academic-input text-center"
+            data-student-id="${row.id}"
+            data-batch-id="${row.batch_id || ''}"
+            data-step="${sNum}"
+            data-subject="SPEAKING"
+            data-type="DIAGNOSTIC"
+            data-key="PT"
+            data-target="25"
+            min="0"
+            max="25"
+            step="1"
+            value="${raw}"
+            placeholder="—"
+            onclick="event.stopPropagation();">
+        `;
+      }
+    });
+
     spkKeys.forEach((key, idx) => {
-      const lbl = spkLabels[idx];
+      const exLabel = `EX-${idx + 1}`;
       cols.push({
         key: `_camp_spk_${sNum}_${key.toLowerCase()}`,
-        label: lbl,
-        shortLabel: lbl,
-        microLabel: lbl,
-        headerTitle: `Speaking ${key} (Max 25)`,
+        label: exLabel,
+        shortLabel: exLabel,
+        microLabel: exLabel,
+        headerTitle: `Speaking ${exLabel} (${key}) (Max 25)`,
         sortable: true,
         align: 'center',
         width: '52px',
@@ -3622,7 +4111,7 @@ export async function renderStudents(area, options = {}) {
           const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
           return `
             <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking ${lbl}: ${displayVal} / 25 (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking ${exLabel}: ${displayVal} / 25 (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
             </div>
             <input type="number"
               class="student-inline-input student-inline-academic-input text-center"
@@ -3643,13 +4132,13 @@ export async function renderStudents(area, options = {}) {
         }
       });
     });
-    // Speaking NA
+    // Speaking SCORE
     cols.push({
       key: `_camp_spk_${sNum}_na`,
-      label: 'NA',
-      shortLabel: 'NA',
-      microLabel: 'NA',
-      headerTitle: 'Speaking Final Score (NA)',
+      label: 'SCORE',
+      shortLabel: 'SCORE',
+      microLabel: 'SCORE',
+      headerTitle: 'Speaking Final Score (SCORE)',
       className: 'super-hdr-divider',
       sortable: true,
       align: 'center',
@@ -3661,7 +4150,7 @@ export async function renderStudents(area, options = {}) {
         const color = na != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(na) : 'var(--clr-text-3)';
         return `
           <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking NA: ${displayVal}%">${displayVal}</span>
+            <span style="font-size:12px;font-weight:700;color:${color} !important;font-variant-numeric:tabular-nums;" title="Speaking SCORE: ${displayVal}%">${displayVal}</span>
           </div>
           <div class="student-inline-input text-center text-muted" style="display:none;font-size:11px;line-height:26px;">${displayVal}</div>
         `;
@@ -4299,31 +4788,7 @@ export async function renderStudents(area, options = {}) {
         style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
-      // Group 2: VOCABULARY (Colspan 5: W1, W2, W3, W4, NA)
-      sh.push({
-        label: 'VOCABULARY',
-        colSpan: 5,
-        className: 'super-hdr super-hdr-class',
-        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
-      });
-
-      // Group 3: STORYTELLING (Colspan 5: W1, W2, W3, W4, NA)
-      sh.push({
-        label: 'STORYTELLING',
-        colSpan: 5,
-        className: 'super-hdr super-hdr-class',
-        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
-      });
-
-      // Group 4: GRAMMAR (Colspan 3: U1, U2, NA)
-      sh.push({
-        label: 'GRAMMAR',
-        colSpan: 3,
-        className: 'super-hdr super-hdr-class',
-        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
-      });
-
-      // Group 5: 4TH SUBJECT (Colspan 3: U1, U2, NA)
+      // Group 2: 4TH SUBJECT (Basic English / GFS / Pronunciation - Di Kiri Kolom Vocab)
       sh.push({
         label: fourthName,
         colSpan: 3,
@@ -4331,8 +4796,32 @@ export async function renderStudents(area, options = {}) {
         style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
       });
 
-      // Group 6: SPEAKING (Colspan: Step 1 = 4 [U1, U2, PR, NA], Step 2 = 3 [U1, U2, NA], Step 3 = 4 [U1, U2, U3, NA])
-      const spkColSpan = pageNum === 2 ? 3 : 4;
+      // Group 3: VOCABULARY (Colspan 6: PT, W1, W2, W3, W4, NA)
+      sh.push({
+        label: 'VOCABULARY',
+        colSpan: 6,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 4: STORYTELLING (Colspan 5: W1, W2, W3, W4, NA)
+      sh.push({
+        label: 'STORYTELLING',
+        colSpan: 5,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 5: GRAMMAR (Colspan 4: PT, U1, U2, NA)
+      sh.push({
+        label: 'GRAMMAR',
+        colSpan: 4,
+        className: 'super-hdr super-hdr-class',
+        style: 'background:#1e293b; color:#ffffff; font-weight:800; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; text-align:center; height:30px; border-bottom:1px solid rgba(255,255,255,0.35); border-right:2px solid rgba(255,255,255,0.22) !important;'
+      });
+
+      // Group 6: SPEAKING (Colspan: Step 1 = 5 [PT, U1, U2, PR, NA], Step 2 = 4 [PT, U1, U2, NA], Step 3 = 5 [PT, U1, U2, U3, NA])
+      const spkColSpan = (pageNum === 2 ? 3 : 4) + 1;
       sh.push({
         label: 'SPEAKING',
         colSpan: spkColSpan,
@@ -4718,13 +5207,13 @@ export async function renderStudents(area, options = {}) {
     // User directive: Do not open modals on general row clicks. Only clicking photo or name opens the report.
     onRowClick: null,
     columns: [
-      // 1. Level (Inline Editable in Edit Mode)
+      // 1. Level / Step (CEC Step vs TOP Level SSOT per DECISION-083)
       {
         key: 'levelName',
-        label: 'LEVEL',
-        shortLabel: 'LEVEL',
-        microLabel: 'LVL',
-        headerTitle: 'LEVEL',
+        label: isCampProgram ? 'STEP' : 'LEVEL',
+        shortLabel: isCampProgram ? 'STEP' : 'LEVEL',
+        microLabel: isCampProgram ? 'STEP' : 'LVL',
+        headerTitle: isCampProgram ? 'STEP' : 'LEVEL',
         className: 'col-narrow-header',
         sortable: true,
         align: 'center',
@@ -5261,15 +5750,15 @@ export async function renderStudents(area, options = {}) {
             statusOptionsHtml += `<option value="delete" style="color:var(--grade-e);font-weight:700;">Delete</option>`;
           }
 
-          // Active and fully eligible for promotion: Render interactive LEVEL UP button
+          // Active and fully eligible for promotion: Render interactive STEP UP / LEVEL UP button
           if (currentStatus === 'active' && row.isEligibleNext && !isLvlX && row.studentLevelNum !== 0) {
             const isGrad = curNum >= 3;
-            const targetTitle = isGrad ? 'Graduate to ALUMNI (Level X)' : `Promote to Level ${curNum + 1}`;
+            const targetTitle = isGrad ? 'Graduate to ALUMNI (Level X)' : (isCampProgram ? `Promote to Step ${curNum + 1}` : `Promote to Level ${curNum + 1}`);
             return `
               <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
                 <button type="button" class="btn-level-up-cell" onclick="event.stopPropagation(); window.promoteStudentNextLevel('${row.id}');"
                   title="${escapeHtml(targetTitle)}">
-                  ${getSvgIcon('chevrons-up', 12)} LEVEL UP
+                  ${getSvgIcon('chevrons-up', 12)} ${isCampProgram ? 'STEP UP' : 'LEVEL UP'}
                 </button>
               </div>
               <select class="student-inline-select student-status-select" data-id="${row.id}" data-name="${escapeHtml(row.displayName || row.name || 'Student')}" data-prev-status="${currentStatus}" data-level-num="${curNum}" data-field="program_status" onclick="event.stopPropagation();">

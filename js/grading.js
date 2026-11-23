@@ -870,10 +870,25 @@ export function calculateGrade(percentage, options = {}) {
   const num = Number(percentage) || 0;
   if (num >= 100) return '★';
   const pct = Math.round(num);
+
+  const inst = typeof options === 'string'
+    ? options.toUpperCase()
+    : String(options?.institution || options?.tenant || options?.instCode || '').toUpperCase();
+
+  // TOP (Top Occupational Program) Scale: 100 ★ | 90-99 A | 70-89 B | 60-69 C | 30-59 D | 0-29 E
+  if (inst === 'TOP' || (typeof options === 'object' && options?.isTop)) {
+    if (pct >= 90) return 'A';
+    if (pct >= 70) return 'B';
+    if (pct >= 60) return 'C';
+    if (pct >= 30) return 'D';
+    return 'E';
+  }
+
+  // CEC (Cake English Course) Scale: 100 ★ | 90-99 A | 80-89 B | 70-79 C | 60-69 D | 0-59 E
   if (pct >= 90) return 'A';
   if (pct >= 80) return 'B';
-  if (pct >= 60) return 'C';
-  if (pct >= 30) return 'D';
+  if (pct >= 70) return 'C';
+  if (pct >= 60) return 'D';
   return 'E';
 }
 
@@ -931,14 +946,16 @@ export const isWeeklyExam = isExam; // Backward compatibility alias
  */
 export const TOPSCORE_COLORS = {
   // 1. Grade & Score Tiers (Nilai Ujian & Persentase)
-  STAR: '#c084fc', // 100% Star ★ (Vibrant Purple - #c084fc)
-  STAR_8HEX: '#c084fcff', // 8-digit hex alias with alpha
-  A: '#00c000ff', // 90–99% Grade A (Pure Green - Identical to Star)
+  STAR: '#00c000ff', // 100% Star ★ uses Pure Green in system (Identical to Grade A Excellent)
+  STAR_8HEX: '#00c000ff', // 8-digit hex alias with alpha
+  LEGEND_GIMMICK: '#c084fc', // Vibrant Purple exclusively for 100% celebration gimmick on Result Page
+  LEGEND_GIMMICK_RGB: '192, 132, 252',
+  A: '#00c000ff', // 90–99% Grade A (Pure Green - Excellent)
   A_8HEX: '#00c000ff', // 8-digit hex alias with alpha
-  B: '#95ff00ff', // 80–89% Grade B (Electric Lime - #95ff00ff)
-  C: '#FFFF00', // 60–79% Grade C (Pure Yellow - 100% distinct from orange)
-  D: '#FF8C00', // 30–59% Grade D (Dark Orange)
-  E: '#FF0000', // 0–29% Grade E (Pure Red)
+  B: '#95ff00ff', // 80–89% Grade B (Electric Lime - Very Good)
+  C: '#FFFF00', // 70–79% Grade C (Pure Yellow - Good)
+  D: '#FF8C00', // 60–69% Grade D (Dark Orange - Enough / KKM)
+  E: '#FF0000', // 0–59% Grade E (Pure Red - Less)
   REMEDIAL: '#FFFF00', // Remedial Exam Grade R (Pure Yellow - identical to Grade C)
   FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override Grade F (Pure Red #FF0000 - identical to Grade E)
   X: '#8B5CF6', // Special Grade X for Alumni (Purple)
@@ -947,7 +964,7 @@ export const TOPSCORE_COLORS = {
   NEUTRAL_RGB: '148, 163, 184',
 
   // 2. RGB Equivalents for Opacities, Shadows, & Glows
-  STAR_RGB: '192, 132, 252',
+  STAR_RGB: '0, 192, 0',
   A_RGB: '0, 192, 0',
   B_RGB: '149, 255, 0',
   C_RGB: '255, 255, 0',
@@ -993,12 +1010,13 @@ export const STAR_THEME = {
   symbol: '★',
   label: 'Excellent',
   predicate: 'Excellent',
-  color: TOPSCORE_COLORS.STAR,
-  dark: '#7e22ce',
-  light: '#d8b4fe',
-  rgb: TOPSCORE_COLORS.STAR_RGB,
-  glow: 'rgba(192, 132, 252, 0.5)',
-  textColor: TOPSCORE_COLORS.TEXT_STAR,
+  officialPredicate: 'Excellent',
+  color: TOPSCORE_COLORS.STAR, // Pure Green in system (#00c000ff)
+  dark: '#006400',
+  light: '#86efac',
+  rgb: TOPSCORE_COLORS.A_RGB,
+  glow: 'rgba(0, 192, 0, 0.35)',
+  textColor: TOPSCORE_COLORS.TEXT_DARK,
   name: 'Excellent (100%)',
   minScore: 100,
   maxScore: 100,
@@ -1010,77 +1028,77 @@ export const GRADE_PALETTE = {
   S: STAR_THEME, // Backward-compatibility alias for historical records
   A: {
     symbol: 'A',
-    label: 'Very Good',
-    predicate: 'Very Good',
+    label: 'Excellent',
+    predicate: 'Excellent',
     color: TOPSCORE_COLORS.A,
     dark: '#006400',
     light: '#86efac',
     rgb: TOPSCORE_COLORS.A_RGB,
     glow: 'rgba(0, 192, 0, 0.35)',
     textColor: TOPSCORE_COLORS.TEXT_DARK,
-    name: 'Very Good (90-99%)',
+    name: 'Excellent (90-99%)',
     minScore: 90,
     maxScore: 99,
     sparkle: false,
   },
   B: {
     symbol: 'B',
-    label: 'Good',
-    predicate: 'Good',
+    label: 'Very Good',
+    predicate: 'Very Good',
     color: TOPSCORE_COLORS.B,
     dark: '#5ebd00',
     light: '#d9f99d',
     rgb: TOPSCORE_COLORS.B_RGB,
     glow: 'rgba(149, 255, 0, 0.35)',
     textColor: TOPSCORE_COLORS.TEXT_DARK,
-    name: 'Good (80-89%)',
+    name: 'Very Good (80-89%)',
     minScore: 80,
     maxScore: 89,
     sparkle: false,
   },
   C: {
     symbol: 'C',
-    label: 'Enough',
-    predicate: 'Enough',
+    label: 'Good',
+    predicate: 'Good',
     color: TOPSCORE_COLORS.C,
     dark: '#cccc00',
     light: '#ffff99',
     rgb: TOPSCORE_COLORS.C_RGB,
     glow: 'rgba(255, 255, 0, 0.35)',
     textColor: TOPSCORE_COLORS.TEXT_DARK,
-    name: 'Enough (60-79%)',
-    minScore: 60,
+    name: 'Good (70-79%)',
+    minScore: 70,
     maxScore: 79,
     sparkle: false,
   },
   D: {
     symbol: 'D',
-    label: 'Less',
-    predicate: 'Less',
+    label: 'Enough',
+    predicate: 'Enough',
     color: TOPSCORE_COLORS.D,
     dark: '#cc7000',
     light: '#fed7aa',
     rgb: TOPSCORE_COLORS.D_RGB,
     glow: 'rgba(255, 140, 0, 0.35)',
     textColor: TOPSCORE_COLORS.TEXT_DARK,
-    name: 'Less (30-59%)',
-    minScore: 30,
-    maxScore: 59,
+    name: 'Enough (60-69%)',
+    minScore: 60,
+    maxScore: 69,
     sparkle: false,
   },
   E: {
     symbol: 'E',
-    label: 'Fail',
-    predicate: 'Fail',
+    label: 'Less',
+    predicate: 'Less',
     color: TOPSCORE_COLORS.E,
     dark: '#cc0000',
     light: '#ff9999',
     rgb: TOPSCORE_COLORS.E_RGB,
     glow: 'rgba(255, 0, 0, 0.35)',
     textColor: TOPSCORE_COLORS.TEXT_DARK,
-    name: 'Fail (0-29%)',
+    name: 'Less (<60%)',
     minScore: 0,
-    maxScore: 29,
+    maxScore: 59,
     sparkle: false,
   },
   R: {
@@ -1128,6 +1146,28 @@ export const GRADE_PALETTE = {
     maxScore: null,
     sparkle: false,
   },
+};
+
+/**
+ * Authoritative Dual-Tenant Grading Scales SSOT (CEC vs TOP)
+ */
+export const INSTITUTION_GRADING_SCALES = {
+  TOP: [
+    { symbol: '★', min: 100, max: 100, label: '100%', predicate: 'EXCELLENT', color: TOPSCORE_COLORS.STAR, note: 'Perfect Score' },
+    { symbol: 'A', min: 90, max: 99, label: '90 – 99%', predicate: 'VERY GOOD', color: TOPSCORE_COLORS.A, note: 'Very Good' },
+    { symbol: 'B', min: 70, max: 89, label: '70 – 89%', predicate: 'GOOD', color: TOPSCORE_COLORS.B, note: 'Good' },
+    { symbol: 'C', min: 60, max: 69, label: '60 – 69%', predicate: 'ENOUGH', color: TOPSCORE_COLORS.C, note: 'Passing Grade (KKM)' },
+    { symbol: 'D', min: 30, max: 59, label: '30 – 59%', predicate: 'LESS', color: TOPSCORE_COLORS.D, note: 'Needs Improvement' },
+    { symbol: 'E', min: 0, max: 29, label: '0 – 29%', predicate: 'FAIL', color: TOPSCORE_COLORS.E, note: 'Fail / Retake' },
+  ],
+  CEC: [
+    { symbol: '★', min: 100, max: 100, label: '100%', predicate: 'EXCELLENT', color: TOPSCORE_COLORS.STAR, note: 'Perfect Score' },
+    { symbol: 'A', min: 90, max: 99, label: '90 – 99%', predicate: 'VERY GOOD', color: TOPSCORE_COLORS.A, note: 'Very Good' },
+    { symbol: 'B', min: 80, max: 89, label: '80 – 89%', predicate: 'GOOD', color: TOPSCORE_COLORS.B, note: 'Good' },
+    { symbol: 'C', min: 70, max: 79, label: '70 – 79%', predicate: 'ENOUGH', color: TOPSCORE_COLORS.C, note: 'Enough' },
+    { symbol: 'D', min: 60, max: 69, label: '60 – 69%', predicate: 'LESS', color: TOPSCORE_COLORS.D, note: 'Step Passing Threshold (60%)' },
+    { symbol: 'E', min: 0, max: 59, label: '0 – 59%', predicate: 'FAIL', color: TOPSCORE_COLORS.E, note: 'Fail / Remedial' },
+  ],
 };
 
 /**
@@ -1497,14 +1537,27 @@ if (typeof document !== 'undefined') {
  * @param {number|string} percentage Score percentage (0 - 100)
  * @returns {string} Hex color string
  */
-export function getGradeColorByScore(percentage) {
+export function getGradeColorByScore(percentage, options = {}) {
   const p = Number(percentage);
   if (isNaN(p) || p < 0) return '#94a3b8';
+  const inst = typeof options === 'string'
+    ? options.toUpperCase()
+    : String(options?.institution || options?.tenant || options?.instCode || '').toUpperCase();
+
+  if (inst === 'TOP' || (typeof options === 'object' && options?.isTop)) {
+    if (p >= 100) return TOPSCORE_COLORS.STAR;
+    if (p >= 90) return TOPSCORE_COLORS.A;
+    if (p >= 70) return TOPSCORE_COLORS.B;
+    if (p >= 60) return TOPSCORE_COLORS.C;
+    if (p >= 30) return TOPSCORE_COLORS.D;
+    return TOPSCORE_COLORS.E;
+  }
+
   if (p >= 100) return TOPSCORE_COLORS.STAR;
   if (p >= 90) return TOPSCORE_COLORS.A;
   if (p >= 80) return TOPSCORE_COLORS.B;
-  if (p >= 60) return TOPSCORE_COLORS.C;
-  if (p >= 30) return TOPSCORE_COLORS.D;
+  if (p >= 70) return TOPSCORE_COLORS.C;
+  if (p >= 60) return TOPSCORE_COLORS.D;
   return TOPSCORE_COLORS.E;
 }
 
@@ -1565,8 +1618,8 @@ export function getGradeSymbol(grade, percentage = null, isRemedial = false) {
     const pct = Math.round(num);
     if (pct >= 90) return 'A';
     if (pct >= 80) return 'B';
-    if (pct >= 60) return 'C';
-    if (pct >= 30) return 'D';
+    if (pct >= 70) return 'C';
+    if (pct >= 60) return 'D';
     return 'E';
   }
   if (isRemedial) return 'R';
@@ -1623,12 +1676,21 @@ export function getGradeTheme(grade, isRemedial = false) {
 
 /**
  * Authoritative Achievement Status (Official Predicate)
- * Strictly 8 official tiers: FAIL (0-29%), LESS (30-59%), ENOUGH (60-79%), GOOD (80-89%), VERY GOOD (90-99%), EXCELLENT (100%), REMEDIAL (Grade R), FORGIVEN (Grade F).
+ * Strictly official tiers conforming to CEC Authentic Standard:
+ * - 100% (Grade ★): 'LEGEND' for student-facing views, 'EXCELLENT' for official certificates.
+ * - 90-99% (Grade A): 'EXCELLENT'
+ * - 80-89% (Grade B): 'VERY GOOD'
+ * - 70-79% (Grade C): 'GOOD'
+ * - 60-69% (Grade D): 'ENOUGH' (Passing KKM)
+ * - <60% (Grade E): 'LESS'
  */
-export function getAchievementStatus(grade, percentage = null) {
+export function getAchievementStatus(grade, percentage = null, isStudentFacing = false) {
   const g = String(grade || '').trim().toUpperCase();
-  if (g === '★' || g === '⭐' || g === 'S' || g === 'STAR') {
-    return 'EXCELLENT';
+  const p = percentage !== null && !isNaN(Number(percentage)) ? Number(percentage) : null;
+  const isHundred = (p !== null && p >= 100) || g === '★' || g === '⭐' || g === 'S' || g === 'STAR';
+
+  if (isHundred) {
+    return isStudentFacing ? 'LEGEND' : 'EXCELLENT';
   }
   if (g === 'X' || g === 'ALUMNI') {
     return 'ALUMNI';
@@ -1642,22 +1704,23 @@ export function getAchievementStatus(grade, percentage = null) {
   if (g === "LET'S GO" || g === 'LETS GO' || g === '—' || g === '-' || g === 'START') {
     return 'START';
   }
+
   let effGrade = g;
   if (!['A', 'B', 'C', 'D', 'E', 'R', 'F'].includes(effGrade)) {
-    const p = parseFloat(percentage ?? 0);
-    if (p >= 100) return 'EXCELLENT';
-    if (p >= 90) effGrade = 'A';
-    else if (p >= 80) effGrade = 'B';
-    else if (p >= 60) effGrade = 'C';
-    else if (p >= 30) effGrade = 'D';
+    const num = parseFloat(percentage ?? 0);
+    if (num >= 100) return isStudentFacing ? 'LEGEND' : 'EXCELLENT';
+    if (num >= 90) effGrade = 'A';
+    else if (num >= 80) effGrade = 'B';
+    else if (num >= 70) effGrade = 'C';
+    else if (num >= 60) effGrade = 'D';
     else effGrade = 'E';
   }
   const map = {
-    A: 'VERY GOOD',
-    B: 'GOOD',
-    C: 'ENOUGH',
-    D: 'LESS',
-    E: 'FAIL',
+    A: 'EXCELLENT',
+    B: 'VERY GOOD',
+    C: 'GOOD',
+    D: 'ENOUGH',
+    E: 'LESS',
     R: 'REMEDIAL',
     F: 'FORGIVEN',
   };

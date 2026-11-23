@@ -13,6 +13,7 @@
 
 import { getSupabase } from './supabase.js';
 import { detectClassDiscipline, calculateGrade } from './grading.js';
+import { getSvgIcon } from './svg-icons.js?v=20261124_01';
 
 // Configuration & Constants
 const FINE_RATE_PER_WORD = 2000;
@@ -369,6 +370,9 @@ let _students = [];
 let _attendanceMap = new Map(); // studentId -> status ('PRESENT' | 'EXCUSED' | 'SICK' | 'ABSENT' | 'UNCHECKED')
 let _violationsMap = new Map(); // studentId -> { word_count, fine_amount, paid_amount, debt_amount }
 let _activeTab = 'attendance'; // 'attendance' | 'grade' | 'discipline'
+let _activeArea = 'study'; // 'study' | 'english'
+let _studySubView = 'attendance'; // 'attendance' | 'scores'
+let _englishSubView = 'fines'; // 'fines' | 'payment'
 let _gradeLevelNumber = 1; // 1 | 2 | 3
 let _finesLevelNumber = 1; // 1 | 2 | 3
 let _gradeSelectedClass = null;
@@ -571,7 +575,7 @@ function playTutorSound(type = 'chime') {
 /**
  * In-App Floating Toast Pill
  */
-function showTutorToast(msg, icon = '🔔', type = 'info', durationMs = 5000) {
+function showTutorToast(msg, icon = 'bell', type = 'info', durationMs = 5000) {
   const toastEl = document.getElementById('tutor-floating-toast');
   const msgEl = document.getElementById('tutor-toast-msg');
   const iconEl = document.getElementById('tutor-toast-icon');
@@ -582,7 +586,14 @@ function showTutorToast(msg, icon = '🔔', type = 'info', durationMs = 5000) {
     _toastTimeout = null;
   }
 
-  if (iconEl) iconEl.textContent = icon;
+  if (iconEl) {
+    // If icon is an SVG key or SVG string
+    if (typeof icon === 'string' && icon.trim().startsWith('<svg')) {
+      iconEl.innerHTML = icon;
+    } else {
+      iconEl.innerHTML = getSvgIcon(icon, 16) || getSvgIcon('bell', 16);
+    }
+  }
   if (msgEl) msgEl.textContent = msg;
 
   toastEl.className = `tutor-toast-pill toast-${type}`;
@@ -671,6 +682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initTenantContext();
     setupEventListeners();
     startRealtimeClock();
+    initSwipeGestures();
     await loadMasterData();
     await applyTenantView();
     await checkRestorableSession();
@@ -758,13 +770,23 @@ function initTenantContext() {
  * 2. Setup DOM Event Listeners
  */
 function setupEventListeners() {
-  // Tri-Blade Navigation Tabs (ATTENDANCE | GRADE | FINES)
+  // Bottom Master Switcher Dock (STUDY AREA | ENGLISH AREA)
+  document.getElementById('btn-dock-study')?.addEventListener('click', () => switchArea('study'));
+  document.getElementById('btn-dock-english')?.addEventListener('click', () => switchArea('english'));
+
+  // Sub-View Switchers (Header Pills / Indicators)
+  document.getElementById('sub-btn-attendance')?.addEventListener('click', () => switchStudySubView('attendance'));
+  document.getElementById('sub-btn-scores')?.addEventListener('click', () => switchStudySubView('scores'));
+  document.getElementById('sub-btn-fines')?.addEventListener('click', () => switchEnglishSubView('fines'));
+  document.getElementById('sub-btn-payment')?.addEventListener('click', () => switchEnglishSubView('payment'));
+
+  // Legacy Navigation Hooks for Test Harness
   document.getElementById('tab-btn-attendance')?.addEventListener('click', () => switchBladeTab('attendance'));
   document.getElementById('tab-btn-grade')?.addEventListener('click', () => switchBladeTab('grade'));
   document.getElementById('tab-btn-discipline')?.addEventListener('click', () => switchBladeTab('discipline'));
 
-  // Universal Synchronized Level Selection (Attendance, Grade, Fines)
-  document.querySelectorAll('#level-segmented-bar .btn-segment, #grade-level-filter-bar .btn-level-pill, #fines-level-filter-bar .btn-level-pill').forEach(btn => {
+  // Universal Synchronized Level Selection (Attendance, Grade, Fines, Payment & Bottom Bar)
+  document.querySelectorAll('#tutor-bottom-level-bar .btn-bottom-level, #level-segmented-bar .btn-segment, #grade-level-filter-bar .btn-level-pill, #fines-level-filter-bar .btn-level-pill, #payment-level-filter-bar .btn-level-pill').forEach(btn => {
     btn.addEventListener('click', () => {
       const lvl = parseInt(btn.dataset.level, 10);
       if (lvl) setUniversalLevel(lvl);
@@ -829,6 +851,10 @@ function setupEventListeners() {
     document.getElementById('modal-qris-display')?.classList.add('hidden');
   });
 
+  // Rubric Guide Modal Actions
+  document.getElementById('btn-close-rubric-modal')?.addEventListener('click', closeRubricGuideModal);
+  document.getElementById('btn-dismiss-rubric-modal')?.addEventListener('click', closeRubricGuideModal);
+
   // Close Session Master Action
   document.getElementById('btn-arena-close-session')?.addEventListener('click', () => {
     document.getElementById('modal-close-session')?.classList.remove('hidden');
@@ -871,6 +897,10 @@ function setUniversalLevel(lvlNum) {
   _gradeLevelNumber = lvlNum;
   _finesLevelNumber = lvlNum;
 
+  // 0. Update Bottom Level Bar buttons
+  document.querySelectorAll('#tutor-bottom-level-bar .btn-bottom-level').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.level, 10) === lvlNum);
+  });
   // 1. Update Attendance Level cards
   document.querySelectorAll('#level-segmented-bar .btn-segment').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.level, 10) === lvlNum);
@@ -883,10 +913,15 @@ function setUniversalLevel(lvlNum) {
   document.querySelectorAll('#fines-level-filter-bar .btn-level-pill').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.level, 10) === lvlNum);
   });
+  // 4. Update Payment Level pills
+  document.querySelectorAll('#payment-level-filter-bar .btn-level-pill').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.level, 10) === lvlNum);
+  });
 
   onLevelChanged();
   renderGradeMatrix();
   renderFinesTable();
+  renderPaymentTable();
 }
 
 /**
@@ -937,7 +972,7 @@ function checkPreClassStartAlerts(now, dateStr) {
       if (!_firedPreStartAlerts.has(alertKey)) {
         _firedPreStartAlerts.add(alertKey);
         playTutorSound('chime');
-        showTutorToast(`Upcoming class in 5 minutes! (${sched.name} at ${sched.time})`, '🔔', 'info', 6000);
+        showTutorToast(`Upcoming class in 5 minutes! (${sched.name} at ${sched.time})`, 'bell', 'info', 6000);
         sendBrowserNotification(
           'Upcoming Class in 5 Minutes',
           `${sched.name} starts at ${sched.time}. Please prepare attendance.`
@@ -1072,7 +1107,7 @@ async function applyTenantView() {
   if (isCEC) {
     if (headerTitle) headerTitle.textContent = 'CEC';
     if (headerSub) headerSub.textContent = 'TUTOR DESK';
-    if (headerEmblem) headerEmblem.textContent = '🏫';
+    if (headerEmblem) headerEmblem.innerHTML = getSvgIcon('book-open', 18);
     if (launcherMeta) launcherMeta.textContent = 'CEC CAMP';
     navTabs?.classList.remove('hidden');
     cecBox?.classList.remove('hidden');
@@ -1081,7 +1116,7 @@ async function applyTenantView() {
   } else {
     if (headerTitle) headerTitle.textContent = 'TOP';
     if (headerSub) headerSub.textContent = 'TUTOR DESK';
-    if (headerEmblem) headerEmblem.textContent = '🏢';
+    if (headerEmblem) headerEmblem.innerHTML = getSvgIcon('building', 18);
     if (launcherMeta) launcherMeta.textContent = 'TOP CORPORATE';
     navTabs?.classList.add('hidden'); // Single page strictly for TOP
     cecBox?.classList.add('hidden');
@@ -1092,41 +1127,168 @@ async function applyTenantView() {
 }
 
 /**
- * 6. Switch Blade Navigation Tab (Tri-Blade: Attendance | Grade | Fines)
+ * 6. Switch Main Work Area (Study Area ⇄ English Area)
  */
-function switchBladeTab(tab) {
-  _activeTab = tab;
-  const btnAttend = document.getElementById('tab-btn-attendance');
-  const btnGrade = document.getElementById('tab-btn-grade');
-  const btnDisc = document.getElementById('tab-btn-discipline');
+function switchArea(area) {
+  _activeArea = area;
+  const btnStudy = document.getElementById('btn-dock-study');
+  const btnEnglish = document.getElementById('btn-dock-english');
+  const subGroupStudy = document.getElementById('sub-group-study');
+  const subGroupEnglish = document.getElementById('sub-group-english');
+
+  btnStudy?.classList.toggle('active', area === 'study');
+  btnEnglish?.classList.toggle('active', area === 'english');
+
+  if (area === 'study') {
+    if (subGroupStudy) { subGroupStudy.style.display = 'flex'; subGroupStudy.classList.remove('hidden'); }
+    if (subGroupEnglish) { subGroupEnglish.style.display = 'none'; subGroupEnglish.classList.add('hidden'); }
+    switchStudySubView(_studySubView);
+  } else {
+    if (subGroupStudy) { subGroupStudy.style.display = 'none'; subGroupStudy.classList.add('hidden'); }
+    if (subGroupEnglish) { subGroupEnglish.style.display = 'flex'; subGroupEnglish.classList.remove('hidden'); }
+    switchEnglishSubView(_englishSubView);
+  }
+}
+
+/**
+ * 6.1 Switch Study Area Sub-Views (ATTENDANCE ⇄ SCORES)
+ */
+function switchStudySubView(view) {
+  _studySubView = view;
+  _activeTab = (view === 'attendance') ? 'attendance' : 'grade';
+  const btnAtt = document.getElementById('sub-btn-attendance');
+  const btnScr = document.getElementById('sub-btn-scores');
+  const dotAtt = document.getElementById('dot-study-att');
+  const dotScr = document.getElementById('dot-study-scr');
   const bladeAttend = document.getElementById('blade-attendance');
   const bladeGrade = document.getElementById('blade-grade');
   const bladeDisc = document.getElementById('blade-discipline');
+  const bladePay = document.getElementById('blade-payment');
 
-  btnAttend?.classList.toggle('active', tab === 'attendance');
-  btnAttend?.setAttribute('aria-selected', tab === 'attendance' ? 'true' : 'false');
-  btnGrade?.classList.toggle('active', tab === 'grade');
-  btnGrade?.setAttribute('aria-selected', tab === 'grade' ? 'true' : 'false');
-  btnDisc?.classList.toggle('active', tab === 'discipline');
-  btnDisc?.setAttribute('aria-selected', tab === 'discipline' ? 'true' : 'false');
+  btnAtt?.classList.toggle('active', view === 'attendance');
+  btnScr?.classList.toggle('active', view === 'scores');
+  dotAtt?.classList.toggle('active', view === 'attendance');
+  dotScr?.classList.toggle('active', view === 'scores');
 
-  document.body.classList.toggle('blade-grade-active', tab === 'grade');
-  document.body.classList.toggle('blade-discipline-active', tab === 'discipline');
+  bladeDisc?.classList.add('hidden');
+  bladePay?.classList.add('hidden');
+  document.body.classList.toggle('blade-discipline-active', false);
 
-  if (tab === 'attendance') {
+  if (view === 'attendance') {
     bladeAttend?.classList.remove('hidden');
     bladeGrade?.classList.add('hidden');
-    bladeDisc?.classList.add('hidden');
-  } else if (tab === 'grade') {
+    document.body.classList.toggle('blade-grade-active', false);
+  } else {
     bladeGrade?.classList.remove('hidden');
     bladeAttend?.classList.add('hidden');
-    bladeDisc?.classList.add('hidden');
+    document.body.classList.toggle('blade-grade-active', true);
     renderGradeMatrix();
-  } else {
+  }
+}
+
+/**
+ * 6.2 Switch English Area Sub-Views (FINES ⇄ PAYMENT)
+ */
+function switchEnglishSubView(view) {
+  _englishSubView = view;
+  _activeTab = 'discipline';
+  const btnFin = document.getElementById('sub-btn-fines');
+  const btnPay = document.getElementById('sub-btn-payment');
+  const dotFin = document.getElementById('dot-eng-fin');
+  const dotPay = document.getElementById('dot-eng-pay');
+  const bladeAttend = document.getElementById('blade-attendance');
+  const bladeGrade = document.getElementById('blade-grade');
+  const bladeDisc = document.getElementById('blade-discipline');
+  const bladePay = document.getElementById('blade-payment');
+
+  btnFin?.classList.toggle('active', view === 'fines');
+  btnPay?.classList.toggle('active', view === 'payment');
+  dotFin?.classList.toggle('active', view === 'fines');
+  dotPay?.classList.toggle('active', view === 'payment');
+
+  bladeAttend?.classList.add('hidden');
+  bladeGrade?.classList.add('hidden');
+  document.body.classList.toggle('blade-grade-active', false);
+  document.body.classList.toggle('blade-discipline-active', true);
+
+  if (view === 'fines') {
     bladeDisc?.classList.remove('hidden');
-    bladeAttend?.classList.add('hidden');
-    bladeGrade?.classList.add('hidden');
+    bladePay?.classList.add('hidden');
     renderFinesTable();
+  } else {
+    bladePay?.classList.remove('hidden');
+    bladeDisc?.classList.add('hidden');
+    renderPaymentTable();
+  }
+}
+
+/**
+ * Backward compatibility bridge for switchBladeTab
+ */
+function switchBladeTab(tab) {
+  if (tab === 'attendance') {
+    switchArea('study');
+    switchStudySubView('attendance');
+  } else if (tab === 'grade') {
+    switchArea('study');
+    switchStudySubView('scores');
+  } else {
+    switchArea('english');
+    switchEnglishSubView('fines');
+  }
+}
+
+/**
+ * Touch Swipe Gesture Controller (Natural Swipe Navigation)
+ */
+let _touchStartX = 0;
+let _touchStartY = 0;
+let _touchEndX = 0;
+let _touchEndY = 0;
+
+function initSwipeGestures() {
+  const container = document.getElementById('tutor-blade-container') || document.querySelector('.tutor-blade-container');
+  if (!container) return;
+
+  container.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    _touchStartX = e.touches[0].clientX;
+    _touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+
+  container.addEventListener('touchend', (e) => {
+    if (e.changedTouches.length !== 1) return;
+    _touchEndX = e.changedTouches[0].clientX;
+    _touchEndY = e.changedTouches[0].clientY;
+    handleSwipeGesture();
+  }, { passive: true });
+}
+
+function handleSwipeGesture() {
+  const deltaX = _touchEndX - _touchStartX;
+  const deltaY = _touchEndY - _touchStartY;
+  const absDeltaX = Math.abs(deltaX);
+  const absDeltaY = Math.abs(deltaY);
+
+  // Minimum 45px swipe with horizontal priority (1.4x over vertical scroll)
+  if (absDeltaX < 45 || absDeltaX < absDeltaY * 1.4) return;
+
+  if (_activeArea === 'study') {
+    if (deltaX < 0 && _studySubView === 'attendance') {
+      // Swiped left -> move to SCORES
+      switchStudySubView('scores');
+    } else if (deltaX > 0 && _studySubView === 'scores') {
+      // Swiped right -> move to ATTENDANCE
+      switchStudySubView('attendance');
+    }
+  } else if (_activeArea === 'english') {
+    if (deltaX < 0 && _englishSubView === 'fines') {
+      // Swiped left -> move to PAYMENT
+      switchEnglishSubView('payment');
+    } else if (deltaX > 0 && _englishSubView === 'payment') {
+      // Swiped right -> move to FINES
+      switchEnglishSubView('fines');
+    }
   }
 }
 
@@ -1838,7 +2000,7 @@ function transitionToLiveActiveArena() {
         _activeSession.session_number = newNum;
         if (meetingBadge) meetingBadge.textContent = `Meeting ${newNum}`;
         localStorage.setItem('topscore_active_tutor_session', JSON.stringify(_activeSession));
-        showTutorToast(`Meeting updated to #${newNum}`, '📝', 'info', 2000);
+        showTutorToast(`Meeting updated to #${newNum}`, 'file-text', 'info', 2000);
       }
     };
   }
@@ -2120,7 +2282,7 @@ function startActiveSessionTimer() {
         !_hasFired5MinWarning) {
       _hasFired5MinWarning = true;
       playTutorSound('chime');
-      showTutorToast('5 minutes remaining before class concludes!', '⏱', 'warning', 6000);
+      showTutorToast('5 minutes remaining before class concludes!', 'clock', 'warning', 6000);
       sendBrowserNotification(
         'Class Ending Soon',
         '5 minutes remaining in this scheduled session.'
@@ -2131,7 +2293,7 @@ function startActiveSessionTimer() {
     if (_sessionSeconds >= _activeSessionDurationSeconds && !_hasFiredEndAlarm) {
       _hasFiredEndAlarm = true;
       playTutorSound('alarm');
-      showTutorToast('Class time has ended! Please close session.', '🚨', 'alert', 8000);
+      showTutorToast('Class time has ended! Please close session.', 'alert-triangle', 'alert', 8000);
       sendBrowserNotification(
         'Class Ended',
         'Scheduled class time has concluded. Please close session.'
@@ -2220,13 +2382,199 @@ function getStudentsForLevel(lvlNum) {
 }
 
 /**
- * 22. Get Standard Exams for a Class Modality
- * - VOCABULARY: 5 EXAMS (PRE-TEST, EXAM 1, EXAM 2, EXAM 3, EXAM 4)
- * - BASIC ENGLISH: 2 EXAMS (EXAM 1, EXAM 2)
- * - STORYTELLING: 4 EXAMS (EXAM 1, EXAM 2, EXAM 3, EXAM 4)
- * - GRAMMAR / GFS: 2 EXAMS (EXAM 1, EXAM 2)
- * - SPEAKING: 4 EXAMS (EXAM 1, EXAM 2, EXAM 3, EXAM 4)
- * - PRONUNCIATION: 2 EXAMS (EXAM 1, EXAM 2)
+ * 22. Authentic CEC 1–5 Rubric Specifications & Evaluation Criteria
+ */
+const STORYTELLING_RUBRIC_DATA = {
+  W1: {
+    focus: 'Sentence Formation & Basic Grammar',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Belum bisa menyusun kalimat dengan benar dan masih banyak kesalahan.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Bisa membuat kalimat sederhana, tetapi masih ada beberapa kesalahan.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Bisa membuat beberapa kalimat dengan cukup benar, hanya sedikit kesalahan.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Bisa menyusun kalimat dengan benar dan runtut.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Bisa menyusun kalimat dengan sangat baik, rapi, dan hampir tidak ada kesalahan.' }
+    ]
+  },
+  W2: {
+    focus: 'Daily Routine Narrative & Coherence',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Belum bisa menceritakan kegiatan sehari-hari dengan jelas.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Bisa menceritakan kegiatan sehari-hari secara sederhana, tetapi masih kurang runtut.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Cerita sudah cukup jelas dan urut, masih ada sedikit kesalahan.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Bisa menceritakan kegiatan sehari-hari dengan runtut dan jelas.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Cerita sangat jelas, runtut, dan menggunakan kosakata yang baik.' }
+    ]
+  },
+  W3: {
+    focus: 'Narrative Volume & Target Sentences',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Cerita kurang dari 5 kalimat.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Cerita 5 kalimat, belum sampai target.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Cerita 10 kalimat, sudah sampai batas minimal.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Cerita 15 kalimat, sesuai target.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Cerita 20 kalimat lebih, sesuai target dan sangat baik.' }
+    ]
+  },
+  W4: {
+    focus: 'Spontaneous Delivery & Question Response',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Belum bisa bercerita dan belum bisa menjawab pertanyaan.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Bisa bercerita sedikit dan menjawab pertanyaan dengan sangat singkat.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Bisa bercerita dengan cukup jelas dan menjawab pertanyaan sederhana.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Bisa bercerita dengan jelas dan menjawab pertanyaan dengan benar.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Bisa bercerita dengan lancar dan menjawab pertanyaan dengan jelas dan percaya diri.' }
+    ]
+  }
+};
+
+const SPEAKING_RUBRIC_DATA = {
+  fluency: {
+    name: 'Fluency (Kelancaran Berbicara)',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Belum bisa menyampaikan maksud, jeda sangat panjang.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Sangat lambat dengan jeda panjang, ide masih dapat disampaikan.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Kelancaran sedang, beberapa kali ragu-ragu.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Lancar dengan sedikit keraguan alami.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Sangat lancar dan alami tanpa keraguan yang berarti.' }
+    ]
+  },
+  pronunciation: {
+    name: 'Pronunciation (Pelafalan)',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Pengucapan sangat sulit dipahami pendengar.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Pengucapan sering keliru, butuh konsentrasi ekstra.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Pengucapan cukup jelas dengan aksen/kesalahan minor.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Pengucapan jelas dan aksen mudah dipahami.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Pengucapan sangat jelas, intonasi tepat dan presisi.' }
+    ]
+  },
+  grammar: {
+    name: 'Grammar (Tata Bahasa)',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Kesalahan tata bahasa sangat sering, sulit dipahami.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Kesalahan terlihat, namun makna masih bisa ditangkap.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Kesalahan minor, kalimat dan ide dasar jelas.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Hampir tanpa kesalahan, variasi kalimat tepat.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Sempurna tanpa kesalahan gramatikal.' }
+    ]
+  },
+  comprehension: {
+    name: 'Comprehension (Daya Tangkap Tanya-Jawab)',
+    indicators: [
+      { score: 1, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Kesulitan memahami atau merespons pertanyaan.' },
+      { score: 2, predicate: 'LESS', grade: 'E', color: '#ff0000', text: 'Pemahaman dasar, perlu pengulangan berkali-kali.' },
+      { score: 3, predicate: 'ENOUGH', grade: 'D', color: '#FF8C00', text: 'Memahami ide umum, sedikit detail terlewat.' },
+      { score: 4, predicate: 'VERY GOOD', grade: 'B', color: '#95ff00', text: 'Memahami sebagian besar detail dan merespons tepat.' },
+      { score: 5, predicate: 'EXCELLENT', grade: '★', color: '#00c000', text: 'Pemahaman penuh dan respons cepat serta akurat.' }
+    ]
+  }
+};
+
+let _activeRubricInput = null;
+
+function openRubricGuideModal(exam, targetInput = null, studentName = '') {
+  _activeRubricInput = targetInput;
+  const modal = document.getElementById('modal-rubric-guide');
+  const titleText = document.getElementById('rubric-modal-title-text');
+  const body = document.getElementById('rubric-modal-body');
+  const footerHint = document.getElementById('rubric-modal-footer-hint');
+  if (!modal || !body) return;
+
+  const isStory = exam?.rubric === 'TELLING_STORY';
+  const rubricWeek = exam?.week || exam?.key || 'W1';
+  const rubData = isStory ? STORYTELLING_RUBRIC_DATA[rubricWeek] : null;
+
+  if (titleText) {
+    const studentSuffix = studentName ? ` — ${studentName}` : '';
+    if (isStory && rubData) {
+      titleText.textContent = `STORYTELLING RUBRIC ${rubricWeek}: ${rubData.focus.toUpperCase()}${studentSuffix}`;
+    } else {
+      titleText.textContent = `EVALUATION CRITERIA: ${exam?.title || exam?.label || 'EXAM RUBRIC'}${studentSuffix}`;
+    }
+  }
+
+  if (footerHint) {
+    footerHint.textContent = targetInput ? 'Tap any card below to assign score to student' : 'Standard CEC Criteria Reference (1 = Less, 3 = Enough, 5 = Excellent)';
+  }
+
+  let html = '';
+
+  // Equivalence Banner
+  html += `
+    <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px 12px; margin-bottom:4px; font-size:11px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+      <span style="color:#94a3b8; font-weight:700;">CEC PREDICATE SCALE:</span>
+      <span style="color:#ff0000; font-weight:800;">1: LESS (20%)</span>
+      <span style="color:#ff0000; font-weight:800;">2: LESS (40%)</span>
+      <span style="color:#FF8C00; font-weight:800;">3: ENOUGH (60% KKM)</span>
+      <span style="color:#95ff00; font-weight:800;">4: VERY GOOD (80%)</span>
+      <span style="color:#00c000; font-weight:800;">5: EXCELLENT (100% ★)</span>
+    </div>
+  `;
+
+  if (isStory && rubData) {
+    rubData.indicators.forEach(ind => {
+      html += `
+        <div class="rubric-score-card" data-score="${ind.score}" style="border-left: 4px solid ${ind.color} !important;">
+          <div class="rubric-score-num" style="color:${ind.color};">${ind.score}</div>
+          <div class="rubric-score-info">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="rubric-predicate-badge" style="color:${ind.color};">${ind.predicate} (${ind.score * 20}%)</span>
+              <span style="font-size:10px; color:#94a3b8; font-weight:600;">Grade ${ind.grade}</span>
+            </div>
+            <div class="rubric-desc-text">${escHtml(ind.text)}</div>
+          </div>
+        </div>
+      `;
+    });
+  } else {
+    // 5-Axis Speaking or Generic Rubric
+    Object.keys(SPEAKING_RUBRIC_DATA).forEach(paramKey => {
+      const p = SPEAKING_RUBRIC_DATA[paramKey];
+      html += `<div style="font-size:12px; font-weight:800; color:#38bdf8; margin-top:8px; text-transform:uppercase;">${p.name}</div>`;
+      p.indicators.forEach(ind => {
+        html += `
+          <div class="rubric-score-card" data-score="${ind.score}" style="border-left: 4px solid ${ind.color} !important; padding:6px 10px !important;">
+            <div class="rubric-score-num" style="font-size:15px; width:26px; height:26px; color:${ind.color};">${ind.score}</div>
+            <div class="rubric-score-info">
+              <span class="rubric-predicate-badge" style="color:${ind.color}; font-size:10px;">${ind.predicate}</span>
+              <div class="rubric-desc-text" style="font-size:11px;">${escHtml(ind.text)}</div>
+            </div>
+          </div>
+        `;
+      });
+    });
+  }
+
+  body.innerHTML = html;
+
+  // Add click handlers to cards
+  body.querySelectorAll('.rubric-score-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const score = card.dataset.score;
+      if (_activeRubricInput) {
+        _activeRubricInput.value = score;
+        _activeRubricInput.dispatchEvent(new Event('input', { bubbles: true }));
+        closeRubricGuideModal();
+      }
+    });
+  });
+
+  modal.classList.remove('hidden');
+}
+
+function closeRubricGuideModal() {
+  document.getElementById('modal-rubric-guide')?.classList.add('hidden');
+  _activeRubricInput = null;
+}
+
+/**
+ * 23. Get Standard Exams for a Class Modality (Authoritative CEC Academic Matrix)
+ * - VOCABULARY: W1–W4 (Cumulative word deposits: L1: 90/210/300/450, L2: 120/280/440/600, L3: 150/400/650/800)
+ * - BASIC ENGLISH: U1, U2 (Max 100)
+ * - STORYTELLING: W1–W4 (Authoritative 1–5 Criteria Rubric)
+ * - GRAMMAR / GFS: W1, W2 (Periodic exams)
+ * - SPEAKING: W1–W3/W4 (5-Axis Rubric / Max 25)
+ * - PRONUNCIATION: W1, W2 (Max 25)
  */
 function getExamsForClass(cls, levelNum = _gradeLevelNumber) {
   if (!cls) return [];
@@ -2241,12 +2589,20 @@ function getExamsForClass(cls, levelNum = _gradeLevelNumber) {
         { key: 'W4', label: 'W4', title: 'Week 4 Deposit (Max 450)', target: 450, type: 'WEEKLY_DEPOSIT' }
       ];
     }
+    if (levelNum === 2) {
+      return [
+        { key: 'W1', label: 'W1', title: 'Week 1 Deposit (Max 120)', target: 120, type: 'WEEKLY_DEPOSIT' },
+        { key: 'W2', label: 'W2', title: 'Week 2 Deposit (Max 280)', target: 280, type: 'WEEKLY_DEPOSIT' },
+        { key: 'W3', label: 'W3', title: 'Week 3 Deposit (Max 440)', target: 440, type: 'WEEKLY_DEPOSIT' },
+        { key: 'W4', label: 'W4', title: 'Week 4 Deposit (Max 600)', target: 600, type: 'WEEKLY_DEPOSIT' }
+      ];
+    }
     if (levelNum === 3) {
       return [
-        { key: 'W1', label: 'W1', title: 'Week 1 Attendance (Max 6)', target: 6, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W2', label: 'W2', title: 'Week 2 Attendance (Max 6)', target: 6, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W3', label: 'W3', title: 'Week 3 Attendance (Max 6)', target: 6, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W4', label: 'W4', title: 'Week 4 Attendance (Max 6)', target: 6, type: 'WEEKLY_DEPOSIT' }
+        { key: 'W1', label: 'W1', title: 'Week 1 Deposit (Max 150)', target: 150, type: 'WEEKLY_DEPOSIT' },
+        { key: 'W2', label: 'W2', title: 'Week 2 Deposit (Max 400)', target: 400, type: 'WEEKLY_DEPOSIT' },
+        { key: 'W3', label: 'W3', title: 'Week 3 Deposit (Max 650)', target: 650, type: 'WEEKLY_DEPOSIT' },
+        { key: 'W4', label: 'W4', title: 'Week 4 Deposit (Max 800)', target: 800, type: 'WEEKLY_DEPOSIT' }
       ];
     }
     return [
@@ -2258,65 +2614,69 @@ function getExamsForClass(cls, levelNum = _gradeLevelNumber) {
   }
   if (d === 'BASIC') {
     return [
-      { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' },
-      { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' }
+      { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 100)', target: 100, type: 'PERIODIC_EXAM' },
+      { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 100)', target: 100, type: 'PERIODIC_EXAM' }
     ];
   }
   if (d === 'STORYTELLING') {
     return [
-      { key: 'W1', label: 'W1', title: 'Week 1 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-      { key: 'W2', label: 'W2', title: 'Week 2 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-      { key: 'W3', label: 'W3', title: 'Week 3 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-      { key: 'W4', label: 'W4', title: 'Week 4 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' }
+      { key: 'W1', label: 'W1', title: 'Week 1 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT', rubric: 'TELLING_STORY', week: 'W1' },
+      { key: 'W2', label: 'W2', title: 'Week 2 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT', rubric: 'TELLING_STORY', week: 'W2' },
+      { key: 'W3', label: 'W3', title: 'Week 3 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT', rubric: 'TELLING_STORY', week: 'W3' },
+      { key: 'W4', label: 'W4', title: 'Week 4 Rubric (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT', rubric: 'TELLING_STORY', week: 'W4' }
     ];
   }
-  if (d === 'GRAMMAR' || d === 'GFS') {
-    if (levelNum === 3) {
-      return [
-        { key: 'W1', label: 'W1', title: 'Week 1 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W2', label: 'W2', title: 'Week 2 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W3', label: 'W3', title: 'Week 3 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W4', label: 'W4', title: 'Week 4 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' }
-      ];
-    }
+  if (d === 'GRAMMAR') {
     if (levelNum === 1) {
       return [
         { key: 'PT', label: 'PT', title: 'Placement Test (Max 25)', target: 25, type: 'DIAGNOSTIC' },
-        { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 15)', target: 15, type: 'PERIODIC_EXAM' },
-        { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 15)', target: 15, type: 'PERIODIC_EXAM' }
+        { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 15)', target: 15, type: 'PERIODIC_EXAM' },
+        { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' }
+      ];
+    }
+    if (levelNum === 2) {
+      return [
+        { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 30)', target: 30, type: 'PERIODIC_EXAM' },
+        { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 30)', target: 30, type: 'PERIODIC_EXAM' }
+      ];
+    }
+    if (levelNum === 3) {
+      return [
+        { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 15)', target: 15, type: 'PERIODIC_EXAM' },
+        { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 15)', target: 15, type: 'PERIODIC_EXAM' }
       ];
     }
     return [
-      { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' },
-      { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' }
+      { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' },
+      { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' }
+    ];
+  }
+  if (d === 'GFS') {
+    return [
+      { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' },
+      { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' }
     ];
   }
   if (d === 'SPEAKING') {
-    if (levelNum === 3) {
-      return [
-        { key: 'W1', label: 'W1', title: 'Week 1 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W2', label: 'W2', title: 'Week 2 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W3', label: 'W3', title: 'Week 3 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' },
-        { key: 'W4', label: 'W4', title: 'Week 4 Attendance (Max 5)', target: 5, type: 'WEEKLY_DEPOSIT' }
-      ];
-    }
     if (levelNum === 1) {
       return [
         { key: 'PT', label: 'PT', title: 'Placement Test (Max 25)', target: 25, type: 'DIAGNOSTIC' },
-        { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM' },
-        { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM' },
-        { key: 'PRACTICE', label: 'PRAC', title: 'Practice Score (Max 25)', target: 25, type: 'PRACTICE' }
+        { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM', rubric: 'SPEAKING_5_AXIS' },
+        { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM', rubric: 'SPEAKING_5_AXIS' },
+        { key: 'W3', label: 'W3', title: 'Week 3 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM', rubric: 'SPEAKING_5_AXIS' },
+        { key: 'W4', label: 'PRAC', title: 'Week 4 Practice (Max 25)', target: 25, type: 'PRACTICE', rubric: 'SPEAKING_5_AXIS' }
       ];
     }
     return [
-      { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM' },
-      { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM' }
+      { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM', rubric: 'SPEAKING_5_AXIS' },
+      { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM', rubric: 'SPEAKING_5_AXIS' },
+      { key: 'W3', label: 'W3', title: 'Week 3 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM', rubric: 'SPEAKING_5_AXIS' }
     ];
   }
   if (d === 'PRONUNCIATION') {
     return [
-      { key: 'U1', label: 'U1', title: 'Unit 1 Mid-Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' },
-      { key: 'U2', label: 'U2', title: 'Unit 2 Final-Exam (Max 20)', target: 20, type: 'PERIODIC_EXAM' }
+      { key: 'W1', label: 'W1', title: 'Week 1 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM' },
+      { key: 'W2', label: 'W2', title: 'Week 2 Exam (Max 25)', target: 25, type: 'PERIODIC_EXAM' }
     ];
   }
   return [
@@ -2332,10 +2692,11 @@ function getScoreColorClass(score, target = 100) {
   if (score == null || score === '' || isNaN(score)) return '';
   const n = Number(score);
   const pct = target > 0 ? (n / target) * 100 : n;
-  if (pct >= 90) return 'score-a';
-  if (pct >= 80) return 'score-b';
-  if (pct >= 60) return 'score-c';
-  return 'score-e';
+  if (pct >= 90) return 'score-a'; // Green (Excellent)
+  if (pct >= 80) return 'score-b'; // Lime (Very Good)
+  if (pct >= 70) return 'score-c'; // Yellow (Good)
+  if (pct >= 60) return 'score-d'; // Orange (Enough)
+  return 'score-e'; // Red (Less)
 }
 
 const _gradeSaveTimers = new Map();
@@ -2437,7 +2798,7 @@ async function loadGradesForActiveMatrix(lvlNum, subjectCode) {
  */
 function renderGradeMatrix() {
   // 1. Update Active Level Pill
-  document.querySelectorAll('#grade-level-filter-bar .btn-level-pill').forEach(btn => {
+  document.querySelectorAll('#tutor-bottom-level-bar .btn-bottom-level, #grade-level-filter-bar .btn-level-pill').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.level, 10) === _gradeLevelNumber);
   });
 
@@ -2497,7 +2858,7 @@ function renderGradeMatrix() {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `btn-grade-class-pill ${c.modality === _gradeSelectedClass.modality ? 'active' : ''}`;
-      
+
       // Short label mapping to guarantee zero truncation and zero horizontal overflow
       let shortLabel = c.name;
       if (c.modality === 'GFS' || /grammar\s+for\s+speaking/i.test(c.name)) shortLabel = 'GFS';
@@ -2527,10 +2888,20 @@ function renderGradeMatrix() {
   if (thead) {
     let thHtml = '<tr><th class="th-student-name">STUDENT NAME</th>';
     exams.forEach(e => {
-      thHtml += `<th class="th-exam-score" style="text-align:center; min-width:44px;" title="${e.title}">${e.label}</th>`;
+      const hasRub = !!e.rubric;
+      const rubIcon = hasRub ? ' <span style="font-size:10px; color:#38bdf8;" title="View Rubric Guide">ℹ️</span>' : '';
+      thHtml += `<th class="th-exam-score" style="text-align:center; min-width:44px; cursor:${hasRub ? 'pointer' : 'default'};" title="${e.title}" data-exam-key="${e.key}">${e.label}${rubIcon}</th>`;
     });
     thHtml += '</tr>';
     thead.innerHTML = thHtml;
+
+    // Click handler for Rubric Guide on column headers
+    thead.querySelectorAll('.th-exam-score').forEach((th, idx) => {
+      const e = exams[idx];
+      if (e && e.rubric) {
+        th.addEventListener('click', () => openRubricGuideModal(e, null, ''));
+      }
+    });
   }
 
   // 5. Render Table Body (Students in Level 1, 2, 3)
@@ -2558,23 +2929,33 @@ function renderGradeMatrix() {
       const gradeKey = `${_gradeLevelNumber}_${_gradeSelectedClass.modality || _gradeSelectedClass.code}_${s.id}_${e.key}`;
       const score = _manualGrades.get(gradeKey) ?? '';
       const colorCls = getScoreColorClass(score, e.target || 100);
+      const titleAttr = e.rubric ? 'title="Double-click to open 1–5 Rubric Picker"' : '';
       rowHtml += `
-        <td class="td-grade-cell" style="text-align:center; padding:2px !important;">
-          <input type="number" min="0" max="${e.target || 100}" class="grade-manual-input ${colorCls}" 
-                 data-grade-key="${gradeKey}" 
-                 data-student-id="${s.id}" 
-                 data-exam-key="${e.key}" 
-                 data-target-score="${e.target || 100}" 
-                 data-exam-type="${e.type || 'PERIODIC_EXAM'}" 
-                 data-batch-id="${s.batch_id || ''}" 
-                 value="${score !== '' ? score : ''}" 
-                 placeholder="—" />
+        <td class="td-grade-cell">
+          <input type="number" min="0" max="${e.target || 100}" class="grade-manual-input ${colorCls}"
+                 data-grade-key="${gradeKey}"
+                 data-student-id="${s.id}"
+                 data-exam-key="${e.key}"
+                 data-target-score="${e.target || 100}"
+                 data-exam-type="${e.type || 'PERIODIC_EXAM'}"
+                 data-batch-id="${s.batch_id || ''}"
+                 value="${score !== '' ? score : ''}"
+                 placeholder="—"
+                 ${titleAttr} />
         </td>
       `;
     });
     tr.innerHTML = rowHtml;
 
     tr.querySelectorAll('.grade-manual-input').forEach(inp => {
+      const examKey = inp.dataset.examKey;
+      const matchedExam = exams.find(x => x.key === examKey);
+      if (matchedExam && matchedExam.rubric) {
+        inp.addEventListener('dblclick', () => {
+          openRubricGuideModal(matchedExam, inp, s.name);
+        });
+      }
+
       inp.addEventListener('input', () => {
         const k = inp.dataset.gradeKey;
         const studentId = inp.dataset.studentId;
@@ -2616,12 +2997,21 @@ function renderGradeMatrix() {
   });
 }
 
+function formatCompactAmount(num) {
+  if (!num || num === 0) return '0';
+  if (num >= 1000) {
+    const kVal = num / 1000;
+    return (Number.isInteger(kVal) ? kVal : kVal.toFixed(1)) + 'k';
+  }
+  return String(num);
+}
+
 /**
- * 24. Render Fines Table (Discipline & Fine Datagrid: Name | Count | Amount | Paid)
+ * 24. Render Fines Table (Discipline & Fine Datagrid: Name | Words | Amount | Paid)
  */
 function renderFinesTable() {
   // 1. Update Active Level Pill
-  document.querySelectorAll('#fines-level-filter-bar .btn-level-pill').forEach(btn => {
+  document.querySelectorAll('#tutor-bottom-level-bar .btn-bottom-level, #fines-level-filter-bar .btn-level-pill').forEach(btn => {
     btn.classList.toggle('active', parseInt(btn.dataset.level, 10) === _finesLevelNumber);
   });
 
@@ -2642,10 +3032,10 @@ function renderFinesTable() {
   const debtEl = document.getElementById('kpi-total-debt');
   const debtBadge = document.getElementById('badge-debt-count');
 
-  if (fineEl) fineEl.textContent = `Rp ${totalFine.toLocaleString('id-ID')}`;
-  if (paidEl) paidEl.textContent = `Rp ${totalPaid.toLocaleString('id-ID')}`;
-  if (debtEl) debtEl.textContent = `Rp ${totalDebt.toLocaleString('id-ID')}`;
-  if (debtBadge) debtBadge.textContent = `Rp ${totalDebt.toLocaleString('id-ID')}`;
+  if (fineEl) fineEl.textContent = formatCompactAmount(totalFine);
+  if (paidEl) paidEl.textContent = formatCompactAmount(totalPaid);
+  if (debtEl) debtEl.textContent = formatCompactAmount(totalDebt);
+  if (debtBadge) debtBadge.textContent = formatCompactAmount(totalDebt);
 
   // 4. Render Table Body
   const tbody = document.getElementById('tbody-fines-matrix');
@@ -2672,20 +3062,20 @@ function renderFinesTable() {
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="td-student-name" style="padding:0 8px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.name}</td>
-      <td class="td-fines-count" style="text-align:center;">
+      <td class="td-student-name" title="${s.name}">${s.name}</td>
+      <td class="td-fines-count">
         <div class="fines-stepper">
           <button type="button" class="btn-step-minus" data-id="${s.id}" title="Decrease count">−</button>
           <span class="fines-count-display">${count}</span>
           <button type="button" class="btn-step-plus" data-id="${s.id}" title="Add violation">+</button>
         </div>
       </td>
-      <td class="td-fines-amount" style="text-align:right; font-weight:700; color:${amount > 0 ? '#f87171' : '#94a3b8'}; padding-right:8px !important;">
-        ${amount > 0 ? 'Rp ' + amount.toLocaleString('id-ID') : 'Rp 0'}
+      <td class="td-fines-amount" style="color:${amount > 0 ? '#f87171' : '#94a3b8'};">
+        ${formatCompactAmount(amount)}
       </td>
-      <td class="td-fines-paid" style="text-align:right; padding-right:8px !important;">
+      <td class="td-fines-paid">
         <button type="button" class="btn-fines-pay-pill ${isPaidFull ? 'paid-full' : ''}" data-id="${s.id}" title="Record payment">
-          ${paid > 0 ? 'Rp ' + paid.toLocaleString('id-ID') : 'Rp 0'}
+          ${formatCompactAmount(paid)}
         </button>
       </td>
     `;
@@ -2719,6 +3109,7 @@ function stepFinesViolation(studentId, delta) {
   } catch (_) {}
 
   renderFinesTable();
+  renderPaymentTable();
 }
 
 /**
@@ -2726,6 +3117,7 @@ function stepFinesViolation(studentId, delta) {
  */
 function renderViolationList() {
   renderFinesTable();
+  renderPaymentTable();
 }
 
 function addStudentViolation(studentId, wordDelta) {
@@ -2744,7 +3136,7 @@ function openPaymentModal(studentId) {
   const amtInput = document.getElementById('modal-pay-amount');
 
   if (nameEl) nameEl.textContent = student?.name || 'Student';
-  if (debtEl) debtEl.textContent = `Rp ${currentDebt.toLocaleString('id-ID')}`;
+  if (debtEl) debtEl.textContent = formatCompactAmount(currentDebt);
   if (amtInput) amtInput.value = currentDebt > 0 ? currentDebt : 2000;
   document.getElementById('modal-payment')?.classList.remove('hidden');
 }
@@ -2771,6 +3163,89 @@ function confirmPayment() {
   document.getElementById('modal-payment')?.classList.add('hidden');
   _selectedStudentForPayment = null;
   renderFinesTable();
+  renderPaymentTable();
+}
+
+/**
+ * 25. Render Payment Table (English Area Settlement Ledger)
+ */
+function renderPaymentTable() {
+  // 1. Update Active Level Pill
+  document.querySelectorAll('#tutor-bottom-level-bar .btn-bottom-level, #payment-level-filter-bar .btn-level-pill').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.level, 10) === _finesLevelNumber);
+  });
+
+  // 2. Load Students for Fines Level
+  const students = getStudentsForLevel(_finesLevelNumber);
+
+  // 3. Compute Totals for Payment
+  let totalFine = 0, totalPaid = 0, totalDebt = 0;
+  students.forEach(s => {
+    const viol = _violationsMap.get(s.id) || { word_count: 0, fine_amount: 0, paid_amount: 0, debt_amount: 0 };
+    totalFine += (viol.fine_amount || 0);
+    totalPaid += (viol.paid_amount || 0);
+    totalDebt += Math.max(0, (viol.fine_amount || 0) - (viol.paid_amount || 0));
+  });
+
+  const payTotalEl = document.getElementById('kpi-pay-total');
+  const payPaidEl = document.getElementById('kpi-pay-paid');
+  const payDebtEl = document.getElementById('kpi-pay-debt');
+
+  if (payTotalEl) payTotalEl.textContent = formatCompactAmount(totalFine);
+  if (payPaidEl) payPaidEl.textContent = formatCompactAmount(totalPaid);
+  if (payDebtEl) payDebtEl.textContent = formatCompactAmount(totalDebt);
+
+  // 4. Render Table Body
+  const tbody = document.getElementById('tbody-payment-matrix');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (students.length === 0) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td colspan="4" class="table-empty-row" style="text-align:center; padding: 36px 12px !important; color: #94a3b8; font-size: 13px; font-weight: 700;">
+        No active students enrolled in Level ${_finesLevelNumber}
+      </td>
+    `;
+    tbody.appendChild(tr);
+    return;
+  }
+
+  students.forEach(s => {
+    const viol = _violationsMap.get(s.id) || { word_count: 0, fine_amount: 0, paid_amount: 0, debt_amount: 0 };
+    const debt = Math.max(0, (viol.fine_amount || 0) - (viol.paid_amount || 0));
+    const paid = viol.paid_amount || 0;
+    const isPaidFull = paid > 0 && debt === 0;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="td-student-name" title="${s.name}">${s.name}</td>
+      <td class="td-pay-debt" style="text-align:right; font-weight:700; color:${debt > 0 ? '#f87171' : '#94a3b8'};">
+        ${formatCompactAmount(debt)}
+      </td>
+      <td class="td-pay-paid" style="text-align:right; font-weight:700; color:${paid > 0 ? '#4ade80' : '#94a3b8'};">
+        ${formatCompactAmount(paid)}
+      </td>
+      <td class="td-pay-action" style="text-align:center;">
+        ${debt > 0 ? `
+          <button type="button" class="btn-fines-pay-pill" data-id="${s.id}" title="Record payment">
+            PAY
+          </button>
+        ` : (isPaidFull ? `
+          <span class="badge-status-pill badge-paid-full" title="Paid in Full">PAID ★</span>
+        ` : `
+          <span class="badge-status-pill badge-clear" title="No Outstanding Debt">CLEAR</span>
+        `)}
+      </td>
+    `;
+
+    tr.querySelector('.btn-fines-pay-pill')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPaymentModal(s.id);
+    });
+
+    tbody.appendChild(tr);
+  });
 }
 
 /**

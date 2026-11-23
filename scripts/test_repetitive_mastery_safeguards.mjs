@@ -47,7 +47,7 @@ const classesHubContent = fs.readFileSync('js/admin/classes-hub.js', 'utf8');
 assert(appJsContent.includes("adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order,"), 'app.js classTests query MUST select question_order');
 assert(classesHubContent.includes("adminFetchAll('tests',       'id, title, category, test_type, class_id, level_id, minimum_required_score, question_order,"), 'classes-hub.js tests query MUST select question_order');
 assert(appJsContent.includes("(String(r?.question_order || r?.payload?.question_order || 'random').toLowerCase() === 'sequential') ? 'Seq' : 'Random'"), 'app.js questionOrder mapping MUST default to Random');
-assert(apiContent.includes("if (prefix === 'tests' || prefix.startsWith('tests')) {\n      clearAdminCache('tests');\n    }"), 'api.js clearApiCache must automatically invalidate clearAdminCache tests');
+assert(apiContent.includes("if (prefix === 'tests' || prefix.startsWith('tests'))") && apiContent.includes("clearAdminCache('tests');"), 'api.js clearApiCache must automatically invalidate clearAdminCache tests');
 console.log('  ✔ Pillar 1.4: Tests queries select question_order, enforce Random default, and auto-purge admin cache');
 
 

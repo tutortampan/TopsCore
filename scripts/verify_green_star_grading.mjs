@@ -21,7 +21,7 @@ assert(calculateGrade(105) === '★', "calculateGrade(105) returns '★'");
 assert(calculateGrade(95) === 'A', "calculateGrade(95) returns 'A'");
 assert(calculateGrade(85) === 'B', "calculateGrade(85) returns 'B'");
 assert(calculateGrade(75) === 'C', "calculateGrade(75) returns 'C'");
-assert(calculateGrade(50) === 'D', "calculateGrade(50) returns 'D'");
+assert(calculateGrade(65) === 'D', "calculateGrade(65) returns 'D'");
 assert(calculateGrade(20) === 'E', "calculateGrade(20) returns 'E'");
 
 // TOPSCORE_COLORS Master Vault verification
@@ -59,15 +59,20 @@ assert(getEvaluationColor('minor_spelling_error') === '#FFFF00', "getEvaluationC
 assert(getEvaluationColor('partial') === '#FFFF00', "getEvaluationColor('partial') returns #FFFF00");
 assert(getEvaluationColor('incorrect') === '#FF0000', "getEvaluationColor('incorrect') returns #FF0000");
 
-assert(getAchievementStatus('★') === 'EXCELLENT', "getAchievementStatus('★') returns EXCELLENT");
-assert(getAchievementStatus('A') === 'VERY GOOD', "getAchievementStatus('A') returns VERY GOOD");
+assert(getAchievementStatus('★', 100, true) === 'LEGEND', "getAchievementStatus('★') returns LEGEND for student");
+assert(getAchievementStatus('★', 100, false) === 'EXCELLENT', "getAchievementStatus('★') returns EXCELLENT for certificate");
+assert(getAchievementStatus('A') === 'EXCELLENT', "getAchievementStatus('A') returns EXCELLENT");
+assert(getAchievementStatus('B') === 'VERY GOOD', "getAchievementStatus('B') returns VERY GOOD");
+assert(getAchievementStatus('C') === 'GOOD', "getAchievementStatus('C') returns GOOD");
+assert(getAchievementStatus('D') === 'ENOUGH', "getAchievementStatus('D') returns ENOUGH");
+assert(getAchievementStatus('E') === 'LESS', "getAchievementStatus('E') returns LESS");
 
 // 2. Check Core Specifications and Guides
 console.log('\n[2] Checking Core Documentation & Execution Contracts:');
 
 const agentsMd = fs.readFileSync('AGENTS.md', 'utf-8');
 assert(agentsMd.includes('#00c000ff'), "AGENTS.md has Pure Green #00c000ff for Star");
-assert(agentsMd.includes('| C | Enough | 60% – 79% | Pure Yellow | `#FFFF00` |'), "AGENTS.md has Pure Yellow #FFFF00 for Grade C");
+assert(agentsMd.includes('| C | Good | 70% – 79% | Pure Yellow | `#FFFF00` |'), "AGENTS.md has Pure Yellow #FFFF00 for Grade C");
 
 const antigravityRules = fs.readFileSync('.antigravityrules', 'utf-8');
 assert(antigravityRules.includes('SINGLE SOURCE OF TRUTH COLORING'), ".antigravityrules enforces Rule 11 (Single Source of Truth Coloring)");

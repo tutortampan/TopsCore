@@ -57,7 +57,7 @@
       align-items: center;
       justify-content: center;
       margin: 0;
-      box-shadow: 0 0 16px rgba(56, 189, 248, 0.25);
+      box-shadow: 189, 248, 0.25);
       animation: float 3s ease-in-out infinite;
       user-select: none;
       box-sizing: border-box;
@@ -94,7 +94,7 @@
 
     .brand-core {
       color: #38bdf8;
-      text-shadow: 0 0 14px rgba(56, 189, 248, 0.5);
+      text-shadow: none;
     }
 
     /* Remember Me Banner */
@@ -157,7 +157,7 @@
     .rmb-toggle.on {
       background: #0284c7;
       border-color: #38bdf8;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+      box-shadow: 189, 248, 0.45);
     }
 
     .rmb-toggle.on::after {
@@ -366,7 +366,7 @@
     .opt-card.active {
       background: rgba(56, 189, 248, 0.16);
       border-color: rgba(56, 189, 248, 0.65);
-      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+      box-shadow: 189, 248, 0.25);
       color: #fff;
     }
 
@@ -457,7 +457,7 @@
 
     .pin-digit.pin-error {
       border-color: var(--grade-e) !important;
-      box-shadow: 0 0 12px rgba(255, 0, 0, 0.45) !important;
+      box-shadow: 0, 0, 0.45) !important;
       color: var(--grade-e) !important;
     }
 
@@ -484,7 +484,7 @@
 
     .btn-signin:hover:not(:disabled) {
       transform: none;
-      box-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+      box-shadow: 189, 248, 0.5);
     }
 
     .btn-signin:disabled {
@@ -525,7 +525,7 @@
       color: var(--primary-tactical, #38bdf8);
       background: rgba(56, 189, 248, 0.12);
       transform: none !important;
-      box-shadow: 0 0 10px rgba(56, 189, 248, 0.35);
+      box-shadow: 189, 248, 0.35);
     }
 
     /* Short screen optimizations */

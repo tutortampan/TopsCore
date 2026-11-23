@@ -92,7 +92,7 @@
   background: rgba(0, 192, 0, 0.15);
   color: var(--grade-a);
   border-color: rgba(0, 192, 0, 0.35);
-  box-shadow: 0 0 10px rgba(0, 192, 0, 0.2);
+  box-shadow: 192, 0, 0.2);
 }
 
 .conv-stage-pill.completed {
@@ -345,7 +345,7 @@
 
 .conv-speaker-card.speaking {
   border-color: var(--grade-a);
-  box-shadow: 0 0 12px rgba(0, 192, 0, 0.2);
+  box-shadow: 192, 0, 0.2);
 }
 
 .conv-speaker-header {
@@ -463,7 +463,7 @@
   justify-content: center;
   position: relative;
   z-index: 2;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+  box-shadow: 189, 248, 0.3);
   transition: all 0.3s ease;
 }
 
@@ -550,17 +550,17 @@
 }
 .avatar-state-pill.state-idle .state-dot {
   background: #38bdf8;
-  box-shadow: 0 0 6px #38bdf8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes avatarBreathe {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 0 8px rgba(56, 189, 248, 0.25);
+    box-shadow: 189, 248, 0.25);
   }
   50% {
     transform: scale(1.05);
-    box-shadow: 0 0 16px rgba(56, 189, 248, 0.5);
+    box-shadow: 189, 248, 0.5);
   }
 }
 
@@ -571,7 +571,7 @@
 
 .conv-living-avatar-stage[data-state="listening"] .living-avatar-core {
   border-color: var(--grade-a);
-  box-shadow: 0 0 18px rgba(0, 192, 0, 0.5);
+  box-shadow: 192, 0, 0.5);
 }
 
 .conv-living-avatar-stage[data-state="listening"] .avatar-ripple-ring {
@@ -592,7 +592,7 @@
 }
 .avatar-state-pill.state-listening .state-dot {
   background: var(--grade-a);
-  box-shadow: 0 0 8px var(--grade-a);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   animation: dotBlink 0.8s ease-in-out infinite;
 }
 
@@ -619,7 +619,7 @@
 
 .conv-living-avatar-stage[data-state="thinking"] .living-avatar-core {
   border-color: #818cf8;
-  box-shadow: 0 0 16px rgba(129, 140, 248, 0.6);
+  box-shadow: 140, 248, 0.6);
   animation: thinkingPulse 1.2s ease-in-out infinite alternate;
 }
 
@@ -630,7 +630,7 @@
 }
 .avatar-state-pill.state-thinking .state-dot {
   background: #818cf8;
-  box-shadow: 0 0 8px #818cf8;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes thinkingPulse {
@@ -641,12 +641,12 @@
 /* STATE 4: SPEAKING */
 .conv-living-avatar-stage[data-state="speaking"] {
   border-color: rgba(255, 45, 135, 0.5);
-  box-shadow: 0 0 15px rgba(255, 45, 135, 0.15);
+  box-shadow: 45, 135, 0.15);
 }
 
 .conv-living-avatar-stage[data-state="speaking"] .living-avatar-core {
   border-color: var(--grade-star);
-  box-shadow: 0 0 22px rgba(255, 45, 135, 0.6);
+  box-shadow: 45, 135, 0.6);
 }
 
 .conv-living-avatar-stage[data-state="speaking"] .avatar-mouth-equalizer span {
@@ -666,7 +666,7 @@
 }
 .avatar-state-pill.state-speaking .state-dot {
   background: var(--grade-star);
-  box-shadow: 0 0 8px var(--grade-star);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes mouthEq {
@@ -889,7 +889,7 @@
   display: flex !important;
   flex-direction: column !important;
   overflow: hidden !important;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 25px rgba(56, 189, 248, 0.1) !important;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9) !important;
   box-sizing: border-box !important;
 }
 
@@ -988,7 +988,7 @@
   background: transparent !important;
   color: #FFFFFF !important;
   border: 1.5px solid rgba(255, 255, 255, 0.8) !important;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 255, 255, 0.2) !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   transform: none !important;
@@ -997,7 +997,7 @@
 .conv-btn-ghost-sec:hover {
   background: #FFFFFF !important;
   color: #090D16 !important;
-  box-shadow: 0 0 20px rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 255, 255, 0.6) !important;
   transform: none !important;
 }
 
@@ -1015,7 +1015,7 @@
   background: var(--clr-accent-1, #6366F1) !important;
   color: #FFFFFF !important;
   border: 1.5px solid var(--clr-accent-1, #6366F1) !important;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.45) !important;
+  box-shadow: 102, 241, 0.45) !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   transform: none !important;
@@ -1023,7 +1023,7 @@
 
 .conv-btn-solid-glow:hover {
   background: #4F46E5 !important;
-  box-shadow: 0 0 24px rgba(99, 102, 241, 0.7) !important;
+  box-shadow: 102, 241, 0.7) !important;
   transform: none !important;
 }
 

@@ -7,9 +7,9 @@ import {
   fetchDisciplineGovernance,
   saveDisciplineGovernance,
   DEFAULT_DISCIPLINE_GOVERNANCE
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261124_v681';
 import { showToast, escapeHtml } from '../app.js?v=20261106_v160';
-import { detectClassDiscipline } from '../grading.js?v=20261106_v160';
+import { detectClassDiscipline, INSTITUTION_GRADING_SCALES, TOPSCORE_COLORS, calculateGrade, getGradeColorByScore } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 export async function renderClassesHub(area) {
@@ -102,6 +102,7 @@ export async function renderClassesHub(area) {
     activeTests.forEach(r   => window._classesHubRecords[r.id] = r);
 
     // Default UI states
+    if (!window._classesHubActiveTenant) window._classesHubActiveTenant = 'CEC'; // 'CEC' | 'TOP'
     if (!window._classesHubActiveInst) window._classesHubActiveInst = 'all'; // 'all' | instId
     if (!window._classesHubDiscipline) window._classesHubDiscipline = 'VOCABULARY'; // 'VOCABULARY' | 'BASIC_ENGLISH' | 'SPEAKING' | 'STORYTELLING' | 'ALL_CLASSES'
     if (!window._classesHubExpandedLevels || window._classesHubExpandedLevels.size === 0) {
@@ -175,6 +176,12 @@ export async function renderClassesHub(area) {
         dataSourceLabel: 'Central Database'
       }
     ];
+
+    // Switch dual-tenant bilah (CEC vs TOP)
+    window.switchClassesHubTenant = (tenant) => {
+      window._classesHubActiveTenant = tenant;
+      renderView();
+    };
 
     // Switch institution filter tab
     window.switchClassesHubInst = (instId) => {
@@ -418,39 +425,58 @@ export async function renderClassesHub(area) {
       }
     };
 
-    // Main Renderer
+    // Main Renderer (Strict Zero Scrolling & 100vh Single-Screen Lock)
     const renderView = async () => {
-      const activeInstFilter = window._classesHubActiveInst || 'all';
-      const activeDiscipline = window._classesHubDiscipline || 'VOCABULARY';
-      const isMasterDirectory = activeDiscipline === 'ALL_CLASSES';
+      const activeTenant = window._classesHubActiveTenant || 'CEC';
+      const viewMode = window._classesHubViewMode || 'CARDS'; // 'CARDS' | 'TABLE'
+      const activeStepFilter = window._classesHubActiveStepFilter || 'ALL'; // 'ALL' | 1 | 2 | 3
 
-      // ── Top Panel: SSOT Discipline Tabs Integration via setTopbarTabs ────
-      const disciplineTopTabs = DISCIPLINE_TABS.map(d => {
-        const count = d.key === 'ALL_CLASSES'
-          ? activeClasses.length
-          : activeClasses.filter(c => detectClassDiscipline(c) === d.key).length;
-        return {
-          id: d.key,
-          label: d.name,
-          icon: getSvgIcon(d.icon, 14),
-          val: count,
-          valColor: d.color
-        };
-      });
+      const isCecClass = (c) => {
+        const prog = progMap.get(c.program_id);
+        const inst = prog ? instMap.get(prog.institution_id) : (c.institution_id ? instMap.get(c.institution_id) : null);
+        const instCode = (inst?.code || inst?.name || '').toUpperCase();
+        const progName = (prog?.name || prog?.code || '').toUpperCase();
+        const className = (c.name || c.code || '').toUpperCase();
+        return instCode === 'CEC' || progName.includes('CAMP') || className.includes('CAMP');
+      };
+
+      const cecClasses = activeClasses.filter(isCecClass);
+      const topClasses = activeClasses.filter(c => !isCecClass(c));
+      const tenantClasses = activeTenant === 'CEC' ? cecClasses : topClasses;
+
+      // ── Top Panel: Dual-Tenant Bilah Tabs (CEC vs TOP) ────
+      const tenantTopTabs = [
+        {
+          id: 'CEC',
+          label: 'CEC — Cake English Course',
+          icon: getSvgIcon('book', 14),
+          val: cecClasses.length,
+          valColor: '#ff2d87',
+          badge: 'Camp Step 1–3'
+        },
+        {
+          id: 'TOP',
+          label: 'TOP — Top Occupational Program',
+          icon: getSvgIcon('award', 14),
+          val: topClasses.length,
+          valColor: '#38bdf8',
+          badge: 'Vocational Level 0'
+        }
+      ];
 
       if (window.setTopbarTabs) {
-        window.setTopbarTabs(disciplineTopTabs, activeDiscipline, 'window.switchClassesHubDiscipline');
+        window.setTopbarTabs(tenantTopTabs, activeTenant, 'window.switchClassesHubTenant');
       }
 
-      // Filter classes by active discipline or all
-      let targetClasses = isMasterDirectory
-        ? (activeInstFilter === 'all'
-            ? activeClasses
-            : activeClasses.filter(c => {
-                const prog = progMap.get(c.program_id);
-                return (prog && prog.institution_id === activeInstFilter) || (c.institution_id === activeInstFilter);
-              }))
-        : activeClasses.filter(c => detectClassDiscipline(c) === activeDiscipline);
+      window.toggleClassesHubView = () => {
+        window._classesHubViewMode = window._classesHubViewMode === 'TABLE' ? 'CARDS' : 'TABLE';
+        renderView();
+      };
+
+      window.setClassesHubStepFilter = (stepVal) => {
+        window._classesHubActiveStepFilter = stepVal;
+        renderView();
+      };
 
       const searchQuery = (window._classesHubSearch !== undefined
         ? window._classesHubSearch
@@ -473,22 +499,16 @@ export async function renderClassesHub(area) {
           }
           const lvlName = lvl ? (lvl.name || '').toLowerCase() : '';
           const lvlNum = lvl?.level_number != null ? 'l' + lvl.level_number : '';
-          const cTests = testsByClass.get(c.id) || [];
-          const matchesTest = cTests.some(t =>
-            (t.title || '').toLowerCase().includes(query) ||
-            (t.shell_code || '').toLowerCase().includes(query)
-          );
           return (c.name || '').toLowerCase().includes(query) ||
                  (c.code || '').toLowerCase().includes(query) ||
                  (prog && (prog.name || '').toLowerCase().includes(query)) ||
                  (inst && (inst.name || '').toLowerCase().includes(query)) ||
                  lvlName.includes(query) ||
-                 lvlNum === query ||
-                 matchesTest;
+                 lvlNum === query;
         });
       };
 
-      const searchedClasses = filterClassesList(targetClasses, searchQuery);
+      const searchedClasses = filterClassesList(tenantClasses, searchQuery);
 
       const getSortIcon = (key) => {
         const cur = window._classesHubSort || { key: 'level', asc: true };
@@ -546,13 +566,114 @@ export async function renderClassesHub(area) {
         });
       };
 
-      const buildClassRow = (cls, idx) => {
+      const sortedClasses = sortClassList(searchedClasses);
+
+      // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CAMP-3VOCAB, CAMP-1BASIC, EVNK-VOCAB)
+      const getStandardClassCode = (c, levelObj, progObj) => {
+        if (c.code) return c.code;
+        const rawName = (c.name || '').toUpperCase();
+        let progAbbr = 'CAMP';
+        if (rawName.includes('CAMP') || (progObj && (progObj.name || '').toUpperCase().includes('CAMP'))) {
+          progAbbr = 'CAMP';
+        } else if (rawName.includes('EVNIKOM') || (progObj && (progObj.name || '').toUpperCase().includes('EVNIKOM'))) {
+          progAbbr = 'EVNK';
+        } else if (rawName.includes('SHERATON') || (progObj && (progObj.name || '').toUpperCase().includes('SHERATON'))) {
+          progAbbr = 'SHRT';
+        } else if (rawName.includes('TAMATA') || (progObj && (progObj.name || '').toUpperCase().includes('TAMATA'))) {
+          progAbbr = 'TPTC';
+        } else if (progObj && progObj.code) {
+          progAbbr = progObj.code.length >= 4 ? progObj.code.slice(0, 4).toUpperCase() : progObj.code.toUpperCase();
+        }
+
+        let lNum = levelObj?.level_number;
+        if (lNum === 0 || (levelObj?.name || '').toLowerCase() === 'non-level') {
+          lNum = '';
+        } else if (!lNum) {
+          if (rawName.includes('1ST')) lNum = 1;
+          else if (rawName.includes('2ND')) lNum = 2;
+          else if (rawName.includes('3RD')) lNum = 3;
+          else lNum = '';
+        }
+
+        let classAbbr = 'VOCAB';
+        if (rawName.includes('BASIC')) classAbbr = 'BASIC';
+        else if (rawName.includes('STORY')) classAbbr = 'STORY';
+        else if (rawName.includes('SPEAK')) classAbbr = 'SPEAK';
+        else if (rawName.includes('VOCAB')) classAbbr = 'VOCAB';
+        else {
+          const words = rawName.split(/\s+/).filter(w => !['CAMP', '1ST', '2ND', '3RD', 'LEVEL'].includes(w));
+          classAbbr = (words[0] || 'CLASS').slice(0, 5);
+        }
+
+        return `${progAbbr}-${lNum}${classAbbr}`;
+      };
+
+      // ── 1. Compact Official Grading System Standard Card (~68px) ────
+      const gradingScale = INSTITUTION_GRADING_SCALES[activeTenant] || INSTITUTION_GRADING_SCALES.CEC;
+      const gradingCardHtml = `
+        <div style="background:#0F172A; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:${activeTenant === 'CEC' ? '#ff2d87' : '#38bdf8'};"></span>
+              <span style="font-size:11px; font-weight:800; color:${activeTenant === 'CEC' ? '#ff2d87' : '#38bdf8'}; text-transform:uppercase; letter-spacing:0.04em;">1. Official ${activeTenant} Grading System Standard</span>
+            </div>
+            <span style="font-size:9px; font-weight:800; color:#94a3b8; background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:3px; text-transform:uppercase;">SSOT Standard</span>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(6, 1fr); gap:6px;">
+            ${gradingScale.map(g => `
+              <div style="background:#090D16; border:1px solid rgba(255,255,255,0.08); border-top:2px solid ${g.color}; border-radius:4px; padding:4px 4px; display:flex; flex-direction:column; align-items:center; text-align:center; gap:1px;">
+                <div style="display:flex; align-items:center; gap:3px;">
+                  <span style="font-family:var(--fm-font-mono, monospace); font-size:13px; font-weight:900; line-height:1; color:${g.color};">${g.symbol}</span>
+                  <span style="font-family:var(--fm-font-mono, monospace); font-size:11px; font-weight:700; color:#f8fafc;">${g.label}</span>
+                </div>
+                <span style="font-size:9px; font-weight:800; text-transform:uppercase; color:${g.color}; letter-spacing:0.03em;">${g.predicate}</span>
+                <span style="font-size:8px; color:#94a3b8; line-height:1; white-space:nowrap;">${g.note}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      // ── 2. Compact Step Composite Scoring & Rules Card (~68px) ────
+      const stepScoringCardHtml = activeTenant === 'CEC' ? `
+        <div style="background:#0F172A; border:1px solid rgba(255,45,135,0.25); border-radius:6px; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:11px; font-weight:800; color:#ff2d87; text-transform:uppercase; letter-spacing:0.04em;">2. Step Composite Scoring &amp; Promotion Rules</span>
+            <span style="font-size:9px; font-weight:800; color:#ff2d87; background:rgba(255,45,135,0.12); border:1px solid rgba(255,45,135,0.3); padding:1px 5px; border-radius:3px; text-transform:uppercase;">Tiered Steps 1–3</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <div style="background:#090D16; border-left:2px solid #ff2d87; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
+              <strong style="color:#f8fafc;">Passing Standard:</strong> Step Composite Average <strong style="color:#ffff00;">&ge; 60% (Grade C)</strong> with zero unresolved fails.
+            </div>
+            <div style="background:#090D16; border-left:2px solid #38bdf8; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
+              <strong style="color:#f8fafc;">Formula:</strong> <code>Avg(Milestone Exams)</code>. Remedial ceiling: <strong style="color:#ffff00;">60%</strong> clean score. 3rd Step &rarr; <strong style="color:#8b5cf6;">Alumni (Level X)</strong>.
+            </div>
+          </div>
+        </div>
+      ` : `
+        <div style="background:#0F172A; border:1px solid rgba(56,189,248,0.25); border-radius:6px; padding:6px 10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span style="font-size:11px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">2. Program Completion, Passing Standards &amp; Alumni Status</span>
+            <span style="font-size:9px; font-weight:800; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); padding:1px 5px; border-radius:3px; text-transform:uppercase;">Level 0 (Non-Level)</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+            <div style="background:#090D16; border-left:2px solid #38bdf8; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
+              <strong style="color:#f8fafc;">Graduation Standard:</strong> Final Composite <strong style="color:#ffff00;">&ge; 60% (Grade C)</strong>. Passing graduates officially become <strong style="color:#8b5cf6;">Alumni (Level X)</strong>.
+            </div>
+            <div style="background:#090D16; border-left:2px solid #95ff00; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
+              <strong style="color:#f8fafc;">Formula:</strong> <code>Avg(Milestone Exams)</code>. Remedial ceiling: <strong style="color:#ffff00;">60%</strong> clean score. Single-tier completion.
+            </div>
+          </div>
+        </div>
+      `;
+
+      // ── 3. Render Individual Class Card (Zero-Scroll Adaptive) ────
+      const renderClassCard = (cls) => {
         const prog = progMap.get(cls.program_id);
         const inst = prog ? instMap.get(prog.institution_id) : (cls.institution_id ? instMap.get(cls.institution_id) : null);
-        const instCode  = escapeHtml(inst?.code || inst?.name || '—');
-        const progName  = prog ? escapeHtml(prog.name) : 'No Program';
+        const instCode  = escapeHtml(inst?.code || inst?.name || (activeTenant === 'CEC' ? 'CEC' : 'TOP'));
+        const progName  = prog ? escapeHtml(prog.name) : 'General Program';
 
-        // Level detection
         let lvl = cls.level_id ? levelMap.get(cls.level_id) : null;
         if (!lvl) {
           for (const cl of (classLevels || [])) {
@@ -564,51 +685,123 @@ export async function renderClassesHub(area) {
         }
         const lvlNum = lvl?.level_number != null ? Number(lvl.level_number) : null;
         const shortLvl = (lvl && lvl.level_number != null && lvl.level_number < 99)
+          ? (lvl.level_number === 0 ? 'Level 0' : (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number) : `${lvl.level_number} Step`))
+          : (activeTenant === 'TOP' ? 'Level 0' : '1st Step');
+
+        const effectiveCode = getStandardClassCode(cls, lvl, prog);
+        const studentCount = getEligibleStudentCountForClass(cls);
+        const disc = detectClassDiscipline(cls);
+
+        let modalityLabel = 'Vocabulary Mastery';
+        let modalityColor = '#c084fc';
+        if (disc === 'BASIC_ENGLISH') {
+          modalityLabel = 'Basic English Structure (M1)';
+          modalityColor = '#38bdf8';
+        } else if (disc === 'SPEAKING') {
+          modalityLabel = 'Speaking Oral Articulation (M5, M7)';
+          modalityColor = '#95ff00';
+        } else if (disc === 'STORYTELLING') {
+          modalityLabel = 'Storytelling Narrative (M6)';
+          modalityColor = '#FF8C00';
+        } else if (disc === 'VOCABULARY') {
+          const isL2 = lvlNum === 2 || (cls.name || '').toUpperCase().includes('2ND') || effectiveCode.includes('2VOCAB');
+          modalityLabel = isL2 ? 'Vocabulary (100% Words)' : 'Vocabulary (Words & Phrases)';
+          modalityColor = '#c084fc';
+        }
+
+        const classTests = testsByClass.get(cls.id) || [];
+        const tasks = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM');
+        const exams = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM');
+
+        const examCountLabel = exams.length > 0 ? `${exams.length} Milestone Exams (EX-1..${exams.length})` : '4 Periodic Milestone Exams (EX-1..4)';
+        const taskCountLabel = tasks.length > 0 ? `${tasks.length} Formative Tasks` : (disc === 'VOCABULARY' ? (lvlNum === 2 ? '7 Tasks (7×7 Reps)' : '14 Tasks (7×7 Reps)') : 'Formative Coursework');
+
+        const examMinScore = exams.length > 0 ? Math.round(getTestMinScore(exams[0])) : 60;
+        const taskMinScore = tasks.length > 0 ? Math.round(getTestMinScore(tasks[0])) : (disc === 'VOCABULARY' ? 70 : 60);
+
+        return `
+          <div style="background:#0F172A; border:1px solid rgba(255,255,255,0.1); border-radius:6px; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; gap:6px; box-sizing:border-box; transition:border-color 0.15s ease;" onmouseenter="this.style.borderColor='rgba(56,189,248,0.4)'" onmouseleave="this.style.borderColor='rgba(255,255,255,0.1)'">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:6px; margin-bottom:4px;">
+                <div style="min-width:0; overflow:hidden;">
+                  <div style="font-size:12px; font-weight:800; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(cls.name)}</div>
+                  <div style="font-family:var(--fm-font-mono, monospace); font-size:10px; font-weight:700; color:#38bdf8; margin-top:1px;">${escapeHtml(effectiveCode)}</div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px; flex-shrink:0;">
+                  <span style="font-size:9px; font-weight:800; padding:1px 5px; border-radius:3px; background:rgba(255,255,255,0.08); color:#f8fafc; white-space:nowrap;">${escapeHtml(shortLvl)}</span>
+                  <span style="font-size:9px; color:${cls.is_active ? '#95ff00' : '#ff0000'}; font-weight:700;">${cls.is_active ? 'ACTIVE' : 'INACTIVE'}</span>
+                </div>
+              </div>
+
+              <div style="font-size:10px; font-weight:700; color:${modalityColor}; margin-bottom:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${modalityLabel}
+              </div>
+
+              <!-- Rules Matrix -->
+              <div style="background:#090D16; border:1px solid rgba(255,255,255,0.06); border-radius:4px; padding:6px 8px; display:flex; flex-direction:column; gap:4px; font-size:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:#94a3b8;">Milestone Exams:</span>
+                  <span style="font-weight:700; color:#ff2d87;">${examCountLabel}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:#94a3b8;">Formative Tasks:</span>
+                  <span style="font-weight:700; color:#95ff00;">${taskCountLabel}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:3px;">
+                  <span style="color:#94a3b8;">Exam Pass (KKM):</span>
+                  <span style="font-weight:800; color:#ffff00; font-variant-numeric:tabular-nums;">${examMinScore}% (${calculateGrade(examMinScore, { institution: activeTenant })})</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:#94a3b8;">Task Pass Threshold:</span>
+                  <span style="font-weight:700; color:#95ff00; font-variant-numeric:tabular-nums;">${taskMinScore}% per rep</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                  <span style="color:#94a3b8;">Enrolled:</span>
+                  <span style="font-weight:700; color:#f8fafc; font-variant-numeric:tabular-nums;">${studentCount} students</span>
+                </div>
+              </div>
+
+              <!-- Formula Box -->
+              <div style="margin-top:5px; background:rgba(0,0,0,0.3); border-left:2px solid #38bdf8; border-radius:0 3px 3px 0; padding:4px 6px; font-size:9px; color:#cbd5e1; line-height:1.2;">
+                <strong>Formula:</strong> <code>Avg(EX-1 .. EX-4)</code> &rarr; Equal weight in ${activeTenant === 'CEC' ? shortLvl + ' Composite AVG' : 'Program Final Score'}.
+              </div>
+            </div>
+
+            <!-- Action Ribbon -->
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.06); padding-top:6px; margin-top:2px;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" style="height:24px !important; line-height:22px !important; padding:0 6px !important; font-size:10px !important; font-weight:700; border-radius:3px; cursor:pointer; display:inline-flex; align-items:center; gap:3px;" title="Configure Test & Scoring Rules for this class">
+                ${getSvgIcon('award', 11)} Configure Rules
+              </button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('class-hub');}else{window.location.hash='#class-hub';}" style="height:24px !important; line-height:22px !important; padding:0 6px !important; font-size:10px !important; font-weight:700; border-radius:3px; cursor:pointer; color:#38bdf8; border-color:rgba(56,189,248,0.4);" title="Open Workstation Binder">
+                Workspace ↗
+              </button>
+            </div>
+          </div>
+        `;
+      };
+
+      // ── Build Class Row for Optional Table View ────
+      const buildClassRow = (cls, idx) => {
+        const prog = progMap.get(cls.program_id);
+        const inst = prog ? instMap.get(prog.institution_id) : (cls.institution_id ? instMap.get(cls.institution_id) : null);
+        const instCode  = escapeHtml(inst?.code || inst?.name || '—');
+        const progName  = prog ? escapeHtml(prog.name) : 'No Program';
+
+        let lvl = cls.level_id ? levelMap.get(cls.level_id) : null;
+        if (!lvl) {
+          for (const cl of (classLevels || [])) {
+            if (cl.class_id === cls.id && cl.level_id && levelMap.has(cl.level_id)) {
+              lvl = levelMap.get(cl.level_id);
+              break;
+            }
+          }
+        }
+        const shortLvl = (lvl && lvl.level_number != null && lvl.level_number < 99)
           ? (typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number) : (lvl.level_number === 0 ? '0' : (lvl.name || '0')))
           : '—';
         const levelHtml = shortLvl !== '—'
           ? `<span style="color:#818cf8;font-weight:600;font-size:12px;">${escapeHtml(shortLvl)}</span>`
           : '<span class="text-xs text-muted">—</span>';
-
-        // Format class code: strictly PROGRAM-LEVELCLASS SSOT (e.g. CAMP-3VOCAB, CAMP-1BASIC, EVNK-VOCAB)
-        const getStandardClassCode = (c, levelObj, progObj) => {
-          if (c.code) return c.code;
-          const rawName = (c.name || '').toUpperCase();
-          let progAbbr = 'CAMP';
-          if (rawName.includes('CAMP') || (progObj && (progObj.name || '').toUpperCase().includes('CAMP'))) {
-            progAbbr = 'CAMP';
-          } else if (rawName.includes('EVNIKOM') || (progObj && (progObj.name || '').toUpperCase().includes('EVNIKOM'))) {
-            progAbbr = 'EVNK';
-          } else if (rawName.includes('SHERATON') || (progObj && (progObj.name || '').toUpperCase().includes('SHERATON'))) {
-            progAbbr = 'SHRT';
-          } else if (rawName.includes('TAMATA') || (progObj && (progObj.name || '').toUpperCase().includes('TAMATA'))) {
-            progAbbr = 'TPTC';
-          } else if (progObj && progObj.code) {
-            progAbbr = progObj.code.length >= 4 ? progObj.code.slice(0, 4).toUpperCase() : progObj.code.toUpperCase();
-          }
-
-          let lNum = levelObj?.level_number;
-          if (lNum === 0 || (levelObj?.name || '').toLowerCase() === 'non-level') {
-            lNum = ''; // Level 0 dianggap kosong!
-          } else if (!lNum) {
-            if (rawName.includes('1ST')) lNum = 1;
-            else if (rawName.includes('2ND')) lNum = 2;
-            else if (rawName.includes('3RD')) lNum = 3;
-            else lNum = '';
-          }
-
-          let classAbbr = 'VOCAB';
-          if (rawName.includes('BASIC')) classAbbr = 'BASIC';
-          else if (rawName.includes('STORY')) classAbbr = 'STORY';
-          else if (rawName.includes('SPEAK')) classAbbr = 'SPEAK';
-          else if (rawName.includes('VOCAB')) classAbbr = 'VOCAB';
-          else {
-            const words = rawName.split(/\s+/).filter(w => !['CAMP', '1ST', '2ND', '3RD', 'LEVEL'].includes(w));
-            classAbbr = (words[0] || 'CLASS').slice(0, 5);
-          }
-
-          return `${progAbbr}-${lNum}${classAbbr}`;
-        };
 
         const effectiveCode = getStandardClassCode(cls, lvl, prog);
         const codeHtml  = `<span style="font-family:var(--fm-font-mono, monospace);font-size:12px;font-weight:600;letter-spacing:0.04em;color:#e2e8f0;">${escapeHtml(effectiveCode)}</span>`;
@@ -617,136 +810,81 @@ export async function renderClassesHub(area) {
           ? `<span style="color:var(--fm-text-primary);font-weight:600;font-size:12px;font-variant-numeric:tabular-nums;">${studentCount}</span>`
           : '<span class="text-xs text-muted" style="font-variant-numeric:tabular-nums;">0</span>';
 
-        // Discipline Modality & Engine Isolation (Zero-Capsule SSOT: pure text colors)
         const disc = detectClassDiscipline(cls);
         let scopeHtml = '<span class="text-xs text-muted">—</span>';
         let engineHtml = '<span class="text-xs text-muted">Standard</span>';
 
         if (disc === 'VOCABULARY') {
-          const isL2 = lvlNum === 2 || (cls.name || '').toUpperCase().includes('2ND') || effectiveCode.includes('2VOCAB');
-          if (isL2) {
-            scopeHtml = '<span style="color:#95ff00;font-weight:700;font-size:12px;">100% Words (7 Reps)</span>';
-          } else {
-            scopeHtml = '<span style="font-weight:700;font-size:12px;"><span style="color:#95ff00;">Words</span> <span style="color:#94a3b8;">&amp;</span> <span style="color:#ff2d87;">Phrases</span> <span style="color:#94a3b8;font-weight:400;">(14 Reps)</span></span>';
-          }
-          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Vocabulary Mastery Modules</span> <span style="color:#94a3b8;font-size:12px;">(Recognition, Spoken, Written)</span>';
+          scopeHtml = '<span style="font-weight:700;font-size:12px;"><span style="color:#95ff00;">Words</span> <span style="color:#94a3b8;">&amp;</span> <span style="color:#ff2d87;">Phrases</span></span>';
+          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Vocabulary Mastery</span>';
         } else if (disc === 'BASIC_ENGLISH') {
           scopeHtml = '<span style="color:#38bdf8;font-weight:700;font-size:12px;">Photo Description</span>';
-          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Basic English</span> <span style="color:#94a3b8;font-size:12px;">(M1)</span>';
+          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Basic English (M1)</span>';
         } else if (disc === 'SPEAKING') {
           scopeHtml = '<span style="color:#95ff00;font-weight:700;font-size:12px;">Speech &amp; Dialogue</span>';
-          engineHtml = '<span style="color:#95ff00;font-size:12px;font-weight:700;">Public Speaking</span> <span style="color:#94a3b8;font-size:12px;">(M5, M7)</span>';
+          engineHtml = '<span style="color:#95ff00;font-size:12px;font-weight:700;">Public Speaking (M5)</span>';
         } else if (disc === 'STORYTELLING') {
           scopeHtml = '<span style="color:#FF8C00;font-weight:700;font-size:12px;">Narrative &amp; Retell</span>';
-          engineHtml = '<span style="color:#FF8C00;font-size:12px;font-weight:700;">Storytelling</span> <span style="color:#94a3b8;font-size:12px;">(M6)</span>';
+          engineHtml = '<span style="color:#FF8C00;font-size:12px;font-weight:700;">Storytelling (M6)</span>';
         }
 
-        // Class tests and passing standards
         const classTests = testsByClass.get(cls.id) || [];
         const tasks = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() !== 'EXAM');
         const exams = classTests.filter(t => (t.category || (t.test_type === 'exam' ? 'EXAM' : 'TASK')).toUpperCase() === 'EXAM');
 
-        // Task passing standard
-        let taskHtml = '';
-        if (tasks.length > 0) {
-          const taskScores = tasks.map(getTestMinScore);
-          const curTaskScore = Math.round(taskScores[0]);
-          const minT = Math.min(...taskScores);
-          const maxT = Math.max(...taskScores);
-          const taskLabel = minT === maxT ? `${minT}%` : `${minT}%–${maxT}%`;
-          taskHtml = `
-            <span class="classes-hub-score-view metric-pct" style="color:var(--task-color, var(--grade-b, #95ff00));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${tasks.length} Formative Tasks (Min Pass: ${taskLabel}) — Click to configure class rules">
-              ${taskLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${tasks.length})</span>
-            </span>
-            <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-              <input type="number" min="1" max="100" class="input-class-task-score" data-class-id="${cls.id}" value="${curTaskScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:var(--task-color, var(--grade-b, #95ff00));border:1px solid rgba(149,255,0,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','TASK',this.value)" title="Set passing rate for all ${tasks.length} tasks" />
-              <span style="font-size:12px;color:#94a3b8;">%</span>
-            </span>
-          `;
-        } else {
-          taskHtml = '<span class="text-xs text-muted">—</span>';
-        }
-
-        // Exam passing standard
-        let examHtml = '';
-        if (exams.length > 0) {
-          const examScores = exams.map(getTestMinScore);
-          const curExamScore = Math.round(examScores[0]);
-          const minE = Math.min(...examScores);
-          const maxE = Math.max(...examScores);
-          const examLabel = minE === maxE ? `${minE}%` : `${minE}%–${maxE}%`;
-          examHtml = `
-            <span class="classes-hub-score-view metric-pct" style="color:var(--exam-color, var(--quad-a, #ff2d87));font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;cursor:pointer;" onclick="window.openClassTestSettingsFromHub('${cls.id}','${escapeHtml(cls.name)}')" title="${exams.length} Formal Exams (Min Pass: ${examLabel}) — Click to configure class rules">
-              ${examLabel} <span style="font-size:12px;opacity:0.75;font-weight:400;">(${exams.length})</span>
-            </span>
-            <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center;justify-content:center;gap:2px;">
-              <input type="number" min="1" max="100" class="input-class-exam-score" data-class-id="${cls.id}" value="${curExamScore}" style="width:48px;height:24px;font-size:12px;font-weight:600;text-align:center;background:#090D16;color:var(--exam-color, var(--quad-a, #ff2d87));border:1px solid rgba(255,45,135,0.4);border-radius:4px;padding:0;font-variant-numeric:tabular-nums;" onchange="window.handleClassPassingScoreChange('${cls.id}','EXAM',this.value)" title="Set passing rate for all ${exams.length} exams" />
-              <span style="font-size:12px;color:#94a3b8;">%</span>
-            </span>
-          `;
-        } else {
-          examHtml = '<span class="text-xs text-muted">—</span>';
-        }
+        const taskScores = tasks.map(getTestMinScore);
+        const taskLabel = taskScores.length > 0 ? `${Math.round(taskScores[0])}%` : '—';
+        const examScores = exams.map(getTestMinScore);
+        const examLabel = examScores.length > 0 ? `${Math.round(examScores[0])}%` : '60%';
 
         return `
           <tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.15s ease;">
-            <!-- 1. NO -->
             <td class="text-center" style="font-size:12px;color:var(--fm-text-muted);font-variant-numeric:tabular-nums;padding:8px 6px;">${idx + 1}</td>
-            <!-- 2. INSTITUTION -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
               <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);">${instCode}</span>
             </td>
-            <!-- 3. PROGRAM -->
             <td style="font-size:12px;white-space:nowrap;padding:8px 8px;">
-              <span style="color:var(--fm-text-secondary);font-size:12px;">${progName}</span>
+              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);">${progName}</span>
             </td>
-            <!-- 4. LEVEL -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${levelHtml}</td>
-            <!-- 5. CODE (Adjacent to Level & Identity before Class Name SSOT) -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${codeHtml}</td>
-            <!-- 6. CLASS NAME -->
-            <td style="font-size:12px;white-space:nowrap;padding:8px 10px;">
-              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);cursor:pointer;transition:color 0.15s ease;"
-                    onmouseover="this.style.color='#38bdf8'"
-                    onmouseout="this.style.color='var(--fm-text-primary)'"
-                    onclick="window.openClassWorkstation('${cls.id}')"
-                    title="Click to open workstation for ${escapeHtml(cls.name)}">
-                ${escapeHtml(cls.name)}
-              </span>
-            </td>
-            <!-- 7. STUDENTS -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${studentsHtml}</td>
-            <!-- 8. SCOPE / MODALITY -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${scopeHtml}</td>
-            <!-- 9. ENGINE -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${engineHtml}</td>
-            <!-- 10. TASK PASS -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${taskHtml}</td>
-            <!-- 11. EXAM PASS -->
-            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">${examHtml}</td>
-            <!-- 12. STATUS -->
             <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
-              <span class="status-tag ${cls.is_active ? 'status-active' : 'status-inactive'}" data-status="${cls.is_active ? 'active' : 'inactive'}" style="cursor:pointer;font-size:12px;font-weight:700;letter-spacing:0.04em;color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};text-shadow:none;" onclick="window.toggleClassesHubEntity('classes','${cls.id}',${!cls.is_active})" title="Click to ${cls.is_active ? 'deactivate' : 'activate'} this class">
+              ${levelHtml}
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              ${codeHtml}
+            </td>
+            <td style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              <span style="font-weight:600;font-size:12px;color:var(--fm-text-primary);">${escapeHtml(cls.name)}</span>
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;border-right:2px solid rgba(255,255,255,0.22) !important;">
+              ${studentsHtml}
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              ${scopeHtml}
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;border-right:2px solid rgba(255,255,255,0.22) !important;">
+              ${engineHtml}
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              <span style="color:#95ff00;font-weight:700;">${taskLabel}</span>
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;border-right:2px solid rgba(255,255,255,0.22) !important;">
+              <span style="color:#ff2d87;font-weight:700;">${examLabel}</span>
+            </td>
+            <td class="text-center" style="font-size:12px;white-space:nowrap;padding:8px 8px;">
+              <span style="font-weight:700;font-size:12px;color:${cls.is_active ? 'var(--grade-b, #95ff00)' : 'var(--grade-e, #ff0000)'};">
                 ${cls.is_active ? 'ACTIVE' : 'INACTIVE'}
-              </span>
-              <span class="edit-mode-only" style="margin-left:6px;gap:4px;display:none;">
-                <button class="btn btn-secondary btn-sm" style="padding:0 6px;height:22px;line-height:20px;font-size:12px;" onclick="event.stopPropagation();window.openClassesHubEdit('classes','${cls.id}')" title="Edit Class">Edit</button>
-                <button class="btn btn-danger btn-sm" style="padding:0 6px;height:22px;line-height:20px;font-size:12px;" onclick="event.stopPropagation();window.deleteClassesHubRecord('classes','${cls.id}','${escapeHtml(cls.name)}')" title="Delete Class">Del</button>
               </span>
             </td>
           </tr>
         `;
       };
 
-      const sortedClasses = sortClassList(searchedClasses);
-
       const renderTableRowsHtml = (list) => {
-        if (list.length === 0) {
+        if (!list || list.length === 0) {
           return `
             <tr>
-              <td colspan="12" style="text-align:center;padding:36px 16px;color:var(--fm-text-muted);">
-                <div style="font-size:14px;font-weight:600;margin-bottom:6px;">No classes found</div>
-                <div style="font-size:12px;">Try adjusting your search query or discipline selection.</div>
+              <td colspan="12" style="text-align:center;padding:32px 16px;color:#94a3b8;font-size:12px;">
+                No classes match the active filter or search query.
               </td>
             </tr>
           `;
@@ -754,458 +892,166 @@ export async function renderClassesHub(area) {
         return list.map((cls, idx) => buildClassRow(cls, idx)).join('');
       };
 
-      // Fetch governance rules for active discipline if in discipline view
-      let discGov = DEFAULT_DISCIPLINE_GOVERNANCE[activeDiscipline] || DEFAULT_DISCIPLINE_GOVERNANCE.VOCABULARY;
-      if (!isMasterDirectory) {
-        try {
-          discGov = await fetchDisciplineGovernance(activeDiscipline);
-        } catch (_) {}
+      // Filter classes for display
+      let displayClasses = searchedClasses;
+      if (activeTenant === 'CEC' && activeStepFilter !== 'ALL') {
+        const targetStepNum = Number(activeStepFilter);
+        displayClasses = searchedClasses.filter(c => {
+          const raw = (c.name || c.code || '').toUpperCase();
+          const lvl = c.level_id ? levelMap.get(c.level_id) : null;
+          return lvl?.level_number === targetStepNum || raw.includes(`${targetStepNum}ST`) || raw.includes(`${targetStepNum}ND`) || raw.includes(`${targetStepNum}RD`) || raw.includes(`-${targetStepNum}`);
+        });
       }
 
-      const isVocab = activeDiscipline === 'VOCABULARY';
-      const taskScore = discGov.taskMinScore || 60;
-      const examScore = discGov.examMinScore || 60;
-      const wordsPacing = discGov.wordsPacing || { written: 15, recognition: 10, selection: 10, spoken: 10 };
-      const phrasesPacing = discGov.phrasesPacing || { written: 25, recognition: 10, selection: 10, spoken: 20 };
-
-      // Set bottom infobar: All summary and contextual info lives in Sub Panel per ui-invariants.md § 1.3
-      const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
-      const actCount = sortedClasses.filter(c => c.is_active).length;
-      const inactCount = sortedClasses.filter(c => !c.is_active).length;
-      const totalEligible = sortedClasses.reduce((sum, c) => sum + getEligibleStudentCountForClass(c), 0);
-
-      const editBtnStyle = isEditOn
-        ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
-        : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
-      const editBtnLabel = isEditOn
-        ? `${getSvgIcon('check-circle', 14)} Done Editing`
-        : `${getSvgIcon('edit', 14)} Edit Mode`;
-
-      let leftSubPanelHtml = '';
-      let rightSubPanelHtml = '';
-
-      if (isVocab) {
-        // Sub Panel Left: Vocabulary Discipline Summary Info
-        leftSubPanelHtml = `
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1;white-space:nowrap;">
-            <span style="font-weight:800;color:#c084fc;text-transform:uppercase;">VOCABULARY MASTERY:</span>
-            <span><strong style="color:#f8fafc;">${targetClasses.length}</strong> Classes</span>
-            <span>·</span>
-            <span><strong style="color:#38bdf8;">${totalEligible}</strong> Students</span>
-            <span>·</span>
-            <span style="color:var(--grade-a);font-weight:700;"><strong>${actCount}</strong> ACTIVE</span>
-            <span>·</span>
-            <span style="color:#95ff00;font-weight:700;">L2: 100% Words (7 Reps)</span>
-            <span>·</span>
-            <span style="color:#ff2d87;font-weight:700;">L1/L3/TOP: Words &amp; Phrases (14 Reps)</span>
-            <span>·</span>
-            <span style="color:var(--task-color, var(--grade-b, #95ff00));font-weight:700;">Task: ${taskScore}%</span>
-            <span>·</span>
-            <span style="color:var(--exam-color, var(--quad-a, #ff2d87));font-weight:700;">Exam: ${examScore}%</span>
-            <span>·</span>
-            <span style="color:#38bdf8;font-weight:700;">Vault: ${vaultCountsByLevel.total} Words</span>
-          </div>
-        `;
-
-        // Sub Panel Right: Action buttons
-        rightSubPanelHtml = `
-          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-color:#ff2d87;color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
-              ${getSvgIcon('award', 13)} Exam Rules ↗
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
-              ${getSvgIcon('book-open', 14)} Open Vault
-            </button>
-            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
-              ${editBtnLabel}
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Class">
-              ${getSvgIcon('plus', 14)} Add Class
-            </button>
-          </div>
-        `;
-      } else if (!isMasterDirectory) {
-        const activeConfig = DISCIPLINE_TABS.find(d => d.key === activeDiscipline) || DISCIPLINE_TABS[0];
-        leftSubPanelHtml = `
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1;white-space:nowrap;">
-            <span style="font-weight:800;color:${activeConfig.color};text-transform:uppercase;">${activeConfig.name} DISCIPLINE:</span>
-            <span><strong style="color:#f8fafc;">${targetClasses.length}</strong> Classes</span>
-            <span>·</span>
-            <span><strong style="color:#38bdf8;">${totalEligible}</strong> Students</span>
-            <span>·</span>
-            <span style="color:var(--grade-a);font-weight:700;"><strong>${actCount}</strong> ACTIVE</span>
-            <span>·</span>
-            <span style="color:var(--task-color, var(--grade-b, #95ff00));font-weight:700;">Task: ${taskScore}%</span>
-            <span>·</span>
-            <span style="color:var(--exam-color, var(--quad-a, #ff2d87));font-weight:700;">Exam: ${examScore}%</span>
-          </div>
-        `;
-
-        rightSubPanelHtml = `
-          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-color:#ff2d87;color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
-              ${getSvgIcon('award', 13)} Exam Rules ↗
-            </button>
-            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
-              ${editBtnLabel}
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Class">
-              ${getSvgIcon('plus', 14)} Add Class
-            </button>
-          </div>
-        `;
+      // Compute grid layout:
+      // If TOP: exactly 3 classes -> 3 columns in 1 row (100% height)
+      // If CEC and filtered to a step (1-4 classes) -> 1 row of up to 4 columns (100% height)
+      // If CEC and ALL -> 3 columns x 2 rows (100% height)
+      let gridColumnsCss = 'repeat(3, 1fr)';
+      let gridRowsCss = '1fr';
+      if (activeTenant === 'TOP') {
+        gridColumnsCss = `repeat(${Math.max(1, displayClasses.length)}, 1fr)`;
+        gridRowsCss = '1fr';
       } else {
-        // Master Directory Sub Panel Left: Search & Overall summary
-        leftSubPanelHtml = `
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:nowrap;">
-            <div style="position:relative;display:inline-flex;align-items:center;">
-              <span style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px;display:inline-flex;align-items:center;pointer-events:none;">
-                ${getSvgIcon('search', 12)}
-              </span>
-              <input type="text" id="classes-hub-search" placeholder="Search classes, codes, programs..." value="${escapeHtml(searchQuery)}" style="padding:0 8px 0 26px;font-size:12px;height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.15);color:#f8fafc;border-radius:4px;width:240px;outline:none;box-sizing:border-box;" />
-            </div>
-            <div id="classes-hub-summary-text" style="display:inline-flex;align-items:center;gap:10px;font-size:12px;color:#94a3b8;font-weight:600;white-space:nowrap;">
-              <span><strong style="color:#f8fafc;">${sortedClasses.length}</strong>${searchQuery ? ` of ${targetClasses.length}` : ''} Classes</span>
-              <span>·</span>
-              <span style="color:var(--grade-a);font-weight:700;"><strong style="color:var(--grade-a);">${actCount}</strong> ACTIVE</span>
-              <span>·</span>
-              <span style="color:var(--grade-e);font-weight:700;"><strong style="color:var(--grade-e);">${inactCount}</strong> INACTIVE</span>
-              <span>·</span>
-              <span><strong style="color:#818cf8;">${totalEligible}</strong> Eligible Students</span>
-            </div>
-          </div>
-        `;
-
-        // Master Directory Sub Panel Right: Controls
-        rightSubPanelHtml = `
-          <div style="display:flex;align-items:center;gap:8px;white-space:nowrap;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important;line-height:28px !important;padding:0 10px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;border-color:#ff2d87;color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
-              ${getSvgIcon('award', 13)} Exam Rules ↗
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:600;display:inline-flex;align-items:center;gap:5px;border-radius:4px;cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
-              ${getSvgIcon('book-open', 14)} Open Vault
-            </button>
-            <button type="button" class="btn btn-sm" id="btn-classes-hub-toggle-edit" onclick="window.toggleClassesHubEditMode()" style="${editBtnStyle}" title="Toggle Master Edit Mode (Inline Standards)">
-              ${editBtnLabel}
-            </button>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;background:var(--primary-tactical, #38bdf8);border-color:var(--primary-tactical, #38bdf8);color:#0f172a;font-weight:800;" title="Add New Class">
-              ${getSvgIcon('plus', 14)} Add Class
-            </button>
-            ${isEditOn ? `
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-add-level" onclick="window.openClassesHubAddLevel()" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;" title="Add New Level">
-                ${getSvgIcon('plus', 14)} Add Level
-              </button>
-            ` : ''}
-          </div>
-        `;
-      }
-
-      if (typeof window.setBottomInfobar === 'function') {
-        window.setBottomInfobar(leftSubPanelHtml, rightSubPanelHtml);
-
-        const sInp = document.getElementById('classes-hub-search');
-        if (sInp && !sInp.dataset.bound) {
-          sInp.dataset.bound = 'true';
-          sInp.addEventListener('input', (e) => {
-            window._classesHubSearch = e.target.value;
-            const curTarget = isMasterDirectory
-              ? (activeInstFilter === 'all'
-                  ? activeClasses
-                  : activeClasses.filter(c => {
-                      const prog = progMap.get(c.program_id);
-                      return (prog && prog.institution_id === activeInstFilter) || (c.institution_id === activeInstFilter);
-                    }))
-              : activeClasses.filter(c => detectClassDiscipline(c) === activeDiscipline);
-            const searched = filterClassesList(curTarget, e.target.value.toLowerCase().trim());
-            const sorted = sortClassList(searched);
-            const tbody = document.getElementById('classes-hub-tbody');
-            if (tbody) tbody.innerHTML = renderTableRowsHtml(sorted);
-          });
+        if (activeStepFilter !== 'ALL') {
+          gridColumnsCss = `repeat(${Math.max(1, displayClasses.length)}, 1fr)`;
+          gridRowsCss = '1fr';
+        } else {
+          gridColumnsCss = 'repeat(3, 1fr)';
+          gridRowsCss = 'repeat(2, 1fr)';
         }
       }
 
-      // Workstation Datagrid View (Strict 100vh lock, zero outer scrollbar)
-      area.innerHTML = isVocab ? `
-        <!-- VOCABULARY DISCIPLINE: Cards Top & Full-Width Datagrid Bottom (Workspace Dual-Zone Vertical Split) -->
-        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; height:100% !important; overflow:hidden !important; gap:10px; padding:0; box-sizing:border-box; background:#090d16;">
-
-          <!-- TOP ROW: Vocabulary Governance 4-Card Deck (flex: 0 0 auto) -->
-          <div style="display:grid; grid-template-columns:1.2fr 1fr 1fr 1.05fr; gap:10px; flex:0 0 auto; box-sizing:border-box;">
-
-            <!-- Card 1: Vocabulary Mastery Modules (Tactical Cyan SSOT) -->
-            <div style="background:#0F172A; border:1px solid rgba(56,189,248,0.3); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
-              <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                  <span style="font-size:12px; font-weight:800; color:#38BDF8; text-transform:uppercase; letter-spacing:0.04em;">1. Vocabulary Mastery Modules</span>
-                  <span style="font-size:12px; font-weight:700; color:var(--grade-e); border:1px solid rgba(255,0,0,0.3); padding:1px 6px; border-radius:4px; text-transform:uppercase;">Isolated</span>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                  <div>
-                    <div style="font-size:12px; font-weight:700; color:#38BDF8;">Recognition Module</div>
-                    <div style="font-size:12px; color:#94A3B8;">4-choice distractor recognition &amp; contextual filtering. Evaluates fast semantic identification.</div>
-                  </div>
-                  <div>
-                    <div style="font-size:12px; font-weight:700; color:#38BDF8;">Spoken Module</div>
-                    <div style="font-size:12px; color:#94A3B8;">Phonetic speech analysis &amp; pronunciation verification. Evaluates oral production &amp; acoustic clarity.</div>
-                  </div>
-                  <div>
-                    <div style="font-size:12px; font-weight:700; color:#38BDF8;">Written Module</div>
-                    <div style="font-size:12px; color:#94A3B8;">Text typing, spelling recall &amp; lexical precision. Evaluates word-for-word spelling accuracy &amp; translation.</div>
-                  </div>
-                </div>
-              </div>
-              <div style="margin-top:6px; font-size:12px; color:#64748b; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
-                * Locked strictly to Vocabulary; zero cross-discipline leak.
-              </div>
-            </div>
-
-            <!-- Card 2: Words Pacing & Modality (Lime SSOT) -->
-            <div style="background:#0F172A; border:1px solid rgba(149,255,0,0.35); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
-              <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                  <span style="font-size:12px; font-weight:800; color:#95FF00; text-transform:uppercase; letter-spacing:0.04em;">2. Words Pacing &amp; Rules</span>
-                  <span style="font-size:12px; color:#95FF00; font-weight:700; border:1px solid rgba(149,255,0,0.3); padding:1px 6px; border-radius:4px;">INDIVIDUAL WORDS</span>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #95FF00;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Recognition Module:</span>
-                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#95FF00;">${wordsPacing.recognition || wordsPacing.selection || 10}s / word</span>
-                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
-                        <input type="number" id="pacing-words-recognition" value="${wordsPacing.recognition || wordsPacing.selection || 10}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#95FF00; border:1px solid rgba(149,255,0,0.5); border-radius:3px; padding:0;" />
-                        <span style="font-size:12px; color:#94a3b8;">s/word</span>
-                      </span>
-                    </div>
-                    <div style="font-size:12px; color:#94A3B8;">4-choice recognition &amp; distractor filtering</div>
-                  </div>
-                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #95FF00;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Spoken Module:</span>
-                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#95FF00;">${wordsPacing.spoken || 10}s / word</span>
-                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
-                        <input type="number" id="pacing-words-spoken" value="${wordsPacing.spoken || 10}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#95FF00; border:1px solid rgba(149,255,0,0.5); border-radius:3px; padding:0;" />
-                        <span style="font-size:12px; color:#94a3b8;">s/word</span>
-                      </span>
-                    </div>
-                    <div style="font-size:12px; color:#94A3B8;">Phonetic voice &amp; pronunciation check</div>
-                  </div>
-                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #95FF00;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Written Module:</span>
-                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#95FF00;">${wordsPacing.written || 15}s / word</span>
-                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
-                        <input type="number" id="pacing-words-written" value="${wordsPacing.written || 15}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#95FF00; border:1px solid rgba(149,255,0,0.5); border-radius:3px; padding:0;" />
-                        <span style="font-size:12px; color:#94a3b8;">s/word</span>
-                      </span>
-                    </div>
-                    <div style="font-size:12px; color:#94A3B8;">Typing, spelling &amp; meaning recall</div>
-                  </div>
-                </div>
-              </div>
-              <div style="margin-top:6px; font-size:12px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
-                Scope: 50 Q/task · 7 Reps · <strong style="color:#95FF00;">L2 is 100% Words Only</strong>
-              </div>
-            </div>
-
-            <!-- Card 3: Phrases Pacing & Modality (Pink SSOT) -->
-            <div style="background:#0F172A; border:1px solid rgba(255,45,135,0.35); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
-              <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                  <span style="font-size:12px; font-weight:800; color:#FF2D87; text-transform:uppercase; letter-spacing:0.04em;">3. Phrases Pacing &amp; Rules</span>
-                  <span style="font-size:12px; color:#FF2D87; font-weight:700; border:1px solid rgba(255,45,135,0.3); padding:1px 6px; border-radius:4px;">MULTI-WORD IDIOMS</span>
-                </div>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #FF2D87;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Recognition Module:</span>
-                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#FF2D87;">${phrasesPacing.recognition || phrasesPacing.selection || 10}s / phrase</span>
-                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
-                        <input type="number" id="pacing-phrases-recognition" value="${phrasesPacing.recognition || phrasesPacing.selection || 10}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#FF2D87; border:1px solid rgba(255,45,135,0.5); border-radius:3px; padding:0;" />
-                        <span style="font-size:12px; color:#94a3b8;">s/phrase</span>
-                      </span>
-                    </div>
-                    <div style="font-size:12px; color:#94A3B8;">Context &amp; meaning match elimination</div>
-                  </div>
-                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #FF2D87;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Spoken Module:</span>
-                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#FF2D87;">${phrasesPacing.spoken || 20}s / phrase</span>
-                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
-                        <input type="number" id="pacing-phrases-spoken" value="${phrasesPacing.spoken || 20}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#FF2D87; border:1px solid rgba(255,45,135,0.5); border-radius:3px; padding:0;" />
-                        <span style="font-size:12px; color:#94a3b8;">s/phrase</span>
-                      </span>
-                    </div>
-                    <div style="font-size:12px; color:#94A3B8;">Full-cadence sentence articulation</div>
-                  </div>
-                  <div style="background:#090D16; border-radius:4px; padding:6px 8px; border-left:3px solid #FF2D87;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:12px; font-weight:700; color:#f8fafc;">Written Module:</span>
-                      <span class="classes-hub-score-view" style="font-size:12px; font-weight:700; color:#FF2D87;">${phrasesPacing.written || 25}s / phrase</span>
-                      <span class="classes-hub-score-input-wrap edit-mode-only" style="align-items:center; gap:2px; display:none;">
-                        <input type="number" id="pacing-phrases-written" value="${phrasesPacing.written || 25}" min="1" max="180" style="width:40px; height:20px; font-size:12px; font-weight:700; text-align:center; background:#090D16; color:#FF2D87; border:1px solid rgba(255,45,135,0.5); border-radius:3px; padding:0;" />
-                        <span style="font-size:12px; color:#94a3b8;">s/phrase</span>
-                      </span>
-                    </div>
-                    <div style="font-size:12px; color:#94A3B8;">Multi-word idiom keyboarding &amp; recall</div>
-                  </div>
-                </div>
-              </div>
-              <div style="margin-top:6px; font-size:12px; color:#94a3b8; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
-                Scope: 10 Q/task · 7 Reps · <strong style="color:var(--grade-e);">L2 Excludes Phrases (0 Reps)</strong>
-              </div>
-            </div>
-
-            <!-- Card 4: Calibrate Standards & Vault -->
-            <div style="background:#0F172A; border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;">
-              <div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);">
-                  <span style="font-size:12px; font-weight:800; color:#f8fafc; text-transform:uppercase; letter-spacing:0.04em;">4. Standards &amp; Vault</span>
-                  <span style="font-size:12px; color:var(--grade-c); font-weight:700;">LIVE PROPAGATION</span>
-                </div>
-                <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:6px; margin-bottom:8px;">
-                  <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px; white-space:nowrap;">Task Pass (%):</label>
-                    <input type="number" id="gov-inline-task-score" value="${taskScore}" min="1" max="100" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; color:var(--task-color, var(--grade-b, #95ff00)); font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom:2px; white-space:nowrap;">Exam Pass (%):</label>
-                    <input type="number" id="gov-inline-exam-score" value="${examScore}" min="1" max="100" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; color:var(--exam-color, var(--quad-a, #ff2d87)); font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:2px; white-space:nowrap;">Task Time (m):</label>
-                    <input type="number" id="gov-inline-task-dur" value="${discGov.taskDuration || 11}" min="1" max="180" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#f8fafc; font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:#CBD5E1; margin-bottom:2px; white-space:nowrap;">Exam Time (m):</label>
-                    <input type="number" id="gov-inline-exam-dur" value="${discGov.examDuration || 54}" min="1" max="180" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#f8fafc; font-weight:700; font-size:12px; text-align:center; box-sizing:border-box;" />
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px; white-space:nowrap;">Task Order:</label>
-                    <select id="gov-inline-task-order" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; color:var(--task-color, var(--grade-b, #95ff00)); font-weight:700; font-size:12px; padding:0 4px; box-sizing:border-box;">
-                      <option value="random" ${(discGov.taskOrder || 'random') === 'random' ? 'selected' : ''}>Random</option>
-                      <option value="sequential" ${discGov.taskOrder === 'sequential' ? 'selected' : ''}>Sequential</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style="display:block; font-size:12px; font-weight:700; color:var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom:2px; white-space:nowrap;">Exam Order:</label>
-                    <select id="gov-inline-exam-order" style="width:100%; height:26px; background:#090D16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; color:var(--exam-color, var(--quad-a, #ff2d87)); font-weight:700; font-size:12px; padding:0 4px; box-sizing:border-box;">
-                      <option value="random" ${(discGov.examOrder || 'random') === 'random' ? 'selected' : ''}>Random</option>
-                      <option value="sequential" ${discGov.examOrder === 'sequential' ? 'selected' : ''}>Sequential</option>
-                    </select>
-                  </div>
-                </div>
-                <button type="button" onclick="window.saveVocabGovInline()" style="width:100%; height:30px !important; line-height:28px !important; background:var(--primary-tactical, #38bdf8); border:none; border-radius:4px; color:#0f172a; font-size:12px; font-weight:800; cursor:pointer; letter-spacing:0.04em; display:flex; align-items:center; justify-content:center; gap:6px;">
-                  ${getSvgIcon('check-circle', 14)} SAVE &amp; SYNC STANDARDS
-                </button>
-              </div>
-              <div style="margin-top:6px; font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:4px;">
-                <span>Vault: <strong style="color:#38BDF8;">${vaultCountsByLevel.total}</strong> Words</span>
-                <span style="color:#64748b;">L1: <strong style="color:#818cf8;">${vaultCountsByLevel[1] || 0}</strong> · L2: <strong style="color:#95FF00;">${vaultCountsByLevel[2] || 0}</strong> · L3: <strong style="color:#C084FC;">${vaultCountsByLevel[3] || 0}</strong> · Non-L: <strong style="color:#94A3B8;">${vaultCountsByLevel[0] || 0}</strong></span>
-              </div>
-            </div>
-
-          </div><!-- /TOP ROW -->
-
-          <!-- BOTTOM SECTION: Full-Width Classes Datagrid Table (flex: 1 1 0) -->
-          <div class="table-wrap sticky-first" style="flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow-y:auto !important; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
-            <table class="datagrid-table" style="width:100%; min-width:1355px; border-collapse:collapse; table-layout:fixed;">
-              <colgroup>
-                <col style="width:40px;">
-                <col style="width:75px;">
-                <col style="width:95px;">
-                <col style="width:55px;">
-                <col style="width:110px;">
-                <col style="width:170px;">
-                <col style="width:65px;">
-                <col style="width:185px;">
-                <col style="width:320px;">
-                <col style="width:80px;">
-                <col style="width:80px;">
-                <col style="width:80px;">
-              </colgroup>
-              <thead style="position:sticky; top:0; z-index:20;">
-                <!-- Super-Headers Grouping (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
-                <tr style="height:30px;">
-                  <th colspan="7" style="background:#0b1120 !important; color:#ffffff !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">CURRICULUM IDENTITY</th>
-                  <th colspan="2" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">ASSESSMENT ENGINE</th>
-                  <th colspan="2" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">PASSING STANDARDS</th>
-                  <th colspan="1" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS</th>
-                </tr>
-                <!-- Sub-Headers (Matching Themed Parent Colors on Dark Surface SSOT) -->
-                <tr style="height:30px;">
-                  <th style="width:40px; text-align:center; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">NO</th>
-                  <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INST ${getSortIcon('institution')}</th>
-                  <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
-                  <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
-                  <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
-                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
-                  <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
-                  <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
-                  <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>
-                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
-                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
-                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-weight:700; font-size:12px; height:30px; line-height:30px;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
-                </tr>
-              </thead>
-              <tbody id="classes-hub-tbody">
-                ${renderTableRowsHtml(sortedClasses)}
-              </tbody>
-            </table>
+      // Step Filter Pills for CEC
+      const stepFilterStripHtml = activeTenant === 'CEC' ? `
+        <div style="display:flex; justify-content:space-between; align-items:center; flex:0 0 auto;">
+          <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:#94a3b8; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
+            <span style="color:#ff2d87;">●</span>
+            <span>3. Curriculum Classes &amp; Exam Standards (${displayClasses.length} of ${tenantClasses.length} Classes)</span>
           </div>
-
+          <div style="display:flex; align-items:center; gap:4px;">
+            <span style="font-size:10px; color:#64748b; font-weight:700; margin-right:4px;">STEP VIEW:</span>
+            <button type="button" onclick="window.setClassesHubStepFilter('ALL')" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 'ALL' ? '#ff2d87' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 'ALL' ? 'rgba(255,45,135,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 'ALL' ? '#ff2d87' : '#94a3b8'};">ALL STEPS (6)</button>
+            <button type="button" onclick="window.setClassesHubStepFilter(1)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 1 ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 1 ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 1 ? '#38bdf8' : '#94a3b8'};">1st STEP (4)</button>
+            <button type="button" onclick="window.setClassesHubStepFilter(2)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 2 ? '#95ff00' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 2 ? 'rgba(149,255,0,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 2 ? '#95ff00' : '#94a3b8'};">2nd STEP (2)</button>
+            <button type="button" onclick="window.setClassesHubStepFilter(3)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 3 ? '#c084fc' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 3 ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 3 ? '#c084fc' : '#94a3b8'};">3rd STEP (1)</button>
+          </div>
         </div>
       ` : `
-        <!-- NON-VOCAB / MASTER DIRECTORY: Full-width Datagrid View -->
-        <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow:hidden !important; gap:0; padding:0; box-sizing:border-box; background:#090d16;">
-
-          <div class="table-wrap sticky-first" style="flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow-y:auto !important; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:8px; margin:0;">
-            <table class="datagrid-table" style="width:100%; min-width:1355px; border-collapse:collapse; table-layout:fixed;">
-              <colgroup>
-                <col style="width:40px;">
-                <col style="width:75px;">
-                <col style="width:95px;">
-                <col style="width:55px;">
-                <col style="width:110px;">
-                <col style="width:170px;">
-                <col style="width:65px;">
-                <col style="width:185px;">
-                <col style="width:320px;">
-                <col style="width:80px;">
-                <col style="width:80px;">
-                <col style="width:80px;">
-              </colgroup>
-              <thead style="position:sticky; top:0; z-index:20;">
-                <!-- Super-Headers Grouping (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
-                <tr style="height:30px;">
-                  <th colspan="7" style="background:#0b1120 !important; color:#ffffff !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">CURRICULUM IDENTITY</th>
-                  <th colspan="2" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">ASSESSMENT ENGINE</th>
-                  <th colspan="2" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">PASSING STANDARDS</th>
-                  <th colspan="1" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS</th>
-                </tr>
-                <!-- Sub-Headers (Matching Themed Parent Colors on Dark Surface SSOT) -->
-                <tr style="height:30px;">
-                  <th style="width:40px; text-align:center; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">NO</th>
-                  <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INSTITUTION ${getSortIcon('institution')}</th>
-                  <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
-                  <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
-                  <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
-                  <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
-                  <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
-                  <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
-                  <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>
-                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
-                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
-                  <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-weight:700; font-size:12px; height:30px; line-height:30px;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
-                </tr>
-              </thead>
-              <tbody id="classes-hub-tbody">
-                ${renderTableRowsHtml(sortedClasses)}
-              </tbody>
-            </table>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex:0 0 auto;">
+          <div style="font-size:11px; font-weight:800; text-transform:uppercase; color:#94a3b8; letter-spacing:0.04em; display:flex; align-items:center; gap:6px;">
+            <span style="color:#38bdf8;">●</span>
+            <span>3. Vocational Curriculum Classes &amp; Exam Standards (${displayClasses.length} Classes &middot; Level 0)</span>
           </div>
-
+          <span style="font-size:10px; color:#64748b; font-weight:700;">EVNIKOM &middot; SHERATON &middot; TAMATA</span>
         </div>
       `;
+
+      // Render outer workspace with strict 100vh lock & zero scrolling (overflow: hidden !important)
+      if (viewMode === 'CARDS') {
+        area.innerHTML = `
+          <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; height:100% !important; overflow:hidden !important; gap:8px; padding:0; box-sizing:border-box; background:#090d16;">
+            <!-- TOP DECK: Dual-Card Deck (Grading SSOT + Step Composite Rules) -->
+            <div style="display:grid; grid-template-columns:1.25fr 1fr; gap:8px; flex:0 0 auto; box-sizing:border-box;">
+              ${gradingCardHtml}
+              ${stepScoringCardHtml}
+            </div>
+
+            <!-- FILTER STRIP -->
+            ${stepFilterStripHtml}
+
+            <!-- MAIN WORKSPACE CARDS GRID (100% Height, Zero Scroll) -->
+            <div style="flex:1 1 0 !important; min-height:0 !important; overflow:hidden !important; display:grid; grid-template-columns:${gridColumnsCss}; grid-template-rows:${gridRowsCss}; gap:8px; box-sizing:border-box;">
+              ${displayClasses.length > 0 ? displayClasses.map(renderClassCard).join('') : `
+                <div style="grid-column:1/-1; background:#0F172A; border:1px dashed rgba(255,255,255,0.15); border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#94a3b8;">
+                  <div style="font-size:13px; font-weight:700; color:#f8fafc; margin-bottom:2px;">No Classes Found</div>
+                  <div style="font-size:11px;">No active classes found for this filter. Click "+ Add Class" below to create one.</div>
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      } else {
+        // Table Matrix View (Zero Scroll with internal datagrid fit)
+        area.innerHTML = `
+          <div class="classes-hub-workspace" style="display:flex; flex-direction:column; flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; height:100% !important; overflow:hidden !important; gap:8px; padding:0; box-sizing:border-box; background:#090d16;">
+            <!-- TOP DECK: Dual-Card Deck -->
+            <div style="display:grid; grid-template-columns:1.25fr 1fr; gap:8px; flex:0 0 auto; box-sizing:border-box;">
+              ${gradingCardHtml}
+              ${stepScoringCardHtml}
+            </div>
+
+            <!-- TABLE CONTAINER -->
+            <div class="table-wrap sticky-first" style="flex:1 1 0 !important; min-height:0 !important; max-height:100% !important; overflow-y:auto !important; overflow-x:auto !important; background:#0f172a; border:1px solid rgba(255,255,255,0.12) !important; border-radius:6px; margin:0;">
+              <table class="datagrid-table" style="width:100%; min-width:1355px; border-collapse:collapse; table-layout:fixed;">
+                <colgroup>
+                  <col style="width:40px;"><col style="width:75px;"><col style="width:95px;"><col style="width:55px;"><col style="width:110px;"><col style="width:170px;"><col style="width:65px;"><col style="width:185px;"><col style="width:320px;"><col style="width:80px;"><col style="width:80px;"><col style="width:80px;">
+                </colgroup>
+                <thead style="position:sticky; top:0; z-index:20;">
+                  <tr style="height:30px;">
+                    <th colspan="7" style="background:#0b1120 !important; color:#ffffff !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">CURRICULUM IDENTITY</th>
+                    <th colspan="2" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">ASSESSMENT ENGINE</th>
+                    <th colspan="2" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">PASSING STANDARDS</th>
+                    <th colspan="1" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-size:12px; font-weight:800; text-align:center; padding:5px 8px; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS</th>
+                  </tr>
+                  <tr style="height:30px;">
+                    <th style="width:40px; text-align:center; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">NO</th>
+                    <th style="width:75px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('institution')" title="Sort by Institution">INSTITUTION ${getSortIcon('institution')}</th>
+                    <th style="width:95px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('program')" title="Sort by Program">PROGRAM ${getSortIcon('program')}</th>
+                    <th style="width:55px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('level')" title="Sort by Level">LVL ${getSortIcon('level')}</th>
+                    <th style="width:110px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('code')" title="Sort by Code">CODE ${getSortIcon('code')}</th>
+                    <th style="width:170px; text-align:left; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('name')" title="Sort by Class Name">CLASS NAME ${getSortIcon('name')}</th>
+                    <th style="width:65px; text-align:center; cursor:pointer; background:#0b1120 !important; color:#ffffff !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('students')" title="Sort by Eligible Students">STUDENTS ${getSortIcon('students')}</th>
+                    <th style="width:185px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">SCOPE / MODALITY</th>
+                    <th style="width:320px; text-align:center; background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">ENGINE</th>
+                    <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;" onclick="window.sortClassesHub('task')" title="Sort by Task Passing Rate">TASK PASS ${getSortIcon('task')}</th>
+                    <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; font-weight:700; font-size:12px; border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;" onclick="window.sortClassesHub('exam')" title="Sort by Exam Passing Rate">EXAM PASS ${getSortIcon('exam')}</th>
+                    <th style="width:80px; text-align:center; cursor:pointer; background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; font-weight:700; font-size:12px; height:30px; line-height:30px;" onclick="window.sortClassesHub('status')" title="Sort by Status">STATUS ${getSortIcon('status')}</th>
+                  </tr>
+                </thead>
+                <tbody id="classes-hub-tbody">
+                  ${renderTableRowsHtml(sortedClasses)}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // Sub Panel (40px Lower Panel)
+      if (window.setBottomInfobar) {
+        const leftHtml = `
+          <div style="display:flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; white-space:nowrap;">
+            <span style="font-weight:800; color:${activeTenant === 'CEC' ? '#ff2d87' : '#38bdf8'}; text-transform:uppercase;">${activeTenant} CURRICULUM:</span>
+            <span><strong style="color:#f8fafc;">${tenantClasses.length}</strong> Classes</span>
+            <span>·</span>
+            <span>Exam Standard: <strong style="color:#ffff00;">60% (Grade C)</strong></span>
+            <span>·</span>
+            <span>Task Pass: <strong style="color:#95ff00;">70% Rep</strong></span>
+            <span>·</span>
+            <span>Remedial Ceiling: <strong style="color:#ffff00;">60%</strong></span>
+            <span>·</span>
+            <span style="color:#8b5cf6; font-weight:700;">Alumni: Level X</span>
+          </div>
+        `;
+        const rightHtml = `
+          <div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.toggleClassesHubView()" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:var(--primary-tactical, #38bdf8); color:var(--primary-tactical, #38bdf8);" title="Toggle between Cards Overview and Datagrid Matrix">
+              ${getSvgIcon(viewMode === 'CARDS' ? 'grid' : 'layers', 13)} ${viewMode === 'CARDS' ? 'Table Matrix' : 'Cards View'}
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:#ff2d87; color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
+              ${getSvgIcon('award', 13)} Exam Rules ↗
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-classes-hub-open-vault" onclick="window.openVocabVaultFromClassHub()" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:600; display:inline-flex; align-items:center; gap:5px; border-radius:4px; cursor:pointer;" title="Open Topic Blueprint & Vocabulary Vault">
+              ${getSvgIcon('book-open', 14)} Open Vault
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="btn-classes-hub-add-class" onclick="window.openClassesHubAddClass(null)" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:var(--primary-tactical, #38bdf8); border-color:var(--primary-tactical, #38bdf8); color:#0f172a; font-weight:800;" title="Add New Class">
+              ${getSvgIcon('plus', 14)} Add Class
+            </button>
+          </div>
+        `;
+        window.setBottomInfobar(leftHtml, rightHtml);
+      }
 
       if (!window._classesHubEditModeListenerBound) {
         window._classesHubEditModeListenerBound = true;

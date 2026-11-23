@@ -4,7 +4,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160'
  * Extracted from test.html
  */
 
-import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261117_v549';
+import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261123_v641';
     import { requireStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
@@ -1902,7 +1902,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         if (titleEl) titleEl.textContent = 'FINALIZING & SUBMITTING TEST...';
         if (subEl) subEl.textContent = 'All answers are auto-saved. Loading your results...';
         if (timerEl) timerEl.innerHTML = '<span class="tc-spinner-sm" style="display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></span>';
-        if (pulseIcon) pulseIcon.textContent = '⚡';
+        if (pulseIcon) pulseIcon.innerHTML = getSvgIcon('zap', 16);
         _isGracePeriodActive = true;
         return;
       }
@@ -1913,7 +1913,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         if (titleEl) titleEl.textContent = 'SESSION CLOSED BY TUTOR • AUTO-SAVING';
         if (subEl) subEl.textContent = 'Tutor has concluded this exam session. Submitting your work...';
         if (timerEl) timerEl.textContent = '00:00';
-        if (pulseIcon) pulseIcon.textContent = '🔒';
+        if (pulseIcon) pulseIcon.innerHTML = getSvgIcon('lock', 16);
         _isGracePeriodActive = true;
         return;
       }
@@ -2911,7 +2911,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:12px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:12px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
 
         btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
 
@@ -2930,7 +2930,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           btn.setAttribute('aria-checked', 'true');
           btn.style.border = '1.5px solid #06b6d4';
           btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)';
-          btn.style.boxShadow = '0 0 16px rgba(6,182,212,0.25)';
+          btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           btn.style.color = '#ffffff';
           const activeLetter = btn.querySelector('.mc-letter');
           if (activeLetter) { activeLetter.style.background = '#06b6d4'; activeLetter.style.color = '#000000'; }
@@ -2985,7 +2985,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.className = `mc-option ${isSelected ? 'selected' : ''}`;
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:12px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 16px rgba(6,182,212,0.25)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:12px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
         btn.innerHTML = `<div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25;">${optText}</div>`;
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -3000,7 +3000,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           btn.setAttribute('aria-checked', 'true');
           btn.style.border = '1.5px solid #06b6d4';
           btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16,185,129,0.2) 100%)';
-          btn.style.boxShadow = '0 0 16px rgba(6,182,212,0.25)';
+          btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           btn.style.color = '#ffffff';
           answeredMap[row.id] = optText;
           updateActiveChipOnly(row.id, optText);
@@ -3254,7 +3254,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           capturedBadge.style.display = 'block';
           retakeBtn.style.display = 'flex';
           card1.style.borderColor = 'var(--grade-a)';
-          card1.style.boxShadow = '0 0 16px rgba(0, 192, 0, 0.35)';
+          card1.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           if (!isInitial) {
             playCameraShutterSound();
             triggerHapticFeedback([40]);
@@ -3367,7 +3367,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         const valRes = typeof validateDescriptionSentence === 'function' ? validateDescriptionSentence(text, targetDemo) : { valid: false, error: 'Loading validator...' };
         if (valRes.valid) {
           card2.style.borderColor = 'var(--grade-a)';
-          card2.style.boxShadow = '0 0 20px rgba(0, 192, 0, 0.45)';
+          card2.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           validatorCard.style.background = 'rgba(0, 192, 0, 0.15)';
           validatorCard.style.border = '1px solid var(--grade-a)';
           validatorCard.style.color = '#f8fafc';
@@ -3380,7 +3380,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         } else if (text && text.trim().length > 0) {
           hasTriggeredSuccess = false;
           card2.style.borderColor = '#ea580c';
-          card2.style.boxShadow = '0 0 16px rgba(234, 88, 12, 0.25)';
+          card2.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           validatorCard.style.background = 'rgba(255, 140, 0, 0.12)';
           validatorCard.style.border = '1px solid #ea580c';
           validatorCard.style.color = '#fed7aa';
@@ -3452,7 +3452,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
         abortActiveSpeechSession();
         micBtn.style.transform = 'scale(1.1)';
-        micBtn.style.boxShadow = '0 0 20px rgba(0,255,0,0.6)';
+        micBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
         micStatus.innerHTML = '<span style="color:var(--grade-a);font-weight:800;">● Listening... Speak your description</span>';
 
         currentActiveSpeechSession = createSpeechSession({
@@ -3568,7 +3568,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
       const micBtn = document.createElement('button');
       micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-a-rgb), 0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 0 24px rgba(var(--grade-a-rgb), 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
+      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(var(--grade-a-rgb), 0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow: 0.45), 0 8px 16px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
       micBtn.innerHTML = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
 
       const micHelp = document.createElement('div');
@@ -3608,7 +3608,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             micBtn.classList.add('listening');
             micBtn.style.background = 'linear-gradient(135deg, var(--grade-e) 0%, #990000 100%)';
             micBtn.style.borderColor = 'var(--grade-e)';
-            micBtn.style.boxShadow = '0 0 24px rgba(var(--grade-e-rgb), 0.75), 0 8px 16px rgba(0, 0, 0, 0.5)';
+            micBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
             micBtn.style.color = '#ffffff';
             micBtn.innerHTML = '<svg style="width:clamp(18px, 4.5vw, 24px); height:clamp(18px, 4.5vw, 24px);" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect></svg>';
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';

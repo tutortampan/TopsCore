@@ -1,7 +1,7 @@
 import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
 import { computeUnifiedScore, computeTopicPassLevel, detectClassDiscipline, isVocabularyClass, isManualEvaluationClass, isCbtEvaluationClass } from '../grading.js?v=20261106_v160';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261119_v633';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261124_v681';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 if (typeof window !== 'undefined') {
@@ -396,7 +396,7 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261124_v681';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -418,7 +418,7 @@ import { renderClassMeetingsAttendance, getMeetingsConfigForClass } from './clas
 import { renderExportQuestions } from './imports-exports.js?v=20261106_v160';
 import { openCrudModal, openDuplicateStudentsModal, openDuplicateQuestionsModal, openBulkEditTestsModal, hashPin } from './crud-modals.js?v=20261115_v528';
 import { renderCurriculum } from './curriculum-management.js?v=20261106_v160';
-import { renderClassesHub } from './classes-hub.js?v=20261121_v664';
+import { renderClassesHub } from './classes-hub.js?v=20261124_v680';
 import { renderDashboard } from './admin-deck.js?v=20261121_v655';
 import { openStudentFullEdit } from './student-management.js?v=20261123_v677';
 import { renderStudentsRegistration } from './student-registration.js?v=20261120_v640';
@@ -1402,32 +1402,12 @@ if (typeof window !== 'undefined') {
           }
         }
 
-        // 2. Check classes: If 0 eligible active students and currently is_active = true, deactivate; if gained members, activate
-        const classLevelPairs = new Set();
-        (classLevels || []).forEach(cl => {
-          if (cl.class_id && cl.level_id) classLevelPairs.add(cl.class_id + '_' + cl.level_id);
-        });
-
+        // 2. Classes SSOT: Curriculum classes are permanent academic entities and must remain active.
+        // Auto-heal: Ensure all non-deleted curriculum classes remain is_active: true.
         for (const cls of classes) {
-          const eligibleCount = activeStudents.filter(s => {
-            if (cls.program_id && s.program_id && s.program_id !== cls.program_id) return false;
-            const studentLevel = s.level_id || (s.batch_id ? batchMap.get(s.batch_id)?.current_level_id : null);
-            if (cls.level_id) {
-              if (studentLevel === cls.level_id) return true;
-              if (classLevelPairs.has(cls.id + '_' + studentLevel)) return true;
-              return false;
-            }
-            const classHasLevels = Array.from(classLevelPairs).some(pair => pair.startsWith(cls.id + '_'));
-            if (classHasLevels) {
-              return Boolean(studentLevel && classLevelPairs.has(cls.id + '_' + studentLevel));
-            }
-            return true;
-          }).length;
-
-          if (eligibleCount === 0 && cls.is_active) {
-            await sb.from('classes').update({ is_active: false }).eq('id', cls.id);
-          } else if (eligibleCount > 0 && !cls.is_active) {
+          if (!cls.is_active && !cls.deleted_at) {
             await sb.from('classes').update({ is_active: true }).eq('id', cls.id);
+            cls.is_active = true;
           }
         }
       } catch (e) {
@@ -2840,8 +2820,14 @@ if (typeof window !== 'undefined') {
               btn.disabled = true;
               if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
 
-              const { syncAllCurriculumTests } = await import('../api.js?v=20261114_v517');
+              const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v681');
+              if (window._classHubCache) delete window._classHubCache[targetClassId];
+              clearAdminCache();
+              clearApiCache();
               const res = await syncAllCurriculumTests({ classId: targetClassId, force: true });
+              clearAdminCache();
+              clearApiCache();
+              if (window._classHubCache) delete window._classHubCache[targetClassId];
 
               if (window.hideLoading) window.hideLoading();
               btn.innerHTML = oldHtml;
@@ -6947,8 +6933,14 @@ if (typeof window !== 'undefined') {
             btn.disabled = true;
             if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
 
-            const { syncAllCurriculumTests } = await import('../api.js?v=20261114_v517');
+            const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v681');
+            if (window._classHubCache) delete window._classHubCache[targetClassId];
+            clearAdminCache();
+            clearApiCache();
             const res = await syncAllCurriculumTests({ classId: targetClassId, force: true });
+            clearAdminCache();
+            clearApiCache();
+            if (window._classHubCache) delete window._classHubCache[targetClassId];
 
             if (window.hideLoading) window.hideLoading();
             btn.innerHTML = oldHtml;

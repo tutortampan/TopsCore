@@ -821,7 +821,7 @@ body.admin-body[data-theme="light"] .module-card.card {
 body.admin-body[data-theme="light"] .module-card .badge-area {
   background: rgba(2, 132, 199, 0.08) !important;
   border: 1.5px solid rgba(2, 132, 199, 0.25) !important;
-  box-shadow: 0 0 12px rgba(2, 132, 199, 0.12) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   color: #0284c7 !important;
 }
 body.admin-body[data-theme="light"] .module-card .title-area {

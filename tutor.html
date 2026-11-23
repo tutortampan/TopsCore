@@ -10,41 +10,61 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261123_v42" />
-  <link rel="stylesheet" href="css/tutor.css?v=20261123_v50" />
+  <link rel="stylesheet" href="css/tutor.css?v=20261124_v51" />
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
 </head>
 <body class="notranslate" data-theme="navy">
 
   <div id="tutor-app-container">
 
-    <!-- Top Header Landmark: Bento 3-Panel Model (TIME | DAY | DATE) -->
+    <!-- Top Header Landmark: Bento 3-Panel Model (Live Time | Day | Date) -->
     <header class="tutor-header" id="tutor-top-header">
       <div class="time-bento-grid" id="session-info-panel">
-        <div class="time-bento-card bento-time">
-          <span class="info-lbl">TIME</span>
+        <div class="time-bento-card bento-time" title="Current Time">
           <span class="info-val info-live-time" id="info-live-time">--:--:--</span>
         </div>
-        <div class="time-bento-card bento-day">
-          <span class="info-lbl">DAY</span>
+        <div class="time-bento-card bento-day" title="Current Day">
           <span class="info-val info-live-day" id="info-live-day">---</span>
         </div>
-        <div class="time-bento-card bento-date">
-          <span class="info-lbl">DATE</span>
+        <div class="time-bento-card bento-date" title="Current Date">
           <span class="info-val info-live-date" id="info-live-date">--/--/----</span>
         </div>
       </div>
       <!-- Hidden Compatibility Hooks for Logic Engines -->
       <span class="hidden" id="tutor-header-title" style="display:none !important;">CEC</span>
       <span class="hidden" id="tutor-header-class-name" style="display:none !important;">Level 1 Basic English</span>
-      <span class="hidden" id="tutor-header-emblem" style="display:none !important;">🏫</span>
+      <span class="hidden" id="tutor-header-emblem" style="display:none !important;"></span>
       <span class="hidden" id="session-status-badge" style="display:none !important;"></span>
       <span class="hidden" id="session-status-text" style="display:none !important;">STANDBY</span>
     </header>
 
     <!-- Floating In-App Toast Pill (5-Min Reminder & Alarm Notifications) -->
     <div id="tutor-floating-toast" class="tutor-toast-pill hidden">
-      <span class="toast-icon" id="tutor-toast-icon">🔔</span>
+      <span class="toast-icon" id="tutor-toast-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></span>
       <span class="toast-msg" id="tutor-toast-msg">Notification message</span>
+    </div>
+
+    <!-- Sub-View Swipe Indicator Bar (Top of Workspace) -->
+    <div class="tutor-sub-header-bar" id="tutor-sub-header-bar">
+      <!-- Study Area Sub-View (ATTENDANCE ⇄ SCORES) -->
+      <div class="sub-view-group" id="sub-group-study">
+        <button type="button" class="btn-sub-view active" id="sub-btn-attendance">ATTENDANCE</button>
+        <div class="swipe-dots-wrap" title="Swipe left or right to switch views">
+          <span class="swipe-dot active" id="dot-study-att"></span>
+          <span class="swipe-dot" id="dot-study-scr"></span>
+        </div>
+        <button type="button" class="btn-sub-view" id="sub-btn-scores">SCORES</button>
+      </div>
+
+      <!-- English Area Sub-View (FINES ⇄ PAYMENT) -->
+      <div class="sub-view-group hidden" id="sub-group-english" style="display:none;">
+        <button type="button" class="btn-sub-view active" id="sub-btn-fines">FINES</button>
+        <div class="swipe-dots-wrap" title="Swipe left or right to switch views">
+          <span class="swipe-dot active" id="dot-eng-fin"></span>
+          <span class="swipe-dot" id="dot-eng-pay"></span>
+        </div>
+        <button type="button" class="btn-sub-view" id="sub-btn-payment">PAYMENT</button>
+      </div>
     </div>
 
     <!-- Scrollable Blade Viewport -->
@@ -260,25 +280,14 @@
 
       <!-- BLADE 2: GRADE (Manual Score Entry Datagrid Matrix) -->
       <section id="blade-grade" class="tutor-blade-pane hidden" role="tabpanel" aria-labelledby="tab-btn-grade">
-        <!-- Separate Top Control Panel: 3 Level Cards (1st | 2nd | 3rd) & Class Pills -->
-        <div class="tutor-card grade-top-panel" id="grade-top-panel">
-          <!-- Level Filter Bar (1st, 2nd, 3rd) -->
-          <div class="roster-level-filter-bar" id="grade-level-filter-bar" style="margin-bottom:0 !important;">
-            <button type="button" class="btn-level-pill lvl-1 active" data-level="1" id="btn-grade-lvl-1" title="1st Level">
-              <span class="lvl-card-num">1st</span>
-            </button>
-            <button type="button" class="btn-level-pill lvl-2" data-level="2" id="btn-grade-lvl-2" title="2nd Level">
-              <span class="lvl-card-num">2nd</span>
-            </button>
-            <button type="button" class="btn-level-pill lvl-3" data-level="3" id="btn-grade-lvl-3" title="3rd Level">
-              <span class="lvl-card-num">3rd</span>
-            </button>
-          </div>
-
+        <!-- Separate Top Control Panel: Class Modality Selection Bar -->
+        <div class="tutor-card grade-top-panel" id="grade-top-panel" style="padding:6px 10px !important;">
           <!-- Class Modality Selection Bar -->
-          <div class="grade-class-filter-bar" id="grade-class-filter-bar">
+          <div class="grade-class-filter-bar" id="grade-class-filter-bar" style="margin:0 !important;">
             <!-- Dynamically populated with classes: VOCAB, BASIC, STORY, GRAMMAR, SPEAKING -->
           </div>
+          <!-- Hidden compatibility anchor -->
+          <div class="hidden" id="grade-level-filter-bar" style="display:none !important;"></div>
         </div>
 
         <!-- Separate Scrollable Student Grade Datagrid Table Panel with Sticky Header -->
@@ -302,34 +311,24 @@
 
       <!-- BLADE 3: FINES / ENGLISH AREA (Discipline & Fine Ledger) -->
       <section id="blade-discipline" class="tutor-blade-pane hidden" role="tabpanel" aria-labelledby="tab-btn-discipline">
-        <!-- Separate Top Control Panel: 3 Level Cards (1st | 2nd | 3rd) & Fines KPI Summary -->
-        <div class="tutor-card fines-top-panel" id="fines-top-panel">
-          <!-- Level Filter Bar (1st, 2nd, 3rd) -->
-          <div class="roster-level-filter-bar" id="fines-level-filter-bar" style="margin-bottom:0 !important;">
-            <button type="button" class="btn-level-pill lvl-1 active" data-level="1" id="btn-fines-lvl-1" title="1st Level">
-              <span class="lvl-card-num">1st</span>
-            </button>
-            <button type="button" class="btn-level-pill lvl-2" data-level="2" id="btn-fines-lvl-2" title="2nd Level">
-              <span class="lvl-card-num">2nd</span>
-            </button>
-            <button type="button" class="btn-level-pill lvl-3" data-level="3" id="btn-fines-lvl-3" title="3rd Level">
-              <span class="lvl-card-num">3rd</span>
-            </button>
-          </div>
+        <!-- Separate Top Control Panel: Fines KPI Summary -->
+        <div class="tutor-card fines-top-panel" id="fines-top-panel" style="padding:6px 10px !important;">
+          <!-- Hidden fallback for level bar -->
+          <div class="hidden" id="fines-level-filter-bar" style="display:none !important;"></div>
 
           <!-- Fines KPI Summary Bar -->
-          <div class="fines-summary-bar" id="fines-summary-bar">
+          <div class="fines-summary-bar" id="fines-summary-bar" style="margin:0 !important;">
             <div class="fines-kpi-pill kpi-total">
               <span class="kpi-lbl">TOTAL</span>
-              <span class="kpi-val" id="kpi-total-fine">Rp 0</span>
+              <span class="kpi-val" id="kpi-total-fine">0</span>
             </div>
             <div class="fines-kpi-pill kpi-paid">
               <span class="kpi-lbl">PAID</span>
-              <span class="kpi-val" id="kpi-total-paid">Rp 0</span>
+              <span class="kpi-val" id="kpi-total-paid">0</span>
             </div>
             <div class="fines-kpi-pill kpi-debt">
               <span class="kpi-lbl">UNPAID</span>
-              <span class="kpi-val" id="kpi-total-debt">Rp 0</span>
+              <span class="kpi-val" id="kpi-total-debt">0</span>
             </div>
           </div>
         </div>
@@ -340,14 +339,58 @@
             <table class="attendance-4col-table fines-datagrid-table" id="table-fines-matrix">
               <thead>
                 <tr>
-                  <th class="th-student-name" style="width:36%;">STUDENT NAME</th>
-                  <th class="th-fines-count" style="width:28%; text-align:center;">COUNT</th>
+                  <th class="th-student-name" style="width:38%;">STUDENT NAME</th>
+                  <th class="th-fines-count" style="width:26%; text-align:center;">WORDS</th>
                   <th class="th-fines-amount" style="width:18%; text-align:right;">AMOUNT</th>
                   <th class="th-fines-paid" style="width:18%; text-align:right;">PAID</th>
                 </tr>
               </thead>
               <tbody id="tbody-fines-matrix">
                 <!-- Dynamically rendered student rows with stepper & payment -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- BLADE 4: PAYMENT (English Area Settlement Ledger & QRIS) -->
+      <section id="blade-payment" class="tutor-blade-pane hidden" role="tabpanel" aria-labelledby="sub-btn-payment">
+        <!-- Separate Top Control Panel: Payment KPI Summary -->
+        <div class="tutor-card payment-top-panel" id="payment-top-panel" style="padding:6px 10px !important;">
+          <!-- Hidden fallback for level bar -->
+          <div class="hidden" id="payment-level-filter-bar" style="display:none !important;"></div>
+
+          <!-- Payment KPI Summary Bar -->
+          <div class="fines-summary-bar" id="payment-summary-bar" style="margin:0 !important;">
+            <div class="fines-kpi-pill kpi-total">
+              <span class="kpi-lbl">TOTAL FINE</span>
+              <span class="kpi-val" id="kpi-pay-total">0</span>
+            </div>
+            <div class="fines-kpi-pill kpi-paid">
+              <span class="kpi-lbl">PAID</span>
+              <span class="kpi-val" id="kpi-pay-paid">0</span>
+            </div>
+            <div class="fines-kpi-pill kpi-debt">
+              <span class="kpi-lbl">UNPAID</span>
+              <span class="kpi-val" id="kpi-pay-debt">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Separate Scrollable Payment Ledger Datagrid Table Panel with Sticky Header -->
+        <div class="tutor-card payment-table-card" id="payment-datagrid-card" style="padding:10px !important;">
+          <div class="attendance-table-wrap payment-table-wrap">
+            <table class="attendance-4col-table payment-datagrid-table" id="table-payment-matrix">
+              <thead>
+                <tr>
+                  <th class="th-student-name" style="width:40%;">STUDENT NAME</th>
+                  <th class="th-pay-debt" style="width:20%; text-align:right;">DEBT</th>
+                  <th class="th-pay-paid" style="width:20%; text-align:right;">PAID</th>
+                  <th class="th-pay-action" style="width:20%; text-align:center;">ACTION</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-payment-matrix">
+                <!-- Dynamically rendered student payment ledger rows -->
               </tbody>
             </table>
           </div>
@@ -415,10 +458,10 @@
         </div>
         <div class="tutor-modal-body">
           <div style="font-weight:700;font-size:14px;color:#ffffff;margin-bottom:4px;" id="modal-pay-student-name">Student Name</div>
-          <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Outstanding Debt: <span id="modal-pay-current-debt" style="font-weight:800;color:var(--grade-e, #ff0000);">Rp 0</span></div>
+          <div style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Outstanding Debt: <span id="modal-pay-current-debt" style="font-weight:800;color:var(--grade-e, #ff0000);">0</span></div>
 
           <div class="tutor-field" style="margin-bottom:10px;">
-            <label class="tutor-label" for="modal-pay-amount">Payment Amount (Rp)</label>
+            <label class="tutor-label" for="modal-pay-amount">Payment Amount</label>
             <input type="number" id="modal-pay-amount" class="tutor-input" placeholder="Enter amount" min="1000" step="1000" />
           </div>
 
@@ -459,20 +502,47 @@
       </div>
     </div>
 
-    <!-- Tri-Blade Tab Navigation (ATTENDANCE | GRADE | FINES) -->
-    <nav class="tutor-blade-tabs" id="tutor-nav-tabs" role="tablist">
-      <button type="button" class="blade-tab-btn active" id="tab-btn-attendance" role="tab" aria-selected="true" aria-controls="blade-attendance">
-        <span>ATTENDANCE</span>
-        <span class="tab-badge hidden" id="badge-present-count" style="display:none !important;">0</span>
+    <!-- 5. Rubric Guide & Score Picker Modal (Authentic CEC 1–5 Criteria) -->
+    <div class="tutor-modal-overlay hidden" id="modal-rubric-guide" role="dialog" aria-modal="true" aria-labelledby="rubric-modal-title">
+      <div class="tutor-modal-dialog" style="max-width:540px; text-align:left;">
+        <div class="tutor-modal-title" id="rubric-modal-title" style="display:flex; justify-content:space-between; align-items:center; font-size:13px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">
+          <span id="rubric-modal-title-text">RUBRIC EVALUATION GUIDE</span>
+          <button type="button" class="btn-modal-cancel" id="btn-close-rubric-modal" style="width:28px; height:28px; min-height:unset; padding:0; font-size:18px; line-height:1; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;">&times;</button>
+        </div>
+        <div class="tutor-modal-body" id="rubric-modal-body" style="padding:12px; display:flex; flex-direction:column; gap:8px; max-height:65vh; overflow-y:auto; box-sizing:border-box;">
+          <!-- Dynamically populated by openRubricGuideModal in tutor.js -->
+        </div>
+        <div class="tutor-modal-footer" style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px;">
+          <span id="rubric-modal-footer-hint" style="font-size:11px; color:#94a3b8; font-weight:600;">Tap any criterion to select score</span>
+          <button type="button" class="btn-modal-cancel" id="btn-dismiss-rubric-modal" style="height:36px; padding:0 16px; font-size:12px; font-weight:700;">CLOSE</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Level Selector Bar (1st | 2nd | 3rd) - 30px Locked Height SSOT -->
+    <nav class="tutor-bottom-level-bar" id="tutor-bottom-level-bar" role="navigation" aria-label="Level Selector">
+      <button type="button" class="btn-bottom-level btn-level-pill lvl-1 active" data-level="1" id="btn-bottom-lvl-1" title="1st Level">1st</button>
+      <button type="button" class="btn-bottom-level btn-level-pill lvl-2" data-level="2" id="btn-bottom-lvl-2" title="2nd Level">2nd</button>
+      <button type="button" class="btn-bottom-level btn-level-pill lvl-3" data-level="3" id="btn-bottom-lvl-3" title="3rd Level">3rd</button>
+    </nav>
+
+    <!-- Bottom Master Switcher Dock (STUDY AREA | ENGLISH AREA) -->
+    <nav class="tutor-master-dock" id="tutor-master-dock" role="navigation" aria-label="Main Work Area">
+      <button type="button" class="dock-switch-btn active" id="btn-dock-study" data-area="study" title="Study Area (Attendance &amp; Scores)">
+        <span class="dock-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c3 3 9 3 12 0v-5"></path></svg></span>
+        <span class="dock-btn-label">STUDY AREA</span>
       </button>
-      <button type="button" class="blade-tab-btn" id="tab-btn-grade" role="tab" aria-selected="false" aria-controls="blade-grade">
-        <span>GRADE</span>
+      <button type="button" class="dock-switch-btn" id="btn-dock-english" data-area="english" title="English Area (Fines &amp; Payment)">
+        <span class="dock-btn-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="tc-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
+        <span class="dock-btn-label">ENGLISH AREA</span>
+        <span class="tab-badge" id="badge-debt-count" style="display:none;">0</span>
       </button>
-      <button type="button" class="blade-tab-btn" id="tab-btn-discipline" role="tab" aria-selected="false" aria-controls="blade-discipline">
-        <span>FINES</span>
-        <span class="tab-badge" id="badge-debt-count">Rp 0</span>
-        <span class="hidden" style="display:none !important;">ENGLISH AREA</span>
-      </button>
+
+      <!-- Legacy Compatibility Hooks for Test Harness -->
+      <span class="hidden" id="tab-btn-attendance" style="display:none !important;"></span>
+      <span class="hidden" id="tab-btn-grade" style="display:none !important;"></span>
+      <span class="hidden" id="tab-btn-discipline" style="display:none !important;"></span>
+      <span class="hidden" id="badge-present-count" style="display:none !important;">0</span>
     </nav>
 
     <!-- 50px Bottom Locked Banner -->
@@ -484,6 +554,6 @@
 
   </div>
 
-  <script type="module" src="js/tutor.js?v=20261123_v50"></script>
+  <script type="module" src="js/tutor.js?v=20261124_v51"></script>
 </body>
 </html>

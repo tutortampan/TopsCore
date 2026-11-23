@@ -1502,7 +1502,7 @@ textarea.form-control {
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
   font-size: 12px !important;
   font-weight: 600 !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
   pointer-events: all;
   display: inline-flex !important;
   align-items: center !important;
@@ -1798,7 +1798,7 @@ div#class-analytics-grid,
 
 
 /* ==========================================================================
-   TOPSCORE LOCKED BANNER (PROMINENT, BIGGER & BOLDER: "TopsCore by Mr. Top")
+   TOPSCORE LOCKED BANNER (STANDARDIZED 12PX CENTERED SSOT: "TopsCore by Mr. Top")
    ========================================================================== */
 .topscore-locked-banner,
 #bottom-ad-banner {
@@ -1807,39 +1807,44 @@ div#class-analytics-grid,
   max-height: 50px !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-start !important;
-  text-align: left !important;
-  padding: 0 clamp(16px, 4vw, 24px) !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 0 16px !important;
   font-family: 'Inter', sans-serif !important;
-  font-size: 16px !important;
-  font-weight: 800 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   letter-spacing: 0.04em !important;
   box-sizing: border-box !important;
   position: relative !important;
   z-index: 100 !important;
 }
 
-.banner-brand-content {
+.banner-brand-content,
+.banner-brand-wrap {
   display: flex !important;
   align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
   width: 100% !important;
 }
 
 .topscore-locked-banner .banner-brand,
 #bottom-ad-banner .banner-brand {
-  font-size: 16px !important;
-  font-weight: 900 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   color: #38bdf8 !important;
-  letter-spacing: 0.05em !important;
-  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: none !important;
 }
 
 .topscore-locked-banner .banner-author,
 #bottom-ad-banner .banner-author {
-  font-size: 16px !important;
-  font-weight: 800 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   color: #f8fafc !important;
-  letter-spacing: 0.02em !important;
+  letter-spacing: 0.04em !important;
 }
 
 /* Phase 370: Theme Manager vs Theme Blueprint Separation */
@@ -1855,7 +1860,7 @@ div#class-analytics-grid,
   font-weight: 700;
   font-size: 12px;
   letter-spacing: 0.3px;
-  box-shadow: 0 0 6px rgba(var(--grade-a-rgb), 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .badge-program-unassigned {
   display: inline-flex;

@@ -11,6 +11,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass } from './grading.js?v=20261106_v160';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
+    import { getSupabase } from './supabase.js?v=20261121_v161';
 
     if (typeof window !== 'undefined') {
       window.INDONESIA_REGIONS = INDONESIA_REGIONS;
@@ -215,7 +216,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
   if ((!session.district || !session.village || !session.birth_date || !session.province) && session.student_id) {
     (async () => {
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+        const sb = await getSupabase();
         const { data: st } = await sb.from('students').select('gender, birth_date, education, province, city, district, village').eq('id', session.student_id).maybeSingle();
         if (st) {
           if (st.gender) session.gender = st.gender;
@@ -456,12 +457,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let currentCity = session.city || null;
       let currentDistrict = session.district || null;
       let currentVillage = session.village || null;
+      let currentBirthplace = session.birthplace || null;
+      let currentPhone = session.phone || null;
+      let currentGuardianName = session.guardian_name || null;
+      let currentGuardianPhone = session.guardian_phone || null;
 
       if (!currentGender || !currentBirthDate || !currentEducation || !currentProvince || !currentCity) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+          const sb = await getSupabase();
           const { data: st } = await withTimeout(
-            sb.from('students').select('gender, birth_date, education, province, city, district, village').eq('id', session.student_id).maybeSingle(),
+            sb.from('students').select('gender, birth_date, education, province, city, district, village, birthplace, phone, guardian_name, guardian_phone').eq('id', session.student_id).maybeSingle(),
             1500
           );
           if (st) {
@@ -472,6 +477,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (st.city) { currentCity = st.city; session.city = st.city; }
             if (st.district) { currentDistrict = st.district; session.district = st.district; }
             if (st.village) { currentVillage = st.village; session.village = st.village; }
+            if (st.birthplace) { currentBirthplace = st.birthplace; session.birthplace = st.birthplace; }
+            if (st.phone) { currentPhone = st.phone; session.phone = st.phone; }
+            if (st.guardian_name) { currentGuardianName = st.guardian_name; session.guardian_name = st.guardian_name; }
+            if (st.guardian_phone) { currentGuardianPhone = st.guardian_phone; session.guardian_phone = st.guardian_phone; }
             sessionStorage.setItem('topscore_session', JSON.stringify(session));
             renderHeroProfileDetails(session);
           }
@@ -505,12 +514,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const dayInp = document.getElementById('intro-birth-day');
       const monthSel = document.getElementById('intro-birth-month');
       const yearInp = document.getElementById('intro-birth-year');
+      const birthPlaceInp = document.getElementById('intro-birth-place');
+      const phoneInp = document.getElementById('intro-phone');
+      const guardianNameInp = document.getElementById('intro-guardian-name');
+      const guardianPhoneInp = document.getElementById('intro-guardian-phone');
       const provSel = document.getElementById('intro-province');
       const citySel = document.getElementById('intro-city');
       const distSel = document.getElementById('intro-district');
       const villSel = document.getElementById('intro-village');
       const eduSel = document.getElementById('intro-education-level');
       const confirmBtn = document.getElementById('btn-confirm-introduce');
+
+      if (birthPlaceInp && currentBirthplace) birthPlaceInp.value = currentBirthplace;
+      if (phoneInp && currentPhone) phoneInp.value = currentPhone;
+      if (guardianNameInp && currentGuardianName) guardianNameInp.value = currentGuardianName;
+      if (guardianPhoneInp && currentGuardianPhone) guardianPhoneInp.value = currentGuardianPhone;
 
       let selectedGender = currentGender || null;
 
@@ -805,6 +823,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const m = parseInt(monthSel.value, 10);
           const y = parseInt(yearInp.value, 10);
           const birthDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const selectedBirthPlace = birthPlaceInp?.value?.trim() || null;
+          const selectedPhone = phoneInp?.value?.trim() || null;
+          const selectedGuardianName = guardianNameInp?.value?.trim() || null;
+          const selectedGuardianPhone = guardianPhoneInp?.value?.trim() || null;
           const highestEdu = eduSel.value;
           const timeline = calculateEducationTimeline(y, highestEdu);
           const selectedProv = provSel?.value || null;
@@ -813,12 +835,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const selectedVill = villSel?.value || null;
 
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+            const sb = await getSupabase();
             const updatePayload = {
               gender: selectedGender,
               birth_date: birthDate,
               education: highestEdu
             };
+            if (selectedBirthPlace) updatePayload.birthplace = selectedBirthPlace;
+            if (selectedPhone) updatePayload.phone = selectedPhone;
+            if (selectedGuardianName) updatePayload.guardian_name = selectedGuardianName;
+            if (selectedGuardianPhone) updatePayload.guardian_phone = selectedGuardianPhone;
             if (selectedProv) updatePayload.province = selectedProv;
             if (selectedCity) updatePayload.city = selectedCity;
             if (selectedDist) updatePayload.district = selectedDist;
@@ -832,6 +858,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             session.education = highestEdu;
             session.education_level = highestEdu;
             session.academic_history = timeline;
+            if (selectedBirthPlace) session.birthplace = selectedBirthPlace;
+            if (selectedPhone) session.phone = selectedPhone;
+            if (selectedGuardianName) session.guardian_name = selectedGuardianName;
+            if (selectedGuardianPhone) session.guardian_phone = selectedGuardianPhone;
             if (selectedProv) session.province = selectedProv;
             if (selectedCity) session.city = selectedCity;
             if (selectedDist) session.district = selectedDist;
@@ -1079,7 +1109,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let photoUrl = localStorage.getItem(`stu_photo_${session.student_id}`);
       if (!photoUrl) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+          const sb = await getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, photo_status').eq('id', session.student_id).maybeSingle();
           if (st && st.photo_url) {
             photoUrl = st.photo_url;
@@ -1137,7 +1167,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let hasBirthday = localStorage.getItem(`stu_bd_${session.student_id}`) === 'true';
       if (!hasBirthday) {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+          const sb = await getSupabase();
           const { data: st } = await sb.from('students').select('birth_date').eq('id', session.student_id).maybeSingle();
           if (st && st.birth_date) {
             hasBirthday = true;
@@ -1339,7 +1369,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let birthYear = 2002;
 
       try {
-        const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+        const sb = await getSupabase();
         const { data: st } = await sb.from('students').select('education, birth_date').eq('id', session.student_id).maybeSingle();
         if (st && st.education) {
           if (Array.isArray(st.education) && st.education.length > 0) {
@@ -1714,8 +1744,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const fr = String(att?.forgiven_reason || '');
         if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
         if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
+        const aid = att.test_id || att.Test_id || att.tests?.id;
+        const tObj = (typeof allTestsMap !== 'undefined' && allTestsMap ? allTestsMap[aid] : null) || att.tests;
+        const isEx = tObj ? isExam(tObj) : /exam/i.test(att?.test_title || att?.title || '');
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
+        if (isEx) {
+          if (totalQ > 0 && totalQ <= 50) return 'phrases';
+          if (totalQ > 50) return 'words';
+          if (correctCount > 0 && correctCount <= 40) return 'phrases';
+          return 'words';
+        }
         if (totalQ > 0 && totalQ <= 20) return 'phrases';
         if (totalQ > 20) return 'words';
         if (correctCount > 15) return 'words';
@@ -1844,7 +1883,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         } else {
           // Task: Strictly requires targetReps (7 passes >= minScore)
           if (isUni) {
-            return (wordsPassCountByTest[t.id] || 0) >= targetReps && (phrasesPassCountByTest[t.id] || 0) >= targetReps;
+            const compTarget = (targetReps >= 14) ? Math.round(targetReps / 2) : (targetReps || 7);
+            return (wordsPassCountByTest[t.id] || 0) >= compTarget && (phrasesPassCountByTest[t.id] || 0) >= compTarget;
           }
           return (passCountByTest[t.id] || 0) >= targetReps;
         }
@@ -1910,11 +1950,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (pair && pair.isPair) {
           visitedPairIds.add(pair.wordsTest.id);
           if (pair.phrasesTest) visitedPairIds.add(pair.phrasesTest.id);
+          const compTarget = (targetReps >= 14) ? Math.round(targetReps / 2) : (targetReps || 7);
           const wordsPassed = pair.isUnified
-            ? (pair.isExam ? ((wordsBestByTest[pair.wordsTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.wordsTest.id])) : ((wordsPassCountByTest[pair.wordsTest.id] || 0) >= targetReps || Boolean(isForgivenByTest[pair.wordsTest.id])))
+            ? (pair.isExam ? ((wordsBestByTest[pair.wordsTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.wordsTest.id])) : ((wordsPassCountByTest[pair.wordsTest.id] || 0) >= compTarget || Boolean(isForgivenByTest[pair.wordsTest.id])))
             : isTestPassed(pair.wordsTest);
           const phrasesPassed = pair.isUnified
-            ? (pair.isExam ? ((phrasesBestByTest[pair.phrasesTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.phrasesTest.id])) : ((phrasesPassCountByTest[pair.phrasesTest.id] || 0) >= targetReps || Boolean(isForgivenByTest[pair.phrasesTest.id])))
+            ? (pair.isExam ? ((phrasesBestByTest[pair.phrasesTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.phrasesTest.id])) : ((phrasesPassCountByTest[pair.phrasesTest.id] || 0) >= compTarget || Boolean(isForgivenByTest[pair.phrasesTest.id])))
             : isTestPassed(pair.phrasesTest);
           if (!wordsPassed || !phrasesPassed) {
             nextAssignment = {
@@ -2062,6 +2103,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const phrasesP = nextAssignment.isUnified
             ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0)
             : (passCountByTest[nextAssignment.phrasesTest.id] || 0);
+          const compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : (targetReps || 7);
           const encoded = encodeURIComponent(JSON.stringify({
             badge: 'TOPIC TASK',
             title: displayTitle,
@@ -2072,7 +2114,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             phrasesTestId: nextAssignment.phrasesTest.id,
             wordsPasses: wordsP,
             phrasesPasses: phrasesP,
-            targetReps: targetReps
+            targetReps: compTargetReps
           }));
           container.onclick = () => {
             if (typeof window.triggerComponentChoiceModal === 'function') {
@@ -2412,10 +2454,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let html = '';
       sortedClasses.forEach(c => {
         const isSelected = c.id === (window._candidateClassId || window._selectedClassId);
-        const iconSvg = getClassSvgIcon(c.name, 18, isSelected ? '#38bdf8' : '#94a3b8');
+        const iconSvg = getClassSvgIcon(c.name, 20, isSelected ? '#38bdf8' : '#94a3b8');
         const pct = c._pct != null ? c._pct : 0;
         const isCompletedClass = Boolean(c._isCompleted || pct === 100);
-        const status = c._statusText || (isCompletedClass ? 'Completed' : (pct > 0 ? `${pct}% Progress` : 'In Progress'));
         const scoreColor = isCompletedClass ? '#94a3b8' : (typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : '#38bdf8');
         const scoreText = isCompletedClass ? CHECKMARK_ICON : `${pct}%`;
 
@@ -2427,7 +2468,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               </div>
               <div class="classes-selector-item-info">
                 <div class="classes-selector-item-name">${escapeHtml(c.name)}</div>
-                <div class="classes-selector-item-status">${escapeHtml(status)}</div>
               </div>
             </div>
             <div class="classes-selector-item-pct" style="color: ${scoreColor};">${scoreText}</div>
@@ -2575,6 +2615,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           });
         }
 
+        const compTargetReps = (Number(data.targetReps) >= 14) ? Math.round(Number(data.targetReps) / 2) : (Number(data.targetReps) || 7);
+
         if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
         if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
 
@@ -2593,9 +2635,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             selectedPart = data.phrasesTestId ? 'phrases' : null;
           }
         } else {
-          const targetReps = Number(data.targetReps) || 7;
-          const wordsDone = (Number(data.wordsPasses) || 0) >= targetReps;
-          const phrasesDone = (Number(data.phrasesPasses) || 0) >= targetReps;
+          const wordsDone = (Number(data.wordsPasses) || 0) >= compTargetReps;
+          const phrasesDone = (Number(data.phrasesPasses) || 0) >= compTargetReps;
           if (wordsDone && !phrasesDone && data.phrasesTestId) {
             selectedPart = 'phrases';
           } else if (data.wordsTestId) {
@@ -2663,8 +2704,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (wordsPips) wordsPips.classList.remove('hidden');
             if (wordsExamView) wordsExamView.classList.add('hidden');
             const wordsPasses = Number(data.wordsPasses || 0);
-            renderComponentPips('component-words-pips', wordsPasses);
-            if (wordsStatus) wordsStatus.textContent = `${wordsPasses}/${data.targetReps || 7}`;
+            renderComponentPips('component-words-pips', Math.min(compTargetReps, wordsPasses));
+            if (wordsStatus) wordsStatus.textContent = `${Math.min(compTargetReps, wordsPasses)}/${compTargetReps}`;
           }
           wordsCard.onclick = () => {
             if (selectedPart === 'words') {
@@ -2700,8 +2741,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (phrasesPips) phrasesPips.classList.remove('hidden');
             if (phrasesExamView) phrasesExamView.classList.add('hidden');
             const phrasesPasses = Number(data.phrasesPasses || 0);
-            renderComponentPips('component-phrases-pips', phrasesPasses);
-            if (phrasesStatus) phrasesStatus.textContent = `${phrasesPasses}/${data.targetReps || 7}`;
+            renderComponentPips('component-phrases-pips', Math.min(compTargetReps, phrasesPasses));
+            if (phrasesStatus) phrasesStatus.textContent = `${Math.min(compTargetReps, phrasesPasses)}/${compTargetReps}`;
           }
           phrasesCard.onclick = () => {
             if (selectedPart === 'phrases') {
@@ -2797,8 +2838,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const fr = String(att?.forgiven_reason || '');
         if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
         if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
+        const aid = att.test_id || att.Test_id || att.tests?.id;
+        const tObj = (typeof allTestsMap !== 'undefined' && allTestsMap ? allTestsMap[aid] : null) || att.tests;
+        const isEx = tObj ? isExam(tObj) : /exam/i.test(att?.test_title || att?.title || '');
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
+        if (isEx) {
+          if (totalQ > 0 && totalQ <= 50) return 'phrases';
+          if (totalQ > 50) return 'words';
+          if (correctCount > 0 && correctCount <= 40) return 'phrases';
+          return 'words';
+        }
         if (totalQ > 0 && totalQ <= 20) return 'phrases';
         if (totalQ > 20) return 'words';
         if (correctCount > 15) return 'words';
@@ -3234,11 +3284,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             <div style="display:flex;align-items:center;gap:0.75rem;flex-shrink:0;">
               ${bestPct !== null ? `
                 <div style="text-align:center;">
-                  <div style="font-size:16px;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);` : ''}">${bestPct.toFixed(0)}%</div>
+                  <div style="font-size:16px;font-weight:800;color:${gradeColor}${(grade === '★' || grade === 'S') ? `;text-shadow: none !important;` : ''}">${bestPct.toFixed(0)}%</div>
                   <div style="font-size:12px;color:var(--clr-text-3);">Best Rate</div>
                 </div>
                 ${(grade === '★' || grade === 'S' || bestPct >= 100)
-                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow:0 0 12px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
+                  ? `<div class="grade-star" style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;box-shadow: 0 2px 8px rgba(0,0,0,0.35);color:${TOPSCORE_COLORS.STAR};border:1.5px solid ${TOPSCORE_COLORS.STAR};">★</div>`
                   : `<div style="width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;border:2px solid ${gradeColor};color:${gradeColor};">${grade}</div>`
                 }
               ` : ''}
@@ -3339,7 +3389,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isManualClass = activeClass ? isManualEvaluationClass(activeClass) : false;
 
       if (isManualClass) {
-        const supabase = typeof getSupabase === 'function' ? getSupabase() : window.supabase;
+        const supabase = typeof getSupabase === 'function' ? await getSupabase() : window.supabase;
         const currentStudent = window._currentStudent || (typeof getCurrentStudent === 'function' ? getCurrentStudent() : null);
         const studentId = currentStudent?.id || window._studentId;
 
@@ -3512,7 +3562,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           gradeBadgeValue.textContent = '-';
         } else if (isGradeS) {
           gradeBadgeValue.innerHTML = `
-            <svg class="pure-star-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: none); display:inline-block; vertical-align:middle;">
               <defs>
                 <linearGradient id="starDashGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
@@ -3682,6 +3732,31 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       renderCompletedTestsBottom(attempts, allTests);
       populateUpNext(attempts, allTests);
+
+      // Check for Student Certificate & Final Examination
+      try {
+        const sb = await getSupabase();
+        const { data: certExam } = await sb
+          .from('student_final_examinations')
+          .select('*')
+          .eq('student_id', session.student_id)
+          .maybeSingle();
+
+        const certBtn = document.getElementById('btn-hero-certificate');
+        if (certBtn) {
+          if (certExam && (certExam.practice_score != null || certExam.certificate_nis)) {
+            certBtn.style.display = 'inline-flex';
+            certBtn.onclick = (e) => {
+              e.stopPropagation();
+              openStudentCertificateModal(certExam, session);
+            };
+          } else {
+            certBtn.style.display = 'none';
+          }
+        }
+      } catch (err) {
+        console.warn('Error loading student certificate for dashboard:', err);
+      }
     }
 
     // --- Render Completed Tests Section (Bottom of Dashboard - Dual Panel) ---
@@ -3696,7 +3771,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isManualClass = activeClass ? isManualEvaluationClass(activeClass) : false;
 
       if (isManualClass) {
-        const supabase = typeof getSupabase === 'function' ? getSupabase() : window.supabase;
+        const supabase = typeof getSupabase === 'function' ? await getSupabase() : window.supabase;
         const currentStudent = window._currentStudent || (typeof getCurrentStudent === 'function' ? getCurrentStudent() : null);
         const studentId = currentStudent?.id || window._studentId;
 
@@ -3815,8 +3890,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const fr = String(att?.forgiven_reason || '');
         if (/\b(phrases?|phr)\b/i.test(fr)) return 'phrases';
         if (/\b(words?|wrd)\b/i.test(fr)) return 'words';
+        const aid = att.test_id || att.Test_id || att.tests?.id;
+        const tObj = (typeof allTestsMap !== 'undefined' && allTestsMap ? allTestsMap[aid] : null) || att.tests;
+        const isEx = tObj ? isExam(tObj) : /exam/i.test(att?.test_title || att?.title || '');
         const totalQ = Number(att?.total_questions || 0);
         const correctCount = Number(att?.correct_count || att?.score || 0);
+        if (isEx) {
+          if (totalQ > 0 && totalQ <= 50) return 'phrases';
+          if (totalQ > 50) return 'words';
+          if (correctCount > 0 && correctCount <= 40) return 'phrases';
+          return 'words';
+        }
         if (totalQ > 0 && totalQ <= 20) return 'phrases';
         if (totalQ > 20) return 'words';
         if (correctCount > 15) return 'words';
@@ -4343,6 +4427,47 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         btnAttendance.addEventListener('click', () => setTab('attendance'));
       }
 
+      // Touch Swipe Gesture for Seamless Mobile Tab Navigation (Rank <-> Tests <-> Attend)
+      const dockSection = document.getElementById('bottom-dock-section');
+      if (dockSection) {
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+        const TABS = ['standings', 'completed', 'attendance'];
+
+        dockSection.addEventListener('touchstart', (e) => {
+          if (e.touches && e.touches.length === 1) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            touchStartTime = Date.now();
+          }
+        }, { passive: true });
+
+        dockSection.addEventListener('touchend', (e) => {
+          if (!e.changedTouches || e.changedTouches.length === 0) return;
+          const deltaX = e.changedTouches[0].clientX - touchStartX;
+          const deltaY = e.changedTouches[0].clientY - touchStartY;
+          const deltaTime = Date.now() - touchStartTime;
+
+          // Must be horizontal gesture (> 40px, deltaX > 1.4 * deltaY, fast enough < 600ms)
+          // This ensures smooth native vertical scrolling of tables is completely unaffected
+          if (deltaTime < 600 && Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+            const currentTab = paneStandings.classList.contains('active')
+              ? 'standings'
+              : (paneCompleted.classList.contains('active') ? 'completed' : 'attendance');
+            const currentIndex = TABS.indexOf(currentTab);
+
+            if (deltaX < 0 && currentIndex < TABS.length - 1) {
+              // Swipe Left -> next tab
+              setTab(TABS[currentIndex + 1]);
+            } else if (deltaX > 0 && currentIndex > 0) {
+              // Swipe Right -> previous tab
+              setTab(TABS[currentIndex - 1]);
+            }
+          }
+        }, { passive: true });
+      }
+
       // Check for active session in background and update badge
       checkActiveSessionBadge();
 
@@ -4372,15 +4497,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
         }
         if (active) {
-          badge.textContent = active.session_type === 'EXAM' ? 'EXAM' : 'ACTIVE';
+          badge.textContent = active.session_type === 'EXAM' ? 'EXAM' : 'LIVE';
           badge.style.background = active.session_type === 'EXAM' ? 'rgba(255,45,135,0.25)' : 'rgba(0,192,0,0.25)';
           badge.style.color = active.session_type === 'EXAM' ? '#ff2d87' : '#00c000ff';
           badge.style.borderColor = active.session_type === 'EXAM' ? '#ff2d87' : '#00c000ff';
+          badge.style.display = 'inline-flex';
         } else {
-          badge.textContent = 'STANDBY';
-          badge.style.background = 'rgba(56,189,248,0.15)';
-          badge.style.color = '#38bdf8';
-          badge.style.borderColor = 'rgba(56,189,248,0.3)';
+          badge.textContent = '';
+          badge.style.display = 'none';
         }
       } catch (_) {}
     }
@@ -4637,7 +4761,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let attempts = window._cachedBatchAttempts;
 
         if (!studentList || !attempts) {
-          const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+          const sb = await getSupabase();
 
           // 1. Fetch active students in the same batch
           const { data: students, error: stuErr } = await sb
@@ -4960,7 +5084,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 ${avatarHtml}
                 <div style="min-width:0; overflow:hidden;">
                   <div class="leaderboard-name-wrap">
-                    <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; text-shadow:0 0 10px rgba(${parseHexRgb(hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : theme.color)},0.45);` : ''}">${(isKing || isQueen) ? `<span class="leaderboard-avatar-crown" title="${isKing ? 'Batch King' : 'Batch Queen'}">${getSvgIcon('crown', 12)}</span>` : ''}${escHtml(displayTitleName)}</span>
+                    <span class="leaderboard-student-name ${isMe ? 'is-current-user' : ''}" style="${isMe ? `color:${hasExam && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(st.overallScore) : (hasExam ? theme.color : '#38bdf8')} !important; text-shadow: none !important;` : ''}">${(isKing || isQueen) ? `<span class="leaderboard-avatar-crown" title="${isKing ? 'Batch King' : 'Batch Queen'}">${getSvgIcon('crown', 12)}</span>` : ''}${escHtml(displayTitleName)}</span>
                   </div>
 
                 </div>
@@ -5348,7 +5472,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Fetch and display existing student photo and personal metadata
       (async () => {
         try {
-          const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+          const sb = await getSupabase();
           const { data: st } = await sb.from('students').select('photo_url, birth_date, education, gender, province, city, district, village, updated_at').eq('id', session.student_id).maybeSingle();
           if (st?.photo_url) {
             applyPhotoEverywhere(st.photo_url);
@@ -5649,7 +5773,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           showLoading('Saving profile changes…');
           try {
-            const sb = await (await import('./supabase.js?v=20261106_v154')).getSupabase();
+            const sb = await getSupabase();
             const updatePayload = {
               updated_at: new Date().toISOString()
             };
@@ -5864,6 +5988,279 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       actionBtn?.addEventListener('click', onAction, { once: true });
       modal.addEventListener('click', onBackdrop, { once: true });
     };
+
+    function formatDobEnglish(dob) {
+      if (!dob) return '—';
+      if (typeof dob === 'string' && (dob.includes('ᵀᴴ') || dob.includes('ˢᵀ') || dob.includes('<sup>'))) return dob;
+      try {
+        const d = new Date(dob);
+        if (isNaN(d.getTime())) return String(dob);
+        const day = d.getDate();
+        const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+        let ord = 'TH';
+        if (day === 1 || day === 21 || day === 31) ord = 'ST';
+        else if (day === 2 || day === 22) ord = 'ND';
+        else if (day === 3 || day === 23) ord = 'RD';
+        return `${day}<sup>${ord}</sup> ${months[d.getMonth()]} ${d.getFullYear()}`;
+      } catch (_) {
+        return String(dob);
+      }
+    }
+
+    function openStudentCertificateModal(certExam, session, fullProf = null) {
+      const fe = certExam || {};
+      const certNis = fe.certificate_nis || (session.nis ? `CEC/M/C.${session.nis}/${fe.certificate_month || 'XI'}/${fe.certificate_year || 2026}` : 'CEC/M/C.000000/XI/2026');
+      const certPredicates = [fe.practice_predicate, fe.speaking_predicate, fe.vocab_predicate, fe.pronunciation_predicate, fe.grammar_predicate].filter(Boolean);
+      const hasLessPredicate = certPredicates.some(p => String(p).trim().toUpperCase() === 'LESS');
+      const studentName = cleanStudentName(session.name || session.student_name);
+      const birthplace = session.birthplace || fullProf?.birthplace || 'Mataram';
+      const birthDate = session.birth_date || session.dob || fullProf?.birth_date;
+
+      const backdrop = document.createElement('div');
+      backdrop.id = 'student-cert-modal-backdrop';
+      backdrop.className = 'modal-backdrop';
+      backdrop.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:99999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:16px; box-sizing:border-box;';
+
+      backdrop.innerHTML = `
+        <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; width:94vw; max-width:880px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.6); overflow:hidden;">
+          <div style="height:56px; padding:0 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #334155; background:#1e293b; flex-shrink:0;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="font-size:18px;">🎓</span>
+              <h3 style="margin:0; font-family:var(--fm-font-display,'Inter',sans-serif); font-size:15px; font-weight:800; color:#ffffff; text-transform:uppercase;">
+                Official Certificate & Academic Transcript
+              </h3>
+            </div>
+            <button type="button" id="btn-close-cert-modal" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1;" title="Close">&times;</button>
+          </div>
+
+          <div style="padding:24px; overflow-y:auto; flex:1; background:#060911;">
+            ${hasLessPredicate ? `
+              <div style="background:#450a0a; border:1.5px solid #ef4444; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(239,68,68,0.2);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <span style="font-size:22px;">⚠️</span>
+                  <div>
+                    <strong style="color:#fecaca; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">STATUS: RETAKE REQUIRED</strong>
+                    <span style="color:#fca5a5; font-size:12px;">A 'LESS' predicate was evaluated. In accordance with academic SSOT, certificate is withheld until remedial exam is completed with passing standing.</span>
+                  </div>
+                </div>
+                <span style="background:#ef4444; color:#ffffff; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase;">WITHHELD</span>
+              </div>
+            ` : `
+              <div style="background:#052e16; border:1.5px solid #22c55e; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(34,197,94,0.15);">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <span style="font-size:22px;">✅</span>
+                  <div>
+                    <strong style="color:#bbf7d0; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">STATUS: OFFICIAL CREDENTIAL AUTHORIZED</strong>
+                    <span style="color:#86efac; font-size:12px;">All evaluated competencies have achieved passing threshold at Cake English Course.</span>
+                  </div>
+                </div>
+                <span style="background:#22c55e; color:#090d16; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase;">VERIFIED</span>
+              </div>
+            `}
+
+            <div id="student-cert-print-sheet" style="display:flex; flex-direction:column; gap:28px;">
+              <!-- PAGE 1: CERTIFICATE OF ACHIEVEMENT -->
+              <div style="background:#fdfbf7; color:#0f172a; border-radius:8px; padding:40px 48px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:800px; margin:0 auto; box-sizing:border-box; border:2.5px solid #b45309; outline:8px solid #fef3c7; outline-offset:-14px; position:relative; font-family:'Times New Roman', Georgia, serif; text-align:center;">
+                
+                <div style="margin-bottom:12px;">
+                  <div style="font-family:'Inter', sans-serif; font-size:11px; font-weight:800; color:#78350f; letter-spacing:0.12em; text-transform:uppercase;">LEMBAGA KURSUS DAN PELATIHAN</div>
+                  <h2 style="font-family:Georgia, serif; font-size:24px; font-weight:900; color:#0f172a; letter-spacing:0.06em; margin:4px 0 2px; text-transform:uppercase;">CAKE ENGLISH COURSE (CEC)</h2>
+                  <div style="font-family:'Inter', sans-serif; font-size:10px; font-weight:700; color:#64748b; letter-spacing:0.03em;">Kampoeng Pare Mataram &bull; NPSN K5669268 &bull; No. P PAUD PNF 421.9/3768/Disdik.B2/XI/2022</div>
+                  <div style="font-family:'Inter', sans-serif; font-size:10px; color:#64748b; margin-top:2px;">Jl. Abdul Kadir Munsyi No.16, Punia, Kec. Mataram, Kota Mataram, Nusa Tenggara Barat</div>
+                  <hr style="border:none; border-top:1.5px solid #b45309; width:65%; margin:12px auto 14px;">
+                </div>
+
+                <h1 style="font-family:Georgia, serif; font-size:28px; font-weight:900; color:#b45309; text-transform:uppercase; letter-spacing:0.08em; margin:8px 0 4px;">CERTIFICATE OF ACHIEVEMENT</h1>
+                <div style="font-family:monospace; font-size:12px; font-weight:800; color:#64748b; letter-spacing:0.05em; margin-bottom:16px;">Certificate No: ${certNis}</div>
+
+                <div style="font-family:Georgia, serif; font-style:italic; font-size:14px; color:#475569; margin-bottom:6px;">This is to certify that</div>
+                <h2 style="font-family:Georgia, serif; font-size:26px; font-weight:900; color:#0f172a; text-transform:uppercase; letter-spacing:0.04em; margin:6px 0 4px;">${studentName}</h2>
+                
+                <div style="font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:#334155; margin-bottom:14px;">
+                  Place, Date of Birth: <strong>${birthplace}, ${formatDobEnglish(birthDate)}</strong>
+                </div>
+
+                <p style="font-family:'Inter', sans-serif; font-size:13px; color:#334155; max-width:620px; margin:0 auto 16px; line-height:1.55;">
+                  has successfully satisfied all educational requirements, practical immersion standards, and comprehensive competency examinations of the <strong>Cake English Course Immersion Program</strong>.
+                </p>
+
+                <div style="display:inline-flex; align-items:center; gap:8px; background:#fffbeb; border:1.5px solid #fde68a; border-radius:6px; padding:6px 18px; margin:8px auto 20px;">
+                  <span style="font-family:'Inter', sans-serif; font-size:12px; font-weight:700; color:#78350f; text-transform:uppercase;">Overall Standing:</span>
+                  <strong style="font-family:Georgia, serif; font-size:16px; font-weight:900; color:#b45309; text-transform:uppercase;">${fe.practice_predicate || 'EXCELLENT'}</strong>
+                </div>
+
+                <div style="text-align:right; font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:#475569; margin-bottom:24px; padding-right:16px;">
+                  Mataram, ${fe.certificate_month || 'XI'} ${fe.certificate_year || 2026}
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; padding:0 24px;">
+                  <div style="text-align:center; width:190px;">
+                    <div style="height:44px;"></div>
+                    <strong style="font-family:'Inter', sans-serif; font-size:13px; font-weight:800; color:#0f172a; text-decoration:underline; display:block;">${fe.examiner_name || 'MR. SIGIT'}</strong>
+                    <span style="font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#64748b;">Lead Examiner</span>
+                  </div>
+
+                  <div style="text-align:center; width:100px;">
+                    <div style="width:72px; height:72px; border-radius:50%; border:2px dashed #b45309; margin:0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#b45309; font-family:'Inter', sans-serif; font-size:9px; font-weight:900; line-height:1.2;">
+                      <span>OFFICIAL</span>
+                      <span>SEAL</span>
+                      <span>CEC</span>
+                    </div>
+                  </div>
+
+                  <div style="text-align:center; width:190px;">
+                    <div style="height:44px;"></div>
+                    <strong style="font-family:'Inter', sans-serif; font-size:13px; font-weight:800; color:#0f172a; text-decoration:underline; display:block;">DIREKTUR CEC</strong>
+                    <span style="font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#64748b;">Course Director</span>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- PAGE 2: OFFICIAL ACADEMIC TRANSCRIPT -->
+              <div style="background:#ffffff; color:#0f172a; border-radius:8px; padding:36px 40px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:800px; margin:0 auto; box-sizing:border-box; border:1.5px solid #cbd5e1; font-family:var(--fm-font-sans, 'Inter', sans-serif);">
+                
+                <div style="text-align:center; border-bottom:2px solid #0f172a; padding-bottom:12px; margin-bottom:18px;">
+                  <h2 style="font-family:var(--fm-font-display, 'Inter', sans-serif); font-size:22px; font-weight:900; color:#0f172a; margin:0 0 4px; text-transform:uppercase; letter-spacing:0.04em;">
+                    OFFICIAL ACADEMIC TRANSCRIPT
+                  </h2>
+                  <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em;">
+                    CAKE ENGLISH COURSE &bull; MATARAM ACADEMIC EVALUATION BOARD
+                  </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 16px; margin-bottom:18px; font-size:13px;">
+                  <div><span style="color:#64748b; font-weight:600;">Full Name:</span> <strong style="color:#0f172a; text-transform:uppercase;">${studentName}</strong></div>
+                  <div><span style="color:#64748b; font-weight:600;">Certificate NIS:</span> <strong style="color:#0284c7; font-family:monospace;">${certNis}</strong></div>
+                  <div><span style="color:#64748b; font-weight:600;">Place, DOB:</span> <strong style="color:#0f172a;">${birthplace}, ${formatDobEnglish(birthDate)}</strong></div>
+                  <div><span style="color:#64748b; font-weight:600;">Program:</span> <strong style="color:#0f172a;">CEC Camp Intensive Program</strong></div>
+                </div>
+
+                <table style="width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; margin-bottom:20px; font-size:13px;">
+                  <thead>
+                    <tr style="background:#f1f5f9; border-top:1.5px solid #cbd5e1; border-bottom:2px solid #cbd5e1;">
+                      <th style="width:8%; text-align:center; padding:10px 8px; font-weight:800; color:#0f172a;">NO</th>
+                      <th style="width:28%; text-align:left; padding:10px 12px; font-weight:800; color:#0f172a; text-transform:uppercase;">COMPETENCY / MODALITY</th>
+                      <th style="width:36%; text-align:left; padding:10px 12px; font-weight:800; color:#0f172a; text-transform:uppercase;">EVALUATION SCOPE</th>
+                      <th style="width:14%; text-align:center; padding:10px 10px; font-weight:800; color:#0f172a; text-transform:uppercase;">SCORE</th>
+                      <th style="width:14%; text-align:center; padding:10px 10px; font-weight:800; color:#0f172a; text-transform:uppercase;">PREDICATE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">1</td>
+                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">VOCABULARY</td>
+                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Active Lexical Acquisition & Cumulative Retention</td>
+                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.vocab_score != null ? `${Math.round(fe.vocab_score)}%` : '—'}</td>
+                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.vocab_predicate || '—'}</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">2</td>
+                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">SPEAKING</td>
+                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Oral Discourse, Spontaneous Fluency & Interaction</td>
+                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.speaking_score != null ? `${Math.round(fe.speaking_score)}%` : '—'}</td>
+                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.speaking_predicate || '—'}</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">3</td>
+                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">PRONUNCIATION</td>
+                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Phonetic Articulation, Rhythm, Stress & Intonation</td>
+                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.pronunciation_score != null ? `${Math.round(fe.pronunciation_score)}%` : '—'}</td>
+                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.pronunciation_predicate || '—'}</span></td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #e2e8f0;">
+                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">4</td>
+                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">GRAMMAR</td>
+                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Structural Mechanics, Syntax & Sentence Architecture</td>
+                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.grammar_score != null ? `${Math.round(fe.grammar_score)}%` : '—'}</td>
+                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.grammar_predicate || '—'}</span></td>
+                    </tr>
+                    <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
+                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">5</td>
+                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">FINAL PRACTICE EXAM</td>
+                      <td style="padding:12px 12px; font-size:12px; color:#475569;">2-Panel Comprehensive Practical Interview</td>
+                      <td style="text-align:center; padding:12px 10px; font-weight:800; color:#0f172a;">${fe.practice_score != null ? `${fe.practice_score}` : '—'}</td>
+                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:900; background:#b45309; color:#ffffff;">${fe.practice_predicate || '—'}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; font-size:11px; color:#475569;">
+                  <strong style="color:#0f172a; margin-right:8px;">Grading Scale:</strong>
+                  <span>96 – 100: <strong>EXCELLENT</strong> &bull; 90 – 95: <strong>VERY GOOD</strong> &bull; 80 – 89: <strong>GOOD</strong> &bull; 60 – 79: <strong>ENOUGH</strong> (Passing Grade C) &bull; &lt; 60: <strong>LESS</strong> (Remedial Required)</span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+
+          <div style="height:56px; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; border-top:1px solid #334155; background:rgba(0,0,0,0.3); flex-shrink:0;">
+            <button type="button" id="btn-close-cert-modal-bot" style="font-weight:700; font-size:13px; background:rgba(255,255,255,0.08); color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:6px 16px; border-radius:6px; cursor:pointer;">
+              CLOSE
+            </button>
+            <button type="button" id="btn-download-cert-pdf" ${hasLessPredicate ? 'disabled style="opacity:0.5; cursor:not-allowed;' : 'style="cursor:pointer;'} background:linear-gradient(135deg, #0284c7, #0369a1); border:1px solid #38bdf8; color:#ffffff; font-size:13px; font-weight:800; padding:6px 18px; border-radius:6px;">
+              ${hasLessPredicate ? '⚠️ Certificate Locked (Retake Required)' : '📥 Download Certificate (PDF)'}
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(backdrop);
+
+      const closeFn = () => backdrop.remove();
+      backdrop.querySelector('#btn-close-cert-modal')?.addEventListener('click', closeFn);
+      backdrop.querySelector('#btn-close-cert-modal-bot')?.addEventListener('click', closeFn);
+      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeFn(); });
+
+      const dlBtn = backdrop.querySelector('#btn-download-cert-pdf');
+      if (dlBtn && !hasLessPredicate) {
+        dlBtn.onclick = async () => {
+          if (typeof window.html2pdf !== 'function') {
+            showToast('Loading PDF engine...', 'info');
+            try {
+              await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = './js/vendor/html2pdf.bundle.min.js?v=20261119_v1';
+                script.onload = resolve;
+                script.onerror = () => {
+                  const cdnScript = document.createElement('script');
+                  cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+                  cdnScript.onload = resolve;
+                  cdnScript.onerror = reject;
+                  document.head.appendChild(cdnScript);
+                };
+                document.head.appendChild(script);
+              });
+            } catch (_) {
+              showToast('Failed to load PDF engine.', 'error');
+              return;
+            }
+          }
+
+          const sheet = backdrop.querySelector('#student-cert-print-sheet');
+          if (!sheet) return;
+          const safeName = studentName.replace(/[^a-zA-Z0-9_-]/g, '_');
+          const filename = `CEC_Certificate_${safeName}_${fe.certificate_month || 'XI'}_${fe.certificate_year || 2026}.pdf`;
+          showToast('Generating Certificate PDF...', 'info');
+          dlBtn.disabled = true;
+          try {
+            const opt = {
+              margin: [8, 10, 8, 10],
+              filename: filename,
+              image: { type: 'jpeg', quality: 0.98 },
+              html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
+              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+            await window.html2pdf().set(opt).from(sheet).save();
+            showToast('Certificate downloaded successfully!', 'success');
+          } catch (err) {
+            showToast('Download error: ' + (err.message || err), 'error');
+          } finally {
+            dlBtn.disabled = false;
+          }
+        };
+      }
+    }
 
     // Logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {

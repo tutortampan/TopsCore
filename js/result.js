@@ -197,26 +197,26 @@ setTimeout(purgeExternalBadges, 2000);
     // ═══════════════════════════════════════════════════════════
     function getAchievementStatus(grade, pct = null) {
       let g = String(grade || '').toUpperCase();
-      if (g === 'R' || !['S', 'STAR', '★', 'A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
-        const p = parseFloat(pct || 0);
-        if (p >= 100) g = 'S';
-        else if (p >= 90) g = 'A';
-        else if (p >= 80) g = 'B';
-        else if (p >= 60) g = 'C';
-        else if (p >= 30) g = 'D';
-        else g = 'E';
+      const p = pct != null && !isNaN(Number(pct)) ? parseFloat(pct) : null;
+      if (p !== null && p >= 100) return 'LEGEND';
+      if (g === 'S' || g === 'STAR' || g === '★' || g === '⭐') return 'LEGEND';
+
+      if (g === 'R' || !['A', 'B', 'C', 'D', 'E', 'F'].includes(g)) {
+        if (p !== null) {
+          if (p >= 90) g = 'A';
+          else if (p >= 80) g = 'B';
+          else if (p >= 70) g = 'C';
+          else if (p >= 60) g = 'D';
+          else g = 'E';
+        }
       }
       const map = {
-        S: 'EXCELLENT',
-        STAR: 'EXCELLENT',
-        '★': 'EXCELLENT',
-        '⭐': 'EXCELLENT',
-        A: 'VERY GOOD',
-        B: 'GOOD',
-        C: 'ENOUGH',
-        D: 'LESS',
-        E: 'FAIL',
-        F: 'FAIL'
+        A: 'EXCELLENT',
+        B: 'VERY GOOD',
+        C: 'GOOD',
+        D: 'ENOUGH',
+        E: 'LESS',
+        F: 'LESS'
       };
       return map[g] || 'ENOUGH';
     }
@@ -1104,7 +1104,7 @@ setTimeout(purgeExternalBadges, 2000);
         idCard.style.setProperty('--tier-color', gradeColor);
         idCard.style.setProperty('--tier-rgb', rgbColor);
         idCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
-        idCard.style.boxShadow = `0 0 25px rgba(${rgbColor}, 0.35), 0 10px 25px -5px rgba(0, 0, 0, 0.35)`;
+        idCard.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
       }
 
       // Divider inside Identity card
@@ -1119,12 +1119,12 @@ setTimeout(purgeExternalBadges, 2000);
         avatarCont.style.setProperty('--tier-color', gradeColor);
         if (isGradeSOr100) {
           avatarCont.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #7e22ce 100%)`;
-          avatarCont.style.boxShadow = `0 0 25px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.85), 0 0 45px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.45)`;
+          avatarCont.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           avatarCont.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
         } else {
           avatarCont.style.background = 'rgba(15, 23, 42, 0.9)';
           avatarCont.style.borderColor = gradeColor;
-          avatarCont.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.75), 0 4px 14px rgba(0, 0, 0, 0.35)`;
+          avatarCont.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
         }
       }
 
@@ -1145,7 +1145,7 @@ setTimeout(purgeExternalBadges, 2000);
       const topicEl = document.getElementById('result-test-topic-row');
       if (topicEl) {
         topicEl.style.color = gradeColor;
-        topicEl.style.textShadow = `0 0 14px rgba(${rgbColor}, 0.55)`;
+        topicEl.style.textShadow = 'none';
       }
 
       // 4. Metrics Table Card
@@ -1155,7 +1155,7 @@ setTimeout(purgeExternalBadges, 2000);
         compositeCard.style.setProperty('--tier-color', gradeColor);
         compositeCard.style.setProperty('--tier-rgb', rgbColor);
         compositeCard.style.borderColor = `rgba(${rgbColor}, 0.75)`;
-        compositeCard.style.boxShadow = `0 0 20px rgba(${rgbColor}, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25)`;
+        compositeCard.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
       }
 
       // Dual Score & Grade Row (Row 5 - 40px)
@@ -1168,12 +1168,12 @@ setTimeout(purgeExternalBadges, 2000);
       const scoreBox = document.getElementById('result-score-box');
       if (scoreBox) {
         scoreBox.style.borderColor = `rgba(${rgbColor}, 0.75)`;
-        scoreBox.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45)`;
+        scoreBox.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
       }
       const gradeBox = document.getElementById('result-grade-box');
       if (gradeBox) {
         gradeBox.style.borderColor = `rgba(${rgbColor}, 0.75)`;
-        gradeBox.style.boxShadow = `0 0 16px rgba(${rgbColor}, 0.45)`;
+        gradeBox.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
       }
 
       // Score % and Points inside composite card
@@ -1181,14 +1181,14 @@ setTimeout(purgeExternalBadges, 2000);
       if (pctEl) {
         pctEl.style.setProperty('color', gradeColor, 'important');
         pctEl.style.setProperty('-webkit-text-fill-color', gradeColor, 'important');
-        pctEl.style.setProperty('text-shadow', `0 0 16px rgba(${rgbColor}, 0.65), 0 0 32px rgba(${rgbColor}, 0.35)`, 'important');
+        pctEl.style.setProperty('text-shadow', 'none', 'important');
       }
       const ptsEl = document.getElementById('res-points');
       if (ptsEl) {
         pctEl.style.setProperty('color', gradeColor, 'important');
         ptsEl.style.setProperty('color', gradeColor, 'important');
         ptsEl.style.setProperty('-webkit-text-fill-color', gradeColor, 'important');
-        ptsEl.style.setProperty('text-shadow', `0 0 10px rgba(${rgbColor}, 0.45)`, 'important');
+        ptsEl.style.setProperty('text-shadow', 'none', 'important');
       }
 
       // 5. Evaluation Word Card (Row 6 - 50px: EXCELLENT, GOOD, ENOUGH, etc.)
@@ -1198,16 +1198,16 @@ setTimeout(purgeExternalBadges, 2000);
         motEl.style.setProperty('--tier-color', gradeColor);
         motEl.style.setProperty('--tier-rgb', rgbColor);
         motEl.style.borderColor = `rgba(${rgbColor}, 0.85)`;
-        motEl.style.boxShadow = `0 0 25px rgba(${rgbColor}, 0.50)`;
+        motEl.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
         motEl.style.color = gradeColor;
-        motEl.style.textShadow = `0 0 18px rgba(${rgbColor}, 0.75)`;
+        motEl.style.textShadow = 'none';
       }
 
       // 6. Next Milestone CTA Button
       const nextBtn = document.querySelector('.btn-next-milestone');
       if (nextBtn) {
         nextBtn.style.borderColor = gradeColor;
-        nextBtn.style.boxShadow = `0 0 22px rgba(${rgbColor}, 0.55)`;
+        nextBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
       }
     }
 
@@ -1606,7 +1606,7 @@ setTimeout(purgeExternalBadges, 2000);
         }
 
         let displayGradeHtml = isGradeSOr100 ? `
-            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 0 16px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.95)) drop-shadow(0 0 28px rgba(${TOPSCORE_COLORS.STAR_RGB}, 0.65)); display:inline-block; vertical-align:middle;">
+            <svg class="pure-star-svg" width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: none; display:inline-block; vertical-align:middle;">
               <defs>
                 <linearGradient id="starHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
@@ -1685,10 +1685,7 @@ setTimeout(purgeExternalBadges, 2000);
           if (isGradeSOr100) {
             gradeValEl.style.cssText = `display:inline-flex !important;align-items:center !important;justify-content:center !important;line-height:1 !important;border:none !important;background:none !important;`;
           } else {
-            const glow1 = hexToRgba(gradeColor, 0.95);
-            const glow2 = hexToRgba(gradeColor, 0.70);
-            const vibrantTextGlow = `0 0 12px ${glow1}, 0 0 24px ${glow2}`;
-            gradeValEl.style.cssText = `font-family:'Inter', sans-serif !important;font-weight:900 !important;font-size:40px !important;line-height:1 !important;color:${gradeColor} !important;-webkit-text-fill-color:${gradeColor} !important;text-shadow:${vibrantTextGlow} !important;`;
+            gradeValEl.style.cssText = `font-family:'Inter', sans-serif !important;font-weight:900 !important;font-size:40px !important;line-height:1 !important;color:${gradeColor} !important;-webkit-text-fill-color:${gradeColor} !important;text-shadow:none !important;`;
           }
           // Initial state: Delayed/Hidden until score animation completes
           gradeValEl.classList.add('grade-delayed');
@@ -1973,13 +1970,13 @@ setTimeout(purgeExternalBadges, 2000);
         const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
         const badgeStyle = isGradeS
-          ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};border:1px solid ${TOPSCORE_COLORS.STAR};box-shadow:0 0 10px rgba(${TOPSCORE_COLORS.STAR_RGB},0.45);`
-          : `background:${aTheme.hex || aTheme.color}18;border:1.5px solid ${aTheme.border || aTheme.color};color:${aTheme.hex || aTheme.color};box-shadow:0 0 8px ${aTheme.glow};`;
+          ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};border:1px solid ${TOPSCORE_COLORS.STAR};box-shadow: 0 2px 8px rgba(0,0,0,0.35);`
+          : `background:${aTheme.hex || aTheme.color}18;border:1.5px solid ${aTheme.border || aTheme.color};color:${aTheme.hex || aTheme.color};box-shadow: 0 2px 8px rgba(0,0,0,0.35);`;
 
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
             <td style="padding:8px 12px;font-size:12px;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? TOPSCORE_COLORS.STAR : (aTheme.hex || aTheme.color)};${isGradeS ? `text-shadow:0 0 8px rgba(${TOPSCORE_COLORS.STAR_RGB},0.6);` : ''}">${apct}%</td>
+            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? TOPSCORE_COLORS.STAR : (aTheme.hex || aTheme.color)};${isGradeS ? `text-shadow: none !important;` : ''}">${apct}%</td>
             <td style="padding:8px 12px;">
               <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:12px;${badgeStyle}">${displayGrade}</span>
             </td>

@@ -62,7 +62,12 @@ function resolveClassSubjectAndStep(currentClass, levelMap = {}) {
  */
 function getSubjectSchema(subjectCode, stepLevel) {
   switch (subjectCode) {
-    case 'VOCABULARY':
+    case 'VOCABULARY': {
+      const vTargets = stepLevel === 2
+        ? { W1: 120, W2: 280, W3: 440, W4: 600 }
+        : (stepLevel === 3
+            ? { W1: 150, W2: 400, W3: 650, W4: 800 }
+            : { W1: 98, W2: 266, W3: 431, W4: 574 });
       return {
         groups: [
           {
@@ -76,21 +81,20 @@ function getSubjectSchema(subjectCode, stepLevel) {
             title: 'WEEKLY WORD DEPOSITS',
             colorVar: '--grade-b',
             cols: [
-              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: 90, label: 'W1' },
-              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: 210, label: 'W2' },
-              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: 300, label: 'W3' },
-              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: 450, label: 'W4' }
+              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: vTargets.W1, label: 'W1' },
+              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: vTargets.W2, label: 'W2' },
+              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: vTargets.W3, label: 'W3' },
+              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: vTargets.W4, label: 'W4' }
             ]
           }
         ],
         calcFinal: (scores) => {
           const wKeys = ['W1', 'W2', 'W3', 'W4'];
-          const targets = { W1: 90, W2: 210, W3: 300, W4: 450 };
           const pcts = [];
           wKeys.forEach(k => {
             const raw = scores[k]?.raw_score;
             if (raw != null && raw !== '') {
-              const p = Math.min(100, Math.round((Number(raw) / targets[k]) * 100));
+              const p = Math.min(100, Math.round((Number(raw) / vTargets[k]) * 100));
               pcts.push(p);
             }
           });
@@ -100,18 +104,19 @@ function getSubjectSchema(subjectCode, stepLevel) {
           return { score: `${latestRaw || 0} wds`, pct: avgPct, grade: calculateGrade(avgPct) };
         }
       };
+    }
 
     case 'STORYTELLING':
       return {
         groups: [
           {
-            title: 'WEEKLY RUBRICS (SCALE 1–5)',
+            title: 'WEEKLY PERFORMANCE EXAMS (SCALE 1–5)',
             colorVar: '--grade-d',
             cols: [
-              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W1' },
-              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W2' },
-              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W3' },
-              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W4' }
+              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-1' },
+              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-2' },
+              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-3' },
+              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-4' }
             ]
           }
         ],
@@ -126,7 +131,9 @@ function getSubjectSchema(subjectCode, stepLevel) {
       };
 
     case 'GRAMMAR':
-    case 'GFS':
+    case 'GFS': {
+      const gU1Target = (stepLevel === 1 ? 15 : (stepLevel === 2 ? 30 : 15));
+      const gU2Target = (stepLevel === 1 ? 20 : (stepLevel === 2 ? 30 : 15));
       return {
         groups: [
           {
@@ -150,17 +157,18 @@ function getSubjectSchema(subjectCode, stepLevel) {
             title: 'PERIODICAL EXAMS',
             colorVar: '--grade-a',
             cols: [
-              { key: 'U1', type: 'PERIODIC_EXAM', target: 20, label: 'U1 (Mid)' },
-              { key: 'U2', type: 'PERIODIC_EXAM', target: 20, label: 'U2 (Final)' }
+              { key: 'U1', type: 'PERIODIC_EXAM', target: gU1Target, label: `EX-1 (Max ${gU1Target})` },
+              { key: 'U2', type: 'PERIODIC_EXAM', target: gU2Target, label: `EX-2 (Max ${gU2Target})` }
             ]
           }
         ],
         calcFinal: (scores) => {
           const u1 = scores['U1']?.raw_score;
           const u2 = scores['U2']?.raw_score;
-          const exams = [u1, u2].filter(v => v != null && v !== '').map(Number);
-          if (!exams.length) {
-            // Check weekly if step 3
+          const pcts = [];
+          if (u1 != null && u1 !== '') pcts.push(Math.min(100, (Number(u1) / gU1Target) * 100));
+          if (u2 != null && u2 !== '') pcts.push(Math.min(100, (Number(u2) / gU2Target) * 100));
+          if (!pcts.length) {
             const wKeys = ['W1', 'W2', 'W3', 'W4'];
             const wVals = wKeys.map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
             if (wVals.length) {
@@ -170,11 +178,12 @@ function getSubjectSchema(subjectCode, stepLevel) {
             }
             return { score: null, pct: null, grade: '—' };
           }
-          const avg = exams.reduce((a, b) => a + b, 0) / exams.length;
-          const pct = Math.round((avg / 20) * 100);
-          return { score: avg.toFixed(1), pct, grade: calculateGrade(pct) };
+          const avgPct = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
+          const avgRaw = ((u1 != null && u1 !== '' ? Number(u1) : 0) + (u2 != null && u2 !== '' ? Number(u2) : 0)) / pcts.length;
+          return { score: avgRaw.toFixed(1), pct: avgPct, grade: calculateGrade(avgPct) };
         }
       };
+    }
 
     case 'SPEAKING':
     default:
@@ -201,16 +210,18 @@ function getSubjectSchema(subjectCode, stepLevel) {
             title: 'PERIODICAL EXAMS',
             colorVar: '--grade-a',
             cols: [
-              { key: 'U1', type: 'PERIODIC_EXAM', target: 20, label: 'U1 (Mid)' },
-              { key: 'U2', type: 'PERIODIC_EXAM', target: 20, label: 'U2 (Final)' },
-              ...(stepLevel === 1 ? [{ key: 'PRACTICE', type: 'PRACTICE', target: 25, label: 'Practice' }] : [])
+              { key: 'U1', type: 'PERIODIC_EXAM', target: 25, label: 'EX-1 (Max 25)' },
+              { key: 'U2', type: 'PERIODIC_EXAM', target: 25, label: 'EX-2 (Max 25)' },
+              ...(stepLevel === 1 ? [{ key: 'PRACTICE', type: 'PRACTICE', target: 25, label: 'EX-3 (Practice)' }] : (stepLevel === 3 ? [{ key: 'U3', type: 'PERIODIC_EXAM', target: 25, label: 'EX-3 (Max 25)' }] : []))
             ]
           }
         ],
         calcFinal: (scores) => {
           const u1 = scores['U1']?.raw_score;
           const u2 = scores['U2']?.raw_score;
-          const exams = [u1, u2].filter(v => v != null && v !== '').map(Number);
+          const u3 = scores['U3']?.raw_score;
+          const pr = scores['PRACTICE']?.raw_score;
+          const exams = [u1, u2, u3, pr].filter(v => v != null && v !== '').map(Number);
           if (!exams.length) {
             const wKeys = ['W1', 'W2', 'W3', 'W4'];
             const wVals = wKeys.map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
@@ -222,7 +233,7 @@ function getSubjectSchema(subjectCode, stepLevel) {
             return { score: null, pct: null, grade: '—' };
           }
           const avg = exams.reduce((a, b) => a + b, 0) / exams.length;
-          const pct = Math.round((avg / 20) * 100);
+          const pct = Math.min(100, Math.round((avg / 25) * 100));
           return { score: avg.toFixed(1), pct, grade: calculateGrade(pct) };
         }
       };

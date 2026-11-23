@@ -125,7 +125,7 @@ body.global-edit-mode-on .student-cell-view {
   background: rgba(255, 255, 0, 0.12) !important;
   border-color: var(--grade-c, #FFFF00) !important;
   color: var(--grade-c, #FFFF00) !important;
-  box-shadow: 0 0 10px rgba(255, 255, 0, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-edit-mode-global.mode-off .edit-mode-dot {
@@ -137,15 +137,15 @@ body.global-edit-mode-on .student-cell-view {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.28) 0%, rgba(217, 119, 6, 0.38) 100%) !important;
   border: 1.5px solid #FFD700 !important;
   color: #FFD700 !important;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.45) !important;
-  text-shadow: 0 0 6px rgba(255, 215, 0, 0.6) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  text-shadow: none !important;
 }
 
 .btn-edit-mode-global.mode-on:hover {
   background: linear-gradient(135deg, rgba(255, 215, 0, 0.45) 0%, rgba(217, 119, 6, 0.55) 100%) !important;
   border-color: var(--grade-c, #FFFF00) !important;
   color: var(--grade-c, #FFFF00) !important;
-  box-shadow: 0 0 16px rgba(255, 215, 0, 0.75) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-edit-mode-global.mode-on .edit-mode-dot {

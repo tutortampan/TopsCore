@@ -1,6 +1,6 @@
 /**
  * TopsCore LMS — Class & Batch Attendance Matrix (CEC)
- * 
+ *
  * Rules:
  * - Vocabulary Class: 24 Meetings (Mon – Sat, 6 days/week), Divider after every 6 meetings.
  * - Non-Vocabulary Classes (Speaking, Storytelling, Grammar, Basic): 20 Meetings (Mon – Fri, 5 days/week), Divider after every 5 meetings.
@@ -39,6 +39,10 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
   } = context;
 
   const cfg = getMeetingsConfigForClass(currentClass || className);
+  const isCampClass = Boolean(
+    (className && /camp/i.test(className)) ||
+    (currentClass?.name && /camp/i.test(currentClass.name))
+  );
   const identityColSpan = 3;
 
   container.innerHTML = `
@@ -114,7 +118,7 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
     `;
 
     let subHeadersHtml = `<tr>
-      <th class="att-col-lvl col-sticky" title="Academic Level">LVL</th>
+      <th class="att-col-lvl col-sticky" title="${isCampClass ? 'Academic Step' : 'Academic Level'}">${isCampClass ? 'STEP' : 'LVL'}</th>
       <th class="att-col-btc col-sticky" title="Cohort Batch" style="color:#38bdf8;">BTC</th>
       <th class="att-col-name col-sticky" title="Student Full Name" style="text-align:left; padding-left:10px; color:#ffffff;">STUDENT NAME</th>
     `;
@@ -137,10 +141,10 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
     }
 
     subHeadersHtml += `
-      <th style="width:36px; text-align:center; color:var(--grade-a, #00c000); background:#1e293b;" title="Present (Hadir)">P</th>
-      <th style="width:36px; text-align:center; color:var(--primary-tactical, #38bdf8); background:#1e293b;" title="Excused (Izin)">E</th>
-      <th style="width:36px; text-align:center; color:var(--grade-c, #ffff00); background:#1e293b;" title="Sick (Sakit)">S</th>
-      <th style="width:36px; text-align:center; color:var(--grade-e, #ff0000); background:#1e293b;" title="Absent (Alpha)">A</th>
+      <th style="width:36px; text-align:center; color:var(--grade-a, #00c000); background:#1e293b;" title="Present">P</th>
+      <th style="width:36px; text-align:center; color:var(--primary-tactical, #38bdf8); background:#1e293b;" title="Excused">E</th>
+      <th style="width:36px; text-align:center; color:var(--grade-c, #ffff00); background:#1e293b;" title="Sick">S</th>
+      <th style="width:36px; text-align:center; color:var(--grade-e, #ff0000); background:#1e293b;" title="Absent">A</th>
       <th style="width:54px; text-align:center; color:#ffffff; background:#1e293b;" title="Attendance Rate">RATE</th>
     </tr>`;
 
@@ -521,6 +525,13 @@ export async function renderBatchAttendance(container, context = {}) {
     return true;
   });
 
+  const isCampProgram = Boolean(
+    (batchName && /camp/i.test(batchName)) ||
+    (programId && typeof programId === 'string' && /camp/i.test(programId)) ||
+    (levelNumber && Number(levelNumber) > 0) ||
+    (classesForBatch && classesForBatch.some(c => (c.name || '').toLowerCase().includes('camp')))
+  );
+
   if (classesForBatch.length === 0) {
     container.innerHTML = `<div style="padding:24px; color:#94a3b8; font-size:12px; text-align:center;">No active classes found for this batch.</div>`;
     return;
@@ -601,7 +612,7 @@ export async function renderBatchAttendance(container, context = {}) {
     `;
 
     let subHeadersHtml = `<tr>
-      <th class="att-col-lvl col-sticky" title="Academic Level">LVL</th>
+      <th class="att-col-lvl col-sticky" title="${isCampProgram ? 'Academic Step' : 'Academic Level'}">${isCampProgram ? 'STEP' : 'LVL'}</th>
       <th class="att-col-btc col-sticky" title="Cohort Batch" style="color:#38bdf8;">BTC</th>
       <th class="att-col-name col-sticky" title="Student Full Name" style="text-align:left; padding-left:10px; color:#ffffff;">STUDENT NAME</th>
     `;
@@ -624,7 +635,7 @@ export async function renderBatchAttendance(container, context = {}) {
 
     subHeadersHtml += `
       <th style="width:44px; text-align:center; color:var(--grade-a, #00c000); background:#1e293b;" title="Total Attended Across All Classes">TOT</th>
-      <th style="width:44px; text-align:center; color:var(--grade-e, #ff0000); background:#1e293b;" title="Total Absent / Alpha">ABS</th>
+      <th style="width:44px; text-align:center; color:var(--grade-e, #ff0000); background:#1e293b;" title="Total Absent Across All Classes">ABS</th>
       <th style="width:56px; text-align:center; color:#ffffff; background:#1e293b;" title="Cumulative Attendance Rate %">RATE</th>
     </tr>`;
 
@@ -644,8 +655,11 @@ export async function renderBatchAttendance(container, context = {}) {
         const found = allLevels.find(l => l.id === st.level_id);
         rawLvl = found?.level_number || found?.name;
       }
-      let lvlDisplay = typeof toShortLevel === 'function' ? toShortLevel(rawLvl) : (rawLvl ? String(rawLvl) : '3rd');
-      if (!lvlDisplay || lvlDisplay === '—' || lvlDisplay.length > 5 || lvlDisplay.includes('-')) lvlDisplay = '3rd';
+      const isZeroLvl = rawLvl === 0 || rawLvl === '0' || (!isCampProgram && !rawLvl);
+      let lvlDisplay = isZeroLvl ? '0' : (typeof toShortLevel === 'function' ? toShortLevel(rawLvl) : (rawLvl ? String(rawLvl) : (isCampProgram ? '1st' : '0')));
+      if (!isZeroLvl && (!lvlDisplay || lvlDisplay === '—' || lvlDisplay.length > 5 || lvlDisplay.includes('-'))) {
+        lvlDisplay = isCampProgram ? '1st' : '0';
+      }
 
       const picHtml = st.photo_url
         ? `<img src="${escapeHtml(st.photo_url)}" alt="" style="width:24px; height:24px; border-radius:50%; object-fit:cover;" />`
@@ -778,8 +792,17 @@ export async function renderBatchAttendance(container, context = {}) {
     if (typeof window.setBottomInfobar === 'function') {
       const levelOrdinal = levelNumber === 1 ? '1st' : (levelNumber === 2 ? '2nd' : (levelNumber === 3 ? '3rd' : ''));
       const levelTitle = levelNumber > 0 ? `Level ${levelNumber} (${levelOrdinal}) ` : '';
+      const attendanceSwitcherHtml = (levelNumber > 0 || /camp/i.test(batchName || '')) ? `
+        <div class="attendance-page-switcher" style="display:inline-flex;align-items:stretch;height:32px;background:#0b1324;border:1px solid #334155;border-radius:6px;overflow:hidden;box-sizing:border-box;margin-right:8px;">
+          <span style="font-size:11px;font-weight:800;color:var(--primary-tactical, #38bdf8);letter-spacing:0.05em;display:flex;align-items:center;padding:0 8px;border-right:1px solid #334155;background:rgba(255,255,255,0.02);">ATTENDANCE:</span>
+          <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchAttendancePage==='function')window._switchAttendancePage(1);" style="border:none;border-right:1px solid #334155;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${levelNumber === 1 ? 'background:var(--primary-tactical, #38bdf8);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="1st Level Attendance">1st</button>
+          <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchAttendancePage==='function')window._switchAttendancePage(2);" style="border:none;border-right:1px solid #334155;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${levelNumber === 2 ? 'background:var(--primary-tactical, #38bdf8);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="2nd Level Attendance">2nd</button>
+          <button type="button" class="btn btn-sm" onclick="event.stopPropagation();if(typeof window._switchAttendancePage==='function')window._switchAttendancePage(3);" style="border:none;border-radius:0;height:100%;padding:0 12px;font-size:12px;font-weight:900;cursor:pointer;transition:all 0.15s ease;display:flex;align-items:center;justify-content:center;${levelNumber === 3 ? 'background:var(--primary-tactical, #38bdf8);color:#090d16;box-shadow:inset 0 0 4px rgba(0,0,0,0.2);' : 'background:transparent;color:#94a3b8;'}" title="3rd Level Attendance">3rd</button>
+        </div>
+      ` : '';
       const leftHtml = `
         <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
+          ${attendanceSwitcherHtml}
           <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">
             ${escapeHtml(batchName)} — ${levelTitle}Weekly Attendance Recap
           </span>
@@ -796,7 +819,7 @@ export async function renderBatchAttendance(container, context = {}) {
           <span style="display:inline-flex; align-items:center; gap:4px;"><strong style="color:#38bdf8;">TOTAL</strong> = Weekly Accumulation</span>
         </div>
       `;
-      window.setBottomInfobar(leftHtml, rightHtml);
+      window.setBottomInfobar(leftHtml, rightHtml, '');
     }
 
   } catch(err) {

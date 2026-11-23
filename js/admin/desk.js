@@ -78,7 +78,7 @@ export async function renderRecycleBin(container) {
         if (typeof window.setBottomInfobar !== 'function') return;
         const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
         const editBtnStyle = isEditOn
-          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;transition:all 0.15s ease;'
           : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
         const editBtnLabel = isEditOn
           ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -512,7 +512,7 @@ export async function renderAuditLog(area) {
 
     const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;transition:all 0.15s ease;'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -1831,7 +1831,7 @@ export async function renderSettings(area) {
     `;
     const rightHtml = `
       <div style="display:flex;align-items:center;gap:8px;">
-        <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-settings" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 14px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:6px;background:#7c3aed;border:1px solid #a78bfa;color:#ffffff;box-shadow:0 0 10px rgba(124,58,237,0.45);cursor:pointer;" title="Save All Platform Configurations">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-settings" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 14px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:6px;background:#7c3aed;border:1px solid #a78bfa;color:#ffffff;cursor:pointer;" title="Save All Platform Configurations">
           ${getSvgIcon('save', 14)} Save Settings
         </button>
       </div>
@@ -1901,7 +1901,7 @@ export async function renderInterfaceSettings(area) {
         </div>
         <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
           <label style="position:relative; width:26px; height:26px; margin:0; cursor:pointer; display:inline-block;" title="Pick color (${escapeHtml(label)} - ${escapeHtml(colorName)})">
-            <span class="cs-preview-swatch" id="cs-swatch-${key}" style="display:block; width:26px; height:26px; border-radius:5px; background:${hexVal}; border:1px solid rgba(255,255,255,0.3); box-shadow:0 0 6px ${hex7}55;"></span>
+            <span class="cs-preview-swatch" id="cs-swatch-${key}" style="display:block; width:26px; height:26px; border-radius:5px; background:${hexVal}; border:1px solid rgba(255,255,255,0.3);"></span>
             <input type="color" class="cs-color-picker" data-key="${key}" value="${hex7}" style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0; cursor:pointer; padding:0; border:none;" />
           </label>
           <input type="text" class="cs-hex-input form-control" data-key="${key}" value="${hexVal}" maxlength="9" style="height:26px; width:82px; padding:2px 6px; font-family:'JetBrains Mono', 'Fira Code', monospace; font-size:12px; font-weight:700; text-align:center; text-transform:uppercase; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#f8fafc;" />

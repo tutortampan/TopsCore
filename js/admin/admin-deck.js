@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName } from '../api.js?v=20261119_v633';
+import { adminFetchAll, formatStudentName } from '../api.js?v=20261124_v680';
 import { escHtml } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { getGradeColorByScore, getGradeSymbol, detectClassDiscipline } from '../grading.js?v=20261106_v160';
@@ -1085,7 +1085,7 @@ window._openEditTutorModal = (tutorId) => {
                 <input type="hidden" id="tutor-edit-photo-val" value="${escHtml(tutor.avatar_url || '')}" />
                 <div style="display:flex;align-items:center;gap:6px;">
                   <button type="button" onclick="document.getElementById('tutor-edit-photo-file').click()" style="height:26px;padding:0 10px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-                    <span>📷</span>
+                    <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
                     <span>Upload Image</span>
                   </button>
                   <button type="button" onclick="window._clearTutorPhotoUpload('tutor-edit-preview-img', 'tutor-edit-preview-mono', 'tutor-edit-photo-val')" style="height:26px;padding:0 8px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">
@@ -1178,7 +1178,7 @@ window._openAddTutorModal = () => {
                 <input type="hidden" id="tutor-add-photo-val" value="" />
                 <div style="display:flex;align-items:center;gap:6px;">
                   <button type="button" onclick="document.getElementById('tutor-add-photo-file').click()" style="height:26px;padding:0 10px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
-                    <span>📷</span>
+                    <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
                     <span>Upload Image</span>
                   </button>
                   <button type="button" onclick="window._clearTutorPhotoUpload('tutor-add-preview-img', 'tutor-add-preview-mono', 'tutor-add-photo-val')" style="height:26px;padding:0 8px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">

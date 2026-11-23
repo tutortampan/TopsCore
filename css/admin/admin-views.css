@@ -138,7 +138,7 @@
   background: var(--fm-bg-panel-elevated, #1E293B) !important;
   border: 2px solid var(--fm-accent-tactical, #6366f1) !important;
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 0 12px rgba(99, 102, 241, 0.25) !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3) !important;
 }
 
 .section-tab.is-stat {
@@ -391,19 +391,19 @@
 
 .pulse-emerald {
   background: var(--clr-success);
-  box-shadow: 0 0 10px var(--clr-success);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   animation: pulseGreen 2s infinite;
 }
 
 .pulse-amber {
   background: var(--clr-warning);
-  box-shadow: 0 0 10px var(--clr-warning);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   animation: pulseYellow 2s infinite;
 }
 
 .pulse-red {
   background: var(--clr-danger);
-  box-shadow: 0 0 10px var(--clr-danger);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   animation: pulseRed 2s infinite;
 }
 
@@ -467,7 +467,7 @@
 
 .purge-confirm-input:focus {
   outline: none;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .input-password-wrap {
@@ -1058,7 +1058,7 @@ body.global-edit-mode-on #theme-manager-flat-table td input:focus,
 body.global-edit-mode-on #theme-manager-flat-table td select:focus,
 body.global-edit-mode-on .vault-edit-input:focus {
   border-color: #ffffff !important;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   background: #1e293b !important;
 }
 
@@ -1067,7 +1067,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   0% {
     border-color: var(--grade-a) !important;
     background: rgba(var(--grade-a-rgb), 0.15) !important;
-    box-shadow: 0 0 8px rgba(var(--grade-a-rgb), 0.5) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   }
   100% {
     border-color: rgba(255, 255, 255, 0.5) !important;
@@ -1080,7 +1080,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   0% {
     border-color: var(--grade-e) !important;
     background: rgba(var(--grade-e-rgb), 0.2) !important;
-    box-shadow: 0 0 8px rgba(var(--grade-e-rgb), 0.5) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   }
   100% {
     border-color: rgba(255, 255, 255, 0.5) !important;
@@ -1256,7 +1256,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 
 .analytics-triage-pills .btn-analytics-pill.active {
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   border-color: #38bdf8 !important;
 }
 
@@ -1425,7 +1425,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   border-color: #818cf8;
   background: rgba(99, 102, 241, 0.12);
   transform: none !important;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .student-reg-dropzone-icon {
@@ -1510,7 +1510,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.22) !important;
   border-color: var(--grade-a) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(var(--grade-a-rgb, 0, 192, 0), 0.7) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
@@ -1537,7 +1537,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.22) !important;
   border-color: var(--grade-a) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(var(--grade-a-rgb, 0, 192, 0), 0.7) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
@@ -1565,7 +1565,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.22) !important;
   border-color: var(--grade-c) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(var(--grade-c-rgb, 255, 255, 0), 0.75) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 .btn-wireframe-remidi.btn-dimmed {
@@ -1601,7 +1601,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.22) !important;
   border-color: var(--grade-c) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(var(--grade-c-rgb, 255, 255, 0), 0.75) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
@@ -1611,7 +1611,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   background: #0f172a !important;
   border: 2px solid var(--grade-c) !important;
   border-radius: 10px !important;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.92), 0 0 18px rgba(var(--grade-c-rgb, 255, 255, 0), 0.2) !important;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.92) !important;
 }
 
 .btn-card-add-time-opt,
@@ -1694,7 +1694,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
   background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.22) !important;
   border-color: var(--grade-e) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(var(--grade-e-rgb, 255, 0, 0), 0.7) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
@@ -1720,7 +1720,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .btn-wireframe-live-view:hover {
   background: linear-gradient(180deg, #263348 0%, #1e293b 100%) !important;
   border-color: #38bdf8 !important;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25), 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
   transform: none;
 }
 
@@ -1815,12 +1815,12 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .live-table-row .btn-inspect-student-answers:hover {
   color: #ffffff !important;
   transform: none !important;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 .live-table-row .btn-kick-student:hover {
   color: #ff4d4d !important;
   transform: none !important;
-  box-shadow: 0 0 10px rgba(255, 77, 77, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Borderless Action Button Hover States */
@@ -1868,7 +1868,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .btn-session-mode.mode-normal:active,
 .btn-session-mode.mode-normal.active {
   border-color: var(--grade-a) !important;
-  box-shadow: 0 0 10px rgba(var(--grade-a-rgb), 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   background: rgba(var(--grade-a-rgb), 0.08) !important;
 }
 
@@ -1879,7 +1879,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .btn-session-mode.mode-remedial:active,
 .btn-session-mode.mode-remedial.active {
   border-color: var(--grade-c) !important;
-  box-shadow: 0 0 10px rgba(var(--grade-c-rgb), 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   background: rgba(var(--grade-c-rgb), 0.08) !important;
 }
 
@@ -1891,7 +1891,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .btn-session-edit-time:active,
 .btn-session-edit-time.active {
   border-color: var(--grade-c) !important;
-  box-shadow: 0 0 10px rgba(var(--grade-c-rgb), 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   background: rgba(var(--grade-c-rgb), 0.08) !important;
 }
 
@@ -1902,7 +1902,7 @@ body.global-edit-mode-on .vault-edit-input:focus {
 .btn-session-time:hover,
 .btn-session-time:active {
   border-color: rgba(255, 255, 255, 0.4) !important;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   background: rgba(255, 255, 255, 0.06) !important;
 }
 

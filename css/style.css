@@ -353,7 +353,7 @@ button:hover:not([disabled]):not(:disabled),
 .btn:hover:not([disabled]):not(:disabled),
 [role="button"]:hover:not([disabled]):not(:disabled) {
   filter: brightness(1.1) !important;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none !important;
 }
 
@@ -362,7 +362,7 @@ button:active:not([disabled]):not(:disabled),
 [role="button"]:active:not([disabled]):not(:disabled) {
   filter: brightness(1.15) !important;
   transform: none !important;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Strict Zero-Movement Invariant on Hover & Active across all buttons (§3.4) */
@@ -389,12 +389,12 @@ button:active,
 
 .btn-primary:hover:not([disabled]):not(:disabled),
 .btn-tactical:hover:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.55), 0 0 24px rgba(99, 102, 241, 0.45) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-primary:active:not([disabled]):not(:disabled),
 .btn-tactical:active:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.75), 0 0 30px rgba(99, 102, 241, 0.6) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Words button (Electric Lime: Grade B / Theme C) */
@@ -407,12 +407,12 @@ button:active,
 
 .btn-words:hover:not([disabled]):not(:disabled),
 .btn-lime:hover:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 14px rgba(149, 255, 0, 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-words:active:not([disabled]):not(:disabled),
 .btn-lime:active:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 18px rgba(149, 255, 0, 0.8) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Phrases button (Dark Orange: Grade D / Theme B) */
@@ -425,12 +425,12 @@ button:active,
 
 .btn-phrases:hover:not([disabled]):not(:disabled),
 .btn-orange:hover:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 14px rgba(255, 140, 0, 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-phrases:active:not([disabled]):not(:disabled),
 .btn-orange:active:not([disabled]):not(:disabled) {
-  box-shadow: 0 0 18px rgba(255, 140, 0, 0.8) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Secondary button (Neutral Slate / Subtle Outline) */
@@ -446,7 +446,7 @@ button:active,
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.35) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 10px rgba(148, 163, 184, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-secondary:active:not([disabled]):not(:disabled),
@@ -455,7 +455,7 @@ button:active,
   background: rgba(255, 255, 255, 0.2) !important;
   border-color: rgba(255, 255, 255, 0.5) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Danger / Delete button (Pure Red Grade E SSOT) */
@@ -474,7 +474,7 @@ button:active,
   background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.15) !important;
   border-color: var(--grade-e) !important;
   color: var(--grade-e) !important;
-  box-shadow: 0 0 8px rgba(var(--grade-e-rgb, 255, 0, 0), 0.3) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-danger:active:not([disabled]):not(:disabled),
@@ -489,7 +489,7 @@ button:active,
   background: var(--grade-e) !important;
   border-color: var(--grade-e) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(var(--grade-e-rgb, 255, 0, 0), 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Success / Published button (Pure Green Grade A SSOT) */
@@ -508,7 +508,7 @@ button:active,
   background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.15) !important;
   border-color: var(--grade-a) !important;
   color: var(--grade-a) !important;
-  box-shadow: 0 0 8px rgba(var(--grade-a-rgb, 0, 192, 0), 0.3) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-success:active:not([disabled]):not(:disabled),
@@ -523,7 +523,7 @@ button:active,
   background: var(--grade-a) !important;
   border-color: var(--grade-a) !important;
   color: #0f172a !important; /* Strict Dark Text for Green */
-  box-shadow: 0 0 12px rgba(var(--grade-a-rgb, 0, 192, 0), 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Warning / Remedial button (Pure Yellow Grade C SSOT) */
@@ -544,7 +544,7 @@ button:active,
   background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.15) !important;
   border-color: var(--grade-c) !important;
   color: var(--grade-c) !important;
-  box-shadow: 0 0 8px rgba(var(--grade-c-rgb, 255, 255, 0), 0.3) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-warning:active:not([disabled]):not(:disabled),
@@ -562,7 +562,7 @@ button:active,
   background: var(--grade-c) !important;
   border-color: var(--grade-c) !important;
   color: #0f172a !important; /* Strict Dark Text for Yellow */
-  box-shadow: 0 0 12px rgba(var(--grade-c-rgb, 255, 255, 0), 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Tactical Cyan / Manual button (Tactical Cyan #38bdf8 SSOT) */
@@ -581,7 +581,7 @@ button:active,
   background: rgba(56, 189, 248, 0.12) !important;
   border-color: #38bdf8 !important;
   color: #ffffff !important;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-tactical:active:not([disabled]):not(:disabled),
@@ -596,7 +596,7 @@ button:active,
   background: #0284c7 !important;
   border-color: #38bdf8 !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Purple / Alumni button (Vibrant Purple var(--quad-d) SSOT) */
@@ -615,7 +615,7 @@ button:active,
   background: rgba(192, 132, 252, 0.15) !important;
   border-color: var(--quad-d) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 8px rgba(192, 132, 252, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .btn-purple:active:not([disabled]):not(:disabled),
@@ -630,7 +630,7 @@ button:active,
   background: #8b5cf6 !important;
   border-color: var(--quad-d) !important;
   color: #ffffff !important;
-  box-shadow: 0 0 12px rgba(192, 132, 252, 0.55) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 /* Ghost button */
@@ -942,7 +942,7 @@ select.form-control {
   border-radius: 50% !important;
   animation: spin 0.8s linear infinite !important;
   margin-bottom: 14px !important;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .topscore-loading-center p,
@@ -1003,7 +1003,7 @@ select.form-control {
   max-height: 38px !important;
   background: #0f172a !important;
   border: 1px solid rgba(255, 255, 255, 0.15) !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.15) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6) !important;
   pointer-events: auto !important;
   animation: toast-banner-in 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   font-size: 12px !important;
@@ -1383,11 +1383,11 @@ tbody tr:last-child td {
 /* ★: Star (100% - Pure Green #00c000ff with Glow) */
 @keyframes star-badge-glow {
   0%, 100% {
-    box-shadow: 0 0 16px rgba(var(--grade-star-rgb), 0.45), 0 0 28px rgba(var(--grade-star-rgb), 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.85);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     filter: drop-shadow(0 0 6px rgba(var(--grade-star-rgb), 0.45));
   }
   50% {
-    box-shadow: 0 0 26px rgba(var(--grade-star-rgb), 0.75), 0 0 42px rgba(var(--grade-star-rgb), 0.45), inset 0 1px 4px rgba(255, 255, 255, 1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     filter: drop-shadow(0 0 12px rgba(var(--grade-star-rgb), 0.75));
   }
 }
@@ -1589,7 +1589,7 @@ tbody tr:last-child td {
   color: var(--badge-text-star) !important;
   font-size: 12px !important;
   font-weight: 900 !important;
-  box-shadow: 0 0 8px var(--grade-star-glow) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
@@ -2069,11 +2069,11 @@ body {
   color: #cbd5e1 !important;
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-start !important;
-  text-align: left !important;
-  padding-left: clamp(16px, 4vw, 24px) !important;
-  font-size: 16px !important;
-  font-weight: 800 !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 0 16px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   font-family: 'Inter', sans-serif !important;
   letter-spacing: 0.04em !important;
   z-index: 99999 !important;
@@ -2085,37 +2085,51 @@ body {
   /* Hardware accelerated */
 }
 
-/* Ensure test-page body doesn't conflict */
-body.test-page {
+/* Ensure test-page and dashboard-page body don't conflict */
+body.test-page,
+body.dashboard-page {
   height: 100vh !important;
   height: 100dvh !important;
   overflow: hidden !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
+  padding: 0 !important;
+}
+
+.banner-brand-content,
+.banner-brand-wrap {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  width: 100% !important;
 }
 
 .topscore-locked-banner .banner-brand,
 #bottom-ad-banner .banner-brand {
-  font-size: 16px !important;
-  font-weight: 900 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   color: #38bdf8 !important;
-  letter-spacing: 0.05em !important;
-  text-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important;
+  letter-spacing: 0.04em !important;
+  text-shadow: none !important;
 }
 
 .topscore-locked-banner .banner-sep,
 #bottom-ad-banner .banner-sep {
   opacity: 0.4;
   margin: 0 6px;
+  font-size: 12px !important;
 }
 
 .topscore-locked-banner .banner-author,
 #bottom-ad-banner .banner-author {
-  font-size: 16px !important;
-  font-weight: 800 !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
   color: #f8fafc !important;
-  letter-spacing: 0.02em !important;
+  letter-spacing: 0.04em !important;
 }
 
 /* Micro-animations */
@@ -2272,13 +2286,13 @@ button:hover .tc-icon,
 
 .pwa-offline-badge.offline .pwa-network-dot {
   background: var(--grade-c);
-  box-shadow: 0 0 8px var(--grade-c);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   animation: pwaPulse 1.5s infinite;
 }
 
 .pwa-offline-badge.online .pwa-network-dot {
   background: var(--grade-a);
-  box-shadow: 0 0 8px var(--grade-a);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes pwaPulse {

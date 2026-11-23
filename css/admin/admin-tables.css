@@ -388,49 +388,49 @@ th.sub-hdr:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):n
   background: linear-gradient(135deg, var(--grade-star) 0%, #be185d 100%);
   color: var(--badge-text-star);
   font-weight: 900;
-  box-shadow: 0 0 10px var(--grade-star-glow);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-a {
   background: var(--grade-a);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-a-rgb), 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-b {
   background: var(--grade-b);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-b-rgb), 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-c {
   background: var(--grade-c);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-c-rgb), 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-d {
   background: var(--grade-d);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-d-rgb), 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-e {
   background: var(--grade-e);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-e-rgb), 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-r {
   background: var(--grade-c);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-c-rgb), 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 .form-pill.grade-f {
   background: var(--grade-e);
   color: var(--badge-text-dark);
   font-weight: 900;
-  box-shadow: 0 0 8px rgba(var(--grade-e-rgb), 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 
@@ -572,7 +572,7 @@ th.sub-hdr:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):n
   border-radius: 50% !important;
   animation: spin 0.8s linear infinite !important;
   margin-bottom: 14px !important;
-  box-shadow: 0 0 14px rgba(56, 189, 248, 0.25) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 .topscore-loading-center p,
@@ -1177,7 +1177,7 @@ th.super-hdr-overall {
   vertical-align: middle !important;
   box-sizing: border-box !important;
   box-shadow: 2px 0 6px rgba(0, 0, 0, 0.35);
-  text-shadow: 0 0 10px rgba(192, 132, 252, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-student {
@@ -1202,7 +1202,7 @@ th.super-hdr-theme-a {
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
-  text-shadow: 0 0 10px rgba(255, 45, 135, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-theme-b,
@@ -1215,7 +1215,7 @@ th.super-hdr-theme-b {
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
-  text-shadow: 0 0 10px rgba(255, 140, 0, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-theme-c,
@@ -1228,7 +1228,7 @@ th.super-hdr-theme-c {
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
-  text-shadow: 0 0 10px rgba(149, 255, 0, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-theme-d,
@@ -1241,7 +1241,7 @@ th.super-hdr-theme-d {
   border-bottom: 1px solid rgba(255, 255, 255, 0.18) !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-exam,
@@ -1260,7 +1260,7 @@ th.super-hdr-exam {
 .datagrid-table th.super-hdr-exam.super-hdr-theme-a,
 .datagrid-table th.super-hdr-exam-a {
   color: var(--quad-a, #ff2d87) !important;
-  text-shadow: 0 0 10px rgba(255, 45, 135, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-exam.super-hdr-theme-b,
@@ -1268,7 +1268,7 @@ th.super-hdr-exam {
 .datagrid-table th.super-hdr-exam.super-hdr-theme-b,
 .datagrid-table th.super-hdr-exam-b {
   color: var(--quad-b, #ff8c00) !important;
-  text-shadow: 0 0 10px rgba(255, 140, 0, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-exam.super-hdr-theme-c,
@@ -1276,7 +1276,7 @@ th.super-hdr-exam {
 .datagrid-table th.super-hdr-exam.super-hdr-theme-c,
 .datagrid-table th.super-hdr-exam-c {
   color: var(--quad-c, #95ff00) !important;
-  text-shadow: 0 0 10px rgba(149, 255, 0, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-exam.super-hdr-theme-d,
@@ -1284,7 +1284,7 @@ th.super-hdr-exam {
 .datagrid-table th.super-hdr-exam.super-hdr-theme-d,
 .datagrid-table th.super-hdr-exam-d {
   color: var(--quad-d, #38bdf8) !important;
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
+  text-shadow: none !important;
 }
 
 #class-attendance-grid th.super-hdr-action,
@@ -1332,12 +1332,12 @@ th.super-hdr-exam {
 }
 
 #class-attendance-grid .btn-manual-input-toggle.active {
-  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 #class-attendance-grid .input-matrix-exam-score,
 #class-attendance-grid .input-matrix-exam-pts {
-  box-shadow: 0 0 4px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -1345,7 +1345,7 @@ th.super-hdr-exam {
 #class-attendance-grid .input-matrix-exam-pts:focus {
   outline: none;
   border-color: var(--grade-a) !important;
-  box-shadow: 0 0 6px rgba(var(--grade-a-rgb), 0.6) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 #class-attendance-grid .btn-matrix-action {
@@ -2167,7 +2167,7 @@ th.col-subhdr-status * {
   color: var(--badge-text-dark) !important;
   font-size: 12px !important;
   font-weight: 900 !important;
-  box-shadow: 0 0 8px var(--grade-star-glow) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
 }
 
@@ -2226,7 +2226,7 @@ th.col-subhdr-status * {
   border-radius: 50% !important;
   line-height: 1 !important;
   border: 1px solid rgba(255, 255, 255, 0.5) !important;
-  box-shadow: 0 0 8px var(--grade-star-glow) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2239,7 +2239,7 @@ th.col-subhdr-status * {
 
 .text-gold-champion {
   color: var(--grade-c) !important;
-  text-shadow: 0 0 8px rgba(var(--grade-c-rgb), 0.5) !important;
+  text-shadow: none !important;
   font-weight: 900 !important;
 }
 
@@ -2299,35 +2299,35 @@ th.col-subhdr-status * {
   background: rgba(56, 189, 248, 0.16);
   color: #38bdf8;
   border-color: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .attendance-theme-pill.theme-a.active {
   background: rgba(var(--quad-a-rgb, 255, 45, 135), 0.18);
   color: var(--quad-a, #ff2d87);
   border-color: var(--quad-a, #ff2d87);
-  box-shadow: 0 0 10px rgba(var(--quad-a-rgb, 255, 45, 135), 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .attendance-theme-pill.theme-b.active {
   background: rgba(var(--quad-b-rgb, 255, 140, 0), 0.18);
   color: var(--quad-b, #ff8c00);
   border-color: var(--quad-b, #ff8c00);
-  box-shadow: 0 0 10px rgba(var(--quad-b-rgb, 255, 140, 0), 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .attendance-theme-pill.theme-c.active {
   background: rgba(var(--quad-c-rgb, 149, 255, 0), 0.18);
   color: var(--quad-c, #95ff00);
   border-color: var(--quad-c, #95ff00);
-  box-shadow: 0 0 10px rgba(var(--quad-c-rgb, 149, 255, 0), 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .attendance-theme-pill.theme-d.active {
   background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.18);
   color: var(--quad-d, #c084fc);
   border-color: var(--quad-d, #c084fc);
-  box-shadow: 0 0 10px rgba(var(--quad-d-rgb, 192, 132, 252), 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 /* Top Panel Theme Navigation (Deprecated: moved to Sub Panel per strict 2-panel SSOT) */
@@ -2597,7 +2597,7 @@ tfoot.datagrid-tfoot,
 .status-dot.dot-active,
 .status-dot.dot-success {
   background: var(--clr-success);
-  box-shadow: 0 0 8px rgba(0, 192, 0, 0.6);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   animation: statusPulse 2s infinite ease-in-out;
 }
 
@@ -2605,21 +2605,21 @@ tfoot.datagrid-tfoot,
 .status-dot.dot-inactive,
 .status-dot.dot-neutral {
   background: var(--clr-text-3);
-  box-shadow: 0 0 4px rgba(148, 163, 184, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .status-dot.dot-locked,
 .status-dot.dot-danger,
 .status-dot.dot-error {
   background: var(--clr-danger);
-  box-shadow: 0 0 8px rgba(var(--grade-e-rgb), 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 .status-dot.dot-warning,
 .status-dot.dot-remedial,
 .status-dot.dot-review {
   background: var(--clr-warning);
-  box-shadow: 0 0 8px rgba(var(--grade-d-rgb), 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 @keyframes statusPulse {
@@ -2677,7 +2677,7 @@ tfoot.datagrid-tfoot,
   background: rgba(255, 255, 255, 0.15);
   border-color: rgba(255, 255, 255, 0.3);
   transform: none;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 
@@ -3378,7 +3378,7 @@ button[data-edit-level]:hover {
   background: rgba(56, 189, 248, 0.15) !important;
   border-color: #38bdf8 !important;
   color: #ffffff !important;
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.35) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
 }
 
 

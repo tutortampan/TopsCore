@@ -103,12 +103,12 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
   - **Button Size Golden Rules**:
     - Modal CTA Area: Strictly **36px–40px** height (`height: 36px` to `40px !important; padding: 0 20px !important; font-size: 14px !important; font-weight: 800 !important; border-radius: 6px !important;`). Must never exceed 40px.
     - In-Panel / Toolbar: Strictly **30px** height (`height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; border-radius: 4px !important;`). Must never exceed 30px.
-  - **CTA Ghost-to-Solid Button Invariant (Standby Ghost, Hover/Click Solid Glow)**:
+  - **CTA Ghost-to-Solid Button Invariant (Standby Ghost, Hover/Click Solid Matte)**:
     - Seluruh tombol aksi pada CTA Area (baik tombol sekunder `CLOSE` maupun tombol aksi utama) **WAJIB menggunakan pola Ghost-to-Solid**:
-      - **Standby (Default)**: Ghost Outline Mode (`background: transparent !important;`, border 1.5px dan teks menyala mengikuti warna semantik token).
-      - **Hover / Click (:active)**: Solid Filled + Neon Glow Mode (`background: [TOKEN_COLOR] !important; color: #FFFFFF / #0F172A; box-shadow: 0 0 14px rgba(var(--token-rgb), 0.45);`).
+      - **Standby (Default)**: Ghost Outline Mode (`background: transparent !important;`, border 1.5px dan teks menyala mengikuti warna semantik token tanpa glow).
+      - **Hover / Click (:active)**: Solid Filled Matte Mode (`background: [TOKEN_COLOR] !important; color: #FFFFFF / #0F172A; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); text-shadow: none !important;`).
       - **Strict Stationary Hover**: DILARANG bergerak fisik saat hover (`transform: none !important;`).
-  - **Universal Hover & Click (Active) Glow**: Every button across the application MUST emit a smooth, luminous glow on `:hover` and click/press (`:active`) via dynamic `box-shadow` matched to its theme/semantic color token.
+  - **Universal Matte Enterprise Palette SSOT**: Seluruh tombol, kartu, badge, dan teks di seluruh sistem TopsCore LMS MUTLAK menerapkan warna matte murni tanpa neon glow, tanpa `text-shadow`, dan tanpa `box-shadow: 0 0 Xpx`. Efek hover dan tekan (:active) mengandalkan perubahan latar belakang solid atau kontras warna matte berbobot elevasi `box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4)`.
 
 ### 1.6 Architectural Anti-Freeze & Performance Invariants
 
@@ -131,16 +131,18 @@ Setiap kali pengguna mengunggah tangkapan layar (screenshot), agen WAJIB secara 
 ### 1.8 Standardized 50px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`) (SSOT)
 Seluruh halaman sistem TopsCore LMS (Student Realm & Admin Realm) menerapkan banner bawah permanen terkunci (**Locked Base Banner**) dengan aturan baku mutlak:
 1. **Strict 50px Height Lock**: Tinggi banner bawah terkunci mati tepat **`50px`** (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box !important;`).
-2. **Dual-Viewport Invariant Execution**:
+2. **Centered Alignment SSOT**: Teks `"TopsCore by Mr. Top"` berada tepat di tengah (*centered*) secara mutlak di seluruh realm (`justify-content: center !important; text-align: center !important; padding: 0 16px !important;`), baik pada kontainer banner maupun inner wrapper (`.banner-brand-wrap` & `.banner-brand-content`). Aturan lama yang menerapkan rata kiri (*left-aligned*) dan asymmetric padding kiri telah resmi dihapus dan dilarang.
+3. **Dual-Viewport Invariant Execution**:
    - **Student Realm (Mobile Corridor 430px)**: Banner terkunci terpusat pada koridor mobile dengan `max-width: 430px !important; margin: 0 auto !important; left: 0; right: 0; bottom: 0; position: fixed !important;`.
    - **Admin Desktop Realm (100vh Workstation)**: Banner menempel di dasar layar monitor (`width: 100vw; bottom: 0; left: 0; position: fixed !important;`). Konsol kerja `#admin-console` memotong tepat 50px (`height: calc(100vh - 50px) !important; max-height: calc(100vh - 50px) !important;`) untuk menjamin zero outer page scroll (100vh lock sempurna).
-3. **Internal Spacing & Clearance**:
+4. **Internal Spacing & Clearance**:
    - Pada halaman dengan scrollable content, body mengalokasikan padding bawah `padding-bottom: calc(50px + env(safe-area-inset-bottom, 0px)) !important;`.
    - Pada halaman hasil (`result.html`) dan ruang ujian (`test.html`) yang menerapkan *Zero-Scroll Single Screen Architecture*, jarak vertikal dari elemen/tombol terbawah (misal `#back-dashboard-btn`) ke banner terkunci tepat **10px** (`padding-bottom: 10px; gap: 10px;`).
-4. **Authoritative Brand Typography & Colors**:
-   - **Brand**: `TopsCore` berukuran **16px** (Level 2), font `Inter`, weight `900`, warna Tactical Blue (`#38bdf8`), letter-spacing `0.05em`, soft glow `text-shadow: 0 0 14px rgba(56, 189, 248, 0.45)`.
-   - **Author**: `by Mr. Top` berukuran **14px** (Level 3), font `Inter`, weight `800`, warna White Slate (`#f8fafc`), letter-spacing `0.02em`.
-   - **Background & Border**: Background `#030a12` (atau radial glow dinamis sesuai tier), border atas `1px solid rgba(56, 189, 248, 0.25)` (atau `1.5px solid rgba(var(--tier-rgb), 0.40)` saat tier glow aktif).
+5. **Uniform 12px Brand Typography & Colors (SSOT)**:
+   - **Ukuran & Berat Seragam**: Seluruh teks banner (`TopsCore` maupun `by Mr. Top`) berukuran **`12px`** (`font-size: 12px !important;`), font `'Inter', sans-serif`, dan bobot identik **`font-weight: 700` (Bold)** (`letter-spacing: 0.04em`). Aturan lama yang membedakan ukuran/berat (16px/14px, 900/800) telah resmi dihapus demi kerapian visual.
+   - **Brand**: `TopsCore` menggunakan warna Tactical Cyan (`#38bdf8`) dengan warna matte tegas (`text-shadow: none !important;`).
+   - **Author**: `by Mr. Top` menggunakan warna White Slate (`#f8fafc`).
+   - **Background & Border**: Background `#070b19` (matte solid dark tanpa radial glow), border atas `1px solid rgba(56, 189, 248, 0.25)` (atau `1.5px solid var(--tier-color)` saat tier aktif) dengan drop-shadow matte `0 2px 8px rgba(0, 0, 0, 0.35)`.
 
 ### 1.9 Workspace Dual-Zone Rule (Card + Table Layout Invariant SSOT)
 Dalam perancangan workspace/halaman workstation admin yang memadukan Kartu Kontrol / Governance / Indikator (*Cards/Panels*) dengan Tabel Data (*Data Table/Datagrid*), arsitektur tata letak **MUTLAK** memilih salah satu dari 2 format resmi:
@@ -472,7 +474,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
        - Label metrik: **12px Inter** berbobot regular warna slate (`#94A3B8`).
     5. **Badge Grade Bulat**: Lingkaran grade berdiameter **44px** (`.grade-circle-44`), latar belakang mengikuti warna token Grade siswa, huruf Grade berbobot `font-weight: 800` warna **Dark Slate (`#0F172A`)** untuk seluruh simbol (★, A, B, C, D, E).
     6. **Zero Subtitle Clutter**: Dilarang menampilkan teks subtitle deskriptif yang redundan di bawah nama siswa.
-- **Standar Metrik Hero Individual**: Metrik hero tunggal pada kartu nilai (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) menerapkan **Level 0 Hero Metric (30px, Inter 800 Extra Bold)** dengan tabular-nums dan soft ambient glow.
+- **Standar Metrik Hero Individual**: Metrik hero tunggal pada kartu nilai (`#bottom-stat-avg-score` dan `#stat-overall-grade-value`) menerapkan **Level 0 Hero Metric (30px, Inter 800 Extra Bold)** dengan tabular-nums dan elevasi matte bersih (tanpa glow).
 
 ### 5.3 Student Gate & Cascade Login Invariants (index.html SSOT)
 - **Hierarki Alur Cascade Login**:
@@ -482,7 +484,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Brand Header, Tipografi & Badge Logo Buku Vektor SVG**:
   - **Judul Brand `TOPS CORE`**: Wajib menggunakan **30px (`font-size: 30px; font-weight: 900; font-family: 'Inter', sans-serif; line-height: 1.1; margin: 0;`)** — **Level 0 Brand Hero Landmark**. Skala 30px memberikan wibawa identitas visual (*brand presence*) yang kokoh pada gerbang masuk portal, berharmonisasi secara matematis dengan kelipatan 10px ($10\text{px} \times 3$), serta proporsional dalam koridor mobile 430px. Dilarang menggunakan font perantara liar 18px (*Strict Zero Sub-Scale Invariant*).
   - **Eliminasi Subtitle (Zero Subtitle Clutter)**: Deskripsi atau subtitle di bawah judul (`Student Gate — Sign in to continue`) **DIHAPUS SECARA PERMANEN**. Menghilangkan elemen teks dekoratif yang berulang, memaksimalkan ruang vertikal *above-the-fold*, dan menjaga tampilan gerbang login tetap bersih (*ultra-lean, high-focus*).
-  - **Badge Logo Buku Vektor SVG**: Menggunakan ikon vektor SVG Open Book resmi TopsCore di dalam lingkaran berdiameter 52px (`.brand-badge-wrap`) dengan aksen Tactical Cyan (`#38bdf8`), background `rgba(56, 189, 248, 0.12)`, border `1.5px solid rgba(56, 189, 248, 0.35)`, pendaran `box-shadow: 0 0 16px rgba(56, 189, 248, 0.25)`, dan animasi mengambang halus (*smooth float animation*). Jarak bawah ke judul tepat 10px (`margin-bottom: 10px;`).
+  - **Badge Logo Buku Vektor SVG**: Menggunakan ikon vektor SVG Open Book resmi TopsCore di dalam lingkaran berdiameter 52px (`.brand-badge-wrap`) dengan aksen Tactical Cyan (`#38bdf8`), background `rgba(56, 189, 248, 0.12)`, border `1.5px solid rgba(56, 189, 248, 0.35)`, drop-shadow matte `box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35)`, dan animasi mengambang halus (*smooth float animation*). Jarak bawah ke judul tepat 10px (`margin-bottom: 10px;`).
 - **Universal 10px Container Gap & Card Internal Padding Invariant**:
   - Jarak antar seksi kartu cascade dan banner pada mobile corridor 430px terkunci tepat **10px** (`.login-wrapper { gap: 10px; }`, `.cascade-section.selected { margin-bottom: 10px; }`, `.cascade-section.unlocked { margin-bottom: 10px; }`, `.remember-me-banner { margin: 10px 0; }`).
   - Jarak elemen internal kartu ke garis batas luar (*Card Internal Padding*) terkunci tepat **10px** (`.cascade-header { padding: 10px; gap: 10px; }`, `.cascade-body { padding: 10px; }`, `.pin-section { padding: 10px; }`).
@@ -492,13 +494,13 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Batas maksimal kontainer adalah `max-height: 35vh` dengan scrollbar tipis 4px.
 - **Kapsul Pilihan Siswa / Dropdown Touch Target Invariant (Level 2.5 SSOT)**:
   - Tombol kapsul pilihan siswa (`.opt-card`) wajib memiliki tinggi sentuh ergonomis mobile minimal **44px** (`min-height: 44px; padding: 11px 14px; border-radius: 10px; gap: 12px;`) untuk melenyapkan kesan sempit/gepeng.
-  - Teks nama siswa wajib berukuran **14px** (Level 2.5 Specialized Selects, `font-weight: 600; line-height: 1.35;`) dengan bullet dot vektor Tactical Cyan (`#38bdf8`) dan aksen glow halus saat aktif (`.active`).
+  - Teks nama siswa wajib berukuran **14px** (Level 2.5 Specialized Selects, `font-weight: 600; line-height: 1.35;`) dengan bullet dot vektor Tactical Cyan (`#38bdf8`) dan aksen kontras matte saat aktif (`.active`).
   - Label seksi terlipat (`.cascade-label`) menggunakan `min-width: 68px; max-width: 90px; width: auto;` agar nama siswa terpilih pada baris atas tidak terpotong elipsis (`...`) sesuai aturan *Universal Zero-Truncation Invariant*.
 - **Netralisasi Digit PIN (False Affordance Prevention)**:
   - Kotak digit PIN yang sedang diketik (`.pin-digit.filled`) **DILARANG KERAS menggunakan warna Hijau** (`#00c000`). Hijau eksklusif untuk Grade A (Sukses / Kelulusan). Digit PIN yang belum terverifikasi wajib berkarakter **Netral** (White/Slate Subtle: `border-color: rgba(255, 255, 255, 0.35); background: rgba(255, 255, 255, 0.08); color: #fff;`).
   - Kotak aktif/fokus dan tombol "Sign In" wajib menggunakan token **Tactical Blue** (`#38bdf8` / `#0284c7`), bukan warna ungu legacy.
 - **Strict Zero-Movement Hover Invariant**:
-  - Tombol opsi siswa (`.opt-card:hover`) wajib *strictly stationary* (`transform: none !important;`), efek interaksi murni berupa subtle glow dan background tint.
+  - Tombol opsi siswa (`.opt-card:hover`) wajib *strictly stationary* (`transform: none !important;`), efek interaksi murni berupa background tint dan elevasi drop-shadow matte tanpa glow.
 - **Strict Zero Emojis Invariant**:
   - Seluruh kotak pencarian wajib menggunakan ikon vektor SVG Search murni, unicode emoji `🔍` dilarang keras.
 - **PWA Install Banner Ergonomics & Placement Invariant**:
@@ -530,10 +532,10 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
     - **Spesialisasi Korporat**: Menampilkan penugasan program korporat (*Evnikom*, *Sheraton*, *Tamata*), fokus hospitality/perhotelan, dan penanda Level 0 (Non-Level).
 - **Aturan Baku Aksen Warna Gender (Gender Color Accent SSOT)**:
   - 🍏 **Tutor & Staf Pria (Male — `.gender-male`)**:
-    - **Aksen Warna**: **Electric Lime (`#95ff00` / `var(--grade-b)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch glow, dan badge gender.
+    - **Aksen Warna**: **Electric Lime (`#95ff00` / `var(--grade-b)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch, dan badge gender.
     - **Kontras Teks Wajib**: Teks di dalam badge gender Lime WAJIB menggunakan warna **Dark Slate (`#0f172a`)** tebal (Inter 800) untuk menjamin keterbacaan tinggi.
   - 🌸 **Tutor & Staf Wanita (Female — `.gender-female`)**:
-    - **Aksen Warna**: **Electric Pink (`#ff2d87` / `var(--quad-a)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch glow, dan badge gender.
+    - **Aksen Warna**: **Electric Pink (`#ff2d87` / `var(--quad-a)`)** pada border kiri kartu (4px solid), avatar frame, lanyard notch, dan badge gender.
     - **Kontras Teks Wajib**: Teks di dalam badge gender Pink WAJIB menggunakan warna **Crisp White (`#ffffff`)** tebal (Inter 800).
 - **Spatial & Typography Invariants**:
   - Padding internal kartu strictly **10px** (`padding: 10px !important`).
@@ -585,7 +587,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
     - **Kode Tes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM`, `EVN-VCB-G2-TASK` (dilarang menggunakan `EVN-1VCB-...`).
 - **Student Dashboard & Class Lobby Invariants**:
   - **Non-Level**: Badge Level pada header dashboard disembunyikan/ditiadakan (dianggap kosong), dan seluruh kelas program dapat diakses langsung.
-  - **Alumni**: Mempertahankan *Lifetime Universal Access* ke seluruh kelas program di Class Lobby dan Dashboard, dengan badge bertuliskan **`ALUMNI`** / **`X`** dan aura ungu neon.
+  - **Alumni**: Mempertahankan *Lifetime Universal Access* ke seluruh kelas program di Class Lobby dan Dashboard, dengan badge bertuliskan **`ALUMNI`** / **`X`** berwarna ungu matte (`#c084fc`).
 
 ### 6.6 Faculty & Tutor Identity Card Standards (2-Column Grid & Standardized Badge Geometry SSOT)
 - **2-Column Vertical Grid Layout**: On the Attendance Dashboard (Domain A, Right Panel 50%), tutor identity cards strictly render in a balanced **2-column grid** (`grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-content: start;`). For CEC (6 tutors), this forms an elegant 3-row $\times$ 2-column matrix; for TOP (2 tutors), it forms 1 row $\times$ 2 columns.
@@ -607,7 +609,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Menggunakan kartu kotak presisi persegi (**Square aspect-ratio 1:1**, `aspect-ratio: 1 / 1 !important;`).
   - Strict 10px perimeter & 10px gap antar level cards (`gap: 10px !important;`).
   - **Angka Murni Tanpa Huruf 'L' (Strict Zero "L" on Level)**: Tampilan nomor level HANYA angka murni: `1`, `2`, `3` (dan `0` untuk program non-level TOP). DILARANG KERAS mencantumkan huruf "L" (`L1`, `L2`, `L3` dilarang).
-  - Visual State: Redup saat inaktif (`opacity: 0.45; filter: grayscale(15%);`), menyala terang saat aktif dengan border 2px dan glow shadow Grade Color.
+  - Visual State: Redup saat inaktif (`opacity: 0.45; filter: grayscale(15%);`), aktif tegas saat dipilih dengan border 2px Grade Color dan elevasi matte bersih `box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35)`.
 - **2. Class Schedule Matrix SSOT**:
   - Urutan 4 kolom baku: **`LVL`** (tengah, nomor murni) | **`CLASS`** (kiri, nama disiplin) | **`TUTOR`** (tengah, nama panggilan/nickname) | **`TIME`** (kanan, jam sesi).
   - Header: `LVL` | `CLASS` | `TUTOR` | `TIME`.
@@ -636,6 +638,23 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **2. Zero Header-Repetition in Data Cells (Header/Data Non-Redundancy SSOT)**:
   - Dilarang keras mengulang kata atau label yang sudah ada di header kolom ke dalam nilai sel data.
   - **Penerapan Resmi pada Kolom BATCH**: Jika header kolom tabel adalah **`BATCH`**, maka isi sel kolom mutlak hanya menampilkan angka/nama pengenal murni (`135`, `134`, `123`, `EV-07`), DILARANG menambahkan awalan kata "Batch" (`Batch 135`, `Batch 134`) karena menciptakan redundansi visual (*visual clutter*). Seluruh awalan `Batch ` wajib di-strip secara konsisten.
+
+### 6.9 Tutor Desk Mobile Navigation, Bottom Cluster & Spreadsheet Score Matrix SSOT
+- **1. Switcher Dock Height Invariant (Strict 40px SSOT Across All Areas)**:
+  - Bilah pengalih area kerja utama / switcher dock (`.tutor-master-dock` / `#tutor-master-dock`) dikunci mutlak dengan tinggi **`40px`** (`height: 40px !important; min-height: 40px !important; max-height: 40px !important; line-height: 40px !important; box-sizing: border-box;`) di seluruh area aplikasi.
+  - Tombol switcher (`.dock-switch-btn`) memiliki tinggi proporsional 32px (`height: 32px !important;`) dengan padding vertikal 4px dari batas dock.
+  - Memisahkan 2 kluster kerja utama: **`STUDY AREA`** (Attendance & Scores) dan **`ENGLISH AREA`** (Fines & Payment) yang dapat beralih via tap/klik atau gestur horizontal swipe.
+- **2. Bottom Level Selector Bar Invariant (Strict 30px SSOT)**:
+  - Bilah pemilih level (`.tutor-bottom-level-bar` / `#tutor-bottom-level-bar` dengan tombol `1st | 2nd | 3rd`) berlabuh di bagian bawah layar tepat di atas switcher dock 40px.
+  - Tinggi bilah level dikunci mutlak **`30px`** (`height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important;`).
+  - Tombol level memiliki tinggi 26px, mengisi porsi setara (`flex: 1 1 33.333%`), kontras tinggi, dan tersinkronisasi di seluruh view (Attendance, Scores, Fines, Payment).
+  - Peniadaan duplikasi: Level bar atas pada masing-masing panel datagrid dihilangkan, membebaskan ruang vertikal tabel untuk tampilan data yang lapang dan bersih.
+- **3. Spreadsheet Grid Score Input Invariant (Zero Floating Capsule Boxes)**:
+  - Seluruh input nilai manual pada datagrid nilai (`.grade-manual-input` di kelas Vocabulary, Speaking, Storytelling, Grammar, Basic English, dsb.) WAJIB mengadopsi format **Spreadsheet Grid Cell murni**.
+  - DILARANG KERAS menggunakan kotak input mengambang (floating capsule), border terpisah per-kotak, border-radius melengkung, atau latar belakang gelap terpisah di dalam sel data (`border: none !important; border-radius: 0 !important; background: transparent !important;`).
+  - Input mengisi 100% tinggi dan lebar sel `<td>` (`width: 100% !important; height: 100% !important;`), dengan garis grid pembatas tabel standar (`border-bottom: 1px solid rgba(255, 255, 255, 0.08)`, `border-right: 1px solid rgba(255, 255, 255, 0.08)`).
+  - State fokus (`:focus`) memberikan highlight outline Excel (`outline: none !important; background: rgba(56, 189, 248, 0.12) !important; box-shadow: inset 0 0 0 1.5px var(--primary-tactical, #38bdf8) !important;`).
+  - Browser number spinners disembunyikan sepenuhnya (`-webkit-appearance: none; -moz-appearance: textfield;`).
 
 
 

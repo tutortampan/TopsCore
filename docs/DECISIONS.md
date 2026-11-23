@@ -1120,7 +1120,7 @@ Status: ACCEPTED
 ## DECISION-042 — Result Page Synchronized Tier Glow, 8-Digit Hex Normalization, and Bright Blue Primary Navigation Button Preservation
 
 Date: 2026-11-03
-Status: ACCEPTED
+Status: ACCEPTED (Synchronized tier glow shadows SUPERSEDED by DECISION-081 Flat Enterprise Precision)
 
 ### Context
 1. User feedback identified that panels on `result.html` exhibited inconsistent colors:
@@ -2215,3 +2215,160 @@ Previously, the `public.students` table maintained `birth_date` (Date of Birth /
 ### Consequences
 - Official certificate generation and student demographics have full access to both Place and Date of Birth with zero ambiguity.
 - Tested on Batch 134 as pilot with 100% backward compatibility and zero impact on other batches.
+
+
+---
+
+## DECISION-080: Standardized Centered Uniform 12px Bottom Banner SSOT (Supersedes & Permanently Eradicates Conflicting Asymmetric Banner Typography Rules)
+
+### Status
+ACCEPTED (Supersedes & Eradicates Conflicting Banner Rules in UI Invariants & Legacy Blueprints)
+
+### Date
+2026-11-24
+
+### Context
+Banner dasar terkunci 50px (`#bottom-ad-banner` / `.topscore-locked-banner`) sebelumnya menerapkan aturan tipografi asimetris dengan teks rata kiri (`justify-content: flex-start; text-align: left; padding-left: 16px;`), serta disparitas ukuran dan ketebalan font antara brand dan author (`TopsCore` 16px weight 900 vs `by Mr. Top` 14px weight 800). Hal ini menimbulkan ketidakseimbangan visual, kurang rapi, dan tidak selaras saat ditampilkan pada koridor mobile 430px maupun workstation desktop 100vh.
+
+### Decision
+1. **Centered Alignment SSOT**:
+   - Teks `"TopsCore by Mr. Top"` mutlak berada tepat di tengah (*centered*) di seluruh halaman dan viewport (`justify-content: center !important; text-align: center !important; padding: 0 16px !important;`).
+   - Seluruh inner wrapper (`.banner-brand-wrap` & `.banner-brand-content`) berpusat 100% di tengah (`display: flex !important; align-items: center !important; justify-content: center !important; text-align: center !important; width: 100% !important;`).
+   - Aturan lama yang menerapkan rata kiri (*left-aligned*) dan asymmetric left padding resmi dihapus dan dilarang.
+2. **Uniform 12px Font & Weight SSOT**:
+   - Seluruh teks pada banner (`TopsCore` maupun `by Mr. Top`) wajib berukuran seragam **`12px`** (`font-size: 12px !important;`), menggunakan font tunggal resmi `'Inter', sans-serif`, dan bobot identik **`font-weight: 700 !important;` (Bold)** dengan `letter-spacing: 0.04em`.
+   - Aturan lama yang membedakan ukuran/bobot (16px vs 14px, 900 vs 800) resmi dihapus permanen.
+   - Warna: `TopsCore` menggunakan Tactical Cyan (`#38bdf8`) dengan warna matte tegas (`text-shadow: none !important;`), dan `by Mr. Top` menggunakan White Slate (`#f8fafc`).
+3. **Penyelarasan Seluruh Stylesheet**:
+   - Diterapkan secara seragam di `css/style.css`, `css/dashboard.css`, `css/tutor.css`, `css/admin/admin-layout.css`, `css/admin/admin-modals.css`, `css/test.css`, `css/result.css`, serta minified bundles.
+
+### Consequences
+- Banner dasar 50px tampil rapi, simetris, berbobot seragam, dan 100% konsisten di seluruh aplikasi tanpa pertentangan aturan.
+- Seluruh dokumen acuan (`AGENTS.md`, `.agents/rules/ui-invariants.md`, `docs/DECISIONS.md`) harmonis 100%.
+
+---
+
+## DECISION-081: Universal System-Wide Matte Enterprise Standardization & Complete Purge of Neon Glow (Flat Enterprise Precision SSOT)
+
+### Status
+ACCEPTED (Permanently Eradicates Ambient Glow, Radial Glow Gradients, and Text Shadows Across the Entire System; SUPERSEDES DECISION-016 & DECISION-042 tier glow auras)
+
+### Date
+2026-11-24
+
+### Context
+Pengguna memerintahkan standardisasi warna matte murni (pure matte) di seluruh sistem tanpa terkecuali, serta menghapus seluruh aturan lama yang berlawanan.
+Sebelumnya, sistem masih menyisakan pendaran neon ambient (`box-shadow: 0 0 Xpx [color]`), gradient radial aura (`radial-gradient(...)`), dan bayangan teks (`text-shadow: 0 0 Xpx`) pada hero score cards, result cards, test modals, buttons hover, dan indicator badges yang dinilai norak (tacky) dan mengurangi wibawa enterprise.
+
+### Decision
+1. **Universal Matte Enterprise Palette SSOT**:
+   - **Zero Ambient Neon Glow**: Seluruh deklarasi `box-shadow: 0 0 Xpx ...` di seluruh stylesheet CSS murni (`style.css`, `dashboard.css`, `result.css`, `test.css`, `auth.css`, `conversation.css`, `tutor.css`, dan seluruh file `css/admin/*.css`) dihapus dan diganti dengan elevasi matte bersih berbobot gelap: `box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35)` atau `box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4)` atau `none`.
+   - **Zero Text Shadows**: Seluruh deklarasi `text-shadow: 0 0 Xpx ...` pada skor, persentase grade, judul hero, pips kata/frasa, dan bottom banner dihapus permanen (`text-shadow: none !important;`).
+   - **Zero Radial Aura Gradients**: Latar belakang kartu (seperti `.hero-metric-box`, `.result-identity-card`, `.result-metrics-composite-card`) dialihkan dari radial gradient berkabut neon menjadi warna matte pekat yang solid (`#0f172a`, `#090d16`, `#070b19`).
+   - **Crisp Matte Borders**: Penegasan kategori/tier nilai menggunakan garis border solid semantik berbobot presisi (`1px` atau `1.5px solid var(--tier-color)` / `var(--grade-*)`) tanpa pendaran glow di sekelilingnya.
+2. **Eradikasi Aturan yang Bertentangan**:
+   - Menghapus aturan "Universal Hover & Click Active Glow" pada `.agents/rules/ui-invariants.md`.
+   - Memperbarui `AGENTS.md` §2.31 untuk mengunci *Universal Matte Enterprise Palette SSOT*.
+   - Menghapus referensi tier glow pendaran pada bottom banner di `ui-invariants.md` §1.8.
+
+### Consequences
+- Seluruh antarmuka TopsCore LMS (Student Dashboard, Result, Exam Room, Tutor Desk, Admin Workstation, dan Gate) tampil profesional, tenang, berwibawa, dan berstandar enterprise modern.
+- Zero ambiguitas atau konflik aturan styling antara dokumen governance dan kode implementasi.
+
+---
+
+## DECISION-082: Two-Tier Evaluation Architecture: Class-Daily Formative (Domain C) vs Batch-Weekly Report (Domain B) SSOT
+
+### Status
+ACCEPTED (Authoritative Architecture Standard for All Classes & Subject Assessments)
+
+### Date
+2026-11-24
+
+### Context
+Pengguna menegaskan klarifikasi arsitektur penilaian TopsCore LMS: nilai harian (*daily formative tasks / practice*) hanya berada di dalam kelas (*Domain C*), sedangkan nilai yang ditarik ke dalam Rapor Siswa (*Student's Report*) di *Domain B (Batch)* secara eksklusif adalah nilai mingguan / periodik (*weekly milestone / periodic exams*).
+Perlu adanya kodifikasi resmi agar pemisahan peran antara Domain C (kelas operasional) dan Domain B (rapor rombongan belajar) terkunci secara permanen dan menjadi pedoman baku bagi perancangan seluruh kelas.
+
+### Decision
+1. **Lapis 1 — Harian (Daily Formative / Tasks / Repetitions / Practice — Domain C Exclusivity)**:
+   - Seluruh aktivitas latihan, repetisi harian (seperti 7×7 kata dan frasa pada Vocabulary, drill percakapan Speaking, latihan performa teks Storytelling, dan tugas harian Grammar) **eksklusif beroperasi di dalam Domain C (Class Hub)**.
+   - Bertindak sebagai kawah candradimuka proses belajar dan syarat pembuka gembok (*prerequisite gating*) menuju Ujian Mingguan.
+   - **Mutlak tidak ditarik ke Rapor Siswa di Domain B**: Kesalahan selama proses latihan harian tidak pernah mengurangi nilai resmi rapor siswa.
+2. **Lapis 2 — Mingguan & Periodik (Weekly Milestone & Periodic Exams — Domain B Aggregation)**:
+   - Ujian resmi berkala (*Milestones*: `EX-1, EX-2, EX-3, EX-4`) diselenggarakan di dalam kelas untuk menguji capaian siswa.
+   - Hasil ujian resmi mingguan/periodik inilah yang **secara otomatis ditarik ke dalam Student's Report di Domain B**.
+   - Di Domain B, nilai-nilai ujian tersebut diolah menjadi Nilai Akhir per mata pelajaran dengan label **`SCORE`** (menggantikan istilah NA/TOTAL), dan seluruh SCORE dirangkum menjadi Nilai Rata-rata Keseluruhan (**`AVG`**) guna menentukan kelulusan level / promosi rombongan belajar.
+3. **Harmonisasi Kolom OVERALL Domain C**:
+   - Kolom `OVERALL` (`PTS` dan `GRD`) pada sisi kanan workstation Domain C adalah akumulasi poin mentah dan grade akhir khusus mata pelajaran tersebut yang mencerminkan Nilai Akhir (`SCORE`) yang mengalir ke Domain B.
+4. **Protokol Pencegahan Bentrok Nama (Zero Name Clash Invariant & Audit Protocol)**:
+   - Setiap perancangan atau perubahan penamaan label/kolom wajib melalui audit kode guna memastikan nol tumpang tindih semantik:
+     - `SCORE`: Nilai akhir mata pelajaran (Subject Final Score %).
+     - `AVG`: Rata-rata komposit seluruh mata pelajaran.
+     - `PTS`: Poin mentah (*Whole Integer Raw Points*).
+     - `RATE`: Persentase kelulusan ujian/topik di workstation kelas.
+     - `GRD`: Simbol huruf grade (★, A, B, C, D, E).
+     - `EX-1`..`EX-4`: Nomor urut resmi ujian berkala.
+
+### Consequences
+- Batas kerja antara Domain C dan Domain B menjadi 100% tegas, logis, dan intuitif bagi admin maupun pengembang.
+- Seluruh kelas (Vocabulary, Speaking, Storytelling, Grammar, Basic/Pronunciation) memiliki acuan seragam dalam menstrukturkan materi harian vs ujian mingguan.
+
+---
+
+## DECISION-083: Dual-Tenant Step vs Level Terminology SSOT (CEC Step vs TOP Level)
+
+### Status
+ACCEPTED (Authoritative Terminology Standard for Institutional Differentiation)
+
+### Date
+2026-11-24
+
+### Context
+Institusi Cake English Course (CEC) menggunakan kurikulum berjenjang 3 bulan bertahap yang secara kultural dan pedagogis dinamakan **`Step`** (`1st Step`, `2nd Step`, `3rd Step`). Sedangkan institusi Top Occupational Program (TOP: Evnikom, Sheraton, Tamata) menyelenggarakan program vokasi/hospitality non-level intensif yang menggunakan entitas teknis **`Level`** (`Level 0`).
+Pengguna memerintahkan penyelarasan terminologi: CEC resmi beralih menggunakan istilah **`Step`**, sedangkan TOP tetap mempertahankan istilah **`Level`**.
+
+### Decision
+1. **CEC Terminology SSOT (Program Camp)**:
+   - Istilah resmi jenjang adalah **`Step`**:
+     - `1st Step` (Bulan 1)
+     - `2nd Step` (Bulan 2)
+     - `3rd Step` (Bulan 3)
+   - **Header Kolom Datagrid**: Menampilkan **`STEP`** (bukan `LVL`).
+   - **Tombol Kenaikan Jenjang**: Menampilkan **`STEP UP`** (atau `NEXT STEP`).
+   - **Kelulusan Akhir 3rd Step**: Resmi berstatus **`Alumni` (Level X)**.
+2. **TOP Terminology SSOT (Program Evnikom, Sheraton, Tamata)**:
+   - Istilah resmi jenjang tetap **`Level`**:
+     - Entitas teknis database: **`Level 0`** (`level_number = 0`).
+     - Header kolom datagrid: Menampilkan **`LVL`** (bernilai **`0`** sesuai DECISION-066).
+     - Tanpa tombol promosi (program tunggal selesai), langsung lulus berstatus **`Alumni`**.
+3. **Database Integrity**:
+   - Kolom database internal `levels`, `level_id`, dan `level_number` tetap dipertahankan tanpa perubahan skema destruktif; pembedaan terminologi diaplikasikan pada antarmuka (UI/UX) dan label visual.
+
+### Consequences
+- Menghadirkan rasa bahasa yang otentik dan selaras 100% dengan budaya akademik CEC dan TOP.
+- Pengguna dan siswa CEC melihat istilah `Step` yang alami, sementara program vokasi TOP tetap terdefinisi jelas sebagai `Level 0`.
+
+---
+
+## DECISION-084: 3rd Step (Level 3) Milestone Exam Passing Threshold (70%)
+
+### Status
+ACCEPTED (Authoritative Academic Standard for 3rd Step Final Exams)
+
+### Date
+2026-11-24
+
+### Context
+Pada kurikulum berjenjang CEC Camp, Step 3 (Level 3) merupakan jenjang tertinggi sebelum kelulusan resmi menjadi Alumni (Level X). Materi kosakata Level 3 mencakup kosakata tingkat lanjut dan akademis (Academic Vocabulary — TOEFL & IELTS). Pengguna menginstruksikan standar kelulusan khusus untuk Ujian Akhir Tema (Milestone Exam) pada 3rd Step adalah **70%** (berbeda dari batas standar umum 60%).
+
+### Decision
+1. **3rd Step Exam Passing Threshold (70%)**:
+   - Seluruh Ujian Akhir Tema (Milestone Exams) untuk 3rd Step / Level 3 (`CAMP-3VCB-A-EXAM`, `CAMP-3VCB-B-EXAM`, `CAMP-3VCB-C-EXAM`, `CAMP-3VCB-D-EXAM`) wajib menetapkan batas minimal kelulusan `minimum_required_score = 70`.
+2. **Auto-Generator Default Integration**:
+   - Fungsi pembangkit tes otomatis `autoGenerateTestsHierarchy` di `js/api.js` mengadopsi aturan ini: jika `levelNum === 3`, nilai default `testPass` secara otomatis diatur ke `70%`.
+3. **Database Consistency**:
+   - Metadata tes pada tabel `tests` (`minimum_required_score` dan `payload.minimum_required_score`) telah diperbarui ke `70%` untuk seluruh ujian aktif Level 3.
+
+### Consequences
+- Standar kelulusan Step 3 mencerminkan rigoritas akademis tingkat lanjut sebelum siswa dipromosikan ke jenjang Alumni (Level X).
+- Seluruh tugas harian (Tasks) dan ujian tema (Exams) pada 3rd Step selaras pada batas penguasaan minimal 70%.

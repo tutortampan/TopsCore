@@ -66,7 +66,7 @@ Whenever `/check-ui` is invoked on a live screen, component, or screenshot, insp
 ### 6. Button Sizes & CTA Spatial Golden Rules
 - **In-Panel / Toolbar Buttons**: Strictly **30px** height (`height: 30px !important; line-height: 28px !important;`).
 - **Modal CTA Buttons**: Strictly **36px–40px** height (`height: 36px` to `40px !important;`).
-- **Ghost-to-Solid Invariant**: Standby transparent ghost outline $\to$ hover/active solid filled neon glow. Stationary hover (`transform: none`).
+- **Ghost-to-Solid Invariant**: Standby transparent ghost outline $\to$ hover/active solid filled matte mode (`box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); text-shadow: none;`). Stationary hover (`transform: none`).
 - **CTA Distribution Invariant**:
   - 1 button: Centered.
   - 2 buttons: Flush opposite ends (`CLOSE` at far LEFT, primary action at far RIGHT).

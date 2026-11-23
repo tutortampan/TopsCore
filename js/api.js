@@ -1,15 +1,15 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass } from './grading.js?v=20261106_v160';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass } from './grading.js?v=20261106_v160';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
-export function getGrade(pct) {
-  return calculateGrade(pct);
+export function getGrade(pct, options) {
+  return calculateGrade(pct, options);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -295,8 +295,23 @@ function _getPersistentStorage() {
   return null;
 }
 
-const MASTER_STORAGE_PREFIX = 'topscore_mc_';
+const MASTER_STORAGE_PREFIX = 'topscore_mc_v681_';
 const MASTER_STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7-day weekly academic cycle (Ahad to Ahad)
+
+// Purge any stale legacy cache keys from previous versions on module initialization
+try {
+  const _initStorage = _getPersistentStorage();
+  if (_initStorage) {
+    const _staleKeys = [];
+    for (let i = 0; i < _initStorage.length; i++) {
+      const k = _initStorage.key(i);
+      if (k && k.startsWith('topscore_mc_') && !k.startsWith(MASTER_STORAGE_PREFIX)) {
+        _staleKeys.push(k);
+      }
+    }
+    _staleKeys.forEach(k => _initStorage.removeItem(k));
+  }
+} catch (_) {}
 
 // Sunday (Ahad) boundary reset helper in WITA (UTC+8)
 function _isSundayExpired(cachedTimestamp, now = Date.now()) {
@@ -379,27 +394,39 @@ function _clearMasterStorage(table = null) {
   } catch (_) {}
 }
 
+let _isClearingApiCache = false;
 export function clearApiCache(prefix = null, { keepPersistent = false } = {}) {
-  if (!prefix) {
-    _apiCache.clear();
-    clearAdminCache();
-    if (!keepPersistent) {
-      _clearPersistentVaultCache();
-      _clearMasterStorage();
-    }
-  } else {
-    for (const key of _apiCache.keys()) {
-      if (key.startsWith(prefix)) _apiCache.delete(key);
-    }
-    if (!keepPersistent) {
-      _clearMasterStorage(prefix);
-    }
-    if (prefix === 'tests' || prefix.startsWith('tests')) {
+  if (_isClearingApiCache) return;
+  _isClearingApiCache = true;
+  try {
+    if (!prefix) {
+      _apiCache.clear();
+      clearAdminCache();
+      if (!keepPersistent) {
+        _clearPersistentVaultCache();
+        _clearMasterStorage();
+      }
+    } else {
+      for (const key of _apiCache.keys()) {
+        if (key.startsWith(prefix)) _apiCache.delete(key);
+      }
+      if (!keepPersistent) {
+        _clearMasterStorage(prefix);
+      }
+      if (prefix === 'tests' || prefix.startsWith('tests')) {
       clearAdminCache('tests');
     }
-    if ((prefix === 'vault' || prefix.startsWith('vault')) && !keepPersistent) {
-      _clearPersistentVaultCache();
+      if (prefix === 'tests' || prefix.startsWith('tests')) {
+        _clearMasterStorage('tests');
+      }
+      if ((prefix === 'vault' || prefix.startsWith('vault') || prefix === 'vocabulary_vault') && !keepPersistent) {
+        _clearPersistentVaultCache();
+        clearAdminCache('vocabulary_vault');
+        _clearMasterStorage('vocabulary_vault');
+      }
     }
+  } finally {
+    _isClearingApiCache = false;
   }
 }
 
@@ -1120,6 +1147,9 @@ export async function saveClassTestSettings(classId, settings = {}, applyToExist
         }
       }
       clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
     } catch (err) {
       console.error('[saveClassTestSettings] Failed to apply to tests:', err);
     }
@@ -1143,6 +1173,9 @@ export async function updateTestPassingScore(testId, newScore) {
 
   if (error) throw error;
   clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
   return { success: true, newScore: validScore };
 }
 
@@ -1977,7 +2010,8 @@ export async function startTest(studentId, testId) {
     const prereqAttempts = prereqAttRes.data || [];
     const prereqTest = prereqTestRes.data;
     const testSettings = await fetchClassTestSettings(asmData.class_id);
-    const targetReps = Number(testSettings?.taskRepetitions) || 7;
+    const rawTargetReps = Number(testSettings?.taskRepetitions) || 7;
+    const targetReps = (rawTargetReps >= 14) ? Math.round(rawTargetReps / 2) : rawTargetReps;
     const defaultTaskMin = Number(testSettings?.taskMinScore) || 50;
     const defaultExamMin = Number(testSettings?.examMinScore) || 60;
 
@@ -2088,7 +2122,8 @@ export async function startTest(studentId, testId) {
 
       if (themeTasks.length > 0) {
         const testSettings = await fetchClassTestSettings(asmData.class_id);
-        const targetReps = Number(testSettings?.taskRepetitions) || 7;
+        const rawTargetReps = Number(testSettings?.taskRepetitions) || 7;
+        const targetReps = (rawTargetReps >= 14) ? Math.round(rawTargetReps / 2) : rawTargetReps;
         const taskMinScore = Number(testSettings?.taskMinScore) || 50;
         const taskMap = Object.fromEntries(themeTasks.map(t => [t.id, t]));
 
@@ -2203,7 +2238,8 @@ export async function startTest(studentId, testId) {
 
     if (filteredPriorTasks.length > 0) {
       const testSettings = await fetchClassTestSettings(asmData.class_id);
-      const targetReps = Number(testSettings?.taskRepetitions) || 7;
+      const rawTargetReps = Number(testSettings?.taskRepetitions) || 7;
+      const targetReps = (rawTargetReps >= 14) ? Math.round(rawTargetReps / 2) : rawTargetReps;
       const priorTaskIds = filteredPriorTasks.map(t => t.id);
       const { data: priorTaskAttempts } = await sb.from('attempts')
         .select('test_id, percentage, effective_score, status, is_forgiven, total_questions, correct_count, score, forgiven_reason')
@@ -2897,40 +2933,48 @@ export async function fetchAttemptAnswers(attemptId) {
 
 let _adminCache = new Map();
 
+let _isClearingAdminCache = false;
 export function clearAdminCache(table = null) {
-  if (table) {
-    const normTable = (table || '').toLowerCase().replace('-', '_');
-    for (const key of _adminCache.keys()) {
-      if (key.startsWith(normTable + '|')) _adminCache.delete(key);
-    }
-    _clearMasterStorage(normTable);
-    // Cross-table dependencies: if batches, programs, institutions or levels change,
-    // clear students and progress caches which embed these related records
-    if (['batches', 'programs', 'institutions', 'levels'].includes(normTable)) {
+  if (_isClearingAdminCache) return;
+  _isClearingAdminCache = true;
+  try {
+    if (table) {
+      const normTable = (table || '').toLowerCase().replace('-', '_');
       for (const key of _adminCache.keys()) {
-        if (key.startsWith('students|') || key.startsWith('progress|') || key.startsWith('classes|')) {
-          _adminCache.delete(key);
-        }
+        if (key.startsWith(normTable + '|')) _adminCache.delete(key);
       }
-      _clearMasterStorage('classes');
+      _clearMasterStorage(normTable);
+      // Cross-table dependencies: if batches, programs, institutions or levels change,
+      // clear students and progress caches which embed these related records
+      if (['batches', 'programs', 'institutions', 'levels'].includes(normTable)) {
+        for (const key of _adminCache.keys()) {
+          if (key.startsWith('students|') || key.startsWith('progress|') || key.startsWith('classes|')) {
+            _adminCache.delete(key);
+          }
+        }
+        _clearMasterStorage('classes');
+      }
+      if (normTable === 'programs' && typeof window !== 'undefined' && typeof window.loadSidebarPrograms === 'function') {
+        window.loadSidebarPrograms();
+      }
+      if (normTable === 'classes' && typeof window !== 'undefined' && typeof window.loadSidebarClasses === 'function') {
+        window.loadSidebarClasses();
+      }
+      if (normTable === 'vocabulary_vault' || normTable === 'vocab') {
+        _clearPersistentVaultCache();
+        _clearMasterStorage('vocabulary_vault');
+      }
+    } else {
+      _adminCache.clear();
+      _clearMasterStorage();
+      _clearPersistentVaultCache();
+      if (typeof window !== 'undefined') {
+        if (typeof window.loadSidebarPrograms === 'function') window.loadSidebarPrograms();
+        if (typeof window.loadSidebarClasses === 'function') window.loadSidebarClasses();
+      }
     }
-    if (normTable === 'programs' && typeof window !== 'undefined' && typeof window.loadSidebarPrograms === 'function') {
-      window.loadSidebarPrograms();
-    }
-    if (normTable === 'classes' && typeof window !== 'undefined' && typeof window.loadSidebarClasses === 'function') {
-      window.loadSidebarClasses();
-    }
-    if (normTable === 'vocabulary_vault' || normTable === 'vocab') {
-      clearApiCache('vault');
-    }
-  } else {
-    _adminCache.clear();
-    _clearMasterStorage();
-    clearApiCache('vault');
-    if (typeof window !== 'undefined') {
-      if (typeof window.loadSidebarPrograms === 'function') window.loadSidebarPrograms();
-      if (typeof window.loadSidebarClasses === 'function') window.loadSidebarClasses();
-    }
+  } finally {
+    _isClearingAdminCache = false;
   }
 }
 
@@ -3003,7 +3047,17 @@ export async function adminFetchAll(table, select = '*', filters = {}, forceRefr
       'class_levels',   // junction table — no deleted_at column
       'student_academic_assessments',
       'student_final_examinations',
-      'v_student_step_summaries'
+      'v_student_step_summaries',
+      'tutor_profiles',
+      'class_sessions',
+      'session_attendance',
+      'language_violations',
+      'language_violation_payments',
+      'test_topics',
+      'test_results',
+      'theme_program_assignments',
+      'conversation_sessions',
+      'word_types'
     ];
     if (!noDeletedAtTables.includes(normTable)) {
       query = query.is('deleted_at', null);
@@ -4602,6 +4656,9 @@ export async function createVocabMasteryTest(config) {
 
   clearApiCache('vault');
   clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
   clearAdminCache('tests');
   return { testId, title, tier, totalWords: totalGatheredWords, sampledWords: selectedWords.length, sourceTopics };
 }
@@ -6018,6 +6075,19 @@ export async function upsertDynamicTestShell(config) {
           ];
     }
 
+    const altProgPrefixes = ['EVN', 'CMP', 'SHR', 'TMT', 'EEC', 'CAMP', 'EVNK', 'SHRT', 'TPTC'];
+    for (const altP of altProgPrefixes) {
+      if (isTest) {
+        legacyCodes.push(`${altP}-${classShort}-${codeThemeExam}-WORDS-EXAM`);
+        legacyCodes.push(`${altP}-${classShort}-${codeThemeExam}-EXAM`);
+        legacyCodes.push(`${altP}-${classShort}-${codeThemeExam}-PHRASES-EXAM`);
+      } else {
+        legacyCodes.push(`${altP}-${classShort}-${codeThemeTopic}-WORDS-TASK`);
+        legacyCodes.push(`${altP}-${classShort}-${codeThemeTopic}-TASK`);
+        legacyCodes.push(`${altP}-${classShort}-${codeThemeTopic}-PHRASES-TASK`);
+      }
+    }
+
     legacyCodes = Array.from(new Set(legacyCodes.filter(c => c !== code)));
 
     for (const leg of legacyCodes) {
@@ -6065,7 +6135,7 @@ export async function upsertDynamicTestShell(config) {
     status:                     'PUBLISHED',
     working_duration_minutes:   effectiveDurationMinutes,
     minimum_required_score:     effectiveMinScore,
-    prerequisite_test_id:       prerequisiteId,
+    prerequisite_test_id:       (existing && prerequisiteId === existing.id) ? null : prerequisiteId,
     answer_type:                effectiveAnswerType,
     question_order:             questionOrder,
     is_dynamic_shell:           true,
@@ -6223,6 +6293,9 @@ export async function updateClassTestsConfig(params = {}) {
   }
 
   clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
   return { updatedTasks, updatedTests };
 }
 
@@ -6241,15 +6314,15 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
   const institutionId = progData.institution_id;
   const PROG_CODE_MAP = {
-    'camp': 'CMP',
-    'evnikom': 'EVN',
-    'tamata': 'TMT',
-    'tamata persada': 'TMT',
-    'sheraton': 'SHR',
-    'english explorer': 'EXP'
+    'camp': 'CAMP',
+    'evnikom': 'EVNK',
+    'tamata': 'TPTC',
+    'tamata persada': 'TPTC',
+    'sheraton': 'SHRT',
+    'english explorer': 'EXPR'
   };
   const progNormName = (progData.name || '').toLowerCase();
-  const resolvedProgCode = PROG_CODE_MAP[progNormName] || (progData.code || 'CMP').toUpperCase().slice(0, 3);
+  const resolvedProgCode = PROG_CODE_MAP[progNormName] || (progData.code || 'CAMP').toUpperCase().slice(0, 4);
 
   // Pre-fetch Module IDs
   const { data: vocabModule } = await sb.from('modules').select('id').ilike('name', '%Vocabulary Mastery%').limit(1).maybeSingle();
@@ -6380,10 +6453,10 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const phrasesTaskDur = config.phrasesTaskDurationMinutes !== undefined && config.phrasesTaskDurationMinutes !== null
       ? Number(config.phrasesTaskDurationMinutes)
       : (taskDur || calculateAutoDurationMinutes(10, phrasesTaskAns, 'phrases', config.phrasesTaskPaceSeconds, 1));
-    const taskPass = config.taskPassingScore !== undefined ? Number(config.taskPassingScore) : 60;
+    const taskPass = config.taskPassingScore !== undefined ? Number(config.taskPassingScore) : 70;
     const wordsTestAns = config.wordsTestAnswerType || 'spoken';
     const phrasesTestAns = config.phrasesTestAnswerType || 'selection';
-    const testPass = config.testPassingScore !== undefined ? Number(config.testPassingScore) : 60;
+    const testPass = config.testPassingScore !== undefined ? Number(config.testPassingScore) : (levelNum === 3 ? 70 : 60);
     const taskOrder = config.taskQuestionOrder || config.questionOrder || 'random';
     const examOrder = config.examQuestionOrder || config.questionOrder || 'random';
 
@@ -6415,7 +6488,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             modulePrefix: 'UNIFIED', category: 'unified',
             moduleId: vocabModuleId,
             answerType: wordsTaskAns,
-            durationMinutes: (wordsTaskDur || 10) + (phrasesTaskDur || 5),
+            durationMinutes: taskDur ? taskDur : (isUnifiedMode ? 15 : ((wordsTaskDur || 10) + (phrasesTaskDur || 5))),
             minimumRequiredScore: taskPass,
             prerequisiteId: topicPrereqId,
             displayOrder: displayOrder++,
@@ -6481,9 +6554,11 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
 
       if (isUnifiedMode) {
         const examQCount = (levelNum === 0 && themeData.wordCount) ? themeData.wordCount : null;
-        const examDuration = (levelNum === 0 && examQCount)
-          ? calculateAutoDurationMinutes(examQCount, wordsTestAns, 'words')
-          : ((config.wordsExamDurationMinutes || 40) + (config.phrasesExamDurationMinutes || 14));
+        const examDuration = config.examDurationMinutes !== undefined && config.examDurationMinutes !== null
+          ? Number(config.examDurationMinutes)
+          : ((levelNum === 0 && examQCount)
+            ? calculateAutoDurationMinutes(examQCount, wordsTestAns, 'words')
+            : (config.wordsExamDurationMinutes || 40));
         const { testId, action } = await upsertShell({
           institutionId, programId, levelId, classId: targetClassId, levelNum,
           tier: 'EXAM', themeName: themeData.name, topicName: null,
@@ -6553,6 +6628,9 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
   }
 
   clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
   return results;
 }
 
@@ -6697,10 +6775,17 @@ export async function autoSyncClassTestsForLevel(levelNumberOrId, options = {}) 
       programId,
       explicitClassId: targetClassId,
       unified: isUnified,
-      category: isUnified ? 'unified' : (options.category || 'vocab')
+      category: isUnified ? 'unified' : (options.category || 'vocab'),
+      taskPassingScore: 70,
+      testPassingScore: levelNum === 3 ? 70 : 60,
+      taskDurationMinutes: 15,
+      examDurationMinutes: 40
     });
 
     clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
 
     return {
       synced: true,
@@ -6790,6 +6875,9 @@ export async function syncAllCurriculumTests({ level = null, classId = null, for
   }
 
   clearApiCache('tests');
+  clearApiCache('vault');
+  clearAdminCache('tests');
+  clearAdminCache('vocabulary_vault');
   return {
     synced: true,
     createdCount: totalCreated,
