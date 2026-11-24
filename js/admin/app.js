@@ -1,7 +1,7 @@
 import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
 import { computeUnifiedScore, computeTopicPassLevel, detectClassDiscipline, isVocabularyClass, isManualEvaluationClass, isCbtEvaluationClass } from '../grading.js?v=20261106_v160';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261124_v681';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261124_v683';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 if (typeof window !== 'undefined') {
@@ -396,7 +396,7 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261124_v681';
+} from '../api.js?v=20261124_v683';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -1453,7 +1453,7 @@ if (typeof window !== 'undefined') {
         // OPTIMIZATION: attempts query is deferred and strictly scoped to this class's tests (pruning 95%+ egress & avoiding 9x pagination loops)
         let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
-          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at').catch(() => []),
+          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at', {}, true).catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
@@ -1564,6 +1564,17 @@ if (typeof window !== 'undefined') {
         const publishedClassTests = classTests.filter(a => String(a.status || '').toLowerCase() === 'published');
         if (publishedClassTests.length > 0) {
           classTests = publishedClassTests;
+        }
+
+        // Auto Cache-Bust: if cached test array has 0 items for this class, force-refresh tests directly from DB
+        if (classTests.length === 0 && classId) {
+          const freshTests = await adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at', {}, true).catch(() => []);
+          const freshClassTests = (freshTests || []).filter(a => a.class_id === classId && !a.deleted_at);
+          if (freshClassTests.length > 0) {
+            allTests = freshTests;
+            const pubFresh = freshClassTests.filter(a => String(a.status || '').toLowerCase() === 'published');
+            classTests = pubFresh.length > 0 ? pubFresh : freshClassTests;
+          }
         }
 
         // Self-Healing / Auto-Provisioning: Strictly for Vocabulary classes only!
@@ -2820,7 +2831,7 @@ if (typeof window !== 'undefined') {
               btn.disabled = true;
               if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
 
-              const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v681');
+              const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v683');
               if (window._classHubCache) delete window._classHubCache[targetClassId];
               clearAdminCache();
               clearApiCache();
@@ -6933,7 +6944,7 @@ if (typeof window !== 'undefined') {
             btn.disabled = true;
             if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
 
-            const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v681');
+            const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v683');
             if (window._classHubCache) delete window._classHubCache[targetClassId];
             clearAdminCache();
             clearApiCache();

@@ -608,6 +608,7 @@ async function renderBulkImportView(container) {
       const batchCache = {};
 
       const { data: allClasses } = await sb.from('classes').select('id, program_id, institution_id, level_id').eq('is_active', true);
+      const { data: allPrograms } = await sb.from('programs').select('id, name, institution_id, institutions(name, short_code)');
       const { data: allDbLevels } = await sb.from('levels').select('id, level_number');
       const nonLevelRec = (allDbLevels || []).find(l => l.level_number === 0);
       const level1Rec = (allDbLevels || []).find(l => l.level_number === 1);
@@ -620,7 +621,9 @@ async function renderBulkImportView(container) {
         updateLoadingProgress((currentOps / totalOps) * 100, `Saving student ${currentOps} of ${readyList.length}...`);
 
         // Determine appropriate level for student's program (Level 0 for Non-Level programs, Level 1 for tiered programs)
-        const isNonLevelProg = (allClasses || []).some(c => c.program_id === s.progId && nonLevelRec && c.level_id === nonLevelRec.id);
+        const progObj = (allPrograms || []).find(p => p.id === s.progId);
+        const isTopProg = progObj && (progObj.institutions?.short_code === 'TOP' || ['evnikom', 'sheraton', 'tamata'].includes((progObj.name || '').toLowerCase()));
+        const isNonLevelProg = isTopProg || (allClasses || []).some(c => c.program_id === s.progId && nonLevelRec && c.level_id === nonLevelRec.id);
         const resolvedProgLevelId = isNonLevelProg ? (nonLevelRec?.id || null) : (level1Rec?.id || null);
 
         // 1. Auto-create batch if needed (or restore if soft-deleted)

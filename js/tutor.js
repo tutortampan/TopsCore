@@ -14,6 +14,7 @@
 import { getSupabase } from './supabase.js';
 import { detectClassDiscipline, calculateGrade } from './grading.js';
 import { getSvgIcon } from './svg-icons.js?v=20261124_01';
+import { cleanStudentName } from './api.js';
 
 // Configuration & Constants
 const FINE_RATE_PER_WORD = 2000;
@@ -1390,7 +1391,10 @@ async function preloadStudentsAllLevels() {
       .order('name');
     _levels.forEach(lvl => {
       if (lvl.level_number >= 1 && lvl.level_number <= 3) {
-        const lStudents = (data || []).filter(s => s.level_id === lvl.id);
+        const lStudents = (data || []).filter(s => s.level_id === lvl.id).map(s => ({
+          ...s,
+          name: cleanStudentName(s.name)
+        }));
         if (lStudents.length > 0) {
           _studentsCacheByLevel[lvl.level_number] = lStudents;
         } else if (COHORT_STUDENTS_BY_LEVEL[lvl.level_number]) {
@@ -1623,7 +1627,10 @@ async function loadStudentsForCecLevel(levelId) {
     }
 
     const { data } = await query;
-    _students = data || [];
+    _students = (data || []).map(s => ({
+      ...s,
+      name: cleanStudentName(s.name)
+    }));
 
     // Fallback if empty in cloud (standard 30-student cohort)
     if (_students.length === 0) {
@@ -1721,7 +1728,10 @@ async function loadStudentsForTopProgram(programCode) {
       .neq('program_status', 'ALUMNI')
       .order('name');
 
-    _students = data || [];
+    _students = (data || []).map(s => ({
+      ...s,
+      name: cleanStudentName(s.name)
+    }));
     if (_students.length === 0) {
       _students = [
         { id: 's_top_1', name: 'Budi Prasetyo', program_status: 'IN_PROGRESS' },
@@ -2039,9 +2049,10 @@ function render4ColAttendanceTable() {
   _students.forEach(s => {
     const status = _attendanceMap.get(s.id) || 'ABSENT';
     const tr = document.createElement('tr');
+    const studentDisplayName = cleanStudentName(s.name);
 
     tr.innerHTML = `
-      <td class="td-student-name" title="${s.name}">${s.name}</td>
+      <td class="td-student-name" title="${studentDisplayName}">${studentDisplayName}</td>
       <td class="td-status-cell">
         <label class="status-radio-label" title="Mark Present">
           <input type="radio" name="status_${s.id}" class="radio-present" value="PRESENT" ${status === 'PRESENT' || status === 'PRESENT_PROXIMITY' || status === 'PRESENT_QR' ? 'checked' : ''} />
@@ -2924,7 +2935,8 @@ function renderGradeMatrix() {
 
   students.forEach(s => {
     const tr = document.createElement('tr');
-    let rowHtml = `<td class="td-student-name" style="padding:0 8px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${s.name}</td>`;
+    const studentDisplayName = cleanStudentName(s.name);
+    let rowHtml = `<td class="td-student-name" style="padding:0 8px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${studentDisplayName}</td>`;
     exams.forEach(e => {
       const gradeKey = `${_gradeLevelNumber}_${_gradeSelectedClass.modality || _gradeSelectedClass.code}_${s.id}_${e.key}`;
       const score = _manualGrades.get(gradeKey) ?? '';
@@ -2952,7 +2964,7 @@ function renderGradeMatrix() {
       const matchedExam = exams.find(x => x.key === examKey);
       if (matchedExam && matchedExam.rubric) {
         inp.addEventListener('dblclick', () => {
-          openRubricGuideModal(matchedExam, inp, s.name);
+          openRubricGuideModal(matchedExam, inp, cleanStudentName(s.name));
         });
       }
 
@@ -3061,8 +3073,9 @@ function renderFinesTable() {
     const isPaidFull = paid >= amount && amount > 0;
 
     const tr = document.createElement('tr');
+    const studentDisplayName = cleanStudentName(s.name);
     tr.innerHTML = `
-      <td class="td-student-name" title="${s.name}">${s.name}</td>
+      <td class="td-student-name" title="${studentDisplayName}">${studentDisplayName}</td>
       <td class="td-fines-count">
         <div class="fines-stepper">
           <button type="button" class="btn-step-minus" data-id="${s.id}" title="Decrease count">−</button>
@@ -3218,8 +3231,9 @@ function renderPaymentTable() {
     const isPaidFull = paid > 0 && debt === 0;
 
     const tr = document.createElement('tr');
+    const studentDisplayName = cleanStudentName(s.name);
     tr.innerHTML = `
-      <td class="td-student-name" title="${s.name}">${s.name}</td>
+      <td class="td-student-name" title="${studentDisplayName}">${studentDisplayName}</td>
       <td class="td-pay-debt" style="text-align:right; font-weight:700; color:${debt > 0 ? '#f87171' : '#94a3b8'};">
         ${formatCompactAmount(debt)}
       </td>

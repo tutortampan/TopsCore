@@ -31,7 +31,13 @@ const files = {
 
 function cleanName(n) {
   if (!n) return '';
-  return String(n).replace(/\s+/g, ' ').trim().toUpperCase();
+  return String(n)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .split(' ')
+    .map(w => w ? w.charAt(0).toUpperCase() + w.slice(1) : '')
+    .join(' ');
 }
 
 function cleanNis(nis) {

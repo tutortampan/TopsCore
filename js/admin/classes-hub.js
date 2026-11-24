@@ -7,7 +7,7 @@ import {
   fetchDisciplineGovernance,
   saveDisciplineGovernance,
   DEFAULT_DISCIPLINE_GOVERNANCE
-} from '../api.js?v=20261124_v681';
+} from '../api.js?v=20261124_v683';
 import { showToast, escapeHtml } from '../app.js?v=20261106_v160';
 import { detectClassDiscipline, INSTITUTION_GRADING_SCALES, TOPSCORE_COLORS, calculateGrade, getGradeColorByScore } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';

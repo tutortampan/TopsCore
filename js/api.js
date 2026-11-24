@@ -28,10 +28,69 @@ const MOCK_PROGRAMS = [
 export function cleanStudentName(name) {
   if (!name) return '';
   const cleaned = stripHonorific(name);
-  return cleaned.toLowerCase().split(' ').map(word => {
+  return cleaned.replace(/\s+/g, ' ').trim().toLowerCase().split(' ').map(word => {
     if (!word) return '';
     return word.charAt(0).toUpperCase() + word.slice(1);
   }).join(' ');
+}
+
+export function toTitleCase(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+    .split(' ')
+    .map(word => {
+      if (!word) return '';
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
+    .join(' ');
+}
+
+const VAULT_PROPER_NOUNS = new Set([
+  // Days & Months (English)
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december',
+  // Days & Months (Indonesian)
+  'senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu',
+  'januari', 'februari', 'maret', 'april', 'mei', 'juni', 'juli', 'agustus', 'september', 'oktober', 'november', 'desember',
+  // Languages & Nationalities & Countries
+  'english', 'indonesian', 'indonesia', 'american', 'america', 'british', 'britain', 'japanese', 'japan', 'arabic'
+]);
+
+export function formatVaultTerm(str, isPhrase = false) {
+  if (!str) return '';
+  const parts = String(str).split(/\s*[/;|]\s*/).map(p => p.trim()).filter(Boolean);
+  const formatted = parts.map(part => {
+    const words = part.split(/\s+/);
+    if (words.length === 1 && !isPhrase) {
+      const lower = part.toLowerCase();
+      if (VAULT_PROPER_NOUNS.has(lower)) {
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      }
+      return lower;
+    } else {
+      let clean = part;
+      if (part === part.toUpperCase() && /[A-Z]/.test(part)) {
+        clean = part.toLowerCase();
+      }
+      clean = clean.charAt(0).toUpperCase() + clean.slice(1);
+      clean = clean.replace(/\bi\b/g, 'I');
+      clean = clean.split(' ').map((w, idx) => {
+        if (idx === 0) return w;
+        const stripped = w.replace(/^[^\w]+|[^\w]+$/g, '').toLowerCase();
+        if (VAULT_PROPER_NOUNS.has(stripped)) {
+          const lead = w.match(/^[^\w]+/)?.[0] || '';
+          const trail = w.match(/[^\w]+$/)?.[0] || '';
+          return `${lead}${stripped.charAt(0).toUpperCase() + stripped.slice(1)}${trail}`;
+        }
+        return w;
+      }).join(' ');
+      return clean;
+    }
+  });
+  return [...new Set(formatted)].join(' / ');
 }
 
 export function formatStudentName(name) {
@@ -295,7 +354,7 @@ function _getPersistentStorage() {
   return null;
 }
 
-const MASTER_STORAGE_PREFIX = 'topscore_mc_v681_';
+const MASTER_STORAGE_PREFIX = 'topscore_mc_v683_';
 const MASTER_STORAGE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7-day weekly academic cycle (Ahad to Ahad)
 
 // Purge any stale legacy cache keys from previous versions on module initialization
@@ -1989,6 +2048,18 @@ export async function startTest(studentId, testId) {
     .single();
   const isAlumniStudent = (currentStudentInfo?.program_status || '').toUpperCase() === 'ALUMNI' || currentStudentInfo?.levels?.level_number === 99;
 
+  // Formal Exam determination & schedule mode (Must be evaluated at root of startTest so both new & resumed attempts can access)
+  const isExamSubtype = (asmData.test_subtype || '').toUpperCase().includes('TEST') || (asmData.test_subtype || '').toUpperCase().includes('EXAM');
+  const isExamShell = (asmData.shell_code || '').toUpperCase().endsWith('-TEST') || (asmData.shell_code || '').toUpperCase().endsWith('-EXAM');
+  const isExamTitle = ((asmData.title || '').toLowerCase().includes('test') || (asmData.title || '').toLowerCase().includes('exam')) && !(asmData.title || '').toLowerCase().includes('task');
+  const isFormalExam = ((asmData.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
+                       !(asmData.shell_code || '').toUpperCase().includes('-TASK') &&
+                       !(asmData.test_subtype || '').toUpperCase().includes('TASK') &&
+                       !(asmData.title || '').toLowerCase().includes('task') &&
+                       !(asmData.test_type || '').toLowerCase().includes('task') &&
+    !(asmData.test_type || '').toLowerCase().includes('quiz');
+  const isFlexible = (asmData.schedule_mode || asmData.payload?.schedule_mode) === 'flexible';
+
   // Prerequisite & Whitelist gates only apply when initiating a NEW attempt for non-alumni (Alumni has Universal Lifetime Access)
   if (!attempt && !isAlumniStudent) {
     // Guard: Prerequisite check in client DB fallback
@@ -2322,18 +2393,6 @@ export async function startTest(studentId, testId) {
   }
 
   // Guard: Test Session Access & Attendance Whitelist (for formal EXAM category)
-  const isExamSubtype = (asmData.test_subtype || '').toUpperCase().includes('TEST') || (asmData.test_subtype || '').toUpperCase().includes('EXAM');
-  const isExamShell = (asmData.shell_code || '').toUpperCase().endsWith('-TEST') || (asmData.shell_code || '').toUpperCase().endsWith('-EXAM');
-  const isExamTitle = ((asmData.title || '').toLowerCase().includes('test') || (asmData.title || '').toLowerCase().includes('exam')) && !(asmData.title || '').toLowerCase().includes('task');
-  const isFormalExam = ((asmData.test_type || '').toLowerCase() === 'exam' || isExamSubtype || isExamShell || isExamTitle) &&
-                       !(asmData.shell_code || '').toUpperCase().includes('-TASK') &&
-                       !(asmData.test_subtype || '').toUpperCase().includes('TASK') &&
-                       !(asmData.title || '').toLowerCase().includes('task') &&
-                       !(asmData.test_type || '').toLowerCase().includes('task') &&
-    !(asmData.test_type || '').toLowerCase().includes('quiz');
-
-  let activeSession = null;
-  const isFlexible = (asmData.schedule_mode || asmData.payload?.schedule_mode) === 'flexible';
   if (isFormalExam && !isFlexible && (asmData.schedule_mode === 'strict' || asmData.payload?.test_session)) {
     const accessCheck = await checkStudentTestAccess(studentId, testId);
     if (!accessCheck.allowed) {
@@ -2344,7 +2403,7 @@ export async function startTest(studentId, testId) {
     }
     activeSession = accessCheck.session;
   }
-  } // End if (!attempt)
+  } // End if (!attempt && !isAlumniStudent)
 
   // Enforce session lock on resumed attempts for formal exams (cannot resume closed sessions)
   if (attempt && !isAlumniStudent && isFormalExam && !isFlexible) {
@@ -3897,15 +3956,16 @@ function sanitizeVaultRow(row) {
   }
 
   const determinedCategory = cat ? (cat.includes('phrase') ? 'phrases' : 'words') : (['expression', 'idiom', 'proverb'].includes(wType.toLowerCase()) ? 'phrases' : 'words');
+  const isPhraseCategory = determinedCategory === 'phrases';
 
   return {
     theme_code: thCode || (topCode ? topCode[0] : 'A'),
-    theme:      String(row.theme || '').trim().replace(/\s+/g, ' '),
+    theme:      toTitleCase(row.theme || ''),
     topic_code: topCode || 'A1',
-    topic:      String(row.topic || '').trim().replace(/\s+/g, ' '),
-    indonesian: String(row.indonesian || '').trim().replace(/\s+/g, ' '),
-    english:    canonicalEng,
-    word_type:  wType,
+    topic:      toTitleCase(row.topic || ''),
+    indonesian: formatVaultTerm(row.indonesian || '', isPhraseCategory),
+    english:    formatVaultTerm(canonicalEng, isPhraseCategory),
+    word_type:  toTitleCase(wType),
     target_level: (() => {
       const rawLvl = (row.level !== undefined && row.level !== null && row.level !== '')
         ? row.level
@@ -4063,6 +4123,16 @@ export async function deleteVaultWord(id) {
 export async function updateVaultWord(id, payload) {
   const sb = await getSupabase();
   payload.updated_at = new Date().toISOString();
+  if (payload.theme) payload.theme = toTitleCase(payload.theme);
+  if (payload.topic) payload.topic = toTitleCase(payload.topic);
+  if (payload.word_type) payload.word_type = toTitleCase(payload.word_type);
+  if (payload.theme_code) payload.theme_code = payload.theme_code.trim().toUpperCase();
+  if (payload.topic_code) payload.topic_code = payload.topic_code.trim().toUpperCase();
+  if (payload.indonesian || payload.english) {
+    const isPhrase = payload.category === 'phrases' || ['expression', 'idiom', 'proverb'].includes((payload.word_type || '').toLowerCase());
+    if (payload.indonesian) payload.indonesian = formatVaultTerm(payload.indonesian, isPhrase);
+    if (payload.english) payload.english = formatVaultTerm(payload.english, isPhrase);
+  }
   const { error } = await sb.from('vocabulary_vault').update(payload).eq('id', id);
   if (error) throw error;
   clearApiCache('vault');

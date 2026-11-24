@@ -5,6 +5,7 @@ export async function openAutoGenerateModal(options = {}) {
     autoGenerateTestsHierarchy,
     updateClassTestsConfig,
     calculateAutoDurationMinutes,
+    clearAdminCache,
     adminFetchAll,
     toShortLevel,
     escapeHtml,
@@ -785,6 +786,8 @@ export async function openAutoGenerateModal(options = {}) {
         });
 
         overlay.remove();
+        if (typeof clearAdminCache === 'function') clearAdminCache('tests');
+        if (window._classHubCache && cfg.targetClassId) delete window._classHubCache[cfg.targetClassId];
         const msg = `Auto-Gen Success: ${res.tasks ?? 0} Tasks, ${res.exams ?? 0} Exams created (${res.updated ?? 0} synchronized)!`;
         if (window.showToast) window.showToast(msg, 'success');
         else alert(msg);

@@ -34,7 +34,9 @@ import {
   updateVaultTopicCascade,
   updateVaultTopicCodeCascade,
   updateVaultTopicLevelCascade,
-  updateVaultThemeLevelCascade
+  updateVaultThemeLevelCascade,
+  toTitleCase,
+  formatVaultTerm
 } from '../api.js?v=20261118_v600';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -680,12 +682,26 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
             lexSpan.textContent = `${newComp}-${parts[1]}`;
           }
         } else if (field === 'word_type') {
-          payload.word_type = newVal;
-          word.word_type = newVal;
+          const cleanVal = toTitleCase(newVal);
+          payload.word_type = cleanVal;
+          word.word_type = cleanVal;
           if (viewSpan) {
-            viewSpan.textContent = newVal;
-            viewSpan.style.color = getWordTypeColor(newVal);
+            viewSpan.textContent = cleanVal;
+            viewSpan.style.color = getWordTypeColor(cleanVal);
           }
+        } else if (field === 'theme' || field === 'topic') {
+          const cleanVal = toTitleCase(newVal);
+          payload[field] = cleanVal;
+          word[field] = cleanVal;
+          input.value = cleanVal;
+          if (viewSpan) viewSpan.textContent = cleanVal;
+        } else if (field === 'english' || field === 'indonesian') {
+          const isPhrase = mode === 'phrases' || ['expression', 'idiom', 'proverb'].includes((word.word_type || '').toLowerCase());
+          const cleanVal = formatVaultTerm(newVal, isPhrase);
+          payload[field] = cleanVal;
+          word[field] = cleanVal;
+          input.value = cleanVal;
+          if (viewSpan) viewSpan.textContent = cleanVal;
         } else {
           payload[field] = newVal;
           word[field] = newVal;
@@ -968,18 +984,21 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
           ? normalized.LEVEL
           : ((normalized.TARGET_LEVEL !== undefined && normalized.TARGET_LEVEL !== '') ? normalized.TARGET_LEVEL : '1');
 
+        const cat = normalized.CATEGORY || '';
+        const wt = normalized.TYPE || normalized['WORD TYPE'] || normalized.WORD_TYPE || 'Vocab';
+        const isPhrase = (cat || '').toLowerCase().includes('phrase') || ['expression', 'idiom', 'proverb'].includes(wt.toLowerCase());
         return {
           institution_id: rowInstId,
           program_id: rowProgId,
           level: String(rawLevelVal).trim(),
-          category: normalized.CATEGORY || '',
+          category: cat,
           theme_code: rawThemeCode.toUpperCase(),
-          theme: rawTheme,
+          theme: toTitleCase(rawTheme),
           topic_code: rawCode.toUpperCase(),
-          topic: rawTopic,
-          word_type: normalized.TYPE || normalized['WORD TYPE'] || normalized.WORD_TYPE || 'Vocab',
-          indonesian: normalized.INDONESIAN || '',
-          english: normalized.ENGLISH || ''
+          topic: toTitleCase(rawTopic),
+          word_type: toTitleCase(wt),
+          indonesian: formatVaultTerm(normalized.INDONESIAN || '', isPhrase),
+          english: formatVaultTerm(normalized.ENGLISH || '', isPhrase)
         };
       }).filter(r => r.topic && r.indonesian && r.english);
 
