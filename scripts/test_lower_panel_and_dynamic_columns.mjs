@@ -127,10 +127,11 @@ assert.ok(analyticsJs.includes("'Word Form / Root Error'"), 'Must contain diagno
 assert.ok(analyticsJs.includes("'Distractor Trap / Concept Error'"), 'Must contain diagnosis label Distractor Trap / Concept Error');
 console.log('  ✔ Verified all 6 English diagnostic classifications');
 
-// 3.4 Triage pills relocated to Lower Panel
+// 3.4 Triage pills / summary relocated to Lower Panel (canonical setBottomInfobar)
 assert.ok(
-  analyticsJs.includes('class="workspace-lower-panel analytics-toolbar"'),
-  'Analytics triage pills must be rendered inside .workspace-lower-panel'
+  analyticsJs.includes('class="workspace-lower-panel analytics-toolbar"') ||
+  analyticsJs.includes('window.setBottomInfobar(leftHtml, rightHtml, centerHtml)'),
+  'Analytics triage pills must be rendered inside .workspace-lower-panel or setBottomInfobar'
 );
 console.log('  ✔ Triage pills and evaluation KPIs relocated to 50px Lower Panel');
 

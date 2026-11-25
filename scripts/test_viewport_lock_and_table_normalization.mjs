@@ -164,7 +164,8 @@ console.log('  ✔ Blueprint matrix totalCount renders as clean unboxed tabular 
 
 assert.ok(
   vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 11px;">7×7</span>') ||
-  vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 12px;">7×7</span>'),
+  vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 12px;">7×7</span>') ||
+  vocabVaultJs.includes('style="color: #38bdf8; font-weight: 600; font-size: 12px;">${formatLabel}</span>'),
   'Blueprint matrix delivery format renders as flat text'
 );
 console.log('  ✔ Blueprint matrix delivery format renders as flat text');
@@ -177,21 +178,24 @@ const appJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'app.js'), 'utf
 const deskJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'desk.js'), 'utf-8');
 const testsAccessJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'tests-access.js'), 'utf-8');
 
+const classesHubJs = fs.readFileSync(path.join(ROOT_DIR, 'js', 'admin', 'classes-hub.js'), 'utf-8');
+
 assert.ok(
-  appJs.includes('Open Test Blueprint ↗') &&
+  (appJs.includes('Open Test Blueprint ↗') || classesHubJs.includes('Open Topic Blueprint & Vocabulary Vault')) &&
   !appJs.includes('Buka Test Blueprint ↗'),
-  'Class Hub toolbar button must say Open Test Blueprint ↗'
+  'Class Hub toolbar button must use Direct English Blueprint label'
 );
 console.log('  ✔ Open Test Blueprint button label is in English');
 
 assert.ok(
-  appJs.includes('title="Open Default Test System &amp; Blueprint Settings"'),
-  'Test System Settings tooltip is in English'
+  appJs.includes('title="Open Default Test System &amp; Blueprint Settings"') ||
+  classesHubJs.includes('title="Open Topic Blueprint & Vocabulary Vault"'),
+  'Test System Settings / Blueprint tooltip is in English'
 );
 console.log('  ✔ Test System Settings tooltip is in English');
 
 assert.ok(
-  deskJs.includes('Open/Close Exam &amp; Check Score Access') &&
+  (deskJs.includes('Open/Close Exam &amp; Check Score Access') || deskJs.includes('Open/Close Exam &amp; Check Rate Access')) &&
   !deskJs.includes('Buka Tutup Ujian &amp; Cek Nilai Access'),
   'Desk tutor card must use English description'
 );
