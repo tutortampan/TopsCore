@@ -33,9 +33,8 @@ export function initPWA() {
     let isRefreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (isRefreshing) return;
-      // Active test invariant: NEVER auto-reload while student is actively in test.html
-      const isTakingTest = window.location.pathname.includes('test.html') &&
-        (sessionStorage.getItem('test_state') || document.getElementById('test-screen'));
+      // Active test invariant: NEVER auto-reload while student is actively in test.html or test harness
+      const isTakingTest = window.__isTestHarnessMode || window.location.pathname.includes('test.html');
       if (isTakingTest) {
         console.warn('[PWA] Active test in progress. Deferring reload until exam completion.');
         return;

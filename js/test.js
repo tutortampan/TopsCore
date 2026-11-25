@@ -1045,6 +1045,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     async function bootTest() {
       window.bootTest = bootTest;
       window.doSubmit = doSubmit;
+      if (window.__isTestHarnessMode) return;
       showLoading('Starting TEST…');
       try {
         const [fetchedConfig, result] = await Promise.all([
@@ -1717,7 +1718,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         }
 
         showToast(errMsg, 'error');
-        setTimeout(() => window.location.href = 'dashboard.html', 3000);
+        setTimeout(() => { if (!window.__isTestHarnessMode) window.location.href = 'dashboard.html'; }, 3000);
       }
     }
 
@@ -2753,6 +2754,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
     // Visual Testing & Catalog Harness Hook (Zero-mutation instant scenario rendering)
     window.__renderTestScenario = function(scenario) {
+      window.__isTestHarnessMode = true;
       document.getElementById('loading-overlay')?.classList.add('hidden');
       document.getElementById('pre-exam-focus-modal')?.classList.add('hidden');
       document.getElementById('fullscreen-pause-modal')?.classList.add('hidden');

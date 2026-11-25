@@ -75,6 +75,7 @@ async function runGuard() {
   });
 
   await page.addInitScript(() => {
+    window.__isTestHarnessMode = true;
     const mockSession = {
       student_id: 'guard-student-uuid',
       student_name: 'Test Student',

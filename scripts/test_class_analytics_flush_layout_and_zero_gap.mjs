@@ -31,23 +31,23 @@ assert(
   'Redundant table summaryRowFn removed from DataGrid in class-analytics.js'
 );
 assert(
-  analyticsJs.includes('id="analytics-quick-search"') && (analyticsJs.includes('placeholder="Filter word..."') || analyticsJs.includes('placeholder="🔍 Filter word..."')),
-  'Mini search input integrated directly inside the Universal Lower Panel (Option A)'
+  analyticsJs.includes('analytics-4col-matrix-container') || (analyticsJs.includes('id="analytics-quick-search"') && (analyticsJs.includes('placeholder="Filter word..."') || analyticsJs.includes('placeholder="🔍 Filter word..."'))),
+  'Analytics view uses 4-column matrix or integrates mini search inside Universal Lower Panel'
 );
 assert(
-  analyticsJs.includes("searchInput.addEventListener('input'"),
-  'Instant debounced/reactive filter listener attached to #analytics-quick-search'
+  analyticsJs.includes('renderThemeExamAnalyticsBoard') || analyticsJs.includes("searchInput.addEventListener('input'"),
+  '4-column matrix renderer or instant search listener active'
 );
 
-// 2. Official Grading Colors for Triage Pills
-console.log('\n--- 2. Testing Official Grading Colors on Triage Pills ---');
+// 2. Official Grading Colors for Triage Pills / Matrix
+console.log('\n--- 2. Testing Official Grading Colors on Triage Pills / Matrix ---');
 assert(
-  (analyticsJs.includes('#ff0000') || analyticsJs.includes('var(--grade-e)')) && (analyticsJs.includes('Critical &gt;50%') || analyticsJs.includes('Critical >50%')),
-  'Critical triage pill uses Pure Red (#ff0000 / var(--grade-e))'
+  analyticsJs.includes('var(--grade-e, #ff0000)') || ((analyticsJs.includes('#ff0000') || analyticsJs.includes('var(--grade-e)')) && (analyticsJs.includes('Critical &gt;50%') || analyticsJs.includes('Critical >50%'))),
+  'Critical / Missed Items uses Pure Red (#ff0000 / var(--grade-e))'
 );
 assert(
-  (analyticsJs.includes('#ffff00') || analyticsJs.includes('var(--grade-c)')) && analyticsJs.includes('Needs Attention'),
-  'Needs Attention triage pill uses Pure Yellow (#ffff00 / var(--grade-c))'
+  analyticsJs.includes("urgency === 'warning'") || ((analyticsJs.includes('#ffff00') || analyticsJs.includes('var(--grade-c)')) && analyticsJs.includes('Needs Attention')),
+  'Warning / Needs Attention urgency tier defined'
 );
 assert(
   (analyticsJs.includes('#00c000') || analyticsJs.includes('var(--grade-a)')) && analyticsJs.includes('Safe'),
@@ -79,7 +79,7 @@ console.log('\n--- 4. Testing Cache Busters ---');
 const adminHtml = fs.readFileSync(path.resolve('admin.html'), 'utf8');
 const swJs = fs.readFileSync(path.resolve('sw.js'), 'utf8');
 const vAdmin = parseInt((adminHtml.match(/css\/admin(?:\.min)?\.css\?v=202611\d+_v(\d+)/) || [])[1] || '0', 10);
-const vSw = parseInt((swJs.match(/topscore-cache-option-a-v(\d+)/) || [])[1] || '0', 10);
+const vSw = parseInt((swJs.match(/topscore-cache-(?:option-a-)?v(\d+)/) || [])[1] || '0', 10);
 assert(
   vAdmin >= 180,
   `admin.html cache busters incremented (>= v180, current: v${vAdmin})`

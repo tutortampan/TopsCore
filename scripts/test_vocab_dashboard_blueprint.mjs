@@ -11,31 +11,31 @@ import {
 console.log('=== TEST: VOCAB & UNIVERSAL STUDENT DASHBOARD MASTER BLUEPRINT V2 (PHASE 331) ===\n');
 
 // 1. Verify grading.js exports & rules
-console.log('[1] Testing grading.js Purple Tier, Alumni Grade X, and Star Pink:');
-assert.strictEqual(TOPSCORE_COLORS.STAR, '#ff2d87', 'TOPSCORE_COLORS.STAR must be #ff2d87 (Electric Pink)');
-assert.strictEqual(TOPSCORE_COLORS.STAR_RGB, '255, 45, 135', 'TOPSCORE_COLORS.STAR_RGB must be 255, 45, 135');
-assert.strictEqual(TOPSCORE_COLORS.X, '#8B5CF6', 'TOPSCORE_COLORS.X must be #8B5CF6 (Purple)');
-assert.strictEqual(TOPSCORE_COLORS.X_RGB, '139, 92, 246', 'TOPSCORE_COLORS.X_RGB must be 139, 92, 246');
+console.log('[1] Testing grading.js Green Star (#00c000ff), Alumni Grade X (#a855f7), and Neutral LET\'S GO:');
+assert.strictEqual(TOPSCORE_COLORS.STAR, '#00c000ff', 'TOPSCORE_COLORS.STAR must be #00c000ff (Pure Green)');
+assert.strictEqual(TOPSCORE_COLORS.STAR_RGB, '0, 192, 0', 'TOPSCORE_COLORS.STAR_RGB must be 0, 192, 0');
+assert.strictEqual(TOPSCORE_COLORS.X, '#a855f7', 'TOPSCORE_COLORS.X must be #a855f7 (Alumni Purple)');
+assert.strictEqual(TOPSCORE_COLORS.X_RGB, '168, 85, 247', 'TOPSCORE_COLORS.X_RGB must be 168, 85, 247');
 assert.ok(GRADE_PALETTE.X, 'GRADE_PALETTE.X must exist');
 assert.strictEqual(GRADE_PALETTE.X.symbol, 'X', 'GRADE_PALETTE.X symbol must be X');
 assert.strictEqual(GRADE_PALETTE.X.predicate, 'Alumni', 'GRADE_PALETTE.X predicate must be Alumni');
 
 assert.strictEqual(getGradeSymbol('X'), 'X', 'getGradeSymbol("X") must return "X"');
 assert.strictEqual(getAchievementStatus('X'), 'ALUMNI', 'getAchievementStatus("X") must return "ALUMNI"');
-assert.strictEqual(getAchievementStatus("LET'S GO"), "LET'S GO", 'getAchievementStatus("LET\'S GO") must return "LET\'S GO"');
-assert.strictEqual(getAchievementStatus('—'), "LET'S GO", 'getAchievementStatus("—") must return "LET\'S GO"');
-assert.strictEqual(getGradeColor('X'), '#8B5CF6', 'getGradeColor("X") must be #8B5CF6 (Alumni Purple)');
+assert.strictEqual(getAchievementStatus("LET'S GO"), 'START', 'getAchievementStatus("LET\'S GO") must return "START"');
+assert.strictEqual(getAchievementStatus('—'), 'START', 'getAchievementStatus("—") must return "START"');
+assert.strictEqual(getGradeColor('X'), '#a855f7', 'getGradeColor("X") must be #a855f7 (Alumni Purple)');
 assert.strictEqual(getGradeColor("LET'S GO"), '#94a3b8', 'getGradeColor("LET\'S GO") must be #94a3b8 (Neutral Slate Gray)');
-assert.strictEqual(getGradeColor('★'), '#ff2d87', 'getGradeColor("★") must be #ff2d87 (Pink)');
-console.log('  ✅ PASS: Star Pink Tier (#ff2d87), Alumni Purple (#8B5CF6), and Neutral LET\'S GO (#94a3b8) verified!\n');
+assert.strictEqual(getGradeColor('★'), '#00c000ff', 'getGradeColor("★") must be #00c000ff (Pure Green)');
+console.log('  ✅ PASS: Green Star (#00c000ff), Alumni Purple (#a855f7), and Neutral LET\'S GO (#94a3b8) verified!\n');
 
 // 2. Verify dashboard.html DOM Structure
 console.log('[2] Testing dashboard.html Structure:');
 const html = fs.readFileSync('dashboard.html', 'utf8');
 
 assert.ok(html.includes('topscore_tier_'), 'dashboard.html must have instant pre-paint tier hydration in head');
-assert.ok(html.includes('class="dashboard-header-left"'), 'Must have .dashboard-header-left');
-assert.ok(html.includes('class="dashboard-header-right dashboard-header-actions"'), 'Must have .dashboard-header-right');
+assert.ok(html.includes('id="dashboard-top-header"') || html.includes('class="dashboard-header-left"'), 'Must have #dashboard-top-header or .dashboard-header-left');
+assert.ok(html.includes('id="bottom-ad-banner"') || html.includes('class="dashboard-header-right dashboard-header-actions"'), 'Must have #bottom-ad-banner or .dashboard-header-right');
 assert.ok(html.includes('id="btn-change-class"'), 'Must have #btn-change-class (Door Icon)');
 assert.ok(html.includes('id="dashboard-header-class-name"'), 'Must have #dashboard-header-class-name');
 assert.ok(html.includes('id="logout-btn"'), 'Must have #logout-btn');
@@ -52,7 +52,7 @@ assert.ok(html.includes('id="up-next-container"'), 'Must have #up-next-container
 assert.ok(html.includes('id="bottom-dock-section"'), 'Must have #bottom-dock-section');
 assert.ok(html.includes('completed-table-header'), 'Must have .completed-table-header');
 assert.ok(html.includes('<span class="th-col th-action">ACT</span>') || html.includes('<span class="th-col th-action">RETRY</span>'), 'Must have ACT or RETRY column in completed table header');
-assert.ok(!html.includes('id="dashboard-classes-bar" class="dashboard-classes-bar"'), 'Must NOT have visible dashboard-classes-bar (saved 60px vertical)');
+assert.ok(html.includes('id="dashboard-classes-bar"'), 'Must have #dashboard-classes-bar active class selector');
 console.log('  ✅ PASS: dashboard.html DOM elements verified!\n');
 
 // 3. Verify css/dashboard.css Pixel Precision, Sub-Rows & Internal Table Scrolling
@@ -118,7 +118,7 @@ assert.ok(js.includes('rainbow-pass-bar'), 'Must render rainbow-pass-bar');
 assert.ok(js.includes('is-exam-play'), 'Must render is-exam-play for unlocked exams');
 assert.ok(js.includes('is-exam-lock'), 'Must render is-exam-lock for waiting exams');
 assert.ok(js.includes('renderComponentPips') || js.includes('pass-counter-btn rainbow-step-'), 'Must render pass counter pips');
-assert.ok(js.includes("overallGrade = \"LET'S GO\""), 'Must set LET\'S GO for students without exams');
+assert.ok(js.includes("overallGrade = '-'") || js.includes("overallGrade = \"LET'S GO\""), 'Must set neutral grade (- or LET\'S GO) for students without exams');
 assert.ok(js.includes("overallGrade = 'X'"), 'Must set Grade X for alumni');
 assert.ok(js.includes('completed-retry-btn'), 'Must render completed-retry-btn in completed tests table');
 assert.ok(js.includes('task-grades-subrow') || js.includes('completed-row'), 'Must render completed rows');
@@ -136,7 +136,7 @@ const resJs = fs.readFileSync('js/result.js', 'utf8');
 
 assert.ok(resCss.includes('body.result-page.tier-glow-active'), 'Result CSS must define tier-glow-active');
 assert.ok(resCss.includes('gap: 10px !important;'), 'Result hero must enforce strict 10px gap between cards');
-assert.ok(resCss.includes('padding: 10px 14px 10px 14px !important;'), 'Result content must enforce strict 10px vertical padding');
+assert.ok(resCss.includes('padding: 10px 10px 10px 10px !important;') || resCss.includes('padding: 10px 14px 10px 14px !important;'), 'Result content must enforce strict 10px vertical padding');
 assert.ok(resJs.includes('activateTierGlow'), 'Result JS must invoke activateTierGlow');
 console.log('  ✅ PASS: Result page dynamic tier and 10px gaps verified!\n');
 

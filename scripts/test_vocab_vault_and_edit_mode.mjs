@@ -53,7 +53,7 @@ assert(vaultJs.includes('>TOTAL</th>') && vaultJs.includes('>WORDS</th>') && vau
 assert(!vaultJs.includes('Vault Items</th>'), 'Theme Manager must NOT contain composite Vault Items column');
 
 // Check Single Responsibility Column Invariants in Theme Blueprint:
-assert(vaultJs.includes('>ITEMS</th>') && vaultJs.includes('>DURATION</th>') && vaultJs.includes('>PASS SCORE</th>') && vaultJs.includes('>FORMAT</th>'), 'Theme Blueprint must split settings and vocab pool into discrete columns');
+assert(vaultJs.includes('>ITEMS</th>') && vaultJs.includes('>DURATION</th>') && (vaultJs.includes('>PASS SCORE</th>') || vaultJs.includes('>PASS RATE</th>')) && vaultJs.includes('>FORMAT</th>'), 'Theme Blueprint must split settings and vocab pool into discrete columns');
 assert(!vaultJs.includes('Test Settings</th>'), 'Theme Blueprint must NOT contain composite Test Settings column');
 assert(!vaultJs.includes('✓ Ready (${taskDuration}m'), 'Theme Blueprint Task Status must NOT cram duration/score into pill');
 assert(!vaultJs.includes('✓ Ready (${examDuration}m'), 'Theme Blueprint Exam Status must NOT cram duration/score into pill');

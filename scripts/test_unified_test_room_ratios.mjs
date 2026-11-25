@@ -212,6 +212,7 @@ async function runRatioVerification() {
     });
 
     await page.addInitScript(() => {
+      window.__isTestHarnessMode = true;
       const mockSession = {
         student_id: 'test-student-1',
         student_name: 'Top',

@@ -57,8 +57,8 @@ console.log('  ✓ app.js verified: Authoritative Grade and Score action buttons
 
 // 4. Check 4-Tab Navigation in Class Hub
 console.log('\n[Test 4] Verifying 4-Tab Navigation in Class Hub...');
-assert(appJs.includes("id: 'attendance'") && appJs.includes("label: 'Students Grade and Score'"), 'Tab 1 must be attendance');
-assert(appJs.includes("id: 'test-sessions'") && appJs.includes("label: 'Test Sessions'"), 'Tab 2 must be test-sessions');
+assert(appJs.includes("id: 'attendance'") && (appJs.includes("label: 'Students Grade and Rate'") || appJs.includes("label: 'Students Grade and Score'")), 'Tab 1 must be attendance');
+assert(appJs.includes("id: 'test-sessions'") && (appJs.includes("label: 'Class Sessions'") || appJs.includes("label: 'Test Sessions'")), 'Tab 2 must be test-sessions');
 assert(appJs.includes("id: 'tests'") && appJs.includes("label: 'Class Tests'"), 'Tab 3 must be Class Tests');
 assert(appJs.includes("id: 'analytics'") && appJs.includes("label: 'Test Analytics'"), 'Tab 4 must be Test Analytics');
 assert(appJs.includes('renderClassVocabularyAnalytics'), 'app.js must import and call renderClassVocabularyAnalytics');

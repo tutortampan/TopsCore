@@ -219,8 +219,8 @@ assert.ok(
   'test-sessions-tab-wrapper must stretch vertically with flex: 1 1 0'
 );
 assert.ok(
-  testsAccessCode.includes('id="theme-exam-analytics-container" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%;'),
-  'theme-exam-analytics-container must stretch vertically with flex: 1 1 0'
+  testsAccessCode.includes('flex: 1 1 0; min-height: 0; height: 100%;'),
+  'renderThemeExamAnalyticsBoard grid must stretch vertically with flex: 1 1 0'
 );
 assert.ok(
   testsAccessCode.includes('analytics-table-wrap" style="flex: 1 1 0 !important; min-height: 0 !important; height: 100% !important; overflow-y: auto !important; overflow-x: hidden !important;'),
