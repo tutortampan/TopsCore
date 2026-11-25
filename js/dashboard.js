@@ -3609,11 +3609,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             let sectionPts = effPoints;
             let sectionPct = effPct;
 
-            if (fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160)) {
+            if (fr.includes('[SECTION: WORDS]') || (!fr.includes('[SECTION: PHRASES]') && tQ > 40 && tQ <= 160)) {
               sectionKey = `${uniqueKey}_words`;
               sectionTQ = 160;
               sectionPts = tQ === 160 ? Math.round(effPoints) : Math.round(160 * (effPct / 100));
-            } else if (fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40)) {
+            } else if (fr.includes('[SECTION: PHRASES]') || (!fr.includes('[SECTION: WORDS]') && tQ > 0 && tQ <= 40)) {
               sectionKey = `${uniqueKey}_phrases`;
               sectionTQ = 40;
               sectionPts = tQ === 40 ? Math.round(effPoints) : Math.round(40 * (effPct / 100));
@@ -5532,11 +5532,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               const wordsAtts = atts.filter(a => {
                 const fr = String(a.forgiven_reason || '');
                 const tQ = Number(a.total_questions || 0);
+                if (fr.includes('[SECTION: PHRASES]')) return false;
                 return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
               });
               const phrasesAtts = atts.filter(a => {
                 const fr = String(a.forgiven_reason || '');
                 const tQ = Number(a.total_questions || 0);
+                if (fr.includes('[SECTION: WORDS]')) return false;
                 return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
               });
               const fullAtts = atts.filter(a => Number(a.total_questions || 0) > 160);

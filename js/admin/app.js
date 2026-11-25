@@ -1,7 +1,7 @@
 import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
 import { computeUnifiedScore, computeTopicPassLevel, detectClassDiscipline, isVocabularyClass, isManualEvaluationClass, isCbtEvaluationClass } from '../grading.js?v=20261106_v160';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261124_v683';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261125_v687';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 if (typeof window !== 'undefined') {
@@ -1520,7 +1520,8 @@ if (typeof window !== 'undefined') {
         const detectedLvlMatch = String(currentClass?.code || currentClass?.name || '').match(/(\d+)/);
         const fallbackLvlNum = detectedLvlMatch ? Number(detectedLvlMatch[1]) : null;
         const classLevelNum = (classLevelRec?.level_number != null) ? Number(classLevelRec.level_number) : fallbackLvlNum;
-        const isLevel2Vocab = isVocab && (classLevelNum === 2);
+        const isWordsOnlyVocab = isVocab && (classLevelNum === 2 || classLevelNum === 0);
+        const isLevel2Vocab = isWordsOnlyVocab;
 
         // Authoritative helpers to determine if a topic or theme contains Phrases (Level 2 is strictly Words-only SSOT)
         const checkTopicHasPhrases = (matchingTasks) => {
@@ -1937,15 +1938,24 @@ if (typeof window !== 'undefined') {
                   const yTotal = Number(y.total_questions || maxQ);
                   const xSc = Math.min(Number(x.score ?? 0), xTotal);
                   const ySc = Math.min(Number(y.score ?? 0), yTotal);
+                  const xPct = Number(x.percentage ?? (xTotal > 0 ? (xSc / xTotal) * 100 : 0));
+                  const yPct = Number(y.percentage ?? (yTotal > 0 ? (ySc / yTotal) * 100 : 0));
+                  if (xTotal !== yTotal) {
+                    const pctDiffCross = yPct - xPct;
+                    if (Math.abs(pctDiffCross) > 0.01) return pctDiffCross;
+                  }
                   const scoreDiff = ySc - xSc;
                   if (scoreDiff !== 0) return scoreDiff;
-                  const pctDiff = Number(y.percentage ?? 0) - Number(x.percentage ?? 0);
+                  const pctDiff = yPct - xPct;
                   if (Math.abs(pctDiff) > 0.01) return pctDiff;
                   return new Date(y.submitted_at || y.created_at || 0) - new Date(x.submitted_at || x.created_at || 0);
                 });
                 const topAtt = submittedAtts[0];
                 const markedBest = submittedAtts.find(a => a.is_best_score === true);
-                if (markedBest && Math.min(Number(markedBest.score ?? 0), Number(markedBest.total_questions || maxQ)) >= Math.min(Number(topAtt.score ?? 0), Number(topAtt.total_questions || maxQ)) && Number(markedBest.percentage ?? 0) >= Number(topAtt.percentage ?? 0) - 0.01) {
+                const isManualOverrideBest = Boolean(markedBest && /MANUAL_OVERRIDE/i.test(String(markedBest.forgiven_reason || '')));
+                const topPct = Number(topAtt.percentage ?? (Number(topAtt.total_questions || maxQ) > 0 ? (Math.min(Number(topAtt.score ?? 0), Number(topAtt.total_questions || maxQ)) / Number(topAtt.total_questions || maxQ)) * 100 : 0));
+                const markedPct = markedBest ? Number(markedBest.percentage ?? (Number(markedBest.total_questions || maxQ) > 0 ? (Math.min(Number(markedBest.score ?? 0), Number(markedBest.total_questions || maxQ)) / Number(markedBest.total_questions || maxQ)) * 100 : 0)) : -1;
+                if (isManualOverrideBest || (markedBest && markedPct >= topPct - 0.01)) {
                   bestAtt = markedBest;
                 } else {
                   bestAtt = topAtt;
@@ -2005,7 +2015,15 @@ if (typeof window !== 'undefined') {
 
             asmWordsPassCounts[asm.id] = Math.min(compTargetReps, wordsPasses);
             asmPhrasesPassCounts[asm.id] = Math.min(compTargetReps, phrasesPasses);
-            asmPassCounts[asm.id] = Math.min(compTargetReps, Math.min(wordsPasses, phrasesPasses));
+            const isAsmUnified = Boolean(asm.payload?.is_unified || asm.payload?.is_unified_test || asm.category === 'unified' || asm.payload?.category === 'unified');
+            const isAsmPhrasesOnly = !isAsmUnified && (asm.payload?.category === 'phrases' || /PHRASE/i.test(asm.shell_code || asm.title || ''));
+            if (isWordsOnlyVocab || (!isAsmUnified && !isAsmPhrasesOnly)) {
+              asmPassCounts[asm.id] = Math.min(compTargetReps, wordsPasses);
+            } else if (isAsmPhrasesOnly) {
+              asmPassCounts[asm.id] = Math.min(compTargetReps, phrasesPasses);
+            } else {
+              asmPassCounts[asm.id] = Math.min(compTargetReps, Math.min(wordsPasses, phrasesPasses));
+            }
           });
 
           // Step 2: Rule 2.10 Paired Theme Exam Remedial Synchronization ("Satu Paket")
@@ -3499,8 +3517,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                   if (typeof showToast === 'function') showToast(`✓ Theme ${themeCode} task progress (${earnedVal}/${maxTasks}) saved successfully!`, 'success');
                 } catch (err) {
@@ -3576,8 +3595,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                   if (typeof showToast === 'function') showToast(`✓ Topic ${topicCode} ${compLabel} repetitions (${reps}/${maxReps}) saved successfully!`, 'success');
                 } catch (err) {
@@ -3790,8 +3810,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                   if (typeof showToast === 'function') showToast(`✓ Scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
                 } catch (err) {
@@ -3921,7 +3942,7 @@ if (typeof window !== 'undefined') {
                   // Rule 2.10: Points Half-Up Whole Integer Invariant (Math.round)
                   const pts = d?.pts != null ? Math.round(Number(d.pts)) : Math.round((d?.totalQ || 120) * (pct / 100));
                   const g = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'E');
-                  testActions.push({ testId: k, action: 'manual', percentage: pct, score: pts, grade: g });
+                  testActions.push({ testId: k, totalQ: d?.totalQ, action: 'manual', percentage: pct, score: pts, grade: g });
                 }
               });
 
@@ -3966,8 +3987,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                 if (typeof showToast === 'function') showToast(`✓ Scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
               } catch (err) {
@@ -4024,8 +4046,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                 if (typeof showToast === 'function') showToast(`✓ ${repetitionActions.length} repetition score(s) saved!`, 'success');
               } catch (repErr) {
@@ -4271,8 +4294,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                 if (typeof showToast === 'function') showToast('✓ Forgiven waiver (Grade F - Passed) granted', 'success');
               } else {
@@ -4310,8 +4334,9 @@ if (typeof window !== 'undefined') {
                   clearAdminCache('attempts');
                   clearAdminCache('tests');
                 }
-                if (window._classHubCache && targetClassId) {
-                  delete window._classHubCache[targetClassId];
+                const curClassId = (typeof targetClassId !== 'undefined' ? targetClassId : (window._selectedClassId || window._currentClassHubContext?.classId));
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
                 }
                 if (typeof showToast === 'function') showToast('✓ Forgiven waiver removed', 'info');
               }
@@ -4381,43 +4406,40 @@ if (typeof window !== 'undefined') {
                     return examTestIds.has(tid);
                   }).filter(a => ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase()));
 
+                  const pickBestSectionAtt = (list) => {
+                    if (!list || list.length === 0) return null;
+                    const manualBest = list.find(a => a.is_best_score === true && /MANUAL_OVERRIDE/i.test(String(a.forgiven_reason || '')));
+                    if (manualBest) return manualBest;
+                    const sorted = [...list].sort((x, y) => {
+                      const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
+                      const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
+                      if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
+                      return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
+                    });
+                    return sorted[0] || null;
+                  };
+
                   // A. Words attempts
                   const wordsAtts = studentExamAtts.filter(a => {
                     const fr = String(a.forgiven_reason || '');
                     const tQ = Number(a.total_questions || 0);
+                    if (fr.includes('[SECTION: PHRASES]')) return false;
                     return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
                   });
-                  wordsAtts.sort((x, y) => {
-                    const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
-                    const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
-                    if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
-                    return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
-                  });
-                  const bestWords = wordsAtts[0] || null;
+                  const bestWords = pickBestSectionAtt(wordsAtts);
 
                   // B. Phrases attempts
                   const phrasesAtts = studentExamAtts.filter(a => {
                     const fr = String(a.forgiven_reason || '');
                     const tQ = Number(a.total_questions || 0);
+                    if (fr.includes('[SECTION: WORDS]')) return false;
                     return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
                   });
-                  phrasesAtts.sort((x, y) => {
-                    const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
-                    const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
-                    if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
-                    return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
-                  });
-                  const bestPhrases = phrasesAtts[0] || null;
+                  const bestPhrases = pickBestSectionAtt(phrasesAtts);
 
                   // C. Full 200Q attempts fallback
                   const fullAtts = studentExamAtts.filter(a => Number(a.total_questions || 0) > 160);
-                  fullAtts.sort((x, y) => {
-                    const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
-                    const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
-                    if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
-                    return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
-                  });
-                  const bestFull = fullAtts[0] || null;
+                  const bestFull = pickBestSectionAtt(fullAtts);
 
                   let wordsRate = null, wordsPts = null;
                   let phrasesRate = null, phrasesPts = null;
@@ -4848,7 +4870,9 @@ if (typeof window !== 'undefined') {
 
                       if (isManualMode && maxTopicReps > 0) {
                         const taskKey = `task_${tc}_${topCode}`;
-                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey];
+                        const currentDraft = window._manualInputState?.drafts?.[row.id]?.[taskKey] ||
+                                             window._manualInputState?.drafts?.[row.id]?.[`${taskKey}_words`] ||
+                                             window._manualInputState?.drafts?.[row.id]?.[`${taskKey}_phrases`];
                         const displayVal = currentDraft?.reps != null ? currentDraft.reps : earned;
                         return `
                           <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">

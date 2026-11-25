@@ -795,7 +795,7 @@ Deno.serve(async (req) => {
           .select('level_number')
           .eq('id', test.level_id)
           .single();
-        if (levelRec?.level_number) levelNum = levelRec.level_number;
+        if (levelRec && levelRec.level_number != null) levelNum = Number(levelRec.level_number);
       }
 
       let query = supabase.from("vocabulary_vault").select("*").is("deleted_at", null).eq("target_level", levelNum).range(0, 4999);
@@ -811,16 +811,20 @@ Deno.serve(async (req) => {
               String(topicCode).replace(/^[A-Za-z]/, '')
           ].filter(Boolean);
           query = query.in("topic_code", candidateCodes);
-      } else if (themes && Array.isArray(themes) && themes.length > 0) {
+      } else if (themes && Array.isArray(themes) && themes.length > 0 && levelNum !== 0) {
           query = query.in("theme_code", themes);
       } else if (isThemeTest && themeCode) {
-          const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-          const idx = allThemes.indexOf(String(themeCode).toUpperCase());
-          if (idx !== -1) {
-              const targetThemes = allThemes.slice(0, idx + 1);
-              query = query.in("theme_code", targetThemes);
-          } else {
+          if (levelNum === 0) {
               query = query.eq("theme_code", themeCode);
+          } else {
+              const allThemes = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+              const idx = allThemes.indexOf(String(themeCode).toUpperCase());
+              if (idx !== -1) {
+                  const targetThemes = allThemes.slice(0, idx + 1);
+                  query = query.in("theme_code", targetThemes);
+              } else {
+                  query = query.eq("theme_code", themeCode);
+              }
           }
       } else if (themeCode) {
           query = query.eq("theme_code", themeCode);

@@ -1705,7 +1705,7 @@ export async function generateTestQuestions(sb, test) {
             (levelNum && themeCode) ? `${levelNum}${String(themeCode).toUpperCase()}${String(topicCode).replace(/^[A-Za-z]/, '')}` : null
           ].filter(Boolean);
           filtered = filtered.filter(w => candidateCodes.includes(String(w.topic_code || '').toUpperCase()));
-        } else if (themes && Array.isArray(themes) && themes.length > 0) {
+        } else if (themes && Array.isArray(themes) && themes.length > 0 && levelNum !== 0) {
           filtered = filtered.filter(w => themes.includes(w.theme_code));
         } else if (isThemeTest && themeCode) {
           if (levelNum === 0) {
@@ -1747,7 +1747,7 @@ export async function generateTestQuestions(sb, test) {
           (levelNum && themeCode) ? `${levelNum}${String(themeCode).toUpperCase()}${String(topicCode).replace(/^[A-Za-z]/, '')}` : null
         ].filter(Boolean);
         query = query.in('topic_code', candidateCodes);
-      } else if (themes && Array.isArray(themes) && themes.length > 0) {
+      } else if (themes && Array.isArray(themes) && themes.length > 0 && levelNum !== 0) {
         query = query.in('theme_code', themes);
       } else if (isThemeTest && themeCode) {
         if (levelNum === 0) {
@@ -1789,7 +1789,7 @@ export async function generateTestQuestions(sb, test) {
           (levelNum && themeCode) ? `${levelNum}${String(themeCode).toUpperCase()}${String(topicCode).replace(/^[A-Za-z]/, '')}` : null
         ].filter(Boolean);
         queryNoCat = queryNoCat.in('topic_code', candidateCodes);
-      } else if (themes && Array.isArray(themes) && themes.length > 0) {
+      } else if (themes && Array.isArray(themes) && themes.length > 0 && levelNum !== 0) {
         queryNoCat = queryNoCat.in('theme_code', themes);
       } else if (isThemeTest && themeCode) {
         if (levelNum === 0) {
@@ -6565,10 +6565,10 @@ export async function upsertDynamicTestShell(config) {
     ? Number(config.minimumRequiredScore)
     : 60;
 
-  // Cumulative theme determination for weekly milestone tests
+  // Cumulative theme determination for weekly milestone tests (Level 0 non-leveled programs stay strictly single-theme)
   const allThemesList = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
   const themeIdx = allThemesList.indexOf((themeCode || '').toUpperCase());
-  const cumulativeThemes = (isTest && themeIdx !== -1)
+  const cumulativeThemes = (isTest && levelNum !== 0 && themeIdx !== -1)
     ? allThemesList.slice(0, themeIdx + 1)
     : (themeCode ? [themeCode.toUpperCase()] : []);
 
@@ -7007,6 +7007,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
               modulePrefix: 'VOCAB', category: 'words',
               moduleId: vocabModuleId,
               answerType: wordsTaskAns,
+              totalQuestions: (levelNum === 0 && topicObj.wordCount) ? topicObj.wordCount : undefined,
               durationMinutes: wordsTaskDur,
               minimumRequiredScore: taskPass,
               prerequisiteId: topicPrereqId,
@@ -7078,6 +7079,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       } else {
         // 3. Words Exam (First in exam pair)
         if (hasAnyVocab && (!config.category || config.category === 'all' || config.category === 'words')) {
+          const examQCount = (levelNum === 0 && themeData.wordCount) ? themeData.wordCount : undefined;
           const { testId, action } = await upsertShell({
             institutionId, programId, levelId, classId: targetClassId, levelNum,
             tier: 'EXAM', themeName: themeData.name, topicName: null,
@@ -7086,6 +7088,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
             modulePrefix: 'VOCAB', category: 'words',
             moduleId: vocabModuleId,
             answerType: wordsTestAns,
+            totalQuestions: examQCount,
             durationMinutes: config.wordsExamDurationMinutes || null,
             minimumRequiredScore: testPass,
             prerequisiteId: lastThemeTaskId,
