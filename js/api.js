@@ -4026,7 +4026,7 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
 
       while (true) {
         const { data, error } = await sb.from('vocabulary_vault')
-          .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
+          .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, program_id')
           .is('deleted_at', null)
           .order('target_level', { ascending: true })
           .order('theme_code', { ascending: true })
@@ -6833,15 +6833,34 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     // 1. Fetch Words for Level to know what themes and topics exist (Chunked Pagination Protected)
     let words = [];
     try {
-      words = await fetchVaultWords({ targetLevel: levelNum, limit: 10000 });
+      words = await fetchVaultWords({ targetLevel: levelNum, programId, limit: 10000 });
     } catch (_) {
       let vaultQuery = sb.from('vocabulary_vault')
-        .select('theme_code, theme, topic_code, topic, word_type, category')
+        .select('theme_code, theme, topic_code, topic, word_type, category, program_id')
         .is('deleted_at', null)
         .eq('target_level', levelNum);
 
       const { data } = await vaultQuery;
-      words = data || [];
+      words = (data || []).filter(w => !w.program_id || w.program_id === programId);
+    }
+
+    // 1b. Enforce Program-Theme Isolation via theme_program_assignments (prevents cross-program leaks in shared Level 0)
+    try {
+      const { data: tpaRows } = await sb.from('theme_program_assignments')
+        .select('theme_code, program_id')
+        .eq('target_level', levelNum)
+        .eq('is_active', true);
+      if (tpaRows && tpaRows.length > 0) {
+        const myThemes = new Set(tpaRows.filter(a => a.program_id === programId).map(a => String(a.theme_code || '').toUpperCase()));
+        const claimedByOthers = new Set(tpaRows.filter(a => a.program_id !== programId).map(a => String(a.theme_code || '').toUpperCase()));
+        if (myThemes.size > 0) {
+          words = words.filter(w => myThemes.has(String(w.theme_code || '').toUpperCase()));
+        } else if (claimedByOthers.size > 0) {
+          words = words.filter(w => !claimedByOthers.has(String(w.theme_code || '').toUpperCase()));
+        }
+      }
+    } catch (tpaErr) {
+      console.warn('[autoGenerateTestsHierarchy] theme_program_assignments filter fallback:', tpaErr?.message);
     }
 
     if (!words || words.length === 0) continue;
@@ -6892,7 +6911,8 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
     const taskOrder = config.taskQuestionOrder || config.questionOrder || 'random';
     const examOrder = config.examQuestionOrder || config.questionOrder || 'random';
 
-    const isUnifiedMode = config.category === 'unified' || config.unified === true;
+    const isWordsOnlyProgram = levelNum === 0 || levelNum === 2 || ['EVNK', 'SHRT', 'TPTC'].includes(resolvedProgCode);
+    const isUnifiedMode = !isWordsOnlyProgram && (config.category === 'unified' || config.unified === true);
 
     // 3. Generate Tests in strict Linear Sequential Chain
     for (const themeCode of sortedThemes) {

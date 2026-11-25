@@ -1770,9 +1770,13 @@ if (typeof window !== 'undefined') {
 
           // Words vs Phrases Count Calculation
           const isVocab = typeof isVocabularyClass === 'function' ? isVocabularyClass(currentClass) : true;
+          const isWordsOnlyClass = cleanLvlNum === 0 || cleanLvlNum === 2 || /^(SHRT|EVNK|TPTC)-VOCAB/i.test(currentClass?.code || '') || /^(SHRT|EVNK|TPTC)-VCB/i.test(r?.shell_code || '');
           let wordsCount = 0;
           let phrasesCount = 0;
-          if (isPhrase) {
+          if (isWordsOnlyClass) {
+            wordsCount = effectiveQCount;
+            phrasesCount = 0;
+          } else if (isPhrase) {
             wordsCount = 0;
             phrasesCount = effectiveQCount;
           } else if (isUnified) {
