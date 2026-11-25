@@ -6342,8 +6342,8 @@ export async function renderStudents(area, options = {}) {
       } else if (field === 'level_id') {
         const lvlObj = levelsMap.get(value);
         updates.level_id = value;
-        const isLvlZeroOrAlumni = lvlObj && (lvlObj.level_number === 0 || (lvlObj.name || '').toLowerCase() === 'alumni');
-        if (isLvlZeroOrAlumni) {
+        const isLvlAlumni = lvlObj && (lvlObj.level_number === 99 || (lvlObj.name || '').toLowerCase() === 'alumni' || (lvlObj.name || '').toLowerCase() === 'x');
+        if (isLvlAlumni) {
           updates.program_status = 'ALUMNI';
           updates.is_active = true;
         } else {
@@ -6502,7 +6502,7 @@ export async function renderStudents(area, options = {}) {
             s.studentLevelNum = lvlObj?.level_number;
             const viewEl = cell?.querySelector('.student-cell-view span');
             if (viewEl) {
-              if (updates.program_status === 'ALUMNI' || lvlObj?.level_number === 0) {
+              if (updates.program_status === 'ALUMNI' || lvlObj?.level_number === 99) {
                 viewEl.textContent = 'X';
                 viewEl.style.color = 'var(--grade-star, #a855f7)';
                 viewEl.setAttribute('title', 'Alumni (Level X)');
@@ -6677,7 +6677,7 @@ window.promoteStudentNextLevel = async function(rowOrId) {
 
     await sb.from('audit_logs').insert({
       actor_role: 'admin',
-      action: nextLevelNum === 0 ? 'STUDENT_GRADUATED_ALUMNI' : 'LEVEL_PROMOTION',
+      action: nextLevelNum === 99 ? 'STUDENT_GRADUATED_ALUMNI' : 'LEVEL_PROMOTION',
       entity_type: 'students',
       entity_id: studentId,
       old_value: { level_id: row.level_id, level_number: currentLevelNum },
@@ -6686,7 +6686,7 @@ window.promoteStudentNextLevel = async function(rowOrId) {
     });
 
     clearAdminCache('students');
-    if (nextLevelNum === 0) {
+    if (nextLevelNum === 99) {
       showToast(`${row.displayName} has graduated to ALUMNI (Level X)!`, 'success');
     } else {
       showToast(`${row.displayName} successfully promoted to ${targetLevel.name}!`, 'success');
