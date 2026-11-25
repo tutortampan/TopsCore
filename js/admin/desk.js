@@ -78,7 +78,7 @@ export async function renderRecycleBin(container) {
         if (typeof window.setBottomInfobar !== 'function') return;
         const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
         const editBtnStyle = isEditOn
-          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;transition:all 0.15s ease;'
+          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;transition:all 0.15s ease;'
           : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
         const editBtnLabel = isEditOn
           ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -512,7 +512,7 @@ export async function renderAuditLog(area) {
 
     const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;transition:all 0.15s ease;'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;transition:all 0.15s ease;'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -702,9 +702,9 @@ export async function renderDataHealth(container) {
             <div class="text-xs text-muted mb-1">Submitted Attempts</div>
             <div class="fw-700" style="font-size: 20px;" id="recal-metric-attempts">0</div>
           </div>
-          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--clr-primary, #6366f1);">
+          <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--primary-tactical, #38bdf8);">
             <div class="text-xs text-muted mb-1">Affected Attempts</div>
-            <div class="fw-700" style="font-size: 20px; color: var(--clr-primary, #a78bfa);" id="recal-metric-affected">0</div>
+            <div class="fw-700" style="font-size: 20px; color: var(--clr-primary, #a855f7);" id="recal-metric-affected">0</div>
           </div>
           <div class="glass-card p-3 text-center" style="border-left: 3px solid var(--grade-a);">
             <div class="text-xs text-muted mb-1">Status: FAIL &rarr; PASS</div>
@@ -996,13 +996,13 @@ export async function renderDataHealth(container) {
             const isStatusPass = item.oldStatus === 'FAIL' && item.newStatus === 'PASS';
             const isStatusFail = item.oldStatus === 'PASS' && item.newStatus === 'FAIL';
 
-            let statusBadge = '<span class="badge badge-neutral">No Change</span>';
+            let statusBadge = '<span style="color:var(--clr-text-muted); font-size:12px; font-weight:500;">No Change</span>';
             if (isStatusPass) {
-              statusBadge = '<span class="badge badge-success fw-700">Fail &rarr; Pass</span>';
+              statusBadge = '<span style="color:var(--grade-a); font-weight:700; font-size:12px;">Fail &rarr; Pass</span>';
             } else if (isStatusFail) {
-              statusBadge = '<span class="badge badge-danger fw-700">Pass &rarr; Fail</span>';
+              statusBadge = '<span style="color:var(--grade-e); font-weight:700; font-size:12px;">Pass &rarr; Fail</span>';
             } else if (item.isAffected) {
-              statusBadge = isScoreUp ? '<span class="badge badge-info">+ Rate Up</span>' : '<span class="badge badge-warning">- Rate Down</span>';
+              statusBadge = isScoreUp ? '<span style="color:var(--primary-tactical, #38bdf8); font-weight:700; font-size:12px;">+ Rate Up</span>' : '<span style="color:var(--grade-c); font-weight:700; font-size:12px;">- Rate Down</span>';
             }
 
             const changedAnswersCount = item.questions ? item.questions.filter(q => q.isAffected).length : 0;
@@ -1020,7 +1020,7 @@ export async function renderDataHealth(container) {
                 <td class="text-center"><span class="grade-badge grade-${item.oldGrade}" style="width:24px;height:24px;font-size: 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${oldSymbol}</span></td>
                 <td class="text-center"><span class="grade-badge grade-${item.newGrade}" style="width:24px;height:24px;font-size: 12px;display:inline-flex;align-items:center;justify-content:center;line-height:1;">${newSymbol}</span></td>
                 <td class="text-center">${statusBadge}</td>
-                <td class="text-center"><span class="badge ${changedAnswersCount > 0 ? 'badge-primary' : 'badge-neutral'}">${changedAnswersCount} q</span></td>
+                <td class="text-center"><span style="color:${changedAnswersCount > 0 ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8'}; font-weight:700; font-size:12px;">${changedAnswersCount} q</span></td>
               `;
             tableBody.appendChild(tr);
           });
@@ -1263,7 +1263,7 @@ export async function renderSettings(area) {
           <div class="text-xs text-muted mt-1">Time allowed before auto-submit on cheating (Default: 10s).</div>
         </div>
 
-        <button class="btn btn-primary btn-sm w-100" id="btn-save-anti-cheat" style="height:32px;font-size:12px;font-weight:700;background:#7c3aed;border:1px solid #a78bfa;color:#fff;">
+        <button class="btn btn-primary btn-sm w-100" id="btn-save-anti-cheat" style="height:32px;font-size:12px;font-weight:700;background:#7c3aed;border:1px solid var(--grade-star, #a855f7);color:#fff;">
           ${getSvgIcon('shield', 14)} Save Security Settings
         </button>
       </div>
@@ -1302,7 +1302,7 @@ export async function renderSettings(area) {
           </div>
         </div>
 
-        <button class="btn btn-primary btn-sm w-100" id="btn-save-vault" style="height:32px;font-size:12px;font-weight:700;background:#7c3aed;border:1px solid #a78bfa;color:#fff;">
+        <button class="btn btn-primary btn-sm w-100" id="btn-save-vault" style="height:32px;font-size:12px;font-weight:700;background:#7c3aed;border:1px solid var(--grade-star, #a855f7);color:#fff;">
           Save API Key Vault
         </button>
       </div>
@@ -1831,7 +1831,7 @@ export async function renderSettings(area) {
     `;
     const rightHtml = `
       <div style="display:flex;align-items:center;gap:8px;">
-        <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-settings" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 14px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:6px;background:#7c3aed;border:1px solid #a78bfa;color:#ffffff;cursor:pointer;" title="Save All Platform Configurations">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-subpanel-save-settings" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 14px !important;font-size:12px !important;font-weight:700;border-radius:4px;display:inline-flex;align-items:center;gap:6px;background:#7c3aed;border:1px solid var(--grade-star, #a855f7);color:#ffffff;cursor:pointer;" title="Save All Platform Configurations">
           ${getSvgIcon('save', 14)} Save Settings
         </button>
       </div>
@@ -1955,8 +1955,8 @@ export async function renderInterfaceSettings(area) {
             </span>
             <span style="font-size:12px; font-weight:700; color:#64748b; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.06); padding:1px 6px; border-radius:4px; text-transform:uppercase; letter-spacing:0.03em;">Red ➔ Blue</span>
           </div>
-          ${renderColorItem('btnDanger', 'Danger Action (Delete Button)', 'Pure Crimson', 'Permanent Delete · Hard Purge · Kick Student &amp; End Session', colorSettings.btnDanger || '#dc2626')}
-          ${renderColorItem('btnPrimary', 'Primary Action (CTA Button)', 'Tactical Blue', 'Modal Save Buttons · Proceed CTAs · Create Class &amp; Submit Exam', colorSettings.btnPrimary || '#0284c7')}
+          ${renderColorItem('btnDanger', 'Danger Action (Delete Button)', 'Pure Crimson', 'Permanent Delete · Hard Purge · Kick Student &amp; End Session', colorSettings.btnDanger || 'var(--grade-e, #ff0000)')}
+          ${renderColorItem('btnPrimary', 'Primary Action (CTA Button)', 'Tactical Cyan', 'Modal Save Buttons · Proceed CTAs · Create Class &amp; Submit Exam', colorSettings.btnPrimary || '#38bdf8')}
         </div>
 
       </div>
@@ -1966,7 +1966,7 @@ export async function renderInterfaceSettings(area) {
 
         <!-- CARD 4: ACADEMIC GRADES (RED ➔ PURPLE SPECTRUM) -->
         <div style="background:rgba(15,23,42,0.65); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px; display:flex; flex-direction:column; box-sizing:border-box;">
-          <div style="font-size:12px; font-weight:800; color:#c084fc; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-size:12px; font-weight:800; color:#a855f7; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between;">
             <span style="display:flex; align-items:center; gap:6px;">
               <span>${getSvgIcon('award', 13)}</span>
               <span>Academic Grades (SSOT)</span>
@@ -2159,7 +2159,7 @@ export async function renderInterfaceSettings(area) {
         <button type="button" class="btn btn-secondary btn-sm" id="btn-reset-interface-system" style="height:30px !important; min-height:30px !important; max-height:30px !important; line-height:28px !important; font-size:12px !important; font-weight:700; border-color:rgba(255,255,255,0.2); padding:0 12px; cursor:pointer;">
           ${getSvgIcon('refresh', 12)} Reset Defaults
         </button>
-        <button type="button" class="btn btn-primary btn-sm" id="btn-save-interface-system" style="height:30px !important; min-height:30px !important; max-height:30px !important; line-height:28px !important; font-size:12px !important; font-weight:800; background:#0284c7; border:1px solid #38bdf8; color:#fff; padding:0 14px; cursor:pointer;">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-save-interface-system" style="height:30px !important; min-height:30px !important; max-height:30px !important; line-height:28px !important; font-size:12px !important; font-weight:800; background:var(--primary-tactical, #38bdf8); border:1px solid #38bdf8; color:#fff; padding:0 14px; cursor:pointer;">
           ${getSvgIcon('save', 12)} Save System Designs
         </button>
       </div>

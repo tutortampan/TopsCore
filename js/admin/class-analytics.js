@@ -79,7 +79,7 @@ function diagnoseErrorReason(targetWord, mistakesList, isSpokenMode = false) {
   if (formCount / totalMistakes >= 0.3) {
     return { label: 'Word Form / Root Error', color: 'var(--grade-d)', icon: getSvgIcon('refresh', 12), bg: 'rgba(var(--grade-d-rgb, 255, 140, 0),0.15)', border: 'rgba(var(--grade-d-rgb, 255, 140, 0),0.35)' };
   }
-  return { label: 'Distractor Trap / Concept Error', color: 'var(--grade-star, #c084fc)', icon: getSvgIcon('alert-triangle', 12), bg: 'rgba(var(--grade-star-rgb, 192, 132, 252),0.15)', border: 'rgba(var(--grade-star-rgb, 192, 132, 252),0.35)' };
+  return { label: 'Distractor Trap / Concept Error', color: 'var(--grade-star, #a855f7)', icon: getSvgIcon('alert-triangle', 12), bg: 'rgba(var(--grade-star-rgb, 192, 132, 252),0.15)', border: 'rgba(var(--grade-star-rgb, 192, 132, 252),0.35)' };
 }
 
 /**
@@ -307,7 +307,7 @@ export async function renderClassVocabularyAnalytics(container, context = {}) {
       const centerHtml = `
         <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
           <span style="color:#cbd5e1; font-weight:700;">Empirical Missed Items:</span>
-          <span style="color:var(--grade-e, #fca5a5); font-weight:800;">${totalMissedAcrossThemes} Questions Recorded</span>
+          <span style="color:var(--grade-e, #ff0000); font-weight:800;">${totalMissedAcrossThemes} Questions Recorded</span>
         </div>
       `;
       const rightHtml = `
@@ -607,7 +607,7 @@ function openVocabErrorDetailModal(item) {
                     <td style="padding:8px 10px; font-weight:700; color:#ffffff;">${escapeHtml(m.studentName)}</td>
                     <td style="padding:8px 10px; font-family:monospace; color:var(--grade-e); font-weight:700;">"${escapeHtml(m.studentAnswer)}"</td>
                     <td style="padding:8px 10px; text-align:center;">
-                      <span class="badge" style="background:${m.score > 0 ? 'rgba(var(--grade-c-rgb, 255, 255, 0),0.15)' : 'rgba(var(--grade-e-rgb, 255, 0, 0),0.15)'}; color:${m.score > 0 ? 'var(--grade-c)' : 'var(--grade-e)'}; font-size:12px; font-weight:800; padding:2px 6px;">
+                      <span style="color:${m.score > 0 ? 'var(--grade-c)' : 'var(--grade-e)'}; font-size:12px; font-weight:700; font-variant-numeric:tabular-nums;">
                         ${m.score} pt
                       </span>
                     </td>

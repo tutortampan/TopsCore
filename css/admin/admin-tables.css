@@ -12,7 +12,7 @@
 .table-wrap {
   width: 100%;
   max-width: 100%;
-  background: var(--admin-surface-card, var(--fm-bg-panel, #0f172a));
+  background: var(--admin-surface-card, #0f172a);
   border: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
   border-radius: var(--fm-radius-md, 8px);
   overflow-x: hidden !important;
@@ -367,7 +367,7 @@ th.sub-hdr:not(:last-child):not(.super-hdr-divider):not(.col-test-theme-grade):n
 }
 .badge-level-3 {
   background: rgba(168, 85, 247, 0.12);
-  color: #c084fc;
+  color: var(--grade-star, #a855f7);
   border-color: rgba(168, 85, 247, 0.3);
 }
 
@@ -723,7 +723,7 @@ input[type="checkbox"], input[type="radio"] {
   transition: background-color 0.2s ease;
 }
 .col-resizer:hover, .col-resizer.active {
-  background-color: var(--fm-primary, #6366f1);
+  background-color: var(--fm-primary, #38bdf8);
 }
 
 
@@ -1166,7 +1166,7 @@ th.super-hdr-overall {
   top: 0 !important;
   z-index: 30 !important;
   background: #0b1120 !important;
-  color: var(--grade-star, #c084fc) !important;
+  color: var(--grade-star, #a855f7) !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em !important;
   border-top: 2px solid rgba(255, 255, 255, 0.28) !important;
@@ -1336,13 +1336,21 @@ th.super-hdr-exam {
 }
 
 #class-attendance-grid .input-matrix-exam-score,
-#class-attendance-grid .input-matrix-exam-pts {
+#class-attendance-grid .input-matrix-exam-pts,
+#class-attendance-grid .input-matrix-words-rate,
+#class-attendance-grid .input-matrix-words-pts,
+#class-attendance-grid .input-matrix-phrases-rate,
+#class-attendance-grid .input-matrix-phrases-pts {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
 #class-attendance-grid .input-matrix-exam-score:focus,
-#class-attendance-grid .input-matrix-exam-pts:focus {
+#class-attendance-grid .input-matrix-exam-pts:focus,
+#class-attendance-grid .input-matrix-words-rate:focus,
+#class-attendance-grid .input-matrix-words-pts:focus,
+#class-attendance-grid .input-matrix-phrases-rate:focus,
+#class-attendance-grid .input-matrix-phrases-pts:focus {
   outline: none;
   border-color: var(--grade-a) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
@@ -1890,7 +1898,7 @@ th.col-subhdr-overall,
 #class-attendance-grid thead tr:nth-child(2) th.col-overall,
 #class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-overall {
   background: #0b1120 !important;
-  color: var(--grade-star, #c084fc) !important;
+  color: var(--grade-star, #a855f7) !important;
 }
 th.col-subhdr-theme-overall *,
 th.col-subhdr-overall *,
@@ -1900,7 +1908,7 @@ th.col-subhdr-overall *,
 #class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-overall *,
 #class-attendance-grid thead tr:nth-child(2) th.col-overall .datagrid-header-label,
 #class-attendance-grid thead tr:nth-child(2) th.col-subhdr-theme-overall .datagrid-header-label {
-  color: var(--grade-star, #c084fc) !important;
+  color: var(--grade-star, #a855f7) !important;
   font-weight: 700 !important;
 }
 
@@ -1977,12 +1985,12 @@ th.col-subhdr-topic * {
 #blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-vocab,
 th.col-subhdr-vocab {
   background: #0b1120 !important;
-  color: var(--grade-star, #c084fc) !important;
+  color: var(--grade-star, #a855f7) !important;
 }
 #blueprint-matrix-table th.bp-sh-vocab *,
 #blueprint-matrix-table thead tr:nth-child(2) th.col-subhdr-vocab *,
 th.col-subhdr-vocab * {
-  color: var(--grade-star, #c084fc) !important;
+  color: var(--grade-star, #a855f7) !important;
   font-weight: 700 !important;
 }
 
@@ -2086,7 +2094,7 @@ th.col-subhdr-status * {
 .badge-active-theme-a { background: rgba(var(--quad-a-rgb, 255, 45, 135), 0.15) !important; color: var(--quad-a, #ff2d87) !important; border: 1px solid rgba(var(--quad-a-rgb, 255, 45, 135), 0.4) !important; }
 .badge-active-theme-b { background: rgba(var(--quad-b-rgb, 255, 140, 0), 0.15) !important; color: var(--quad-b, #ff8c00) !important; border: 1px solid rgba(var(--quad-b-rgb, 255, 140, 0), 0.4) !important; }
 .badge-active-theme-c { background: rgba(var(--quad-c-rgb, 149, 255, 0), 0.15) !important; color: var(--quad-c, #95ff00) !important; border: 1px solid rgba(var(--quad-c-rgb, 149, 255, 0), 0.4) !important; }
-.badge-active-theme-d { background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.15) !important; color: var(--quad-d, #c084fc) !important; border: 1px solid rgba(var(--quad-d-rgb, 192, 132, 252), 0.4) !important; }
+.badge-active-theme-d { background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.15) !important; color: var(--quad-d, #a855f7) !important; border: 1px solid rgba(var(--quad-d-rgb, 192, 132, 252), 0.4) !important; }
 
 /* Unified Font and Tabular Numbers across Grid */
 #class-attendance-grid,
@@ -2325,8 +2333,8 @@ th.col-subhdr-status * {
 
 .attendance-theme-pill.theme-d.active {
   background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.18);
-  color: var(--quad-d, #c084fc);
-  border-color: var(--quad-d, #c084fc);
+  color: var(--quad-d, #a855f7);
+  border-color: var(--quad-d, #a855f7);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
@@ -2413,7 +2421,7 @@ th.col-comp-words {
 }
 
 th.col-comp-phrases {
-  color: #c084fc !important;
+  color: var(--grade-star, #a855f7) !important;
 }
 
 .asm-cell-rep-rate {
@@ -2549,7 +2557,7 @@ tfoot.datagrid-tfoot,
 .toolbar-input-38:focus,
 .table-toolbar-unified input:focus,
 .table-toolbar-unified select:focus {
-  border-color: var(--fm-accent-tactical, #6366f1) !important;
+  border-color: var(--fm-accent-tactical, #38bdf8) !important;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2) !important;
   background: #111827 !important;
 }

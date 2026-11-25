@@ -226,7 +226,7 @@ function renderSubPanel(container, data, filteredData) {
     const count = grp === 'ALL' ? data.length : data.filter(d => d.group === grp).length;
     if (count === 0 && !isAct && grp !== 'ALL') return '';
     return `
-      <button type="button" class="btn btn-sm ${isAct ? 'btn-primary' : 'btn-outline'}" data-group-filter="${escHtml(grp)}" style="height:26px; line-height:24px; padding:0 8px; font-size:12px; font-weight:700; white-space:nowrap; border-radius:4px; flex-shrink:0; ${isAct ? 'background:#0284c7; border-color:#38bdf8; color:#fff;' : 'border-color:#334155; color:#94a3b8;'}">
+      <button type="button" class="btn btn-sm ${isAct ? 'btn-primary' : 'btn-outline'}" data-group-filter="${escHtml(grp)}" style="height:26px; line-height:24px; padding:0 8px; font-size:12px; font-weight:700; white-space:nowrap; border-radius:4px; flex-shrink:0; ${isAct ? 'background:#38bdf8; border-color:#38bdf8; color:#090d16;' : 'border-color:#334155; color:#94a3b8;'}">
         ${escHtml(grp)} <span style="font-size:12px; opacity:0.8; margin-left:2px;">(${count})</span>
       </button>
     `;
@@ -271,7 +271,7 @@ function renderSubPanel(container, data, filteredData) {
 
       <!-- Add Term (Edit Mode Only) -->
       ${_isEditMode ? `
-        <button type="button" class="btn btn-primary btn-sm" id="btn-add-glossary-term" style="height:28px; line-height:26px; padding:0 9px; font-size:12px; font-weight:800; background:#059669; border:1px solid #10b981; color:#fff;">
+        <button type="button" class="btn btn-primary btn-sm" id="btn-add-glossary-term" style="height:28px; line-height:26px; padding:0 9px; font-size:12px; font-weight:800; background:#059669; border:1px solid var(--grade-a, #00c000); color:#fff;">
           + Add
         </button>
       ` : ''}
@@ -279,7 +279,7 @@ function renderSubPanel(container, data, filteredData) {
       <!-- Edit Mode Toggle Button -->
       <button type="button" class="btn btn-sm" id="btn-toggle-glossary-edit" style="height:28px; line-height:26px; padding:0 10px; font-size:12px; font-weight:800; border-radius:4px; cursor:pointer; display:flex; align-items:center; gap:5px; ${
         _isEditMode 
-          ? 'background:#eab308; border:1px solid #facc15; color:#0f172a;' 
+          ? 'background:var(--grade-c, #ffff00); border:1px solid var(--grade-c, #ffff00); color:#0f172a;' 
           : 'background:#1e293b; border:1px solid #475569; color:#f8fafc;'
       }">
         ${getSvgIcon('edit-3', 12)} ${_isEditMode ? 'Exit' : 'Edit Mode'}
@@ -289,7 +289,7 @@ function renderSubPanel(container, data, filteredData) {
       <button type="button" class="btn btn-outline btn-sm" id="btn-glossary-reset" title="Reset SSOT" style="height:28px; line-height:26px; padding:0 7px; font-size:12px; font-weight:700; border-color:#475569; color:#cbd5e1;">
         ${getSvgIcon('rotate-ccw', 11)}
       </button>
-      <button type="button" class="btn btn-primary btn-sm" id="btn-glossary-save" style="height:28px; line-height:26px; font-size:12px; font-weight:800; background:${_isDirty ? '#0284c7' : '#1e293b'}; border:1px solid ${_isDirty ? '#38bdf8' : '#334155'}; color:#fff; cursor:${_isDirty ? 'pointer' : 'default'}; opacity:${_isDirty ? '1' : '0.6'}; padding:0 10px;" ${_isDirty ? '' : 'disabled'}>
+      <button type="button" class="btn btn-primary btn-sm" id="btn-glossary-save" style="height:28px; line-height:26px; font-size:12px; font-weight:800; background:${_isDirty ? '#38bdf8' : '#1e293b'}; border:1px solid ${_isDirty ? '#38bdf8' : '#334155'}; color:${_isDirty ? '#090d16' : '#94a3b8'}; cursor:${_isDirty ? 'pointer' : 'default'}; opacity:${_isDirty ? '1' : '0.6'}; padding:0 10px;" ${_isDirty ? '' : 'disabled'}>
         ${getSvgIcon('save', 12)} Save
       </button>
     </div>
@@ -478,7 +478,7 @@ export async function renderSystemGlossary(container) {
                 <!-- 6. REFERENSI SSOT -->
                 ${getSortTh('ssot_ref', 'Referensi SSOT', '10%', '10%', 'left', _isEditMode)}
                 <!-- 7. AKSI (Edit Mode Only) -->
-                ${_isEditMode ? `<th style="width:5%; text-align:center; padding:5px 4px; font-weight:800; color:#ef4444; text-transform:uppercase; font-size:12px; box-sizing:border-box;">Aksi</th>` : ''}
+                ${_isEditMode ? `<th style="width:5%; text-align:center; padding:5px 4px; font-weight:800; color:var(--grade-e, #ff0000); text-transform:uppercase; font-size:12px; box-sizing:border-box;">Aksi</th>` : ''}
               </tr>
             </thead>
             <tbody>
@@ -528,7 +528,7 @@ function renderTableRows(items, isEdit) {
           
           <!-- 1. LOKASI HEADER -->
           <td style="padding:6px 8px; vertical-align:top; border-right:1px solid rgba(255,255,255,0.05); word-break:break-word; overflow-wrap:break-word; white-space:normal; box-sizing:border-box;">
-            <span class="badge" style="background:#1e293b; color:#94a3b8; border:1px solid #334155; font-size:12px; font-weight:700; padding:2px 7px; border-radius:3px; display:inline-block; line-height:1.25;">
+            <span style="color:#94a3b8; font-size:12px; font-weight:700; display:inline-block; line-height:1.25;">
               ${escHtml(item.group || 'Umum')}
             </span>
           </td>
@@ -638,7 +638,7 @@ function renderTableRows(items, isEdit) {
 
           <!-- 7. Delete Row Action -->
           <td style="text-align:center; padding:4px 4px; vertical-align:top; box-sizing:border-box;">
-            <button type="button" class="btn-delete-row" data-idx="${rawIdx}" title="Hapus baris header" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#ef4444; width:26px; height:26px; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+            <button type="button" class="btn-delete-row" data-idx="${rawIdx}" title="Hapus baris header" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:var(--grade-e, #ff0000); width:26px; height:26px; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
               ${getSvgIcon('trash', 12)}
             </button>
           </td>

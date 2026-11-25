@@ -29,7 +29,7 @@ export function generateAvatarSvg(name = '', gender = '') {
   const isMale = g === 'male' || g === 'm' || g === 'laki-laki' || g === 'l';
   const isFemale = g === 'female' || g === 'f' || g === 'perempuan' || g === 'p';
   
-  const bgGrad1 = isMale ? '#3b82f6' : isFemale ? '#a855f7' : '#6366f1';
+  const bgGrad1 = isMale ? 'var(--primary-tactical, #38bdf8)' : isFemale ? '#a855f7' : 'var(--primary-tactical, #38bdf8)';
   const bgGrad2 = isMale ? '#1d4ed8' : isFemale ? '#7e22ce' : '#4338ca';
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 320" width="240" height="320">

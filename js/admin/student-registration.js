@@ -162,7 +162,7 @@ async function renderBulkImportView(container) {
             <p class="text-xs text-muted" id="preview-row-count" style="margin: 2px 0 0 0;">0 students loaded from file</p>
           </div>
           <div class="d-flex align-center gap-2">
-            <button class="btn btn-secondary btn-sm" id="btn-cancel-preview">Cancel</button>
+            <button class="btn btn-secondary btn-sm" id="btn-cancel-preview">CLOSE</button>
             <button class="btn btn-primary btn-sm" id="btn-confirm-save">✓ Confirm &amp; Save Students</button>
           </div>
         </div>
@@ -321,7 +321,7 @@ async function renderBulkImportView(container) {
     } else {
       showToast('Exporting student records...', 'info');
       try {
-        const stds = await adminFetchAll('students', 'name, gender, birth_date, is_active, created_at, programs(name), batches(name)');
+        const stds = await adminFetchAll('students', 'name, gender, birth_date, is_active, created_at, programs(name), batches!batch_id(name)');
         if (!stds || stds.length === 0) { showToast('No students to export.', 'warning'); return; }
         const exportRows = stds.map(s => ({
           'Name': s.name,
@@ -670,7 +670,6 @@ async function renderBulkImportView(container) {
           const updData = {
             pin: pinVal,
             pin_hash: pinHash,
-            is_active: true,
             deleted_at: null,
             updated_at: new Date().toISOString()
           };
@@ -703,7 +702,8 @@ async function renderBulkImportView(container) {
             birth_date: s.birthDate || null,
             pin: pinVal,
             pin_hash: pinHash,
-            is_active: true
+            is_active: true,
+            program_status: 'ACTIVE'
           };
           if (s.province) insData.province = s.province;
           if (s.city) insData.city = s.city;
@@ -783,7 +783,7 @@ async function renderIndividualRegView(container) {
       adminFetchAll('institutions', 'id, name, is_active'),
       adminFetchAll('programs', 'id, name, is_active, institution_id'),
       adminFetchAll('batches', 'id, name, is_active, program_id'),
-      adminFetchAll('students', 'id, name, gender, birth_date, is_active, created_at, institution_id, program_id, batch_id, institutions(name), programs(name), batches(name)')
+      adminFetchAll('students', 'id, name, gender, birth_date, is_active, created_at, institution_id, program_id, batch_id, institutions(name), programs(name), batches!batch_id(name)')
     ]);
     allInsts = (results[0].status === 'fulfilled' && Array.isArray(results[0].value)) ? results[0].value : [];
     allProgs = (results[1].status === 'fulfilled' && Array.isArray(results[1].value)) ? results[1].value : [];
@@ -1133,18 +1133,19 @@ async function renderIndividualRegView(container) {
         city: 'Kota Mataram',
         pin: pin,
         pin_hash: pinHash,
-        is_active: isActive
+        is_active: isActive,
+        program_status: isActive ? 'ACTIVE' : 'INACTIVE'
       };
 
       let createdStudent = null;
       try {
-        const res = await sb.from('students').insert(insPayload).select('id, name, created_at, is_active, programs(name), batches(name)').single();
+        const res = await sb.from('students').insert(insPayload).select('id, name, created_at, is_active, programs(name), batches!batch_id(name)').single();
         if (res.error) throw res.error;
         createdStudent = res.data;
       } catch (_) {
         delete insPayload.province;
         delete insPayload.city;
-        const res = await sb.from('students').insert(insPayload).select('id, name, created_at, is_active, programs(name), batches(name)').single();
+        const res = await sb.from('students').insert(insPayload).select('id, name, created_at, is_active, programs(name), batches!batch_id(name)').single();
         if (res.error) throw res.error;
         createdStudent = res.data;
       }
@@ -1208,7 +1209,7 @@ async function renderIndividualRegView(container) {
   if (typeof window.setBottomInfobar === 'function') {
     const isEditOn = (typeof document !== 'undefined' && document.body.classList.contains('global-edit-mode-on')) || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--primary-tactical, #38bdf8);border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`

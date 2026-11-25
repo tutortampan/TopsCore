@@ -36,7 +36,7 @@ const THEME_PALETTES = {
   'A': { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.08)', borderRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.35)' },
   'B': { color: 'var(--quad-b, #ff8c00)', bgRgba: 'rgba(var(--quad-b-rgb, 255, 140, 0), 0.08)', borderRgba: 'rgba(var(--quad-b-rgb, 255, 140, 0), 0.35)' },
   'C': { color: 'var(--quad-c, #95ff00)', bgRgba: 'rgba(var(--quad-c-rgb, 149, 255, 0), 0.08)', borderRgba: 'rgba(var(--quad-c-rgb, 149, 255, 0), 0.35)' },
-  'D': { color: 'var(--quad-d, #c084fc)', bgRgba: 'rgba(var(--quad-d-rgb, 192, 132, 252), 0.08)', borderRgba: 'rgba(var(--quad-d-rgb, 192, 132, 252), 0.35)' },
+  'D': { color: 'var(--quad-d, #a855f7)', bgRgba: 'rgba(var(--quad-d-rgb, 192, 132, 252), 0.08)', borderRgba: 'rgba(var(--quad-d-rgb, 192, 132, 252), 0.35)' },
   'G': { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.08)', borderRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.35)' }
 };
 const DEFAULT_THEME_PALETTE = { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.08)', borderRgba: 'rgba(var(--quad-a-rgb, 255, 45, 135), 0.35)' };
@@ -419,12 +419,12 @@ function renderRegularAttendanceCard({
     <div style="display: flex; flex-direction: column; gap: 6px;">
       <!-- Line 1: Header + Live/Standby Badge -->
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 2px; line-height: 1.4;">
-        <span style="font-size: 12px; font-weight: 800; color: #4ade80; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
-          <span style="color: #22c55e;">REGULAR CLASS</span> &bull; ATTENDANCE
+        <span style="font-size: 12px; font-weight: 800; color: var(--grade-a, #00c000); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
+          <span style="color: var(--grade-a, #00c000);">REGULAR CLASS</span> &bull; ATTENDANCE
         </span>
         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           ${isLive ? `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #4ade80;">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.15); border: 1px solid var(--grade-a, #00c000); color: var(--grade-a, #00c000);">
               LIVE (ACTIVE)
             </span>
           ` : `
@@ -460,7 +460,7 @@ function renderRegularAttendanceCard({
   if (isLive) {
     row2Content = `
       <div style="height:36px;">
-        <button type="button" class="btn btn-wireframe-live-view btn-regular-live-view" style="width:100%; border:1px solid #16a34a; background:#16a34a; color:#ffffff; font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Regular Class Attendance Session is Live">
+        <button type="button" class="btn btn-wireframe-live-view btn-regular-live-view" style="width:100%; border:1px solid var(--grade-a, #00c000); background:var(--grade-a, #00c000); color:#ffffff; font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Regular Class Attendance Session is Live">
           LIVE ATTENDANCE &bull; ${presentCount} PRESENT (${uncheckedCount} PENDING)
         </button>
       </div>
@@ -473,7 +473,7 @@ function renderRegularAttendanceCard({
         <button type="button" class="btn btn-wireframe-code btn-copy-code" data-code="${liveCode}" style="flex:1; border:1px solid rgba(255,255,255,0.2); color:#ffffff; background:rgba(255,255,255,0.06); font-weight:700; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Copy 6-character check-in code">
           CODE: ${liveCode}
         </button>
-        <button type="button" class="btn btn-wireframe-close btn-close-regular-session" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:#fca5a5; background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); font-weight:800; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Close Active Attendance Session (Auto-Alpha Unchecked)">
+        <button type="button" class="btn btn-wireframe-close btn-close-regular-session" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:var(--grade-e, #ff0000); background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); font-weight:800; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Close Active Attendance Session (Auto-Alpha Unchecked)">
           CLOSE
         </button>
       </div>
@@ -481,7 +481,7 @@ function renderRegularAttendanceCard({
   } else {
     row2Content = `
       <div class="card-block-row-buttons" style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-wireframe-normal btn-start-regular-session" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.08); font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Start Regular Class Session with Live Attendance">
+        <button type="button" class="btn btn-wireframe-normal btn-start-regular-session" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:var(--grade-a, #00c000); background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.08); font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Start Regular Class Session with Live Attendance">
           START CLASS (${activeBatchStudents.length} Students)
         </button>
       </div>
@@ -528,7 +528,7 @@ function renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendance
         if (studAttempts.length > 0) {
           const bestScore = Math.max(...studAttempts.map(a => Number(a.effective_score ?? a.percentage ?? 0)));
           examScoreStr = `${bestScore.toFixed(0)}%`;
-          examScoreColor = bestScore >= 60 ? 'var(--grade-a, #86efac)' : 'var(--grade-e, #fca5a5)';
+          examScoreColor = bestScore >= 60 ? 'var(--grade-a, #00c000)' : 'var(--grade-e, #ff0000)';
         }
 
         return `
@@ -539,10 +539,10 @@ function renderClassRosterAttendanceTable(activeBatchStudents, sessionAttendance
             </td>
             <td style="padding:6px 8px; text-align:center;">
               <div style="display:inline-flex; gap:4px; align-items:center;">
-                <button type="button" class="btn-roster-att-pill ${isPresent ? 'active-present' : ''}" data-student-id="${student.id}" data-status="PRESENT" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isPresent ? '#16a34a' : 'rgba(255,255,255,0.15)'}; background:${isPresent ? '#16a34a' : 'transparent'}; color:${isPresent ? '#ffffff' : '#94a3b8'};" title="Mark Present">P</button>
-                <button type="button" class="btn-roster-att-pill ${isExcused ? 'active-excused' : ''}" data-student-id="${student.id}" data-status="EXCUSED" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isExcused ? '#0284c7' : 'rgba(255,255,255,0.15)'}; background:${isExcused ? '#0284c7' : 'transparent'}; color:${isExcused ? '#ffffff' : '#94a3b8'};" title="Mark Excused">E</button>
-                <button type="button" class="btn-roster-att-pill ${isSick ? 'active-sick' : ''}" data-student-id="${student.id}" data-status="SICK" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isSick ? '#ea580c' : 'rgba(255,255,255,0.15)'}; background:${isSick ? '#ea580c' : 'transparent'}; color:${isSick ? '#ffffff' : '#94a3b8'};" title="Mark Sick">S</button>
-                <button type="button" class="btn-roster-att-pill ${isAbsent ? 'active-absent' : ''}" data-student-id="${student.id}" data-status="ABSENT" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isAbsent ? '#dc2626' : 'rgba(255,255,255,0.15)'}; background:${isAbsent ? '#dc2626' : 'transparent'}; color:${isAbsent ? '#ffffff' : '#94a3b8'};" title="Mark Absent">A</button>
+                <button type="button" class="btn-roster-att-pill ${isPresent ? 'active-present' : ''}" data-student-id="${student.id}" data-status="PRESENT" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isPresent ? 'var(--grade-a, #00c000)' : 'rgba(255,255,255,0.15)'}; background:${isPresent ? 'var(--grade-a, #00c000)' : 'transparent'}; color:${isPresent ? '#ffffff' : '#94a3b8'};" title="Mark Present">P</button>
+                <button type="button" class="btn-roster-att-pill ${isExcused ? 'active-excused' : ''}" data-student-id="${student.id}" data-status="EXCUSED" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isExcused ? '#38bdf8' : 'rgba(255,255,255,0.15)'}; background:${isExcused ? '#38bdf8' : 'transparent'}; color:${isExcused ? '#090d16' : '#94a3b8'};" title="Mark Excused">E</button>
+                <button type="button" class="btn-roster-att-pill ${isSick ? 'active-sick' : ''}" data-student-id="${student.id}" data-status="SICK" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isSick ? 'var(--grade-d, #ff8c00)' : 'rgba(255,255,255,0.15)'}; background:${isSick ? 'var(--grade-d, #ff8c00)' : 'transparent'}; color:${isSick ? '#ffffff' : '#94a3b8'};" title="Mark Sick">S</button>
+                <button type="button" class="btn-roster-att-pill ${isAbsent ? 'active-absent' : ''}" data-student-id="${student.id}" data-status="ABSENT" style="padding:3px 7px; border-radius:4px; font-size:11px; font-weight:800; cursor:pointer; border:1px solid ${isAbsent ? 'var(--grade-e, #ff0000)' : 'rgba(255,255,255,0.15)'}; background:${isAbsent ? 'var(--grade-e, #ff0000)' : 'transparent'}; color:${isAbsent ? '#ffffff' : '#94a3b8'};" title="Mark Absent">A</button>
               </div>
             </td>
             <td style="padding:6px 8px; text-align:center; font-weight:800; font-size:12px; color:${examScoreColor}; width:150px;">
@@ -1164,20 +1164,20 @@ export async function renderClassTestSessions(container, context = {}) {
 
                 <!-- Section 1: Add Time (+) -->
                 <div>
-                  <div style="font-size:12px; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                  <div style="font-size:12px; font-weight:800; color:var(--grade-a, #00c000); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                     ADD TIME (+)
                   </div>
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                    <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       +5 Min
                     </button>
-                    <button type="button" class="btn-add-time-option" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       +10 Min
                     </button>
-                    <button type="button" class="btn-add-time-option" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       +15 Min
                     </button>
-                    <button type="button" class="btn-add-time-option" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       +30 Min
                     </button>
                   </div>
@@ -1185,20 +1185,20 @@ export async function renderClassTestSessions(container, context = {}) {
 
                 <!-- Section 2: Reduce Time (-) -->
                 <div>
-                  <div style="font-size:12px; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+                  <div style="font-size:12px; font-weight:800; color:var(--grade-e, #ff0000); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                     REDUCE TIME (-)
                   </div>
                   <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
-                    <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       -5 Min
                     </button>
-                    <button type="button" class="btn-add-time-option" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       -10 Min
                     </button>
-                    <button type="button" class="btn-add-time-option" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       -15 Min
                     </button>
-                    <button type="button" class="btn-add-time-option" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
+                    <button type="button" class="btn-add-time-option" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:3px;">
                       -30 Min
                     </button>
                   </div>
@@ -1686,11 +1686,11 @@ function renderThemeCard(theme, context) {
         </span>
         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           ${isLive ? `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isRemedial ? 'background:rgba(var(--grade-c-rgb),0.15); border:1px solid var(--grade-c); color:var(--grade-c, #fef08a);' : 'background:rgba(var(--grade-a-rgb),0.15); border:1px solid var(--grade-a); color:var(--grade-a, #86efac);'}">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isRemedial ? 'background:rgba(var(--grade-c-rgb),0.15); border:1px solid var(--grade-c); color:var(--grade-c, #ffff00);' : 'background:rgba(var(--grade-a-rgb),0.15); border:1px solid var(--grade-a); color:var(--grade-a, #00c000);'}">
               LIVE (${remainingMinutes}m)
             </span>
           ` : `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${eligibleNormalCount === batchTotalStudents && batchTotalStudents > 0 ? 'background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a,#86efac); border:1px solid rgba(var(--grade-a-rgb),0.3);' : 'background:rgba(var(--grade-c-rgb),0.12); color:var(--grade-c,#fef08a); border:1px solid rgba(var(--grade-c-rgb),0.3);'}">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${eligibleNormalCount === batchTotalStudents && batchTotalStudents > 0 ? 'background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a, #00c000); border:1px solid rgba(var(--grade-a-rgb),0.3);' : 'background:rgba(var(--grade-c-rgb),0.12); color:var(--grade-c, #ffff00); border:1px solid rgba(var(--grade-c-rgb),0.3);'}">
               ${eligibleNormalCount}/${batchTotalStudents} Ready (${readinessPct}%)
             </span>
           `}
@@ -1729,7 +1729,7 @@ function renderThemeCard(theme, context) {
   } else {
     row2Content = `
       <div class="card-block-row-buttons" style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none;" title="Open Normal Session (Full Score) - ${eligibleNormalCount} Eligible">
+        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:var(--grade-a, #00c000); background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none;" title="Open Normal Session (Full Score) - ${eligibleNormalCount} Eligible">
           NORMAL (${eligibleNormalCount})
         </button>
         <button type="button" class="btn btn-wireframe-remidi ${eligibleRemedialCount === 0 ? 'btn-dimmed' : ''} btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="flex:1; ${eligibleRemedialCount > 0 ? 'border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none;' : ''}" title="Open Remedial Session (Max 60%) - ${eligibleRemedialCount} Eligible" ${eligibleRemedialCount === 0 ? 'disabled' : ''}>
@@ -1751,7 +1751,7 @@ function renderThemeCard(theme, context) {
 
     row3Content = `
       <div class="card-block-row-buttons" style="position:relative; display:flex; gap:6px;">
-        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:#86efac; background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Add Late Arrival Students">
+        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:var(--grade-a, #00c000); background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Add Late Arrival Students">
           +LATE
         </button>
 
@@ -1768,27 +1768,27 @@ function renderThemeCard(theme, context) {
 
             <!-- Add Time (+) -->
             <div>
-              <div style="font-size: 12px; font-weight:800; color:#86efac; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+              <div style="font-size: 12px; font-weight:800; color:var(--grade-a, #00c000); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                 ADD TIME (+)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+5m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+10m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+15m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:#86efac; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+30m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+5m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+10m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+15m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+30m</button>
               </div>
             </div>
 
             <!-- Reduce Time (-) -->
             <div>
-              <div style="font-size: 12px; font-weight:800; color:#fca5a5; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
+              <div style="font-size: 12px; font-weight:800; color:var(--grade-e, #ff0000); text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:flex; align-items:center; gap:4px;">
                 REDUCE TIME (-)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-5m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-10m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-15m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:#fca5a5; padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-30m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-5m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-10m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-15m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-30m</button>
               </div>
             </div>
 
@@ -1842,7 +1842,7 @@ function renderThemeCard(theme, context) {
         </div>
 
         <!-- Close Session -->
-        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:#fca5a5; background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Close Active Exam Session">
+        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:var(--grade-e, #ff0000); background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Close Active Exam Session">
           CLOSE
         </button>
       </div>
@@ -1955,8 +1955,8 @@ function bindTestSessionsEvents(container, themesData, context) {
         b.style.color = '#94a3b8';
         b.style.borderColor = 'rgba(255,255,255,0.15)';
       });
-      const colorMap = { PRESENT: '#16a34a', EXCUSED: '#0284c7', SICK: '#ea580c', ABSENT: '#dc2626' };
-      const selColor = colorMap[status] || '#16a34a';
+      const colorMap = { PRESENT: 'var(--grade-a, #00c000)', EXCUSED: 'var(--primary-tactical, #38bdf8)', SICK: 'var(--grade-d, #ff8c00)', ABSENT: 'var(--grade-e, #ff0000)' };
+      const selColor = colorMap[status] || 'var(--grade-a, #00c000)';
       e.currentTarget.style.background = selColor;
       e.currentTarget.style.color = '#ffffff';
       e.currentTarget.style.borderColor = selColor;
@@ -3469,7 +3469,7 @@ async function openThemeLiveMonitorModal(container, theme, context) {
       if (kpiAlarmsTitle) kpiAlarmsTitle.style.color = 'var(--grade-e)';
       if (kpiAlarmsValue) {
         kpiAlarmsValue.style.color = 'var(--grade-e)';
-        kpiAlarmsValue.innerHTML = `${totalAlarms} <span style="font-size: 12px; font-weight:600; color:#fca5a5;">(${studentsWithAlarms} Students)</span>`;
+        kpiAlarmsValue.innerHTML = `${totalAlarms} <span style="font-size: 12px; font-weight:600; color:var(--grade-e, #ff0000);">(${studentsWithAlarms} Students)</span>`;
       }
     } else {
       if (kpiAlarmsCard) {

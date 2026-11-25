@@ -447,7 +447,7 @@ export async function renderUnifiedInstitutions(area) {
         </td>
           <td rowspan="2" style="color: var(--fm-text-muted);">—</td>
           <td rowspan="2" style="color: var(--fm-text-muted); text-align: center;">—</td>
-          <td style="border-bottom: none;">LEVEL: <span class="badge badge-neutral">No Batches</span></td>
+          <td style="border-bottom: none;">LEVEL: <span style="color:var(--fm-text-muted); font-size:12px; font-weight:600;">No Batches</span></td>
         </tr>
         <tr class="students-row">
           <td>STUDENTS: 0 Enrolled</td>
@@ -479,7 +479,7 @@ export async function renderUnifiedInstitutions(area) {
             </div>
               </td>
               <td rowspan="2" style="color: var(--fm-text-muted); text-align: center;">—</td>
-              <td style="border-bottom: none;">LEVEL: <span class="badge badge-neutral">No Batches</span></td>
+              <td style="border-bottom: none;">LEVEL: <span style="color:var(--fm-text-muted); font-size:12px; font-weight:600;">No Batches</span></td>
             </tr>
             <tr class="students-row">
               <td>STUDENTS: 0 Enrolled</td>
@@ -609,7 +609,7 @@ window.openChangeLevelModal = async function(batchId, currentLevelId) {
           ${selectHtml}
         </div>
         <div class="d-flex justify-between align-center gap-2 mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-          <button class="btn btn-secondary btn-modal-close-left" id="cancel-level-btn">Cancel</button>
+          <button class="btn btn-secondary btn-modal-close-left" id="cancel-level-btn">CLOSE</button>
           <button class="btn btn-primary" id="save-level-btn">Save Changes</button>
         </div>
       </div>

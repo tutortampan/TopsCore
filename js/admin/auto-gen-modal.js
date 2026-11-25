@@ -1,25 +1,562 @@
-export async function openAutoGenerateModal(options = {}) {
-  const {
-    fetchInstitutions,
-    fetchPrograms,
-    autoGenerateTestsHierarchy,
-    updateClassTestsConfig,
-    calculateAutoDurationMinutes,
-    clearAdminCache,
-    adminFetchAll,
-    toShortLevel,
-    escapeHtml,
-    escHtml
-  } = await import('../api.js?v=20261114_v517');
-  const { getSupabase } = await import('../supabase.js?v=20261027c');
-  const { getSvgIcon } = await import('../svg-icons.js?v=20261114_v487');
+// TOPS CORE — Vocabulary System (Master Curriculum Matrix)
+// Single Source of Truth (SSOT) for all Vocabulary classes across CEC & TOP institutions.
+// Dual-Mode Presentation:
+// 1. Modal Dialog Mode: openVocabularySystemModal / openAutoGenerateModal
+// 2. Full-Page View Mode: renderVocabularySystemPage (Curriculum Management #class-hub)
 
+import {
+  fetchInstitutions,
+  fetchPrograms,
+  autoGenerateTestsHierarchy,
+  updateClassTestsConfig,
+  fetchClassTestSettings,
+  saveClassTestSettings,
+  calculateAutoDurationMinutes,
+  clearAdminCache,
+  adminFetchAll,
+  toShortLevel,
+  escapeHtml,
+  showToast
+} from '../api.js?v=20261125_v681';
+import { getSupabase } from '../supabase.js?v=20261027c';
+import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
+import { isVocabularyClass, detectClassDiscipline } from '../grading.js?v=20261106_v160';
+
+// Canonical list of Vocabulary Classes in TopsCore
+const KNOWN_VOCAB_CLASSES = [
+  { code: 'CAMP-1VOCAB', name: 'Camp 1st Vocabulary', institution: 'CEC', program: 'Camp', levelNumber: 1, levelLabel: '1st', hasPhrases: true },
+  { code: 'CAMP-2VOCAB', name: 'Camp 2nd Vocabulary', institution: 'CEC', program: 'Camp', levelNumber: 2, levelLabel: '2nd', hasPhrases: false }, // 100% Words Only (DECISION-083)
+  { code: 'CAMP-3VOCAB', name: 'Camp 3rd Vocabulary', institution: 'CEC', program: 'Camp', levelNumber: 3, levelLabel: '3rd', hasPhrases: true },
+  { code: 'EVNK-VOCAB',  name: 'Evnikom Vocabulary',  institution: 'TOP', program: 'Evnikom', levelNumber: 0, levelLabel: '0',   hasPhrases: false }, // Level 0 Words-Only
+  { code: 'SHRT-VOCAB',  name: 'Sheraton Vocabulary', institution: 'TOP', program: 'Sheraton', levelNumber: 0, levelLabel: '0',   hasPhrases: false }, // Level 0 Words-Only
+  { code: 'TPTC-VOCAB',  name: 'Tamata Vocabulary',   institution: 'TOP', program: 'Tamata', levelNumber: 0, levelLabel: '0',   hasPhrases: false }  // Level 0 Words-Only
+];
+
+/**
+ * Loads metadata and active configuration for all vocabulary classes
+ */
+async function loadAllVocabClassesData() {
+  const [allClasses, allLevels, institutions, programs] = await Promise.all([
+    adminFetchAll('classes', 'id, name, code, is_active, program_id, level_id, institution_id, deleted_at').catch(() => []),
+    adminFetchAll('levels', 'id, name, level_number').catch(() => []),
+    fetchInstitutions().catch(() => []),
+    adminFetchAll('programs', 'id, name, code, institution_id').catch(() => [])
+  ]);
+
+  const levelMap = new Map((allLevels || []).map(l => [l.id, l]));
+  const instMap = new Map((institutions || []).map(i => [i.id, i]));
+  const progMap = new Map((programs || []).map(p => [p.id, p]));
+
+  // Match database classes with vocabulary modality
+  const vocabClasses = (allClasses || []).filter(c => !c.deleted_at && isVocabularyClass(c));
+
+  const enriched = [];
+  for (const kc of KNOWN_VOCAB_CLASSES) {
+    const matched = vocabClasses.find(c => {
+      const cCode = String(c.code || '').toUpperCase();
+      const cName = String(c.name || '').toLowerCase();
+      return cCode === kc.code || cName.includes(kc.name.toLowerCase()) || (kc.code.includes('CAMP-1') && cCode.includes('1VOCAB'));
+    }) || vocabClasses.find(c => String(c.name || '').toLowerCase() === kc.name.toLowerCase());
+
+    const classId = matched ? matched.id : null;
+    let settings = {
+      taskRepetitions: 7,
+      taskMinScore: 70,
+      examMinScore: 60,
+      taskQuestionOrder: 'random',
+      examQuestionOrder: 'random',
+      wordsTaskQuestions: 'ALL',
+      phrasesTaskQuestions: 'ALL',
+      wordsTaskAnswer: 'spoken',
+      phrasesTaskAnswer: 'spoken',
+      wordsTaskPace: 15,
+      phrasesTaskPace: 20,
+      wordsTaskDur: 5,
+      phrasesTaskDur: 4,
+      wordsExamQuestions: 'ALL',
+      phrasesExamQuestions: 'ALL',
+      wordsExamAnswer: 'spoken',
+      phrasesExamAnswer: 'selection',
+      wordsExamPace: 15,
+      phrasesExamPace: 20,
+      wordsExamDur: 30,
+      phrasesExamDur: 10
+    };
+
+    if (classId) {
+      try {
+        const fetched = await fetchClassTestSettings(classId);
+        if (fetched) {
+          settings = { ...settings, ...fetched };
+          // Ensure default is strictly 'ALL' unless explicitly saved as custom
+          if (!fetched.wordsTaskQuestionsCustom) settings.wordsTaskQuestions = 'ALL';
+          if (!fetched.phrasesTaskQuestionsCustom) settings.phrasesTaskQuestions = 'ALL';
+          if (!fetched.wordsExamQuestionsCustom) settings.wordsExamQuestions = 'ALL';
+          if (!fetched.phrasesExamQuestionsCustom) settings.phrasesExamQuestions = 'ALL';
+        }
+      } catch (_) {}
+    }
+
+    enriched.push({
+      ...kc,
+      id: classId,
+      rawClass: matched || null,
+      programId: matched?.program_id || null,
+      institutionId: matched?.institution_id || null,
+      settings
+    });
+  }
+
+  return { enriched, institutions, programs, levels: allLevels };
+}
+
+/**
+ * Builds the Master Matrix HTML markup
+ */
+function buildMatrixHtml(vocabClasses, activeClassId, isAllUnlocked = false, filterClassId = null) {
+  let rowsHtml = '';
+  const classesToRender = filterClassId
+    ? vocabClasses.filter(c => String(c.id) === String(filterClassId))
+    : vocabClasses;
+
+  const getProgBadge = (prog) => {
+    return `<span style="color:var(--admin-text-main, #f8fafc); font-size:12px; font-weight:600;">${escapeHtml(prog || '—')}</span>`;
+  };
+
+  classesToRender.forEach(c => {
+    const isThisActive = isAllUnlocked || (activeClassId && String(c.id) === String(activeClassId));
+    const instBadge = `<span style="color:var(--admin-text-main, #f8fafc); font-size:12px; font-weight:700;">${escapeHtml(c.institution)}</span>`;
+
+    const progBadge = getProgBadge(c.program);
+    const levelBadge = `<span style="color:var(--admin-text-muted, #94a3b8); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums;">${escapeHtml(c.levelLabel)}</span>`;
+
+    const statusBadge = isThisActive
+      ? '<span style="color:var(--grade-b,#95ff00); font-size:12px; font-weight:800; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;">● ACTIVE</span>'
+      : `<button type="button" class="btn btn-ghost btn-sm btn-unlock-row" data-class-id="${c.id}" style="font-size:12px; padding:2px 8px; color:#94a3b8; border:1px solid rgba(255,255,255,0.12); border-radius:4px; cursor:pointer; white-space:nowrap;" title="Unlock this class for editing">${getSvgIcon('lock', 12)} LOCKED</button>`;
+
+    const s = c.settings || {};
+    const taskReps = s.taskRepetitions === 14 ? 7 : (s.taskRepetitions || 7);
+
+    // Helper for input generator
+    const makeInput = (field, val, type = 'number', width = '55px', suffix = '', extra = '') => {
+      if (!isThisActive) {
+        return `<span style="font-weight:600; color:#f8fafc; font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap;">${escapeHtml(String(val))}${suffix}</span>`;
+      }
+      return `
+        <div style="display:inline-flex; align-items:center; justify-content:center; gap:3px;">
+          <input type="${type}" class="form-control form-control-sm matrix-input" data-class-id="${c.id}" data-field="${field}" value="${escapeHtml(String(val))}" style="height:26px !important; width:${width}; font-size:12px; font-weight:700; text-align:center; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#ffffff; padding:0 3px;" ${extra} />
+          ${suffix ? `<span style="font-size:12px; font-weight:700; color:#94a3b8;">${suffix}</span>` : ''}
+        </div>
+      `;
+    };
+
+    const makeSelect = (field, currentVal, options, width = '190px') => {
+      const opt = options.find(o => o.value === currentVal);
+      const label = opt ? opt.label : currentVal;
+      if (!isThisActive) {
+        return `<span style="font-size:12px; font-weight:600; color:#cbd5e1; white-space:nowrap;">${escapeHtml(label)}</span>`;
+      }
+      return `
+        <select class="form-control form-control-sm matrix-select" data-class-id="${c.id}" data-field="${field}" style="height:26px !important; width:${width}; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#ffffff; padding:0 6px; white-space:nowrap;">
+          ${options.map(o => `<option value="${o.value}" ${o.value === currentVal ? 'selected' : ''} style="background:#0f172a; color:#f8fafc;">${escapeHtml(o.label)}</option>`).join('')}
+        </select>
+      `;
+    };
+
+    const answerModeOptions = [
+      { value: 'spoken', label: 'Spoken Module (15s)' },
+      { value: 'selection', label: 'Recognition Module (20s)' },
+      { value: 'written', label: 'Written Module (30s)' },
+      { value: 'mixed', label: 'Mixed (Hybrid)' }
+    ];
+
+    const orderOptions = [
+      { value: 'random', label: 'Random' },
+      { value: 'sequential', label: 'Sequential' }
+    ];
+
+    const rowBg = isThisActive ? 'background:rgba(56,189,248,0.04);' : 'opacity:0.85;';
+    const tdBase = 'padding:6px 8px; white-space:nowrap; overflow:visible !important; text-overflow:clip !important;';
+
+    // 1. Words Task Row
+    rowsHtml += `
+      <tr class="matrix-row ${isThisActive ? 'row-active' : 'row-locked'}" data-class-id="${c.id}" style="${rowBg} border-bottom:1px solid rgba(255,255,255,0.06);">
+        <td style="${tdBase} text-align:center;">${instBadge}</td>
+        <td style="${tdBase} text-align:center;">${progBadge}</td>
+        <td style="${tdBase} text-align:center;">${levelBadge}</td>
+        <td style="${tdBase} font-weight:700; color:#f8fafc; font-size:12px;">${escapeHtml(c.name)}</td>
+        <td style="${tdBase} text-align:center;"><span style="color:var(--task-color, #95ff00); font-weight:800; font-size:12px;">TASK</span></td>
+        <td style="${tdBase} text-align:center;"><span style="color:var(--admin-text-main, #f8fafc); font-weight:700; font-size:12px;">WORD</span></td>
+        <td style="${tdBase} text-align:center;">${makeInput('taskRepetitions', taskReps, 'number', '55px', '', 'min="1" max="7"')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('wordsTaskQuestions', s.wordsTaskQuestions || 'ALL', 'text', '60px')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('taskMinScore', s.taskMinScore || 70, 'number', '50px', '%', 'min="1" max="100"')}</td>
+        <td style="${tdBase}">${makeSelect('wordsTaskAnswer', s.wordsTaskAnswer || 'spoken', answerModeOptions, '190px')}</td>
+        <td style="${tdBase} text-align:center;">${makeSelect('taskQuestionOrder', s.taskQuestionOrder || 'random', orderOptions, '95px')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('wordsTaskPace', s.wordsTaskPace || 15, 'number', '50px', 's', 'min="5" max="60"')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('wordsTaskDur', s.wordsTaskDur || 5, 'number', '50px', 'm', 'min="1" max="120"')}</td>
+        <td style="${tdBase} text-align:center;">${statusBadge}</td>
+      </tr>
+    `;
+
+    // 2. Phrases Task Row (Omitted for Camp 2nd Vocab / Words-Only)
+    if (c.hasPhrases) {
+      rowsHtml += `
+        <tr class="matrix-row ${isThisActive ? 'row-active' : 'row-locked'}" data-class-id="${c.id}" style="${rowBg} border-bottom:1px solid rgba(255,255,255,0.06);">
+          <td style="${tdBase} text-align:center;">${instBadge}</td>
+          <td style="${tdBase} text-align:center;">${progBadge}</td>
+          <td style="${tdBase} text-align:center;">${levelBadge}</td>
+          <td style="${tdBase} font-weight:700; color:#f8fafc; font-size:12px;">${escapeHtml(c.name)}</td>
+          <td style="${tdBase} text-align:center;"><span style="color:var(--task-color, #95ff00); font-weight:800; font-size:12px;">TASK</span></td>
+          <td style="${tdBase} text-align:center;"><span style="color:var(--admin-text-main, #f8fafc); font-weight:700; font-size:12px;">PHRASE</span></td>
+          <td style="${tdBase} text-align:center;">${makeInput('taskRepetitions', taskReps, 'number', '55px', '', 'min="1" max="7"')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('phrasesTaskQuestions', s.phrasesTaskQuestions || 'ALL', 'text', '60px')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('taskMinScore', s.taskMinScore || 70, 'number', '50px', '%', 'min="1" max="100"')}</td>
+          <td style="${tdBase}">${makeSelect('phrasesTaskAnswer', s.phrasesTaskAnswer || 'spoken', answerModeOptions, '190px')}</td>
+          <td style="${tdBase} text-align:center;">${makeSelect('taskQuestionOrder', s.taskQuestionOrder || 'random', orderOptions, '95px')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('phrasesTaskPace', s.phrasesTaskPace || 20, 'number', '50px', 's', 'min="5" max="60"')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('phrasesTaskDur', s.phrasesTaskDur || 4, 'number', '50px', 'm', 'min="1" max="120"')}</td>
+          <td style="${tdBase} text-align:center;">${statusBadge}</td>
+        </tr>
+      `;
+    }
+
+    // 3. Words Exam Row
+    rowsHtml += `
+      <tr class="matrix-row ${isThisActive ? 'row-active' : 'row-locked'}" data-class-id="${c.id}" style="${rowBg} border-bottom:1px solid rgba(255,255,255,0.06);">
+        <td style="${tdBase} text-align:center;">${instBadge}</td>
+        <td style="${tdBase} text-align:center;">${progBadge}</td>
+        <td style="${tdBase} text-align:center;">${levelBadge}</td>
+        <td style="${tdBase} font-weight:700; color:#f8fafc; font-size:12px;">${escapeHtml(c.name)}</td>
+        <td style="${tdBase} text-align:center;"><span style="color:var(--exam-color, #ff2d87); font-weight:800; font-size:12px;">EXAM</span></td>
+        <td style="${tdBase} text-align:center;"><span style="color:var(--admin-text-main, #f8fafc); font-weight:700; font-size:12px;">WORD</span></td>
+        <td style="${tdBase} text-align:center;"><span style="color:#64748b; font-size:12px; font-weight:700;">1x (Final)</span></td>
+        <td style="${tdBase} text-align:center;">${makeInput('wordsExamQuestions', s.wordsExamQuestions || 'ALL', 'text', '60px')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('examMinScore', s.examMinScore || 60, 'number', '50px', '%', 'min="1" max="100"')}</td>
+        <td style="${tdBase}">${makeSelect('wordsExamAnswer', s.wordsExamAnswer || 'spoken', answerModeOptions, '190px')}</td>
+        <td style="${tdBase} text-align:center;">${makeSelect('examQuestionOrder', s.examQuestionOrder || 'random', orderOptions, '95px')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('wordsExamPace', s.wordsExamPace || 15, 'number', '50px', 's', 'min="5" max="60"')}</td>
+        <td style="${tdBase} text-align:center;">${makeInput('wordsExamDur', s.wordsExamDur || (c.hasPhrases ? 30 : 25), 'number', '50px', 'm', 'min="1" max="120"')}</td>
+        <td style="${tdBase} text-align:center;">${statusBadge}</td>
+      </tr>
+    `;
+
+    // 4. Phrases Exam Row (Omitted for Camp 2nd Vocab / Words-Only)
+    if (c.hasPhrases) {
+      rowsHtml += `
+        <tr class="matrix-row ${isThisActive ? 'row-active' : 'row-locked'}" data-class-id="${c.id}" style="${rowBg} border-bottom:1.5px solid rgba(255,255,255,0.12);">
+          <td style="${tdBase} text-align:center;">${instBadge}</td>
+          <td style="${tdBase} text-align:center;">${progBadge}</td>
+          <td style="${tdBase} text-align:center;">${levelBadge}</td>
+          <td style="${tdBase} font-weight:700; color:#f8fafc; font-size:12px;">${escapeHtml(c.name)}</td>
+          <td style="${tdBase} text-align:center;"><span style="color:var(--exam-color, #ff2d87); font-weight:800; font-size:12px;">EXAM</span></td>
+          <td style="${tdBase} text-align:center;"><span style="color:var(--admin-text-main, #f8fafc); font-weight:700; font-size:12px;">PHRASE</span></td>
+          <td style="${tdBase} text-align:center;"><span style="color:#64748b; font-size:12px; font-weight:700;">1x (Final)</span></td>
+          <td style="${tdBase} text-align:center;">${makeInput('phrasesExamQuestions', s.phrasesExamQuestions || 'ALL', 'text', '60px')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('examMinScore', s.examMinScore || 60, 'number', '50px', '%', 'min="1" max="100"')}</td>
+          <td style="${tdBase}">${makeSelect('phrasesExamAnswer', s.phrasesExamAnswer || 'selection', answerModeOptions, '190px')}</td>
+          <td style="${tdBase} text-align:center;">${makeSelect('examQuestionOrder', s.examQuestionOrder || 'random', orderOptions, '95px')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('phrasesExamPace', s.phrasesExamPace || 20, 'number', '50px', 's', 'min="5" max="60"')}</td>
+          <td style="${tdBase} text-align:center;">${makeInput('phrasesExamDur', s.phrasesExamDur || 10, 'number', '50px', 'm', 'min="1" max="120"')}</td>
+          <td style="${tdBase} text-align:center;">${statusBadge}</td>
+        </tr>
+      `;
+    }
+  });
+
+  return `
+    <div class="table-wrap vocab-matrix-wrap" style="overflow-x:auto !important; overflow-y:auto !important; flex:1 1 0; min-height:0; width:100%; border:1px solid rgba(255,255,255,0.1); border-radius:6px; background:#0f172a;">
+      <style>
+        .vocab-matrix-wrap {
+          overflow-x: auto !important;
+          overflow-y: auto !important;
+        }
+        .vocab-matrix-table td,
+        .vocab-matrix-table th {
+          overflow: visible !important;
+          text-overflow: clip !important;
+          white-space: nowrap !important;
+        }
+      </style>
+      <table class="table vocab-matrix-table" style="min-width:1320px; width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap;">
+        <thead style="position:sticky; top:0; z-index:10; background:#1e293b; border-bottom:1.5px solid rgba(255,255,255,0.16);">
+          <tr style="height:36px;">
+            <th style="width:85px; min-width:85px; padding:6px 6px; text-align:center; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">INSTITUTION</th>
+            <th style="width:85px; min-width:85px; padding:6px 6px; text-align:center; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">PROGRAM</th>
+            <th style="width:65px; min-width:65px; padding:6px 6px; text-align:center; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">LEVEL</th>
+            <th style="width:190px; min-width:190px; padding:6px 8px; text-align:left; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">CLASS</th>
+            <th style="width:70px; min-width:70px; padding:6px 6px; text-align:center; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">TYPE</th>
+            <th style="width:75px; min-width:75px; padding:6px 6px; text-align:center; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">CONTENT</th>
+            <th style="width:95px; min-width:95px; padding:6px 6px; text-align:center; font-weight:800; color:#95ff00; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">REPETITIONS</th>
+            <th style="width:80px; min-width:80px; padding:6px 6px; text-align:center; font-weight:800; color:#95ff00; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">QUESTIONS</th>
+            <th style="width:85px; min-width:85px; padding:6px 6px; text-align:center; font-weight:800; color:#95ff00; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">PASS RATE</th>
+            <th style="width:180px; min-width:180px; padding:6px 8px; text-align:left; font-weight:800; color:var(--grade-star, #a855f7); font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">ANSWER MODE</th>
+            <th style="width:85px; min-width:85px; padding:6px 6px; text-align:center; font-weight:800; color:var(--grade-star, #a855f7); font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">ORDER</th>
+            <th style="width:105px; min-width:105px; padding:6px 6px; text-align:center; font-weight:800; color:#f8fafc; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">DUR / QUESTION</th>
+            <th style="width:80px; min-width:80px; padding:6px 6px; text-align:center; font-weight:800; color:#f8fafc; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">DURATION</th>
+            <th style="width:85px; min-width:85px; padding:6px 6px; text-align:center; font-weight:800; color:#38bdf8; font-size:12px; text-transform:uppercase; letter-spacing:0.04em;">STATUS</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHtml}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+/**
+ * Extracts form values for a given class ID
+ */
+function readMatrixInputs(rootEl, classId) {
+  const inputs = rootEl.querySelectorAll(`.matrix-input[data-class-id="${classId}"], .matrix-select[data-class-id="${classId}"]`);
+  const values = {};
+  inputs.forEach(inp => {
+    const field = inp.dataset.field;
+    if (field) {
+      values[field] = inp.value;
+    }
+  });
+
+  return {
+    taskRepetitions: Math.max(1, parseInt(values.taskRepetitions, 10) || 7),
+    taskMinScore: Math.min(100, Math.max(1, parseInt(values.taskMinScore, 10) || 70)),
+    examMinScore: Math.min(100, Math.max(1, parseInt(values.examMinScore, 10) || 60)),
+    taskQuestionOrder: values.taskQuestionOrder === 'sequential' ? 'sequential' : 'random',
+    examQuestionOrder: values.examQuestionOrder === 'sequential' ? 'sequential' : 'random',
+    wordsTaskQuestions: String(values.wordsTaskQuestions || 'ALL').toUpperCase() === 'ALL' ? 'ALL' : (values.wordsTaskQuestions || 'ALL'),
+    phrasesTaskQuestions: String(values.phrasesTaskQuestions || 'ALL').toUpperCase() === 'ALL' ? 'ALL' : (values.phrasesTaskQuestions || 'ALL'),
+    wordsTaskAnswer: values.wordsTaskAnswer || 'spoken',
+    phrasesTaskAnswer: values.phrasesTaskAnswer || 'spoken',
+    wordsTaskPace: parseInt(values.wordsTaskPace, 10) || 15,
+    phrasesTaskPace: parseInt(values.phrasesTaskPace, 10) || 20,
+    wordsTaskDur: parseInt(values.wordsTaskDur, 10) || 5,
+    phrasesTaskDur: parseInt(values.phrasesTaskDur, 10) || 4,
+    wordsExamQuestions: String(values.wordsExamQuestions || 'ALL').toUpperCase() === 'ALL' ? 'ALL' : (values.wordsExamQuestions || 'ALL'),
+    phrasesExamQuestions: String(values.phrasesExamQuestions || 'ALL').toUpperCase() === 'ALL' ? 'ALL' : (values.phrasesExamQuestions || 'ALL'),
+    wordsExamAnswer: values.wordsExamAnswer || 'spoken',
+    phrasesExamAnswer: values.phrasesExamAnswer || 'selection',
+    wordsExamPace: parseInt(values.wordsExamPace, 10) || 15,
+    phrasesExamPace: parseInt(values.phrasesExamPace, 10) || 20,
+    wordsExamDur: parseInt(values.wordsExamDur, 10) || 30,
+    phrasesExamDur: parseInt(values.phrasesExamDur, 10) || 10
+  };
+}
+
+/**
+ * 1. FULL-PAGE VIEW MODE
+ * Renders the master matrix directly into #admin-content-area (Curriculum Management #class-hub)
+ */
+export async function renderVocabularySystemPage(container, options = {}) {
+  if (!container) return;
+
+  container.innerHTML = `
+    <div id="vocabulary-system-page-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; height:100%; box-sizing:border-box;">
+      <div class="topscore-loading-center" style="min-height: 200px !important;">
+        <div class="spinner"></div>
+        <p class="loading-text">Loading Vocabulary System Matrix...</p>
+      </div>
+    </div>
+  `;
+
+  try {
+    const { enriched: vocabClasses } = await loadAllVocabClassesData();
+    let currentActiveClassId = options.explicitClassId || vocabClasses[0]?.id || null;
+    let isAllUnlocked = false;
+
+    const render = () => {
+      const pageContainer = document.getElementById('vocabulary-system-page-container');
+      if (!pageContainer) return;
+
+      const activeClass = vocabClasses.find(c => String(c.id) === String(currentActiveClassId)) || vocabClasses[0];
+
+      // Strict Top Element Invariant: Direct Ceiling Docking (Zero floating sub-header bar above table)
+      pageContainer.innerHTML = buildMatrixHtml(vocabClasses, currentActiveClassId, isAllUnlocked);
+
+      // Wire Unlock Row triggers
+      pageContainer.querySelectorAll('.btn-unlock-row').forEach(btn => {
+        btn.onclick = () => {
+          currentActiveClassId = btn.dataset.classId;
+          isAllUnlocked = false;
+          render();
+        };
+      });
+
+      // Wire Live Duration Auto-Calculation
+      pageContainer.querySelectorAll('.matrix-input').forEach(inp => {
+        inp.addEventListener('input', () => {
+          const targetRow = inp.closest('tr');
+          if (!targetRow) return;
+          const qVal = parseInt(targetRow.querySelector('[data-field$="Questions"]')?.value, 10) || 10;
+          const pVal = parseInt(targetRow.querySelector('[data-field$="Pace"]')?.value, 10) || 15;
+          const durInput = targetRow.querySelector('[data-field$="Dur"]');
+          if (durInput && qVal && pVal) {
+            durInput.value = Math.max(1, Math.ceil((qVal * pVal) / 60));
+          }
+        });
+      });
+
+      // Sub Panel Monopoly for Status & Actions (AGENTS.md §0.2.3)
+      const leftHtml = `
+        <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#cbd5e1; font-weight:600; white-space:nowrap;">
+          <span style="font-weight:800; color:#38bdf8; text-transform:uppercase;">VOCABULARY SYSTEM:</span>
+          <span>Target: <strong style="color:#f8fafc;">${isAllUnlocked ? 'All Vocabulary Classes' : escapeHtml(activeClass?.name)}</strong></span>
+          ${isAllUnlocked ? '<span class="badge" style="background:rgba(255,140,0,0.2); color:#FF8C00; font-weight:700;">ALL UNLOCKED</span>' : ''}
+        </div>
+      `;
+
+      const rightHtml = `
+        <div style="display:inline-flex; align-items:center; gap:8px; white-space:nowrap;">
+          <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-unlock-all" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:${isAllUnlocked ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; color:${isAllUnlocked ? '#FF8C00' : '#cbd5e1'};" title="Toggle full matrix editing">
+            ${getSvgIcon('unlock', 13)} ${isAllUnlocked ? 'Lock Other Classes' : 'Unlock All Classes'}
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" id="btn-page-open-vault" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:var(--grade-star, #a855f7); color:var(--grade-star, #a855f7);" title="Open Topic Blueprint &amp; Vocabulary Vault">
+            ${getSvgIcon('book-open', 13)} Vault ↗
+          </button>
+          <button type="button" class="btn btn-outline btn-sm" onclick="if(window.toggleClassesHubView){window.toggleClassesHubView('CARDS');}" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:#94a3b8; color:#94a3b8;" title="Switch to Class Directory Overview">
+            ${getSvgIcon('grid', 13)} Directory Cards
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-save-page-settings" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Save settings without generating new tests">
+            ${getSvgIcon('save', 14)} Update Settings
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="btn-sync-page-all" style="height:30px !important; line-height:28px !important; padding:0 14px !important; font-size:12px !important; font-weight:800; border-radius:4px; cursor:pointer; background:var(--primary-tactical, #38bdf8); color:#0f172a; display:inline-flex; align-items:center; gap:5px;" title="Generate and synchronize tests for active class">
+            ${getSvgIcon('zap', 14)} Generate &amp; Sync
+          </button>
+        </div>
+      `;
+
+      if (typeof window.setBottomInfobar === 'function') {
+        window.setBottomInfobar(leftHtml, rightHtml);
+      }
+
+      // Wire Bottom Toolbar triggers
+      document.getElementById('btn-toggle-unlock-all')?.addEventListener('click', () => {
+        isAllUnlocked = !isAllUnlocked;
+        render();
+      });
+
+      document.getElementById('btn-page-open-vault')?.addEventListener('click', () => {
+        if (typeof window.loadSection === 'function') window.loadSection('vocab_vault');
+        else window.location.hash = '#vocab_vault';
+      });
+
+      // Wire Save Handler
+      document.getElementById('btn-save-page-settings')?.addEventListener('click', async () => {
+        const targetIds = isAllUnlocked ? vocabClasses.map(c => c.id).filter(Boolean) : [currentActiveClassId];
+        const saveBtn = document.getElementById('btn-save-page-settings');
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = `${getSvgIcon('clock', 14)} Saving...`;
+        }
+
+        try {
+          let count = 0;
+          for (const cid of targetIds) {
+            const vals = readMatrixInputs(pageContainer, cid);
+            await saveClassTestSettings(cid, vals, true);
+            await updateClassTestsConfig({
+              classId: cid,
+              taskRepetitions: vals.taskRepetitions,
+              taskPassingScore: vals.taskMinScore,
+              testPassingScore: vals.examMinScore,
+              taskDurationMinutes: vals.wordsTaskDur,
+              wordsTaskDurationMinutes: vals.wordsTaskDur,
+              phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+              wordsTaskPaceSeconds: vals.wordsTaskPace,
+              phrasesTaskPaceSeconds: vals.phrasesTaskPace,
+              wordsExamPaceSeconds: vals.wordsExamPace,
+              phrasesExamPaceSeconds: vals.phrasesExamPace,
+              wordsTaskAnswerType: vals.wordsTaskAnswer,
+              phrasesTaskAnswerType: vals.phrasesTaskAnswer,
+              wordsTestAnswerType: vals.wordsExamAnswer,
+              phrasesTestAnswerType: vals.phrasesExamAnswer,
+              taskQuestionOrder: vals.taskQuestionOrder,
+              examQuestionOrder: vals.examQuestionOrder
+            });
+            count++;
+          }
+          showToast(`Successfully saved settings for ${count} Vocabulary class(es)!`, 'success');
+          render();
+        } catch (err) {
+          console.error('[renderVocabularySystemPage] Save error:', err);
+          showToast('Failed to save settings: ' + err.message, 'error');
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = `${getSvgIcon('save', 14)} Update Settings`;
+          }
+        }
+      });
+
+      // Wire Sync Handler
+      document.getElementById('btn-sync-page-all')?.addEventListener('click', async () => {
+        if (!currentActiveClassId) return;
+        const targetClass = vocabClasses.find(c => String(c.id) === String(currentActiveClassId));
+        const syncBtn = document.getElementById('btn-sync-page-all');
+        if (syncBtn) {
+          syncBtn.disabled = true;
+          syncBtn.innerHTML = `${getSvgIcon('clock', 14)} Syncing...`;
+        }
+
+        try {
+          const vals = readMatrixInputs(pageContainer, currentActiveClassId);
+          await saveClassTestSettings(currentActiveClassId, vals, true);
+          const res = await autoGenerateTestsHierarchy([targetClass.levelNumber], {
+            programId: targetClass.programId,
+            institutionId: targetClass.institutionId,
+            explicitClassId: currentActiveClassId,
+            category: targetClass.hasPhrases ? 'all' : 'words',
+            taskDurationMinutes: vals.wordsTaskDur,
+            wordsTaskDurationMinutes: vals.wordsTaskDur,
+            phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+            wordsTaskPaceSeconds: vals.wordsTaskPace,
+            phrasesTaskPaceSeconds: vals.phrasesTaskPace,
+            wordsExamPaceSeconds: vals.wordsExamPace,
+            phrasesExamPaceSeconds: vals.phrasesExamPace,
+            wordsTaskAnswerType: vals.wordsTaskAnswer,
+            phrasesTaskAnswerType: vals.phrasesTaskAnswer,
+            wordsTestAnswerType: vals.wordsExamAnswer,
+            phrasesTestAnswerType: vals.phrasesExamAnswer,
+            taskPassingScore: vals.taskMinScore,
+            testPassingScore: vals.examMinScore,
+            taskQuestionOrder: vals.taskQuestionOrder,
+            examQuestionOrder: vals.examQuestionOrder
+          });
+          showToast(`Synchronized ${res.tasks ?? 0} Tasks & ${res.exams ?? 0} Exams for ${targetClass.name}!`, 'success');
+          render();
+        } catch (err) {
+          console.error('[renderVocabularySystemPage] Sync error:', err);
+          showToast('Failed to sync tests: ' + err.message, 'error');
+          if (syncBtn) {
+            syncBtn.disabled = false;
+            syncBtn.innerHTML = `${getSvgIcon('zap', 14)} Generate &amp; Sync`;
+          }
+        }
+      });
+    };
+
+    render();
+  } catch (err) {
+    console.error('[renderVocabularySystemPage] Error:', err);
+    container.innerHTML = `
+      <div style="padding:24px; text-align:center; color:var(--grade-e);">
+        <p style="font-weight:700;">Failed to load Vocabulary System Matrix</p>
+        <p style="font-size:12px; color:#94a3b8;">${err?.message || err}</p>
+      </div>
+    `;
+  }
+}
+
+/**
+ * 2. MODAL DIALOG MODE (openVocabularySystemModal / openAutoGenerateModal)
+ * Opened from Class Tests tab or Vocabulary Vault
+ */
+export async function openVocabularySystemModal(options = {}) {
   const {
-    availableLevels = [],
-    preSelectedLevels = [],
     explicitClassId = null,
     onComplete = null
   } = options;
+
+  // Remove existing modal if any
+  document.getElementById('vocabulary-system-modal-overlay')?.remove();
 
   // Show canonical centered loading indicator while preparing modal data
   const loading = document.createElement('div');
@@ -27,784 +564,969 @@ export async function openAutoGenerateModal(options = {}) {
   loading.innerHTML = `
     <div class="topscore-loading-center" style="min-height: 140px !important;">
       <div class="spinner"></div>
-      <p class="loading-text">Preparing Test Generator...</p>
+      <p class="loading-text">Preparing Vocabulary System Matrix...</p>
     </div>
   `;
   document.body.appendChild(loading);
 
   try {
-    const [institutions, allClasses, allLevels] = await Promise.all([
-      fetchInstitutions(),
-      adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
-      adminFetchAll('levels', 'id, name, level_number').catch(() => [])
-    ]);
-
-    // Determine current active class and strict level binding
-    const isExplicitClass = Boolean(explicitClassId);
-    const currentClassId = explicitClassId || window._selectedClassId || localStorage.getItem('topscore_selected_class_id');
-    const matchedClass = allClasses.find(c => String(c.id) === String(currentClassId));
-    const className = matchedClass ? matchedClass.name : 'Vocabulary Class';
-
-    let matchedLevel = null;
-    let matchedLevelNum = null;
-    if (matchedClass && matchedClass.level_id) {
-      matchedLevel = (allLevels || []).find(l => String(l.id) === String(matchedClass.level_id));
-      if (matchedLevel && matchedLevel.level_number != null) {
-        matchedLevelNum = Number(matchedLevel.level_number);
-      }
-    }
-    if (matchedLevelNum == null && matchedClass) {
-      const match = String(matchedClass.code || matchedClass.name || '').match(/(\d+)/);
-      if (match) matchedLevelNum = Number(match[1]);
-      else if (/evnikom|sheraton|tamata/i.test(matchedClass.name || '')) matchedLevelNum = 0;
-    }
-
-    // Class-scoped mode: locked to that specific class and its intrinsic level
-    const isClassScoped = Boolean(matchedClass && matchedLevelNum != null && isExplicitClass);
-    const isLevel2 = isClassScoped && (matchedLevelNum === 2);
-
-    // ── Triple-Lock Lapis 2: Infer class modality from code/name (SSOT §2.5.3) ──
-    // Mirrors detectClassDiscipline in grading.js without importing (avoid circular dep)
-    function inferClassModality(classObj) {
-      if (!classObj) return 'VOCABULARY';
-      const code = String(classObj.code || '').toUpperCase();
-      const name = String(classObj.name || '').toLowerCase();
-      if (/-([0-9]*VCB|VOCAB)\b/.test(code) || /\b(vocab|vocabulary)\b/.test(name)) return 'VOCABULARY';
-      if (/-([0-9]*BSC|BASIC)\b/.test(code) || /\bbasic(\s*english)?\b/.test(name)) return 'BASIC';
-      if (/-([0-9]*SPK|SPEAK)\b/.test(code) || /\b(speaking|public\s*speaking)\b/.test(name)) return 'SPEAKING';
-      if (/-([0-9]*STT|STORY)\b/.test(code) || /\b(storytelling|story)\b/.test(name)) return 'STORYTELLING';
-      if (/-([0-9]*GRM|GRAM|GRMMR)\b/.test(code) || /\bgrammar\b/.test(name)) return 'GRAMMAR';
-      if (/-([0-9]*PRN|PRON|PRONC)\b/.test(code) || /\bpronunciation\b/.test(name)) return 'PRONUNCIATION';
-      if (/-([0-9]*GFS|GFORS)\b/.test(code) || /\bgrammar\s*for\s*speaking\b/.test(name)) return 'GFS';
-      return 'VOCABULARY'; // safe default
-    }
-    const classModality = inferClassModality(matchedClass);
-    const isVocabularyModal = classModality === 'VOCABULARY';
-    const isNonVocabularyModal = !isVocabularyModal;
-
-    let instId = matchedClass?.institution_id || (institutions.length > 0 ? institutions[0].id : null);
-    let programs = [];
-    if (instId) {
-      try { programs = await fetchPrograms(instId); } catch (_) {}
-    }
-    if (!programs.length && institutions.length > 0) {
-      try { programs = await fetchPrograms(institutions[0].id); } catch (_) {}
-    }
-
+    const { enriched: vocabClasses } = await loadAllVocabClassesData();
     loading.remove();
 
-    // Default task durations based on SSOT pacing data (DECISION-062):
-    // Words Task (40 Qs @ 10s/q): 400s -> 7 minutes
-    // Phrases Task (10 Qs @ 20s/q): 200s -> 4 minutes
-    // Prefill is overridden below if existing class tests have a recorded duration.
-    let prefillTaskDur = 7;
-    let prefillWordsTaskDur = 7;
-    let prefillPhrasesTaskDur = 4;
-    let prefillWordsTaskAns = 'spoken';
-    let prefillPhrasesTaskAns = 'spoken';
-    let prefillTaskMin = 60;
-    let prefillWordsTestAns = 'spoken';
-    let prefillPhrasesTestAns = 'selection';
-    let prefillTestMin = 60;
-
-    if (currentClassId) {
-      try {
-        if (typeof window.fetchClassTestSettings === 'function') {
-          const classRules = await window.fetchClassTestSettings(currentClassId);
-          if (classRules) {
-            prefillTaskMin = classRules.taskMinScore || 60;
-            prefillTestMin = classRules.examMinScore || 60;
-          }
-        }
-      } catch (_) {}
-
-      try {
-        const sb = await getSupabase();
-        const { data: existingAsms } = await sb
-          .from('tests')
-          .select('test_type, category, payload, shell_code, title, answer_type, working_duration_minutes, minimum_required_score')
-          .eq('class_id', currentClassId)
-          .is('deleted_at', null)
-          .limit(40);
-
-        if (existingAsms && existingAsms.length > 0) {
-          for (const a of existingAsms) {
-            const isTest = String(a.category || a.test_type).toUpperCase() === 'EXAM'
-              || String(a.category || a.test_type).toUpperCase() === 'TEST'
-              || String(a.test_type).toLowerCase() === 'exam'
-              || (a.shell_code && (a.shell_code.endsWith('-EXAM') || a.shell_code.endsWith('-TEST')));
-            const isPhrase = a.category === 'phrases'
-              || (a.payload && a.payload.category === 'phrases')
-              || (a.shell_code && a.shell_code.toUpperCase().includes('PHRASE'))
-              || (a.title && a.title.toUpperCase().includes('PHRASE'));
-
-            const ans = a.answer_type || (a.payload && a.payload.answer_type);
-            const minSc = a.minimum_required_score || (a.payload && a.payload.minimum_required_score);
-            const dur = a.working_duration_minutes || (a.payload && a.payload.working_duration_minutes);
-
-            if (isTest) {
-              if (minSc) prefillTestMin = minSc;
-              if (ans) {
-                if (isPhrase) prefillPhrasesTestAns = ans;
-                else prefillWordsTestAns = ans;
-              }
-            } else {
-              if (dur) {
-                if (isPhrase) prefillPhrasesTaskDur = dur;
-                else prefillWordsTaskDur = dur;
-                prefillTaskDur = dur;
-              }
-              if (minSc) prefillTaskMin = minSc;
-              if (ans) {
-                if (isPhrase) prefillPhrasesTaskAns = ans;
-                else prefillWordsTaskAns = ans;
-              }
-            }
-          }
-        }
-      } catch (err) {
-        console.warn('Could not prefill wizard from existing tests:', err);
-      }
-    }
+    // Determine current active class (default to explicitClassId or selected class)
+    const currentClassId = explicitClassId || window._selectedClassId || localStorage.getItem('topscore_selected_class_id');
+    let matchedClass = vocabClasses.find(c => String(c.id) === String(currentClassId)) || vocabClasses[0];
 
     const overlay = document.createElement('div');
-    overlay.className = 'topscore-modal-overlay modal-backdrop';
-    overlay.id = 'test-generator-wizard-overlay';
-    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;animation:fadeIn 0.15s ease-out;';
+    overlay.className = 'topscore-modal-overlay';
+    overlay.id = 'vocabulary-system-modal-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(6px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:10px;box-sizing:border-box;animation:fadeIn 0.15s ease-out;';
 
-    // Fallback to basic levels if none provided
-    const displayLevels = availableLevels.length ? availableLevels : [0, 1, 2, 3];
+    let currentScope = 'this';
+    let previewFilterMode = 'active'; // 'active' (4 rows) or 'all' (24 rows)
+    let isPreviewVisible = true;
+
+    const buildWizardPanelsHtml = (activeClass) => {
+      const s = activeClass.settings || {};
+      const taskReps = s.taskRepetitions === 14 ? 7 : (s.taskRepetitions || 7);
+
+      const isWordsTaskCustom = Boolean(s.wordsTaskQuestionsCustom) && s.wordsTaskQuestions && String(s.wordsTaskQuestions).toUpperCase() !== 'ALL';
+      const wordsTaskNum = (s.wordsTaskQuestions && String(s.wordsTaskQuestions).toUpperCase() !== 'ALL') ? String(s.wordsTaskQuestions) : '10';
+
+      const isPhrasesTaskCustom = Boolean(s.phrasesTaskQuestionsCustom) && s.phrasesTaskQuestions && String(s.phrasesTaskQuestions).toUpperCase() !== 'ALL';
+      const phrasesTaskNum = (s.phrasesTaskQuestions && String(s.phrasesTaskQuestions).toUpperCase() !== 'ALL') ? String(s.phrasesTaskQuestions) : '10';
+
+      const isWordsExamCustom = Boolean(s.wordsExamQuestionsCustom) && s.wordsExamQuestions && String(s.wordsExamQuestions).toUpperCase() !== 'ALL';
+      const wordsExamNum = (s.wordsExamQuestions && String(s.wordsExamQuestions).toUpperCase() !== 'ALL') ? String(s.wordsExamQuestions) : (activeClass.hasPhrases ? '30' : '20');
+
+      const isPhrasesExamCustom = Boolean(s.phrasesExamQuestionsCustom) && s.phrasesExamQuestions && String(s.phrasesExamQuestions).toUpperCase() !== 'ALL';
+      const phrasesExamNum = (s.phrasesExamQuestions && String(s.phrasesExamQuestions).toUpperCase() !== 'ALL') ? String(s.phrasesExamQuestions) : '10';
+
+      return `
+        <!-- Wizard Scope & Active Class Bar -->
+        <div class="wizard-panel card-scope" style="background:#131c31; border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:8px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+            <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+              <span style="color:#38bdf8;">${getSvgIcon('book-open', 16)}</span>
+              <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">CONFIGURE TARGET:</span>
+              <select id="wiz-active-class-select" style="height:32px; min-width:280px; font-size:12px; font-weight:700; background:#090d16; border:1.5px solid #38bdf8; border-radius:6px; color:#ffffff; padding:0 8px; cursor:pointer;">
+                ${vocabClasses.map(c => `
+                  <option value="${c.id}" ${String(c.id) === String(activeClass.id) ? 'selected' : ''}>
+                    ${escapeHtml(c.institution || 'CEC')} • ${escapeHtml(c.program || 'Camp')} • ${escapeHtml(c.levelLabel)} — ${escapeHtml(c.name)}
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- Segmented Scope Control -->
+            <div class="wiz-scope-segmented" style="display:inline-flex; background:#090d16; border:1px solid rgba(56,189,248,0.35); border-radius:6px; overflow:hidden; height:32px;">
+              <button type="button" class="wiz-scope-btn ${currentScope === 'this' ? 'active' : ''}" data-scope="this" style="padding:0 14px; font-size:12px; font-weight:800; border:none; background:${currentScope === 'this' ? 'rgba(56,189,248,0.25)' : 'transparent'}; color:${currentScope === 'this' ? '#38bdf8' : '#94a3b8'}; cursor:pointer; transition:all 0.12s ease;">
+                Apply to Active Class Only
+              </button>
+              <button type="button" class="wiz-scope-btn ${currentScope === 'all' ? 'active' : ''}" data-scope="all" style="padding:0 14px; font-size:12px; font-weight:700; border:none; background:${currentScope === 'all' ? 'rgba(56,189,248,0.25)' : 'transparent'}; color:${currentScope === 'all' ? '#38bdf8' : '#94a3b8'}; cursor:pointer; transition:all 0.12s ease;">
+                Apply to All 6 Classes
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two-Pillar Configuration Grid -->
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; box-sizing:border-box;">
+          
+          <!-- Pillar 1: Formative Tasks Engine (Lime Theme) -->
+          <div class="wizard-panel card-tasks" style="background:#131c31; border:1.5px solid rgba(149,255,0,0.35); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(149,255,0,0.2); padding-bottom:6px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:#95ff00;">${getSvgIcon('repeat', 16)}</span>
+                <span style="font-size:13px; font-weight:800; color:#95ff00; text-transform:uppercase; letter-spacing:0.04em;">FORMATIVE TASKS CONFIGURATION</span>
+              </div>
+            </div>
+
+            <!-- Top Controls Grid: Reps, Threshold, Order -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:rgba(0,0,0,0.25); border-radius:6px; padding:10px;">
+              <!-- Repetitions Target -->
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:4px; text-transform:uppercase;">Repetitions Target</label>
+                <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; padding:0 8px; height:30px; width:88px; box-sizing:border-box;">
+                  <input type="number" id="wiz-task-reps" value="${taskReps}" min="1" max="7" style="width:40px; border:none; background:transparent; color:#ffffff; font-size:13px; font-weight:800; text-align:center; padding:0;" />
+                  <span style="font-size:12px; font-weight:700; color:#95ff00;">reps</span>
+                </div>
+                <div style="display:flex; gap:4px; margin-top:10px; flex-wrap:wrap;">
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 1 ? 'active' : ''}" data-target="wiz-task-reps" data-val="1">1x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 2 ? 'active' : ''}" data-target="wiz-task-reps" data-val="2">2x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 3 ? 'active' : ''}" data-target="wiz-task-reps" data-val="3">3x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 4 ? 'active' : ''}" data-target="wiz-task-reps" data-val="4">4x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 5 ? 'active' : ''}" data-target="wiz-task-reps" data-val="5">5x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 6 ? 'active' : ''}" data-target="wiz-task-reps" data-val="6">6x</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${taskReps === 7 ? 'active' : ''}" data-target="wiz-task-reps" data-val="7">7x</button>
+                </div>
+              </div>
+
+              <!-- Passing Threshold -->
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:4px; text-transform:uppercase;">Passing Threshold</label>
+                <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; padding:0 8px; height:30px; width:80px; box-sizing:border-box;">
+                  <input type="number" id="wiz-task-min-score" value="${s.taskMinScore || 70}" min="1" max="100" style="width:38px; border:none; background:transparent; color:#ffffff; font-size:13px; font-weight:800; text-align:center; padding:0;" />
+                  <span style="font-size:12px; font-weight:700; color:#95ff00;">%</span>
+                </div>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${(s.taskMinScore || 70) === 60 ? 'active' : ''}" data-target="wiz-task-min-score" data-val="60">60%</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${(s.taskMinScore || 70) === 70 ? 'active' : ''}" data-target="wiz-task-min-score" data-val="70">70%</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-lime ${(s.taskMinScore || 70) === 80 ? 'active' : ''}" data-target="wiz-task-min-score" data-val="80">80%</button>
+                </div>
+              </div>
+
+              <!-- Question Order -->
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:4px; text-transform:uppercase;">Question Order</label>
+                <input type="hidden" id="wiz-task-order" value="${s.taskQuestionOrder || 'random'}" />
+                <div class="wiz-segmented-order" style="display:flex; height:30px; background:#090d16; border:1px solid rgba(149,255,0,0.4); border-radius:4px; overflow:hidden;">
+                  <button type="button" class="wiz-order-task-btn ${(s.taskQuestionOrder || 'random') === 'random' ? 'active' : ''}" data-val="random" style="flex:1; border:none; background:${(s.taskQuestionOrder || 'random') === 'random' ? 'rgba(149,255,0,0.22)' : 'transparent'}; color:${(s.taskQuestionOrder || 'random') === 'random' ? '#95ff00' : '#94a3b8'}; font-size:12px; font-weight:800; cursor:pointer;">Random</button>
+                  <button type="button" class="wiz-order-task-btn ${(s.taskQuestionOrder || 'random') === 'sequential' ? 'active' : ''}" data-val="sequential" style="flex:1; border:none; background:${(s.taskQuestionOrder || 'random') === 'sequential' ? 'rgba(149,255,0,0.22)' : 'transparent'}; color:${(s.taskQuestionOrder || 'random') === 'sequential' ? '#95ff00' : '#94a3b8'}; font-size:12px; font-weight:700; cursor:pointer;">Sequential</button>
+                </div>
+                <span style="font-size:12px; font-weight:600; color:#64748b; line-height:24px; display:block; margin-top:10px;">Shuffled per attempt</span>
+              </div>
+            </div>
+
+            <!-- Horizontal Side-by-Side: Words Task & Phrases Task -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <!-- Sub-Card: Words Task -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:13px; font-weight:800; color:#f8fafc;">Standard Vocabulary Task (Word)</span>
+                  <div style="font-size:12px; color:#94a3b8; font-weight:600;">
+                    Duration: <strong id="wiz-words-task-dur-display" style="color:#95ff00; font-size:13px; font-weight:800;">${s.wordsTaskDur || 5}m</strong>
+                  </div>
+                </div>
+
+                <!-- Row 1: Questions (Unified Capsule Control) & Answer Mode -->
+                <div style="display:grid; grid-template-columns:115px 1fr; gap:10px; align-items:center;">
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Questions</label>
+                    <div class="wiz-q-capsule" id="wiz-words-task-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isWordsTaskCustom ? '#95ff00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box;">
+                      <button type="button" class="wiz-q-btn-all" id="wiz-words-task-btn-all" data-target-check="wiz-words-task-custom" style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isWordsTaskCustom ? '800' : '700'}; cursor:pointer; background:${!isWordsTaskCustom ? 'rgba(149,255,0,0.22)' : 'transparent'}; color:${!isWordsTaskCustom ? '#95ff00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
+                      <div style="width:1px; height:18px; background:rgba(255,255,255,0.12);"></div>
+                      <label id="wiz-words-task-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isWordsTaskCustom ? 'rgba(149,255,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
+                        <input type="checkbox" id="wiz-words-task-custom" class="wiz-q-custom-check" data-target="wiz-words-task-questions" data-capsule="wiz-words-task-capsule" data-btn-all="wiz-words-task-btn-all" data-custom-label="wiz-words-task-custom-label" data-color="#95ff00" data-rgb="149,255,0" ${isWordsTaskCustom ? 'checked' : ''} style="cursor:pointer; accent-color:#95ff00; width:13px; height:13px; margin:0;" />
+                        <input type="number" id="wiz-words-task-questions" class="wiz-q-num-input" data-check="wiz-words-task-custom" value="${wordsTaskNum}" min="1" max="200" ${!isWordsTaskCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isWordsTaskCustom ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isWordsTaskCustom ? 'opacity:0.4;' : ''}" />
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
+                    <select id="wiz-words-task-answer" style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
+                      <option value="spoken" ${(s.wordsTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
+                      <option value="selection" ${(s.wordsTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
+                      <option value="written" ${(s.wordsTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="mixed" ${(s.wordsTaskAnswer || 'spoken') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Row 2: Pace / Question -->
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Pace / Question</label>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:0 8px; height:30px; width:62px; box-sizing:border-box;">
+                      <input type="number" id="wiz-words-task-pace" value="${s.wordsTaskPace || 15}" min="5" max="60" style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === 10 ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="10">10s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === 15 ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="15">15s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-lime ${(s.wordsTaskPace || 15) === 20 ? 'active' : ''}" data-target="wiz-words-task-pace" data-val="20">20s</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sub-Card: Phrases Task -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid ${activeClass.hasPhrases ? 'rgba(255,140,0,0.2)' : 'rgba(255,255,255,0.05)'}; border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px; opacity:${activeClass.hasPhrases ? '1' : '0.45'};">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:13px; font-weight:800; color:#f8fafc;">Phrases Component (Phrase)</span>
+                  <div style="font-size:12px; color:#94a3b8; font-weight:600;">
+                    Duration: <strong id="wiz-phrases-task-dur-display" style="color:#FF8C00; font-size:13px; font-weight:800;">${activeClass.hasPhrases ? (s.phrasesTaskDur || 4) : 0}m</strong>
+                  </div>
+                </div>
+
+                <!-- Row 1: Questions (Unified Capsule Control) & Answer Mode -->
+                <div style="display:grid; grid-template-columns:115px 1fr; gap:10px; align-items:center;">
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Questions</label>
+                    <div class="wiz-q-capsule" id="wiz-phrases-task-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isPhrasesTaskCustom && activeClass.hasPhrases ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box; opacity:${activeClass.hasPhrases ? '1' : '0.5'};">
+                      <button type="button" class="wiz-q-btn-all" id="wiz-phrases-task-btn-all" data-target-check="wiz-phrases-task-custom" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isPhrasesTaskCustom ? '800' : '700'}; cursor:pointer; background:${!isPhrasesTaskCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.25)' : 'transparent'}; color:${!isPhrasesTaskCustom && activeClass.hasPhrases ? '#FF8C00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
+                      <div style="width:1px; height:18px; background:rgba(255,255,255,0.12);"></div>
+                      <label id="wiz-phrases-task-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isPhrasesTaskCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
+                        <input type="checkbox" id="wiz-phrases-task-custom" class="wiz-q-custom-check" data-target="wiz-phrases-task-questions" data-capsule="wiz-phrases-task-capsule" data-btn-all="wiz-phrases-task-btn-all" data-custom-label="wiz-phrases-task-custom-label" data-color="#FF8C00" data-rgb="255,140,0" ${!activeClass.hasPhrases ? 'disabled' : ''} ${isPhrasesTaskCustom && activeClass.hasPhrases ? 'checked' : ''} style="cursor:pointer; accent-color:#FF8C00; width:13px; height:13px; margin:0;" />
+                        <input type="number" id="wiz-phrases-task-questions" class="wiz-q-num-input" data-check="wiz-phrases-task-custom" value="${phrasesTaskNum}" min="1" max="200" ${!activeClass.hasPhrases || !isPhrasesTaskCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isPhrasesTaskCustom && activeClass.hasPhrases ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isPhrasesTaskCustom || !activeClass.hasPhrases ? 'opacity:0.4;' : ''}" />
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
+                    <select id="wiz-phrases-task-answer" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
+                      <option value="spoken" ${(s.phrasesTaskAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
+                      <option value="selection" ${(s.phrasesTaskAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
+                      <option value="written" ${(s.phrasesTaskAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="mixed" ${(s.phrasesTaskAnswer || 'spoken') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Row 2: Pace / Question -->
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Pace / Question</label>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:0 8px; height:30px; width:62px; box-sizing:border-box;">
+                      <input type="number" id="wiz-phrases-task-pace" value="${s.phrasesTaskPace || 20}" min="5" max="60" ${!activeClass.hasPhrases ? 'disabled' : ''} style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === 15 ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="15" ${!activeClass.hasPhrases ? 'disabled' : ''}>15s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === 20 ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="20" ${!activeClass.hasPhrases ? 'disabled' : ''}>20s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesTaskPace || 20) === 30 ? 'active' : ''}" data-target="wiz-phrases-task-pace" data-val="30" ${!activeClass.hasPhrases ? 'disabled' : ''}>30s</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pillar 2: Milestone Exams Engine (Pink Theme) -->
+          <div class="wizard-panel card-exams" style="background:#131c31; border:1.5px solid rgba(255,45,135,0.35); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(255,45,135,0.2); padding-bottom:6px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="color:#ff2d87;">${getSvgIcon('award', 16)}</span>
+                <span style="font-size:13px; font-weight:800; color:#ff2d87; text-transform:uppercase; letter-spacing:0.04em;">MILESTONE EXAMS CONFIGURATION</span>
+              </div>
+            </div>
+
+            <!-- Top Controls Grid: Reps, Threshold, Order -->
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:10px; background:rgba(0,0,0,0.25); border-radius:6px; padding:10px;">
+              <!-- Repetitions (Fixed 1x) -->
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:4px; text-transform:uppercase;">Repetitions Requirement</label>
+                <div style="height:30px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:#f8fafc; background:#090d16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; padding:0 8px; width:100%; box-sizing:border-box;">
+                  1x (Final Exam)
+                </div>
+                <span style="font-size:12px; color:#64748b; font-weight:600; line-height:24px; display:block; margin-top:10px;">Non-repetitive milestone</span>
+              </div>
+
+              <!-- Exam Passing Threshold -->
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:4px; text-transform:uppercase;">Passing Threshold</label>
+                <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; padding:0 8px; height:30px; width:80px; box-sizing:border-box;">
+                  <input type="number" id="wiz-exam-min-score" value="${s.examMinScore || 60}" min="1" max="100" style="width:38px; border:none; background:transparent; color:#ffffff; font-size:13px; font-weight:800; text-align:center; padding:0;" />
+                  <span style="font-size:12px; font-weight:700; color:#ff2d87;">%</span>
+                </div>
+                <div style="display:flex; gap:5px; margin-top:10px;">
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-pink ${(s.examMinScore || 60) === 60 ? 'active' : ''}" data-target="wiz-exam-min-score" data-val="60">60%</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-pink ${(s.examMinScore || 60) === 70 ? 'active' : ''}" data-target="wiz-exam-min-score" data-val="70">70%</button>
+                  <button type="button" class="wiz-preset-pill wiz-preset-pill-pink ${(s.examMinScore || 60) === 75 ? 'active' : ''}" data-target="wiz-exam-min-score" data-val="75">75%</button>
+                </div>
+              </div>
+
+              <!-- Question Order -->
+              <div>
+                <label style="display:block; font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:4px; text-transform:uppercase;">Question Order</label>
+                <input type="hidden" id="wiz-exam-order" value="${s.examQuestionOrder || 'random'}" />
+                <div class="wiz-segmented-order" style="display:flex; height:30px; background:#090d16; border:1px solid rgba(255,45,135,0.4); border-radius:4px; overflow:hidden;">
+                  <button type="button" class="wiz-order-exam-btn ${(s.examQuestionOrder || 'random') === 'random' ? 'active' : ''}" data-val="random" style="flex:1; border:none; background:${(s.examQuestionOrder || 'random') === 'random' ? 'rgba(255,45,135,0.22)' : 'transparent'}; color:${(s.examQuestionOrder || 'random') === 'random' ? '#ff2d87' : '#94a3b8'}; font-size:12px; font-weight:800; cursor:pointer;">Random</button>
+                  <button type="button" class="wiz-order-exam-btn ${(s.examQuestionOrder || 'random') === 'sequential' ? 'active' : ''}" data-val="sequential" style="flex:1; border:none; background:${(s.examQuestionOrder || 'random') === 'sequential' ? 'rgba(255,45,135,0.22)' : 'transparent'}; color:${(s.examQuestionOrder || 'random') === 'sequential' ? '#ff2d87' : '#94a3b8'}; font-size:12px; font-weight:700; cursor:pointer;">Sequential</button>
+                </div>
+                <span style="font-size:12px; font-weight:600; color:#64748b; line-height:24px; display:block; margin-top:10px;">Shuffled per student</span>
+              </div>
+            </div>
+
+            <!-- Horizontal Side-by-Side: Words Exam & Phrases Exam -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+              <!-- Sub-Card: Words Periodic Exam -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid rgba(255,255,255,0.08); border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:13px; font-weight:800; color:#f8fafc;">Vocabulary Periodic Exam (Word)</span>
+                  <div style="font-size:12px; color:#94a3b8; font-weight:600;">
+                    Duration: <strong id="wiz-words-exam-dur-display" style="color:#ff2d87; font-size:13px; font-weight:800;">${s.wordsExamDur || (activeClass.hasPhrases ? 30 : 25)}m</strong>
+                  </div>
+                </div>
+
+                <!-- Row 1: Questions (Unified Capsule Control) & Answer Mode -->
+                <div style="display:grid; grid-template-columns:115px 1fr; gap:10px; align-items:center;">
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Questions</label>
+                    <div class="wiz-q-capsule" id="wiz-words-exam-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isWordsExamCustom ? '#ff2d87' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box;">
+                      <button type="button" class="wiz-q-btn-all" id="wiz-words-exam-btn-all" data-target-check="wiz-words-exam-custom" style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isWordsExamCustom ? '800' : '700'}; cursor:pointer; background:${!isWordsExamCustom ? 'rgba(255,45,135,0.25)' : 'transparent'}; color:${!isWordsExamCustom ? '#ff2d87' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
+                      <div style="width:1px; height:18px; background:rgba(255,255,255,0.12);"></div>
+                      <label id="wiz-words-exam-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isWordsExamCustom ? 'rgba(255,45,135,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
+                        <input type="checkbox" id="wiz-words-exam-custom" class="wiz-q-custom-check" data-target="wiz-words-exam-questions" data-capsule="wiz-words-exam-capsule" data-btn-all="wiz-words-exam-btn-all" data-custom-label="wiz-words-exam-custom-label" data-color="#ff2d87" data-rgb="255,45,135" ${isWordsExamCustom ? 'checked' : ''} style="cursor:pointer; accent-color:#ff2d87; width:13px; height:13px; margin:0;" />
+                        <input type="number" id="wiz-words-exam-questions" class="wiz-q-num-input" data-check="wiz-words-exam-custom" value="${wordsExamNum}" min="1" max="200" ${!isWordsExamCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isWordsExamCustom ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isWordsExamCustom ? 'opacity:0.4;' : ''}" />
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
+                    <select id="wiz-words-exam-answer" style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
+                      <option value="spoken" ${(s.wordsExamAnswer || 'spoken') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
+                      <option value="selection" ${(s.wordsExamAnswer || 'spoken') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
+                      <option value="written" ${(s.wordsExamAnswer || 'spoken') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="mixed" ${(s.wordsExamAnswer || 'spoken') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Row 2: Pace / Question -->
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Pace / Question</label>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:0 8px; height:30px; width:62px; box-sizing:border-box;">
+                      <input type="number" id="wiz-words-exam-pace" value="${s.wordsExamPace || 15}" min="5" max="60" style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === 15 ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="15">15s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === 20 ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="20">20s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-pink ${(s.wordsExamPace || 15) === 30 ? 'active' : ''}" data-target="wiz-words-exam-pace" data-val="30">30s</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sub-Card: Phrases Periodic Exam -->
+              <div style="background:rgba(0,0,0,0.3); border:1px solid ${activeClass.hasPhrases ? 'rgba(255,140,0,0.2)' : 'rgba(255,255,255,0.05)'}; border-radius:6px; padding:10px; display:flex; flex-direction:column; gap:10px; opacity:${activeClass.hasPhrases ? '1' : '0.45'};">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:13px; font-weight:800; color:#f8fafc;">Phrases Periodic Exam (Phrase)</span>
+                  <div style="font-size:12px; color:#94a3b8; font-weight:600;">
+                    Duration: <strong id="wiz-phrases-exam-dur-display" style="color:#FF8C00; font-size:13px; font-weight:800;">${activeClass.hasPhrases ? (s.phrasesExamDur || 10) : 0}m</strong>
+                  </div>
+                </div>
+
+                <!-- Row 1: Questions (Unified Capsule Control) & Answer Mode -->
+                <div style="display:grid; grid-template-columns:115px 1fr; gap:10px; align-items:center;">
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Questions</label>
+                    <div class="wiz-q-capsule" id="wiz-phrases-exam-capsule" style="display:inline-flex; align-items:center; height:30px; background:#090d16; border:1px solid ${isPhrasesExamCustom && activeClass.hasPhrases ? '#FF8C00' : 'rgba(255,255,255,0.2)'}; border-radius:4px; overflow:hidden; box-sizing:border-box; opacity:${activeClass.hasPhrases ? '1' : '0.5'};">
+                      <button type="button" class="wiz-q-btn-all" id="wiz-phrases-exam-btn-all" data-target-check="wiz-phrases-exam-custom" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:100%; border:none; padding:0 10px; font-size:12px; font-weight:${!isPhrasesExamCustom ? '800' : '700'}; cursor:pointer; background:${!isPhrasesExamCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.25)' : 'transparent'}; color:${!isPhrasesExamCustom && activeClass.hasPhrases ? '#FF8C00' : '#64748b'}; transition:all 0.12s ease;">ALL</button>
+                      <div style="width:1px; height:18px; background:rgba(255,255,255,0.12);"></div>
+                      <label id="wiz-phrases-exam-custom-label" style="display:inline-flex; align-items:center; height:100%; padding:0 6px; gap:4px; cursor:pointer; background:${isPhrasesExamCustom && activeClass.hasPhrases ? 'rgba(255,140,0,0.12)' : 'transparent'}; transition:all 0.12s ease;" title="Check to set custom question count">
+                        <input type="checkbox" id="wiz-phrases-exam-custom" class="wiz-q-custom-check" data-target="wiz-phrases-exam-questions" data-capsule="wiz-phrases-exam-capsule" data-btn-all="wiz-phrases-exam-btn-all" data-custom-label="wiz-phrases-exam-custom-label" data-color="#FF8C00" data-rgb="255,140,0" ${!activeClass.hasPhrases ? 'disabled' : ''} ${isPhrasesExamCustom && activeClass.hasPhrases ? 'checked' : ''} style="cursor:pointer; accent-color:#FF8C00; width:13px; height:13px; margin:0;" />
+                        <input type="number" id="wiz-phrases-exam-questions" class="wiz-q-num-input" data-check="wiz-phrases-exam-custom" value="${phrasesExamNum}" min="1" max="200" ${!activeClass.hasPhrases || !isPhrasesExamCustom ? 'disabled' : ''} style="height:26px; width:36px; text-align:center; font-size:12px; font-weight:800; background:transparent; border:none; color:${isPhrasesExamCustom && activeClass.hasPhrases ? '#ffffff' : '#64748b'}; padding:0; outline:none; ${!isPhrasesExamCustom || !activeClass.hasPhrases ? 'opacity:0.4;' : ''}" />
+                      </label>
+                    </div>
+                  </div>
+                  <div>
+                    <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Answer Mode</label>
+                    <select id="wiz-phrases-exam-answer" ${!activeClass.hasPhrases ? 'disabled' : ''} style="height:30px; width:100%; font-size:12px; font-weight:600; background:#090d16; border:1px solid rgba(255,255,255,0.15); border-radius:4px; color:#ffffff; padding:0 8px;">
+                      <option value="selection" ${(s.phrasesExamAnswer || 'selection') === 'selection' ? 'selected' : ''}>Recognition (20s)</option>
+                      <option value="spoken" ${(s.phrasesExamAnswer || 'selection') === 'spoken' ? 'selected' : ''}>Spoken (15s)</option>
+                      <option value="written" ${(s.phrasesExamAnswer || 'selection') === 'written' ? 'selected' : ''}>Written (30s)</option>
+                      <option value="mixed" ${(s.phrasesExamAnswer || 'selection') === 'mixed' ? 'selected' : ''}>Mixed (Hybrid)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Row 2: Pace / Question -->
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:4px;">Pace / Question</label>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="display:inline-flex; align-items:center; background:#090d16; border:1px solid rgba(255,255,255,0.2); border-radius:4px; padding:0 8px; height:30px; width:62px; box-sizing:border-box;">
+                      <input type="number" id="wiz-phrases-exam-pace" value="${s.phrasesExamPace || 20}" min="5" max="60" ${!activeClass.hasPhrases ? 'disabled' : ''} style="width:32px; border:none; background:transparent; color:#ffffff; font-size:12px; font-weight:800; text-align:center; padding:0;" />
+                      <span style="font-size:12px; font-weight:700; color:#94a3b8;">s</span>
+                    </div>
+                    <div style="display:flex; gap:5px;">
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === 15 ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="15" ${!activeClass.hasPhrases ? 'disabled' : ''}>15s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === 20 ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="20" ${!activeClass.hasPhrases ? 'disabled' : ''}>20s</button>
+                      <button type="button" class="wiz-preset-pill-mini wiz-preset-pill-orange ${(s.phrasesExamPace || 20) === 30 ? 'active' : ''}" data-target="wiz-phrases-exam-pace" data-val="30" ${!activeClass.hasPhrases ? 'disabled' : ''}>30s</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Panel 3: Live Synchronized Master Matrix Preview -->
+        <div class="wizard-panel card-preview" style="background:#131c31; border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="color:#38bdf8;">${getSvgIcon('grid', 15)}</span>
+              <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">SYNCHRONIZED CURRICULUM MATRIX PREVIEW</span>
+              <span style="font-size:12px; color:#94a3b8; font-weight:600;">(Live Real-Time)</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:8px;">
+              <!-- Toggle Preview Scope: Active Class Only vs All Classes -->
+              <div style="display:inline-flex; background:#090d16; border:1px solid rgba(56,189,248,0.35); border-radius:4px; overflow:hidden; height:28px;">
+                <button type="button" id="wiz-btn-filter-active" class="btn-preview-filter ${previewFilterMode === 'active' ? 'active' : ''}" style="border:none; padding:0 10px; font-size:12px; font-weight:800; background:${previewFilterMode === 'active' ? 'rgba(56,189,248,0.25)' : 'transparent'}; color:${previewFilterMode === 'active' ? '#38bdf8' : '#94a3b8'}; cursor:pointer;">Active Class (4 Rows)</button>
+                <button type="button" id="wiz-btn-filter-all" class="btn-preview-filter ${previewFilterMode === 'all' ? 'active' : ''}" style="border:none; padding:0 10px; font-size:12px; font-weight:700; background:${previewFilterMode === 'all' ? 'rgba(56,189,248,0.25)' : 'transparent'}; color:${previewFilterMode === 'all' ? '#38bdf8' : '#94a3b8'}; cursor:pointer;">All 6 Classes</button>
+              </div>
+
+              <!-- Toggle Collapse/Expand -->
+              <button type="button" id="wiz-btn-toggle-matrix" style="border:1px solid rgba(255,255,255,0.15); border-radius:4px; background:rgba(255,255,255,0.06); color:#cbd5e1; font-size:12px; font-weight:700; height:28px; padding:0 10px; cursor:pointer;">
+                ${isPreviewVisible ? '▾ Hide Preview' : '▸ Show Preview'}
+              </button>
+            </div>
+          </div>
+
+          <div id="modal-matrix-table-wrap" style="${isPreviewVisible ? '' : 'display:none;'} max-height:${previewFilterMode === 'active' ? '280px' : '360px'}; min-height:240px; overflow-y:auto; overflow-x:auto;">
+            ${buildMatrixHtml(vocabClasses, activeClass.id, false, previewFilterMode === 'active' ? activeClass.id : null)}
+          </div>
+        </div>
+      `;
+    };
 
     overlay.innerHTML = `
       <style>
-        #test-generator-wizard-overlay .modal-card {
-          background: #0f172a; border: 1.5px solid rgba(255,255,255,0.16) !important; border-radius: 12px;
-          width: 640px; max-width: 96%; color: #f8fafc; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7);
-          max-height: 80vh !important; display: flex; flex-direction: column; overflow: hidden;
+        #vocabulary-system-modal-overlay .modal-card {
+          background: #0f172a; border: 1.5px solid rgba(255, 255, 255, 0.16); border-radius: 12px;
+          width: 96vw !important; max-width: 1440px !important; max-height: 94vh; display: flex; flex-direction: column;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7); overflow: hidden; color: #f8fafc;
         }
-        #test-generator-wizard-overlay .title-area {
-          height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;
-          border-bottom: 1.5px solid rgba(255,255,255,0.16) !important;
-          border-left: 4px solid #38bdf8 !important;
-          display: flex; align-items: center; justify-content: flex-start;
-          background: linear-gradient(90deg, rgba(56, 189, 248, 0.38) 0%, rgba(56, 189, 248, 0.12) 55%, rgba(15, 23, 42, 0.95) 100%) !important;
-          box-sizing: border-box; padding: 0 16px; gap: 12px;
+        #vocabulary-system-modal-overlay input[type=number]::-webkit-inner-spin-button,
+        #vocabulary-system-modal-overlay input[type=number]::-webkit-outer-spin-button {
+          -webkit-appearance: none !important;
+          margin: 0 !important;
         }
-        #test-generator-wizard-overlay .title-icon-box {
-          width: 34px !important; height: 34px !important; border-radius: 8px !important;
-          display: inline-flex !important; align-items: center !important; justify-content: center !important;
-          flex-shrink: 0 !important; background: rgba(56, 189, 248, 0.18) !important;
-          border: 1.5px solid rgba(56, 189, 248, 0.5) !important; color: #38bdf8 !important;
+        #vocabulary-system-modal-overlay input[type=number] {
+          -moz-appearance: textfield !important;
         }
-        #test-generator-wizard-overlay .title-area h2 {
+        #vocabulary-system-modal-overlay .title-area {
+          height: 60px !important; min-height: 60px !important; max-height: 60px !important;
+          border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important;
+          display: flex; align-items: center; justify-content: space-between;
+          background: #1e293b !important; box-sizing: border-box; padding: 0 16px;
+        }
+        #vocabulary-system-modal-overlay .title-area h2 {
           margin: 0; font-family: var(--fm-font-display, 'Inter', sans-serif);
-          font-size: 16px; font-weight: 800; text-transform: uppercase;
-          letter-spacing: 0.04em; color: #ffffff; text-align: left;
+          font-size: 15px; font-weight: 800; text-transform: uppercase;
+          letter-spacing: 0.05em; color: #38bdf8; display: flex; align-items: center; gap: 8px;
         }
-        #test-generator-wizard-overlay .modal-body {
-          padding: 10px !important; overflow-y: auto; max-height: calc(80vh - 120px);
-          display: flex; flex-direction: column; gap: 10px; box-sizing: border-box;
+        #vocabulary-system-modal-overlay .modal-body {
+          padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box;
+          max-height: calc(94vh - 120px);
         }
-        #test-generator-wizard-overlay .wizard-card {
-          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.08);
-          border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 10px;
-          box-sizing: border-box;
-        }
-        #test-generator-wizard-overlay .wizard-card-task {
-          border-color: rgba(var(--grade-b-rgb, 149, 255, 0), 0.35);
-        }
-        #test-generator-wizard-overlay .wizard-card-task .wizard-card-title {
-          font-family: var(--fm-font-display, 'Inter', sans-serif);
-          font-size: 12px; font-weight: 800; color: var(--task-color, var(--grade-b, #95ff00));
-          text-transform: uppercase; letter-spacing: 0.04em;
-          display: inline-flex; align-items: center; gap: 6px;
-        }
-        #test-generator-wizard-overlay .wizard-card-exam {
-          border-color: rgba(var(--quad-a-rgb, 255, 45, 135), 0.35);
-        }
-        #test-generator-wizard-overlay .wizard-card-exam .wizard-card-title {
-          font-family: var(--fm-font-display, 'Inter', sans-serif);
-          font-size: 12px; font-weight: 800; color: var(--exam-color, var(--quad-a, #ff2d87));
-          text-transform: uppercase; letter-spacing: 0.04em;
-          display: inline-flex; align-items: center; gap: 6px;
-        }
-        #test-generator-wizard-overlay .wizard-card-header {
-          display: flex; justify-content: space-between; align-items: center;
-        }
-        #test-generator-wizard-overlay .field-label {
-          font-size: 12px; font-weight: 700; color: #94a3b8;
-          text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; display: block;
-        }
-        #test-generator-wizard-overlay .cta-area {
-          height: 60px !important; min-height: 60px !important; max-height: 60px !important; flex-shrink: 0 !important;
+        #vocabulary-system-modal-overlay .cta-area {
+          height: 60px !important; min-height: 60px !important; max-height: 60px !important;
           border-top: 1.5px solid rgba(255, 255, 255, 0.16) !important;
-          background: rgba(30, 41, 59, 0.5); display: flex !important; justify-content: space-between !important;
-          align-items: center !important; gap: 10px; padding: 0 16px !important; box-sizing: border-box;
+          background: rgba(30, 41, 59, 0.6); display: flex !important; justify-content: space-between !important;
+          align-items: center !important; gap: 10px; padding: 0 12px !important; box-sizing: border-box;
         }
-        #test-generator-wizard-overlay .btn-cta-close {
-          height: 40px !important; min-height: 40px !important; max-height: 40px !important;
-          line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
-          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
-          background: transparent !important; border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
-          color: #94a3b8; cursor: pointer; transition: all 0.15s ease; box-sizing: border-box;
-          margin-right: auto !important; margin-left: 0 !important; align-self: center !important; transform: none !important;
+        #vocabulary-system-modal-overlay .btn-cta-close {
+          height: 40px !important; line-height: 38px !important; padding: 0 16px !important; border-radius: 6px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+          color: #94a3b8; cursor: pointer; transition: all 0.15s ease;
         }
-        #test-generator-wizard-overlay .btn-cta-close:hover,
-        #test-generator-wizard-overlay .btn-cta-close:active {
-          background: #334155 !important; color: #ffffff !important;
-          border-color: #64748b !important; box-shadow: 0 0 10px rgba(255, 255, 255, 0.2) !important;
+        #vocabulary-system-modal-overlay .btn-cta-close:hover {
+          background: rgba(255,255,255,0.12) !important; color: #ffffff !important;
         }
-        #test-generator-wizard-overlay .btn-cta-secondary {
-          height: 40px !important; min-height: 40px !important; max-height: 40px !important;
-          line-height: 38px !important; padding: 0 20px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
-          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
-          background: transparent !important; border: 1.5px solid rgba(56, 189, 248, 0.4) !important;
-          color: #38bdf8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;
-          gap: 6px; transition: all 0.15s ease; box-sizing: border-box; transform: none !important;
+        #vocabulary-system-modal-overlay .btn-cta-save {
+          height: 40px !important; line-height: 38px !important; padding: 0 16px !important; border-radius: 6px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
+          background: rgba(56,189,248,0.15); border: 1.5px solid #38bdf8; color: #38bdf8; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;
         }
-        #test-generator-wizard-overlay .btn-cta-secondary:hover,
-        #test-generator-wizard-overlay .btn-cta-secondary:active {
-          background: rgba(56, 189, 248, 0.18) !important; color: #38bdf8 !important;
-          border-color: #38bdf8 !important; box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+        #vocabulary-system-modal-overlay .btn-cta-sync {
+          height: 40px !important; line-height: 38px !important; padding: 0 18px !important; border-radius: 6px !important;
+          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 13px !important;
+          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.03em;
+          background: var(--primary-tactical, #38bdf8); border: none; color: #0f172a; cursor: pointer;
+          display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(56,189,248,0.35); transition: all 0.15s ease;
         }
-        #test-generator-wizard-overlay .btn-cta-primary {
-          height: 40px !important; min-height: 40px !important; max-height: 40px !important;
-          line-height: 38px !important; padding: 0 22px !important; border-radius: 6px !important;
-          font-family: var(--fm-font-display, 'Inter', sans-serif) !important; font-size: 14px !important;
-          font-weight: 800 !important; text-transform: uppercase; letter-spacing: 0.04em;
-          background: transparent !important; color: #38bdf8 !important; border: 1.5px solid #38bdf8 !important;
-          cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-          transition: all 0.15s ease; box-sizing: border-box; margin-left: auto !important; transform: none !important;
+        #vocabulary-system-modal-overlay .btn-cta-sync:hover {
+          background: var(--primary-tactical, #38bdf8);
         }
-        #test-generator-wizard-overlay .btn-cta-primary:hover,
-        #test-generator-wizard-overlay .btn-cta-primary:active {
-          background: #38bdf8 !important; color: #0f172a !important;
-          box-shadow: 0 0 16px rgba(56, 189, 248, 0.6) !important;
+        .wiz-preset-pill {
+          height: 30px !important; line-height: 28px !important; padding: 0 8px !important; font-size: 12px !important; font-weight: 700 !important;
+          border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+          color: #94a3b8; cursor: pointer; transition: all 0.12s ease;
+        }
+        .wiz-preset-pill:hover, .wiz-preset-pill.active {
+          background: rgba(149,255,0,0.2) !important; border-color: #95ff00 !important; color: #95ff00 !important;
+        }
+        .wiz-preset-pill-lime:hover, .wiz-preset-pill-lime.active {
+          background: rgba(149,255,0,0.2) !important; border-color: #95ff00 !important; color: #95ff00 !important;
+        }
+        .wiz-preset-pill-pink:hover, .wiz-preset-pill-pink.active {
+          background: rgba(255,45,135,0.22) !important; border-color: #ff2d87 !important; color: #ff2d87 !important;
+        }
+        .wiz-preset-pill-orange:hover, .wiz-preset-pill-orange.active {
+          background: rgba(255,140,0,0.22) !important; border-color: #FF8C00 !important; color: #FF8C00 !important;
+        }
+        .wiz-preset-pill-mini {
+          height: 30px !important; line-height: 28px !important; padding: 0 8px !important; font-size: 12px !important; font-weight: 700 !important;
+          border-radius: 4px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+          color: #94a3b8; cursor: pointer; transition: all 0.12s ease;
+        }
+        .wiz-preset-pill-mini:hover, .wiz-preset-pill-mini.active {
+          background: rgba(149,255,0,0.2) !important; border-color: #95ff00 !important; color: #95ff00 !important;
+        }
+        .wiz-preset-pill-mini.wiz-preset-pill-lime:hover, .wiz-preset-pill-mini.wiz-preset-pill-lime.active {
+          background: rgba(149,255,0,0.2) !important; border-color: #95ff00 !important; color: #95ff00 !important;
+        }
+        .wiz-preset-pill-mini.wiz-preset-pill-pink:hover, .wiz-preset-pill-mini.wiz-preset-pill-pink.active {
+          background: rgba(255,45,135,0.22) !important; border-color: #ff2d87 !important; color: #ff2d87 !important;
+        }
+        .wiz-preset-pill-mini.wiz-preset-pill-orange:hover, .wiz-preset-pill-mini.wiz-preset-pill-orange.active {
+          background: rgba(255,140,0,0.22) !important; border-color: #FF8C00 !important; color: #FF8C00 !important;
+        }
+        .wiz-q-capsule {
+          transition: border-color 0.15s ease;
+        }
+        .wiz-q-capsule .wiz-q-btn-all:hover {
+          filter: brightness(1.15);
         }
       </style>
 
       <div class="modal-card">
-        <!-- Title Area (60px SSOT, Left-Aligned 16px White Title with 34px Icon Box, Tactical Cyan #38bdf8, Zero Subtitle Clutter) -->
+        <!-- Title Area -->
         <div class="title-area">
-          <div class="title-icon-box">
-            ${getSvgIcon('settings', 18)}
-          </div>
-          <h2>TEST GENERATOR WIZARD</h2>
-          ${isClassScoped ? (() => {
-            // Modality badge colors (Class Discipline Color SSOT §2.5.3)
-            const MODALITY_BADGE = {
-              VOCABULARY:   { bg: 'rgba(149,255,0,0.18)',  border: 'rgba(149,255,0,0.5)',  color: '#95ff00',  label: 'VOCABULARY' },
-              SPEAKING:     { bg: 'rgba(56,189,248,0.18)', border: 'rgba(56,189,248,0.5)', color: '#38bdf8',  label: 'SPEAKING' },
-              STORYTELLING: { bg: 'rgba(255,140,0,0.18)',  border: 'rgba(255,140,0,0.5)',  color: '#FF8C00',  label: 'STORYTELLING' },
-              BASIC:        { bg: 'rgba(192,132,252,0.18)',border: 'rgba(192,132,252,0.5)',color: '#c084fc',  label: 'BASIC ENGLISH' },
-              GRAMMAR:      { bg: 'rgba(192,132,252,0.18)',border: 'rgba(192,132,252,0.5)',color: '#c084fc',  label: 'GRAMMAR' },
-            };
-            const mb = MODALITY_BADGE[classModality] || MODALITY_BADGE.VOCABULARY;
-            return `<span style="margin-left:auto; background:${mb.bg}; border:1px solid ${mb.border}; color:${mb.color}; font-size:11px; font-weight:800; padding:2px 10px; border-radius:4px; text-transform:uppercase; letter-spacing:0.06em; white-space:nowrap;">${mb.label}</span>`;
-          })() : ''}
+          <h2>${getSvgIcon('settings', 16)} VOCABULARY SYSTEM WIZARD</h2>
         </div>
 
-        <!-- Modal Body (10px padding & gaps, capped at 80vh) -->
-        <div class="modal-body">
-          <!-- Context Banner -->
-          ${isClassScoped ? `
-          <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="display:inline-flex; align-items:center; color:#38bdf8;">${getSvgIcon('book-open', 16)}</span>
-              <div>
-                <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">TARGET CLASS (LOCKED &amp; SECURED)</div>
-                <div style="font-size:12px; font-weight:700; color:#f8fafc;">${escapeHtml(className)}</div>
-              </div>
-            </div>
-            <span class="badge" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px;">LOCKED</span>
-          </div>
-          ` : `
-          <div style="background:rgba(56,189,248,0.08); border:1px solid rgba(56,189,248,0.25); border-radius:8px; padding:10px; display:flex; justify-content:space-between; align-items:center; box-sizing:border-box;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="display:inline-flex; align-items:center; color:#38bdf8;">${getSvgIcon('book-open', 16)}</span>
-              <div>
-                <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">CURRICULUM BLUEPRINT MODE</div>
-                <div style="font-size:12px; font-weight:700; color:#f8fafc;">Program-Wide Dynamic Test Synchronization</div>
-              </div>
-            </div>
-            <span class="badge" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px;">BLUEPRINT</span>
-          </div>
-          `}
-
-          <!-- Section 1: Target Level & Category Scope -->
-          ${isNonVocabularyModal ? `
-          <!-- Triple-Lock Lapis 2: Non-Vocabulary Class Notice (§2.5.3) -->
-          <div style="background:rgba(255,140,0,0.08); border:1px solid rgba(255,140,0,0.3); border-radius:8px; padding:10px; display:flex; align-items:flex-start; gap:10px; box-sizing:border-box;">
-            <span style="display:inline-flex; align-items:center; color:#FF8C00; flex-shrink:0; margin-top:1px;">${getSvgIcon('alert-triangle', 16)}</span>
-            <div>
-              <div style="font-size:12px; font-weight:800; color:#FF8C00; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:2px;">Non-Vocabulary Class — Manual Test Creation Required</div>
-              <div style="font-size:12px; font-weight:600; color:#cbd5e1; line-height:1.45;">
-                Class modality: <strong style="color:#f8fafc;">${classModality}</strong>. The Auto-Generate Wizard is optimized for the Vocabulary curriculum (7×7 repetition structure). For <strong>${classModality}</strong> classes, manually create tests via the Tests tab using the appropriate evaluation engine (${classModality === 'SPEAKING' ? 'M5/M7 Speech modules' : classModality === 'STORYTELLING' ? 'M6 Monologue module' : classModality === 'BASIC' ? 'M1 Description module' : 'class-specific module'}). Cross-class module injection is blocked by Triple-Lock Lapis 3.
-              </div>
-            </div>
-          </div>
-          ` : ''}
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; box-sizing:border-box;">
-            ${isClassScoped ? `
-            <div>
-              <label class="field-label">Target Level (Locked):</label>
-              <div style="background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px; min-height:34px; display:flex; align-items:center; gap:8px; box-sizing:border-box;">
-                <span class="badge" style="background:rgba(56,189,248,0.2); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:12px; font-weight:700; padding:2px 8px; border-radius:4px;">
-                  ${matchedLevelNum === 0 ? '0 (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(matchedLevelNum) : matchedLevelNum + 'th Level')}
-                </span>
-                <span style="font-size:12px; color:#94a3b8; font-weight:600;">(Locked to ${escapeHtml(className)})</span>
-              </div>
-              <input type="hidden" class="wizard-level-chk" value="${matchedLevelNum}" checked />
-            </div>
-            ` : `
-            <div>
-              <label class="field-label">Select Level:</label>
-              <div style="display:flex; flex-wrap:wrap; gap:8px; background:#090d16; padding:6px 10px; border:1px solid rgba(255,255,255,0.08); border-radius:6px; min-height:34px; align-items:center; box-sizing:border-box;">
-                ${displayLevels.map(lvl => `
-                  <label style="display:inline-flex; align-items:center; gap:4px; font-size:12px; cursor:pointer; color:#e2e8f0;">
-                    <input type="checkbox" class="wizard-level-chk" value="${lvl}" ${preSelectedLevels.includes(lvl) || preSelectedLevels.length === 0 ? 'checked' : ''} /> ${lvl === 0 ? '0 (Non-Level)' : (typeof toShortLevel === 'function' ? toShortLevel(lvl) : lvl)}
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-            `}
-
-            <div>
-              <label for="wizard-scope-select" class="field-label">Category Scope:</label>
-              <select id="wizard-scope-select" class="form-control" style="background:#090d16; color:#f8fafc; border:1px solid rgba(255,255,255,0.08); border-radius:6px; font-size:12px; height:34px; padding:0 8px; width:100%; box-sizing:border-box;">
-                ${isLevel2 ? `
-                  <option value="words" selected>● Words Only (Level 2 Words-Only SSOT)</option>
-                ` : `
-                  <option value="all" selected>● All (Words &amp; Phrases — 40 Questions)</option>
-                  <option value="words">○ Words Only (20 Questions)</option>
-                  <option value="phrases">○ Phrases Only (20 Questions)</option>
-                `}
-              </select>
-            </div>
-          </div>
-
-          <!-- Section 2: Task Configuration -->
-          <div class="wizard-card wizard-card-task">
-            <div class="wizard-card-header">
-              <span class="wizard-card-title">
-                ${getSvgIcon('zap', 14)} 1. TASK SETTINGS (TASKS)
-              </span>
-            </div>
-
-            <!-- Row 1: Separate Durations (Words vs Phrases) & Passing Score -->
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; box-sizing:border-box;">
-              <div>
-                <label for="wizard-task-words-pace" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">
-                  WORDS TASK (<span id="words-task-calc-dur">7m</span>)
-                </label>
-                <div style="display:flex; align-items:center; gap:4px;">
-                  <input type="number" id="wizard-task-words-pace" min="5" max="60" value="10" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:32px; width:70px;" title="Seconds per word (default 10s)" />
-                  <span style="font-size:12px; color:#94a3b8;">sec/item</span>
-                </div>
-                <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-words-pace" data-val="10" style="font-size:12px; padding:1px 6px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">10s</button>
-                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-words-pace" data-val="15" style="font-size:12px; padding:1px 6px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">15s</button>
-                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-words-pace" data-val="20" style="font-size:12px; padding:1px 6px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">20s</button>
-                </div>
-                <input type="hidden" id="wizard-task-words-dur" value="${escapeHtml(String(prefillWordsTaskDur || 7))}" />
-              </div>
-
-              <div>
-                <label for="wizard-task-phrases-pace" class="field-label" style="color:var(--phrases-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">
-                  PHRASES TASK (<span id="phrases-task-calc-dur">4m</span>)
-                </label>
-                <div style="display:flex; align-items:center; gap:4px;">
-                  <input type="number" id="wizard-task-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:32px; width:70px;" title="Seconds per phrase (default 20s)" />
-                  <span style="font-size:12px; color:#94a3b8;">sec/item</span>
-                </div>
-                <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-phrases-pace" data-val="15" style="font-size:12px; padding:1px 6px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">15s</button>
-                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-phrases-pace" data-val="20" style="font-size:12px; padding:1px 6px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">20s</button>
-                  <button type="button" class="btn btn-ghost btn-sm pace-preset-btn" data-target="wizard-task-phrases-pace" data-val="30" style="font-size:12px; padding:1px 6px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">30s</button>
-                </div>
-                <input type="hidden" id="wizard-task-phrases-dur" value="${escapeHtml(String(prefillPhrasesTaskDur || 4))}" />
-              </div>
-
-              <div>
-                <label for="wizard-task-min" class="field-label" style="margin-bottom:2px;">MIN. RATE (%)</label>
-                <input type="number" id="wizard-task-min" min="1" max="100" value="${escapeHtml(String(prefillTaskMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:32px; width:100%; box-sizing:border-box;" title="Passing threshold for tasks" />
-                <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-task-min" data-val="60" style="font-size:12px; padding:1px 8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">60% (Grade C)</button>
-                </div>
-              </div>
-            </div>
-
-            <!-- Row 2: Cara Jawab Terpisah & Question Order -->
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; background:rgba(0,0,0,0.22); padding:8px 10px; border-radius:6px; border:1px solid rgba(var(--grade-b-rgb, 149, 255, 0), 0.2); box-sizing:border-box;">
-              <div>
-                <label for="wizard-task-ans-words" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">Words Task</label>
-                <select id="wizard-task-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="selection" ${prefillWordsTaskAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
-                  <option value="spoken" ${prefillWordsTaskAns === 'spoken' ? 'selected' : ''}>Spoken Module (15s)</option>
-                  <option value="written" ${prefillWordsTaskAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
-                  <option value="mixed" ${prefillWordsTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="wizard-task-ans-phrases" class="field-label" style="color:var(--phrases-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">Phrases Task</label>
-                <select id="wizard-task-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="selection" ${prefillPhrasesTaskAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
-                  <option value="spoken" ${prefillPhrasesTaskAns === 'spoken' ? 'selected' : ''}>Spoken Module (20s)</option>
-                  <option value="written" ${prefillPhrasesTaskAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
-                  <option value="mixed" ${prefillPhrasesTaskAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
-                </select>
-              </div>
-
-              <div>
-                <label for="wizard-task-order" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">Task Order</label>
-                <select id="wizard-task-order" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="random" selected>Random</option>
-                  <option value="sequential">Sequential</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Section 3: Exam Configuration -->
-          <div class="wizard-card wizard-card-exam">
-            <div class="wizard-card-header">
-              <span class="wizard-card-title">
-                ${getSvgIcon('clipboard', 14)} 2. EXAM SETTINGS (EXAMS)
-              </span>
-            </div>
-
-            <!-- Dynamic Session Duration Callout -->
-            <div style="background:rgba(0,0,0,0.3); border-left:3px solid var(--exam-color, var(--quad-a, #ff2d87)); padding:6px 10px; border-radius:4px; font-size:12px; color:#cbd5e1; line-height:1.35; box-sizing:border-box;">
-              <strong>Exam Duration:</strong> Automatically calculated per item based on cumulative theme scope (Words: 15s/item, Phrases: 20s/item). Live tutor sessions can also define dedicated time limits when launching exams.
-            </div>
-
-            <div style="display:grid; grid-template-columns:1.25fr 1.25fr 0.75fr 0.85fr; gap:10px; box-sizing:border-box;">
-              <div>
-                <label for="wizard-test-ans-words" class="field-label" style="color:var(--task-color, var(--grade-b, #95ff00)); margin-bottom:2px;">Words Exam</label>
-                <select id="wizard-test-ans-words" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="selection" ${prefillWordsTestAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
-                  <option value="spoken" ${prefillWordsTestAns === 'spoken' ? 'selected' : ''}>Spoken Module (15s)</option>
-                  <option value="written" ${prefillWordsTestAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
-                  <option value="mixed" ${prefillWordsTestAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
-                </select>
-                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                  <input type="number" id="wizard-exam-words-pace" min="5" max="60" value="10" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:26px; width:55px;" title="Seconds per word for exam (default 10s)" />
-                  <span style="font-size:12px; color:#94a3b8;">sec/item</span>
-                </div>
-              </div>
-
-              <div>
-                <label for="wizard-test-ans-phrases" class="field-label" style="color:var(--phrases-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">Phrases Exam</label>
-                <select id="wizard-test-ans-phrases" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="selection" ${prefillPhrasesTestAns === 'selection' ? 'selected' : ''}>Recognition Module (20s)</option>
-                  <option value="spoken" ${prefillPhrasesTestAns === 'spoken' ? 'selected' : ''}>Spoken Module (20s)</option>
-                  <option value="written" ${prefillPhrasesTestAns === 'written' ? 'selected' : ''}>Written Module (30s)</option>
-                  <option value="mixed" ${prefillPhrasesTestAns === 'mixed' ? 'selected' : ''}>Mixed (Hybrid / 25s)</option>
-                </select>
-                <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
-                  <input type="number" id="wizard-exam-phrases-pace" min="5" max="60" value="20" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:26px; width:55px;" title="Seconds per phrase for exam" />
-                  <span style="font-size:12px; color:#94a3b8;">sec/item</span>
-                </div>
-              </div>
-
-              <div>
-                <label for="wizard-test-min" class="field-label" style="margin-bottom:2px;">MIN. RATE (%)</label>
-                <input type="number" id="wizard-test-min" min="1" max="100" value="${escapeHtml(String(prefillTestMin))}" class="form-control" style="background:#090d16; color:#f8fafc; font-weight:700; font-size:12px; height:32px; width:100%; box-sizing:border-box;" title="Passing threshold for exam" />
-                <div style="display:flex; gap:3px; margin-top:4px;">
-                  <button type="button" class="btn btn-ghost btn-sm preset-btn" data-target="wizard-test-min" data-val="60" style="font-size:12px; padding:1px 8px; border:1px solid rgba(255,255,255,0.1); border-radius:4px;">60% (Grade C)</button>
-                </div>
-              </div>
-
-              <div>
-                <label for="wizard-test-order" class="field-label" style="color:var(--exam-color, var(--quad-a, #ff2d87)); margin-bottom:2px;">Exam Order</label>
-                <select id="wizard-test-order" class="form-control" style="background:#090d16; color:#f8fafc; font-size:12px; height:32px; width:100%; box-sizing:border-box;">
-                  <option value="random" selected>Random</option>
-                  <option value="sequential">Sequential</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <!-- Hidden program and institution ID helpers -->
-          <input type="hidden" id="wizard-prog-id" value="${matchedClass?.program_id || window.currentProgId || programs[0]?.id || ''}" />
-          <input type="hidden" id="wizard-inst-id" value="${matchedClass?.institution_id || ''}" />
+        <!-- Modal Body -->
+        <div class="modal-body" id="vocab-modal-body-content">
+          ${buildWizardPanelsHtml(matchedClass)}
         </div>
 
-        <!-- CTA Area (60px SSOT, 1.5px border, Triple Buttons Kiri-Tengah-Kanan) -->
+        <!-- Dedicated 60px CTA Area -->
         <div class="cta-area">
-          <!-- Button 1 (Left): CLOSE (Zero 'Cancel' Invariant) -->
-          <button type="button" class="btn-cta-close" id="wizard-cancel-btn">CLOSE</button>
-
-          <!-- Button 2 (Center): UPDATE SETTINGS ONLY -->
-          <button type="button" class="btn-cta-secondary" id="wizard-update-only-btn">
-            ${getSvgIcon('zap', 14)} UPDATE SETTINGS ONLY
-          </button>
-
-          <!-- Button 3 (Right): GENERATE & SYNC ALL (Pillar D Violet SSOT) -->
-          <button type="button" class="btn-cta-primary" id="wizard-generate-btn">
-            ${getSvgIcon('zap', 14)} GENERATE &amp; SYNC ALL
-          </button>
+          <button type="button" class="btn-cta-close" id="modal-btn-close">CLOSE</button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button type="button" class="btn-cta-save" id="modal-btn-update-only">
+              ${getSvgIcon('zap', 14)} UPDATE SETTINGS ONLY
+            </button>
+            <button type="button" class="btn-cta-sync" id="modal-btn-generate-sync">
+              ${getSvgIcon('zap', 14)} GENERATE &amp; SYNC ALL
+            </button>
+          </div>
         </div>
       </div>
     `;
 
     document.body.appendChild(overlay);
 
-    // Attach Preset Buttons handler
-    overlay.querySelectorAll('.preset-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const targetVal = btn.dataset.val;
-        const input = overlay.querySelector('#' + targetId);
-        if (input) {
-          input.value = targetVal;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      });
+    const closeModal = () => overlay.remove();
+    overlay.querySelector('#modal-btn-close').onclick = closeModal;
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeModal();
     });
 
-    overlay.querySelectorAll('.pace-preset-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
-        const targetVal = btn.dataset.val;
-        const input = overlay.querySelector('#' + targetId);
-        if (input) {
-          input.value = targetVal;
-          input.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-      });
-    });
+    const readWizardFormValues = () => {
+      const getVal = (id, fallback) => overlay.querySelector(id)?.value ?? fallback;
+      const getInt = (id, fallback) => {
+        const n = parseInt(overlay.querySelector(id)?.value, 10);
+        return isNaN(n) ? fallback : n;
+      };
 
-    // Real-time Duration Auto-Calibration
-    const recalculateDurations = () => {
-      const wordsAns = overlay.querySelector('#wizard-task-ans-words')?.value || 'spoken';
-      const phrasesAns = overlay.querySelector('#wizard-task-ans-phrases')?.value || 'spoken';
-      const wordsPace = parseInt(overlay.querySelector('#wizard-task-words-pace')?.value, 10) || 10;
-      const phrasesPace = parseInt(overlay.querySelector('#wizard-task-phrases-pace')?.value, 10) || 20;
+      const wordsTaskCustom = overlay.querySelector('#wiz-words-task-custom')?.checked ?? false;
+      const wordsTaskQ = wordsTaskCustom ? (getVal('#wiz-words-task-questions', '10') || '10') : 'ALL';
+      const wordsTaskPace = getInt('#wiz-words-task-pace', 15);
+      const wordsTaskCount = wordsTaskCustom ? (parseInt(wordsTaskQ, 10) || 10) : 20;
+      const wordsTaskDur = Math.max(1, Math.ceil(wordsTaskCount * wordsTaskPace / 60));
 
-      const wordsDur = calculateAutoDurationMinutes(40, wordsAns, 'words', wordsPace, 1);
-      const phrasesDur = calculateAutoDurationMinutes(10, phrasesAns, 'phrases', phrasesPace, 1);
+      const phrasesTaskCustom = overlay.querySelector('#wiz-phrases-task-custom')?.checked ?? false;
+      const phrasesTaskQ = phrasesTaskCustom ? (getVal('#wiz-phrases-task-questions', '10') || '10') : 'ALL';
+      const phrasesTaskPace = getInt('#wiz-phrases-task-pace', 20);
+      const phrasesTaskCount = phrasesTaskCustom ? (parseInt(phrasesTaskQ, 10) || 10) : 10;
+      const phrasesTaskDur = Math.max(1, Math.ceil(phrasesTaskCount * phrasesTaskPace / 60));
 
-      const wordsDurBadge = overlay.querySelector('#words-task-calc-dur');
-      if (wordsDurBadge) wordsDurBadge.textContent = wordsDur + 'm';
-      const wordsDurInput = overlay.querySelector('#wizard-task-words-dur');
-      if (wordsDurInput) wordsDurInput.value = wordsDur;
+      const wordsExamCustom = overlay.querySelector('#wiz-words-exam-custom')?.checked ?? false;
+      const wordsExamQ = wordsExamCustom ? (getVal('#wiz-words-exam-questions', matchedClass.hasPhrases ? '30' : '20') || (matchedClass.hasPhrases ? '30' : '20')) : 'ALL';
+      const wordsExamPace = getInt('#wiz-words-exam-pace', 15);
+      const wordsExamCount = wordsExamCustom ? (parseInt(wordsExamQ, 10) || 30) : (matchedClass.hasPhrases ? 30 : 20);
+      const wordsExamDur = Math.max(1, Math.ceil(wordsExamCount * wordsExamPace / 60));
 
-      const phrasesDurBadge = overlay.querySelector('#phrases-task-calc-dur');
-      if (phrasesDurBadge) phrasesDurBadge.textContent = phrasesDur + 'm';
-      const phrasesDurInput = overlay.querySelector('#wizard-task-phrases-dur');
-      if (phrasesDurInput) phrasesDurInput.value = phrasesDur;
-    };
-
-    // Live Event Listeners for real-time recalculation
-    ['wizard-task-words-pace', 'wizard-task-phrases-pace'].forEach(id => {
-      const el = overlay.querySelector('#' + id);
-      if (el) {
-        el.addEventListener('input', recalculateDurations);
-        el.addEventListener('change', recalculateDurations);
-      }
-    });
-
-    overlay.querySelector('#wizard-task-ans-words')?.addEventListener('change', (e) => {
-      const paceInput = overlay.querySelector('#wizard-task-words-pace');
-      if (paceInput) {
-        paceInput.value = 10;
-      }
-      recalculateDurations();
-    });
-
-    overlay.querySelector('#wizard-task-ans-phrases')?.addEventListener('change', (e) => {
-      const paceInput = overlay.querySelector('#wizard-task-phrases-pace');
-      if (paceInput) {
-        paceInput.value = 20;
-      }
-      recalculateDurations();
-    });
-
-    // Run initial calibration
-    recalculateDurations();
-
-    const closeOverlay = () => overlay.remove();
-    overlay.querySelector('#wizard-cancel-btn').onclick = closeOverlay;
-
-    const getWizardConfig = () => {
-      const selectedLevels = (isClassScoped && matchedLevelNum != null)
-        ? [matchedLevelNum]
-        : Array.from(overlay.querySelectorAll('.wizard-level-chk:checked')).map(cb => parseInt(cb.value, 10));
-      const progId = overlay.querySelector('#wizard-prog-id').value;
-      const institutionId = overlay.querySelector('#wizard-inst-id')?.value || null;
-      const category = isLevel2 ? 'words' : overlay.querySelector('#wizard-scope-select').value;
-      const durEl = overlay.querySelector('#wizard-task-dur') || overlay.querySelector('#wizard-task-dur');
-      const wordsDurEl = overlay.querySelector('#wizard-task-words-dur');
-      const phrasesDurEl = overlay.querySelector('#wizard-task-phrases-dur');
-      const minEl = overlay.querySelector('#wizard-task-min') || overlay.querySelector('#wizard-task-min');
-      const wordsAnsEl = overlay.querySelector('#wizard-task-ans-words') || overlay.querySelector('#wizard-task-ans-words');
-      const phrasesAnsEl = overlay.querySelector('#wizard-task-ans-phrases') || overlay.querySelector('#wizard-task-ans-phrases');
-
-      const wordsPace = parseInt(overlay.querySelector('#wizard-task-words-pace')?.value, 10) || 10;
-      const phrasesPace = parseInt(overlay.querySelector('#wizard-task-phrases-pace')?.value, 10) || 20;
-      const wordsExamPace = parseInt(overlay.querySelector('#wizard-exam-words-pace')?.value, 10) || 10;
-      const phrasesExamPace = parseInt(overlay.querySelector('#wizard-exam-phrases-pace')?.value, 10) || 20;
-
-      const wordsQuizAnswer = wordsAnsEl ? wordsAnsEl.value : 'spoken';
-      const phrasesQuizAnswer = phrasesAnsEl ? phrasesAnsEl.value : 'spoken';
-
-      const wordsQuizDuration = parseInt(wordsDurEl?.value, 10) || calculateAutoDurationMinutes(40, wordsQuizAnswer, 'words', wordsPace, 1);
-      const phrasesQuizDuration = parseInt(phrasesDurEl?.value, 10) || calculateAutoDurationMinutes(10, phrasesQuizAnswer, 'phrases', phrasesPace, 1);
-      const quizDuration = wordsQuizDuration;
-      const quizPassing = parseInt(minEl?.value, 10) || 60;
-      const wordsTestAnswer = overlay.querySelector('#wizard-test-ans-words').value;
-      const phrasesTestAnswer = overlay.querySelector('#wizard-test-ans-phrases').value;
-      const testPassing = parseInt(overlay.querySelector('#wizard-test-min').value, 10) || 60;
-      const taskQuestionOrder = overlay.querySelector('#wizard-task-order')?.value === 'sequential' ? 'sequential' : 'random';
-      const examQuestionOrder = overlay.querySelector('#wizard-test-order')?.value === 'sequential' ? 'sequential' : 'random';
+      const phrasesExamCustom = overlay.querySelector('#wiz-phrases-exam-custom')?.checked ?? false;
+      const phrasesExamQ = phrasesExamCustom ? (getVal('#wiz-phrases-exam-questions', '10') || '10') : 'ALL';
+      const phrasesExamPace = getInt('#wiz-phrases-exam-pace', 20);
+      const phrasesExamCount = phrasesExamCustom ? (parseInt(phrasesExamQ, 10) || 10) : 10;
+      const phrasesExamDur = Math.max(1, Math.ceil(phrasesExamCount * phrasesExamPace / 60));
 
       return {
-        selectedLevels,
-        progId,
-        institutionId,
-        category,
-        quizDuration,
-        taskDuration: quizDuration,
-        wordsTaskDuration: wordsQuizDuration,
-        phrasesTaskDuration: phrasesQuizDuration,
-        wordsTaskPaceSeconds: wordsPace,
-        phrasesTaskPaceSeconds: phrasesPace,
-        wordsExamPaceSeconds: wordsExamPace,
-        phrasesExamPaceSeconds: phrasesExamPace,
-        wordsQuizAnswer,
-        wordsTaskAnswer: wordsQuizAnswer,
-        phrasesQuizAnswer,
-        phrasesTaskAnswer: phrasesQuizAnswer,
-        quizPassing,
-        taskPassing: quizPassing,
-        wordsTestAnswer,
-        phrasesTestAnswer,
-        testPassing,
-        taskQuestionOrder,
-        examQuestionOrder,
-        targetClassId: currentClassId
+        taskRepetitions: getInt('#wiz-task-reps', 7),
+        taskMinScore: Math.min(100, Math.max(1, getInt('#wiz-task-min-score', 70))),
+        examMinScore: Math.min(100, Math.max(1, getInt('#wiz-exam-min-score', 60))),
+        taskQuestionOrder: getVal('#wiz-task-order', 'random') === 'sequential' ? 'sequential' : 'random',
+        examQuestionOrder: getVal('#wiz-exam-order', 'random') === 'sequential' ? 'sequential' : 'random',
+        wordsTaskQuestions: wordsTaskQ,
+        wordsTaskQuestionsCustom: wordsTaskCustom,
+        phrasesTaskQuestions: phrasesTaskQ,
+        phrasesTaskQuestionsCustom: phrasesTaskCustom,
+        wordsTaskAnswer: getVal('#wiz-words-task-answer', 'spoken'),
+        phrasesTaskAnswer: getVal('#wiz-phrases-task-answer', 'spoken'),
+        wordsTaskPace,
+        phrasesTaskPace,
+        wordsTaskDur,
+        phrasesTaskDur,
+        wordsExamQuestions: wordsExamQ,
+        wordsExamQuestionsCustom: wordsExamCustom,
+        phrasesExamQuestions: phrasesExamQ,
+        phrasesExamQuestionsCustom: phrasesExamCustom,
+        wordsExamAnswer: getVal('#wiz-words-exam-answer', 'spoken'),
+        phrasesExamAnswer: getVal('#wiz-phrases-exam-answer', 'selection'),
+        wordsExamPace,
+        phrasesExamPace,
+        wordsExamDur,
+        phrasesExamDur
       };
     };
 
-    // 1. UPDATE EXISTING SETTINGS ONLY
-    overlay.querySelector('#wizard-update-only-btn').onclick = async () => {
-      const cfg = getWizardConfig();
-      if (!cfg.targetClassId) {
-        if (window.showToast) window.showToast('Class ID not found.', 'error');
-        return;
-      }
+    const syncWizardValuesToSettings = () => {
+      const vals = readWizardFormValues();
+      const targets = currentScope === 'all' ? vocabClasses : [matchedClass];
+      targets.forEach(c => {
+        c.settings = { ...c.settings, ...vals };
+      });
 
-      const btn = overlay.querySelector('#wizard-update-only-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<span>⏳ UPDATING...</span>';
+      // Update Live Duration Displays
+      const wordsTaskDurEl = overlay.querySelector('#wiz-words-task-dur-display');
+      if (wordsTaskDurEl) wordsTaskDurEl.textContent = `${vals.wordsTaskDur}m`;
 
-      try {
-        const res = await updateClassTestsConfig({
-          classId: cfg.targetClassId,
-          taskDurationMinutes: cfg.taskDuration,
-          wordsTaskDurationMinutes: cfg.wordsTaskDuration,
-          phrasesTaskDurationMinutes: cfg.phrasesTaskDuration,
-          wordsTaskPaceSeconds: cfg.wordsTaskPaceSeconds,
-          phrasesTaskPaceSeconds: cfg.phrasesTaskPaceSeconds,
-          wordsExamPaceSeconds: cfg.wordsExamPaceSeconds,
-          phrasesExamPaceSeconds: cfg.phrasesExamPaceSeconds,
-          wordsTaskAnswerType: cfg.wordsTaskAnswer,
-          phrasesTaskAnswerType: cfg.phrasesTaskAnswer,
-          taskPassingScore: cfg.taskPassing,
-          wordsTestAnswerType: cfg.wordsTestAnswer,
-          phrasesTestAnswerType: cfg.phrasesTestAnswer,
-          testPassingScore: cfg.testPassing,
-          taskQuestionOrder: cfg.taskQuestionOrder,
-          examQuestionOrder: cfg.examQuestionOrder
-        });
+      const phrasesTaskDurEl = overlay.querySelector('#wiz-phrases-task-dur-display');
+      if (phrasesTaskDurEl) phrasesTaskDurEl.textContent = `${matchedClass.hasPhrases ? vals.phrasesTaskDur : 0}m`;
 
-        overlay.remove();
-        const msg = `Settings successfully applied: ${res.updatedTasks} Tasks (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m), ${res.updatedTests} Exams updated!`;
-        if (window.showToast) window.showToast(msg, 'success');
-        else alert(msg);
+      const wordsExamDurEl = overlay.querySelector('#wiz-words-exam-dur-display');
+      if (wordsExamDurEl) wordsExamDurEl.textContent = `${vals.wordsExamDur}m`;
 
-        if (onComplete) onComplete(res);
-      } catch (err) {
-        console.error(err);
-        btn.disabled = false;
-        btn.innerHTML = `${getSvgIcon('zap', 14)} UPDATE SETTINGS ONLY`;
-        if (window.showToast) window.showToast('Failed to update: ' + err.message, 'error');
-        else alert('Failed to update: ' + err.message);
+      const phrasesExamDurEl = overlay.querySelector('#wiz-phrases-exam-dur-display');
+      if (phrasesExamDurEl) phrasesExamDurEl.textContent = `${matchedClass.hasPhrases ? vals.phrasesExamDur : 0}m`;
+
+      // Update Preview Table
+      const previewTableWrap = overlay.querySelector('#modal-matrix-table-wrap');
+      if (previewTableWrap) {
+        previewTableWrap.innerHTML = buildMatrixHtml(
+          vocabClasses,
+          matchedClass.id,
+          false,
+          previewFilterMode === 'active' ? matchedClass.id : null
+        );
+        wirePreviewTableTriggers();
       }
     };
 
-    // 2. GENERATE & SYNC ALL FROM BLUEPRINT / VAULT
-    overlay.querySelector('#wizard-generate-btn').onclick = async () => {
-      const cfg = getWizardConfig();
-      if (cfg.selectedLevels.length === 0) {
-        if (window.showToast) window.showToast('Please select at least one level.', 'error');
-        else alert('Please select at least one level.');
-        return;
+    const wirePreviewTableTriggers = () => {
+      overlay.querySelectorAll('.btn-unlock-row').forEach(btn => {
+        btn.onclick = () => {
+          const cid = btn.dataset.classId;
+          const found = vocabClasses.find(c => String(c.id) === String(cid));
+          if (found) {
+            matchedClass = found;
+            reRenderWizardBody();
+          }
+        };
+      });
+    };
+
+    const wireWizardInputs = () => {
+      // 1. Target Class Selection dropdown
+      const classSelect = overlay.querySelector('#wiz-active-class-select');
+      if (classSelect) {
+        classSelect.onchange = () => {
+          const found = vocabClasses.find(c => String(c.id) === String(classSelect.value));
+          if (found) {
+            matchedClass = found;
+            reRenderWizardBody();
+          }
+        };
       }
 
-      const loadingSubtitle = isClassScoped
-        ? `Building Task hierarchy (Words: ${cfg.wordsTaskDuration}m) &amp; Exams for ${matchedLevelNum === 0 ? 'Level 0' : (typeof toShortLevel === 'function' ? toShortLevel(matchedLevelNum) : 'Level ' + matchedLevelNum)} in class ${escapeHtml(className)}...`
-        : `Building Task hierarchy (Words: ${cfg.wordsTaskDuration}m, Phrases: ${cfg.phrasesTaskDuration}m) &amp; Exams for Level ${cfg.selectedLevels.join(', ')}...`;
+      // 2. Segmented Scope Toggle
+      overlay.querySelectorAll('.wiz-scope-btn').forEach(btn => {
+        btn.onclick = () => {
+          currentScope = btn.dataset.scope || 'this';
+          overlay.querySelectorAll('.wiz-scope-btn').forEach(b => {
+            const isActive = b.dataset.scope === currentScope;
+            b.classList.toggle('active', isActive);
+            b.style.background = isActive ? 'rgba(56,189,248,0.25)' : 'transparent';
+            b.style.color = isActive ? '#38bdf8' : '#94a3b8';
+            b.style.fontWeight = isActive ? '800' : '700';
+          });
+          syncWizardValuesToSettings();
+        };
+      });
 
-      overlay.innerHTML = `
-        <div style="background:#0f172a; padding:2rem 2.5rem; border-radius:12px; width:440px; text-align:center; font-family:Inter,sans-serif; color:white; border:1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-          <div class="topscore-loading-center" style="min-height: 120px !important;">
-            <div class="spinner"></div>
-            <h3 style="margin:0 0 6px 0; font-size: 16px; font-weight:700; color:#f8fafc;">Generating Curriculum Tests</h3>
-            <p style="color:#94a3b8; font-size: 12px; margin:0; line-height:1.4;">
-              ${loadingSubtitle}
-            </p>
-          </div>
-        </div>
-      `;
+      // 3. Question Order Segmented Toggles
+      overlay.querySelectorAll('.wiz-order-task-btn').forEach(btn => {
+        btn.onclick = () => {
+          const val = btn.dataset.val;
+          const hiddenInp = overlay.querySelector('#wiz-task-order');
+          if (hiddenInp) hiddenInp.value = val;
+          overlay.querySelectorAll('.wiz-order-task-btn').forEach(b => {
+            const isActive = b.dataset.val === val;
+            b.classList.toggle('active', isActive);
+            b.style.background = isActive ? 'rgba(149,255,0,0.22)' : 'transparent';
+            b.style.color = isActive ? '#95ff00' : '#94a3b8';
+            b.style.fontWeight = isActive ? '800' : '700';
+          });
+          syncWizardValuesToSettings();
+        };
+      });
+
+      overlay.querySelectorAll('.wiz-order-exam-btn').forEach(btn => {
+        btn.onclick = () => {
+          const val = btn.dataset.val;
+          const hiddenInp = overlay.querySelector('#wiz-exam-order');
+          if (hiddenInp) hiddenInp.value = val;
+          overlay.querySelectorAll('.wiz-order-exam-btn').forEach(b => {
+            const isActive = b.dataset.val === val;
+            b.classList.toggle('active', isActive);
+            b.style.background = isActive ? 'rgba(255,45,135,0.22)' : 'transparent';
+            b.style.color = isActive ? '#ff2d87' : '#94a3b8';
+            b.style.fontWeight = isActive ? '800' : '700';
+          });
+          syncWizardValuesToSettings();
+        };
+      });
+
+      // 4. Preset Pill Buttons
+      overlay.querySelectorAll('.wiz-preset-pill, .wiz-preset-pill-mini').forEach(btn => {
+        btn.onclick = () => {
+          const targetId = btn.dataset.target;
+          const val = btn.dataset.val;
+          const inp = overlay.querySelector('#' + targetId);
+          if (inp && val !== undefined) {
+            inp.value = val;
+            btn.parentElement?.querySelectorAll('.active')?.forEach(a => a.classList.remove('active'));
+            btn.classList.add('active');
+            syncWizardValuesToSettings();
+          }
+        };
+      });
+
+      // 5. Questions Unified Capsule Toggles & Listeners
+      const updateCapsuleUi = (chk) => {
+        const capsule = overlay.querySelector('#' + chk.dataset.capsule);
+        const inp = overlay.querySelector('#' + chk.dataset.target);
+        const btnAll = overlay.querySelector('#' + chk.dataset.btnAll);
+        const customLabel = overlay.querySelector('#' + chk.dataset.customLabel);
+        const accentColor = chk.dataset.color || '#95ff00';
+        const accentRgb = chk.dataset.rgb || '149,255,0';
+        const isChecked = chk.checked;
+
+        if (capsule) {
+          capsule.style.borderColor = isChecked ? accentColor : 'rgba(255,255,255,0.2)';
+        }
+        if (btnAll) {
+          btnAll.style.background = !isChecked ? `rgba(${accentRgb},0.25)` : 'transparent';
+          btnAll.style.color = !isChecked ? accentColor : '#64748b';
+          btnAll.style.fontWeight = !isChecked ? '800' : '700';
+        }
+        if (customLabel) {
+          customLabel.style.background = isChecked ? `rgba(${accentRgb},0.12)` : 'transparent';
+        }
+        if (inp) {
+          inp.disabled = !isChecked;
+          inp.style.color = isChecked ? '#ffffff' : '#64748b';
+          inp.style.opacity = isChecked ? '1' : '0.4';
+          if (isChecked) inp.focus();
+        }
+      };
+
+      overlay.querySelectorAll('.wiz-q-custom-check').forEach(chk => {
+        chk.onchange = () => {
+          updateCapsuleUi(chk);
+          syncWizardValuesToSettings();
+        };
+      });
+
+      overlay.querySelectorAll('.wiz-q-btn-all').forEach(btn => {
+        btn.onclick = (e) => {
+          e.preventDefault();
+          const chk = overlay.querySelector('#' + btn.dataset.targetCheck);
+          if (chk && chk.checked) {
+            chk.checked = false;
+            updateCapsuleUi(chk);
+            syncWizardValuesToSettings();
+          }
+        };
+      });
+
+      overlay.querySelectorAll('.wiz-q-num-input').forEach(inp => {
+        inp.addEventListener('focus', () => {
+          const chk = overlay.querySelector('#' + inp.dataset.check);
+          if (chk && !chk.checked) {
+            chk.checked = true;
+            updateCapsuleUi(chk);
+            syncWizardValuesToSettings();
+          }
+        });
+      });
+
+      // 6. Live Input & Select Listeners
+      overlay.querySelectorAll('#wiz-task-reps, #wiz-task-min-score, #wiz-words-task-questions, #wiz-words-task-answer, #wiz-words-task-pace, #wiz-phrases-task-questions, #wiz-phrases-task-answer, #wiz-phrases-task-pace, #wiz-exam-min-score, #wiz-words-exam-questions, #wiz-words-exam-answer, #wiz-words-exam-pace, #wiz-phrases-exam-questions, #wiz-phrases-exam-answer, #wiz-phrases-exam-pace').forEach(el => {
+        el.addEventListener('input', syncWizardValuesToSettings);
+        el.addEventListener('change', syncWizardValuesToSettings);
+      });
+
+      // 7. Preview Table Filter & Collapse Controls
+      const btnFilterActive = overlay.querySelector('#wiz-btn-filter-active');
+      const btnFilterAll = overlay.querySelector('#wiz-btn-filter-all');
+      if (btnFilterActive && btnFilterAll) {
+        btnFilterActive.onclick = () => {
+          previewFilterMode = 'active';
+          btnFilterActive.style.background = 'rgba(56,189,248,0.25)';
+          btnFilterActive.style.color = '#38bdf8';
+          btnFilterActive.style.fontWeight = '800';
+          btnFilterAll.style.background = 'transparent';
+          btnFilterAll.style.color = '#94a3b8';
+          btnFilterAll.style.fontWeight = '700';
+          const wrap = overlay.querySelector('#modal-matrix-table-wrap');
+          if (wrap) {
+            wrap.style.maxHeight = '250px';
+            wrap.innerHTML = buildMatrixHtml(vocabClasses, matchedClass.id, false, matchedClass.id);
+            wirePreviewTableTriggers();
+          }
+        };
+        btnFilterAll.onclick = () => {
+          previewFilterMode = 'all';
+          btnFilterAll.style.background = 'rgba(56,189,248,0.25)';
+          btnFilterAll.style.color = '#38bdf8';
+          btnFilterAll.style.fontWeight = '800';
+          btnFilterActive.style.background = 'transparent';
+          btnFilterActive.style.color = '#94a3b8';
+          btnFilterActive.style.fontWeight = '700';
+          const wrap = overlay.querySelector('#modal-matrix-table-wrap');
+          if (wrap) {
+            wrap.style.maxHeight = '320px';
+            wrap.innerHTML = buildMatrixHtml(vocabClasses, matchedClass.id, false, null);
+            wirePreviewTableTriggers();
+          }
+        };
+      }
+
+      const btnToggleMatrix = overlay.querySelector('#wiz-btn-toggle-matrix');
+      if (btnToggleMatrix) {
+        btnToggleMatrix.onclick = () => {
+          isPreviewVisible = !isPreviewVisible;
+          const wrap = overlay.querySelector('#modal-matrix-table-wrap');
+          if (wrap) wrap.style.display = isPreviewVisible ? 'block' : 'none';
+          btnToggleMatrix.textContent = isPreviewVisible ? '▾ Hide Preview' : '▸ Show Preview';
+        };
+      }
+
+      wirePreviewTableTriggers();
+    };
+
+    const reRenderWizardBody = () => {
+      const bodyContent = overlay.querySelector('#vocab-modal-body-content');
+      if (bodyContent) {
+        bodyContent.innerHTML = buildWizardPanelsHtml(matchedClass);
+        wireWizardInputs();
+      }
+    };
+
+    wireWizardInputs();
+
+    // 1. UPDATE SETTINGS ONLY
+    overlay.querySelector('#modal-btn-update-only').onclick = async () => {
+      const isApplyAll = currentScope === 'all';
+      const targetIds = isApplyAll ? vocabClasses.map(c => c.id).filter(Boolean) : [matchedClass.id];
+
+      const btn = overlay.querySelector('#modal-btn-update-only');
+      btn.disabled = true;
+      btn.innerHTML = `${getSvgIcon('clock', 14)} UPDATING...`;
 
       try {
-        const res = await autoGenerateTestsHierarchy(cfg.selectedLevels, {
-          programId: cfg.progId,
-          institutionId: cfg.institutionId,
-          explicitClassId: cfg.targetClassId,
-          category: cfg.category,
-          taskDurationMinutes: cfg.taskDuration,
-          wordsTaskDurationMinutes: cfg.wordsTaskDuration,
-          phrasesTaskDurationMinutes: cfg.phrasesTaskDuration,
-          wordsTaskPaceSeconds: cfg.wordsTaskPaceSeconds,
-          phrasesTaskPaceSeconds: cfg.phrasesTaskPaceSeconds,
-          wordsExamPaceSeconds: cfg.wordsExamPaceSeconds,
-          phrasesExamPaceSeconds: cfg.phrasesExamPaceSeconds,
-          wordsTaskAnswerType: cfg.wordsTaskAnswer,
-          phrasesTaskAnswerType: cfg.phrasesTaskAnswer,
-          taskPassingScore: cfg.taskPassing,
-          wordsTestAnswerType: cfg.wordsTestAnswer,
-          phrasesTestAnswerType: cfg.phrasesTestAnswer,
-          testPassingScore: cfg.testPassing,
-          taskQuestionOrder: cfg.taskQuestionOrder,
-          examQuestionOrder: cfg.examQuestionOrder
-        });
+        let updatedCount = 0;
+        const vals = readWizardFormValues();
+        for (const cid of targetIds) {
+          await saveClassTestSettings(cid, vals, true);
+          await updateClassTestsConfig({
+            classId: cid,
+            taskRepetitions: vals.taskRepetitions,
+            taskPassingScore: vals.taskMinScore,
+            testPassingScore: vals.examMinScore,
+            taskDurationMinutes: vals.wordsTaskDur,
+            wordsTaskDurationMinutes: vals.wordsTaskDur,
+            phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+            wordsTaskPaceSeconds: vals.wordsTaskPace,
+            phrasesTaskPaceSeconds: vals.phrasesTaskPace,
+            wordsExamPaceSeconds: vals.wordsExamPace,
+            phrasesExamPaceSeconds: vals.phrasesExamPace,
+            wordsTaskAnswerType: vals.wordsTaskAnswer,
+            phrasesTaskAnswerType: vals.phrasesTaskAnswer,
+            wordsTestAnswerType: vals.wordsExamAnswer,
+            phrasesTestAnswerType: vals.phrasesExamAnswer,
+            taskQuestionOrder: vals.taskQuestionOrder,
+            examQuestionOrder: vals.examQuestionOrder
+          });
+          updatedCount++;
+        }
 
+        showToast(`Settings updated successfully for ${updatedCount} Vocabulary class(es)!`, 'success');
         overlay.remove();
-        if (typeof clearAdminCache === 'function') clearAdminCache('tests');
-        if (window._classHubCache && cfg.targetClassId) delete window._classHubCache[cfg.targetClassId];
-        const msg = `Auto-Gen Success: ${res.tasks ?? 0} Tasks, ${res.exams ?? 0} Exams created (${res.updated ?? 0} synchronized)!`;
-        if (window.showToast) window.showToast(msg, 'success');
-        else alert(msg);
-
-        if (onComplete) onComplete(res);
+        if (onComplete) onComplete({ success: true, count: updatedCount });
       } catch (err) {
+        console.error('[openVocabularySystemModal] Update error:', err);
+        showToast('Failed to update settings: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `${getSvgIcon('zap', 14)} UPDATE SETTINGS ONLY`;
+      }
+    };
+
+    // 2. GENERATE & SYNC ALL
+    overlay.querySelector('#modal-btn-generate-sync').onclick = async () => {
+      const isApplyAll = currentScope === 'all';
+      const targetClasses = isApplyAll ? vocabClasses : [matchedClass];
+
+      const btn = overlay.querySelector('#modal-btn-generate-sync');
+      btn.disabled = true;
+      btn.innerHTML = `${getSvgIcon('clock', 14)} GENERATING & SYNCING...`;
+
+      try {
+        let totalTasks = 0;
+        let totalExams = 0;
+        const vals = readWizardFormValues();
+
+        for (const tc of targetClasses) {
+          if (!tc.id) continue;
+          await saveClassTestSettings(tc.id, vals, true);
+
+          const res = await autoGenerateTestsHierarchy([tc.levelNumber], {
+            programId: tc.programId,
+            institutionId: tc.institutionId,
+            explicitClassId: tc.id,
+            category: tc.hasPhrases ? 'all' : 'words',
+            taskDurationMinutes: vals.wordsTaskDur,
+            wordsTaskDurationMinutes: vals.wordsTaskDur,
+            phrasesTaskDurationMinutes: vals.phrasesTaskDur,
+            wordsTaskPaceSeconds: vals.wordsTaskPace,
+            phrasesTaskPaceSeconds: vals.phrasesTaskPace,
+            wordsExamPaceSeconds: vals.wordsExamPace,
+            phrasesExamPaceSeconds: vals.phrasesExamPace,
+            wordsTaskAnswerType: vals.wordsTaskAnswer,
+            phrasesTaskAnswerType: vals.phrasesTaskAnswer,
+            wordsTestAnswerType: vals.wordsExamAnswer,
+            phrasesTestAnswerType: vals.phrasesExamAnswer,
+            taskPassingScore: vals.taskMinScore,
+            testPassingScore: vals.examMinScore,
+            taskQuestionOrder: vals.taskQuestionOrder,
+            examQuestionOrder: vals.examQuestionOrder
+          });
+          totalTasks += (res.tasks ?? 0);
+          totalExams += (res.exams ?? 0);
+        }
+
+        if (typeof clearAdminCache === 'function') clearAdminCache('tests');
+        showToast(`Auto-Gen Success: ${totalTasks} Tasks, ${totalExams} Exams synchronized!`, 'success');
         overlay.remove();
-        console.error(err);
-        if (window.showToast) window.showToast('Auto-Generate Failed: ' + err.message, 'error');
-        else alert('Auto-Generate Failed: ' + err.message);
+        if (onComplete) onComplete({ success: true, tasks: totalTasks, exams: totalExams });
+      } catch (err) {
+        console.error('[openVocabularySystemModal] Sync error:', err);
+        showToast('Auto-Generate Failed: ' + err.message, 'error');
+        btn.disabled = false;
+        btn.innerHTML = `${getSvgIcon('zap', 14)} GENERATE &amp; SYNC ALL`;
       }
     };
 
   } catch (err) {
     if (loading.parentNode) loading.remove();
-    console.error(err);
-    if (window.showToast) window.showToast(err.message, 'error');
-    else alert(err.message);
+    console.error('[openVocabularySystemModal] Error:', err);
+    showToast('Failed to open Vocabulary System: ' + err.message, 'error');
   }
 }
+
+// Canonical Aliases for Backward Compatibility
+export const openAutoGenerateModal = openVocabularySystemModal;

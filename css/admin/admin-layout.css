@@ -27,7 +27,7 @@
   /* Tactical Status & Accent Tokens - Mapped to Authoritative Grade Vault (Rule 26) */
   --fm-accent-pitch: var(--grade-a);       /* Academy pitch green (Completed, Passing, Online) */
   --fm-accent-tactical: var(--primary-tactical, #38bdf8);    /* Tactical blue (Primary highlight, Selected tab) */
-  --fm-accent-indigo: #6366f1;      /* Academy crest indigo */
+  --fm-accent-indigo: var(--primary-tactical, #38bdf8);      /* Academy crest indigo */
   --fm-accent-amber: var(--grade-c);       /* Tactical amber/yellow (Pending review, Deadlines) */
   --fm-accent-crimson: var(--grade-e);     /* Urgent / Danger / Below threshold */
   --fm-accent-slate: #94a3b8;       /* Neutral status */
@@ -277,26 +277,26 @@ body {
 
 .nav-domain-group[data-domain="board"] .nav-domain-header,
 .nav-domain-group[data-domain="board"] .domain-icon {
-  color: var(--quad-b, var(--grade-d, #FF8C00)) !important;
+  color: var(--quad-b, #FF8C00) !important;
 }
 .nav-domain-group[data-domain="board"] .admin-nav-item.active {
-  border-left: 3px solid var(--quad-b, var(--grade-d, #FF8C00)) !important;
+  border-left: 3px solid var(--quad-b, #FF8C00) !important;
 }
 
 .nav-domain-group[data-domain="class"] .nav-domain-header,
 .nav-domain-group[data-domain="class"] .domain-icon {
-  color: var(--quad-c, var(--grade-b, #95FF00)) !important;
+  color: var(--quad-c, #95FF00) !important;
 }
 .nav-domain-group[data-domain="class"] .admin-nav-item.active {
-  border-left: 3px solid var(--quad-c, var(--grade-b, #95FF00)) !important;
+  border-left: 3px solid var(--quad-c, #95FF00) !important;
 }
 
 .nav-domain-group[data-domain="desk"] .nav-domain-header,
 .nav-domain-group[data-domain="desk"] .domain-icon {
-  color: var(--quad-d, #c084fc) !important;
+  color: var(--quad-d, #a855f7) !important;
 }
 .nav-domain-group[data-domain="desk"] .admin-nav-item.active {
-  border-left: 3px solid var(--quad-d, #c084fc) !important;
+  border-left: 3px solid var(--quad-d, #a855f7) !important;
 }
 
 .sidebar-svg-icon {
@@ -529,7 +529,7 @@ body {
 }
 
 .btn-theme-toggle[data-theme="navy"].active {
-  background: #0284c7 !important;
+  background: var(--primary-tactical, #38bdf8) !important;
   color: #ffffff !important;
 }
 
@@ -1006,8 +1006,8 @@ body.tenant-top #divider-c-d {
   border-color: var(--fm-accent-tactical);
 }
 .btn-primary:hover {
-  background: #7dd3fc;
-  border-color: #7dd3fc;
+  background: var(--primary-tactical, #38bdf8);
+  border-color: var(--primary-tactical, #38bdf8);
 }
 
 .btn-secondary {
@@ -1921,7 +1921,7 @@ div#class-analytics-grid,
   border-right: 2px solid rgba(56, 189, 248, 0.35) !important;
 }
 #blueprint-matrix-table thead tr.bp-super-header-row th.bp-sh-vocab {
-  color: #c084fc !important;
+  color: var(--grade-star, #a855f7) !important;
   border-right: 2px solid rgba(192, 132, 252, 0.35) !important;
 }
 #blueprint-matrix-table thead tr.bp-super-header-row th.bp-sh-blueprint {
@@ -1956,7 +1956,7 @@ div#class-analytics-grid,
 }
 .badge-answer-written {
   background: rgba(192, 132, 252, 0.14);
-  color: #c084fc;
+  color: var(--grade-star, #a855f7);
   border: 1px solid rgba(192, 132, 252, 0.3);
 }
 .badge-answer-hybrid {

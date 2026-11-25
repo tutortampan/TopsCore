@@ -191,18 +191,18 @@ table td .grade-circle.grade-circle-s,
 }
 
 .title-area-vault, .title-area.accent-purple, .modal-header.accent-purple, .modal-header.modal-header-purple {
-  --theme-hex: #c084fc !important;
+  --theme-hex: var(--grade-star, #a855f7) !important;
   --theme-rgb: 192, 132, 252 !important;
   --theme-text: #0f172a !important;
-  border-left-color: #c084fc !important;
+  border-left-color: var(--grade-star, #a855f7) !important;
   background: linear-gradient(90deg, rgba(192, 132, 252, 0.38) 0%, rgba(192, 132, 252, 0.12) 55%, rgba(15, 23, 42, 0.95) 100%) !important;
 }
 
 .title-area-info, .title-area.accent-info, .modal-header.accent-info, .modal-header.modal-header-info {
-  --theme-hex: #3b82f6 !important;
+  --theme-hex: var(--primary-tactical, #38bdf8) !important;
   --theme-rgb: 59, 130, 246 !important;
   --theme-text: #ffffff !important;
-  border-left-color: #3b82f6 !important;
+  border-left-color: var(--primary-tactical, #38bdf8) !important;
   background: linear-gradient(90deg, rgba(59, 130, 246, 0.38) 0%, rgba(59, 130, 246, 0.12) 55%, rgba(15, 23, 42, 0.95) 100%) !important;
 }
 
@@ -541,7 +541,13 @@ table td .grade-circle.grade-circle-s,
    26. DUPLICATE RESOLVER MODAL FM OVERRIDES
    ============================================================ */
 
-#duplicate-students-modal .modal-box,
+#duplicate-students-modal .modal-box {
+  max-width: 1380px !important;
+  width: 96vw !important;
+  background: var(--fm-bg-panel) !important;
+  border-color: var(--fm-border-medium) !important;
+}
+
 #duplicate-questions-modal .modal-box {
   background: var(--fm-bg-panel) !important;
   border-color: var(--fm-border-medium) !important;
@@ -760,7 +766,7 @@ table td .grade-circle.grade-circle-s,
 
 .student-profile-tab-btn.active {
   color: #ffffff;
-  border-bottom-color: var(--fm-accent-tactical, #6366f1);
+  border-bottom-color: var(--fm-accent-tactical, #38bdf8);
   background: rgba(99, 102, 241, 0.08);
 }
 
@@ -1384,7 +1390,7 @@ table td .grade-circle.grade-circle-s,
 .tac-diag-chip.chip-vocabgap {
   background: rgba(168, 85, 247, 0.12) !important;
   border-color: rgba(168, 85, 247, 0.3) !important;
-  color: #c084fc !important;
+  color: var(--grade-star, #a855f7) !important;
 }
 
 /* =========================================================================
@@ -1581,7 +1587,7 @@ table td .grade-circle.grade-circle-s,
   cursor: pointer !important;
 }
 .tac-drawer-filter-btn.active {
-  background: #0284c7 !important;
+  background: var(--primary-tactical, #38bdf8) !important;
   border-color: #38bdf8 !important;
   color: #ffffff !important;
   font-weight: 700 !important;

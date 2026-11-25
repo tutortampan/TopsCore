@@ -110,6 +110,20 @@ The admin workspace (`admin.html`) strictly enforces a single-screen `100vh` vie
       - **Strict Stationary Hover**: DILARANG bergerak fisik saat hover (`transform: none !important;`).
   - **Universal Matte Enterprise Palette SSOT**: Seluruh tombol, kartu, badge, dan teks di seluruh sistem TopsCore LMS MUTLAK menerapkan warna matte murni tanpa neon glow, tanpa `text-shadow`, dan tanpa `box-shadow: 0 0 Xpx`. Efek hover dan tekan (:active) mengandalkan perubahan latar belakang solid atau kontras warna matte berbobot elevasi `box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4)`.
 
+### 1.5.5 Unified Duplicate Resolver & Large Datagrid Dialog Invariant (SSOT)
+- **Unified Workspace Layout**: Dialog peninjauan duplikasi profil siswa dan soal menyatukan seluruh cakupan (Same Class dan Cross-Class) dalam satu kanvas utuh tanpa tab navigasi terpisah yang memperlambat alur kerja.
+- **Strict 1380px Modal Box Dimension**: Dialog yang memuat tabel data 8 kolom atau lebih wajib menerapkan `max-width: 1380px !important; width: 96vw !important;` (menggantikan pembatas sempit `.modal-box-lg 960px`) guna menjamin seluruh kolom (`RECORD UUID`, `PROGRAM / LEVEL`, `BATCH`, `INSTITUTION`, `ATTEMPTS`, `CREATED AT`, `ACTION`, dan `RESULT PREVIEW`) tampil utuh tanpa terpotong (*Universal Zero-Truncation*) dan tanpa memicu scrollbar horizontal di dalam kartu.
+- **Card Header Single-Line Nowrap**: Baris judul kartu grup duplikat menggunakan `flex-wrap: nowrap` sehingga baris nama siswa dan kotak pratinjau `RESULT:` tampil simetris dalam satu baris sejajar.
+
+### 1.5.6 Strict Zero-Pill & Zero-Box Inline Status Tag Invariant
+- **Eradication of Boxed Tags**: Tag status inline (seperti `(Cross-Class)`, `(Same Class)`, `(Repeat - 130)`, `(Alumni - 131)`) **MUTLAK DILARANG KERAS MENGGUNAKAN BORDER KOTAK, OUTLINE SQUIRCLE, ATAU LATAR BELAKANG PILL CAPSULE**.
+- **Pure Typography Inline Standard**: Tag status murni berupa teks tebal berbobot `font-weight: 600–700` dengan ukuran baku `font-size: 12px !important;` yang menempel rapi di sebelah nama siswa atau label grup:
+  - **Repeat**: Warna Oranye (`#FF8C00` / `var(--quad-b)`), contoh: `Suke Ajai (Repeat - 130)`.
+  - **Alumni**: Warna Ungu (`#c084fc` / `var(--grade-star)`), contoh: `Siti Qori' Atun Hizbaeni (Alumni - 131)`.
+  - **Cross-Class**: Warna Oranye (`#FF8C00` / `var(--quad-b)`), contoh: `Duplicate Group 1 — Name: "..." (Cross-Class)`.
+  - **Same Class**: Warna Cyan (`#38bdf8` / `var(--primary-tactical)`), contoh: `Duplicate Group 1 — Name: "..." (Same Class)`.
+- **Mutual Exclusivity**: Status `(Repeat - ...)` dan `(Alumni - ...)` bersifat saling eksklusif; siswa yang mengulang tidak boleh menampilkan tag alumni.
+
 ### 1.6 Architectural Anti-Freeze & Performance Invariants
 
 #### 1.6.1 MutationObserver Loop Prevention & DOM Re-Entrancy Guard (Anti-Freeze Invariant)
@@ -481,13 +495,21 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Alur baku pemilihan identitas siswa: `INSTITUTION -> PROGRAM -> BATCH -> STUDENT -> PIN`.
   - Setiap seksi yang telah dipilih **wajib tetap terlihat dalam kondisi terlipat (`.selected`)**, lengkap dengan label nilai yang dipilih dan tombol `Change` (`.cascade-change-btn`) untuk memungkinkan siswa mengubah pilihan.
   - Pemanggilan fungsi reset cascade wajib menargetkan langkah persis di bawahnya (`resetFrom('program')` saat institusi dipilih), DILARANG memanggil reset pada langkah yang baru saja dipilih karena akan melenyapkan elemen tersebut dari DOM visual (`max-height: 0`).
-- **Brand Header, Tipografi & Badge Logo Buku Vektor SVG**:
-  - **Judul Brand `TOPS CORE`**: Wajib menggunakan **30px (`font-size: 30px; font-weight: 900; font-family: 'Inter', sans-serif; line-height: 1.1; margin: 0;`)** — **Level 0 Brand Hero Landmark**. Skala 30px memberikan wibawa identitas visual (*brand presence*) yang kokoh pada gerbang masuk portal, berharmonisasi secara matematis dengan kelipatan 10px ($10\text{px} \times 3$), serta proporsional dalam koridor mobile 430px. Dilarang menggunakan font perantara liar 18px (*Strict Zero Sub-Scale Invariant*).
-  - **Eliminasi Subtitle (Zero Subtitle Clutter)**: Deskripsi atau subtitle di bawah judul (`Student Gate — Sign in to continue`) **DIHAPUS SECARA PERMANEN**. Menghilangkan elemen teks dekoratif yang berulang, memaksimalkan ruang vertikal *above-the-fold*, dan menjaga tampilan gerbang login tetap bersih (*ultra-lean, high-focus*).
-  - **Badge Logo Buku Vektor SVG**: Menggunakan ikon vektor SVG Open Book resmi TopsCore di dalam lingkaran berdiameter 52px (`.brand-badge-wrap`) dengan aksen Tactical Cyan (`#38bdf8`), background `rgba(56, 189, 248, 0.12)`, border `1.5px solid rgba(56, 189, 248, 0.35)`, drop-shadow matte `box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35)`, dan animasi mengambang halus (*smooth float animation*). Jarak bawah ke judul tepat 10px (`margin-bottom: 10px;`).
+- **Brand Header & Pure Typography (SSOT)**:
+  - **Judul Brand `TOPS CORE`**: Menggunakan tipografi murni tanpa boks squircle/emblem (`<h1 class="brand-title">TOPS <span class="brand-core">CORE</span></h1>`) berukuran **32px (`font-size: 32px; font-weight: 900; font-family: 'Outfit', sans-serif; line-height: 1.1; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;`)** — **Level 0 Brand Hero Landmark**. Teks `TOPS` putih bersih dan `CORE` Tactical Cyan `#38bdf8`, terpusat rapi dan proporsional dalam koridor mobile 430px.
+  - **Eliminasi Subtitle (Zero Subtitle Clutter)**: Deskripsi atau subtitle di bawah judul (`Student Gate — Sign in to continue`) **DIHAPUS SECARA PERMANEN**. Menghilangkan elemen teks dekoratif yang berulang, memaksimalkan ruang vertikal *above-the-fold*, dan menjaga tampilan gerbang login tetap bersih (*ultra-lean, high-focus*). Margin bawah brand ke kartu langkah 1 terkunci tepat 10px (*Strict 10px Container Gap Invariant*).
+- **Rata Kiri Kolom Label (90px Fixed Label Alignment) & Eliminasi Angka Langkah**:
+  - **Eliminasi Angka Langkah (`.cascade-step-num`)**: Lingkaran angka langkah (1, 2, 3, 4, 5) di sebelah kiri setiap panel **DIHAPUS** untuk memaksimalkan ruang horizontal nama siswa dan menyajikan antarmuka yang bersih dan modern.
+  - **Rata Kiri Kolom Label 90px**: Lebar label seksi (`.cascade-label`) dikunci tepat **90px (`width: 90px; min-width: 90px; max-width: 90px; flex: 0 0 90px;`)** pada seluruh panel (Institution, Program, Batch, Name, PIN). Tanda titik dua (`:`) berjarak margin kanan 12px, sehingga seluruh nilai terpilih (`.cascade-selection-label`) berlabuh pada garis kolom vertikal yang persis sama (*razor-sharp tabular alignment*).
+- **Persistent Student Session & Default Auto-Save Login**:
+  - Sesi login siswa dan kredensial tersimpan secara persisten pada `localStorage` secara otomatis, sehingga siswa tidak perlu berulang kali memilih institusi/program/batch/nama atau memasukkan PIN setiap membuka halaman, kecuali siswa secara eksplisit menekan tombol **Logout / Exit** pada dashboard.
+  - **Eradikasi Elemen Redundan (`#remember-me-banner` & `#clear-session-link`)**: Saklar "Remember me on this device" dan tautan "Clear saved login info" di bawah kartu PIN **DIHAPUS SECARA PERMANEN** dari DOM dan CSS karena sistem kini otomatis menyimpan status sesi, serta tombol "Change" pada setiap kartu sudah menyediakan kontrol pembaruan data secara mandiri.
+- **Viewport Auto-Centering (100dvh - 50px Lock)**:
+  - Kontainer halaman login `.login-page` menggunakan `min-height: calc(100vh - 50px); min-height: calc(100dvh - 50px);` dengan `padding: 10px;` simetris di keempat sisinya.
+  - Kontainer kartu `.login-wrapper` berlabuh secara otomatis di titik tengah geometris dan optis layar (*auto vertically centered*) antara batas atas layar dan batas atas banner bawah 50px, melenyapkan pergeseran ke atas (*zero upward-drift*).
 - **Universal 10px Container Gap & Card Internal Padding Invariant**:
-  - Jarak antar seksi kartu cascade dan banner pada mobile corridor 430px terkunci tepat **10px** (`.login-wrapper { gap: 10px; }`, `.cascade-section.selected { margin-bottom: 10px; }`, `.cascade-section.unlocked { margin-bottom: 10px; }`, `.remember-me-banner { margin: 10px 0; }`).
-  - Jarak elemen internal kartu ke garis batas luar (*Card Internal Padding*) terkunci tepat **10px** (`.cascade-header { padding: 10px; gap: 10px; }`, `.cascade-body { padding: 10px; }`, `.pin-section { padding: 10px; }`).
+  - Jarak antar seksi kartu cascade pada mobile corridor 430px terkunci tepat **10px** (`.login-wrapper { gap: 10px; }`, `.cascade-section.selected { margin-bottom: 10px; }`, `.cascade-section.unlocked { margin-bottom: 10px; }`).
+  - Jarak elemen internal kartu ke garis batas luar (*Card Internal Padding*) terkunci tepat **10px** (`.cascade-header { padding: 10px 14px; gap: 10px; }`, `.cascade-body { padding: 10px; }`, `.pin-section { padding: 10px; }`).
 - **Options Grid Dynamic Shrink-to-Fit Invariant (Anti-Gap Kosong)**:
   - Kontainer daftar pilihan (`.options-grid`) **DILARANG KERAS** menggunakan `min-height` statis (seperti `min-height: 120px;`).
   - Kontainer wajib menyesuaikan tinggi secara dinamis mengikuti jumlah item (*shrink-to-fit*), sehingga bila hanya ada 1 atau 2 opsi (misal institusi/program `TOP`), jarak tepi bawah tombol ke garis pembatas luar kotak tetap **tepat 10px presisi**.

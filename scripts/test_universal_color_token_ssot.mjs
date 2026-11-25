@@ -11,7 +11,7 @@ console.log('🧪 Starting Universal Single-Source Color Governance & SSOT Verif
 console.log('▶ Pillar 1: Checking Master Vault Wiring in css/style.css...');
 const styleCss = fs.readFileSync(path.resolve('css/style.css'), 'utf8');
 
-assert(styleCss.includes('--grade-star: #c084fc;'), 'css/style.css must declare --grade-star (#c084fc)');
+assert(styleCss.includes('--grade-star: #a855f7;'), 'css/style.css must declare --grade-star (#a855f7)');
 assert(styleCss.includes('--grade-a: #00c000ff;'), 'css/style.css must declare --grade-a (#00c000ff)');
 assert(styleCss.includes('--grade-c: #ffff00;'), 'css/style.css must declare --grade-c (#ffff00)');
 assert(styleCss.includes('--grade-e: #ff0000;'), 'css/style.css must declare --grade-e (#ff0000)');
@@ -23,6 +23,15 @@ assert(styleCss.includes('--clr-danger: var(--grade-e);'), '--clr-danger must bi
 assert(styleCss.includes('--eval-correct: var(--grade-a);'), '--eval-correct must bind to var(--grade-a)');
 assert(styleCss.includes('--eval-partial: var(--grade-c);'), '--eval-partial must bind to var(--grade-c)');
 assert(styleCss.includes('--eval-incorrect: var(--grade-e);'), '--eval-incorrect must bind to var(--grade-e)');
+
+// Single Product Accent SSOT (#38bdf8 / Tactical Cyan)
+assert(styleCss.includes('--primary-tactical: #38bdf8;'), '--primary-tactical must declare #38bdf8');
+assert(styleCss.includes('--clr-primary: var(--primary-tactical);'), '--clr-primary must bind to var(--primary-tactical)');
+assert(styleCss.includes('--clr-accent-1: var(--primary-tactical);'), '--clr-accent-1 must bind to var(--primary-tactical)');
+assert(styleCss.includes('--clr-info: var(--primary-tactical);'), '--clr-info must bind to var(--primary-tactical)');
+
+const gradingJs = fs.readFileSync(path.resolve('js/grading.js'), 'utf8');
+assert(gradingJs.includes("btnPrimary: '#38bdf8'"), "js/grading.js must declare btnPrimary: '#38bdf8'");
 console.log('  ✅ Pillar 1 Passed: Master Vault variables and semantic bindings fully verified.');
 
 // ── Pillar 2: Admin CSS Token Mapping in css/admin.css ──
@@ -88,7 +97,7 @@ console.log('  ✅ Pillar 5 Passed: Zero unwrapped raw hexes detected across all
 console.log('\n▶ Pillar 6: Simulating One-Touch Color Propagation Property Inheritance...');
 // Simulate CSS Custom Property cascaded computation
 const mockComputedRoot = {
-  '--grade-star': '#c084fc',
+  '--grade-star': '#a855f7',
   '--grade-a': '#00c000ff',
   '--grade-c': '#ffff00',
   '--grade-e': '#e11d48' // User modified Grade E from #ff0000 to #e11d48!

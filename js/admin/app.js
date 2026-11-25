@@ -1198,7 +1198,7 @@ if (typeof window !== 'undefined') {
         ]);
 
         const validBatches = (batches || []).filter(b => !b.deleted_at);
-        const validStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false && s.program_status !== 'ALUMNI');
+        const validStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI');
         // Only active batches with at least 1 active non-alumni student per user directive
         const activeBatches = validBatches.filter(b => b.is_active !== false && validStudents.some(s => s.batch_id === b.id));
 
@@ -1389,7 +1389,7 @@ if (typeof window !== 'undefined') {
 
         if (!classes || !students || !batches) return;
 
-        const activeStudents = students.filter(s => s.is_active && !s.deleted_at && s.program_status !== 'ALUMNI');
+        const activeStudents = students.filter(s => s.is_active && !s.deleted_at && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI');
         const batchMap = new Map(batches.map(b => [b.id, b]));
 
         // 1. Check batches: If 0 active non-alumni students and currently is_active = true, deactivate
@@ -1650,7 +1650,7 @@ if (typeof window !== 'undefined') {
 
         const classStudents = (allStudents || []).filter(s => {
           if (s.deleted_at) return false;
-          if (s.is_active === false) return false;
+          if (s.is_active === false || (s.program_status || '').toUpperCase() === 'INACTIVE') return false;
 
           const batchObj = (allBatches || []).find(b => b.id === s.batch_id);
           const batchProgId = batchObj?.program_id;
@@ -1744,13 +1744,44 @@ if (typeof window !== 'undefined') {
             || r?.test_subtype?.includes('PHRASE')
             || (r?.shell_code && r.shell_code.includes('PHRASE'))
             || String(r?.title || '').toLowerCase().includes('phrase');
-          const category = isPhrase ? 'phrases' : 'words';
+          const isUnified = r?.payload?.category === 'unified'
+            || r?.test_subtype?.includes('UNIFIED')
+            || (r?.shell_code && r.shell_code.includes('UNIFIED'))
+            || String(r?.title || '').toLowerCase().includes('words & phrases');
+          const category = isPhrase ? 'phrases' : (isUnified ? 'unified' : 'words');
 
           const minScore = r?.minimum_required_score || 60;
           const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
           const _vaultQ = _isDyn ? vaultCountFor(r, cleanLvlNum) : 0;
           const qCount = r?.total_questions || r?.payload?.total_questions || (r?.test_type === 'exam' ? 120 : 40);
           const effectiveQCount = _isDyn ? _vaultQ : qCount;
+
+          // Repetitions Calculation (DECISION-084 / Rule 2.4.1)
+          let classTaskReps = null;
+          try {
+            const cachedSettings = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage.getItem(`topscore_test_settings_${classId}`) : null;
+            if (cachedSettings) {
+              const parsed = JSON.parse(cachedSettings);
+              if (parsed.taskRepetitions) classTaskReps = Number(parsed.taskRepetitions);
+            }
+          } catch (_) {}
+          const isExamTest = String(r?.category || r?.test_type || '').toLowerCase().includes('exam') || String(r?.title || '').toLowerCase().includes('exam');
+          const repetitions = isExamTest ? 1 : Math.max(1, parseInt(r?.payload?.task_repetitions || r?.required_repetitions || classTaskReps, 10) || 7);
+
+          // Words vs Phrases Count Calculation
+          const isVocab = typeof isVocabularyClass === 'function' ? isVocabularyClass(currentClass) : true;
+          let wordsCount = 0;
+          let phrasesCount = 0;
+          if (isPhrase) {
+            wordsCount = 0;
+            phrasesCount = effectiveQCount;
+          } else if (isUnified) {
+            wordsCount = Number(r?.payload?.words_count) || Math.round(effectiveQCount * 0.8);
+            phrasesCount = Number(r?.payload?.phrases_count) || (effectiveQCount - wordsCount);
+          } else {
+            wordsCount = effectiveQCount;
+            phrasesCount = 0;
+          }
 
           // Real-time dynamic duration calculation (SSOT DECISION-062):
           // Prioritizes tutor's manual working_duration_minutes, otherwise calculates from 10s/word & 20s/phrase
@@ -1772,6 +1803,10 @@ if (typeof window !== 'undefined') {
             answerType: formatAnswerType(rawAns),
             questionOrder: (String(r?.question_order || r?.payload?.question_order || 'random').toLowerCase() === 'sequential') ? 'Seq' : 'Random',
             TestCategory,
+            repetitions,
+            isVocab,
+            wordsCount,
+            phrasesCount,
             timeLimit,
             minScore,
             qCount: _isDyn ? _vaultQ : qCount,
@@ -1816,8 +1851,8 @@ if (typeof window !== 'undefined') {
         const classTestSettings = (typeof fetchClassTestSettings === 'function')
           ? await fetchClassTestSettings(classId || cid).catch(() => ({ taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 }))
           : { taskRepetitions: 7, taskMinScore: 60, examMinScore: 60 };
-        const targetReps = Math.max(7, Number(classTestSettings?.taskRepetitions) || 7);
-        // Per-component repetition target (Words or Phrases individually, strictly 7 in standard 7x7 system)
+        const targetReps = Math.max(1, Number(classTestSettings?.taskRepetitions) || 7);
+        // Per-component repetition target (Words or Phrases individually — dynamic from class settings)
         const compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : targetReps;
         const taskMinScore = Number(classTestSettings?.taskMinScore) || 60;
         const examMinScore = Number(classTestSettings?.examMinScore) || 60;
@@ -2213,7 +2248,7 @@ if (typeof window !== 'undefined') {
 
         const activeBatchStudents = classStudents.filter(s => {
           const b = batchMap[s.batch_id];
-          return b ? b.is_active !== false : true;
+          return (b ? b.is_active !== false : true) && s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE';
         });
 
         const taskTests = classTests.filter(a => a.test_type === 'quiz' || a.category === 'QUIZ' || a.category === 'TASK' || a.test_type === 'VOCAB_TASK' || a.test_type === 'PHRASE_TASK' || (a.test_subtype && a.test_subtype.includes('QUIZ')) || (a.test_subtype && a.test_subtype.includes('TASK')) || /\b(QUIZ|TASK)\b/i.test(a.title || ''));
@@ -2321,7 +2356,7 @@ if (typeof window !== 'undefined') {
           'A': { border: 'var(--quad-a, #ff2d87)', bg: 'var(--quad-a, #ff2d87)', text: '#ffffff', glow: 'rgba(255,45,135,0.45)' },
           'B': { border: 'var(--grade-d, #FF8C00)', bg: 'var(--grade-d, #FF8C00)', text: '#0f172a', glow: 'rgba(255,140,0,0.45)' },
           'C': { border: 'var(--grade-b, #95ff00)', bg: 'var(--grade-b, #95ff00)', text: '#0f172a', glow: 'rgba(149,255,0,0.45)' },
-          'D': { border: 'var(--quad-d, #C084FC)', bg: 'var(--quad-d, #C084FC)', text: '#0f172a', glow: 'rgba(192,132,252,0.45)' }
+          'D': { border: 'var(--quad-d, #a855f7)', bg: 'var(--quad-d, #a855f7)', text: '#0f172a', glow: 'rgba(192,132,252,0.45)' }
         };
 
         // Render Top Panel for Theme Navigation (Deprecated: moved 100% to Sub Panel per strict 2-panel SSOT)
@@ -2343,11 +2378,11 @@ if (typeof window !== 'undefined') {
             let navButtonsHtml = '';
             if (isThemeOverview) {
               // Master Overview: 5 Equal-Width Buttons (OVERVIEW + THEME A..D) docked at the FAR LEFT
-              const ovBtnStyle = `${navBtnBase} background: #0284c7 !important; border: 1px solid #38bdf8 !important; color: #ffffff !important; box-shadow: 0 0 10px rgba(56,189,248,0.45) !important;`;
+              const ovBtnStyle = `${navBtnBase} background: #38bdf8 !important; border: 1px solid #38bdf8 !important; color: #090d16 !important; box-shadow: 0 0 10px rgba(56,189,248,0.45) !important;`;
               const ovBtnHtml = `<button type="button" class="btn btn-sm btn-subpanel-nav btn-subpanel-theme active" onclick="window.switchClassAttendanceTheme('ALL')" style="${ovBtnStyle}" title="Master Overview (All Themes Matrix)">OVERVIEW</button>`;
 
               const themeBtnsHtml = sortedThemes.map(tc => {
-                const colCfg = themeBtnColors[tc] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
+                const colCfg = themeBtnColors[tc] || { border: '#38bdf8', bg: '#38bdf8', text: '#090d16', glow: 'rgba(56,189,248,0.45)' };
                 const tName = themeNames[tc] ? `${tc} - ${themeNames[tc]}` : `THEME ${tc}`;
                 const btnStyle = `${navBtnBase} background: transparent !important; border: 1px solid ${colCfg.border} !important; color: ${colCfg.border} !important;`;
                 return `<button type="button" class="btn btn-sm btn-subpanel-nav btn-subpanel-theme" onclick="window.switchClassAttendanceTheme('${tc}')" style="${btnStyle}" title="${tName} (Inspect Topics &amp; Detail)">THEME ${tc}</button>`;
@@ -2370,7 +2405,7 @@ if (typeof window !== 'undefined') {
               }
               tCodes.sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
-              const colCfg = themeBtnColors[currentTheme] || { border: '#38bdf8', bg: '#0284c7', text: '#ffffff', glow: 'rgba(56,189,248,0.45)' };
+              const colCfg = themeBtnColors[currentTheme] || { border: '#38bdf8', bg: '#38bdf8', text: '#090d16', glow: 'rgba(56,189,248,0.45)' };
               const isTopicAllActive = currentTopic === 'ALL' || currentTopic === 'OVERVIEW';
 
               // 1. Back to Master Overview (← ALL)
@@ -2416,9 +2451,9 @@ if (typeof window !== 'undefined') {
               </div>
             `;
 
-            // 1. Manual / Edit Mode Button (Cyan #38bdf8 / #0284c7)
+            // 1. Manual / Edit Mode Button (Cyan #38bdf8 / var(--primary-tactical, #38bdf8))
             const manualBtnStyle = isManualOn
-              ? 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
+              ? 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: #38bdf8; border: 1px solid #38bdf8; color: #090d16; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
               : 'height: 30px !important; min-height: 30px !important; max-height: 30px !important; line-height: 28px !important; padding: 0 12px !important; font-size: 12px !important; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: transparent; border: 1px solid #38bdf8; color: #38bdf8; transition: all 0.15s ease;';
             const manualBtnLabel = isManualOn
               ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -2454,7 +2489,7 @@ if (typeof window !== 'undefined') {
           } else if (activeTab === 'tests') {
             const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
             const editBtnStyle = isEditOn
-              ? 'width: 140px; min-width: 140px; max-width: 140px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #0284c7; border: 1px solid #38bdf8; color: #ffffff; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
+              ? 'width: 140px; min-width: 140px; max-width: 140px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: #38bdf8; border: 1px solid #38bdf8; color: #090d16; padding: 0 10px; cursor: pointer; border-radius: 4px; box-shadow: 0 0 10px rgba(56,189,248,0.45); transition: all 0.15s ease;'
               : 'width: 140px; min-width: 140px; max-width: 140px; height: 30px; min-height: 30px; max-height: 30px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; background: transparent; border: 1px solid #38bdf8; color: #38bdf8; padding: 0 10px; cursor: pointer; border-radius: 4px; transition: all 0.15s ease;';
             const editBtnLabel = isEditOn
               ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -2474,8 +2509,8 @@ if (typeof window !== 'undefined') {
                 <button type="button" class="btn btn-secondary btn-sm" id="btn-sync-class-tests" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer;" title="Sync tests for this class with Vocabulary Vault themes &amp; topics">
                   ${getSvgIcon('refresh', 14)} Sync Tests
                 </button>
-                <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; background:rgba(56,189,248,0.15); border:1.5px solid #38bdf8; color:#38bdf8;" title="Open Generator &amp; Curriculum Settings Wizard">
-                  ${getSvgIcon('zap', 14)} Generator &amp; Settings Wizard
+                <button type="button" class="btn btn-primary btn-sm" id="btn-open-generator-from-class" style="height:30px !important; line-height:28px !important; padding:0 12px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; background:rgba(56,189,248,0.15); border:1.5px solid #38bdf8; color:#38bdf8;" title="Open Vocabulary System Master Matrix Studio">
+                  ${getSvgIcon('settings', 14)} Vocabulary System
                 </button>
               </div>
             ` : `
@@ -2650,17 +2685,19 @@ if (typeof window !== 'undefined') {
                 key: 'level',
                 label: 'LEVEL',
                 sortable: true,
-                width: '75px',
+                width: '60px',
+                align: 'center',
                 render: (val, row) => `<span style="font-size:12px; color:var(--clr-text-2); font-weight:500; white-space:nowrap;">${escapeHtml(row.level || '—')}</span>`
               },
               {
                 key: 'order',
                 label: 'CODE',
                 sortable: true,
-                width: '165px',
+                width: '205px',
+                align: 'center',
                 render: (val, row) => {
                   if (row.shellCode) {
-                    return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
+                    return `<span style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
                   }
                   return `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-weight:500; white-space:nowrap;">${row.order || '—'}</span>`;
                 }
@@ -2676,42 +2713,58 @@ if (typeof window !== 'undefined') {
                   if (isEditOn) {
                     return `<input type="text" class="form-control form-control-sm input-test-title" data-test-id="${row.id}" data-original-val="${escapeHtml(row.title || '')}" value="${escapeHtml(row.title || '')}" style="height:24px !important; font-size:12px; font-weight:600; width:100%; min-width:240px; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#f8fafc; padding:0 6px; box-sizing:border-box;" />`;
                   }
-                  let displayTitle = escapeHtml(row.title);
-                  displayTitle = displayTitle.replace(/\b(Task)\b/gi, '<span style="color: var(--task-color, var(--grade-b, #95ff00)); font-weight:600;">$1</span>');
-                  displayTitle = displayTitle.replace(/\b(Test)\b/gi, '<span style="color: var(--exam-color, var(--quad-a, #ff2d87)); font-weight:600;">$1</span>');
-                  displayTitle = displayTitle.replace(/\b(Exam)\b/gi, '<span style="color: var(--exam-color, var(--quad-a, #ff2d87)); font-weight:600;">$1</span>');
-                  return `<div class="fw-500" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:240px;" title="${escapeHtml(row.title)}">${displayTitle}</div>`;
+                  return `<div class="fw-600" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:240px;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`;
                 }
               },
               {
                 key: 'prereq',
                 label: 'PREREQUISITE',
                 sortable: true,
-                width: '180px',
+                width: '205px',
+                align: 'center',
                 render: (val, row) => {
                   const prereqDisplay = row.prereq || '';
                   if (!prereqDisplay) return '<span class="text-muted" style="font-size:12px; font-weight:500;">—</span>';
-                  return `<span style="font-size:12px; color:var(--clr-warning); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(prereqDisplay)}">${escapeHtml(prereqDisplay)}</span>`;
+                  return `<span style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(prereqDisplay)}">${escapeHtml(prereqDisplay)}</span>`;
                 }
               },
               {
                 key: 'TestCategory',
                 label: 'TYPE',
                 sortable: true,
-                width: '80px',
+                width: '75px',
+                align: 'center',
                 render: (val, row) => {
                   const rawType = String(row.TestCategory || row._raw?.test_type || 'Task').toLowerCase();
                   const isExam = rawType.includes('exam');
                   const label = isExam ? 'Exam' : 'Task';
-                  const color = isExam ? 'var(--exam-color, var(--quad-a, #ff2d87))' : 'var(--task-color, var(--grade-b, #95ff00))';
+                  const color = isExam ? 'var(--exam-color, #ff2d87)' : 'var(--task-color, #95ff00)';
                   return `<span style="font-size:12px; color:${color}; font-weight:600; white-space:nowrap;">${label}</span>`;
+                }
+              },
+              {
+                key: 'repetitions',
+                label: 'REPETITIONS',
+                shortLabel: 'REPS',
+                microLabel: 'REP',
+                sortable: true,
+                width: '85px',
+                align: 'center',
+                render: (val, row) => {
+                  const isExam = String(row.TestCategory || '').toLowerCase().includes('exam');
+                  if (isExam) {
+                    return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-3, #94a3b8); font-variant-numeric:tabular-nums;" title="Milestone Exam (1x Final)">1x</span>`;
+                  }
+                  const rCount = row.repetitions || 7;
+                  return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${rCount}x Repetitions Target">${rCount}x</span>`;
                 }
               },
               {
                 key: 'answerType',
                 label: 'ANSWER',
                 sortable: true,
-                width: '95px',
+                width: '90px',
+                align: 'center',
                 render: (val, row) => {
                   const ans = String(row.answerType || 'Selection');
                   const cleanAns = ans.replace(/[^\w\s]/gi, '').trim();
@@ -2723,7 +2776,8 @@ if (typeof window !== 'undefined') {
                 key: 'questionOrder',
                 label: 'ORDER',
                 sortable: true,
-                width: '95px',
+                width: '85px',
+                align: 'center',
                 render: (val, row) => {
                   const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
                   const isRand = String(row.questionOrder || '').toLowerCase().includes('rand');
@@ -2734,21 +2788,23 @@ if (typeof window !== 'undefined') {
                     </select>`;
                   }
                   const accessLabel = isRand ? 'Random' : 'Sequential';
-                  return `<span style="font-size:12px; color:${isRand ? '#38bdf8' : 'var(--clr-text-2)'}; white-space:nowrap; font-weight:500;">${accessLabel}</span>`;
+                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500;">${accessLabel}</span>`;
                 }
               },
               {
                 key: 'timeLimit',
                 label: 'DURATION',
                 sortable: true,
-                width: '95px',
+                width: '85px',
+                align: 'center',
                 render: (val, row) => `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:500; font-variant-numeric:tabular-nums;">${row.timeLimit || 60} min</span>`
               },
               {
                 key: 'minScore',
                 label: 'PASS RATE',
                 sortable: true,
-                width: '100px',
+                width: '85px',
+                align: 'center',
                 render: (val, row) => {
                   const currentMin = row.minScore || 60;
                   const passColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(currentMin) : 'var(--grade-c)';
@@ -2766,12 +2822,41 @@ if (typeof window !== 'undefined') {
                 key: 'qCount',
                 label: 'QUESTIONS',
                 sortable: true,
-                width: '120px',
+                width: '105px',
+                align: 'center',
                 render: (val, row) => {
                   const count = row.qCount || 0;
                   const isVault = !!row.qIsVault;
                   const label = isVault ? `${count} (Vault)` : `${count}`;
-                  return `<span class="fw-500 ${count > 0 ? 'text-info' : 'text-danger'}" style="font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums;" title="${isVault ? 'Live question count projected from Vocabulary Vault' : 'Question bank total'}">${label}</span>`;
+                  return `<span class="fw-500" style="color:var(--clr-text-2); font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums;" title="${isVault ? 'Live question count projected from Vocabulary Vault' : 'Question bank total'}">${label}</span>`;
+                }
+              },
+              {
+                key: 'wordsCount',
+                label: 'WORDS',
+                shortLabel: 'WORD',
+                sortable: true,
+                width: '75px',
+                align: 'center',
+                render: (val, row) => {
+                  if (row.isVocab === false) return `<span class="text-muted" style="font-size:12px;">—</span>`;
+                  const count = row.wordsCount || 0;
+                  if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                  return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Words in test">${count}</span>`;
+                }
+              },
+              {
+                key: 'phrasesCount',
+                label: 'PHRASES',
+                shortLabel: 'PHR',
+                sortable: true,
+                width: '75px',
+                align: 'center',
+                render: (val, row) => {
+                  if (row.isVocab === false) return `<span class="text-muted" style="font-size:12px;">—</span>`;
+                  const count = row.phrasesCount || 0;
+                  if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                  return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Phrases in test">${count}</span>`;
                 }
               },
               {
@@ -2780,7 +2865,8 @@ if (typeof window !== 'undefined') {
                 shortLabel: 'STS',
                 microLabel: 'STS',
                 sortable: true,
-                width: '135px',
+                width: '100px',
+                align: 'center',
                 render: (val, row) => {
                   const st = String(row.status || 'draft').toLowerCase();
                   const isPub = st === 'published';
@@ -3136,6 +3222,99 @@ if (typeof window !== 'undefined') {
             if (ptsInput) {
               ptsInput.value = calcPts.toString();
             }
+          };
+
+          window.onMatrixSectionExamChange = (studentId, testId, section, totalQ, valStr, isPts, otherTotalQ, themeCode) => {
+            if (!window._manualInputState) {
+              window._manualInputState = { activeStudentIds: new Set(), drafts: {} };
+            }
+            if (!window._manualInputState.drafts[studentId]) {
+              window._manualInputState.drafts[studentId] = {};
+            }
+            const tcLower = String(themeCode || '').toLowerCase();
+            const draftKey = `exam_${testId}_${section}`;
+            const rateInput = document.querySelector(`.input-matrix-${section}-rate-${studentId}-${tcLower}`);
+            const ptsInput = document.querySelector(`.input-matrix-${section}-pts-${studentId}-${tcLower}`);
+            const origRateStr = rateInput?.dataset?.originalScore ?? '';
+            const origPtsStr = ptsInput?.dataset?.originalPts ?? '';
+
+            const updateSectionLiveFeedback = (sId, tcLow, curSec, curTotQ, othTotQ) => {
+              const wordsPtsInput = document.querySelector(`.input-matrix-words-pts-${sId}-${tcLow}`);
+              const phrasesPtsInput = document.querySelector(`.input-matrix-phrases-pts-${sId}-${tcLow}`);
+              const wPtsVal = wordsPtsInput ? (wordsPtsInput.value !== '' ? Number(wordsPtsInput.value) : null) : null;
+              const pPtsVal = phrasesPtsInput ? (phrasesPtsInput.value !== '' ? Number(phrasesPtsInput.value) : null) : null;
+
+              const totalPtsSpan = document.querySelector(`.test-score-theme-total-${sId}-${tcLow}`);
+              const gradeSpan = document.querySelector(`.grid-grade-val-${sId}-${tcLow}`);
+
+              if (wPtsVal !== null || pPtsVal !== null) {
+                const wordsDenom = curSec === 'words' ? curTotQ : othTotQ;
+                const phrasesDenom = curSec === 'phrases' ? curTotQ : othTotQ;
+                const totalExamQ = (wordsDenom || 160) + (phrasesDenom || 40);
+                const sumPts = (wPtsVal || 0) + (pPtsVal || 0);
+                const calcThemePct = totalExamQ > 0 ? Math.round((sumPts / totalExamQ) * 100) : 0;
+                const newGrade = typeof calculateGrade === 'function' ? calculateGrade(calcThemePct) : 'C';
+                const newGradeColor = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(calcThemePct) : '#ffffff';
+
+                if (totalPtsSpan) {
+                  totalPtsSpan.textContent = sumPts.toString();
+                  totalPtsSpan.style.color = newGradeColor;
+                }
+                if (gradeSpan) {
+                  const cleanGrade = String(newGrade || '').trim().toUpperCase();
+                  if (cleanGrade === '★' || cleanGrade === 'S') {
+                    gradeSpan.className = `grid-grade-val grid-grade-val-${sId}-${tcLow} grid-grade-star`;
+                    gradeSpan.textContent = '★';
+                    gradeSpan.style.color = 'var(--grade-star)';
+                  } else {
+                    gradeSpan.className = `grid-grade-val grid-grade-val-${sId}-${tcLow}`;
+                    gradeSpan.textContent = cleanGrade;
+                    gradeSpan.style.color = newGradeColor;
+                  }
+                }
+              }
+            };
+
+            if (!valStr || valStr.trim() === '') {
+              const isDirty = (origRateStr !== '' || origPtsStr !== '');
+              window._manualInputState.drafts[studentId][draftKey] = {
+                testId,
+                section,
+                score: null,
+                pts: null,
+                totalQ,
+                isDirty
+              };
+              if (isPts && rateInput) rateInput.value = '';
+              if (!isPts && ptsInput) ptsInput.value = '';
+              updateSectionLiveFeedback(studentId, tcLower, section, totalQ, otherTotalQ);
+              return;
+            }
+
+            const valNum = Number(valStr);
+            let calcScore, calcPts;
+            if (isPts) {
+              calcPts = Math.round(Math.max(0, Math.min(totalQ, isNaN(valNum) ? 0 : valNum)));
+              calcScore = totalQ > 0 ? Math.round((calcPts / totalQ) * 100) : 0;
+              if (rateInput) rateInput.value = calcScore.toString();
+            } else {
+              calcScore = Math.max(0, Math.min(100, isNaN(valNum) ? 0 : valNum));
+              calcPts = Math.round(totalQ * (calcScore / 100));
+              if (ptsInput) ptsInput.value = calcPts.toString();
+            }
+
+            const isDirty = origRateStr === '' || Number(origRateStr) !== calcScore || Math.abs(Number(origPtsStr) - calcPts) >= 0.5;
+
+            window._manualInputState.drafts[studentId][draftKey] = {
+              testId,
+              section,
+              score: calcScore,
+              pts: calcPts,
+              totalQ,
+              isDirty
+            };
+
+            updateSectionLiveFeedback(studentId, tcLower, section, totalQ, otherTotalQ);
           };
 
           window.onMatrixExamPtsChange = (studentId, testId, totalQ, valStr) => {
@@ -3678,6 +3857,21 @@ if (typeof window !== 'undefined') {
                       reason: `MANUAL_REPS: ${reps}/${maxReps}`
                     });
                   });
+                } else if (k.startsWith('exam_')) {
+                  const d = studentDraft[k];
+                  const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
+                  const defaultDenom = d?.section === 'words' ? 160 : (d?.section === 'phrases' ? 40 : 120);
+                  const pts = d?.pts != null ? Math.round(Number(d.pts)) : Math.round((d?.totalQ || defaultDenom) * (pct / 100));
+                  const g = typeof calculateGrade === 'function' ? calculateGrade(pct) : (typeof getGrade === 'function' ? getGrade(pct) : 'E');
+                  testActions.push({
+                    testId: d.testId,
+                    section: d.section,
+                    totalQ: d.totalQ || defaultDenom,
+                    action: 'manual',
+                    percentage: pct,
+                    score: pts,
+                    grade: g
+                  });
                 } else {
                   const d = studentDraft[k];
                   const pct = Math.max(0, Math.min(100, Number(d?.score || 0)));
@@ -3855,8 +4049,8 @@ if (typeof window !== 'undefined') {
                     padding: 0 20px !important; font-size: 14px !important; font-weight: 800 !important;
                     font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
                     display: inline-flex !important; align-items: center !important; justify-content: center !important;
-                    gap: 8px !important; border-radius: 6px !important; background: #0284c7 !important;
-                    border: 1px solid #38bdf8 !important; color: #ffffff !important; cursor: pointer !important;
+                    gap: 8px !important; border-radius: 6px !important; background: #38bdf8 !important;
+                    border: 1px solid #38bdf8 !important; color: #090d16 !important; cursor: pointer !important;
                     box-shadow: 0 0 14px rgba(56, 189, 248, 0.45) !important; letter-spacing: 0.04em !important;
                     text-transform: uppercase !important; transition: all 0.15s ease;
                   ">
@@ -4126,7 +4320,12 @@ if (typeof window !== 'undefined') {
                     const tQ = Number(a.total_questions || 0);
                     return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
                   });
-                  wordsAtts.sort((x, y) => Number(y.score || 0) - Number(x.score || 0));
+                  wordsAtts.sort((x, y) => {
+                    const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
+                    const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
+                    if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
+                    return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
+                  });
                   const bestWords = wordsAtts[0] || null;
 
                   // B. Phrases attempts
@@ -4135,12 +4334,22 @@ if (typeof window !== 'undefined') {
                     const tQ = Number(a.total_questions || 0);
                     return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
                   });
-                  phrasesAtts.sort((x, y) => Number(y.score || 0) - Number(x.score || 0));
+                  phrasesAtts.sort((x, y) => {
+                    const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
+                    const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
+                    if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
+                    return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
+                  });
                   const bestPhrases = phrasesAtts[0] || null;
 
                   // C. Full 200Q attempts fallback
                   const fullAtts = studentExamAtts.filter(a => Number(a.total_questions || 0) > 160);
-                  fullAtts.sort((x, y) => Number(y.score || 0) - Number(x.score || 0));
+                  fullAtts.sort((x, y) => {
+                    const pctX = Number(x.percentage != null ? x.percentage : (x.total_questions ? (x.score / x.total_questions) * 100 : 0));
+                    const pctY = Number(y.percentage != null ? y.percentage : (y.total_questions ? (y.score / y.total_questions) * 100 : 0));
+                    if (Math.abs(pctY - pctX) > 0.01) return pctY - pctX;
+                    return new Date(y.updated_at || y.created_at || 0) - new Date(x.updated_at || x.created_at || 0);
+                  });
                   const bestFull = fullAtts[0] || null;
 
                   let wordsRate = null, wordsPts = null;
@@ -4150,9 +4359,11 @@ if (typeof window !== 'undefined') {
                   // Candidate words: pick highest between words-only attempt and full attempt
                   const candidateWords = [];
                   if (bestWords) {
+                    const bPct = Number(bestWords.percentage != null ? bestWords.percentage : (bestWords.total_questions ? (bestWords.score / bestWords.total_questions) * 100 : 0));
+                    const bPts = bestWords.total_questions === 160 ? Math.round(Number(bestWords.score || 0)) : Math.round(160 * (bPct / 100));
                     candidateWords.push({
-                      pts: Math.round(Number(bestWords.score || 0)),
-                      pct: Math.round(Number(bestWords.percentage || (bestWords.total_questions ? (bestWords.score / bestWords.total_questions) * 100 : 0)))
+                      pts: bPts,
+                      pct: Math.round(bPct)
                     });
                   }
                   if (bestFull) {
@@ -4171,9 +4382,11 @@ if (typeof window !== 'undefined') {
                   // Candidate phrases: pick highest between phrases-only attempt and full attempt
                   const candidatePhrases = [];
                   if (bestPhrases) {
+                    const bPct = Number(bestPhrases.percentage != null ? bestPhrases.percentage : (bestPhrases.total_questions ? (bestPhrases.score / bestPhrases.total_questions) * 100 : 0));
+                    const bPts = bestPhrases.total_questions === 40 ? Math.round(Number(bestPhrases.score || 0)) : Math.round(40 * (bPct / 100));
                     candidatePhrases.push({
-                      pts: Math.round(Number(bestPhrases.score || 0)),
-                      pct: Math.round(Number(bestPhrases.percentage || (bestPhrases.total_questions ? (bestPhrases.score / bestPhrases.total_questions) * 100 : 0)))
+                      pts: bPts,
+                      pct: Math.round(bPct)
                     });
                   }
                   if (bestFull && Number(bestFull.score || 0) > 160) {
@@ -4291,6 +4504,26 @@ if (typeof window !== 'undefined') {
               row.progressPct = totalExams > 0 ? Math.round(((row.completedExamCount || 0) / totalExams) * 100) : 0;
               row.progressStr = `${row.progressPct}%`;
               row.progressTooltip = `${row.completedExamCount || 0}/${totalExams} Milestone Exams Done (${row.progressPct}%)`;
+
+              // Recalculate totalEarnedScore from theme accumulative exam points across active themes
+              let totalThemePts = 0;
+              let totalThemePossible = 0;
+              let hasAnyThemeExam = false;
+              sortedActiveThemes.forEach(tc => {
+                if (row[`theme_${tc}_has_exam_att`] && row[`theme_${tc}_total_pts`] != null && row[`theme_${tc}_total_pts`] >= 0) {
+                  hasAnyThemeExam = true;
+                  totalThemePts += Number(row[`theme_${tc}_total_pts`]);
+                  totalThemePossible += Number(row[`theme_${tc}_max_q`] || 200);
+                }
+              });
+              if (hasAnyThemeExam) {
+                row.totalEarnedScore = Math.round(totalThemePts);
+                if (totalThemePossible > 0) {
+                  const themeAvgPct = Math.round((totalThemePts / totalThemePossible) * 100);
+                  row.averageScorePct = themeAvgPct;
+                  row.grade = typeof calculateGrade === 'function' ? calculateGrade(themeAvgPct) : row.grade;
+                }
+              }
             });
 
             // Check active theme view mode
@@ -4376,7 +4609,7 @@ if (typeof window !== 'undefined') {
                   style: themeStyles[tc] || ''
                 });
               });
-              dynamicSuperHeaders.push({ label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall', style: 'background: #0b1120 !important; color: var(--grade-star, #c084fc) !important;' });
+              dynamicSuperHeaders.push({ label: 'OVERALL', colSpan: 3, className: 'super-hdr super-hdr-overall', style: 'background: #0b1120 !important; color: var(--grade-star, #a855f7) !important;' });
             } else {
               const activeThemeCode = sortedActiveThemes.includes(selectedTheme) ? selectedTheme : (sortedActiveThemes[0] || 'A');
               const asmsInTheme = themeGroups[activeThemeCode] || [];
@@ -4400,7 +4633,7 @@ if (typeof window !== 'undefined') {
                   style: themeStyles[activeThemeCode] || ''
                 });
               } else {
-                // Mode 3: Detailed 7x7 Progress for Single Selected Topic
+                // Mode 3: Detailed Progress for Single Selected Topic
                 const targetTopCode = selectedTopic.toUpperCase();
                 const matchingTasks = taskAsmsInTheme.filter(a =>
                   String(a.payload?.topic_code || '').toUpperCase() === targetTopCode ||
@@ -4530,7 +4763,7 @@ if (typeof window !== 'undefined') {
                     className: `col-asm col-task col-theme-topic-summary col-theme-topic-${tc.toLowerCase()}${isEndCol ? ' col-theme-topic-att-end' : ''}`,
                     width: '65px',
                     minWidth: '55px',
-                    headerTitle: `Topic ${topCode}: ${topName} (Click to inspect 7x7 detailed attempts)`,
+                    headerTitle: `Topic ${topCode}: ${topName} (Click to inspect detailed attempts)`,
                     title: topCode,
                     label: topCode,
                     shortLabel: topCode,
@@ -4575,7 +4808,7 @@ if (typeof window !== 'undefined') {
                         <div class="asm-cell-task-wrap" style="display:flex; align-items:center; justify-content:center; cursor:pointer;"
                              onclick="event.stopPropagation(); window.switchClassAttendanceTopic('${topCode}');"
                              ondblclick="event.stopPropagation(); if(typeof window.toggleAttendanceManualEditMode==='function') window.toggleAttendanceManualEditMode(true);"
-                             title="Topic ${topCode} (${topName}): ${earned}/${maxTopicReps} reps completed - Click to inspect 7x7 detailed attempts">
+                             title="Topic ${topCode} (${topName}): ${earned}/${maxTopicReps} reps completed - Click to inspect detailed attempts">
                           <span class="asm-rep-badge ${isComplete ? 'rep-complete' : ''}" style="font-size:12px; font-weight:700; color:${color}; font-variant-numeric:tabular-nums;">
                             ${earned}/${maxTopicReps}
                           </span>
@@ -4585,11 +4818,11 @@ if (typeof window !== 'undefined') {
                   });
                 });
               } else if (topicCodes.length > 0) {
-                // Mode 3: Detailed 7x7 Progress for Single Selected Topic
+                // Mode 3: Detailed Progress for Single Selected Topic
                 const targetTopCode = selectedTopic.toUpperCase();
                 const topicCodesToRender = topicCodes.includes(targetTopCode) ? [targetTopCode] : [topicCodes[0]];
 
-                // Topic Repetitions Helper to partition Words vs Phrases accurately in 7x7 system
+                // Topic Repetitions Helper to partition Words vs Phrases accurately
                 const getTopicAttemptsForComp = (studentAttsList, mTasks, compType) => {
                   const comp = compType === 'phrases' ? 'phrases' : 'words';
                   const explicitPhrasesTask = mTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
@@ -4635,10 +4868,10 @@ if (typeof window !== 'undefined') {
                   const phrasesTask = matchingTasks.find(a => a.payload?.category === 'phrases' || /PHRASE/i.test(a.shell_code || a.title || ''));
                   const hasPhrasesInTopic = checkTopicHasPhrases(matchingTasks);
 
-                  // 7 Columns for Words: W1, W2, W3, W4, W5, W6, W7
-                  for (let rep = 1; rep <= 7; rep++) {
+                  // Dynamic columns for Words: W1..W{compTargetReps}
+                  for (let rep = 1; rep <= compTargetReps; rep++) {
                     const repIdx = rep - 1;
-                    const isEndCol = !hasPhrasesInTopic && rep === 7;
+                    const isEndCol = !hasPhrasesInTopic && rep === compTargetReps;
                     dynamicAsmCols.push({
                       key: `theme_${tc}_topic_${topCode}_words_att_${repIdx}`,
                       className: `col-asm col-task col-theme-topic-att col-theme-topic-att-${tc.toLowerCase()} col-rep-${rep} col-comp-words${isEndCol ? ' col-theme-topic-att-end' : ''}`,
@@ -4733,11 +4966,11 @@ if (typeof window !== 'undefined') {
                     });
                   }
 
-                  // 7 Columns for Phrases: P1..P7 (Rendered whenever topic contains phrases or in vocabulary classes)
+                  // Dynamic columns for Phrases: P1..P{compTargetReps} (Rendered whenever topic contains phrases)
                   if (hasPhrasesInTopic) {
-                    for (let rep = 1; rep <= 7; rep++) {
+                    for (let rep = 1; rep <= compTargetReps; rep++) {
                       const repIdx = rep - 1;
-                      const isEndCol = rep === 7;
+                      const isEndCol = rep === compTargetReps;
                       dynamicAsmCols.push({
                         key: `theme_${tc}_topic_${topCode}_phrases_att_${repIdx}`,
                         className: `col-asm col-task col-theme-topic-att col-theme-topic-att-${tc.toLowerCase()} col-rep-${rep} col-comp-phrases${isEndCol ? ' col-theme-topic-att-end' : ''}`,
@@ -4782,7 +5015,7 @@ if (typeof window !== 'undefined') {
                                        oninput="window.onMatrixRepRateChange('${row.id}', '${tc}', '${topCode}', 'phrases', ${repIdx}, '${taskId}', '${att?.id || ''}', ${totalQ}, this.value)"
                                        onkeydown="if(event.key==='Enter'){this.blur();}"
                                        onclick="event.stopPropagation();"
-                                       style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--quad-d, #C084FC); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                                       style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--quad-d, #a855f7); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
                               </div>
                             `;
                           }
@@ -4836,6 +5069,16 @@ if (typeof window !== 'undefined') {
               }
 
               const hasExamPhrases = isVocab && !isLevel2Vocab && (examAsms.some(e => e.payload?.is_unified || e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')) || checkThemeHasPhrases(taskAsmsInTheme));
+              const wordsExam = examAsms.find(e => e.payload?.category === 'words' || /WORDS/i.test(e.shell_code || e.title || '')) ||
+                                examAsms.find(e => e.payload?.is_unified || /EXAM/i.test(e.shell_code || '')) ||
+                                examAsm;
+              const phrasesExam = examAsms.find(e => e.payload?.category === 'phrases' || /PHRASE/i.test(e.shell_code || e.title || '')) ||
+                                  examAsms.find(e => e.payload?.is_unified || /EXAM/i.test(e.shell_code || '')) ||
+                                  examAsm;
+              const isUnifiedExam = Boolean(wordsExam && phrasesExam && wordsExam.id === phrasesExam.id);
+              const wordsTotalQ = (isVocab && !isLevel2Vocab) ? 160 : (isUnifiedExam ? 160 : (Number(wordsExam?.payload?.total_questions || wordsExam?.total_questions || 160) || 160));
+              const phrasesTotalQ = (isVocab && !isLevel2Vocab) ? 40 : (isUnifiedExam ? 40 : (Number(phrasesExam?.payload?.total_questions || phrasesExam?.total_questions || 40) || 40));
+
               if (hasExamPhrases) {
                 // 1. WRD RATE (Words Exam Rate %)
                 dynamicAsmCols.push({
@@ -4851,10 +5094,33 @@ if (typeof window !== 'undefined') {
                   sortable: true,
                   align: 'center',
                   render: (val, row) => {
+                    const isManualMode = Boolean(window._classManualScoreEditMode);
                     const wRate = row[`theme_${tc}_words_rate`];
                     const isTaskCompleted = Boolean(row[`theme_${tc}_task_completed`]);
                     const earnedTasks = row[`theme_${tc}_task_progress`] || 0;
                     const maxTasks = row[`theme_${tc}_task_max`] || 0;
+
+                    if (isManualMode && wordsExam) {
+                      const draftKey = `exam_${wordsExam.id}_words`;
+                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[draftKey];
+                      const displayScore = currentDraft?.score != null ? currentDraft.score : (wRate != null && wRate >= 0 ? wRate : '');
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                          <input type="number" min="0" max="100" class="input-matrix-words-rate input-matrix-words-rate-${row.id}-${tc.toLowerCase()}"
+                                 data-student-id="${row.id}"
+                                 data-test-id="${wordsExam.id}"
+                                 data-section="words"
+                                 data-total-q="${wordsTotalQ}"
+                                 data-original-score="${wRate != null && wRate >= 0 ? wRate : ''}"
+                                 value="${displayScore}"
+                                 placeholder="%"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${wordsExam.id}', 'words', ${wordsTotalQ}, this.value, false, ${phrasesTotalQ}, '${tc}')"
+                                 onkeydown="if(event.key==='Enter'){this.blur();}"
+                                 onclick="event.stopPropagation();"
+                                 style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--grade-b, #95ff00); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                        </div>
+                      `;
+                    }
 
                     if (wRate != null && wRate >= 0) {
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(wRate) : '#ffffff';
@@ -4891,8 +5157,33 @@ if (typeof window !== 'undefined') {
                   sortable: true,
                   align: 'center',
                   render: (val, row) => {
+                    const isManualMode = Boolean(window._classManualScoreEditMode);
                     const wPts = row[`theme_${tc}_words_pts`];
                     const wRate = row[`theme_${tc}_words_rate`] || 0;
+
+                    if (isManualMode && wordsExam) {
+                      const draftKey = `exam_${wordsExam.id}_words`;
+                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[draftKey];
+                      const cleanPts = wPts != null && wPts >= 0 ? Math.round(Number(wPts)) : '';
+                      const displayPts = currentDraft?.pts != null ? Math.round(Number(currentDraft.pts)) : cleanPts;
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                          <input type="number" min="0" max="${wordsTotalQ}" class="input-matrix-words-pts input-matrix-words-pts-${row.id}-${tc.toLowerCase()}"
+                                 data-student-id="${row.id}"
+                                 data-test-id="${wordsExam.id}"
+                                 data-section="words"
+                                 data-total-q="${wordsTotalQ}"
+                                 data-original-pts="${cleanPts}"
+                                 value="${displayPts}"
+                                 placeholder="${wordsTotalQ}"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${wordsExam.id}', 'words', ${wordsTotalQ}, this.value, true, ${phrasesTotalQ}, '${tc}')"
+                                 onkeydown="if(event.key==='Enter'){this.blur();}"
+                                 onclick="event.stopPropagation();"
+                                 style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                        </div>
+                      `;
+                    }
+
                     if (wPts != null && wPts >= 0) {
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(wRate) : '#ffffff';
                       return `
@@ -4921,8 +5212,32 @@ if (typeof window !== 'undefined') {
                   sortable: true,
                   align: 'center',
                   render: (val, row) => {
+                    const isManualMode = Boolean(window._classManualScoreEditMode);
                     const pRate = row[`theme_${tc}_phrases_rate`];
                     const wRate = row[`theme_${tc}_words_rate`];
+
+                    if (isManualMode && phrasesExam) {
+                      const draftKey = `exam_${phrasesExam.id}_phrases`;
+                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[draftKey];
+                      const displayScore = currentDraft?.score != null ? currentDraft.score : (pRate != null && pRate >= 0 ? pRate : '');
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                          <input type="number" min="0" max="100" class="input-matrix-phrases-rate input-matrix-phrases-rate-${row.id}-${tc.toLowerCase()}"
+                                 data-student-id="${row.id}"
+                                 data-test-id="${phrasesExam.id}"
+                                 data-section="phrases"
+                                 data-total-q="${phrasesTotalQ}"
+                                 data-original-score="${pRate != null && pRate >= 0 ? pRate : ''}"
+                                 value="${displayScore}"
+                                 placeholder="%"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${phrasesExam.id}', 'phrases', ${phrasesTotalQ}, this.value, false, ${wordsTotalQ}, '${tc}')"
+                                 onkeydown="if(event.key==='Enter'){this.blur();}"
+                                 onclick="event.stopPropagation();"
+                                 style="width:100%; height:100%; background:transparent; border:none; outline:none; color:var(--grade-d, #FF8C00); font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                        </div>
+                      `;
+                    }
+
                     if (pRate != null && pRate >= 0) {
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pRate) : '#ffffff';
                       return `
@@ -4954,8 +5269,33 @@ if (typeof window !== 'undefined') {
                   sortable: true,
                   align: 'center',
                   render: (val, row) => {
+                    const isManualMode = Boolean(window._classManualScoreEditMode);
                     const pPts = row[`theme_${tc}_phrases_pts`];
                     const pRate = row[`theme_${tc}_phrases_rate`] || 0;
+
+                    if (isManualMode && phrasesExam) {
+                      const draftKey = `exam_${phrasesExam.id}_phrases`;
+                      const currentDraft = window._manualInputState?.drafts?.[row.id]?.[draftKey];
+                      const cleanPts = pPts != null && pPts >= 0 ? Math.round(Number(pPts)) : '';
+                      const displayPts = currentDraft?.pts != null ? Math.round(Number(currentDraft.pts)) : cleanPts;
+                      return `
+                        <div style="display:flex; align-items:center; justify-content:center; padding:1px 0; width:100%; height:100%;">
+                          <input type="number" min="0" max="${phrasesTotalQ}" class="input-matrix-phrases-pts input-matrix-phrases-pts-${row.id}-${tc.toLowerCase()}"
+                                 data-student-id="${row.id}"
+                                 data-test-id="${phrasesExam.id}"
+                                 data-section="phrases"
+                                 data-total-q="${phrasesTotalQ}"
+                                 data-original-pts="${cleanPts}"
+                                 value="${displayPts}"
+                                 placeholder="${phrasesTotalQ}"
+                                 oninput="window.onMatrixSectionExamChange('${row.id}', '${phrasesExam.id}', 'phrases', ${phrasesTotalQ}, this.value, true, ${wordsTotalQ}, '${tc}')"
+                                 onkeydown="if(event.key==='Enter'){this.blur();}"
+                                 onclick="event.stopPropagation();"
+                                 style="width:100%; height:100%; background:transparent; border:none; outline:none; color:#ffffff; font-weight:700; font-size:12px; text-align:center; border-radius:0; padding:0 2px;">
+                        </div>
+                      `;
+                    }
+
                     if (pPts != null && pPts >= 0) {
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pRate) : '#ffffff';
                       return `
@@ -4991,14 +5331,14 @@ if (typeof window !== 'undefined') {
                       const themePct = row[`theme_${tc}_score`] != null && row[`theme_${tc}_score`] >= 0 ? row[`theme_${tc}_score`] : 0;
                       const color = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(themePct) : '#ffffff';
                       return `
-                        <span class="asm-score asm-score-test test-score-theme-total"
+                        <span class="asm-score asm-score-test test-score-theme-total test-score-theme-total-${row.id}-${tc.toLowerCase()}"
                               style="color:${color}; font-weight:800; font-size:12px; font-variant-numeric:tabular-nums;"
                               title="Theme ${tc} Accumulative Points: ${cleanTotal}">
                           ${cleanTotal}
                         </span>
                       `;
                     }
-                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                    return `<span class="asm-score asm-score-test test-score-theme-total test-score-theme-total-${row.id}-${tc.toLowerCase()}" style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
                   }
                 });
 
@@ -5026,17 +5366,17 @@ if (typeof window !== 'undefined') {
                       if (isGradeS) {
                         return `
                           <div style="display:flex; align-items:center; justify-content:center;">
-                            <span class="grid-grade-val grid-grade-star" style="color:var(--grade-star); font-size:12px; font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Theme ${tc} Grade ★ (100% Excellent)">★</span>
+                            <span class="grid-grade-val grid-grade-val-${row.id}-${tc.toLowerCase()} grid-grade-star" style="color:var(--grade-star); font-size:12px; font-weight:700; text-shadow:0 0 6px var(--grade-star-glow, rgba(255,45,135,0.4)); line-height:1;" title="Theme ${tc} Grade ★ (100% Excellent)">★</span>
                           </div>
                         `;
                       }
                       return `
                         <div style="display:flex; align-items:center; justify-content:center;">
-                          <span class="grid-grade-val" style="color:${gradeColor}; font-weight:700; font-size:12px; line-height:1;" title="Theme ${tc} Grade ${cleanGrade}">${cleanGrade}</span>
+                          <span class="grid-grade-val grid-grade-val-${row.id}-${tc.toLowerCase()}" style="color:${gradeColor}; font-weight:700; font-size:12px; line-height:1;" title="Theme ${tc} Grade ${cleanGrade}">${cleanGrade}</span>
                         </div>
                       `;
                     }
-                    return `<span style="font-size:12px; font-weight:600; color:#64748b;">—</span>`;
+                    return `<div style="display:flex; align-items:center; justify-content:center;"><span class="grid-grade-val grid-grade-val-${row.id}-${tc.toLowerCase()}" style="font-size:12px; font-weight:600; color:#64748b;">—</span></div>`;
                   }
                 });
 
@@ -5836,7 +6176,7 @@ if (typeof window !== 'undefined') {
                     if (totalStudents > 0 && repsSum > 0) {
                       const avgReps = (repsSum / totalStudents).toFixed(1).replace(/\.0$/, '');
                       const avgRepsNum = repsSum / totalStudents;
-                      const avgColor = avgRepsNum >= compTargetReps ? 'var(--grade-a)' : (avgRepsNum >= 4 ? '#38bdf8' : 'var(--grade-c)');
+                      const avgColor = avgRepsNum >= compTargetReps ? 'var(--grade-a)' : (avgRepsNum >= Math.ceil(compTargetReps / 2) ? '#38bdf8' : 'var(--grade-c)');
                       cellsHtml += `
                         <td class="text-center ${col.className || ''}">
                           <span style="color:${avgColor}; font-weight:700; font-size:12px; font-variant-numeric:tabular-nums;" title="Class Avg ${label} Repetitions: ${avgReps}/${compTargetReps}">${avgReps}</span>
@@ -6462,7 +6802,8 @@ if (typeof window !== 'undefined') {
           classId: classId || cid,
           classTests,
           studentsGridData,
-          allAttempts
+          allAttempts,
+          classTestSettings
         };
         window.syncClassHubLowerPanel = syncClassHubLowerPanel;
         window.renderAttendanceGridMatrix = renderAttendanceGridMatrix;
@@ -6477,7 +6818,7 @@ if (typeof window !== 'undefined') {
             'A': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.A) || '#ff2d87',
             'B': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.B) || '#FF8C00',
             'C': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.C) || '#95ff00',
-            'D': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.D) || '#C084FC'
+            'D': (typeof TOPSCORE_QUAD_COLORS !== 'undefined' && TOPSCORE_QUAD_COLORS.D) || 'var(--grade-star, #a855f7)'
           };
           const themeColor = quadColors[tc] || '#38bdf8';
 
@@ -6496,7 +6837,10 @@ if (typeof window !== 'undefined') {
           const taskTitle = currentTask?.title || `Theme ${tc} Topic ${topicCode} ${compLabel}`;
           const taskCode = currentTask?.shell_code || `TOPIC-${topicCode}-${compLabel.toUpperCase()}`;
           const expectedMaxQ = (typeof getAsmExpectedMax === 'function' ? getAsmExpectedMax(currentTask) : (Number(currentTask?.payload?.total_questions || currentTask?.total_questions || 10))) || 10;
-          const targetReps = 7;
+          // Dynamic target: read from task payload, then class context settings, fallback 7
+          const _modalTaskReps = Number(currentTask?.payload?.task_repetitions || 0);
+          const _modalCtxReps = Number(window._currentClassHubContext?.classTestSettings?.taskRepetitions || 0);
+          const targetReps = _modalTaskReps || _modalCtxReps || 7;
 
           // Collect attempts from memory context
           const memoryAttempts = (window._currentClassHubContext?.allAttempts || []).filter(a => {
@@ -6668,7 +7012,7 @@ if (typeof window !== 'undefined') {
                           <tr class="${isBest ? 'is-best-attempt' : ''}">
                             <td style="font-weight:700; color:#ffffff;">
                               #${idx + 1}
-                              ${isBest ? '<span style="font-size:12px; font-weight:800; padding:1px 5px; border-radius:3px; background:rgba(0,192,0,0.2); border:1px solid var(--grade-a); color:var(--grade-a); margin-left:4px;">BEST</span>' : ''}
+                              ${isBest ? '<span style="font-size:12px; font-weight:800; color:var(--grade-a); margin-left:4px;">★ BEST</span>' : ''}
                             </td>
                             <td style="text-align:left; padding-left:16px; color:#cbd5e1; font-size:12px;">
                               ${escapeHtml(dateFormatted)}
@@ -7620,10 +7964,7 @@ if (typeof window !== 'undefined') {
               ${escapeHtml(cls.name)}
             </td>
             <td style="padding:0.7rem 1rem; text-align:center;">
-              <span style="font-size: 12px; padding:0.15rem 0.5rem; border-radius:3px; font-weight:600;
-                ${cls.is_active
-                  ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.12); color:${TOPSCORE_COLORS.STAR};`
-                  : 'background:rgba(100,116,139,0.12); color:var(--clr-text-muted);'}">
+              <span style="font-size: 12px; font-weight:700; color:${cls.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};">
                 ${cls.is_active ? 'Active' : 'Inactive'}
               </span>
             </td>
@@ -7669,12 +8010,12 @@ if (typeof window !== 'undefined') {
            const badgeColor = !isExam ? 'background:rgba(var(--grade-d-rgb, 255,140,0),0.15);color:var(--grade-d);border:1px solid rgba(var(--grade-d-rgb, 255,140,0),0.3);' : 'background:rgba(var(--grade-e-rgb),0.15);color:var(--grade-e);border:1px solid rgba(var(--grade-e-rgb),0.3);';
            return `
              <tr style="border-bottom:1px solid var(--clr-border);">
-               <td style="padding:0.75rem 1rem;text-align:center;"><span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-size: 12px;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(a.levels?.name || a.levels?.level_number) : (a.levels?.name || '—'))}</span></td>
+               <td style="padding:0.75rem 1rem;text-align:center;"><span style="color:#f8fafc;font-size: 12px;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(a.levels?.name || a.levels?.level_number) : (a.levels?.name || '—'))}</span></td>
                <td style="padding:0.75rem 1rem;color:var(--clr-text-muted);font-size: 12px;">${escapeHtml(c?.name || '—')}</td>
                <td style="padding:0.75rem 1rem;font-weight:600;color:var(--clr-text);">${escapeHtml(a.title || 'Untitled')}</td>
-               <td style="padding:0.75rem 1rem;"><span class="badge" style="${badgeColor}">${catLabel}</span></td>
+               <td style="padding:0.75rem 1rem;"><span style="color:${!isExam ? 'var(--grade-d)' : 'var(--grade-e)'}; font-size:12px; font-weight:700;">${catLabel}</span></td>
                <td style="padding:0.75rem 1rem;">
-                  ${a.modules?.name ? `<span class="badge badge-neutral">${escapeHtml(a.modules.name)}</span>` : '—'}
+                  ${a.modules?.name ? `<span style="color:#38bdf8; font-size:12px; font-weight:600;">${escapeHtml(a.modules.name)}</span>` : '—'}
                </td>
              </tr>
            `;
@@ -7901,10 +8242,10 @@ if (typeof window !== 'undefined') {
                             <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${escapeHtml(sInst)}</td>
                             <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${escapeHtml(sProg)}</td>
                             <td style="padding:0.65rem 1rem;color:var(--clr-text-muted);">${b ? escapeHtml(b.name) : '—'}</td>
-                            <td style="padding:0.65rem 1rem;text-align:center;"><span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-size: 12px;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(sLvl) : sLvl)}</span></td>
+                            <td style="padding:0.65rem 1rem;text-align:center;"><span style="color:#f8fafc;font-size: 12px;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(sLvl) : sLvl)}</span></td>
                             <td style="padding:0.65rem 1.25rem;font-weight:600;color:var(--clr-text);">${escapeHtml(s.name)}</td>
                             <td style="padding:0.65rem 1rem;text-align:center;">
-                              <span class="badge ${s.is_active !== false ? 'badge-success' : 'badge-neutral'}" style="font-size: 12px;">${s.is_active !== false ? 'Active' : 'Inactive'}</span>
+                              <span style="font-size: 12px; font-weight:700; color:${s.is_active !== false ? 'var(--grade-a)' : 'var(--grade-e)'};">${s.is_active !== false ? 'Active' : 'Inactive'}</span>
                             </td>
                           </tr>
                         `;
@@ -7998,12 +8339,6 @@ if (typeof window !== 'undefined') {
       const data = [...rawData].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
       area.innerHTML = `
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Institutions <span class="count-chip">${data.length} Total</span></h2>
-            <p class="section-subtitle">Manage English learning institutions in alphabetical order</p>
-          </div>
-        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -8026,7 +8361,7 @@ if (typeof window !== 'undefined') {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="fw-600">${escapeHtml(r.name)}</td>
-          <td class="text-center"><span class="badge ${r.is_active ? 'badge-success' : 'badge-neutral'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+          <td class="text-center"><span style="font-size:12px; font-weight:700; color:${r.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};">${r.is_active ? 'Active' : 'Inactive'}</span></td>
           <td class="text-center text-muted text-sm">${new Date(r.created_at).toLocaleDateString()}</td>
           <td class="text-right">
             <div class="d-flex gap-2 justify-end">
@@ -8097,18 +8432,11 @@ if (typeof window !== 'undefined') {
       ).join(' ');
 
       area.innerHTML = `
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Classes & Blueprint <span class="count-chip">${data.length} in Tab</span></h2>
-            <p class="section-subtitle">Manage classes grouped by level in alphabetical order</p>
-          </div>
-          <div class="d-flex gap-2 flex-wrap mt-3" style="width: 100%;">
+        <!-- C-CLASS TOOLS QUICK-ACCESS BAR -->
+        <div class="card p-3 mb-3" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
+          <div class="d-flex gap-2 flex-wrap mb-3">
              ${tabsHtml}
           </div>
-        </div>
-
-        <!-- C-CLASS TOOLS QUICK-ACCESS BAR -->
-        <div class="card p-3 mt-3 mb-3" style="background:rgba(255,255,255,0.02);border:1px solid var(--clr-border);">
           <div class="text-xs fw-700 mb-2" style="color:var(--clr-text-2);letter-spacing:0.08em;">C &mdash; CLASS TOOLS</div>
           <div class="d-flex gap-2 flex-wrap">
             <button class="btn btn-ghost btn-sm" onclick="window.loadSection('levels')">${getSvgIcon('trending-up', 14)} Levels</button>
@@ -8123,7 +8451,7 @@ if (typeof window !== 'undefined') {
           </div>
         </div>
 
-        <div class="table-wrap mt-3">
+        <div class="table-wrap">
           <table>
             <thead>
               <tr>
@@ -8145,9 +8473,9 @@ if (typeof window !== 'undefined') {
             window._subjRecords[r.id] = r;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td><span class="badge" style="background:#334155;color:#f8fafc;border:1px solid rgba(255,255,255,0.15);font-size: 12px;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(r.levels?.name || r.levels?.level_number) : (r.levels?.name || '&mdash;'))}</span></td>
+              <td><span style="color:#f8fafc;font-size: 12px;font-weight:700;white-space:nowrap;">${escapeHtml(typeof toShortLevel === 'function' ? toShortLevel(r.levels?.name || r.levels?.level_number) : (r.levels?.name || '&mdash;'))}</span></td>
               <td class="fw-600" style="color:var(--clr-text-1);">${escapeHtml(r.name)}</td>
-              <td class="text-center"><span class="badge ${r.is_active ? 'badge-success' : 'badge-neutral'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+              <td class="text-center"><span style="font-size:12px; font-weight:700; color:${r.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};">${r.is_active ? 'Active' : 'Inactive'}</span></td>
               <td class="text-right">
                 <div class="d-flex gap-2 justify-end">
                   <button class="btn btn-outline btn-sm" data-nav-topics="${r.id}" title="View Topics in ${escapeHtml(r.name)}">Topics &rarr;</button>
@@ -8216,12 +8544,6 @@ if (typeof window !== 'undefined') {
       });
 
       area.innerHTML = `
-        <div class="section-header">
-          <div>
-            <h2 class="section-title">Levels <span class="count-chip">${data.length} Total</span></h2>
-            <p class="section-subtitle">Curriculum progression tiers ordered by institution, program, class, and level rank</p>
-          </div>
-        </div>
         <div class="table-wrap">
           <table>
             <thead>
@@ -8255,12 +8577,12 @@ if (typeof window !== 'undefined') {
         const programName = (r.program_id && classMap[r.program_id]?.name) ? classMap[r.program_id].name : 'All Programs';
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><span class="badge badge-neutral">${escapeHtml(progName)}</span></td>
-          <td><span class="badge badge-neutral">${escapeHtml(programName)}</span></td>
+          <td><span style="color:#94a3b8; font-size:12px; font-weight:600;">${escapeHtml(progName)}</span></td>
+          <td><span style="color:#94a3b8; font-size:12px; font-weight:600;">${escapeHtml(programName)}</span></td>
           <td class="text-muted fw-600">${escapeHtml(r.classes?.name || '—')}</td>
-          <td class="text-center"><span class="badge badge-primary" style="white-space:nowrap;font-weight:700;">${typeof toShortLevel === 'function' ? toShortLevel(r.level_number) : toLevelLetter(r.level_number)}</span></td>
+          <td class="text-center"><span style="color:var(--primary-tactical, #38bdf8); font-size:12px; font-weight:700; white-space:nowrap;">${typeof toShortLevel === 'function' ? toShortLevel(r.level_number) : toLevelLetter(r.level_number)}</span></td>
           <td class="fw-600">${escapeHtml(r.name)}</td>
-          <td class="text-center"><span class="badge ${r.is_active ? 'badge-success' : 'badge-neutral'}">${r.is_active ? 'Active' : 'Inactive'}</span></td>
+          <td class="text-center"><span style="font-size:12px; font-weight:700; color:${r.is_active ? 'var(--grade-a)' : 'var(--grade-e)'};">${r.is_active ? 'Active' : 'Inactive'}</span></td>
           <td class="text-right">
             <div class="d-flex gap-2 justify-end">
               <button class="btn btn-secondary btn-sm" data-edit-level="${r.id}">Edit</button>

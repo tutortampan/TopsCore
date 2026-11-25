@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v227';
+const CACHE_NAME = 'topscore-cache-option-a-v236';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -14,18 +14,18 @@ const ASSETS_TO_CACHE = [
   './icons/icon.svg',
   './css/style.css?v=20261119_v631',
   './css/dashboard.css?v=20261119_v631',
-  './css/auth.css?v=20261028',
+  './css/auth.css?v=20261125_v680',
   './css/test.css?v=20261121_v555',
   './css/result.css?v=20261119_v631',
   './css/tutor.css?v=20261123_v50',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
   './js/api.js?v=20261124_v642',
-  './js/auth.js?v=20261108_v162',
-  './js/dashboard.js?v=20261124_v672',
+  './js/auth.js?v=20261125_v680',
+  './js/dashboard.js?v=20261125_v677',
   './js/tutor.js?v=20261123_v50',
   './js/test.js?v=20261124_v562',
-  './js/result.js?v=20261119_v631',
+  './js/result.js?v=20261125_v676',
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261121_v161',
   './js/indonesia-regions.js?v=20261117_v547',

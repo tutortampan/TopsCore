@@ -1020,6 +1020,9 @@ function _initCrudModals() {
             const existingList = await adminFetchAll('students');
             const existingMatch = existingList.find(s => !s.deleted_at && s.program_id === payload.program_id && (s.name || '').toLowerCase().trim() === (payload.name || '').toLowerCase().trim());
             if (existingMatch) {
+              if (payload.is_active !== undefined) {
+                payload.program_status = payload.is_active ? 'ACTIVE' : 'INACTIVE';
+              }
               await adminUpdate('students', existingMatch.id, { ...payload, updated_at: new Date().toISOString() });
               showToast('A student with this name already exists in the class. Data successfully merged/updated!', 'success');
               crudModal.classList.add('hidden');
@@ -1029,6 +1032,9 @@ function _initCrudModals() {
           }
           let inserted = null;
           try {
+            if (targetTable === 'students' && payloadToSave.is_active !== undefined) {
+              payloadToSave.program_status = payloadToSave.is_active ? 'ACTIVE' : 'INACTIVE';
+            }
             inserted = await adminInsert(targetTable, payloadToSave);
           } catch (err) {
             if (targetTable === 'levels' && payloadToSave.program_id && (err.message?.includes('program_id') || err.message?.includes('PGRST204') || err.message?.includes('400'))) {
@@ -1115,7 +1121,7 @@ function _initCrudModals() {
 // ============================================================
 // DUPLICATE STUDENTS & QUESTIONS MODAL CONTROLLERS
 // ============================================================
-let currentDupStudScope = 'same_class';
+let currentDupStudScope = 'all';
 let dupStudentGroups = [];
 let currentDupQTab = 'same_Test';
 let _dupModalsInitialized = false;
@@ -1224,91 +1230,229 @@ function _initDuplicateModals() {
 }
 
 // --- STUDENT DUPLICATE LOADER ---
-async function loadDuplicateStudents(scope = 'same_class') {
+async function loadDuplicateStudents(scope = 'all') {
   const dupStudContent = document.getElementById('dup-students-content');
   if (!dupStudContent) return;
   dupStudContent.innerHTML = (window.getLoadingStateHtml || ((msg) => `<div class="topscore-loading-center"><div class="spinner"></div><p class="loading-text">${msg}</p></div>`))('Scanning for duplicate students...');
   try {
-    const duplicateGroups = await detectDuplicateStudents(scope);
+    const duplicateGroups = await detectDuplicateStudents('all');
     dupStudentGroups = duplicateGroups || [];
 
     // Update counters
-    const totalDups = dupStudentGroups.reduce((acc, g) => acc + ((g.candidates?.length || 1) - 1), 0);
+    const sameCount = dupStudentGroups.filter(g => g.isSameClass).length;
+    const crossCount = dupStudentGroups.filter(g => !g.isSameClass).length;
+    const totalGroups = dupStudentGroups.length;
+
+    const totalCountEl = document.getElementById('dup-stud-total-count');
     const sameCountEl = document.getElementById('dup-stud-same-count');
     const crossCountEl = document.getElementById('dup-stud-cross-count');
-    if (scope === 'same_class' && sameCountEl) sameCountEl.textContent = totalDups;
-    if (scope === 'cross_class' && crossCountEl) crossCountEl.textContent = totalDups;
+    const mergeAllBtn = document.getElementById('btn-merge-all-visible-students');
+
+    if (totalCountEl) totalCountEl.textContent = `${totalGroups} group${totalGroups !== 1 ? 's' : ''}`;
+    if (sameCountEl) sameCountEl.textContent = sameCount;
+    if (crossCountEl) crossCountEl.textContent = crossCount;
 
     if (dupStudentGroups.length === 0) {
+      if (mergeAllBtn) {
+        mergeAllBtn.disabled = true;
+        mergeAllBtn.style.opacity = '0.5';
+        mergeAllBtn.style.cursor = 'not-allowed';
+      }
       dupStudContent.innerHTML = `<div class="empty-state p-6 text-center"><p>${getSvgIcon('check-circle', 16)} No duplicate students found.</p></div>`;
       return;
     }
 
-    let html = '';
-    dupStudentGroups.forEach((group, gIdx) => {
-      html += `
-        <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-primary); background:var(--clr-surface, #1e293b); border-radius:8px;">
-          <div class="fw-700 mb-2" style="color:var(--clr-text, #f8fafc); font-size: 16px;">
-            Duplicate Group ${gIdx + 1} — Name: "${escapeHtml(group.name)}"
-          </div>
-          <table class="table-sm w-100 mb-3 text-sm" style="border-collapse:collapse; width:100%;">
-            <thead>
-              <tr style="border-bottom:1px solid rgba(255,255,255,0.1); text-align:left;">
-                <th style="padding:8px 4px;">RECORD UUID</th>
-                <th style="padding:8px 4px;">PROGRAM / CLASS</th>
-                <th style="padding:8px 4px;">BATCH</th>
-                <th style="padding:8px 4px;">INSTITUTION</th>
-                <th style="padding:8px 4px;">ATTEMPTS</th>
-                <th style="padding:8px 4px;">CREATED AT</th>
-                <th style="padding:8px 4px; text-align:right;">ACTION</th>
-              </tr>
-            </thead>
-            <tbody>
-      `;
-      (group.candidates || []).forEach((student, sIdx) => {
-        const isPrimary = student.id === group.recommendedPrimaryId || sIdx === 0;
+    if (mergeAllBtn) {
+      mergeAllBtn.disabled = false;
+      mergeAllBtn.style.opacity = '1';
+      mergeAllBtn.style.cursor = 'pointer';
+    }
+
+    const renderGroups = () => {
+      let html = '';
+      dupStudentGroups.forEach((group, gIdx) => {
+        const primaryCandidate = (group.candidates || []).find(c => c.id === group.recommendedPrimaryId) || group.candidates?.[0];
+        const otherCandidates = (group.candidates || []).filter(c => c.id !== primaryCandidate?.id);
+        const totalAttempts = (group.candidates || []).reduce((acc, c) => acc + (c.attemptsCount || 0), 0);
+
+        // Determine resulting batch & display
+        const primaryBatchNum = (primaryCandidate?.batches?.name || primaryCandidate?.batchName || '').replace(/^batch\s*/i, '').trim();
+        const otherCandidateWithBatch = otherCandidates.find(c => {
+          const b = (c.batches?.name || c.batchName || '').replace(/^batch\s*/i, '').trim();
+          return b && b !== primaryBatchNum && b !== 'Unassigned';
+        });
+        const otherBatchNum = otherCandidateWithBatch ? (otherCandidateWithBatch.batches?.name || otherCandidateWithBatch.batchName || '').replace(/^batch\s*/i, '').trim() : '';
+
+        // Suffix preview: (Repeat - <earlier batch>) or (Alumni - <batch>) or clean
+        let resultSuffixHtml = '';
+        const pNum = parseInt(primaryBatchNum.replace(/\D/g, ''), 10);
+        const oNum = parseInt(otherBatchNum.replace(/\D/g, ''), 10);
+        const hasBothBatches = Boolean(primaryBatchNum && otherBatchNum && primaryBatchNum !== otherBatchNum);
+
+        if (hasBothBatches) {
+          const isPrimaryNewer = (!isNaN(pNum) && !isNaN(oNum))
+            ? pNum > oNum
+            : new Date(primaryCandidate?.created_at || 0) >= new Date(otherCandidates[0]?.created_at || 0);
+
+          if (isPrimaryNewer) {
+            // Student is active in newer batch, repeating from earlier batch (user rule: suffix must show earlier batch!)
+            resultSuffixHtml = `<span style="color: var(--quad-b, #FF8C00); font-weight: 600; font-size: 12px; margin-left: 4px;">(Repeat - ${escapeHtml(otherBatchNum)})</span>`;
+          } else {
+            // User manually selected earlier batch as primary
+            if ((primaryCandidate?.program_status || '').toUpperCase() === 'ALUMNI' || primaryCandidate?.level_id === 99) {
+              resultSuffixHtml = `<span style="color: var(--grade-star, #a855f7); font-weight: 600; font-size: 12px; margin-left: 4px;">(Alumni - ${escapeHtml(primaryBatchNum)})</span>`;
+            }
+          }
+        } else if ((primaryCandidate?.program_status || '').toUpperCase() === 'ALUMNI' || primaryCandidate?.level_id === 99) {
+          resultSuffixHtml = `<span style="color: var(--grade-star, #a855f7); font-weight: 600; font-size: 12px; margin-left: 4px;">(Alumni - ${escapeHtml(primaryBatchNum)})</span>`;
+        }
+
+        const activeBatchDisplay = primaryBatchNum ? `Batch ${primaryBatchNum}` : 'Unassigned';
+
+        // Same Class vs Cross-Class label (Strict Zero-Pill / Zero-Box Invariant: clean unboxed text)
+        const isSameClass = group.isSameClass ?? (group.candidates || []).every(c => c.batch_id === group.candidates[0]?.batch_id);
+        const typeTagHtml = isSameClass
+          ? `<span style="color: var(--primary-tactical, #38bdf8); font-size: 12px; font-weight: 700; margin-left: 6px;">(Same Class)</span>`
+          : `<span style="color: var(--quad-b, #FF8C00); font-size: 12px; font-weight: 700; margin-left: 6px;">(Cross-Class)</span>`;
+
         html += `
-              <tr style="${isPrimary ? 'background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.12);' : ''} border-bottom:1px solid rgba(255,255,255,0.05);">
-                <td style="padding:8px 4px; font-family:monospace; font-size: 12px;">${student.id.substring(0,8)}...</td>
-                <td style="padding:8px 4px;">${escapeHtml(student.programName || student.programs?.name || '—')}</td>
-                <td style="padding:8px 4px;">${escapeHtml(student.batchName || student.batches?.name || 'Unassigned')}</td>
-                <td style="padding:8px 4px;">${escapeHtml(student.institutionName || student.institutions?.name || '—')}</td>
-                <td style="padding:8px 4px;"><span class="badge" style="background:rgba(59,130,246,0.2); color:#60a5fa;">${student.attemptsCount || 0} attempts</span></td>
-                <td style="padding:8px 4px; font-size: 12px; color:#94a3b8;">${new Date(student.created_at).toLocaleDateString()}</td>
-                <td style="padding:8px 4px; text-align:right;">
-                  ${isPrimary ? '<span class="badge badge-success" style="background:var(--clr-success); color:#0F172A; font-weight:700; padding:3px 8px; border-radius:4px; font-size: 12px;">Primary Target</span>' : `<button class="btn btn-warning btn-sm btn-merge-student" data-primary="${group.recommendedPrimaryId}" data-secondary="${student.id}" style="font-size: 12px; padding:3px 8px;">Merge to Primary</button>`}
-                </td>
-              </tr>
+          <div class="card" style="padding: 10px; margin-bottom: 10px; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 8px; box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; flex-shrink: 0 !important; min-height: auto !important; overflow: visible !important;">
+            <div style="font-size: 14px; font-weight: 800; color: #f8fafc; display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: nowrap;">
+              <div style="display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                <span>Duplicate Group ${gIdx + 1} &mdash; Name:</span>
+                <span style="color: #ffffff; font-weight: 800;">&ldquo;${escapeHtml(group.name)}&rdquo;</span>
+                ${typeTagHtml}
+              </div>
+              <div style="display: flex; align-items: center; gap: 6px; background: #0f172a; border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 6px; padding: 4px 10px; font-size: 12px; white-space: nowrap;">
+                <span style="color: #94a3b8; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.04em;">RESULT:</span>
+                <strong style="color: #ffffff; font-size: 12px;">${escapeHtml(group.name)}</strong>
+                ${resultSuffixHtml}
+                <span style="color: rgba(255,255,255,0.25);">&bull;</span>
+                <span style="color: var(--primary-tactical, #38bdf8); font-weight: 700;">${escapeHtml(activeBatchDisplay)}</span>
+                <span style="color: rgba(255,255,255,0.25);">&bull;</span>
+                <span style="color: var(--grade-a, #00c000); font-weight: 700;">${totalAttempts} ATTEMPTS</span>
+              </div>
+            </div>
+            <div style="width: 100%;">
+              <table style="width: 100%; border-collapse: collapse; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 12px; table-layout: auto;">
+                <thead>
+                  <tr style="height: 34px; border-bottom: 1.5px solid rgba(255, 255, 255, 0.12); background: #0f172a;">
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 90px; white-space: nowrap !important;">RECORD UUID</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 140px; white-space: nowrap !important;">PROGRAM / LEVEL</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 90px; white-space: nowrap !important;">BATCH</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 75px; white-space: nowrap !important;">INSTITUTION</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 100px; white-space: nowrap !important;">ATTEMPTS</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 95px; white-space: nowrap !important;">CREATED AT</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: right; width: 220px; white-space: nowrap !important;">ACTION</th>
+                    <th style="padding: 0 10px; font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em; text-align: left; width: 250px; white-space: nowrap !important;">RESULT PREVIEW</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
+          (group.candidates || []).forEach((student, sIdx) => {
+            const isPrimary = student.id === group.recommendedPrimaryId || (!group.recommendedPrimaryId && sIdx === 0);
+            const createdDateStr = student.created_at ? new Date(student.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+            const batchDisplay = student.batchName || (student.batches?.name ? `Batch ${student.batches.name.replace(/^batch\s*/i, '')}` : 'Unassigned');
+            const progDisplay = student.programName || student.programs?.name || '—';
+            const levelDisplay = student.levelName || student.levels?.name || '';
+            const instDisplay = student.institutionName || student.programs?.institutions?.code || student.institutions?.name || '—';
+            const attCount = typeof student.attemptsCount === 'number' ? student.attemptsCount : 0;
+
+            html += `
+                  <tr style="height: 38px; min-height: 38px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); ${isPrimary ? 'background: rgba(0, 192, 0, 0.12);' : ''}">
+                    <td style="padding: 0 10px; font-family: var(--fm-font-mono, monospace); font-size: 12px; color: #94a3b8; font-weight: 600; white-space: nowrap !important;">${student.id.substring(0,8)}...</td>
+                    <td style="padding: 0 10px; font-size: 12px; white-space: nowrap !important; line-height: 38px;">
+                      <strong style="color: #f8fafc; font-weight: 700; font-size: 12px;">${escapeHtml(progDisplay)}</strong>
+                      ${levelDisplay ? ` <span style="color: var(--grade-star, #a855f7); font-weight: 600; font-size: 12px;">(${escapeHtml(levelDisplay)})</span>` : ''}
+                    </td>
+                    <td style="padding: 0 10px; font-size: 12px; font-weight: 700; color: ${batchDisplay !== 'Unassigned' ? 'var(--primary-tactical, #38bdf8)' : '#94a3b8'}; line-height: 38px; white-space: nowrap !important;">${escapeHtml(batchDisplay)}</td>
+                    <td style="padding: 0 10px; font-size: 12px; line-height: 38px; white-space: nowrap !important;">
+                      <span style="font-size: 12px !important; font-weight: 700; color: ${instDisplay === 'TOP' ? 'var(--quad-b, #ff8c00)' : 'var(--quad-a, #ff2d87)'}; display: inline-block; white-space: nowrap !important;">${escapeHtml(instDisplay)}</span>
+                    </td>
+                    <td style="padding: 0 10px; font-size: 12px; line-height: 38px; white-space: nowrap !important;">
+                      <span style="display: inline-block; color: ${attCount > 0 ? '#38bdf8' : '#94a3b8'}; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap !important;">${attCount} ATTEMPTS</span>
+                    </td>
+                    <td style="padding: 0 10px; font-size: 12px; color: #94a3b8; font-variant-numeric: tabular-nums; line-height: 38px; white-space: nowrap !important;">${createdDateStr}</td>
+                    <td style="padding: 0 10px; text-align: right; white-space: nowrap !important; line-height: 38px;">
+                      ${isPrimary ? `
+                        <span style="display: inline-flex; align-items: center; justify-content: center; height: 26px; padding: 0 8px; color: var(--grade-a, #00c000) !important; font-weight: 900 !important; font-size: 12px !important; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap !important;">PRIMARY TARGET</span>
+                      ` : `
+                        <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end; white-space: nowrap !important;">
+                          <button type="button" class="btn btn-secondary btn-sm btn-set-primary" data-gidx="${gIdx}" data-id="${student.id}" style="height: 26px !important; min-height: 26px !important; line-height: 24px !important; padding: 0 8px !important; font-size: 12px !important; font-weight: 700; border-radius: 4px; border: 1px solid rgba(255, 255, 255, 0.25); white-space: nowrap !important;" title="Set this student as the primary profile to keep">Set as Primary</button>
+                          <button type="button" class="btn btn-warning btn-sm btn-merge-student" data-primary="${group.recommendedPrimaryId}" data-secondary="${student.id}" style="height: 26px !important; min-height: 26px !important; line-height: 24px !important; padding: 0 12px !important; font-size: 12px !important; font-weight: 800; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap !important;">Merge to Primary</button>
+                        </div>
+                      `}
+                    </td>
+                    <td style="padding: 0 10px; font-size: 12px; white-space: nowrap !important; line-height: normal; vertical-align: middle;">
+                      ${isPrimary ? `
+                        <div>
+                          <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="color: #ffffff; font-weight: 700; font-size: 12px;">${escapeHtml(group.name)}</span>
+                            ${resultSuffixHtml}
+                            <span style="color: var(--grade-a, #00c000); font-size: 12px; font-weight: 800; text-transform: uppercase; margin-left: 4px;">[KEPT ACTIVE]</span>
+                          </div>
+                          <div style="font-size: 12px; color: #94a3b8; margin-top: 1px;">
+                            <span style="color: var(--grade-a, #00c000); font-weight: 700;">${totalAttempts} attempts</span> &bull; <span style="color: #38bdf8; font-weight: 600;">${escapeHtml(activeBatchDisplay)}</span>
+                          </div>
+                        </div>
+                      ` : `
+                        <div>
+                          <div style="color: #94a3b8; font-size: 12px; font-weight: 600;">
+                            Merged &rarr; <span style="color: var(--grade-e, #ff2d87); font-weight: 700;">Soft-Deleted</span>
+                          </div>
+                          <div style="font-size: 12px; color: #64748b; margin-top: 1px;">
+                            Data & ${attCount} attempts moved to Primary
+                          </div>
+                        </div>
+                      `}
+                    </td>
+                  </tr>
+            `;
+          });
+          html += `
+                </tbody>
+              </table>
+            </div>
+          </div>
         `;
       });
-      html += `
-            </tbody>
-          </table>
-        </div>
-      `;
-    });
-    dupStudContent.innerHTML = html;
+      dupStudContent.innerHTML = html;
 
-    // Attach individual merge listeners
-    dupStudContent.querySelectorAll('.btn-merge-student').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        const primaryId = e.currentTarget.dataset.primary;
-        const secondaryId = e.currentTarget.dataset.secondary;
-        if (!confirm('Merge this student into the primary profile? All Test attempts and progress will be transferred, and this duplicate profile will be soft-deleted. This cannot be undone.')) return;
+      // Attach individual merge listeners
+      dupStudContent.querySelectorAll('.btn-merge-student').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          const primaryId = e.currentTarget.dataset.primary;
+          const secondaryId = e.currentTarget.dataset.secondary;
+          if (!confirm('Merge this student into the primary profile? All Test attempts and progress will be transferred, and this duplicate profile will be soft-deleted. This cannot be undone.')) return;
 
-        e.currentTarget.disabled = true;
-        e.currentTarget.innerHTML = '<div class="spinner" style="width:12px;height:12px;"></div>';
-        try {
-          const res = await mergeStudentPair(primaryId, secondaryId);
-          showToast(`Successfully merged student! Transferred ${res.transferredAttempts || 0} attempts and ${res.transferredProgress || 0} progress records.`, 'success');
-          await loadDuplicateStudents(currentDupStudScope);
-        } catch (err) {
-          showToast(`Merge failed: ${err.message}`, 'error');
-          e.currentTarget.disabled = false;
-          e.currentTarget.textContent = 'Merge to Primary';
-        }
+          e.currentTarget.disabled = true;
+          e.currentTarget.innerHTML = '<div class="spinner" style="width:12px;height:12px;"></div>';
+          try {
+            const res = await mergeStudentPair(primaryId, secondaryId);
+            showToast(`Successfully merged student! Transferred ${res.transferredAttempts || 0} attempts and ${res.transferredProgress || 0} progress records.`, 'success');
+            await loadDuplicateStudents('all');
+          } catch (err) {
+            showToast(`Merge failed: ${err.message}`, 'error');
+            e.currentTarget.disabled = false;
+            e.currentTarget.textContent = 'Merge to Primary';
+          }
+        });
       });
-    });
+
+      // Attach set as primary listener
+      dupStudContent.querySelectorAll('.btn-set-primary').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          const gIdx = parseInt(e.currentTarget.dataset.gidx, 10);
+          const targetId = e.currentTarget.dataset.id;
+          if (dupStudentGroups[gIdx]) {
+            dupStudentGroups[gIdx].recommendedPrimaryId = targetId;
+            renderGroups();
+          }
+        });
+      });
+    };
+
+    renderGroups();
 
   } catch (err) {
     console.error('Error loading duplicate students:', err);
@@ -1389,7 +1533,7 @@ async function loadDuplicateQuestions() {
                   <td style="padding:6px 4px;">${escapeHtml(q.answer_type)}</td>
                   <td style="padding:6px 4px;" class="fw-700 text-primary">${q.answersCount || 0}</td>
                   <td style="padding:6px 4px; color:#94a3b8;">${new Date(q.created_at).toLocaleDateString()}</td>
-                  <td style="padding:6px 4px; text-align:right;">${qIdx === 0 ? '<span class="badge badge-success" style="background:var(--clr-success); color:#0F172A; font-weight:700; padding:2px 6px; border-radius:3px;">Primary (Keep)</span>' : '<span class="badge badge-error" style="background:var(--clr-danger); color:#fff; padding:2px 6px; border-radius:3px;">Duplicate (Remove)</span>'}</td>
+                  <td style="padding:6px 4px; text-align:right;">${qIdx === 0 ? '<span style="color:var(--grade-a); font-weight:700; font-size:12px;">Primary (Keep)</span>' : '<span style="color:var(--grade-e); font-weight:700; font-size:12px;">Duplicate (Remove)</span>'}</td>
                 </tr>
           `;
         });
@@ -1442,7 +1586,7 @@ async function loadDuplicateQuestions() {
       data.sameTestOrderConflicts.forEach((group) => {
         const TestTitle = group.TestTitle || 'Unknown Test';
         html += `
-          <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-info, #3b82f6); background:var(--clr-surface, #1e293b); border-radius:8px;">
+          <div class="card p-4 mb-4" style="border-left:4px solid var(--clr-info, #38bdf8); background:var(--clr-surface, #1e293b); border-radius:8px;">
             <div class="d-flex justify-between align-center mb-2 flex-wrap gap-2">
               <div class="fw-700" style="color:#f8fafc;">Order Conflict (#${group.order}) in: ${escapeHtml(TestTitle)}</div>
               <button class="btn btn-secondary btn-sm btn-resequence-Test" data-Test="${group.testId}" style="font-size: 12px;">Resequence Test (1..N)</button>

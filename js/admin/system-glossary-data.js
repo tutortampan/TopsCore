@@ -214,9 +214,9 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     id: 'grd_star',
     group: 'Header Grading & Predikat',
     term: '★ 100% EXCELLENT (Grade Star)',
-    function_desc: 'Predikat nilai sempurna 100%. Warna ungu neon (#c084fc) secara eksklusif hanya boleh digunakan untuk predikat ini di seluruh antarmuka.',
-    color_code: '#c084fc',
-    color_token: 'var(--grade-star, #c084fc)',
+    function_desc: 'Predikat nilai sempurna 100%. Warna ungu neon (var(--grade-star, #a855f7)) secara eksklusif hanya boleh digunakan untuk predikat ini di seluruh antarmuka.',
+    color_code: 'var(--grade-star, #a855f7)',
+    color_token: 'var(--grade-star, #a855f7)',
     sample_val: '★ 100% EXCELLENT',
     ssot_ref: 'AGENTS.md §2.10'
   },
@@ -275,8 +275,8 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     group: 'Header Grading & Predikat',
     term: 'F FORGIVEN (Dispensasi)',
     function_desc: 'Predikat dispensasi administratif resmi (is_forgiven = true). Diberikan oleh pimpinan agar siswa dapat naik level bersama rombongan batch.',
-    color_code: '#f59e0b',
-    color_token: 'var(--grade-f, #f59e0b)',
+    color_code: 'var(--grade-c, #ffff00)',
+    color_token: 'var(--grade-f, #ffff00)',
     sample_val: 'F FORGIVEN (Approved)',
     ssot_ref: 'AGENTS.md §2.4.1'
   },
@@ -285,8 +285,8 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     group: 'Header Grading & Predikat',
     term: 'R REMEDIAL (Remedial Selesai)',
     function_desc: 'Predikat penyelesaian remedial. Diberikan saat siswa berhasil menuntaskan tes remedial untuk melengkapi syarat kenaikan level.',
-    color_code: '#06b6d4',
-    color_token: 'var(--grade-r, #06b6d4)',
+    color_code: 'var(--primary-tactical, #38bdf8)',
+    color_token: 'var(--grade-r, #38bdf8)',
     sample_val: 'R 60% REMEDIAL',
     ssot_ref: 'AGENTS.md §2.4.1'
   },
@@ -349,7 +349,7 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     group: 'Header Dashboard Siswa',
     term: 'CLASS LOBBY (Pilihan Kelas)',
     function_desc: 'Header area pemilihan kelas di dashboard siswa. Menampilkan kartu seluruh kelas dari level yang telah dibuka secara kumulatif.',
-    color_code: '#0284c7',
+    color_code: 'var(--primary-tactical, #38bdf8)',
     color_token: 'Class Lobby Container',
     sample_val: 'Camp 3rd Vocab (Active)',
     ssot_ref: 'AGENTS.md §2.5.2'
@@ -373,7 +373,7 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     group: 'Header Live Monitor',
     term: 'DURATION / TIME REMAINING',
     function_desc: 'Header kolom sisa waktu pengerjaan soal siswa secara langsung (countdown). Berwarna merah menyala saat sisa waktu < 5 menit.',
-    color_code: '#ef4444',
+    color_code: 'var(--grade-e, #ff0000)',
     color_token: 'Countdown Timer State',
     sample_val: '24:30 tersisa',
     ssot_ref: 'AGENTS.md §2.12'
@@ -383,7 +383,7 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     group: 'Header Live Monitor',
     term: 'ALARM / INTEGRITY STATUS',
     function_desc: 'Header kolom status kecurangan ujian. Memunculkan badge alarm merah jika siswa berpindah tab atau meminimalkan jendela ujian.',
-    color_code: '#ef4444',
+    color_code: 'var(--grade-e, #ff0000)',
     color_token: 'Anti-Cheat Violation Badge',
     sample_val: 'ALARM (2x Defocus)',
     ssot_ref: 'AGENTS.md §2.12.5'
@@ -393,7 +393,7 @@ export const DEFAULT_SYSTEM_GLOSSARY = [
     group: 'Header Live Monitor',
     term: 'PROCTOR ACTIONS (Aksi Pengawas)',
     function_desc: 'Header kolom tombol tindakan pengawas langsung: Late Entry (beri izin terlambat), Retake (izin ulang), atau Kick / Dismiss (keluarkan pelanggar).',
-    color_code: '#f59e0b',
+    color_code: 'var(--grade-c, #ffff00)',
     color_token: 'Live Monitor Action Buttons',
     sample_val: '[Late] [Kick] [Extend]',
     ssot_ref: 'AGENTS.md §2.12.3 & §2.12.4'

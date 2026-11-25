@@ -144,7 +144,30 @@ INSTITUTION -> PROGRAM -> BATCH -> STUDENT NAME -> PERSONAL PIN -> LOGIN
 ```
 Server verifies that Program belongs to Institution, Batch belongs to Program, Student belongs to Batch, Student is active, and PIN is valid. Never store plaintext PINs.
 - **Cascade Section Visibility**: Every completed step remains visible in a collapsed `.selected` card with its chosen label and a functional `Change` button.
-- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, 30px Inter 900 brand header as Level 0 Brand Hero Landmark, vector SVG Open Book badge, and Zero Subtitle Clutter).
+- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, pure typography TOPS CORE header in Outfit 900 without squircle box, 90px fixed label width for razor-sharp column alignment, elimination of step circle numbers, default persistent login across sessions, viewport auto-centering on 100dvh - 50px visible area, eradication of redundant remember-me banner, and Zero Subtitle Clutter).
+
+### 2.3.1 Strict Inactive Student Exclusion Invariant (Zero Inactive Visibility SSOT)
+- **Aturan Baku Visibilitas Siswa Inaktif**: Siswa yang berstatus tidak aktif (`is_active = false` ATAU `program_status = 'INACTIVE'`) **MUTLAK DILARANG KERAS TAMPIL DI DALAM SISTEM DIMANAPUN** (Student Dashboard Standings / Leaderboard, Completed Tests, Student Login Gate, Class Lobby, Tutor Attendance, Class Hub Gradebook, dan KPI aktif), sampai siswa tersebut diaktifkan kembali oleh Admin (`is_active = true` dan `program_status = 'ACTIVE'`).
+- **Sinkronisasi Dwiarah Otomatis (Database Bidirectional Sync Trigger)**: Kolom `is_active` (boolean) dan `program_status` (teks) wajib selalu sinkron secara otomatis. Apabila `is_active = false`, maka `program_status = 'INACTIVE'`. Apabila `program_status = 'INACTIVE'`, maka `is_active = false`. Jika diaktifkan kembali oleh Admin, status keduanya pulih menjadi aktif bersamaan (`is_active = true` dan `program_status = 'ACTIVE'`).
+- **Multi-Layer Defensive Invariant**: Seluruh kueri dan filter data siswa di frontend (`dashboard.js`, `api.js`, `tutor.js`, `app.js`, `classes-hub.js`, `admin-deck.js`, `curriculum-management.js`, `student-management.js`) wajib menerapkan filter ganda `is_active === true && (program_status || '').toUpperCase() !== 'INACTIVE'` guna menjamin zero-leakage data siswa inaktif.
+
+### 2.3.2 Cross-Batch Repeat & Unified Student Duplicate Resolver Architecture (SSOT per DECISION-088)
+- **Pembedaan Ranah Baku Siswa Mengulang (Repeat) vs Alumni**:
+  - Siswa yang mendaftar ulang di angkatan/batch yang lebih baru (misal terdaftar di Batch 133 setelah sebelumnya pernah belajar di Batch 130) secara resmi berstatus **Siswa Mengulang (Repeat)**.
+  - Entitas aktif yang dipertahankan adalah entitas di **Batch Terbaru / Berjalan (Primary Target)**.
+  - Entitas lama di angkatan sebelumnya di-*soft-delete* (`is_active = false`, `deleted_at = NOW()`), dan batch asalnya dicatat secara permanen di kolom database `original_batch_id` dengan flag `is_repeat = true`.
+  - **Pemindahan Riwayat Belajar Utuh (Zero Loss of Progress)**: Seluruh progres dan riwayat attempt ujian/tugas (misal: 137 attempts) dari entitas lama dipindahkan secara atomik ke entitas profil aktif di batch baru sehingga siswa tidak kehilangan progres historisnya.
+- **Aturan Format Visual Teks Suffix (Strict Zero-Box & Dual-Category Invariant)**:
+  - **Siswa Repeat**: Ditampilkan sebagai teks inline polos tanpa kotak border/pill: **`Nama Siswa (Repeat - <Batch Awal>)`** dengan warna **Oranye (`#FF8C00` / `var(--quad-b)`)**, tebal (font-weight 600), font-size 12px baku.
+  - **Siswa Alumni**: Ditampilkan sebagai teks inline polos tanpa kotak border/pill: **`Nama Siswa (Alumni - <Batch>)`** dengan warna **Ungu (`#c084fc` / `var(--grade-star)`)**, tebal (font-weight 600), font-size 12px baku.
+  - **Mutually Exclusive**: Siswa yang berstatus Repeat mutlak menampilkan teks `(Repeat - ...)`; dilarang menampilkan teks `(Alumni - ...)` secara bersamaan.
+- **Unified Duplicate Resolver Modal Invariant**:
+  - **Single Unified Workspace**: Menyatukan duplikat satu kelas (*Same Class*) dan lintas angkatan (*Cross-Class*) dalam satu halaman ringkas tanpa tab terpisah untuk menghemat waktu peninjauan admin.
+  - **Dimensi Lebar Modal**: Wajib berdimensi `max-width: 1380px !important; width: 96vw !important;` agar 8 kolom datagrid (`RECORD UUID`, `PROGRAM / LEVEL`, `BATCH`, `INSTITUTION`, `ATTEMPTS`, `CREATED AT`, `ACTION`, dan `RESULT PREVIEW`) muat 100% tanpa ada yang terpotong (*Universal Zero-Truncation*) dan bebas dari scrollbar horizontal di dalam kartu.
+  - **Zero-Box Type Tag**: Tag pembeda kelompok (`(Same Class)` dan `(Cross-Class)`) murni berupa teks inline tanpa kotak border atau latar pill.
+  - **CTA Ghost-to-Solid**: Tombol aksi `QUICK MERGE ALL GROUPS` dan `Resolve All Duplicates` mengikuti aturan baku Standby Ghost Outline -> Hover Solid Matte Yellow, font-size 14px / 13px.
+- **Disambiguasi Relasi Foreign Key Database (PostgREST Disambiguation SSOT)**:
+  - Karena tabel `students` memiliki 2 foreign key ke `batches` (`batch_id` dan `original_batch_id`), seluruh kueri join PostgREST wajib mendisambiguasi relasi secara eksplisit: `batches!batch_id(...)` dan `original_batches:batches!original_batch_id(...)`.
 
 ## 2.4 Class and Level Assignment
 Classes are assigned to a **Level**. Students/Batches progress through Levels.
@@ -159,7 +182,9 @@ Classes are assigned to a **Level**. Students/Batches progress through Levels.
 
 ### 2.4.2 Non-Level Programs (Level 0 / Tampilan Angka 0) & Alumni (Level X) Architecture (SSOT)
 - **Program Tanpa Jenjang (Non-Level Programs / Level 0)**: Program yang sejak awal tidak memiliki jenjang bertahap (seperti seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata) menggunakan entitas Level 0 di database (`level_number = 0`, nama `'Non-Level'`).
-- **Tampilan Visual Kolom Level (`0`)**: Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`).
+- **Tampilan Visual Kolom Level (`0`) vs Baris Metadata Siswa (Metadata Year SSOT)**:
+  - Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, dan modal, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`).
+  - **Baris Metadata Profil Siswa**: Khusus pada baris metadata identitas di kartu profil siswa dashboard dan hasil ujian (`#welcome-meta-wrapper`, `#meta-lvl`), entitas Level 0 pada program Non-Level (institusi TOP) **DITAMPILKAN SEBAGAI TAHUN ENROLLMENT / TAHUN ANGKATAN (misal: `2026`)** menggantikan teks "LEVEL 0" atau "NO LEVEL" (`TOP • SHERATON • SH-26 • 2026`).
 - **Aturan Penamaan Kelas & Kode Kelas (Zero-Level Omission Invariant)**: Pada program tanpa jenjang, segmen level ordinal pada nama kelas dan kode kelas ditiadakan karena kurikulumnya tidak bertingkat:
   - **Nama Kelas**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (dilarang menggunakan `1st`).
   - **Kode Kelas**: `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).

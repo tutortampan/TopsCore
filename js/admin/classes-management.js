@@ -746,6 +746,34 @@ export async function loadClassLearningPath(classId) {
 
       const _isDyn = r?.payload?.is_dynamic_shell;
       const _vaultQ = r?.payload?.snapshot_question_count || r?.payload?.total_questions || 0;
+      const effectiveQCount = _isDyn ? _vaultQ : (r.questions ? r.questions.length : (r.total_questions || 0));
+
+      const isPhrase = catStr === 'PHRASES' || typeStr === 'PHRASES' || shell.includes('PHRASE') || titleLower.includes('phrase');
+      const isUnified = catStr === 'UNIFIED' || typeStr === 'UNIFIED' || shell.includes('UNIFIED') || titleLower.includes('words & phrases');
+
+      let classTaskReps = null;
+      try {
+        const cachedSettings = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage.getItem(`topscore_test_settings_${classId}`) : null;
+        if (cachedSettings) {
+          const parsed = JSON.parse(cachedSettings);
+          if (parsed.taskRepetitions) classTaskReps = Number(parsed.taskRepetitions);
+        }
+      } catch (_) {}
+      const isVocab = detectClassType(className) === 'VOCABULARY';
+      const repetitions = isExam ? 1 : Math.max(1, parseInt(r?.payload?.task_repetitions || r?.required_repetitions || classTaskReps, 10) || 7);
+
+      let wordsCount = 0;
+      let phrasesCount = 0;
+      if (isPhrase) {
+        wordsCount = 0;
+        phrasesCount = effectiveQCount;
+      } else if (isUnified) {
+        wordsCount = Number(r?.payload?.words_count) || Math.round(effectiveQCount * 0.8);
+        phrasesCount = Number(r?.payload?.phrases_count) || (effectiveQCount - wordsCount);
+      } else {
+        wordsCount = effectiveQCount;
+        phrasesCount = 0;
+      }
 
       return {
         id: r.id,
@@ -760,7 +788,11 @@ export async function loadClassLearningPath(classId) {
         timeLimit: r.time_limit || 60,
         minScore: r.passing_score || r.min_score || 60,
         qIsVault: _isDyn,
-        qCount: _isDyn ? _vaultQ : (r.questions ? r.questions.length : 0),
+        qCount: effectiveQCount,
+        repetitions,
+        isVocab,
+        wordsCount,
+        phrasesCount,
         status: r.status,
         isExam, isTask, isQuiz, isTryout,
         isTest: isExam, // backwards compatibility
@@ -819,14 +851,14 @@ export async function loadClassLearningPath(classId) {
       },
       columns: [
         {
-          key: 'level', label: 'LEVEL', sortable: true, align: 'center', width: '70px',
+          key: 'level', label: 'LEVEL', sortable: true, align: 'center', width: '60px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap;">${escapeHtml(row.level)}</div>`
         },
         {
-          key: 'order', label: 'CODE', sortable: true, align: 'center', width: '140px',
+          key: 'order', label: 'CODE', sortable: true, align: 'center', width: '205px',
           render: (val, row) => {
             if (row.shellCode) {
-              return `<span style="font-size:12px; color:var(--clr-primary, #38bdf8); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
+              return `<span style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.shellCode)}">${escapeHtml(row.shellCode)}</span>`;
             }
             return `<span style="font-size:12px; color:var(--clr-text-3, #94a3b8); font-weight:500; white-space:nowrap;">${row.order}</span>`;
           }
@@ -837,23 +869,33 @@ export async function loadClassLearningPath(classId) {
           render: (val, row) => `<div class="fw-700" style="color:var(--clr-text-1); font-size:12px; white-space:nowrap !important; text-overflow:ellipsis; overflow:hidden;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>`
         },
         {
-          key: 'prereq', label: 'PREREQUISITE', sortable: true, align: 'left', width: '170px',
+          key: 'prereq', label: 'PREREQUISITE', sortable: true, align: 'center', width: '205px',
           render: (val, row) => {
              if(!row.prereq || row.prereq === '-') return `<span style="color:var(--clr-text-3); font-size:12px;">—</span>`;
-             return `<div style="font-size:12px; color:var(--clr-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(row.prereq)}">${escapeHtml(row.prereq)}</div>`;
+             return `<div style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(row.prereq)}">${escapeHtml(row.prereq)}</div>`;
           }
         },
         {
-          key: 'type', label: 'TYPE', sortable: true, align: 'center', width: '80px',
+          key: 'type', label: 'TYPE', sortable: true, align: 'center', width: '75px',
           render: (val, row) => {
             const rawType = String(row.type || 'Task').toLowerCase();
             const isExam = rawType.includes('exam');
             const label = isExam ? 'Exam' : 'Task';
-            return `<div style="font-size:12px; color:${isExam ? '#38bdf8' : 'var(--grade-c)'}; white-space:nowrap; font-weight:500;">${label}</div>`;
+            return `<div style="font-size:12px; color:${isExam ? 'var(--exam-color, #ff2d87)' : 'var(--task-color, #95ff00)'}; white-space:nowrap; font-weight:600;">${label}</div>`;
           }
         },
         {
-          key: 'answerType', label: 'MODULE', sortable: true, align: 'center', width: '95px',
+          key: 'repetitions', label: 'REPETITIONS', shortLabel: 'REPS', microLabel: 'REP', sortable: true, align: 'center', width: '85px',
+          render: (val, row) => {
+            if (row.isExam) {
+              return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-3, #94a3b8); font-variant-numeric:tabular-nums;" title="Milestone Exam (1x Final)">1x</span>`;
+            }
+            const rCount = row.repetitions || 7;
+            return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${rCount}x Repetitions Target">${rCount}x</span>`;
+          }
+        },
+        {
+          key: 'answerType', label: 'MODULE', sortable: true, align: 'center', width: '90px',
           render: (val, row) => {
             const ans = String(row.answerType || 'Selection').replace(/[^\w\s]/gi, '').trim();
             const titleCaseAns = ans.charAt(0).toUpperCase() + ans.slice(1);
@@ -868,18 +910,36 @@ export async function loadClassLearningPath(classId) {
           }
         },
         {
-          key: 'timeLimit', label: 'DURATION', sortable: true, align: 'center', width: '95px',
+          key: 'timeLimit', label: 'DURATION', sortable: true, align: 'center', width: '85px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.timeLimit} min</div>`
         },
         {
-          key: 'minScore', label: 'PASS RATE', sortable: true, align: 'center', width: '95px',
+          key: 'minScore', label: 'PASS RATE', sortable: true, align: 'center', width: '85px',
           render: (val, row) => `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.minScore}%</div>`
         },
         {
-          key: 'qCount', label: 'QUESTIONS', sortable: true, align: 'center', width: '120px',
+          key: 'qCount', label: 'QUESTIONS', sortable: true, align: 'center', width: '105px',
           render: (val, row) => {
-            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-accent-1); white-space:nowrap; font-variant-numeric:tabular-nums;" title="Dynamic Vault Source">${row.qCount} (Vault)</div>`;
+            if(row.qIsVault) return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;" title="Dynamic Vault Source">${row.qCount} (Vault)</div>`;
             return `<div style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-variant-numeric:tabular-nums;">${row.qCount}</div>`;
+          }
+        },
+        {
+          key: 'wordsCount', label: 'WORDS', shortLabel: 'WORD', sortable: true, align: 'center', width: '75px',
+          render: (val, row) => {
+            if (!row.isVocab) return `<span class="text-muted" style="font-size:12px;">—</span>`;
+            const count = row.wordsCount || 0;
+            if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+            return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Words in test">${count}</span>`;
+          }
+        },
+        {
+          key: 'phrasesCount', label: 'PHRASES', shortLabel: 'PHR', sortable: true, align: 'center', width: '75px',
+          render: (val, row) => {
+            if (!row.isVocab) return `<span class="text-muted" style="font-size:12px;">—</span>`;
+            const count = row.phrasesCount || 0;
+            if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+            return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Phrases in test">${count}</span>`;
           }
         },
         {

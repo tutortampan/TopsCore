@@ -662,10 +662,10 @@ export async function renderTests(area) {
                 <div style="font-weight:700; color:#f8fafc; font-size: 12px;">${escapeHtml(r.title)}</div>
               </td>
               <td style="text-align:center;">
-                ${r.shellCode ? `<span class="badge" style="background:rgba(255,255,255,0.05); color:#94a3b8; font-family:monospace; font-size: 12px; border:1px solid rgba(255,255,255,0.08);">${escapeHtml(r.shellCode)}</span>` : '<span class="text-muted">—</span>'}
+                ${r.shellCode ? `<span style="color:#94a3b8; font-family:monospace; font-size: 12px; font-weight:500;">${escapeHtml(r.shellCode)}</span>` : '<span class="text-muted">—</span>'}
               </td>
               <td style="text-align:center;">
-                <span class="tac-badge ${r.isExam ? 'badge-purple-soft' : 'badge-blue-soft'}" style="font-size: 12px; font-weight:700;">
+                <span style="font-size: 12px; font-weight:700; color:${r.isExam ? 'var(--grade-star, #a855f7)' : 'var(--primary-tactical, #38bdf8)'};">
                   ${r.isExam ? getSvgIcon('award', 12) + ' Exam' : getSvgIcon('zap', 12) + ' Task'}
                 </span>
               </td>
@@ -830,7 +830,7 @@ export async function renderTests(area) {
       .tac-diag-chip.chip-spelling {
         background: rgba(56, 189, 248, 0.08);
         border-color: rgba(56, 189, 248, 0.25);
-        color: #7dd3fc;
+        color: var(--primary-tactical, #38bdf8);
       }
       .tac-diag-chip.chip-literal {
         background: rgba(251, 113, 133, 0.08);
@@ -867,10 +867,10 @@ export async function renderTests(area) {
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
       }
       .tac-drawer-action-btn:hover {
-        background: linear-gradient(135deg, #0284c7, #0369a1);
-        color: #ffffff;
+        background: #38bdf8;
+        color: #090d16;
         border-color: #38bdf8;
-        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+        box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35);
         transform: translateY(-1px);
       }
       .tac-drawer-arrow { transition: transform 0.2s ease; }
@@ -922,12 +922,12 @@ export async function renderTests(area) {
       .tac-theme-col.theme-col-A { border-top: 3px solid var(--quad-a, #ff2d87); }
       .tac-theme-col.theme-col-B { border-top: 3px solid var(--quad-b, #ff8c00); }
       .tac-theme-col.theme-col-C { border-top: 3px solid var(--quad-c, #95ff00); }
-      .tac-theme-col.theme-col-D { border-top: 3px solid var(--quad-d, #c084fc); }
+      .tac-theme-col.theme-col-D { border-top: 3px solid var(--quad-d, #a855f7); }
 
       .theme-col-A .tac-theme-col-title { color: var(--quad-a, #ff2d87) !important; }
       .theme-col-B .tac-theme-col-title { color: var(--quad-b, #ff8c00) !important; }
       .theme-col-C .tac-theme-col-title { color: var(--quad-c, #95ff00) !important; }
-      .theme-col-D .tac-theme-col-title { color: var(--quad-d, #c084fc) !important; }
+      .theme-col-D .tac-theme-col-title { color: var(--quad-d, #a855f7) !important; }
 
       .tac-theme-col-header {
         padding: 8px 12px;
@@ -956,7 +956,7 @@ export async function renderTests(area) {
       .badge-theme-A { background: rgba(var(--quad-a-rgb, 255, 45, 135), 0.12); color: var(--quad-a, #ff2d87); border: 1px solid rgba(var(--quad-a-rgb, 255, 45, 135), 0.3); }
       .badge-theme-B { background: rgba(var(--quad-b-rgb, 255, 140, 0), 0.12); color: var(--quad-b, #ff8c00); border: 1px solid rgba(var(--quad-b-rgb, 255, 140, 0), 0.3); }
       .badge-theme-C { background: rgba(var(--quad-c-rgb, 149, 255, 0), 0.12); color: var(--quad-c, #95ff00); border: 1px solid rgba(var(--quad-c-rgb, 149, 255, 0), 0.3); }
-      .badge-theme-D { background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.12); color: var(--quad-d, #c084fc); border: 1px solid rgba(var(--quad-d-rgb, 192, 132, 252), 0.3); }
+      .badge-theme-D { background: rgba(var(--quad-d-rgb, 192, 132, 252), 0.12); color: var(--quad-d, #a855f7); border: 1px solid rgba(var(--quad-d-rgb, 192, 132, 252), 0.3); }
 
       .tac-theme-col-body {
         flex: 1;
@@ -1086,7 +1086,7 @@ export async function renderTests(area) {
       }
       .diag-pill-spelling { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
       .diag-pill-literal { background: rgba(var(--grade-e-rgb), 0.12); color: var(--grade-e); border: 1px solid rgba(var(--grade-e-rgb), 0.25); }
-      .diag-pill-vocab_gap { background: rgba(251, 146, 60, 0.12); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.25); }
+      .diag-pill-vocab_gap { background: rgba(251, 146, 60, 0.12); color: var(--grade-d, #ff8c00); border: 1px solid rgba(251, 146, 60, 0.25); }
       .diag-pill-word_form { background: rgba(167, 139, 250, 0.12); color: #c4b5fd; border: 1px solid rgba(167, 139, 250, 0.25); }
       .diag-pill-timeout { background: rgba(var(--grade-c-rgb), 0.12); color: var(--grade-c); border: 1px solid rgba(var(--grade-c-rgb), 0.25); }
 
@@ -1191,9 +1191,9 @@ export async function renderTests(area) {
         cursor: pointer;
       }
       .tac-drawer-filter-btn.active {
-        background: #0284c7;
+        background: #38bdf8;
         border-color: #38bdf8;
-        color: #ffffff;
+        color: #090d16;
         font-weight: 700;
       }
 
@@ -1232,8 +1232,8 @@ export async function renderTests(area) {
 
       .tac-badge { font-size: 12px; font-weight: 800; padding: 1px 5px; border-radius: 3px; text-transform: uppercase; }
       .badge-blue-soft { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-      .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: #c084fc; border: 1px solid rgba(139, 92, 246, 0.3); }
-      .badge-success-soft { background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.15); color: #86efac; border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.3); }
+      .badge-purple-soft { background: rgba(139, 92, 246, 0.2); color: var(--grade-star, #a855f7); border: 1px solid rgba(139, 92, 246, 0.3); }
+      .badge-success-soft { background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.15); color: var(--grade-a, #00c000); border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.3); }
       .badge-warning-soft { background: rgba(var(--grade-d-rgb, 255, 140, 0), 0.2); color: #fed7aa; border: 1px solid rgba(var(--grade-d-rgb, 255, 140, 0), 0.3); }
       .badge-danger-soft { background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.2); color: #ff9999; border: 1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.3); }
     </style>
@@ -1630,7 +1630,7 @@ window.openTestGatewayModal = async () => {
         </div>
 
         <div class="d-flex justify-between align-center gap-2 mt-4 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-          <button class="btn btn-secondary btn-modal-close-left" id="cancel-gateway-modal">Cancel</button>
+          <button class="btn btn-secondary btn-modal-close-left" id="cancel-gateway-modal">CLOSE</button>
           <button class="btn btn-primary" id="btn-gateway-next">Next &rarr;</button>
         </div>
       </div>
@@ -1777,7 +1777,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                     <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                       <td style="padding:6px 10px; color:#94a3b8; font-family:monospace;">${witaStr}</td>
                       <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(st.stuMap?.[l.actor_user_id] || l.actor_user_id)}</td>
-                      <td style="padding:6px 10px;"><span class="tac-badge badge-danger-soft">CHEAT_ATTEMPT</span></td>
+                      <td style="padding:6px 10px;"><span style="color:var(--grade-e); font-weight:700; font-size: 12px;">CHEAT_ATTEMPT</span></td>
                       <td style="padding:6px 10px; color:#cbd5e1;">${esc(l.new_value || 'Window blur / tab switched during test')}</td>
                     </tr>
                   `;
@@ -1891,8 +1891,8 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                   <td style="padding:8px 10px; font-weight:800; color:${idx < 3 ? 'var(--grade-e)' : 'var(--grade-c)'}; text-align:center;">#${idx + 1}</td>
                   <td style="padding:8px 10px; font-weight:700; color:#f8fafc;">"${esc(q.text)}"</td>
-                  <td style="padding:8px 10px;"><span class="badge" style="background:rgba(99,102,241,0.15); color:#a5b4fc; font-size: 12px;">${esc(q.wordType)}</span></td>
-                  <td style="padding:8px 10px;"><span class="tac-badge" style="color:${getInvertedGradeColor(q.failRate)}; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); font-weight:700;">${q.failRate}% (${q.fail}/${q.total})</span></td>
+                  <td style="padding:8px 10px;"><span style="color:#a5b4fc; font-size: 12px; font-weight:600;">${esc(q.wordType)}</span></td>
+                  <td style="padding:8px 10px;"><span style="color:${getInvertedGradeColor(q.failRate)}; font-weight:700; font-size: 12px; font-variant-numeric:tabular-nums;">${q.failRate}% (${q.fail}/${q.total})</span></td>
                   <td style="padding:8px 10px; color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.correct)}</td>
                 </tr>
               `).join('')}
@@ -1944,7 +1944,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             ${st.witaHourly.map((cnt, h) => {
               const hPct = Math.round((cnt / maxHour) * 100);
               const isPeak = (h >= 19 && h <= 22) || h === 7;
-              const barColor = isPeak ? 'linear-gradient(180deg, var(--grade-d) 0%, #c2410c 100%)' : 'linear-gradient(180deg, #38bdf8 0%, #0369a1 100%)';
+              const barColor = isPeak ? 'linear-gradient(180deg, var(--grade-d) 0%, var(--grade-d, #ff8c00) 100%)' : 'linear-gradient(180deg, #38bdf8 0%, var(--primary-tactical, #38bdf8) 100%)';
               return `
                 <div style="flex:1; display:flex; flex-direction:column; align-items:center; height:100%; justify-content:flex-end;" title="${h}:00 WITA &mdash; ${cnt} attempts">
                   <div style="font-size: 12px; color:${isPeak ? 'var(--grade-d)' : '#94a3b8'}; margin-bottom:2px; font-weight:700;">${cnt > 0 ? cnt : ''}</div>
@@ -1990,9 +1990,9 @@ window._openTestAnalyticsCardModal = function(cardKey) {
             <tbody>
               ${top15.map((s, idx) => `
                 <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
-                  <td style="padding:6px 10px; font-weight:800; color:#c084fc;">#${idx + 1}</td>
+                  <td style="padding:6px 10px; font-weight:800; color:var(--grade-star, #a855f7);">#${idx + 1}</td>
                   <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(s.name)}</td>
-                  <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge badge-purple-soft">${s.count} Attempts</span></td>
+                  <td style="padding:6px 10px; font-weight:700; color:var(--grade-star, #a855f7); font-size: 12px; font-variant-numeric:tabular-nums;">${s.count} Attempts</td>
                   <td style="padding:6px 10px; color:${getGradeColorByScore(s.firstScore)}; font-variant-numeric:tabular-nums;">${s.firstScore}%</td>
                   <td style="padding:6px 10px; color:${getGradeColorByScore(s.maxScore)}; font-weight:700; font-variant-numeric:tabular-nums;">${s.maxScore}%${s.count > 1 ? `<sup class="asm-rem-sup" style="color:${TOPSCORE_COLORS.C};">R</sup>` : ''}</td>
                   <td style="padding:6px 10px; color:${s.delta >= 0 ? TOPSCORE_COLORS.A : TOPSCORE_COLORS.E}; font-weight:700;">+${s.delta}%</td>
@@ -2044,7 +2044,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                   <tr style="border-bottom:1px solid rgba(255,255,255,0.04);">
                     <td style="padding:6px 10px; font-weight:800; color:var(--grade-e);">#${idx + 1}</td>
                     <td style="padding:6px 10px; font-weight:700; color:#f8fafc;">${esc(t.title)}</td>
-                    <td style="padding:6px 10px; font-weight:700;"><span class="tac-badge ${badgeClass}">${t.avgScore}%</span></td>
+                    <td style="padding:6px 10px; font-weight:700; color:${getGradeColorByScore(t.avgScore)}; font-size: 12px; font-variant-numeric:tabular-nums;">${t.avgScore}%</td>
                     <td style="padding:6px 10px; color:${getInvertedGradeColor(t.remRate)}; font-variant-numeric:tabular-nums;">${t.remRate}% retakes</td>
                     <td style="padding:6px 10px; color:#94a3b8;">${t.total || 0}</td>
                     <td style="padding:6px 10px; font-weight:700;">${tag}</td>
@@ -2065,7 +2065,7 @@ window._openTestAnalyticsCardModal = function(cardKey) {
     const categories = [
       { name: 'Noun', icon: getSvgIcon('book-open', 14), tot: p.Noun?.tot || 0, cor: p.Noun?.cor || 0, color: '#38bdf8' },
       { name: 'Verb', icon: getSvgIcon('zap', 14), tot: p.Verb?.tot || 0, cor: p.Verb?.cor || 0, color: 'var(--grade-c)' },
-      { name: 'Adjective', icon: getSvgIcon('tag', 14), tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: '#c084fc' },
+      { name: 'Adjective', icon: getSvgIcon('tag', 14), tot: p.Adjective?.tot || 0, cor: p.Adjective?.cor || 0, color: 'var(--grade-star, #a855f7)' },
       { name: 'Phrase / Idiom', icon: getSvgIcon('activity', 14), tot: p.Phrase?.tot || 0, cor: p.Phrase?.cor || 0, color: 'var(--grade-a)' },
     ];
 
@@ -2136,14 +2136,14 @@ window._openTestAnalyticsCardModal = function(cardKey) {
                     <td style="padding:8px 10px; color:#cbd5e1;">"${esc(q.prompt)}"</td>
                     <td style="padding:8px 10px; color:${TOPSCORE_COLORS.CORRECT}; font-weight:600;">${esc(q.expected)}</td>
                     <td style="padding:8px 10px;" id="status-cell-${q.id}">
-                      ${q.isCorrect ? '<span class="tac-badge badge-success-soft">Correct</span>' : '<span class="tac-badge badge-danger-soft">Needs Review</span>'}
+                      ${q.isCorrect ? '<span style="color:var(--grade-a); font-weight:700; font-size: 12px;">Correct</span>' : '<span style="color:var(--grade-e); font-weight:700; font-size: 12px;">Needs Review</span>'}
                     </td>
                     <td style="padding:8px 10px; text-align:center;">
                       ${!q.isCorrect ? `
                         <button class="btn btn-xs btn-primary" id="btn-override-${q.id}" onclick="window._overrideSpeechAnswer('${q.id}')" style="font-size: 12px; padding:3px 8px;">
                           Override 100%
                         </button>
-                      ` : '<span class="tac-badge badge-success-soft" style="font-size: 12px;">Validated</span>'}
+                      ` : '<span style="color:var(--grade-a); font-weight:700; font-size: 12px;">Validated</span>'}
                     </td>
                   </tr>
                 `).join('') : '<tr><td colspan="5" class="text-center text-muted p-3">No spoken responses in audit queue.</td></tr>'}

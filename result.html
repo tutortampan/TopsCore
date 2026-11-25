@@ -15,7 +15,10 @@
         var fromAdmin = params.get('admin') === '1' || params.get('is_admin') === 'true' || params.get('from') === 'admin' || params.get('mode') === 'tutor';
         var adminRaw = sessionStorage.getItem('topscore_admin_session') || localStorage.getItem('topscore_admin_session');
         if (fromAdmin || adminRaw) return;
-        var raw = sessionStorage.getItem('topscore_session');
+        var raw = sessionStorage.getItem('topscore_session') || localStorage.getItem('topscore_session');
+        if (raw && !sessionStorage.getItem('topscore_session')) {
+          try { sessionStorage.setItem('topscore_session', raw); } catch (_) {}
+        }
         var sess = raw ? JSON.parse(raw) : null;
         if (!sess || !sess.student_id) { window.location.replace('index.html'); }
       } catch (_) { window.location.replace('index.html'); }
@@ -100,7 +103,7 @@
             <span class="meta-sep">&bull;</span>
             <span id="meta-batch">131</span>
             <span class="meta-sep">&bull;</span>
-            <span id="meta-lvl">3RD LEVEL</span>
+            <span id="meta-lvl">3RD STEP</span>
           </div>
         </div>
 
@@ -112,7 +115,7 @@
           <!-- Photo Container Left -->
           <div class="result-avatar-stage banner-avatar-wrapper" id="result-avatar-stage">
             <span id="result-crown-badge" class="avatar-crown-badge hidden" title="Batch Champion">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"></path></svg>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="var(--grade-c, #ffff00)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"></path></svg>
             </span>
             <div id="result-avatar-container" class="hero-avatar-3x4" title="Profile Photo">
               <span id="result-avatar-initial">S</span>
@@ -225,7 +228,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261121_v632"></script>
+  <script type="module" src="./js/result.js?v=20261125_v676"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
   <footer id="bottom-ad-banner" class="topscore-locked-banner">

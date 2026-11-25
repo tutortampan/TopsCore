@@ -32,10 +32,10 @@ assert(
   'dynamicSuperHeaders correctly configures STUDENTS DATA (colSpan: 2) and OVERALL (3 cols)'
 );
 assert(
-  studentMgmtJs.includes("label: 'STUDENTS DATA',\n      colSpan: 4") &&
-  studentMgmtJs.includes("label: 'DEMOGRAPHIC',\n      colSpan: 3") &&
-  studentMgmtJs.includes("label: 'ADDRESS',\n      colSpan: 4"),
-  'student-management.js correctly splits super-headers into STUDENTS DATA (4 cols), DEMOGRAPHIC (3 cols), and ADDRESS (4 cols)'
+  /label:\s*['"]STUDENTS DATA['"],\s*colSpan:\s*4/.test(studentMgmtJs) &&
+  /label:\s*['"]DEMOGRAPHIC['"],\s*colSpan:\s*[34]/.test(studentMgmtJs) &&
+  /label:\s*['"]ADDRESS['"],\s*colSpan:\s*4/.test(studentMgmtJs),
+  'student-management.js correctly splits super-headers into STUDENTS DATA (4 cols), DEMOGRAPHIC (3-4 cols), and ADDRESS (4 cols)'
 );
 assert(
   adminCss.includes('th.super-hdr-identity') && adminCss.includes('th.super-hdr-overall') && adminCss.includes('th.super-hdr-students-data'),

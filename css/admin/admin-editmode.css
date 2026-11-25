@@ -43,9 +43,17 @@ body.global-edit-mode-on .student-inline-input,
 body.global-edit-mode-on .student-inline-select,
 body.global-edit-mode-on .input-matrix-exam-pts,
 body.global-edit-mode-on .input-matrix-exam-score,
+body.global-edit-mode-on .input-matrix-words-rate,
+body.global-edit-mode-on .input-matrix-words-pts,
+body.global-edit-mode-on .input-matrix-phrases-rate,
+body.global-edit-mode-on .input-matrix-phrases-pts,
 body.global-edit-mode-on .input-matrix-task-progress,
 body.class-manual-edit-on .input-matrix-exam-pts,
 body.class-manual-edit-on .input-matrix-exam-score,
+body.class-manual-edit-on .input-matrix-words-rate,
+body.class-manual-edit-on .input-matrix-words-pts,
+body.class-manual-edit-on .input-matrix-phrases-rate,
+body.class-manual-edit-on .input-matrix-phrases-pts,
 body.class-manual-edit-on .input-matrix-task-progress {
   background: transparent !important;
   border: none !important;

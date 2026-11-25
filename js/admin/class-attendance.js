@@ -240,7 +240,7 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
       const totalRecorded = presentCount + excusedCount + sickCount + absentCount;
       const ratePct = totalRecorded > 0 ? Math.round((presentCount / totalRecorded) * 100) : 0;
       const rateColor = totalRecorded === 0 ? '#64748b' : (
-        ratePct === 100 ? 'var(--grade-star, #c084fc)' : (
+        ratePct === 100 ? 'var(--grade-star, #a855f7)' : (
           ratePct >= 90 ? 'var(--grade-a, #00c000)' : (
             ratePct >= 80 ? 'var(--grade-b, #95ff00)' : (
               ratePct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
@@ -300,7 +300,7 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
           <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">
             ${escapeHtml(className)} Attendance
           </span>
-          <span style="font-size:11px; background:rgba(56,189,248,0.15); color:#7dd3fc; padding:2px 8px; border-radius:12px; font-weight:700;">
+          <span style="font-size:11px; background:rgba(56,189,248,0.15); color:var(--primary-tactical, #38bdf8); padding:2px 8px; border-radius:12px; font-weight:700;">
             ${cfg.scheduleDaysText}
           </span>
           <span style="font-size:11px; color:#94a3b8;">
@@ -376,7 +376,7 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
           if (sumRate) {
             sumRate.textContent = rTot > 0 ? rPct + '%' : '—';
             sumRate.style.color = rTot === 0 ? '#64748b' : (
-              rPct === 100 ? 'var(--grade-star, #c084fc)' : (
+              rPct === 100 ? 'var(--grade-star, #a855f7)' : (
                 rPct >= 90 ? 'var(--grade-a, #00c000)' : (
                   rPct >= 80 ? 'var(--grade-b, #95ff00)' : (
                     rPct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
@@ -445,7 +445,7 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
   } catch(err) {
     console.error('[renderClassMeetingsAttendance] fatal error:', err);
     container.innerHTML = `
-      <div style="padding:20px; color:#ef4444; font-size:12px;">
+      <div style="padding:20px; color:var(--grade-e, #ff0000); font-size:12px;">
         Failed to load attendance matrix: ${escapeHtml(err.message || String(err))}
       </div>
     `;
@@ -735,7 +735,7 @@ export async function renderBatchAttendance(container, context = {}) {
       // Overall Recap Calculation
       const ratePct = allWeeksTotalRecorded > 0 ? Math.round((allWeeksTotalPresent / allWeeksTotalRecorded) * 100) : 0;
       const rateColor = allWeeksTotalRecorded === 0 ? '#64748b' : (
-        ratePct === 100 ? 'var(--grade-star, #c084fc)' : (
+        ratePct === 100 ? 'var(--grade-star, #a855f7)' : (
           ratePct >= 90 ? 'var(--grade-a, #00c000)' : (
             ratePct >= 80 ? 'var(--grade-b, #95ff00)' : (
               ratePct >= 60 ? 'var(--grade-c, #ffff00)' : 'var(--grade-e, #ff0000)'
@@ -806,7 +806,7 @@ export async function renderBatchAttendance(container, context = {}) {
           <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">
             ${escapeHtml(batchName)} — ${levelTitle}Weekly Attendance Recap
           </span>
-          <span style="font-size:11px; background:rgba(56,189,248,0.15); color:#7dd3fc; padding:2px 8px; border-radius:12px; font-weight:700;">
+          <span style="font-size:11px; background:rgba(56,189,248,0.15); color:var(--primary-tactical, #38bdf8); padding:2px 8px; border-radius:12px; font-weight:700;">
             ${classesForBatch.length} Classes • 4 Weeks Matrix
           </span>
         </div>
@@ -824,6 +824,6 @@ export async function renderBatchAttendance(container, context = {}) {
 
   } catch(err) {
     console.error('[renderBatchAttendance] error:', err);
-    container.innerHTML = `<div style="padding:20px; color:#ef4444; font-size:12px;">Error: ${escapeHtml(err.message || String(err))}</div>`;
+    container.innerHTML = `<div style="padding:20px; color:var(--grade-e, #ff0000); font-size:12px;">Error: ${escapeHtml(err.message || String(err))}</div>`;
   }
 }

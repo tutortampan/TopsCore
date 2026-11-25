@@ -246,7 +246,7 @@ export async function renderStudents(area, options = {}) {
   const studentFilters = isAlumniPanel ? {} : (currentProgramId ? { program_id: currentProgramId } : {});
   const rawData = await adminFetchAll(
     'students',
-    'id, nis, name, pin, pin_hash, gender, birth_date, birthplace, education, province, city, district, village, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id)',
+    'id, nis, name, pin, pin_hash, gender, birth_date, birthplace, education, province, city, district, village, is_active, program_status, created_at, deleted_at, level_id, batch_id, program_id, institution_id, is_repeat, original_batch_id, programs!program_id(name, is_active), institutions!institution_id(name, is_active), batches!batch_id(name, is_active, current_level_id), original_batches:batches!original_batch_id(name)',
     studentFilters
   );
 
@@ -864,6 +864,9 @@ export async function renderStudents(area, options = {}) {
       hasRemedial,
       hasForgiven,
       isAlumni,
+      isRepeat: Boolean(s.is_repeat),
+      originalBatchName: s.original_batches?.name || (s.original_batch_id ? ((allBatches || []).find(b => b.id === s.original_batch_id)?.name || null) : null),
+      original_batch_id: s.original_batch_id || null,
       studentLevelNum,
       isEligibleNext,
       activeLevelExamsCount: currentLevelExams.length,
@@ -1234,17 +1237,19 @@ export async function renderStudents(area, options = {}) {
   // Raised Table Layout (User Directive: Strip bulky header & middle filter bar; table header sits directly beneath top panel)
   area.innerHTML = `
     ${totalDuplicates > 0 ? `
-      <div class="mb-3 p-3 rounded d-flex align-center justify-between" style="background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.4);color:#fef3c7;">
+      <div class="p-3 rounded d-flex align-center justify-between" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);color:var(--grade-c, #ffff00);margin-bottom:10px !important;">
         <div class="d-flex align-center gap-3">
-          <span>${getSvgIcon('alert-triangle', 20)}</span>
+          <span style="color:var(--grade-c, #ffff00);display:flex;align-items:center;">${getSvgIcon('alert-triangle', 20)}</span>
           <div>
-            <div class="fw-700 text-sm">Detected ${totalDuplicates} Duplicate Student Profiles</div>
-            <div class="text-xs text-muted" style="color:rgba(255,255,255,0.85)!important;">
+            <div class="fw-700 text-sm" style="font-size:13px;color:#ffffff;">Detected ${totalDuplicates} Duplicate Student Profiles</div>
+            <div class="text-xs text-muted" style="font-size:12px;color:rgba(255,255,255,0.75)!important;">
               Found ${duplicateGroups.length} groups of duplicate student profiles. Merge them to unify their Test progress.
             </div>
           </div>
         </div>
-        <button class="btn btn-warning btn-sm" id="btn-banner-merge-duplicates" style="background:var(--grade-c);color:#0f172a;font-weight:700;border:none;display:inline-flex;align-items:center;gap:6px;">
+        <button class="btn btn-warning btn-sm" id="btn-banner-merge-duplicates" style="background:transparent;color:var(--grade-c, #ffff00);font-size:13px;font-weight:800;border:1.5px solid var(--grade-c, #ffff00);border-radius:6px;padding:6px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:none;transition:all 0.15s ease;"
+          onmouseover="this.style.background='var(--grade-c, #ffff00)';this.style.color='#0f172a';"
+          onmouseout="this.style.background='transparent';this.style.color='var(--grade-c, #ffff00)';">
           ${getSvgIcon('alert-triangle', 14)} Resolve All Duplicates
         </button>
       </div>
@@ -1302,7 +1307,7 @@ export async function renderStudents(area, options = {}) {
 
     const isEditOn = typeof window.getGlobalEditMode === 'function' ? window.getGlobalEditMode() : false;
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -1584,8 +1589,8 @@ export async function renderStudents(area, options = {}) {
             }
             <div>
               <h3 style="margin:0;font-size: 16px;color:var(--clr-text-1);">${escapeHtml(rec.displayName || rec.name)}</h3>
-              <div class="text-xs text-muted" style="margin-top:2px;">
-                ${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)} &bull; Batch ${escapeHtml(rec.batchName)} &bull; ${escapeHtml(rec.levelName)}
+              <div class="text-xs text-muted" style="margin-top:2px;font-size:12px;">
+                ${escapeHtml(rec.instName)} &bull; ${escapeHtml(rec.progName)} &bull; Batch ${escapeHtml(rec.batchName)}${rec.isRepeat && rec.originalBatchName ? ` <span style="font-size:12px;color:#94a3b8;font-weight:600;">(Orig: Batch ${escapeHtml(rec.originalBatchName)})</span>` : ''} &bull; ${escapeHtml(rec.levelName)}
               </div>
             </div>
           </div>
@@ -2232,7 +2237,7 @@ export async function renderStudents(area, options = {}) {
       const sObj = rec.stepSummaries?.[stepNum] || {};
       const stepAvg = sObj.stepAvg;
       const predicate = sObj.predicate || '—';
-      const predColor = predicate === 'EXCELLENT' ? '#c084fc' : (predicate === 'VERY GOOD' ? '#22c55e' : (predicate === 'GOOD' ? '#95ff00' : (predicate === 'ENOUGH' ? '#eab308' : '#ff2d87')));
+      const predColor = predicate === 'EXCELLENT' ? 'var(--grade-star, #a855f7)' : (predicate === 'VERY GOOD' ? 'var(--grade-a, #00c000)' : (predicate === 'GOOD' ? '#95ff00' : (predicate === 'ENOUGH' ? 'var(--grade-c, #ffff00)' : '#ff2d87')));
 
       const fourthSubjCode = stepNum === 1 ? 'BASIC' : (stepNum === 2 ? 'GFS' : 'PRONUNCIATION');
       const fourthSubjName = stepNum === 1 ? 'Basic English' : (stepNum === 2 ? 'Grammar for Speaking' : 'Pronunciation');
@@ -2344,9 +2349,9 @@ export async function renderStudents(area, options = {}) {
 
         const normalPillsHtml = sub.items.map(it => {
           if (it.isPct) {
-            return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${it.label}: <strong style="margin-left:3px;color:${it.pct != null ? (it.pct >= 60 ? '#16a34a' : '#dc2626') : '#64748b'};">${it.pct != null ? `${Math.round(it.pct)}%` : '—'}</strong></span>`;
+            return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${it.label}: <strong style="margin-left:3px;color:${it.pct != null ? (it.pct >= 60 ? 'var(--grade-a, #00c000)' : 'var(--grade-e, #ff0000)') : '#64748b'};">${it.pct != null ? `${Math.round(it.pct)}%` : '—'}</strong></span>`;
           }
-          return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${it.label}: <strong style="margin-left:3px;color:${it.pct != null ? (it.pct >= 60 ? '#16a34a' : '#dc2626') : '#64748b'};">${it.raw != null ? `${it.raw}/${it.max}` : '—'}</strong></span>`;
+          return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${it.label}: <strong style="margin-left:3px;color:${it.pct != null ? (it.pct >= 60 ? 'var(--grade-a, #00c000)' : 'var(--grade-e, #ff0000)') : '#64748b'};">${it.raw != null ? `${it.raw}/${it.max}` : '—'}</strong></span>`;
         }).join('');
 
         const editInputsHtml = sub.isSystemVocab
@@ -2581,7 +2586,7 @@ export async function renderStudents(area, options = {}) {
             ${validSummarySteps.map(st => {
               const sObj = recSummaries[st];
               const ord = st === 1 ? '1st' : st === 2 ? '2nd' : '3rd';
-              const pColor = sObj.predicate === 'EXCELLENT' ? '#c084fc' : (sObj.predicate === 'VERY GOOD' ? '#22c55e' : (sObj.predicate === 'GOOD' ? '#95ff00' : (sObj.predicate === 'ENOUGH' ? '#eab308' : '#ff2d87')));
+              const pColor = sObj.predicate === 'EXCELLENT' ? 'var(--grade-star, #a855f7)' : (sObj.predicate === 'VERY GOOD' ? 'var(--grade-a, #00c000)' : (sObj.predicate === 'GOOD' ? '#95ff00' : (sObj.predicate === 'ENOUGH' ? 'var(--grade-c, #ffff00)' : '#ff2d87')));
               return `
                 <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:12px;display:flex;flex-direction:column;gap:6px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
                   <span style="font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;">${ord} Step Average</span>
@@ -2605,7 +2610,7 @@ export async function renderStudents(area, options = {}) {
         <div style="margin-top:20px;padding:18px 20px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:8px;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
             <h4 style="margin:0;font-size:15px;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:0.04em;">Final Examination & Certificate Transcript</h4>
-            <span style="font-family:monospace;font-size:12px;font-weight:700;color:#0284c7;background:rgba(2,132,199,0.08);padding:4px 10px;border-radius:4px;border:1px solid rgba(2,132,199,0.2);">${fe.certificate_nis || 'CEC/M/...'}</span>
+            <span style="font-family:monospace;font-size:12px;font-weight:700;color:#38bdf8;background:rgba(56,189,248,0.08);padding:4px 10px;border-radius:4px;border:1px solid rgba(56,189,248,0.25);">${fe.certificate_nis || 'CEC/M/...'}</span>
           </div>
           <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:12px;">
             <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px;box-shadow:0 1px 3px rgba(0,0,0,0.04);">
@@ -2639,32 +2644,32 @@ export async function renderStudents(area, options = {}) {
       <div id="dossier-certificate-view" style="display:none; width:100%; box-sizing:border-box;">
         <!-- Status Notification Banner -->
         ${hasLessPredicate ? `
-          <div style="background:#450a0a; border:1.5px solid #ef4444; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(239,68,68,0.2);">
+          <div style="background:#450a0a; border:1.5px solid var(--grade-e, #ff0000); border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(239,68,68,0.2);">
             <div style="display:flex; align-items:center; gap:12px;">
               <span style="font-size:22px;">⚠️</span>
               <div>
-                <strong style="color:#fecaca; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">CERTIFICATE STATUS: LOCKED / RETAKE REQUIRED</strong>
-                <span style="color:#fca5a5; font-size:12px;">Student received a 'LESS' predicate. In accordance with TopsCore academic SSOT, certificate is withheld until the remedial examination achieves at least 'ENOUGH' (Grade C ≥ 60%).</span>
+                <strong style="color:var(--grade-e, #ff0000); font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">CERTIFICATE STATUS: LOCKED / RETAKE REQUIRED</strong>
+                <span style="color:var(--grade-e, #ff0000); font-size:12px;">Student received a 'LESS' predicate. In accordance with TopsCore academic SSOT, certificate is withheld until the remedial examination achieves at least 'ENOUGH' (Grade C ≥ 60%).</span>
               </div>
             </div>
-            <span style="background:#ef4444; color:#ffffff; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">RETAKE REQUIRED</span>
+            <span style="background:var(--grade-e, #ff0000); color:#ffffff; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">RETAKE REQUIRED</span>
           </div>
         ` : `
-          <div style="background:#052e16; border:1.5px solid #22c55e; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(34,197,94,0.15);">
+          <div style="background:#052e16; border:1.5px solid var(--grade-a, #00c000); border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(34,197,94,0.15);">
             <div style="display:flex; align-items:center; gap:12px;">
               <span style="font-size:22px;">✅</span>
               <div>
                 <strong style="color:#bbf7d0; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">CERTIFICATE STATUS: VERIFIED & READY FOR ISSUANCE</strong>
-                <span style="color:#86efac; font-size:12px;">All evaluated competencies have achieved passing threshold. Official certificate authorized for printing and credentialing.</span>
+                <span style="color:var(--grade-a, #00c000); font-size:12px;">All evaluated competencies have achieved passing threshold. Official certificate authorized for printing and credentialing.</span>
               </div>
             </div>
-            <span style="background:#22c55e; color:#090d16; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">AUTHORIZED</span>
+            <span style="background:var(--grade-a, #00c000); color:#090d16; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase; letter-spacing:0.05em; flex-shrink:0;">AUTHORIZED</span>
           </div>
         `}
 
         <div id="student-certificate-sheet-wrap" style="display:flex; flex-direction:column; gap:28px;">
           <!-- PAGE 1: OFFICIAL CERTIFICATE OF ACHIEVEMENT (A4 Landscape Ratio) -->
-          <div class="certificate-page-front" style="background:#fdfbf7; color:#0f172a; border-radius:8px; padding:40px 48px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:820px; margin:0 auto; box-sizing:border-box; border:2.5px solid #b45309; outline:8px solid #fef3c7; outline-offset:-14px; position:relative; font-family:'Times New Roman', Georgia, serif; text-align:center;">
+          <div class="certificate-page-front" style="background:#fdfbf7; color:#0f172a; border-radius:8px; padding:40px 48px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:820px; margin:0 auto; box-sizing:border-box; border:2.5px solid #b45309; outline:8px solid var(--grade-c, #ffff00); outline-offset:-14px; position:relative; font-family:'Times New Roman', Georgia, serif; text-align:center;">
             
             <!-- Legal Authority Header -->
             <div style="margin-bottom:12px;">
@@ -2741,7 +2746,7 @@ export async function renderStudents(area, options = {}) {
             <!-- Student Metadata Strip -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 16px; margin-bottom:18px; font-size:13px;">
               <div><span style="color:#64748b; font-weight:600;">Full Name:</span> <strong style="color:#0f172a; text-transform:uppercase;">${escapeHtml(rec.displayName || rec.name)}</strong></div>
-              <div><span style="color:#64748b; font-weight:600;">Certificate NIS:</span> <strong style="color:#0284c7; font-family:monospace;">${escapeHtml(certNis)}</strong></div>
+              <div><span style="color:#64748b; font-weight:600;">Certificate NIS:</span> <strong style="color:#38bdf8; font-family:monospace;">${escapeHtml(certNis)}</strong></div>
               <div><span style="color:#64748b; font-weight:600;">Place, DOB:</span> <strong style="color:#0f172a;">${escapeHtml(rec.birthplace || 'Mataram')}, ${formatDobEnglish(rec.birth_date)}</strong></div>
               <div><span style="color:#64748b; font-weight:600;">Program:</span> <strong style="color:#0f172a;">CEC Camp Intensive Program</strong></div>
             </div>
@@ -2763,35 +2768,35 @@ export async function renderStudents(area, options = {}) {
                   <td style="padding:12px 12px; font-weight:800; color:#0f172a;">VOCABULARY</td>
                   <td style="padding:12px 12px; font-size:12px; color:#475569;">Active Lexical Acquisition & Cumulative Retention</td>
                   <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.vocab_score != null ? `${Math.round(fe.vocab_score)}%` : '—'}</td>
-                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.vocab_predicate || '—')}</span></td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="font-size:12px; font-weight:700; color:#0f172a;">${escapeHtml(fe?.vocab_predicate || '—')}</span></td>
                 </tr>
                 <tr style="border-bottom:1px solid #e2e8f0;">
                   <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">2</td>
                   <td style="padding:12px 12px; font-weight:800; color:#0f172a;">SPEAKING</td>
                   <td style="padding:12px 12px; font-size:12px; color:#475569;">Oral Discourse, Spontaneous Fluency & Interaction</td>
                   <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.speaking_score != null ? `${Math.round(fe.speaking_score)}%` : '—'}</td>
-                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.speaking_predicate || '—')}</span></td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="font-size:12px; font-weight:700; color:#0f172a;">${escapeHtml(fe?.speaking_predicate || '—')}</span></td>
                 </tr>
                 <tr style="border-bottom:1px solid #e2e8f0;">
                   <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">3</td>
                   <td style="padding:12px 12px; font-weight:800; color:#0f172a;">PRONUNCIATION</td>
                   <td style="padding:12px 12px; font-size:12px; color:#475569;">Phonetic Articulation, Rhythm, Stress & Intonation</td>
                   <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.pronunciation_score != null ? `${Math.round(fe.pronunciation_score)}%` : '—'}</td>
-                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.pronunciation_predicate || '—')}</span></td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="font-size:12px; font-weight:700; color:#0f172a;">${escapeHtml(fe?.pronunciation_predicate || '—')}</span></td>
                 </tr>
                 <tr style="border-bottom:1px solid #e2e8f0;">
                   <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">4</td>
                   <td style="padding:12px 12px; font-weight:800; color:#0f172a;">GRAMMAR</td>
                   <td style="padding:12px 12px; font-size:12px; color:#475569;">Structural Mechanics, Syntax & Sentence Architecture</td>
                   <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe?.grammar_score != null ? `${Math.round(fe.grammar_score)}%` : '—'}</td>
-                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${escapeHtml(fe?.grammar_predicate || '—')}</span></td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="font-size:12px; font-weight:700; color:#0f172a;">${escapeHtml(fe?.grammar_predicate || '—')}</span></td>
                 </tr>
                 <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
                   <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">5</td>
                   <td style="padding:12px 12px; font-weight:800; color:#0f172a;">FINAL PRACTICE EXAM</td>
                   <td style="padding:12px 12px; font-size:12px; color:#475569;">2-Panel Comprehensive Practical Interview</td>
                   <td style="text-align:center; padding:12px 10px; font-weight:800; color:#0f172a;">${fe?.practice_score != null ? `${fe.practice_score}` : '—'}</td>
-                  <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:900; background:#b45309; color:#ffffff;">${escapeHtml(fe?.practice_predicate || '—')}</span></td>
+                  <td style="text-align:center; padding:12px 10px;"><span style="font-size:12px; font-weight:800; color:#b45309;">${escapeHtml(fe?.practice_predicate || '—')}</span></td>
                 </tr>
               </tbody>
             </table>
@@ -2897,6 +2902,9 @@ export async function renderStudents(area, options = {}) {
                     <span class="profile-meta-lbl" style="width: 135px; font-weight: 700; color: #64748b; flex-shrink: 0; white-space: nowrap;">Course Data</span>
                     <span class="profile-meta-colon" style="width: 12px; text-align: center; font-weight: 700; color: #64748b; flex-shrink: 0; margin-right: 8px;">:</span>
                     <strong style="color: #0f172a; font-weight: 700; letter-spacing: 0.01em;">${escapeHtml(courseDataText)}</strong>
+                    <button type="button" class="btn-transfer-batch-meta" id="btn-meta-transfer-batch" data-html2canvas-ignore="true" style="margin-left: 12px; height: 26px; padding: 0 10px; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; background: rgba(56,189,248,0.12); border: 1px solid #38bdf8; color: #38bdf8; transition: all 0.15s ease;" title="Transfer this student to another active batch">
+                      ${getSvgIcon('refresh', 12)} Transfer Batch
+                    </button>
                   </div>
 
                 </div>
@@ -2934,10 +2942,13 @@ export async function renderStudents(area, options = {}) {
         <!-- Modal Footer CTA Area: CLOSE & EDIT MODE (Left) | Student Pager (Center) | Export to PDF (Right) -->
         <div class="modal-footer" style="height: 56px; min-height: 56px; max-height: 56px; padding: 10px 1.5rem; display: flex; align-items: center; justify-content: space-between; border-top: 1.5px solid rgba(255, 255, 255, 0.16); background: rgba(0, 0, 0, 0.3); flex-shrink: 0; box-sizing: border-box;">
 
-          <!-- Pojok Kiri Bawah: CLOSE & EDIT MODE Buttons -->
+          <!-- Pojok Kiri Bawah: CLOSE, TRANSFER BATCH & EDIT MODE Buttons -->
           <div style="flex: 1; display: flex; justify-content: flex-start; align-items: center; gap: 8px;">
             <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" id="btn-close-dossier-modal" style="display: inline-flex !important; align-items: center; justify-content: center; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-weight: 700; font-size: 14px; background: rgba(255, 255, 255, 0.08); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.2); padding: 8px 22px; border-radius: 6px; cursor: pointer;">
               CLOSE
+            </button>
+            <button type="button" class="btn btn-sm" id="btn-dossier-transfer-batch" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:rgba(56,189,248,0.12);border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;" title="Transfer this student to another active batch">
+              ${getSvgIcon('refresh', 14)} Transfer Batch
             </button>
             <button type="button" class="btn btn-sm" id="btn-dossier-toggle-edit" style="height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;" title="Toggle Edit Mode to calibrate student scores">
               ${getSvgIcon('edit', 14)} Edit Mode
@@ -2957,7 +2968,7 @@ export async function renderStudents(area, options = {}) {
 
           <!-- Pojok Kanan Bawah: Export to PDF -->
           <div style="flex: 1; display: flex; justify-content: flex-end;">
-            <button type="button" class="btn btn-primary btn-sm" id="btn-export-pdf-dossier" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; background: linear-gradient(135deg, #0284c7, #0369a1); border: 1px solid #38bdf8; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; padding: 8px 18px; border-radius: 6px; cursor: pointer; color: #ffffff;">
+            <button type="button" class="btn btn-primary btn-sm" id="btn-export-pdf-dossier" style="display: inline-flex; align-items: center; gap: 8px; font-weight: 700; background: #38bdf8; border: 1px solid #38bdf8; font-family: var(--fm-font-sans, 'Inter', sans-serif); font-size: 14px; padding: 8px 18px; border-radius: 6px; cursor: pointer; color: #090d16;">
               ${getSvgIcon('download', 16)} Export to PDF
             </button>
           </div>
@@ -3031,6 +3042,18 @@ export async function renderStudents(area, options = {}) {
       closeAllDossierModals();
     };
 
+    // Transfer Batch action
+    const transferBatchBtn = backdrop.querySelector('#btn-dossier-transfer-batch');
+    const metaTransferBtn = backdrop.querySelector('#btn-meta-transfer-batch');
+    const handleTransferClick = (e) => {
+      e.stopPropagation();
+      if (typeof window.openTransferBatchModal === 'function') {
+        window.openTransferBatchModal(rec.id);
+      }
+    };
+    if (transferBatchBtn) transferBatchBtn.onclick = handleTransferClick;
+    if (metaTransferBtn) metaTransferBtn.onclick = handleTransferClick;
+
     // Edit Mode Toggle Button inside Student Academic Report
     const toggleDossierEditBtn = backdrop.querySelector('#btn-dossier-toggle-edit');
     if (toggleDossierEditBtn) {
@@ -3050,7 +3073,7 @@ export async function renderStudents(area, options = {}) {
           ? `${getSvgIcon('check-circle', 14)} Done Editing`
           : `${getSvgIcon('edit', 14)} Edit Mode`;
         toggleDossierEditBtn.style.cssText = isDossierEditOn
-          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
+          ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;box-shadow:0 0 10px rgba(56,189,248,0.45);transition:all 0.15s ease;'
           : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
       };
     }
@@ -3159,7 +3182,7 @@ export async function renderStudents(area, options = {}) {
                 const raw = v !== '' ? Number(v) : null;
                 const p = raw != null && tgt > 0 ? Math.round((raw / tgt) * 100) : null;
                 const label = k === 'PRACTICE' ? 'Practice' : k;
-                return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${label}: <strong style="margin-left:3px;color:${p != null ? (p >= 60 ? '#16a34a' : '#dc2626') : '#64748b'};">${raw != null ? `${raw}/${tgt}` : '—'}</strong></span>`;
+                return `<span style="display:inline-flex;align-items:center;padding:2px 6px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;font-size:12px;font-weight:700;color:#0f172a;margin:2px;">${label}: <strong style="margin-left:3px;color:${p != null ? (p >= 60 ? 'var(--grade-a, #00c000)' : 'var(--grade-e, #ff0000)') : '#64748b'};">${raw != null ? `${raw}/${tgt}` : '—'}</strong></span>`;
               }).join('');
             }
           }
@@ -3177,7 +3200,7 @@ export async function renderStudents(area, options = {}) {
             });
             const newStepAvg = naVals.length > 0 ? Math.round((naVals.reduce((a, b) => a + b, 0) / naVals.length) * 100) / 100 : null;
             const newPred = newStepAvg != null ? (typeof getCertificatePredicate === 'function' ? getCertificatePredicate(newStepAvg) : (newStepAvg >= 90 ? 'EXCELLENT' : newStepAvg >= 80 ? 'VERY GOOD' : newStepAvg >= 70 ? 'GOOD' : newStepAvg >= 60 ? 'ENOUGH' : 'LESS')) : '—';
-            const newPredColor = newPred === 'EXCELLENT' ? '#c084fc' : (newPred === 'VERY GOOD' ? '#22c55e' : (newPred === 'GOOD' ? '#95ff00' : (newPred === 'ENOUGH' ? '#eab308' : '#ff2d87')));
+            const newPredColor = newPred === 'EXCELLENT' ? 'var(--grade-star, #a855f7)' : (newPred === 'VERY GOOD' ? 'var(--grade-a, #00c000)' : (newPred === 'GOOD' ? '#95ff00' : (newPred === 'ENOUGH' ? 'var(--grade-c, #ffff00)' : '#ff2d87')));
 
             const headerAvg = stepContainer.querySelector('.step-header-avg');
             if (headerAvg) headerAvg.textContent = newStepAvg != null ? `${Math.round(newStepAvg)}%` : '—';
@@ -5166,7 +5189,7 @@ export async function renderStudents(area, options = {}) {
         close();
         const sb = (await import('../supabase.js?v=20261106_v140')).getSupabase ? await (await import('../supabase.js?v=20261106_v140')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
-        for (const id of selectedIds) await sb.from('students').update({ is_active: true }).eq('id', id);
+        for (const id of selectedIds) await sb.from('students').update({ is_active: true, program_status: 'ACTIVE', updated_at: new Date().toISOString() }).eq('id', id);
         showToast(`Activated ${selectedIds.length} students.`, 'success');
         renderStudents(area);
       };
@@ -5175,7 +5198,7 @@ export async function renderStudents(area, options = {}) {
         close();
         const sb = (await import('../supabase.js?v=20261106_v140')).getSupabase ? await (await import('../supabase.js?v=20261106_v140')).getSupabase() : null;
         if (!sb) { showToast('Cannot connect.', 'error'); return; }
-        for (const id of selectedIds) await sb.from('students').update({ is_active: false }).eq('id', id);
+        for (const id of selectedIds) await sb.from('students').update({ is_active: false, program_status: 'INACTIVE', updated_at: new Date().toISOString() }).eq('id', id);
         showToast(`Deactivated ${selectedIds.length} students.`, 'success');
         renderStudents(area);
       };
@@ -5313,7 +5336,7 @@ export async function renderStudents(area, options = {}) {
           const isM = g === 'male' || g === 'm';
           const isF = g === 'female' || g === 'f';
           const titleText = isM ? 'Male' : (isF ? 'Female' : '—');
-          const titleColor = isM ? '#38bdf8' : (isF ? '#c084fc' : 'var(--clr-text-3)');
+          const titleColor = isM ? '#38bdf8' : (isF ? 'var(--grade-star, #a855f7)' : 'var(--clr-text-3)');
           return `
             <div class="student-cell-view" style="white-space:nowrap !important;">
               <span style="color:${titleColor};font-size: 12px;font-weight:500;">${titleText}</span>
@@ -5335,11 +5358,17 @@ export async function renderStudents(area, options = {}) {
         align: 'left',
         minWidth: '200px',
         render: (row) => {
+          const cleanBatch = (row.batchName || '').replace(/^batch\s*/i, '').trim();
+          const cleanOrigBatch = (row.originalBatchName || '').replace(/^batch\s*/i, '').trim();
+          const alumniText = cleanBatch && cleanBatch !== '—' && cleanBatch !== '— No Batch —' ? `(Alumni - ${cleanBatch})` : `(Alumni)`;
+          const repeatText = cleanOrigBatch && cleanOrigBatch !== '—' ? `(Repeat - ${cleanOrigBatch})` : `(Repeat)`;
+
           return `
             <div class="student-cell-view" style="cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"
                  onclick="event.stopPropagation();if(typeof window.showStudentDossierModal==='function')window.showStudentDossierModal('${row.id}');"
                  title="${escapeHtml(row.displayName)}&#10;Click to view official academic report (A4 Dossier)">
               <span style="color:var(--clr-text-1);font-weight:400;font-size: 12px;">${escapeHtml(row.displayName)}</span>
+              ${row.isRepeat ? `<span style="white-space:nowrap;margin-left:6px;font-size:12px;font-weight:600;color:var(--quad-b, #FF8C00);text-shadow:none;">${escapeHtml(repeatText)}</span>` : (row.isAlumni ? `<span style="white-space:nowrap;margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-star, #a855f7);text-shadow:none;">${escapeHtml(alumniText)}</span>` : '')}
               ${!isAlumniPanel && row.isOrphaned ? `<span style="margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-e);text-shadow:none;">(Disconnected)</span>` : ''}
               ${row.remediationPending ? `<span style="white-space:nowrap;margin-left:6px;font-size:12px;font-weight:600;color:var(--grade-c);text-shadow:none;">(Remediation)</span>` : ''}
             </div>
@@ -5724,7 +5753,7 @@ export async function renderStudents(area, options = {}) {
           if (isLvlX || rawStatus === 'ALUMNI' || rawStatus === 'COMPLETED' || rawStatus === 'GRADUATED') {
             currentStatus = 'alumni';
             label = 'Alumni';
-            color = 'var(--quad-d)';
+            color = 'var(--grade-star, #a855f7)';
           } else if (isInactive) {
             currentStatus = 'inactive';
             label = 'Inactive';
@@ -5742,6 +5771,7 @@ export async function renderStudents(area, options = {}) {
           let statusOptionsHtml = `
             <option value="active" style="color:var(--grade-a);" ${currentStatus === 'active' ? 'selected' : ''}>Active</option>
             <option value="inactive" style="color:var(--grade-e);" ${currentStatus === 'inactive' ? 'selected' : ''}>Inactive</option>
+            <option value="transfer" style="color:var(--primary-tactical, #38bdf8);font-weight:700;">⇄ Transfer Batch...</option>
           `;
           if (canAlumni) {
             statusOptionsHtml += `<option value="alumni" style="color:var(--quad-d);" ${currentStatus === 'alumni' ? 'selected' : ''}>Alumni</option>`;
@@ -6327,7 +6357,13 @@ export async function renderStudents(area, options = {}) {
         const prevStatus = target.dataset.prevStatus || 'active';
         const levelNum = parseInt(target.dataset.levelNum || 1, 10);
 
-        if (value === 'delete') {
+        if (value === 'transfer') {
+          target.value = prevStatus;
+          if (typeof window.openTransferBatchModal === 'function') {
+            window.openTransferBatchModal(studentId);
+          }
+          return;
+        } else if (value === 'delete') {
           target.value = prevStatus;
           if (prevStatus !== 'inactive') {
             showToast('Delete is only permitted for Inactive students.', 'warning');
@@ -6452,7 +6488,7 @@ export async function renderStudents(area, options = {}) {
             if (viewEl) {
               const newG = updates.gender;
               viewEl.textContent = newG === 'male' ? 'Male' : newG === 'female' ? 'Female' : '—';
-              viewEl.style.color = newG === 'male' ? '#38bdf8' : newG === 'female' ? '#c084fc' : 'var(--clr-text-3)';
+              viewEl.style.color = newG === 'male' ? '#38bdf8' : newG === 'female' ? 'var(--grade-star, #a855f7)' : 'var(--clr-text-3)';
             }
           } else if (field === 'education') {
             s.education = updates.education;
@@ -6468,7 +6504,7 @@ export async function renderStudents(area, options = {}) {
             if (viewEl) {
               if (updates.program_status === 'ALUMNI' || lvlObj?.level_number === 0) {
                 viewEl.textContent = 'X';
-                viewEl.style.color = '#c084fc';
+                viewEl.style.color = 'var(--grade-star, #a855f7)';
                 viewEl.setAttribute('title', 'Alumni (Level X)');
               } else {
                 viewEl.textContent = shortLvl;
@@ -6809,93 +6845,151 @@ window.promoteAllEligibleStudents = async function() {
 };
 
 window.openTransferBatchModal = async function(studentId) {
-  const source = window._currentStudentsGridData || [];
-  let s = source.find(d => d.id === studentId);
-  const sb = await getSupabase();
-  if (!s) {
-    const { data: st } = await sb.from('students')
-      .select('id, name, batch_id, level_id, program_id, batches(name, current_level_id), levels(name, level_number)')
-      .eq('id', studentId)
-      .single();
-    if (!st) { showToast('Student not found.', 'error'); return; }
-    s = {
-      id: st.id,
-      displayName: cleanStudentName(st.name),
-      batch_id: st.batch_id,
-      level_id: st.level_id,
-      program_id: st.program_id,
-      batchName: st.batches?.name || '—',
-      levelName: st.levels?.name || '—'
-    };
-  }
+  try {
+    const source = window._currentStudentsGridData || [];
+    let s = source.find(d => d.id === studentId);
+    const sb = await getSupabase();
+    if (!s) {
+      const { data: st, error: stErr } = await sb.from('students')
+        .select('id, name, batch_id, level_id, program_id, batches!batch_id(name, current_level_id), levels(name, level_number)')
+        .eq('id', studentId)
+        .single();
+      if (stErr || !st) { showToast('Student not found.', 'error'); return; }
+      s = {
+        id: st.id,
+        displayName: cleanStudentName(st.name),
+        batch_id: st.batch_id,
+        level_id: st.level_id,
+        program_id: st.program_id,
+        batchName: st.batches?.name || '—',
+        levelName: st.levels?.name || '—'
+      };
+    }
 
-  const [{ data: batches }, { data: levels }] = await Promise.all([
-    sb.from('batches').select('id, name, program_id, current_level_id, is_active').is('deleted_at', null).order('name'),
-    sb.from('levels').select('id, name, level_number').order('level_number')
-  ]);
+    let batches = [];
+    let levels = [];
+    let programs = [];
+    try {
+      const [bRes, lRes, pRes] = await Promise.all([
+        sb.from('batches').select('id, name, program_id, current_level_id, is_active').is('deleted_at', null).eq('is_active', true).order('name'),
+        sb.from('levels').select('id, name, level_number').order('level_number'),
+        sb.from('programs').select('id, name')
+      ]);
+      batches = bRes?.data || [];
+      levels = lRes?.data || [];
+      programs = pRes?.data || [];
+    } catch (fetchErr) {
+      console.warn('Batch transfer reference fetch error:', fetchErr);
+    }
 
   const levelsMap = new Map((levels || []).map(l => [l.id, l]));
-  const availableBatches = (batches || []).filter(b => (!s.program_id || b.program_id === s.program_id) && b.is_active !== false);
+  const isCampStudent = (!s.program_id) || ((programs || []).some(p => p.id === s.program_id && /camp/i.test(p.name || ''))) || (/camp/i.test(s.batchName || '')) || true;
+  const formatStepName = (lvl) => {
+    if (!lvl) return '—';
+    if (lvl.level_number === 99 || (lvl.name || '').toLowerCase() === 'alumni') return 'Alumni (X)';
+    if (lvl.level_number === 0 || (lvl.name || '').toLowerCase() === 'non-level') return '0';
+    const short = typeof toShortLevel === 'function' ? toShortLevel(lvl.level_number || lvl.name) : (lvl.level_number || '1');
+    return isCampStudent ? `${short} Step` : `${short} Level`;
+  };
+
+  const curLvlObj = s.level_id ? levelsMap.get(s.level_id) : null;
+  const curStepText = curLvlObj ? formatStepName(curLvlObj) : (typeof toShortLevel === 'function' ? `${toShortLevel(s.levelName)} Step` : (s.levelName || '—'));
+
+  // User directive: Only ACTIVE batches are shown as transfer target (excluding current batch)
+  let availableBatches = (batches || []).filter(b => b.is_active === true && !b.deleted_at && b.id !== s.batch_id && (!s.program_id || b.program_id === s.program_id));
+  if (availableBatches.length === 0) {
+    availableBatches = (batches || []).filter(b => b.is_active === true && !b.deleted_at && b.id !== s.batch_id);
+  }
 
   const existing = document.getElementById('transfer-batch-modal');
   if (existing) existing.remove();
 
   const overlay = document.createElement('div');
   overlay.id = 'transfer-batch-modal';
-  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(6px);z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
   overlay.innerHTML = `
-    <div style="background:var(--fm-bg-panel, #0F172A);border:1px solid var(--clr-border, rgba(255,255,255,0.12));border-radius:12px;padding:2rem;width:100%;max-width:480px;box-shadow:0 20px 40px rgba(0,0,0,0.6);">
-      <div class="d-flex align-center justify-between mb-3">
-        <h3 style="margin:0;font-size: 16px;display:flex;align-items:center;gap:8px;">
-          <span>${getSvgIcon('refresh', 14)}</span> Transfer Batch: <span style="color:#38bdf8;">${escapeHtml(s.displayName)}</span>
-        </h3>
+    <div class="modal-box" style="background:#0F172A;border:1.5px solid rgba(255,255,255,0.18);border-radius:12px;width:100%;max-width:480px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,0.9);padding:0 !important;box-sizing:border-box;">
+
+      <!-- 1. Header (Standardized Title Area 60px Solid Navy Banner per Invariant 1.5.1, Left ALL CAPS) -->
+      <div class="modal-header title-area" style="height:60px;min-height:60px;max-height:60px;padding:0 20px;border-bottom:1.5px solid rgba(255,255,255,0.16);display:flex;justify-content:flex-start;align-items:center;gap:12px;background:#1E293B;box-sizing:border-box;flex-shrink:0;">
+        <div style="width:36px;height:36px;border-radius:8px;background:rgba(56,189,248,0.14);border:1.5px solid rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;color:#38bdf8;flex-shrink:0;">
+          ${getSvgIcon('refresh', 18)}
+        </div>
+        <h2 style="margin:0;font-family:var(--fm-font-display, 'Inter', sans-serif);font-size:16px;font-weight:800;color:#FFFFFF;line-height:1.2;letter-spacing:0.04em;text-transform:uppercase;">
+          TRANSFER BATCH
+        </h2>
       </div>
 
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px 14px;margin-bottom:1.25rem;font-size: 12px;">
-        <div style="color:var(--clr-text-3);margin-bottom:4px;">Current Batch:</div>
-        <div class="fw-700" style="color:#f8fafc;">
-          Batch: <span style="color:#e2e8f0;">${escapeHtml(s.batchName)}</span> &bull; Level: <span style="color:#c084fc;">${escapeHtml(s.levelName)}</span>
-        </div>
-      </div>
+      <!-- 2. Modal Body (Strict 10px Container Padding & 10px Gap) -->
+      <div class="modal-body" style="padding:16px 20px;display:flex;flex-direction:column;gap:10px;background:#0F172A;box-sizing:border-box;">
 
-      <div style="display:flex;flex-direction:column;gap:1.1rem;margin-bottom:1.75rem;">
-        <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Destination Batch</label>
-          <select id="tb-target-batch" class="form-input" style="width:100%;">
-            ${availableBatches.map(b => {
-              const bLvl = levelsMap.get(b.current_level_id);
-              const lvlText = bLvl ? ` (${bLvl.name})` : '';
-              const isSelected = b.id === s.batch_id ? 'selected' : '';
-              return `<option value="${b.id}" data-level-id="${b.current_level_id || ''}" ${isSelected}>${escapeHtml(b.name)}${lvlText}</option>`;
-            }).join('')}
-          </select>
-        </div>
-
-        <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:10px 12px;">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size: 12px;color:#e0f2fe;font-weight:600;">
-            <input type="checkbox" id="tb-inherit-level" checked style="width:16px;height:16px;accent-color:var(--primary-tactical, #38bdf8);">
-            <span>Inherit Destination Batch Level</span>
-          </label>
-          <div style="font-size: 12px;color:#bae6fd;margin-top:4px;margin-left:24px;">
-            Automatically updates student's academic level to match the destination batch's current level.
+        <!-- Student Identity & Current Enrollment Card (Strict 10px Card Padding) -->
+        <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;gap:4px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;">STUDENT</span>
+            <span style="font-size:12px;font-weight:700;color:#38bdf8;letter-spacing:0.02em;">${escapeHtml(s.displayName)}</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(255,255,255,0.06);padding-top:4px;margin-top:2px;">
+            <span style="font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;">CURRENT ENROLLMENT</span>
+            <span style="font-size:12px;font-weight:600;color:#f8fafc;font-variant-numeric:tabular-nums;">
+              Batch <strong style="color:#ffffff;">${escapeHtml(s.batchName.replace(/^batch\s*/i, ''))}</strong> &bull; <span style="color:var(--grade-star, #a855f7);">${escapeHtml(curStepText)}</span>
+            </span>
           </div>
         </div>
 
-        <div>
-          <label class="form-label" style="display:block;margin-bottom:0.35rem;font-size: 12px;font-weight:600;">Academic Status</label>
-          <select id="tb-status" class="form-input" style="width:100%;">
+        <!-- Destination Batch Group -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label" style="display:block;margin:0;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;">
+            DESTINATION BATCH
+          </label>
+          <select id="tb-target-batch" style="width:100%;height:38px;background:#1e293b;border:1px solid #334155;color:#f8fafc;padding:0 12px;border-radius:6px;font-size:12px;font-weight:600;box-sizing:border-box;outline:none;transition:border-color 0.15s ease;">
+            ${availableBatches.length === 0
+              ? `<option value="" disabled selected>No other active batches available</option>`
+              : availableBatches.map((b, idx) => {
+                  const bLvl = levelsMap.get(b.current_level_id);
+                  const lvlText = bLvl ? ` (${formatStepName(bLvl)})` : '';
+                  return `<option value="${b.id}" data-level-id="${b.current_level_id || ''}" ${idx === 0 ? 'selected' : ''}>Batch ${escapeHtml(b.name.replace(/^batch\s*/i, ''))}${lvlText}</option>`;
+                }).join('')
+            }
+          </select>
+          ${availableBatches.length === 0 ? `<div style="font-size:12px;color:var(--grade-e);font-weight:600;margin-top:2px;">⚠️ No other active batches are currently open for transfer.</div>` : ''}
+        </div>
+
+        <!-- Inherit Level Card (Strict 10px Card Padding, Zero Description Clutter) -->
+        <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);border-radius:8px;padding:10px;box-sizing:border-box;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--primary-tactical, #38bdf8);font-weight:700;user-select:none;margin:0;">
+            <input type="checkbox" id="tb-inherit-level" checked style="width:16px;height:16px;margin:0;accent-color:var(--primary-tactical, #38bdf8);cursor:pointer;">
+            <span>Inherit Destination Batch Level</span>
+          </label>
+        </div>
+
+        <!-- Academic Status Group -->
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <label class="form-label" style="display:block;margin:0;font-size:12px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;">
+            ACADEMIC STATUS
+          </label>
+          <select id="tb-status" style="width:100%;height:38px;background:#1e293b;border:1px solid #334155;color:#f8fafc;padding:0 12px;border-radius:6px;font-size:12px;font-weight:600;box-sizing:border-box;outline:none;transition:border-color 0.15s ease;">
             <option value="active" selected>Active</option>
             <option value="inactive">Inactive</option>
           </select>
         </div>
+
       </div>
 
-      <div class="d-flex align-center gap-2 justify-between mt-3 pt-3" style="border-top:1px solid rgba(255,255,255,0.08);">
-        <button id="tb-cancel-btn" class="btn btn-secondary btn-modal-close-left">CLOSE</button>
-        <button id="tb-save-btn" class="btn btn-tactical" style="font-weight:700;">
-          Confirm Transfer
+      <!-- 3. Modal Footer CTA (Strict 60px Height, N-Button Dual Flush Ends per Invariant 1.5.2 & 1.5.4) -->
+      <div class="modal-footer cta-area" style="height:60px;min-height:60px;max-height:60px;padding:0 20px;border-top:1.5px solid rgba(255,255,255,0.16);display:flex;justify-content:space-between;align-items:center;background:#0b1324;box-sizing:border-box;flex-shrink:0;">
+        <button id="tb-cancel-btn" class="btn btn-secondary btn-modal-close-left" style="height:38px !important;min-height:38px !important;max-height:38px !important;line-height:36px !important;padding:0 20px !important;font-size:14px !important;font-weight:800 !important;border-radius:6px !important;border:1.5px solid rgba(255,255,255,0.2) !important;color:#ffffff !important;background:transparent !important;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;transition:all 0.15s ease;"
+          onmouseover="this.style.background='rgba(255,255,255,0.12)';"
+          onmouseout="this.style.background='transparent';">
+          CLOSE
+        </button>
+        <button id="tb-save-btn" class="btn btn-tactical" ${availableBatches.length === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed;' : 'style="'}height:38px !important;min-height:38px !important;max-height:38px !important;line-height:36px !important;padding:0 20px !important;font-size:14px !important;font-weight:800 !important;border-radius:6px !important;border:1.5px solid var(--primary-tactical, #38bdf8) !important;color:var(--primary-tactical, #38bdf8) !important;background:transparent !important;cursor:pointer;text-transform:uppercase;letter-spacing:0.04em;transition:all 0.15s ease;"
+          onmouseover="if(!this.disabled){this.style.background='var(--primary-tactical, #38bdf8)';this.style.color='#0f172a';this.style.boxShadow='0 4px 12px rgba(0,0,0,0.4)';}"
+          onmouseout="if(!this.disabled){this.style.background='transparent';this.style.color='var(--primary-tactical, #38bdf8)';this.style.boxShadow='none';}">
+          CONFIRM TRANSFER
         </button>
       </div>
+
     </div>
   `;
   document.body.appendChild(overlay);
@@ -6921,7 +7015,7 @@ window.openTransferBatchModal = async function(studentId) {
 
     const saveBtn = overlay.querySelector('#tb-save-btn');
     saveBtn.disabled = true;
-    saveBtn.textContent = 'Transferring...';
+    saveBtn.textContent = 'TRANSFERRING...';
 
     try {
       const updates = {
@@ -6929,6 +7023,9 @@ window.openTransferBatchModal = async function(studentId) {
         is_active: isActive,
         program_status: programStatus
       };
+      if (!s.original_batch_id && s.batch_id && s.batch_id !== targetBatchId) {
+        updates.original_batch_id = s.batch_id;
+      }
       if (inheritLevel && targetLevelId) {
         updates.level_id = targetLevelId;
       }
@@ -6948,17 +7045,25 @@ window.openTransferBatchModal = async function(studentId) {
 
       clearAdminCache('students');
       close();
+      document.querySelectorAll('#student-dossier-modal, .student-modal-backdrop, #student-profile-modal').forEach(el => el.remove());
+      document.body.style.overflow = '';
       showToast('Student transferred successfully.', 'success');
       if (typeof window.loadSection === 'function') {
         window.loadSection(window._activeSectionAlias || window._currentSection || 'students');
+      } else if (typeof window.renderStudents === 'function') {
+        window.renderStudents();
       }
     } catch (err) {
       console.error(err);
       showToast('Transfer failed: ' + err.message, 'error');
       saveBtn.disabled = false;
-      saveBtn.textContent = 'Confirm Transfer';
+      saveBtn.textContent = 'CONFIRM TRANSFER';
     }
   };
+  } catch (outerErr) {
+    console.error('Failed to open transfer batch modal:', outerErr);
+    showToast('Failed to open transfer dialog: ' + outerErr.message, 'error');
+  }
 };
 
 window.openRepeatLevelModal = async function(studentId) {
@@ -6967,7 +7072,7 @@ window.openRepeatLevelModal = async function(studentId) {
   const sb = await getSupabase();
   if (!s) {
     const { data: st } = await sb.from('students')
-      .select('id, name, batch_id, level_id, program_id, batches(name), levels(name, level_number)')
+      .select('id, name, batch_id, level_id, program_id, batches!batch_id(name), levels(name, level_number)')
       .eq('id', studentId)
       .single();
     if (!st) { showToast('Student not found.', 'error'); return; }
@@ -7055,8 +7160,11 @@ window.openRepeatLevelModal = async function(studentId) {
       const updates = {
         level_id: targetLevelId,
         is_active: true,
-        program_status: 'ACTIVE'
+        program_status: 'ACTIVE',
+        is_repeat: true
       };
+      const origBatch = s.original_batch_id || s.batch_id;
+      if (origBatch) updates.original_batch_id = origBatch;
       if (targetBatchId) updates.batch_id = targetBatchId;
 
       const { error: updErr } = await sb.from('students').update(updates).eq('id', studentId);
@@ -7507,6 +7615,9 @@ export async function openStudentFullEdit(student, onSaved) {
       institution_id: selectedInstitutionId,
       level_id:       document.getElementById('bfe-level')?.value   || null,
       is_active:      document.getElementById('bfe-active').value === 'true',
+      program_status: document.getElementById('bfe-active').value === 'true'
+        ? ((student?.program_status === 'ALUMNI') ? 'ALUMNI' : 'ACTIVE')
+        : 'INACTIVE',
       photo_url:      currentPhotoUrl || null,
     };
     const pinVal = document.getElementById('bfe-pin').value.trim();

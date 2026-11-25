@@ -480,7 +480,7 @@
     }
     .mc-option.selected {
       background: rgba(6, 182, 212, 0.15);
-      border-color: #06b6d4;
+      border-color: var(--primary-tactical, #38bdf8);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
     }
     .mc-letter {
@@ -496,7 +496,7 @@
       flex-shrink: 0;
     }
     .mc-option.selected .mc-letter {
-      background: #06b6d4;
+      background: var(--primary-tactical, #38bdf8);
       color: #0f172a;
     }
 
@@ -831,9 +831,9 @@
     }
 
     .vk-key.vk-shift.active {
-      background: #0284c7 !important;
+      background: var(--primary-tactical, #38bdf8) !important;
       border-color: #38bdf8 !important;
-      color: #ffffff !important;
+      color: #090d16 !important;
     }
 
     .vk-key.vk-backspace {
@@ -867,18 +867,19 @@
     .vk-key.vk-enter {
       flex: 0 0 15% !important;
       width: 15% !important;
-      background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+      background: var(--primary-tactical, #38bdf8) !important;
       border: 1px solid #38bdf8 !important;
-      color: #ffffff !important;
+      color: #090d16 !important;
       font-size: 16px !important;
-      font-weight: 700 !important;
-      box-shadow: 0 2px 0 #0369a1 !important;
+      font-weight: 800 !important;
+      box-shadow: 0 2px 0 rgba(56, 189, 248, 0.5) !important;
       text-transform: none !important;
     }
 
     .vk-key.vk-enter:active {
       transform: none !important;
-      background: #0284c7 !important;
+      background: var(--primary-tactical, #38bdf8) !important;
+      filter: brightness(0.9) !important;
     }
 
     /* Anti-Cheat selection and touch callout suppression */
@@ -1540,9 +1541,9 @@ body.test-page #fixed-bottom-area {
   line-height: 38px !important;
   padding: 0 8px !important;
   border-radius: 8px !important;
-  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  background: var(--primary-tactical, #38bdf8) !important;
   border: 1px solid #38bdf8 !important;
-  color: #ffffff !important;
+  color: #090d16 !important;
   font-family: var(--fm-font-display, 'Inter', sans-serif) !important;
   font-size: 12px !important;
   font-weight: 800 !important;
@@ -1559,7 +1560,7 @@ body.test-page #fixed-bottom-area {
 }
 
 .matrix-jump-btn:hover {
-  background: linear-gradient(135deg, #0284c7, #0284c7) !important;
+  background: linear-gradient(135deg, var(--primary-tactical, #38bdf8), var(--primary-tactical, #38bdf8)) !important;
   border-color: #38bdf8 !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
   transform: none !important;
@@ -2434,10 +2435,10 @@ body.test-page #fixed-bottom-area {
   font-weight: 800 !important;
   letter-spacing: 0.5px !important;
   text-transform: uppercase !important;
-  background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+  background: var(--primary-tactical, #38bdf8) !important;
   border: 1px solid #38bdf8 !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
+  color: #090d16 !important;
+  box-shadow: 0 4px 14px rgba(56, 189, 248, 0.35) !important;
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   display: flex !important;
@@ -2446,7 +2447,7 @@ body.test-page #fixed-bottom-area {
 }
 
 .btn-focus-start:hover {
-  background: linear-gradient(135deg, #0284c7, #0284c7) !important;
+  background: linear-gradient(135deg, var(--primary-tactical, #38bdf8), var(--primary-tactical, #38bdf8)) !important;
   border-color: #38bdf8 !important;
   transform: none !important;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;

@@ -11,9 +11,9 @@
   <meta name="description" content="Login to Student Gate on TOPS CORE to access your English tests, track your progress, and complete tests." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261115_v518" />
-  <link rel="stylesheet" href="css/auth.css?v=20261114_v481" />
+  <link rel="stylesheet" href="css/auth.css?v=20261125_v680" />
   <!-- Instant Transition Prefetch Pipeline (Prefetch next screens while user enters credentials) -->
   <link rel="prefetch" href="dashboard.html" />
   <link rel="prefetch" href="css/dashboard.css" />
@@ -42,12 +42,6 @@
     <div class="login-wrapper" role="main">
       <!-- Brand -->
       <div class="login-brand">
-        <div class="brand-badge-wrap" aria-hidden="true">
-          <svg class="brand-book-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-          </svg>
-        </div>
         <h1 class="brand-title">TOPS <span class="brand-core">CORE</span></h1>
       </div>
 
@@ -55,7 +49,6 @@
       <div class="cascade-section unlocked" id="sec-institution">
         <div class="cascade-inner">
           <div class="cascade-header">
-            <div class="cascade-step-num" id="step-num-1">1</div>
             <div class="cascade-title-wrap">
               <span class="cascade-label">Institution</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-institution-label"></span>
@@ -78,7 +71,6 @@
       <div class="cascade-section" id="sec-program">
         <div class="cascade-inner">
           <div class="cascade-header">
-            <div class="cascade-step-num" id="step-num-2">2</div>
             <div class="cascade-title-wrap">
               <span class="cascade-label">Program</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-program-label"></span>
@@ -101,7 +93,6 @@
       <div class="cascade-section" id="sec-batch">
         <div class="cascade-inner">
           <div class="cascade-header">
-            <div class="cascade-step-num" id="step-num-3">3</div>
             <div class="cascade-title-wrap">
               <span class="cascade-label">Batch</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-batch-label"></span>
@@ -124,7 +115,6 @@
       <div class="cascade-section" id="sec-student">
         <div class="cascade-inner">
           <div class="cascade-header">
-            <div class="cascade-step-num" id="step-num-4">4</div>
             <div class="cascade-title-wrap">
               <span class="cascade-label">Name</span><span class="cascade-colon">:</span>
               <span class="cascade-selection-label" id="sel-student-label"></span>
@@ -147,7 +137,6 @@
       <div class="cascade-section" id="sec-pin">
         <div class="cascade-inner">
           <div class="cascade-header">
-            <div class="cascade-step-num" id="step-num-5">5</div>
             <div class="cascade-title-wrap">
               <span class="cascade-label">PIN</span><span class="cascade-colon">:</span>
             </div>
@@ -170,18 +159,6 @@
         </div>
       </div>
 
-      <!-- Remember Me Banner (Under PIN) -->
-      <div class="remember-me-banner" id="remember-me-banner" role="button" tabindex="0" aria-label="Toggle remember login">
-        <div class="rmb-left">
-          <span class="rmb-text">Remember me on this device</span>
-        </div>
-        <div class="rmb-toggle" id="rmb-toggle" role="switch" aria-checked="false"></div>
-      </div>
-
-      <div class="clear-session-link" id="clear-session-link" tabindex="0" role="button" aria-label="Clear saved login">
-        Clear saved login info
-      </div>
-
       <!-- Single Admin Access Gear -->
       <div class="admin-gear-wrap">
         <a href="admin.html" id="admin-portal-link" class="admin-gear-link" title="Tutor's Room" aria-label="Tutor's Room"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></a>
@@ -190,7 +167,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/auth.js?v=20261114_v481"></script>
+  <script type="module" src="./js/auth.js?v=20261125_v680"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 

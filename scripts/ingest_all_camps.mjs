@@ -259,12 +259,13 @@ async function main() {
     for (const [name, st] of batchStudents.entries()) {
       let existing = (st.nis ? studentByNis.get(st.nis) : null) || studentByNameAndBatch.get(`${batchId}::${name}`);
 
+      const isExistingInactive = existing && (existing.is_active === false || (existing.program_status || '').toUpperCase() === 'INACTIVE');
       const payload = {
         name: st.name,
         institution_id: INSTITUTION_ID,
         program_id: PROGRAM_ID,
         batch_id: batchId,
-        is_active: true,
+        is_active: isExistingInactive ? false : true,
         ...(st.nis ? { nis: st.nis } : {}),
         ...(st.phone ? { phone: st.phone } : {}),
         ...(st.birthplace ? { birthplace: st.birthplace } : {}),

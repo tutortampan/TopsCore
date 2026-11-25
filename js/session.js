@@ -70,7 +70,11 @@ export function setStudentSession(data) {
     level_name: data.level_name || null,
     authenticated_at: data.authenticated_at || new Date().toISOString(),
   };
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  const jsonStr = JSON.stringify(session);
+  sessionStorage.setItem(SESSION_KEY, jsonStr);
+  try {
+    localStorage.setItem(SESSION_KEY, jsonStr);
+  } catch (_) {}
 }
 
 export function updateStudentSessionGender(gender, studentName) {
@@ -78,13 +82,23 @@ export function updateStudentSessionGender(gender, studentName) {
   if (session) {
     session.gender = gender;
     if (studentName) session.student_name = studentName;
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    const jsonStr = JSON.stringify(session);
+    sessionStorage.setItem(SESSION_KEY, jsonStr);
+    try {
+      localStorage.setItem(SESSION_KEY, jsonStr);
+    } catch (_) {}
   }
 }
 
 export function getStudentSession() {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    let raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) {
+      raw = localStorage.getItem(SESSION_KEY);
+      if (raw) {
+        try { sessionStorage.setItem(SESSION_KEY, raw); } catch (_) {}
+      }
+    }
     const parsed = raw ? JSON.parse(raw) : null;
     if (parsed && !parsed.student_id) return null;
     return parsed;
@@ -96,6 +110,7 @@ export function getStudentSession() {
 export function clearStudentSession() {
   sessionStorage.removeItem(SESSION_KEY);
   try {
+    localStorage.removeItem(SESSION_KEY);
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);
       if (k && k.startsWith('stu_photo_')) {

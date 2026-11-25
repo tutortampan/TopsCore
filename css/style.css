@@ -20,17 +20,16 @@
   --clr-border: rgba(255, 255, 255, 0.08);
   --clr-border-strong: rgba(255, 255, 255, 0.15);
 
-  /* Accent gradient */
-  --clr-accent-1: #6366f1;
-  /* indigo */
-  --clr-accent-2: #8b5cf6;
-  /* violet */
-  --clr-accent-3: #06b6d4;
-  /* cyan */
-  --clr-primary: #6366f1;
-  /* alias for accent-1 — used by pill filters, progress bars, admin highlights */
-  --grad-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
-  --grad-glow: radial-gradient(ellipse at top, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+  /* Accent gradient & Single Product Accent SSOT (#38bdf8 / Tactical Cyan) */
+  --primary-tactical: #38bdf8;
+  --primary-tactical-rgb: 56, 189, 248;
+  --clr-primary: var(--primary-tactical);
+  --clr-accent-1: var(--primary-tactical);
+  --clr-accent-2: var(--grade-star, #a855f7);
+  --clr-accent-3: var(--primary-tactical);
+  --clr-info: var(--primary-tactical);
+  --grad-primary: linear-gradient(135deg, #38bdf8 0%, rgba(56, 189, 248, 0.85) 100%);
+  --grad-glow: radial-gradient(ellipse at top, rgba(56, 189, 248, 0.25) 0%, transparent 70%);
 
   /* Surface variants */
   --clr-surface-2: rgba(255, 255, 255, 0.03);
@@ -40,9 +39,9 @@
      TOPSCORE SINGLE AUTHORITATIVE COLOR MASTER VAULT
      Strictly 1 single source of truth across Result, Admin, & Student
      ============================================================ */
-  --grade-star: #c084fc;
-  --grade-star-rgb: 192, 132, 252;
-  --grade-star-glow: rgba(192, 132, 252, 0.5);
+  --grade-star: #a855f7;
+  --grade-star-rgb: 168, 85, 247;
+  --grade-star-glow: rgba(168, 85, 247, 0.5);
 
   --grade-a: #00c000ff;
   --grade-a-rgb: 0, 192, 0;
@@ -79,7 +78,7 @@
   --clr-warning-rgb: var(--grade-c-rgb);
   --clr-danger: var(--grade-e);
   --clr-danger-rgb: var(--grade-e-rgb);
-  --clr-info: #06b6d4;
+  --clr-info: var(--primary-tactical, #38bdf8);
   --primary-tactical: #38bdf8;
   --primary-tactical-rgb: 56, 189, 248;
 
@@ -115,9 +114,9 @@
   --rainbow-step-4-rgb: var(--grade-a-rgb);
   --rainbow-step-5: var(--primary-tactical);
   --rainbow-step-5-rgb: var(--primary-tactical-rgb);
-  --rainbow-step-6: var(--clr-accent-1);
-  --rainbow-step-6-rgb: 99, 102, 241;
-  --rainbow-step-7: #c084fc;
+  --rainbow-step-6: #4f46e5;
+  --rainbow-step-6-rgb: 79, 70, 229;
+  --rainbow-step-7: var(--grade-star, #a855f7);
   --rainbow-step-7-rgb: 192, 132, 252;
 
   /* Text */
@@ -379,17 +378,20 @@ button:active,
   transform: none !important;
 }
 
-/* Primary button (Tactical Blue / Cyan) */
+/* Primary button (Tactical Cyan: Single Accent SSOT #38bdf8) */
 .btn-primary,
 .btn-tactical {
-  background: var(--grad-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+  background: var(--primary-tactical) !important;
+  color: #090d16 !important;
+  font-weight: 700 !important;
+  border: 1px solid var(--primary-tactical) !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.35) !important;
 }
 
 .btn-primary:hover:not([disabled]):not(:disabled),
 .btn-tactical:hover:not([disabled]):not(:disabled) {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  filter: brightness(0.92) !important;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.5) !important;
 }
 
 .btn-primary:active:not([disabled]):not(:disabled),
@@ -593,7 +595,7 @@ button:active,
 .btn-outline-primary:active:not([disabled]):not(:disabled),
 .btn-outline-primary.is-active,
 .btn-outline-primary.active {
-  background: #0284c7 !important;
+  background: var(--primary-tactical, #38bdf8) !important;
   border-color: #38bdf8 !important;
   color: #ffffff !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
@@ -627,7 +629,7 @@ button:active,
 .btn-outline-purple:active:not([disabled]):not(:disabled),
 .btn-outline-purple.is-active,
 .btn-outline-purple.active {
-  background: #8b5cf6 !important;
+  background: var(--grade-star, #a855f7) !important;
   border-color: var(--quad-d) !important;
   color: #ffffff !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
@@ -1045,7 +1047,7 @@ select.form-control {
   background: #0f172a !important;
   border-left: 3px solid var(--grade-a) !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #86efac;
+  color: var(--grade-a, #00c000);
 }
 
 .toast-error {
@@ -1066,7 +1068,7 @@ select.form-control {
   background: #0f172a !important;
   border-left: 3px solid var(--grade-c) !important;
   border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #fef08a;
+  color: var(--grade-c, #ffff00);
 }
 
 /* ============================================================
@@ -2324,5 +2326,46 @@ div:has(> a[href*="netlify.com"]) {
   bottom: -9999px !important;
   z-index: -9999 !important;
 }
+
+/* ==========================================================================
+   UNIVERSAL ZERO TABLE CAPSULE & ZERO TABLE GLOW INVARIANT (SSOT)
+   Rule 2.31 & ui-invariants.md §4.9:
+   DO NOT use capsules, pills, badges, borders, or background fills in data
+   table cells; status colors are strictly typographic.
+   DO NOT apply glow, text-shadow, or box-shadow to data table cells.
+   ========================================================================== */
+table td,
+table td *,
+.table-wrap td,
+.table-wrap td *,
+.datagrid-table td,
+.datagrid-table td * {
+  text-shadow: none !important;
+}
+
+table td .badge:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+table td [class*="badge"]:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+table td [class*="chip"]:not(.user-avatar),
+table td [class*="pill"],
+table td .tac-badge,
+table td .status-badge,
+table td .status-dot-badge,
+table td .pill-empty,
+.table-wrap td [class*="badge"]:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+.table-wrap td [class*="chip"]:not(.user-avatar),
+.table-wrap td [class*="pill"],
+.datagrid-table td [class*="badge"]:not(.badge-grade-symbol):not(.grade-circle):not(.grid-grade-star):not(.grid-grade-val),
+.datagrid-table td [class*="chip"]:not(.user-avatar),
+.datagrid-table td [class*="pill"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-weight: 600 !important;
+  font-size: 12px !important;
+}
+
 
 

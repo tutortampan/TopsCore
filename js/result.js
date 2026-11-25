@@ -5,7 +5,7 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName } from './api.js?v=20261115_v541';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName, formatAcademicTier, isCampContext } from './api.js?v=20261115_v541';
 import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay, validateDescriptionSentence } from './grading.js?v=20261106_v160';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
@@ -118,11 +118,11 @@ setTimeout(purgeExternalBadges, 2000);
         S: [starColor, '#d8b4fe', '#7e22ce', '#e9d5ff'],
         A: [aColor, aColor, aColor, aColor],
         B: [bColor, '#d9f99d', TOPSCORE_COLORS.B, '#bef264'],
-        C: [cColor, '#ffff99', TOPSCORE_COLORS.C, '#fef08a'],
-        D: [dColor, '#fed7aa', TOPSCORE_COLORS.D, '#fdba74'],
-        E: [eColor, '#ff9999', TOPSCORE_COLORS.E, '#fca5a5'],
-        F: [eColor, '#ff9999', TOPSCORE_COLORS.E, '#fca5a5'],
-        REMEDIAL: [cColor, '#ffff99', TOPSCORE_COLORS.C, '#fef08a'],
+        C: [cColor, '#ffff99', TOPSCORE_COLORS.C, 'var(--grade-c, #ffff00)'],
+        D: [dColor, '#fed7aa', TOPSCORE_COLORS.D, 'var(--grade-d, #ff8c00)'],
+        E: [eColor, '#ff9999', TOPSCORE_COLORS.E, 'var(--grade-e, #ff0000)'],
+        F: [eColor, '#ff9999', TOPSCORE_COLORS.E, 'var(--grade-e, #ff0000)'],
+        REMEDIAL: [cColor, '#ffff99', TOPSCORE_COLORS.C, 'var(--grade-c, #ffff00)'],
       };
       const colors = palettes[grade] || palettes.B;
 
@@ -236,7 +236,7 @@ setTimeout(purgeExternalBadges, 2000);
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      const colors = [TOPSCORE_COLORS.C, TOPSCORE_COLORS.D, TOPSCORE_COLORS.B, '#38bdf8', '#c084fc', TOPSCORE_COLORS.STAR, '#ffffff'];
+      const colors = [TOPSCORE_COLORS.C, TOPSCORE_COLORS.D, TOPSCORE_COLORS.B, '#38bdf8', 'var(--grade-star, #a855f7)', TOPSCORE_COLORS.STAR, '#ffffff'];
       const particles = [];
       const count = 75;
       for (let i = 0; i < count; i++) {
@@ -488,7 +488,7 @@ setTimeout(purgeExternalBadges, 2000);
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:6px;">
                   <span style="font-weight:800; font-size:12px; color:#F8FAFC;">Object #${qNum}</span>
-                  <span style="font-size:12px; font-weight:800; color:#c084fc; background:rgba(192, 132, 252, 0.15); border:1px solid #c084fc; border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
+                  <span style="font-size:12px; font-weight:800; color:var(--grade-star, #a855f7); background:rgba(192, 132, 252, 0.15); border:1px solid var(--grade-star, #a855f7); border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
                 </div>
                 <span style="font-size:12px; font-weight:800; color:${statusColor}; background:${statusBg}; border:1px solid ${statusBorder}; border-radius:6px; padding:2px 8px;">
                   ${pointStr} PTS
@@ -519,8 +519,8 @@ setTimeout(purgeExternalBadges, 2000);
                       <span style="font-weight:800; color:var(--grade-a); display:inline-flex; align-items:center; gap:4px;">${getSvgIcon('check-circle', 14)} Royal Order:</span> ${valRes.adjectives.map(adj => `<span style="color:#95ff00; font-weight:700;">${escapeHtml(adj.word)}</span> <span style="color:#94a3b8; font-size:12px;">(${escapeHtml(adj.category)})</span>`).join(' <span style="color:#64748b;">→</span> ')}
                     </div>
                   ` : studentAns ? `
-                    <div style="background:rgba(255, 140, 0, 0.1); border:1px solid #ea580c; border-radius:6px; padding:4px 6px; font-size:12px; color:#fed7aa; margin-top:2px; line-height:1.3;">
-                      <span style="font-weight:800; color:#ea580c;">Grammar:</span> ${escapeHtml(valRes.error)}
+                    <div style="background:rgba(255, 140, 0, 0.1); border:1px solid var(--grade-d, #ff8c00); border-radius:6px; padding:4px 6px; font-size:12px; color:#fed7aa; margin-top:2px; line-height:1.3;">
+                      <span style="font-weight:800; color:var(--grade-d, #ff8c00);">Grammar:</span> ${escapeHtml(valRes.error)}
                     </div>
                   ` : `
                     <div style="background:rgba(56, 189, 248, 0.06); border:1px solid rgba(56, 189, 248, 0.2); border-radius:6px; padding:4px 6px; font-size:12px; color:#94a3b8; margin-top:2px;">
@@ -1405,7 +1405,7 @@ setTimeout(purgeExternalBadges, 2000);
           const supabase = await getSupabase();
           if (targetStudentId) {
             const { data: st } = await supabase.from('students')
-              .select('id, name, gender, birth_date, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches(name), levels(name)')
+              .select('id, name, gender, birth_date, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches!batch_id(name), levels(name)')
               .eq('id', targetStudentId)
               .maybeSingle();
             if (st) {
@@ -1426,7 +1426,15 @@ setTimeout(purgeExternalBadges, 2000);
               if (metaInstEl) metaInstEl.textContent = resolvedInstName;
               if (metaProgEl) metaProgEl.textContent = resolvedProgName;
               if (metaBatchEl) metaBatchEl.textContent = resolvedBatchName;
-              if (metaLvlEl) metaLvlEl.textContent = resolvedLvlName;
+              if (metaLvlEl) {
+                const isCamp = typeof isCampContext === 'function' ? isCampContext(st) : Boolean(/camp/i.test(resolvedProgName) || /cec|cake/i.test(resolvedInstName));
+                const ctx = {
+                  batch_name: resolvedBatchName,
+                  enrollment_date: st.batches?.enrollment_date || st.enrollment_date,
+                  created_at: st.created_at
+                };
+                metaLvlEl.textContent = (typeof formatAcademicTier === 'function' ? formatAcademicTier(resolvedLvlName, isCamp, ctx) : resolvedLvlName).toUpperCase();
+              }
 
               // Unified Hero Card Biodata Table: Sex (above DoB) -> DoB -> Age -> Adr
               const resGenderEl = document.getElementById('result-hero-gender');
@@ -1969,16 +1977,14 @@ setTimeout(purgeExternalBadges, 2000);
         const aTheme = (typeof getGradeTheme === 'function' ? getGradeTheme(ag) : null) || GRADE_PALETTE[ag] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
         const isGradeS = (ag === '★' || ag === 'S' || ag === 'STAR');
         const displayGrade = isGradeS ? '★' : ag;
-        const badgeStyle = isGradeS
-          ? `background:rgba(${TOPSCORE_COLORS.STAR_RGB},0.18);color:${TOPSCORE_COLORS.STAR};border:1px solid ${TOPSCORE_COLORS.STAR};box-shadow: 0 2px 8px rgba(0,0,0,0.35);`
-          : `background:${aTheme.hex || aTheme.color}18;border:1.5px solid ${aTheme.border || aTheme.color};color:${aTheme.hex || aTheme.color};box-shadow: 0 2px 8px rgba(0,0,0,0.35);`;
+        const gradeColor = isGradeS ? TOPSCORE_COLORS.STAR : (aTheme.hex || aTheme.color);
 
         return `
           <tr style="${isThis ? 'background:rgba(56,189,248,0.07);' : ''}">
             <td style="padding:8px 12px;font-size:12px;color:var(--clr-text-3);">${escapeHtml(dateStr)}</td>
-            <td style="padding:8px 12px;font-weight:700;color:${isGradeS ? TOPSCORE_COLORS.STAR : (aTheme.hex || aTheme.color)};${isGradeS ? `text-shadow: none !important;` : ''}">${apct}%</td>
-            <td style="padding:8px 12px;">
-              <span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;font-weight:800;font-size:12px;${badgeStyle}">${displayGrade}</span>
+            <td style="padding:8px 12px;font-weight:700;color:${gradeColor};">${apct}%</td>
+            <td style="padding:8px 12px;text-align:center;">
+              <span style="font-weight:800;font-size:14px;color:${gradeColor};">${displayGrade}</span>
             </td>
             <td style="padding:8px 12px;">
               ${isBestRow ? `<span style="font-size:12px;font-weight:700;color:${TOPSCORE_COLORS.STAR};">Best</span>` : ''}

@@ -16,7 +16,10 @@
   <script>
     (function() {
       try {
-        var raw = sessionStorage.getItem('topscore_session');
+        var raw = sessionStorage.getItem('topscore_session') || localStorage.getItem('topscore_session');
+        if (raw && !sessionStorage.getItem('topscore_session')) {
+          try { sessionStorage.setItem('topscore_session', raw); } catch (_) {}
+        }
         console.log('[DASHBOARD PRE-PAINT] raw session:', raw ? 'present (' + raw.length + ' chars)' : 'MISSING');
         var sess = raw ? JSON.parse(raw) : null;
         if (!sess || !sess.student_id) {
@@ -45,7 +48,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261124_v670" />
-  <link rel="stylesheet" href="css/dashboard.css?v=20261124_v670" />
+  <link rel="stylesheet" href="css/dashboard.css?v=20261125_v685" />
   <link rel="stylesheet" href="css/components/avatars.css?v=20261107_v161" />
   <!-- Instant Transition Prefetch Pipeline (Prefetch test room while student browses dashboard) -->
   <link rel="prefetch" href="test.html" />
@@ -88,10 +91,7 @@
           <span class="meta-sep">&bull;</span>
           <span id="meta-batch">131</span>
           <span class="meta-sep">&bull;</span>
-          <span id="meta-lvl">3RD LEVEL</span>
-          <button type="button" id="btn-hero-certificate" class="hero-cert-btn" style="display:none; border:1px solid #b45309; background:rgba(245,158,11,0.15); color:#f59e0b; border-radius:4px; font-size:11px; font-weight:800; padding:2px 8px; cursor:pointer; align-items:center; gap:4px; margin-left:8px;" title="View Official Certificate & Academic Transcript">
-            🎓 Official Certificate
-          </button>
+          <span id="meta-lvl">3RD STEP</span>
         </div>
       </div>
 
@@ -230,9 +230,13 @@
           <span class="tab-label-text">TESTS</span>
           <span id="dock-completed-count-badge" class="count-badge">0</span>
         </button>
-        <button type="button" class="dock-tab-btn" id="btn-dock-attendance" role="tab" aria-selected="false" aria-controls="dock-pane-attendance" title="Attendance &amp; English Zone">
+        <button type="button" class="dock-tab-btn" id="btn-dock-attendance" role="tab" aria-selected="false" aria-controls="dock-pane-attendance" title="Class Attendance">
           <span class="tab-label-text">ATTEND</span>
           <span id="dock-attendance-status-badge" class="count-badge" style="display:none;background:rgba(56,189,248,0.2);color:#38bdf8;border:1px solid rgba(56,189,248,0.4);font-size:12px;"></span>
+        </button>
+        <button type="button" class="dock-tab-btn hidden" id="btn-dock-fines" role="tab" aria-selected="false" aria-controls="dock-pane-fines" title="English Zone Fines" style="display:none !important;">
+          <span class="tab-label-text">FINES</span>
+          <span id="dock-fines-status-badge" class="count-badge" style="display:none;">0</span>
         </button>
       </div>
 
@@ -269,7 +273,7 @@
         </div>
       </div>
 
-      <!-- Pane C: Attendance & English Zone Fine Panel -->
+      <!-- Pane C: Class Meetings & Attendance Panel -->
       <div id="dock-pane-attendance" class="dock-tab-pane hidden" role="tabpanel">
         <!-- Section 1: Live Meeting Attendance Card -->
         <div class="student-attend-card" id="student-attend-card">
@@ -305,7 +309,34 @@
           </div>
         </div>
 
-        <!-- Section 2: English Zone Fine Summary Card -->
+        <!-- Section 2: Class Meetings Attendance Calendar Matrix Card -->
+        <div class="student-attend-card" id="student-attendance-matrix-card">
+          <div class="attend-card-header">
+            <span class="attend-card-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span id="attend-matrix-title-text">Class Attendance</span>
+            </span>
+            <span id="attend-matrix-kpi-chip" class="status-tag present">--%</span>
+          </div>
+          <div id="student-attendance-matrix-container">
+            <div class="topscore-loading-center" style="padding:15px 0;">
+              <div class="spinner"></div>
+              <p style="font-size:11px;color:#94a3b8;margin-top:6px;">Loading Attendance Matrix...</p>
+            </div>
+          </div>
+          <div class="attendance-matrix-legend">
+            <span class="att-legend-item"><span class="att-dot present"></span> Present</span>
+            <span class="att-legend-item"><span class="att-dot excused"></span> Excused</span>
+            <span class="att-legend-item"><span class="att-dot sick"></span> Sick</span>
+            <span class="att-legend-item"><span class="att-dot absent"></span> Absent</span>
+            <span class="att-legend-item"><span class="att-dot upcoming"></span> Upcoming</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pane D: English Zone Fine Panel -->
+      <div id="dock-pane-fines" class="dock-tab-pane hidden" role="tabpanel" style="display:none !important;">
+        <!-- English Zone Fine Summary Card -->
         <div class="student-attend-card">
           <div class="attend-card-header">
             <span class="attend-card-title">
@@ -326,6 +357,24 @@
             <div class="col-data-item">
               <span class="col-header-text">DEBT (RP)</span>
               <span class="col-val-text debt" id="student-fine-debt">0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- English Zone Policy & Violation Log Card -->
+        <div class="student-attend-card" id="student-fines-details-card">
+          <div class="attend-card-header">
+            <span class="attend-card-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+              Violation Log
+            </span>
+          </div>
+          <div id="student-fine-history-container" style="font-size:12px;color:#94a3b8;line-height:1.5;">
+            <div style="display:flex;align-items:center;gap:8px;padding:4px 0;color:#00c000ff;font-weight:600;">
+              <span>✓</span> Clean English Zone Record
+            </div>
+            <div style="font-size:11px;color:#64748b;">
+              No language violations recorded. Keep using English in classes and camp zone!
             </div>
           </div>
         </div>
@@ -395,15 +444,7 @@
                 <span id="component-words-status" class="component-card-status" style="margin-left:auto;font-family:var(--fm-font-display,'Inter',sans-serif);font-size:12px;font-weight:800;color:var(--primary-tactical);"></span>
               </div>
               <div class="component-card-divider"></div>
-              <div class="component-card-pips" id="component-words-pips">
-                <div class="pip-box" data-pip="1">1</div>
-                <div class="pip-box" data-pip="2">2</div>
-                <div class="pip-box" data-pip="3">3</div>
-                <div class="pip-box" data-pip="4">4</div>
-                <div class="pip-box" data-pip="5">5</div>
-                <div class="pip-box" data-pip="6">6</div>
-                <div class="pip-box" data-pip="7">7</div>
-              </div>
+              <div class="component-card-pips dynamic-pips-container" id="component-words-pips"></div>
               <div class="component-card-exam-view" id="component-words-exam-view" style="display:none;align-items:center;justify-content:center;height:32px;font-family:var(--fm-font-display,'Inter',sans-serif);font-size:12px;font-weight:700;"></div>
             </div>
 
@@ -415,15 +456,7 @@
                 <span id="component-phrases-status" class="component-card-status" style="margin-left:auto;font-family:var(--fm-font-display,'Inter',sans-serif);font-size:12px;font-weight:800;color:var(--primary-tactical);"></span>
               </div>
               <div class="component-card-divider"></div>
-              <div class="component-card-pips" id="component-phrases-pips">
-                <div class="pip-box" data-pip="1">1</div>
-                <div class="pip-box" data-pip="2">2</div>
-                <div class="pip-box" data-pip="3">3</div>
-                <div class="pip-box" data-pip="4">4</div>
-                <div class="pip-box" data-pip="5">5</div>
-                <div class="pip-box" data-pip="6">6</div>
-                <div class="pip-box" data-pip="7">7</div>
-              </div>
+              <div class="component-card-pips dynamic-pips-container" id="component-phrases-pips"></div>
               <div class="component-card-exam-view" id="component-phrases-exam-view" style="display:none;align-items:center;justify-content:center;height:32px;font-family:var(--fm-font-display,'Inter',sans-serif);font-size:12px;font-weight:700;"></div>
             </div>
           </div>
@@ -809,7 +842,7 @@
 
 
   <script type="module" src="./js/svg-icons.js?v=20261114_v485"></script>
-  <script type="module" src="./js/dashboard.js?v=20261124_v673"></script>
+  <script type="module" src="./js/dashboard.js?v=20261125_v685"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261116_v548"></script>
 

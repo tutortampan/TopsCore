@@ -292,7 +292,7 @@ export const EXAM_RULES_SCHEMA = {
 
   // ── 6. CERTIFICATE PREDICATE SCALE (OFFICIAL TRANSCRIPT) ──
   CERTIFICATE_PREDICATES: [
-    { min: 90.0, max: 100.0, predicate: 'EXCELLENT', color: '#c084fc', grade: '★' },
+    { min: 90.0, max: 100.0, predicate: 'EXCELLENT', color: 'var(--grade-star, #a855f7)', grade: '★' },
     { min: 80.0, max: 89.99, predicate: 'VERY GOOD', color: '#00c000', grade: 'A' },
     { min: 70.0, max: 79.99, predicate: 'GOOD',      color: '#95ff00', grade: 'B' },
     { min: 60.0, max: 69.99, predicate: 'ENOUGH',    color: '#ffff00', grade: 'C' },

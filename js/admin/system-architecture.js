@@ -71,7 +71,7 @@ const ARCH_CATALOG = {
         name: 'Authoritative Grade Badges',
         realm: 'Universal (Student & Admin)',
         ruleRef: 'AGENTS.md §2.10 & ui-invariants.md §3.1',
-        description: 'Official centralized grading scale tokens. Star (★) is exclusively Vibrant Purple (#c084fc).',
+        description: 'Official centralized grading scale tokens. Star (★) is exclusively Vibrant Purple (var(--grade-star, #a855f7)).',
         specs: {
           badgeHeight: 24,
           badgePadding: '2px 10px',
@@ -80,7 +80,7 @@ const ARCH_CATALOG = {
           fontWeight: 800
         },
         tokens: [
-          { key: 'star', label: 'Star (100% Excellent)', token: '--grade-star', hex: '#c084fc' },
+          { key: 'star', label: 'Star (100% Excellent)', token: '--grade-star', hex: 'var(--grade-star, #a855f7)' },
           { key: 'gradeA', label: 'Grade A (90-99% Very Good)', token: '--grade-a', hex: '#00c000' },
           { key: 'gradeB', label: 'Grade B (80-89% Good)', token: '--grade-b', hex: '#95ff00' },
           { key: 'gradeC', label: 'Grade C (60-79% Enough)', token: '--grade-c', hex: '#FFFF00' },
@@ -89,7 +89,7 @@ const ARCH_CATALOG = {
         ],
         renderPreview: (specs, tokens) => `
           <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-            <span style="background:${tokens.star || '#c084fc'}; color:#0f172a; font-weight:${specs.fontWeight}; font-size:${specs.fontSize}px; padding:${specs.badgePadding}; border-radius:${specs.borderRadius}px; box-shadow:0 0 10px rgba(192,132,252,0.4);">★ 100% EXCELLENT</span>
+            <span style="background:${tokens.star || 'var(--grade-star, #a855f7)'}; color:#0f172a; font-weight:${specs.fontWeight}; font-size:${specs.fontSize}px; padding:${specs.badgePadding}; border-radius:${specs.borderRadius}px; box-shadow:0 0 10px rgba(192,132,252,0.4);">★ 100% EXCELLENT</span>
             <span style="background:${tokens.gradeA || '#00c000'}; color:#ffffff; font-weight:${specs.fontWeight}; font-size:${specs.fontSize}px; padding:${specs.badgePadding}; border-radius:${specs.borderRadius}px;">A 95% VERY GOOD</span>
             <span style="background:${tokens.gradeB || '#95ff00'}; color:#0f172a; font-weight:${specs.fontWeight}; font-size:${specs.fontSize}px; padding:${specs.badgePadding}; border-radius:${specs.borderRadius}px;">B 85% GOOD</span>
             <span style="background:${tokens.gradeC || '#FFFF00'}; color:#0f172a; font-weight:${specs.fontWeight}; font-size:${specs.fontSize}px; padding:${specs.badgePadding}; border-radius:${specs.borderRadius}px;">C 70% ENOUGH</span>
@@ -118,19 +118,19 @@ const ARCH_CATALOG = {
           borderColor: 'rgba(255,255,255,0.08)'
         },
         tokens: [
-          { key: 'gradeColor', label: 'Grade Tone', token: '--grade-star', hex: '#c084fc' },
+          { key: 'gradeColor', label: 'Grade Tone', token: '--grade-star', hex: 'var(--grade-star, #a855f7)' },
           { key: 'bgCard', label: 'Card Background', token: '--fm-card-bg', hex: '#121c35' },
           { key: 'textPrimary', label: 'Text White', token: '--clr-text-1', hex: '#ffffff' }
         ],
         renderPreview: (specs, tokens) => `
           <div style="background:${specs.bgCard}; border:1px solid ${specs.borderColor}; border-radius:${specs.borderRadius}px; padding:${specs.padding}px; width:100%; max-width:380px; display:flex; align-items:center; gap:12px; box-sizing:border-box;">
-            <div style="width:64px; height:64px; border-radius:10px; background:linear-gradient(135deg, ${tokens.gradeColor || '#c084fc'}, #6d28d9); display:flex; align-items:center; justify-content:center; font-size:${specs.symbolSize}px; font-weight:900; color:#0f172a; box-shadow:0 0 16px rgba(192,132,252,0.45); flex-shrink:0;">
+            <div style="width:64px; height:64px; border-radius:10px; background:linear-gradient(135deg, ${tokens.gradeColor || 'var(--grade-star, #a855f7)'}, #6d28d9); display:flex; align-items:center; justify-content:center; font-size:${specs.symbolSize}px; font-weight:900; color:#0f172a; box-shadow:0 0 16px rgba(192,132,252,0.45); flex-shrink:0;">
               ★
             </div>
             <div style="flex:1; min-width:0;">
               <div style="font-size:12px; font-weight:700; color:#94a3b8; text-transform:uppercase; letter-spacing:0.04em;">Current Standing</div>
               <div style="font-size:16px; font-weight:800; color:${tokens.textPrimary || '#ffffff'}; text-transform:uppercase; margin-top:2px;">EXCELLENT</div>
-              <div style="font-size:12px; color:#cbd5e1; margin-top:4px; font-variant-numeric:tabular-nums;">Passing Rate: <strong style="color:${tokens.gradeColor || '#c084fc'}; font-size:12px;">100%</strong></div>
+              <div style="font-size:12px; color:#cbd5e1; margin-top:4px; font-variant-numeric:tabular-nums;">Passing Rate: <strong style="color:${tokens.gradeColor || 'var(--grade-star, #a855f7)'}; font-size:12px;">100%</strong></div>
             </div>
           </div>
         `
@@ -209,13 +209,13 @@ const ARCH_CATALOG = {
           borderBottom: '1.5px solid rgba(255,255,255,0.16)'
         },
         tokens: [
-          { key: 'themeBg', label: 'Theme Banner Accent', token: '--theme-hex', hex: '#0284c7' },
+          { key: 'themeBg', label: 'Theme Banner Accent', token: '--theme-hex', hex: '#38bdf8' },
           { key: 'titleColor', label: 'Title Text', token: '--clr-text-1', hex: '#ffffff' }
         ],
         renderPreview: (specs, tokens) => `
-          <div style="height:${specs.height}px; width:100%; max-width:480px; background:linear-gradient(90deg, ${(tokens.themeBg || '#0284c7')}66 0%, ${(tokens.themeBg || '#0284c7')}22 60%, rgba(15,23,42,0.95) 100%); border-bottom:${specs.borderBottom}; border-left:4px solid ${tokens.themeBg || '#0284c7'}; display:flex; align-items:center; padding:${specs.padding}; box-sizing:border-box; border-radius:8px 8px 0 0;">
+          <div style="height:${specs.height}px; width:100%; max-width:480px; background:linear-gradient(90deg, ${(tokens.themeBg || '#38bdf8')}66 0%, ${(tokens.themeBg || '#38bdf8')}22 60%, rgba(15,23,42,0.95) 100%); border-bottom:${specs.borderBottom}; border-left:4px solid ${tokens.themeBg || 'var(--primary-tactical, #38bdf8)'}; display:flex; align-items:center; padding:${specs.padding}; box-sizing:border-box; border-radius:8px 8px 0 0;">
             <div style="display:flex; align-items:center; gap:12px;">
-              <div style="width:34px; height:34px; border-radius:6px; background:${tokens.themeBg || '#0284c7'}; display:flex; align-items:center; justify-content:center; color:#ffffff;">
+              <div style="width:34px; height:34px; border-radius:6px; background:${tokens.themeBg || 'var(--primary-tactical, #38bdf8)'}; display:flex; align-items:center; justify-content:center; color:#ffffff;">
                 ${getSvgIcon('shield', 18)}
               </div>
               <div style="font-size:${specs.fontSize}px; font-weight:${specs.fontWeight}; color:${tokens.titleColor || '#ffffff'}; text-transform:uppercase; letter-spacing:0.04em;">

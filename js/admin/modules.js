@@ -15,7 +15,7 @@ export const CLASS_DISCIPLINES = [
   { key: 'vocabulary', label: 'Vocabulary', shortLabel: 'Vocab', color: 'var(--quad-c, #95ff00)', bg: 'rgba(149, 255, 0, 0.12)', border: 'rgba(149, 255, 0, 0.35)', desc: 'Words, Phrases & Vocabulary Vault' },
   { key: 'storytelling', label: 'Storytelling', shortLabel: 'Storytelling', color: 'var(--quad-b, #FF8C00)', bg: 'rgba(255, 140, 0, 0.12)', border: 'rgba(255, 140, 0, 0.35)', desc: 'Daily Narrative & Pair Stories' },
   { key: 'speaking', label: 'Speaking', shortLabel: 'Speaking', color: 'var(--primary-tactical, #38bdf8)', bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.35)', desc: 'Public Speaking & Speech Projects' },
-  { key: 'grammar', label: 'Basic English', shortLabel: 'Basic / Grammar', color: 'var(--quad-d, #C084FC)', bg: 'rgba(192, 132, 252, 0.12)', border: 'rgba(192, 132, 252, 0.35)', desc: 'Sentence Structures & Fundamentals' }
+  { key: 'grammar', label: 'Basic English', shortLabel: 'Basic / Grammar', color: 'var(--quad-d, #a855f7)', bg: 'rgba(192, 132, 252, 0.12)', border: 'rgba(192, 132, 252, 0.35)', desc: 'Sentence Structures & Fundamentals' }
 ];
 
 export const DEFAULT_MODULE_CLASS_MAP = {
@@ -235,7 +235,7 @@ export async function renderModules(area) {
               <!-- Action Button: Configure Engine (Rule 3.4 Ghost-to-Solid-Glow) -->
               <button class="btn-configure-engine edit-mode-only" data-id="${mod.id}" data-name="${escapeHtml(mod.name)}" data-directive="${escapeHtml(mod.directive)}"
                       style="background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: var(--primary-tactical, #38bdf8); padding: 0 10px; height: 30px; line-height: 28px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: auto;"
-                      onmouseover="this.style.background='#0284c7'; this.style.borderColor='#0284c7'; this.style.color='#ffffff'; this.style.boxShadow='0 0 10px rgba(56, 189, 248, 0.45)';"
+                      onmouseover="this.style.background='#38bdf8'; this.style.borderColor='#38bdf8'; this.style.color='#090d16'; this.style.boxShadow='0 0 10px rgba(56, 189, 248, 0.45)';"
                       onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(56, 189, 248, 0.4)'; this.style.color='var(--primary-tactical, #38bdf8)'; this.style.boxShadow='none';">
                 <span>${getSvgIcon('settings', 14)}</span>
                 <span>Configure Engine &amp; Classes</span>
@@ -338,7 +338,7 @@ export async function renderModules(area) {
       
       const footerHTML = `
         <div style="display:flex; gap:10px; justify-content:space-between; align-items:center; width:100%;">
-          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" onclick="closeRecordDrawer()">Cancel</button>
+          <button type="button" class="btn btn-secondary btn-sm btn-modal-close-left" onclick="closeRecordDrawer()">CLOSE</button>
           <button type="button" class="btn btn-primary btn-sm" id="drawer-save-btn">Save Configuration</button>
         </div>
       `;

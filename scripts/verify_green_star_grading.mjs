@@ -81,7 +81,7 @@ assert(antigravityRules.includes('SINGLE SOURCE OF TRUTH COLORING'), ".antigravi
 console.log('\n[3] Checking CSS & JS Client Files for Grading Consistency:');
 
 const styleCss = fs.readFileSync('css/style.css', 'utf-8');
-assert(styleCss.includes('--grade-star: #c084fc;') || styleCss.includes('--grade-star: #ff2d87;') || styleCss.includes('--grade-star: #00c000ff;'), "css/style.css defines --grade-star");
+assert(styleCss.includes('--grade-star: #a855f7;') || styleCss.includes('--grade-star: #c084fc;') || styleCss.includes('--grade-star: #ff2d87;') || styleCss.includes('--grade-star: #00c000ff;'), "css/style.css defines --grade-star");
 assert(styleCss.includes('--grade-a: #00c000ff;'), "css/style.css defines --grade-a: #00c000ff");
 assert(styleCss.includes('--eval-correct: var(--grade-a);') || styleCss.includes('--eval-correct: #00c000ff;'), "css/style.css defines --eval-correct");
 assert(styleCss.includes('--eval-partial: var(--grade-c);') || styleCss.includes('--eval-partial: #ffff00;'), "css/style.css defines --eval-partial");

@@ -10,7 +10,7 @@ import { getSupabase } from '../supabase.js?v=20261106_v160';
 // Main Canvas: 50-50 Vertical Split (15 Classes | Faculty ID Badges)
 // ═══════════════════════════════════════════════════════════════
 const C = {
-  STAR:    '#c084fc',   // ★ Excellent 100%
+  STAR:    '#a855f7',   // ★ Excellent 100%
   A:       '#00c000',   // A Very Good 90–99%
   B:       '#95ff00',   // B Good 80–89% (Male Tutor Lime Accent)
   C:       '#ffff00',   // C Enough 60–79%
@@ -540,7 +540,7 @@ function renderQuarterHourTimeSelect(selectedValue, onchangeCode, customStyle = 
     : '';
 
   const borderStyle = isWarning
-    ? 'border:1px solid #ef4444 !important;background:rgba(239,68,68,0.2) !important;color:#fca5a5 !important;'
+    ? 'border:1px solid var(--grade-e, #ff0000) !important;background:rgba(255,0,0,0.15) !important;color:var(--grade-e, #ff0000) !important;'
     : 'border:none;background:transparent;color:#f8fafc;';
 
   return `
@@ -1048,31 +1048,30 @@ window._openEditTutorModal = (tutorId) => {
   const modalHtml = `
     <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:15px;backdrop-filter:blur(3px);">
       <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:18px;width:100%;max-width:390px;box-shadow:0 20px 40px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;color:#f8fafc;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;">
-          <h4 style="margin:0;font-size:13px;font-weight:800;letter-spacing:0.3px;color:#f8fafc;">Edit Tutor · ${escHtml(tutor.nickname)}</h4>
-          <button type="button" onclick="document.getElementById('${modalId}').remove()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+        <div style="display:flex;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
+          <h4 style="margin:0;font-size:16px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#f8fafc;">EDIT TUTOR · ${escHtml(tutor.nickname)}</h4>
         </div>
         <form id="form-edit-tutor" onsubmit="event.preventDefault(); window._saveTutorEdit('${escHtml(tutor.id)}');">
           <div style="margin-bottom:10px;display:flex;gap:10px;">
             <div style="flex:0 0 100px;">
-              <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">TUTOR CODE</label>
-              <input type="text" id="tutor-edit-code" value="${escHtml(tutor.code || '')}" placeholder="e.g. T-TOP" required maxlength="10" style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;font-family:monospace;font-weight:700;box-sizing:border-box;outline:none;text-transform:uppercase;" />
+              <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">TUTOR CODE</label>
+              <input type="text" id="tutor-edit-code" value="${escHtml(tutor.code || '')}" placeholder="e.g. T-TOP" required maxlength="10" style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;font-family:monospace;font-weight:700;box-sizing:border-box;outline:none;text-transform:uppercase;" />
             </div>
             <div style="flex:1 1 0;">
-              <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">NICKNAME / CALLOUT</label>
-              <input type="text" id="tutor-edit-nickname" value="${escHtml(tutor.nickname || '')}" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+              <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">NICKNAME / CALLOUT</label>
+              <input type="text" id="tutor-edit-nickname" value="${escHtml(tutor.nickname || '')}" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
             </div>
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">FULL NAME</label>
-            <input type="text" id="tutor-edit-fullname" value="${escHtml(tutor.full_name || '')}" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">FULL NAME</label>
+            <input type="text" id="tutor-edit-fullname" value="${escHtml(tutor.full_name || '')}" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">DATE OF BIRTH (DoB)</label>
-            <input type="date" id="tutor-edit-dob" value="${escHtml(tutor.birth_date || '')}" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">DATE OF BIRTH (DoB)</label>
+            <input type="date" id="tutor-edit-dob" value="${escHtml(tutor.birth_date || '')}" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:14px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:6px;">TUTOR PHOTO (WEB-COMPRESSED)</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;">TUTOR PHOTO (WEB-COMPRESSED)</label>
             <div style="display:flex;align-items:center;gap:12px;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 10px;">
               <div id="tutor-edit-preview-box" style="width:42px;height:42px;border-radius:6px;border:1px solid rgba(255,255,255,0.25);overflow:hidden;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                 <img id="tutor-edit-preview-img" src="${escHtml(tutor.avatar_url || '')}" alt="${escHtml(tutor.nickname)}" style="width:100%;height:100%;object-fit:cover;display:${tutor.avatar_url ? 'block' : 'none'};" />
@@ -1084,21 +1083,21 @@ window._openEditTutorModal = (tutorId) => {
                 <input type="file" id="tutor-edit-photo-file" accept="image/*" style="display:none;" onchange="window._handleTutorPhotoUpload(this, 'tutor-edit-preview-img', 'tutor-edit-preview-mono', 'tutor-edit-photo-val')" />
                 <input type="hidden" id="tutor-edit-photo-val" value="${escHtml(tutor.avatar_url || '')}" />
                 <div style="display:flex;align-items:center;gap:6px;">
-                  <button type="button" onclick="document.getElementById('tutor-edit-photo-file').click()" style="height:26px;padding:0 10px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                  <button type="button" onclick="document.getElementById('tutor-edit-photo-file').click()" style="height:32px;padding:0 12px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                     <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
                     <span>Upload Image</span>
                   </button>
-                  <button type="button" onclick="window._clearTutorPhotoUpload('tutor-edit-preview-img', 'tutor-edit-preview-mono', 'tutor-edit-photo-val')" style="height:26px;padding:0 8px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">
+                  <button type="button" onclick="window._clearTutorPhotoUpload('tutor-edit-preview-img', 'tutor-edit-preview-mono', 'tutor-edit-photo-val')" style="height:32px;padding:0 10px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:12px;cursor:pointer;">
                     Remove
                   </button>
                 </div>
-                <span style="font-size:10px;color:#64748b;">Client-compressed (Zero Supabase quota)</span>
+                <span style="font-size:12px;color:#64748b;">Client-compressed (Zero Supabase quota)</span>
               </div>
             </div>
           </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
-            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:28px;padding:0 12px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
-            <button type="submit" style="height:28px;padding:0 14px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">Save Tutor</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;margin-top:10px;">
+            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:36px;padding:0 14px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">CLOSE</button>
+            <button type="submit" style="height:36px;padding:0 16px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">SAVE TUTOR</button>
           </div>
         </form>
       </div>
@@ -1141,31 +1140,30 @@ window._openAddTutorModal = () => {
   const modalHtml = `
     <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:15px;backdrop-filter:blur(3px);">
       <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:18px;width:100%;max-width:390px;box-shadow:0 20px 40px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;color:#f8fafc;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;">
-          <h4 style="margin:0;font-size:13px;font-weight:800;letter-spacing:0.3px;color:#f8fafc;">Add New Tutor (${tab})</h4>
-          <button type="button" onclick="document.getElementById('${modalId}').remove()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+        <div style="display:flex;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
+          <h4 style="margin:0;font-size:16px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#f8fafc;">ADD NEW TUTOR (${tab})</h4>
         </div>
         <form id="form-add-tutor" onsubmit="event.preventDefault(); window._saveNewTutor();">
           <div style="margin-bottom:10px;display:flex;gap:10px;">
             <div style="flex:0 0 100px;">
-              <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">TUTOR CODE</label>
-              <input type="text" id="tutor-add-code" placeholder="e.g. T-AME" required maxlength="10" style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;font-family:monospace;font-weight:700;box-sizing:border-box;outline:none;text-transform:uppercase;" />
+              <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">TUTOR CODE</label>
+              <input type="text" id="tutor-add-code" placeholder="e.g. T-AME" required maxlength="10" style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;font-family:monospace;font-weight:700;box-sizing:border-box;outline:none;text-transform:uppercase;" />
             </div>
             <div style="flex:1 1 0;">
-              <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">NICKNAME / CALLOUT</label>
-              <input type="text" id="tutor-add-nickname" placeholder="e.g. Miss Sarah" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+              <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">NICKNAME / CALLOUT</label>
+              <input type="text" id="tutor-add-nickname" placeholder="e.g. Miss Sarah" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
             </div>
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">FULL NAME</label>
-            <input type="text" id="tutor-add-fullname" placeholder="e.g. Sarah Azhari" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">FULL NAME</label>
+            <input type="text" id="tutor-add-fullname" placeholder="e.g. Sarah Azhari" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">DATE OF BIRTH (DoB)</label>
-            <input type="date" id="tutor-add-dob" value="2000-01-01" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">DATE OF BIRTH (DoB)</label>
+            <input type="date" id="tutor-add-dob" value="2000-01-01" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:14px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:6px;">TUTOR PHOTO (WEB-COMPRESSED)</label>
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;">TUTOR PHOTO (WEB-COMPRESSED)</label>
             <div style="display:flex;align-items:center;gap:12px;background:#1e293b;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 10px;">
               <div id="tutor-add-preview-box" style="width:42px;height:42px;border-radius:6px;border:1px solid rgba(255,255,255,0.25);overflow:hidden;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
                 <img id="tutor-add-preview-img" src="" alt="Preview" style="width:100%;height:100%;object-fit:cover;display:none;" />
@@ -1177,21 +1175,21 @@ window._openAddTutorModal = () => {
                 <input type="file" id="tutor-add-photo-file" accept="image/*" style="display:none;" onchange="window._handleTutorPhotoUpload(this, 'tutor-add-preview-img', 'tutor-add-preview-mono', 'tutor-add-photo-val')" />
                 <input type="hidden" id="tutor-add-photo-val" value="" />
                 <div style="display:flex;align-items:center;gap:6px;">
-                  <button type="button" onclick="document.getElementById('tutor-add-photo-file').click()" style="height:26px;padding:0 10px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+                  <button type="button" onclick="document.getElementById('tutor-add-photo-file').click()" style="height:32px;padding:0 12px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                     <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg></span>
                     <span>Upload Image</span>
                   </button>
-                  <button type="button" onclick="window._clearTutorPhotoUpload('tutor-add-preview-img', 'tutor-add-preview-mono', 'tutor-add-photo-val')" style="height:26px;padding:0 8px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">
+                  <button type="button" onclick="window._clearTutorPhotoUpload('tutor-add-preview-img', 'tutor-add-preview-mono', 'tutor-add-photo-val')" style="height:32px;padding:0 10px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:12px;cursor:pointer;">
                     Remove
                   </button>
                 </div>
-                <span style="font-size:10px;color:#64748b;">Client-compressed (Zero Supabase quota)</span>
+                <span style="font-size:12px;color:#64748b;">Client-compressed (Zero Supabase quota)</span>
               </div>
             </div>
           </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
-            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:28px;padding:0 12px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
-            <button type="submit" style="height:28px;padding:0 14px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">Add Tutor</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;margin-top:10px;">
+            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:36px;padding:0 14px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">CLOSE</button>
+            <button type="submit" style="height:36px;padding:0 16px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">ADD TUTOR</button>
           </div>
         </form>
       </div>
@@ -1248,30 +1246,29 @@ window._openEditRoomModal = (roomCode) => {
   const modalHtml = `
     <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:15px;backdrop-filter:blur(3px);">
       <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:18px;width:100%;max-width:360px;box-shadow:0 20px 40px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;color:#f8fafc;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;">
-          <h4 style="margin:0;font-size:13px;font-weight:800;letter-spacing:0.3px;color:#f8fafc;">Edit Room · ${escHtml(room.code)}</h4>
-          <button type="button" onclick="document.getElementById('${modalId}').remove()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+        <div style="display:flex;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
+          <h4 style="margin:0;font-size:16px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#f8fafc;">EDIT ROOM · ${escHtml(room.code)}</h4>
         </div>
         <form id="form-edit-room" onsubmit="event.preventDefault(); window._saveRoomEdit('${escHtml(room.code)}');">
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM CODE</label>
-            <input type="text" id="room-edit-code" value="${escHtml(room.code || '')}" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM CODE</label>
+            <input type="text" id="room-edit-code" value="${escHtml(room.code || '')}" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM NAME</label>
-            <input type="text" id="room-edit-name" value="${escHtml(room.name || '')}" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM NAME</label>
+            <input type="text" id="room-edit-name" value="${escHtml(room.name || '')}" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">CAPACITY (STUDENTS)</label>
-            <input type="number" id="room-edit-cap" value="${room.capacity || 30}" min="1" max="500" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">CAPACITY (STUDENTS)</label>
+            <input type="number" id="room-edit-cap" value="${room.capacity || 30}" min="1" max="500" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:14px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM TYPE / USAGE</label>
-            <input type="text" id="room-edit-type" value="${escHtml(room.type || 'Classroom')}" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM TYPE / USAGE</label>
+            <input type="text" id="room-edit-type" value="${escHtml(room.type || 'Classroom')}" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
-            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:28px;padding:0 12px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
-            <button type="submit" style="height:28px;padding:0 14px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">Save Room</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;margin-top:10px;">
+            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:36px;padding:0 14px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">CLOSE</button>
+            <button type="submit" style="height:36px;padding:0 16px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">SAVE ROOM</button>
           </div>
         </form>
       </div>
@@ -1328,30 +1325,29 @@ window._openAddRoomModal = () => {
   const modalHtml = `
     <div id="${modalId}" style="position:fixed;inset:0;background:rgba(0,0,0,0.78);z-index:99999;display:flex;align-items:center;justify-content:center;padding:15px;backdrop-filter:blur(3px);">
       <div style="background:#0f172a;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:18px;width:100%;max-width:360px;box-shadow:0 20px 40px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;color:#f8fafc;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:8px;">
-          <h4 style="margin:0;font-size:13px;font-weight:800;letter-spacing:0.3px;color:#f8fafc;">Add New Room (${tab})</h4>
-          <button type="button" onclick="document.getElementById('${modalId}').remove()" style="background:transparent;border:none;color:#94a3b8;font-size:16px;cursor:pointer;line-height:1;">✕</button>
+        <div style="display:flex;align-items:center;margin-bottom:14px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:10px;">
+          <h4 style="margin:0;font-size:16px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:#f8fafc;">ADD NEW ROOM (${tab})</h4>
         </div>
         <form id="form-add-room" onsubmit="event.preventDefault(); window._saveNewRoom();">
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM CODE</label>
-            <input type="text" id="room-add-code" placeholder="e.g. R-104" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM CODE</label>
+            <input type="text" id="room-add-code" placeholder="e.g. R-104" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM NAME</label>
-            <input type="text" id="room-add-name" placeholder="e.g. Room 104" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM NAME</label>
+            <input type="text" id="room-add-name" placeholder="e.g. Room 104" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:10px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">CAPACITY (STUDENTS)</label>
-            <input type="number" id="room-add-cap" value="35" min="1" max="500" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">CAPACITY (STUDENTS)</label>
+            <input type="number" id="room-add-cap" value="35" min="1" max="500" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
           <div style="margin-bottom:14px;">
-            <label style="display:block;font-size:10.5px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM TYPE / USAGE</label>
-            <input type="text" id="room-add-type" placeholder="e.g. Classroom" value="Classroom" required style="width:100%;height:30px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:11.5px;box-sizing:border-box;outline:none;" />
+            <label style="display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:4px;">ROOM TYPE / USAGE</label>
+            <input type="text" id="room-add-type" placeholder="e.g. Classroom" value="Classroom" required style="width:100%;height:36px;background:#1e293b;border:1px solid rgba(255,255,255,0.2);border-radius:4px;color:#f8fafc;padding:0 8px;font-size:12px;box-sizing:border-box;outline:none;" />
           </div>
-          <div style="display:flex;justify-content:flex-end;gap:8px;border-top:1px solid rgba(255,255,255,0.1);padding-top:10px;">
-            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:28px;padding:0 12px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:11px;cursor:pointer;">Cancel</button>
-            <button type="submit" style="height:28px;padding:0 14px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">Add Room</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(255,255,255,0.1);padding-top:12px;margin-top:10px;">
+            <button type="button" onclick="document.getElementById('${modalId}').remove()" style="height:36px;padding:0 14px;background:transparent;border:1px solid rgba(255,255,255,0.2);color:#94a3b8;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">CLOSE</button>
+            <button type="submit" style="height:36px;padding:0 16px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;border-radius:4px;font-size:12px;font-weight:700;cursor:pointer;">ADD ROOM</button>
           </div>
         </form>
       </div>
@@ -1505,7 +1501,7 @@ export async function renderDashboard(container) {
   const studentMap = {};
   students.forEach(s => { studentMap[s.id] = s; });
 
-  const activeStudents = students.filter(s => s.is_active && !s.deleted_at && s.program_status !== 'ALUMNI');
+  const activeStudents = students.filter(s => s.is_active && !s.deleted_at && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI');
   const activeClasses  = classes.filter(c => c.is_active && !c.deleted_at);
   const publishedTests = tests.filter(t => t.status === 'PUBLISHED' && !t.deleted_at);
   const submittedAttempts = attempts.filter(a =>
@@ -1838,7 +1834,7 @@ export async function renderDashboard(container) {
               <span>●</span> Schedule Clear
             </span>
           ` : `
-            <span style="color:#ef4444;background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.35);padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
+            <span style="color:var(--grade-e, #ff0000);background:rgba(255,0,0,0.15);border:1px solid rgba(255,0,0,0.35);padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
               ⚠ ${audit.totalConflicts} Schedule Alert${audit.totalConflicts > 1 ? 's' : ''}
             </span>
           `}
@@ -1857,7 +1853,7 @@ export async function renderDashboard(container) {
               <span>●</span> Schedule Clear
             </span>
           ` : `
-            <span style="color:#ef4444;background:rgba(239,68,68,0.18);border:1px solid rgba(239,68,68,0.35);padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
+            <span style="color:var(--grade-e, #ff0000);background:rgba(255,0,0,0.15);border:1px solid rgba(255,0,0,0.35);padding:1px 7px;border-radius:4px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
               ⚠ ${audit.totalConflicts} Schedule Alert${audit.totalConflicts > 1 ? 's' : ''}
             </span>
           `}
@@ -1866,7 +1862,7 @@ export async function renderDashboard(container) {
 
       const centerToolbarHtml = `
         <div style="display:inline-flex;align-items:center;gap:8px;">
-          <button type="button" class="btn btn-sm toolbar-btn-30" id="btn-toggle-dashboard-edit-mode" onclick="window._toggleDashboardEditMode()" style="${isEditOn ? 'background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 8px rgba(56,189,248,0.4);' : 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ffffff;'}font-weight:700;font-size:12px;height:30px;line-height:28px;padding:0 14px;border-radius:4px;cursor:pointer;" title="Toggle Edit Mode to Assign Tutors & Edit Schedules">${isEditOn ? '✓ Done Editing' : '✎ Edit Mode'}</button>
+          <button type="button" class="btn btn-sm toolbar-btn-30" id="btn-toggle-dashboard-edit-mode" onclick="window._toggleDashboardEditMode()" style="${isEditOn ? 'background:#38bdf8;border:1px solid #38bdf8;color:#090d16;box-shadow:0 0 8px rgba(56,189,248,0.4);' : 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ffffff;'}font-weight:700;font-size:12px;height:30px;line-height:28px;padding:0 14px;border-radius:4px;cursor:pointer;" title="Toggle Edit Mode to Assign Tutors & Edit Schedules">${isEditOn ? '✓ Done Editing' : '✎ Edit Mode'}</button>
         </div>
       `;
 
@@ -1906,7 +1902,7 @@ export async function renderDashboard(container) {
                   SCHEDULE VALIDATED
                 </span>
               ` : `
-                <span style="font-size:10px;background:rgba(239,68,68,0.2);color:#ef4444;border:1px solid rgba(239,68,68,0.45);border-radius:10px;padding:1px 8px;font-weight:800;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
+                <span style="font-size:10px;background:rgba(255,0,0,0.15);color:var(--grade-e, #ff0000);border:1px solid rgba(255,0,0,0.45);border-radius:10px;padding:1px 8px;font-weight:800;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
                   ⚠ ${audit.totalConflicts} CONFLICT${audit.totalConflicts > 1 ? 'S' : ''} DETECTED
                 </span>
               `}
@@ -2017,9 +2013,9 @@ export async function renderDashboard(container) {
                   ].join('; ');
 
                   const rowBorderLeft = (hasTutorClash || hasRoomClash)
-                    ? 'border-left:3px solid #ef4444 !important;'
+                    ? 'border-left:3px solid var(--grade-e, #ff0000) !important;'
                     : hasCapIssue
-                    ? 'border-left:3px solid #f59e0b !important;'
+                    ? 'border-left:3px solid var(--grade-c, #ffff00) !important;'
                     : '';
 
                   return `
@@ -2055,7 +2051,7 @@ export async function renderDashboard(container) {
                         ${isEditOn ? `
                           ${renderQuarterHourTimeSelect(sched.start || '07:30', `window._onDashboardScheduleChange('${escHtml(item.code)}', 'start', this.value)`, '', hasTimeClash)}
                         ` : `
-                          <span style="font-size:12px;font-weight:500;color:${hasTimeClash ? '#ef4444' : 'var(--admin-text-main, #f8fafc)'};" ${hasTimeClash ? `title="⚠ Time Conflict: ${escHtml(timeClashDetails)}"` : ''}>${escHtml(sched.start || '—')}</span>
+                          <span style="font-size:12px;font-weight:500;color:${hasTimeClash ? 'var(--grade-e, #ff0000)' : 'var(--admin-text-main, #f8fafc)'};" ${hasTimeClash ? `title="⚠ Time Conflict: ${escHtml(timeClashDetails)}"` : ''}>${escHtml(sched.start || '—')}</span>
                         `}
                       </td>
 
@@ -2064,7 +2060,7 @@ export async function renderDashboard(container) {
                         ${isEditOn ? `
                           ${renderQuarterHourTimeSelect(sched.end || '09:00', `window._onDashboardScheduleChange('${escHtml(item.code)}', 'end', this.value)`, '', hasTimeClash)}
                         ` : `
-                          <span style="font-size:12px;font-weight:500;color:${hasTimeClash ? '#ef4444' : 'var(--admin-text-main, #f8fafc)'};" ${hasTimeClash ? `title="⚠ Time Conflict: ${escHtml(timeClashDetails)}"` : ''}>${escHtml(sched.end || '—')}</span>
+                          <span style="font-size:12px;font-weight:500;color:${hasTimeClash ? 'var(--grade-e, #ff0000)' : 'var(--admin-text-main, #f8fafc)'};" ${hasTimeClash ? `title="⚠ Time Conflict: ${escHtml(timeClashDetails)}"` : ''}>${escHtml(sched.end || '—')}</span>
                         `}
                       </td>
 
@@ -2087,18 +2083,18 @@ export async function renderDashboard(container) {
                       <!-- 8. ROOM (Strict Hyphenated Room Code SSOT, Dropdown with Capacity in Edit Mode) -->
                       <td style="padding:0 4px;text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;width:82px;">
                         ${isEditOn ? `
-                          <select onchange="window._onDashboardScheduleChange('${escHtml(item.code)}', 'room', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:500;background:transparent;border:${hasRoomClash ? '1px solid #ef4444 !important' : hasCapIssue ? '1px solid #f59e0b !important' : 'none'};outline:none;color:${hasRoomClash ? '#ef4444' : hasCapIssue ? '#f59e0b' : 'var(--admin-text-main, #f8fafc)'};box-sizing:border-box;text-align:center;cursor:pointer;" title="${hasRoomClash ? `⚠ Room Clash: ${schedRoomCode} double-booked at this time!` : hasCapIssue ? `⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)` : 'Select Room'}">
+                          <select onchange="window._onDashboardScheduleChange('${escHtml(item.code)}', 'room', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:500;background:transparent;border:${hasRoomClash ? '1px solid var(--grade-e, #ff0000) !important' : hasCapIssue ? '1px solid var(--grade-c, #ffff00) !important' : 'none'};outline:none;color:${hasRoomClash ? 'var(--grade-e, #ff0000)' : hasCapIssue ? 'var(--grade-c, #ffff00)' : 'var(--admin-text-main, #f8fafc)'};box-sizing:border-box;text-align:center;cursor:pointer;" title="${hasRoomClash ? `⚠ Room Clash: ${schedRoomCode} double-booked at this time!` : hasCapIssue ? `⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)` : 'Select Room'}">
                             <option value="—" style="background:#0f172a;color:#f8fafc;">— None —</option>
                             ${activeRooms.map(r => `<option value="${escHtml(r.code)}" ${schedRoomCode === r.code ? 'selected' : ''} style="background:#0f172a;color:#f8fafc;">${escHtml(r.code)} (${r.capacity || '—'})</option>`).join('')}
                           </select>
                         ` : `
                           ${hasRoomClash ? `
-                            <span style="font-size:12px;font-weight:700;color:#ef4444;display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Room Clash: ${escHtml(schedRoomCode)} is also booked by ${escHtml(rowAudit.roomClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
+                            <span style="font-size:12px;font-weight:700;color:var(--grade-e, #ff0000);display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Room Clash: ${escHtml(schedRoomCode)} is also booked by ${escHtml(rowAudit.roomClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
                               <span>⚠</span>
                               <span style="overflow:hidden;text-overflow:ellipsis;max-width:65px;">${escHtml(schedRoomCode)}</span>
                             </span>
                           ` : hasCapIssue ? `
-                            <span style="font-size:12px;font-weight:600;color:#f59e0b;display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed ${escHtml(schedRoomCode)} capacity (${rowAudit.capacityIssue.capacity} max by +${rowAudit.capacityIssue.diff})" onclick="window._toggleDashboardEditMode()">
+                            <span style="font-size:12px;font-weight:600;color:var(--grade-c, #ffff00);display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed ${escHtml(schedRoomCode)} capacity (${rowAudit.capacityIssue.capacity} max by +${rowAudit.capacityIssue.diff})" onclick="window._toggleDashboardEditMode()">
                               <span>⚠</span>
                               <span style="overflow:hidden;text-overflow:ellipsis;max-width:65px;">${escHtml(schedRoomCode)}</span>
                             </span>
@@ -2111,13 +2107,13 @@ export async function renderDashboard(container) {
                       <!-- 9. TUTOR (Tanpa Titik/Dot, Dropdown with Conflict Detection in Edit Mode) -->
                       <td style="padding:0 4px;text-align:left;white-space:nowrap;width:82px;">
                         ${isEditOn ? `
-                          <select class="dashboard-tutor-select" onchange="window._onDashboardTutorChange('${escHtml(item.code)}', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:600;background:transparent;border:${hasTutorClash ? '1px solid #ef4444 !important' : 'none'};outline:none;color:${hasTutorClash ? '#ef4444' : 'var(--admin-text-main, #f8fafc)'};cursor:pointer;box-sizing:border-box;" title="${hasTutorClash ? `⚠ Tutor Clash: ${assignedTutor ? assignedTutor.nickname : 'Tutor'} double-booked at this time!` : 'Select Tutor'}">
+                          <select class="dashboard-tutor-select" onchange="window._onDashboardTutorChange('${escHtml(item.code)}', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:600;background:transparent;border:${hasTutorClash ? '1px solid var(--grade-e, #ff0000) !important' : 'none'};outline:none;color:${hasTutorClash ? 'var(--grade-e, #ff0000)' : 'var(--admin-text-main, #f8fafc)'};cursor:pointer;box-sizing:border-box;" title="${hasTutorClash ? `⚠ Tutor Clash: ${assignedTutor ? assignedTutor.nickname : 'Tutor'} double-booked at this time!` : 'Select Tutor'}">
                             <option value="" style="background:#0f172a;color:#f8fafc;">— None —</option>
                             ${activeTutors.map(t => `<option value="${t.id}" ${assignedTutorId === t.id ? 'selected' : ''} style="background:#0f172a;color:#f8fafc;">${t.nickname}</option>`).join('')}
                           </select>
                         ` : `
                           ${hasTutorClash ? `
-                            <span style="color:#ef4444;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Tutor Clash: ${escHtml(assignedTutor ? assignedTutor.nickname : 'Tutor')} is also teaching ${escHtml(rowAudit.tutorClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
+                            <span style="color:var(--grade-e, #ff0000);font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Tutor Clash: ${escHtml(assignedTutor ? assignedTutor.nickname : 'Tutor')} is also teaching ${escHtml(rowAudit.tutorClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
                               <span>⚠</span>
                               <span style="overflow:hidden;text-overflow:ellipsis;max-width:65px;">${escHtml(assignedTutor ? assignedTutor.nickname : 'Tutor')}</span>
                             </span>
@@ -2130,7 +2126,7 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 10. STD (Highlight if Overcapacity) -->
-                      <td style="padding:0 2px;text-align:center;font-weight:${hasCapIssue ? '700' : '400'};font-size:12px;color:${hasCapIssue ? '#f59e0b' : 'var(--admin-text-main, #f8fafc)'};font-variant-numeric:tabular-nums;white-space:nowrap;width:30px;">
+                      <td style="padding:0 2px;text-align:center;font-weight:${hasCapIssue ? '700' : '400'};font-size:12px;color:${hasCapIssue ? 'var(--grade-c, #ffff00)' : 'var(--admin-text-main, #f8fafc)'};font-variant-numeric:tabular-nums;white-space:nowrap;width:30px;">
                         ${hasCapIssue ? `
                           <span style="display:inline-flex;align-items:center;gap:1px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)" onclick="window._toggleDashboardEditMode()">
                             <span>${item.studentCount}</span>
@@ -2150,12 +2146,12 @@ export async function renderDashboard(container) {
                         `}
                       </td>
 
-                      <!-- 12. STATUS (Active = #00c000 Green, Inactive = #dc2626 Red) -->
+                      <!-- 12. STATUS (Active = #00c000 Green, Inactive = var(--grade-e, #ff0000) Red) -->
                       <td style="padding:0 2px;text-align:center;white-space:nowrap;width:48px;">
                         ${item.isActive ? `
                           <span class="status-tag status-active" data-status="active" style="color:var(--grade-a, #00c000);font-weight:700;font-size:12px;">Active</span>
                         ` : `
-                          <span class="status-tag status-inactive" data-status="inactive" style="color:var(--grade-e, #dc2626);font-weight:700;font-size:12px;">Inactive</span>
+                          <span class="status-tag status-inactive" data-status="inactive" style="color:var(--grade-e, #ff0000);font-weight:700;font-size:12px;">Inactive</span>
                         `}
                       </td>
 

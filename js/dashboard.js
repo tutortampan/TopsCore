@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261119_v630';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, toShortLevel, isCampContext, formatAcademicTier, resolveContextYear, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261119_v630';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
@@ -107,8 +107,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     elBatch.textContent = rawB.replace(/^batch\s*/i, '') || rawB || '—';
   }
   if (elLvl) {
-    const rawLvl = session.level_name || (session.level_number ? toOrdinalLevel(session.level_number) : null);
-    elLvl.textContent = rawLvl ? (rawLvl.toLowerCase().includes('level') ? rawLvl : rawLvl + ' Level').toUpperCase() : '1ST LEVEL';
+    const isCamp = typeof isCampContext === 'function' ? isCampContext(session) : Boolean(/camp/i.test(session.program_name || '') || /cec|cake/i.test(session.institution_name || ''));
+    const rawLvl = session.level_number != null ? session.level_number : (session.level_name || 1);
+    const tierText = typeof formatAcademicTier === 'function' ? formatAcademicTier(rawLvl, isCamp, session) : (isCamp ? `${toShortLevel(rawLvl)} Step` : `${toShortLevel(rawLvl)} Level`);
+    elLvl.textContent = tierText.toUpperCase();
   }
 
   // Suppress old welcome-meta logic
@@ -1434,6 +1436,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               session.photo_url = fullProf.photo_url;
               localStorage.setItem(`stu_photo_${session.student_id}`, fullProf.photo_url);
             }
+            if (fullProf.batches?.name) {
+              session.batch_name = fullProf.batches.name;
+              if (fullProf.batches.enrollment_date) session.enrollment_date = fullProf.batches.enrollment_date;
+            }
+            if (fullProf.programs?.name) {
+              session.program_name = fullProf.programs.name;
+            }
+            if (fullProf.programs?.institutions?.name) {
+              session.institution_name = fullProf.programs.institutions.name;
+            }
             if (fullProf.resolved_level?.level_id) {
               session.level_id = fullProf.resolved_level.level_id;
               session.level_number = fullProf.resolved_level.level_number;
@@ -1441,6 +1453,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             }
             sessionStorage.setItem('topscore_session', JSON.stringify(session));
             renderHeroProfileDetails(session);
+
+            // Live-sync header metadata pill
+            const elBatch = document.getElementById('meta-batch');
+            if (elBatch && session.batch_name) {
+              const rawB = session.batch_name || '';
+              elBatch.textContent = rawB.replace(/^batch\s*/i, '') || rawB || '—';
+            }
+            const elLvl = document.getElementById('meta-lvl');
+            if (elLvl) {
+              const isCamp = typeof isCampContext === 'function' ? isCampContext(session) : Boolean(/camp/i.test(session.program_name || '') || /cec|cake/i.test(session.institution_name || ''));
+              const rawLvl = session.level_number != null ? session.level_number : (session.level_name || 1);
+              const tierText = typeof formatAcademicTier === 'function' ? formatAcademicTier(rawLvl, isCamp, session) : (isCamp ? `${toShortLevel(rawLvl)} Step` : `${toShortLevel(rawLvl)} Level`);
+              elLvl.textContent = tierText.toUpperCase();
+            }
+            if (typeof updateDockTabsVisibility === 'function') {
+              updateDockTabsVisibility();
+            }
           }
         } catch (_) {}
 
@@ -1460,9 +1489,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           // Explicitly update DOM header pill
           const elLvl = document.getElementById('meta-lvl');
-          if (elLvl && studentLvl.level_name) {
-            const formatted = studentLvl.level_name.toLowerCase().includes('level') ? studentLvl.level_name : studentLvl.level_name + ' Level';
-            elLvl.textContent = formatted.toUpperCase();
+          if (elLvl && (studentLvl.level_name || studentLvl.level_number != null)) {
+            const isCamp = typeof isCampContext === 'function' ? isCampContext(session) : Boolean(/camp/i.test(session.program_name || '') || /cec|cake/i.test(session.institution_name || ''));
+            const rawLvl = studentLvl.level_number != null ? studentLvl.level_number : studentLvl.level_name;
+            const tierText = typeof formatAcademicTier === 'function' ? formatAcademicTier(rawLvl, isCamp, session) : (isCamp ? `${toShortLevel(rawLvl)} Step` : `${toShortLevel(rawLvl)} Level`);
+            elLvl.textContent = tierText.toUpperCase();
           }
 
           const welcomeMetaEl = document.getElementById('welcome-meta');
@@ -1504,10 +1535,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               welcomeLevelEl.innerHTML = `Alumni ${getSvgIcon('graduation-cap', 14)}`;
               welcomeLevelPanelEl.classList.remove('hidden');
             } else if (isNonLevel) {
-              welcomeLevelEl.textContent = '—';
-              welcomeLevelPanelEl.classList.add('hidden'); // Program tanpa jenjang dianggap kosong
+              welcomeLevelEl.textContent = typeof resolveContextYear === 'function' ? resolveContextYear(session) : String(new Date().getFullYear());
+              welcomeLevelPanelEl.classList.remove('hidden');
             } else {
-              welcomeLevelEl.innerHTML = session.level_name.toLowerCase().includes('level') ? session.level_name : session.level_name + ' Level';
+              const isCamp = typeof isCampContext === 'function' ? isCampContext(session) : Boolean(/camp/i.test(session.program_name || '') || /cec|cake/i.test(session.institution_name || ''));
+              const rawLvl = session.level_number != null ? session.level_number : (session.level_name || 1);
+              welcomeLevelEl.innerHTML = typeof formatAcademicTier === 'function' ? formatAcademicTier(rawLvl, isCamp, session) : session.level_name;
               welcomeLevelPanelEl.classList.remove('hidden');
             }
           }
@@ -1523,7 +1556,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 title: 'Level Up!',
                 text: `Congratulations! You have unlocked ${celebration}.`,
                 icon: 'success',
-                confirmButtonColor: '#6366f1'
+                confirmButtonColor: '#38bdf8'
               });
             } else {
               showToast(`Congratulations! You have unlocked ${celebration}.`, 'success');
@@ -1692,19 +1725,24 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (repRow) repRow.style.display = 'none';
 
         container.innerHTML = `
-          <div class="next-test-col-left" style="flex:1;">
+          <div class="next-test-header-bar">
             <div class="next-test-title-wrap">
               <span class="next-test-primary-name" style="color:var(--primary-tactical); font-weight:800; text-transform:uppercase; font-size:11px; letter-spacing:0.5px;">TUTOR EVALUATED CLASS</span>
-              <span class="next-test-topic-name" style="font-size:16px; font-weight:700; color:#fff;">${escapeHtml(validClass.name)}</span>
-            </div>
-            <div class="next-test-sub" style="font-size:12px; font-weight:500; color:var(--clr-text-2); margin-top:4px;">
-              Direct classroom evaluations, weekly assessments & periodical examinations.
+              <span class="next-test-title-sep">•</span>
+              <span class="next-test-topic-name" style="font-size:13px; font-weight:700; color:#fff;">${escapeHtml(validClass.name)}</span>
             </div>
           </div>
-          <div class="next-test-col-right" title="Review Academic Record">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('completed-Tests-container')?.scrollIntoView({ behavior:'smooth' })" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; border-radius:6px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">
-              Review Scores
-            </button>
+          <div class="next-test-body-row">
+            <div class="next-test-col-left" style="flex:1;">
+              <div class="next-test-sub" style="font-size:12px; font-weight:500; color:var(--clr-text-2);">
+                Direct classroom evaluations, weekly assessments & periodical examinations.
+              </div>
+            </div>
+            <div class="next-test-col-right" title="Review Academic Record">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('completed-Tests-container')?.scrollIntoView({ behavior:'smooth' })" style="height:32px; font-size:11px; font-weight:700; padding:0 12px; border-radius:6px; background:rgba(56,189,248,0.15); border:1px solid rgba(56,189,248,0.4); color:#38bdf8;">
+                Review Scores
+              </button>
+            </div>
           </div>
         `;
         return;
@@ -2035,11 +2073,17 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const line1 = parts[0].trim();
           const line2 = parts.slice(1).join(' - ').trim();
           return `
-            <span class="next-test-primary-name" title="${escapeHtml(line1)}">${escapeHtml(line1)}</span>
-            <span class="next-test-topic-name" title="${escapeHtml(line2)}">${escapeHtml(line2)}</span>
+            <div class="next-test-title-wrap">
+              <span class="next-test-primary-name" title="${escapeHtml(line1)}">${escapeHtml(line1)}</span>
+              <span class="next-test-topic-name" title="${escapeHtml(line2)}">${escapeHtml(line2)}</span>
+            </div>
           `;
         }
-        return `<span class="next-test-primary-name" title="${escapeHtml(fullTitle)}">${escapeHtml(fullTitle)}</span>`;
+        return `
+          <div class="next-test-title-wrap">
+            <span class="next-test-primary-name" title="${escapeHtml(fullTitle)}">${escapeHtml(fullTitle)}</span>
+          </div>
+        `;
       }
 
       const isVocabClass = isVocabularyClass(validClass || activeTestItem);
@@ -2047,52 +2091,84 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (!isTest) {
         let subIndicatorHtml = '';
         if (isVocabClass) {
+          // Words-Only classes (SHRT, EVNK, TPTC) must NEVER show PHR row regardless of DB data
+          const _classCode = ((validClass || activeTestItem)?.code || (validClass || activeTestItem)?.shell_code || '').toUpperCase();
+          const _isWordsOnlyVocab = /^(SHRT|EVNK|TPTC)-VOCAB/.test(_classCode);
+
+          const hasPhrasesComp = !_isWordsOnlyVocab && Boolean(
+            (nextAssignment.isPair && nextAssignment.phrasesTest) ||
+            nextAssignment.primaryTest?.payload?.is_unified === true ||
+            nextAssignment.primaryTest?.payload?.category === 'phrases' ||
+            nextAssignment.primaryTest?.payload?.category === 'unified' ||
+            /PHRASE/i.test(nextAssignment.primaryTest?.shell_code || nextAssignment.primaryTest?.title || '')
+          );
+
+          const rawReps = Math.max(1, Number(activeTestItem.payload?.task_repetitions || targetReps || 7));
+          const maxBoxes = (hasPhrasesComp && rawReps >= 14) ? Math.round(rawReps / 2) : Math.min(rawReps, 7);
+
           const wordsP = nextAssignment.isPair
             ? (nextAssignment.isUnified ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0) : (passCountByTest[nextAssignment.wordsTest.id] || 0))
-            : (passCountByTest[activeTestItem.id] || 0);
+            : (wordsPassCountByTest[activeTestItem.id] != null ? wordsPassCountByTest[activeTestItem.id] : (passCountByTest[activeTestItem.id] || 0));
           const phrasesP = nextAssignment.isPair
             ? (nextAssignment.isUnified ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0) : (passCountByTest[nextAssignment.phrasesTest.id] || 0))
-            : (passCountByTest[activeTestItem.id] || 0);
+            : (phrasesPassCountByTest[activeTestItem.id] != null ? phrasesPassCountByTest[activeTestItem.id] : (passCountByTest[activeTestItem.id] || 0));
 
           let wordsBoxesHtml = '';
           let phrasesBoxesHtml = '';
-          for (let s = 1; s <= 7; s++) {
+          for (let s = 1; s <= maxBoxes; s++) {
             wordsBoxesHtml += `<span class="rainbow-box ${s <= wordsP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
-            phrasesBoxesHtml += `<span class="rainbow-box ${s <= phrasesP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+            if (hasPhrasesComp) {
+              phrasesBoxesHtml += `<span class="rainbow-box ${s <= phrasesP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
+            }
           }
 
-          subIndicatorHtml = `
-            <div class="rainbow-pass-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
-              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
-                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
-                <div class="rainbow-pass-bar">
-                  ${wordsBoxesHtml}
+          if (hasPhrasesComp) {
+            subIndicatorHtml = `
+              <div class="rainbow-pass-double-deck" style="display:flex; flex-direction:column; gap:4px; margin:0;">
+                <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                  <span class="rainbow-pass-label" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
+                  <div class="rainbow-pass-bar">
+                    ${wordsBoxesHtml}
+                  </div>
+                </div>
+                <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                  <span class="rainbow-pass-label" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
+                  <div class="rainbow-pass-bar">
+                    ${phrasesBoxesHtml}
+                  </div>
                 </div>
               </div>
-              <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
-                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
-                <div class="rainbow-pass-bar">
-                  ${phrasesBoxesHtml}
+            `;
+          } else {
+            subIndicatorHtml = `
+              <div class="rainbow-pass-single-deck" style="display:flex; flex-direction:column; gap:4px; margin:0;">
+                <div class="rainbow-pass-row" style="display:flex; align-items:center; gap:6px;">
+                  <span class="rainbow-pass-label" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
+                  <div class="rainbow-pass-bar">
+                    ${wordsBoxesHtml}
+                  </div>
                 </div>
               </div>
-            </div>
-          `;
+            `;
+          }
         } else {
           const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 50;
-          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:#38bdf8; letter-spacing:0.04em; margin-top:4px;">Passing: ${reqMin}%</div>`;
+          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:#38bdf8; letter-spacing:0.04em; margin:0;">Passing: ${reqMin}%</div>`;
         }
 
         container.innerHTML = `
-          <div class="next-test-col-left">
-            <div class="next-test-title-wrap">
-              ${formatNextTestTitleHtml(displayTitle)}
-            </div>
-            ${subIndicatorHtml}
+          <div class="next-test-header-bar">
+            ${formatNextTestTitleHtml(displayTitle)}
           </div>
-          <div class="next-test-col-right" title="Start Task - Click to practice">
-            <button type="button" class="next-test-go-btn next-asm-go-btn is-start" aria-label="Start Task">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
-            </button>
+          <div class="next-test-body-row">
+            <div class="next-test-col-left">
+              ${subIndicatorHtml}
+            </div>
+            <div class="next-test-col-right" title="Start Task - Click to practice">
+              <button type="button" class="next-test-go-btn next-asm-go-btn is-start" aria-label="Start Task">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="8 5 19 12 8 19 8 5"></polygon></svg>
+              </button>
+            </div>
           </div>
         `;
 
@@ -2142,6 +2218,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         let subIndicatorHtml = '';
         if (isVocabClass) {
+          // Words-Only classes (SHRT, EVNK, TPTC) must NEVER show PHR row regardless of DB data
+          const _classCode2 = ((validClass || activeTestItem)?.code || (validClass || activeTestItem)?.shell_code || '').toUpperCase();
+          const _isWordsOnlyVocab2 = /^(SHRT|EVNK|TPTC)-VOCAB/.test(_classCode2);
+
+          const hasExamPhrasesComp = !_isWordsOnlyVocab2 && Boolean(
+            (nextAssignment.isPair && nextAssignment.phrasesTest) ||
+            nextAssignment.primaryTest?.payload?.is_unified === true ||
+            nextAssignment.primaryTest?.payload?.category === 'phrases' ||
+            nextAssignment.primaryTest?.payload?.category === 'unified' ||
+            /PHRASE/i.test(nextAssignment.primaryTest?.shell_code || nextAssignment.primaryTest?.title || '')
+          );
+
           const wBestPct = nextAssignment.isUnified
             ? (wordsBestByTest[nextAssignment.wordsTest?.id] ?? bestMap[nextAssignment.wordsTest?.id] ?? 0)
             : (bestMap[nextAssignment.wordsTest?.id] ?? 0);
@@ -2159,18 +2247,29 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             return `<span style="display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:#94a3b8;">Not Taken Yet <span style="color:#64748b; font-size:12px;">(Passing: ${reqMin}%)</span></span>`;
           };
 
-          subIndicatorHtml = `
-            <div class="exam-status-double-deck" style="display:flex; flex-direction:column; gap:4px; margin-top:5px;">
-              <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
-                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
-                ${renderExamCompStatus(wBestPct)}
+          if (hasExamPhrasesComp) {
+            subIndicatorHtml = `
+              <div class="exam-status-double-deck" style="display:flex; flex-direction:column; gap:4px; margin:0;">
+                <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
+                  <span class="rainbow-pass-label" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
+                  ${renderExamCompStatus(wBestPct)}
+                </div>
+                <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
+                  <span class="rainbow-pass-label" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
+                  ${renderExamCompStatus(pBestPct)}
+                </div>
               </div>
-              <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
-                <span class="rainbow-pass-label" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
-                ${renderExamCompStatus(pBestPct)}
+            `;
+          } else {
+            subIndicatorHtml = `
+              <div class="exam-status-single-deck" style="display:flex; flex-direction:column; gap:4px; margin:0;">
+                <div class="exam-status-row" style="display:flex; align-items:center; gap:8px;">
+                  <span class="rainbow-pass-label" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
+                  ${renderExamCompStatus(wBestPct)}
+                </div>
               </div>
-            </div>
-          `;
+            `;
+          }
         } else {
           const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 60;
           const bestScore = bestMap[activeTestItem.id] ?? 0;
@@ -2179,23 +2278,25 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(bestScore) : (bestScore >= reqMin ? 'var(--grade-a)' : 'var(--grade-d)');
             examStatusText = `Official Exam • Best: <span style="color:${clr};font-weight:800;">${Math.round(bestScore)}% ${bestScore >= reqMin ? '✓' : ''}</span> • Passing: ${reqMin}%`;
           }
-          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:var(--quad-a); letter-spacing:0.04em; margin-top:4px;">${examStatusText}</div>`;
+          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:var(--quad-a); letter-spacing:0.04em; margin:0;">${examStatusText}</div>`;
         }
 
         if (isUnlocked && isWhitelisted) {
           const remMin = activeSession?.remaining_minutes || 40;
           const playTitle = isAlumni ? 'Start Exam (Alumni Universal Access)' : (isFlexible ? 'Start Exam' : `Start Exam (${remMin}m left)`);
           container.innerHTML = `
-            <div class="next-test-col-left">
-              <div class="next-test-title-wrap">
-                ${formatNextTestTitleHtml(displayTitle)}
-              </div>
-              ${subIndicatorHtml}
+            <div class="next-test-header-bar">
+              ${formatNextTestTitleHtml(displayTitle)}
             </div>
-            <div class="next-test-col-right" title="${playTitle}">
-              <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play">
-                ${ICON_3C_GREEN_PLAY}
-              </button>
+            <div class="next-test-body-row">
+              <div class="next-test-col-left">
+                ${subIndicatorHtml}
+              </div>
+              <div class="next-test-col-right" title="${playTitle}">
+                <button type="button" class="next-test-go-btn next-asm-go-btn is-exam-play">
+                  ${ICON_3C_GREEN_PLAY}
+                </button>
+              </div>
             </div>
           `;
 
@@ -2227,16 +2328,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           }
         } else {
           container.innerHTML = `
-            <div class="next-test-col-left">
-              <div class="next-test-title-wrap">
-                ${formatNextTestTitleHtml(displayTitle)}
-              </div>
-              ${subIndicatorHtml}
+            <div class="next-test-header-bar">
+              ${formatNextTestTitleHtml(displayTitle)}
             </div>
-            <div class="next-test-col-right" title="Waiting for Tutor to unlock Exam">
-              <span class="next-test-status-icon next-asm-status-icon is-exam-lock">
-                ${ICON_1A_YELLOW_LOCK}
-              </span>
+            <div class="next-test-body-row">
+              <div class="next-test-col-left">
+                ${subIndicatorHtml}
+              </div>
+              <div class="next-test-col-right" title="Waiting for Tutor to unlock Exam">
+                <span class="next-test-status-icon next-asm-status-icon is-exam-lock">
+                  ${ICON_1A_YELLOW_LOCK}
+                </span>
+              </div>
             </div>
           `;
           container.onclick = null;
@@ -2367,6 +2470,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       updateClassesBarUI();
       renderClassesBoxes(activeClasses);
+      if (typeof updateDockTabsVisibility === 'function') {
+        updateDockTabsVisibility();
+      }
       populateClassesSelectorModal(activeClasses);
     }
 
@@ -2412,9 +2518,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     async function renderSelectedClassDashboard() {
       updateClassesBarUI();
       renderClassesBoxes(window._activeClasses);
+      if (typeof updateDockTabsVisibility === 'function') {
+        updateDockTabsVisibility();
+      }
       await renderNextAssignmentHero(window._allTests, window._allAttempts, window._activeClasses || window._loadedClasses);
       await computeOverallStats(window._allAttempts, window._allTests);
       await loadBatchLeaderboard();
+      if (typeof renderStudentAttendanceMatrix === 'function') {
+        renderStudentAttendanceMatrix(true);
+      }
     }
     window.renderSelectedClassDashboard = renderSelectedClassDashboard;
 
@@ -2476,16 +2588,35 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
       listEl.innerHTML = html || '<div class="text-muted p-4 text-center">No active classes.</div>';
 
+      const closeSelectorModal = () => {
+        const modal = document.getElementById('classes-selector-modal');
+        if (modal) modal.classList.add('hidden');
+        if (window.location.hash === '#select-class') {
+          try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
+        }
+      };
+
+      const openSelectorModal = () => {
+        window._candidateClassId = window._selectedClassId;
+        populateClassesSelectorModal(window._activeClasses);
+        document.getElementById('classes-selector-modal')?.classList.remove('hidden');
+        try { window.location.hash = '#select-class'; } catch (_) {}
+      };
+
       const commitClassSelection = async () => {
         const cid = window._candidateClassId || window._selectedClassId;
+        closeSelectorModal();
         if (cid) {
           window._selectedClassId = cid;
           try { localStorage.setItem('topscore_student_last_class_id', cid); } catch (_) {}
           updateClassesBarUI();
           populateClassesSelectorModal(window._activeClasses);
-          await renderSelectedClassDashboard();
+          try {
+            await renderSelectedClassDashboard();
+          } catch (err) {
+            console.warn('[DASHBOARD] renderSelectedClassDashboard non-fatal error:', err);
+          }
         }
-        closeSelectorModal();
       };
 
       listEl.querySelectorAll('.classes-selector-item').forEach(item => {
@@ -2511,20 +2642,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       });
 
       // Wire modal events once
-      const openSelectorModal = () => {
-        window._candidateClassId = window._selectedClassId;
-        populateClassesSelectorModal(window._activeClasses);
-        document.getElementById('classes-selector-modal')?.classList.remove('hidden');
-        try { window.location.hash = '#select-class'; } catch (_) {}
-      };
-
-      const closeSelectorModal = () => {
-        document.getElementById('classes-selector-modal')?.classList.add('hidden');
-        if (window.location.hash === '#select-class') {
-          try { history.replaceState(null, '', window.location.pathname + window.location.search); } catch (_) {}
-        }
-      };
-
       const confirmBtn = document.getElementById('btn-confirm-class-selection');
       if (confirmBtn && !confirmBtn._hasClickListener) {
         confirmBtn._hasClickListener = true;
@@ -2606,13 +2723,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
         const confirmBtn = document.getElementById('btn-confirm-component-selection');
 
-        function renderComponentPips(containerId, count) {
+        function renderComponentPips(containerId, count, targetReps = 7) {
           const container = document.getElementById(containerId);
           if (!container) return;
-          const pips = container.querySelectorAll('.pip-box');
-          pips.forEach((pip, idx) => {
-            pip.classList.toggle('active', idx < count);
-          });
+          const safeTarget = Math.max(1, parseInt(targetReps, 10) || 7);
+          let html = '';
+          for (let i = 1; i <= safeTarget; i++) {
+            const isPassed = i <= count;
+            html += `<div class="pip-box ${isPassed ? 'active' : ''}" data-pip="${i}">${isPassed ? '✓' : i}</div>`;
+          }
+          container.innerHTML = html;
         }
 
         const compTargetReps = (Number(data.targetReps) >= 14) ? Math.round(Number(data.targetReps) / 2) : (Number(data.targetReps) || 7);
@@ -2704,7 +2824,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (wordsPips) wordsPips.classList.remove('hidden');
             if (wordsExamView) wordsExamView.classList.add('hidden');
             const wordsPasses = Number(data.wordsPasses || 0);
-            renderComponentPips('component-words-pips', Math.min(compTargetReps, wordsPasses));
+            renderComponentPips('component-words-pips', Math.min(compTargetReps, wordsPasses), compTargetReps);
             if (wordsStatus) wordsStatus.textContent = `${Math.min(compTargetReps, wordsPasses)}/${compTargetReps}`;
           }
           wordsCard.onclick = () => {
@@ -2741,7 +2861,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (phrasesPips) phrasesPips.classList.remove('hidden');
             if (phrasesExamView) phrasesExamView.classList.add('hidden');
             const phrasesPasses = Number(data.phrasesPasses || 0);
-            renderComponentPips('component-phrases-pips', Math.min(compTargetReps, phrasesPasses));
+            renderComponentPips('component-phrases-pips', Math.min(compTargetReps, phrasesPasses), compTargetReps);
             if (phrasesStatus) phrasesStatus.textContent = `${Math.min(compTargetReps, phrasesPasses)}/${compTargetReps}`;
           }
           phrasesCard.onclick = () => {
@@ -3004,12 +3124,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               a.class_id === asm.class_id
             );
 
-            // 7×7 Repetitive Mastery Hard Gate: All sibling tasks must reach 7 passes (>= 70%)
+            // Dynamic Repetitive Mastery Hard Gate: All sibling tasks must reach N passes (>= passing threshold)
+            const _themeGateTarget = Math.max(1, Number(window._classTestSettings?.taskRepetitions || 7));
             for (const task of siblingTasks) {
               const pCount = passCountByTest[task.id] || 0;
-              if (pCount < 7) {
+              if (pCount < _themeGateTarget) {
                 prereqMet = false;
-                prereqTitle = `All Theme Tasks Mastery (7/7 Passes Required)`;
+                prereqTitle = `All Theme Tasks Mastery (${_themeGateTarget}/${_themeGateTarget} Passes Required)`;
                 break;
               }
             }
@@ -3130,8 +3251,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (isPrereqTask) {
             const pCount = passCountByTest[pid] || 0;
             const isForgiven = Boolean(bestByTest[pid]?.is_forgiven);
-            prereqMet = isForgiven || pCount >= 7;
-            prereqTitle = pObj ? `${pObj.title || 'Prerequisite'} (7/7 Passes Required)` : 'Prerequisite Task (7/7 Passes Required)';
+            const _prereqGateTarget = Math.max(1, Number(pObj?.payload?.task_repetitions || window._classTestSettings?.taskRepetitions || 7));
+            prereqMet = isForgiven || pCount >= _prereqGateTarget;
+            prereqTitle = pObj ? `${pObj.title || 'Prerequisite'} (${_prereqGateTarget}/${_prereqGateTarget} Passes Required)` : `Prerequisite Task (${_prereqGateTarget}/${_prereqGateTarget} Passes Required)`;
           } else {
             const prereqBest = bestByTest[pid];
             const prereqPct = prereqBest ? parseFloat(prereqBest.effective_score ?? prereqBest.percentage ?? 0) : null;
@@ -3209,9 +3331,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 : (isRemedialAction)
                   ? 'Take Remedial'
                   : 'Retake';
-            const retakeBtnBg = isRemedialAction ? 'var(--grade-c)' : '#0284c7';
-            const retakeBtnBorder = isRemedialAction ? 'var(--grade-c)' : '#0284c7';
-            const retakeTextColor = isRemedialAction ? '#0F172A' : '#ffffff';
+            const retakeBtnBg = isRemedialAction ? 'var(--grade-c)' : 'var(--primary-tactical, #38bdf8)';
+            const retakeBtnBorder = isRemedialAction ? 'var(--grade-c)' : 'var(--primary-tactical, #38bdf8)';
+            const retakeTextColor = isRemedialAction ? '#0F172A' : '#090d16';
             const hasResultId = Boolean(bestAtt?.id);
             const viewBtn = hasResultId
               ? `<button class="btn btn-sm" style="background:rgba(255,255,255,0.05);border:1px solid var(--clr-border);padding:4px 8px;" data-aid-result="${bestAtt.id}">View</button>`
@@ -3354,7 +3476,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               phrasesTestId: matchedTest.id,
               wordsPasses: wordsPassCountByTest[matchedTest.id] || 0,
               phrasesPasses: phrasesPassCountByTest[matchedTest.id] || 0,
-              targetReps: 7,
+              targetReps: Number(window._classTestSettings?.taskRepetitions) || 7,
               wordsBest: wordsBestByTest[matchedTest.id] != null ? { percentage: wordsBestByTest[matchedTest.id] } : (bestByTest[matchedTest.id] != null ? { percentage: bestByTest[matchedTest.id].effective_score ?? bestByTest[matchedTest.id].percentage } : null),
               phrasesBest: phrasesBestByTest[matchedTest.id] != null ? { percentage: phrasesBestByTest[matchedTest.id] } : null
             }));
@@ -3474,23 +3596,91 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         if (isExam(asm)) {
-          const totalQ = Number(att.total_questions || asm?.total_questions || asm?.payload?.total_questions || 50);
+          const isUnified = asm?.payload?.is_unified || asm?.payload?.category === 'unified' || Number(asm?.payload?.total_questions || 0) === 200;
+          const fr = String(att.forgiven_reason || '');
+          const tQ = Number(att.total_questions || asm?.total_questions || asm?.payload?.total_questions || 50);
           const rawScore = Number(att.score ?? 0);
-          const maxRemPts = totalQ * 0.6;
+          const maxRemPts = tQ * 0.6;
           const effPoints = isRem ? Math.min(rawScore, maxRemPts) : rawScore;
-          const curPts = examBestMap[uniqueKey]?.effPoints ?? -1;
-          const curPct = examBestMap[uniqueKey]?.effPct ?? -1;
-          const curTime = examBestMap[uniqueKey]?.attTime || 0;
-          if (examBestMap[uniqueKey] == null || effPoints > curPts || (effPoints === curPts && effPct > curPct) || (effPoints === curPts && attTime > curTime)) {
-            examBestMap[uniqueKey] = {
-              effPct,
-              effPoints,
-              totalQ,
-              test: asm,
-              testId: uniqueKey,
-              attTime,
-              isForgiven: Boolean(att.is_forgiven)
-            };
+
+          if (isUnified) {
+            let sectionKey = uniqueKey;
+            let sectionTQ = tQ;
+            let sectionPts = effPoints;
+            let sectionPct = effPct;
+
+            if (fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160)) {
+              sectionKey = `${uniqueKey}_words`;
+              sectionTQ = 160;
+              sectionPts = tQ === 160 ? Math.round(effPoints) : Math.round(160 * (effPct / 100));
+            } else if (fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40)) {
+              sectionKey = `${uniqueKey}_phrases`;
+              sectionTQ = 40;
+              sectionPts = tQ === 40 ? Math.round(effPoints) : Math.round(40 * (effPct / 100));
+            } else if (tQ > 160) {
+              // Full 200Q attempt: decompose into words (160) and phrases (40)
+              const wPts = Math.min(160, Math.round(effPoints));
+              const wPct = (wPts / 160) * 100;
+              const curWPts = examBestMap[`${uniqueKey}_words`]?.effPoints ?? -1;
+              if (examBestMap[`${uniqueKey}_words`] == null || wPts > curWPts) {
+                examBestMap[`${uniqueKey}_words`] = {
+                  effPct: wPct,
+                  effPoints: wPts,
+                  totalQ: 160,
+                  test: asm,
+                  testId: `${uniqueKey}_words`,
+                  attTime,
+                  isForgiven: Boolean(att.is_forgiven)
+                };
+              }
+              if (rawScore > 160) {
+                const pPts = Math.min(40, Math.round(effPoints - 160));
+                const pPct = (pPts / 40) * 100;
+                const curPPts = examBestMap[`${uniqueKey}_phrases`]?.effPoints ?? -1;
+                if (examBestMap[`${uniqueKey}_phrases`] == null || pPts > curPPts) {
+                  examBestMap[`${uniqueKey}_phrases`] = {
+                    effPct: pPct,
+                    effPoints: pPts,
+                    totalQ: 40,
+                    test: asm,
+                    testId: `${uniqueKey}_phrases`,
+                    attTime,
+                    isForgiven: Boolean(att.is_forgiven)
+                  };
+                }
+              }
+              return;
+            }
+
+            const curPts = examBestMap[sectionKey]?.effPoints ?? -1;
+            const curPct = examBestMap[sectionKey]?.effPct ?? -1;
+            const curTime = examBestMap[sectionKey]?.attTime || 0;
+            if (examBestMap[sectionKey] == null || sectionPts > curPts || (sectionPts === curPts && sectionPct > curPct) || (sectionPts === curPts && attTime > curTime)) {
+              examBestMap[sectionKey] = {
+                effPct: sectionPct,
+                effPoints: sectionPts,
+                totalQ: sectionTQ,
+                test: asm,
+                testId: sectionKey,
+                attTime,
+                isForgiven: Boolean(att.is_forgiven)
+              };
+            }
+          } else {
+            const curPts = examBestMap[uniqueKey]?.effPoints ?? -1;
+            const curPct = examBestMap[uniqueKey]?.effPct ?? -1;
+            const curTime = examBestMap[uniqueKey]?.attTime || 0;
+            if (examBestMap[uniqueKey] == null || effPoints > curPts || (effPoints === curPts && effPct > curPct) || (effPoints === curPts && attTime > curTime)) {
+              examBestMap[uniqueKey] = {
+                effPct,
+                effPoints,
+                totalQ: tQ,
+                test: asm,
+                testId: uniqueKey,
+                attTime,
+                isForgiven: Boolean(att.is_forgiven)
+              };
+            }
           }
         }
       });
@@ -3522,15 +3712,19 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
       const hasExam = (mastery.completedExamCount ?? mastery.completedWeeklyCount ?? 0) > 0;
 
-      // Rule 2.8: Use average of completed exam percentages as the academic score (not curriculum-wide denominator)
+      // Rule 2.8: Use weighted average of completed exam points / questions as academic score
       const validExamEntriesForCard = examEntries.filter(e => {
         const isPureForgivenZero = Boolean(e.isForgiven) && Number(e.effPoints ?? e.points ?? 0) === 0;
         return !isPureForgivenZero;
       });
-      let avgPct = validExamEntriesForCard.length > 0
-        ? Math.round(validExamEntriesForCard.reduce((sum, e) => sum + Number(e.effPct ?? e.pct ?? 0), 0) / validExamEntriesForCard.length)
-        : (hasExam ? mastery.overallScore : 0);
-      let overallGrade = validExamEntriesForCard.length > 0
+      const validCardPts = validExamEntriesForCard.reduce((sum, e) => sum + Number(e.effPoints ?? e.points ?? 0), 0);
+      const validCardQ = validExamEntriesForCard.reduce((sum, e) => sum + Number(e.totalQ || 0), 0);
+      let avgPct = validCardQ > 0
+        ? Math.min(100, Math.max(0, Math.round((validCardPts / validCardQ) * 100)))
+        : (validExamEntriesForCard.length > 0
+            ? Math.round(validExamEntriesForCard.reduce((sum, e) => sum + Number(e.effPct ?? e.pct ?? 0), 0) / validExamEntriesForCard.length)
+            : (hasExam ? mastery.overallScore : 0));
+      let overallGrade = validCardQ > 0
         ? (typeof calculateGrade === 'function' ? calculateGrade(avgPct) : mastery.grade)
         : (hasExam ? mastery.grade : '-');
       let isGradeS = overallGrade === '★' || overallGrade === 'S' || avgPct >= 100;
@@ -3590,7 +3784,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (avgScoreDisplay) avgScoreDisplay.textContent = `${avgPct}%`;
         } else {
           overallGrade = 'X';
-          targetColor = '#f59e0b';
+          targetColor = 'var(--grade-c, #ffff00)';
           rgbColor = '245, 158, 11';
           if (gradeBadgeValue) gradeBadgeValue.textContent = 'X';
           if (avgScoreDisplay) avgScoreDisplay.textContent = '—';
@@ -3733,30 +3927,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       renderCompletedTestsBottom(attempts, allTests);
       populateUpNext(attempts, allTests);
 
-      // Check for Student Certificate & Final Examination
-      try {
-        const sb = await getSupabase();
-        const { data: certExam } = await sb
-          .from('student_final_examinations')
-          .select('*')
-          .eq('student_id', session.student_id)
-          .maybeSingle();
 
-        const certBtn = document.getElementById('btn-hero-certificate');
-        if (certBtn) {
-          if (certExam && (certExam.practice_score != null || certExam.certificate_nis)) {
-            certBtn.style.display = 'inline-flex';
-            certBtn.onclick = (e) => {
-              e.stopPropagation();
-              openStudentCertificateModal(certExam, session);
-            };
-          } else {
-            certBtn.style.display = 'none';
-          }
-        }
-      } catch (err) {
-        console.warn('Error loading student certificate for dashboard:', err);
-      }
     }
 
     // --- Render Completed Tests Section (Bottom of Dashboard - Dual Panel) ---
@@ -3827,7 +3998,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                     <tr style="border-bottom:1px solid var(--clr-border-muted);">
                       <td style="padding:8px 10px; text-align:center; color:var(--clr-text-3);">${idx + 1}</td>
                       <td style="padding:8px 10px; font-weight:600; color:var(--clr-text-1);">${escapeHtml(keyLabel)}</td>
-                      <td style="padding:8px 10px; text-align:center;"><span class="badge" style="background:rgba(255,255,255,0.06); font-size:10px; padding:2px 6px; border-radius:4px;">${escapeHtml(a.assessment_type)}</span></td>
+                      <td style="padding:8px 10px; text-align:center;"><span style="color:var(--clr-text-2); font-size:12px; font-weight:600;">${escapeHtml(a.assessment_type)}</span></td>
                       <td style="padding:8px 10px; text-align:center; font-weight:700; color:var(--clr-text-1);">${escapeHtml(scoreDisplay)}</td>
                       <td style="padding:8px 10px; text-align:center; font-weight:700; color:${gColor};">${pct}%</td>
                       <td style="padding:8px 10px; text-align:center;">${typeof formatGradeBadgeHtml === 'function' ? formatGradeBadgeHtml(a.grade || 'C', pct) : (a.grade || '—')}</td>
@@ -4053,7 +4224,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               phrasesTestId: tObj.id,
               wordsPasses: wordsPassCountByTest[tObj.id] || 0,
               phrasesPasses: phrasesPassCountByTest[tObj.id] || 0,
-              targetReps: 7,
+              targetReps: Number(window._classTestSettings?.taskRepetitions) || 7,
               wordsBest: wordsBestByTest[tObj.id] != null ? { percentage: wordsBestByTest[tObj.id].effPct } : (bObj != null ? { percentage: bObj.effPct } : null),
               phrasesBest: phrasesBestByTest[tObj.id] != null ? { percentage: phrasesBestByTest[tObj.id].effPct } : null
             }));
@@ -4184,7 +4355,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (!isEx) {
           // Task: Extract attempts to compute Top-7 Highest Scores sub-row (7x7 Repetitive Mastery System)
           const taskAttempts = validAttempts.filter(a => (a.test_id || a.tests?.id) === t.id);
-          const isUniTask = Boolean(t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED')) || isVocab);
+          const _compClassCode = ((activeClass || t)?.code || (activeClass || t)?.shell_code || '').toUpperCase();
+          const _isWordsOnlyComp = /^(SHRT|EVNK|TPTC)-VOCAB/.test(_compClassCode) || /^(SHRT|EVNK|TPTC)-VCB/.test(_compClassCode);
+          const isUniTask = !_isWordsOnlyComp && Boolean(
+            t.payload?.is_unified === true ||
+            t.category === 'unified' ||
+            (t.test_subtype && t.test_subtype.startsWith('UNIFIED')) ||
+            (isVocab && (t.payload?.has_phrases || /phrase/i.test(t.shell_code || t.title || '')))
+          );
 
           const mapAtt = (a) => {
             const rawPct = parseFloat(a.effective_score != null ? a.effective_score : (a.percentage || 0));
@@ -4229,12 +4407,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             mappedWords.sort((a, b) => b.effPct - a.effPct);
             mappedPhrases.sort((a, b) => b.effPct - a.effPct);
 
-            const top7Words = mappedWords.slice(0, 7);
-            const top7Phrases = mappedPhrases.slice(0, 7);
+            const targetRepsCount = Math.max(1, Number(t.payload?.task_repetitions || window._classTestSettings?.taskRepetitions || 7));
+            const top7Words = mappedWords.slice(0, targetRepsCount);
+            const top7Phrases = mappedPhrases.slice(0, targetRepsCount);
 
             const buildChips = (list, label) => {
               let chips = '';
-              for (let i = 0; i < 7; i++) {
+              for (let i = 0; i < targetRepsCount; i++) {
                 const item = list[i];
                 if (item) {
                   const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
@@ -4252,13 +4431,13 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             const phrasesChipsHtml = buildChips(top7Phrases, 'Phrases');
 
             taskSubRowHtml = `
-              <div class="task-grades-subrow task-grades-words-subrow" style="display:flex; align-items:center; gap:5px; margin-top:3px;">
-                <span class="comp-label comp-label-words" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
-                <div style="display:flex; align-items:center; gap:3px;">${wordsChipsHtml}</div>
+              <div class="task-grades-subrow task-grades-words-subrow" style="display:flex; align-items:center; gap:3px; margin-top:2px;">
+                <span class="comp-label comp-label-words" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-c); letter-spacing:0.04em; text-transform:uppercase;">WRD</span>
+                <div style="display:flex; align-items:center; gap:2px;">${wordsChipsHtml}</div>
               </div>
-              <div class="task-grades-subrow task-grades-phrases-subrow" style="display:flex; align-items:center; gap:5px; margin-top:2px;">
-                <span class="comp-label comp-label-phrases" style="display:inline-block; width:32px; min-width:32px; max-width:32px; font-size:12px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
-                <div style="display:flex; align-items:center; gap:3px;">${phrasesChipsHtml}</div>
+              <div class="task-grades-subrow task-grades-phrases-subrow" style="display:flex; align-items:center; gap:3px; margin-top:2px;">
+                <span class="comp-label comp-label-phrases" style="display:inline-block; width:26px; min-width:26px; max-width:26px; font-size:11px; font-weight:800; color:var(--quad-b); letter-spacing:0.04em; text-transform:uppercase;">PHR</span>
+                <div style="display:flex; align-items:center; gap:2px;">${phrasesChipsHtml}</div>
               </div>
             `;
 
@@ -4283,20 +4462,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
               }
             }
 
-            // Sort descending to get Top 7 highest
+            // Sort descending to get Top N highest
+            const targetRepsCount = Math.max(1, Number(t.payload?.task_repetitions || window._classTestSettings?.taskRepetitions || 7));
             mappedAttempts.sort((a, b) => b.effPct - a.effPct);
-            const top7 = mappedAttempts.slice(0, 7);
+            const topN = mappedAttempts.slice(0, targetRepsCount);
 
-            // Task final score and grade is the average of top 7 attempts per SSOT (AGENTS.md § 2.9 & ui-invariants.md § 5.1)
-            if (top7.length > 0 && (!best.is_forgiven || isManualReps)) {
-              const sumPct = top7.reduce((acc, curr) => acc + curr.effPct, 0);
-              displayScore = Math.round(sumPct / top7.length);
+            // Task final score and grade is the average of top N attempts per SSOT (AGENTS.md § 2.9 & ui-invariants.md § 5.1)
+            if (topN.length > 0 && (!best.is_forgiven || isManualReps)) {
+              const sumPct = topN.reduce((acc, curr) => acc + curr.effPct, 0);
+              displayScore = Math.round(sumPct / topN.length);
               dispGrade = typeof calculateGrade === 'function' ? calculateGrade(displayScore) : 'C';
             }
 
             let chipsHtml = '';
-            for (let i = 0; i < 7; i++) {
-              const item = top7[i];
+            for (let i = 0; i < targetRepsCount; i++) {
+              const item = topN[i];
               if (item) {
                 const c = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(item.effPct) : '#94a3b8';
                 const isSt = item.grade === '★' || item.grade === 'S';
@@ -4306,7 +4486,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 chipsHtml += `<span class="task-mini-grade is-empty" title="Unattempted slot">—</span>`;
               }
             }
-            taskSubRowHtml = `<div class="task-grades-subrow">${chipsHtml}</div>`;
+            taskSubRowHtml = `<div class="task-grades-subrow" style="display:flex; align-items:center; gap:2px; margin-top:2px;">${chipsHtml}</div>`;
           }
         }
 
@@ -4366,20 +4546,113 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
     window.renderCompletedTestsBottom = renderCompletedTestsBottom;
     window.renderCompletedTests = renderCompletedTestsBottom;
 
+    // Helper: Identify whether current student belongs to CEC institution (Cake English Course / Camp)
+    function isCEC() {
+      // 1. Direct session properties
+      const inst = String(session.institution_name || session.institution?.name || session.institution_code || session.institution?.code || '').toUpperCase();
+      const prog = String(session.program_name || session.program?.name || '').toUpperCase();
+      const batch = String(session.batch_name || session.batch?.name || '').toUpperCase();
+
+      // Explicit TOP disqualifiers (Takes absolute precedence)
+      if (
+        inst.includes('TOP') ||
+        prog.includes('SHERATON') ||
+        prog.includes('EVNIKOM') ||
+        prog.includes('TAMATA') ||
+        batch.startsWith('SH-') ||
+        batch.startsWith('EV-') ||
+        batch.startsWith('TM-') ||
+        batch.startsWith('FO-') ||
+        batch.startsWith('TP-')
+      ) {
+        return false;
+      }
+
+      // 2. DOM inspection (#meta-inst)
+      const elInst = document.getElementById('meta-inst');
+      const instText = (elInst ? elInst.textContent : '').toUpperCase();
+      if (instText.includes('TOP')) return false;
+
+      // 3. Active class inspection (window._activeClasses)
+      const classes = window._activeClasses || window._loadedClasses || [];
+      const hasTopClass = classes.some(c => /sheraton|evnikom|tamata/i.test(c.name || ''));
+      if (hasTopClass) return false;
+
+      // CEC qualifications
+      if (inst.includes('CEC') || inst.includes('CAKE') || prog.includes('CAMP') || instText.includes('CEC') || instText.includes('CAKE')) {
+        return true;
+      }
+      const hasCecClass = classes.some(c => /camp|step/i.test(c.name || ''));
+      if (hasCecClass) return true;
+
+      // Default safe non-CEC
+      return false;
+    }
+    window.isCEC = isCEC;
+
+    function updateDockTabsVisibility() {
+      const btnFines = document.getElementById('btn-dock-fines');
+      const paneFines = document.getElementById('dock-pane-fines');
+      const isCecInst = isCEC();
+
+      if (!isCecInst) {
+        if (btnFines) {
+          btnFines.classList.add('hidden');
+          btnFines.style.setProperty('display', 'none', 'important');
+        }
+        if (paneFines) {
+          paneFines.classList.add('hidden');
+          paneFines.classList.remove('active');
+          paneFines.style.setProperty('display', 'none', 'important');
+        }
+        // If current active tab was fines, switch back to standings
+        const paneStandings = document.getElementById('dock-pane-standings');
+        const btnStandings = document.getElementById('btn-dock-standings');
+        if (paneFines && paneFines.classList.contains('active')) {
+          if (paneStandings) {
+            paneStandings.classList.remove('hidden');
+            paneStandings.classList.add('active');
+          }
+          if (btnStandings) {
+            btnStandings.classList.add('active');
+          }
+        }
+      } else {
+        if (btnFines) {
+          btnFines.classList.remove('hidden');
+          btnFines.style.removeProperty('display');
+        }
+        if (paneFines) {
+          paneFines.style.removeProperty('display');
+        }
+      }
+    }
+    window.updateDockTabsVisibility = updateDockTabsVisibility;
+
     // ============================================================
-    // BATCH LEADERBOARD & DOCK TABS MODULE
+    // BATCH LEADERBOARD & DOCK TABS MODULE (RANK / TESTS / ATTEND / FINES)
     // ============================================================
     function setupDockTabs() {
       const btnStandings = document.getElementById('btn-dock-standings');
       const btnCompleted = document.getElementById('btn-dock-completed');
       const btnAttendance = document.getElementById('btn-dock-attendance');
+      const btnFines = document.getElementById('btn-dock-fines');
       const paneStandings = document.getElementById('dock-pane-standings');
       const paneCompleted = document.getElementById('dock-pane-completed');
       const paneAttendance = document.getElementById('dock-pane-attendance');
+      const paneFines = document.getElementById('dock-pane-fines');
 
       if (!btnStandings || !btnCompleted || !paneStandings || !paneCompleted) return;
 
+      updateDockTabsVisibility();
+
       const setTab = (tab) => {
+        const isCecInst = isCEC();
+        // Enforce CEC-only gate for fines tab
+        if (tab === 'fines' && (!isCecInst || !paneFines)) {
+          tab = 'standings';
+        }
+
         // Reset all tabs
         btnStandings.classList.remove('active');
         btnStandings.setAttribute('aria-selected', 'false');
@@ -4389,6 +4662,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           btnAttendance.classList.remove('active');
           btnAttendance.setAttribute('aria-selected', 'false');
         }
+        if (btnFines) {
+          btnFines.classList.remove('active');
+          btnFines.setAttribute('aria-selected', 'false');
+        }
 
         paneStandings.classList.add('hidden');
         paneStandings.classList.remove('active');
@@ -4397,6 +4674,10 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (paneAttendance) {
           paneAttendance.classList.add('hidden');
           paneAttendance.classList.remove('active');
+        }
+        if (paneFines) {
+          paneFines.classList.add('hidden');
+          paneFines.classList.remove('active');
         }
 
         if (tab === 'completed') {
@@ -4412,6 +4693,14 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           paneAttendance.classList.add('active');
           try { sessionStorage.setItem('topscore_dock_tab', 'attendance'); } catch (_) {}
           loadStudentAttendanceAndFines();
+          renderStudentAttendanceMatrix();
+        } else if (tab === 'fines' && paneFines && isCecInst) {
+          btnFines.classList.add('active');
+          btnFines.setAttribute('aria-selected', 'true');
+          paneFines.classList.remove('hidden');
+          paneFines.classList.add('active');
+          try { sessionStorage.setItem('topscore_dock_tab', 'fines'); } catch (_) {}
+          loadStudentAttendanceAndFines();
         } else {
           btnStandings.classList.add('active');
           btnStandings.setAttribute('aria-selected', 'true');
@@ -4426,14 +4715,18 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       if (btnAttendance) {
         btnAttendance.addEventListener('click', () => setTab('attendance'));
       }
+      if (btnFines) {
+        btnFines.addEventListener('click', () => {
+          if (isCEC()) setTab('fines');
+        });
+      }
 
-      // Touch Swipe Gesture for Seamless Mobile Tab Navigation (Rank <-> Tests <-> Attend)
+      // Touch Swipe Gesture for Seamless Mobile Tab Navigation
       const dockSection = document.getElementById('bottom-dock-section');
       if (dockSection) {
         let touchStartX = 0;
         let touchStartY = 0;
         let touchStartTime = 0;
-        const TABS = ['standings', 'completed', 'attendance'];
 
         dockSection.addEventListener('touchstart', (e) => {
           if (e.touches && e.touches.length === 1) {
@@ -4449,20 +4742,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const deltaY = e.changedTouches[0].clientY - touchStartY;
           const deltaTime = Date.now() - touchStartTime;
 
+          const currentTabs = isCEC() ? ['standings', 'completed', 'attendance', 'fines'] : ['standings', 'completed', 'attendance'];
+
           // Must be horizontal gesture (> 40px, deltaX > 1.4 * deltaY, fast enough < 600ms)
-          // This ensures smooth native vertical scrolling of tables is completely unaffected
           if (deltaTime < 600 && Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
             const currentTab = paneStandings.classList.contains('active')
               ? 'standings'
-              : (paneCompleted.classList.contains('active') ? 'completed' : 'attendance');
-            const currentIndex = TABS.indexOf(currentTab);
+              : (paneCompleted.classList.contains('active')
+                  ? 'completed'
+                  : (paneAttendance && paneAttendance.classList.contains('active') ? 'attendance' : 'fines'));
+            const currentIndex = currentTabs.indexOf(currentTab);
 
-            if (deltaX < 0 && currentIndex < TABS.length - 1) {
+            if (deltaX < 0 && currentIndex < currentTabs.length - 1) {
               // Swipe Left -> next tab
-              setTab(TABS[currentIndex + 1]);
+              setTab(currentTabs[currentIndex + 1]);
             } else if (deltaX > 0 && currentIndex > 0) {
               // Swipe Right -> previous tab
-              setTab(TABS[currentIndex - 1]);
+              setTab(currentTabs[currentIndex - 1]);
             }
           }
         }, { passive: true });
@@ -4474,11 +4770,26 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       // Setup Attendance Controls
       setupAttendanceControls();
 
+      // Initial load of attendance matrix & fines badge
+      renderStudentAttendanceMatrix();
+      loadStudentAttendanceAndFines();
+
       try {
         const savedTab = sessionStorage.getItem('topscore_dock_tab');
         if (savedTab === 'completed') setTab('completed');
         else if (savedTab === 'attendance') setTab('attendance');
+        else if (savedTab === 'fines' && isCecInst) setTab('fines');
       } catch (_) {}
+    }
+
+    function isSessionStillAlive(sess) {
+      if (!sess || sess.status !== 'ACTIVE') return false;
+      const startMs = new Date(sess.started_at || sess.created_at || 0).getTime();
+      if (!startMs || isNaN(startMs)) return false;
+      // Normal class session duration is 60-180 min; allow maximum 6 hours or custom_duration_minutes + 60 mins buffer
+      const durationMin = Math.max(Number(sess.custom_duration_minutes) || 120, 120);
+      const maxLifetimeMs = Math.min((durationMin + 60) * 60 * 1000, 6 * 60 * 60 * 1000);
+      return (Date.now() - startMs) < maxLifetimeMs;
     }
 
     async function checkActiveSessionBadge() {
@@ -4487,13 +4798,31 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       try {
         const sb = await getSupabase();
         let active = null;
-        const { data } = await sb.from('class_sessions').select('id, session_type, status').eq('batch_id', session.batch_id).eq('status', 'ACTIVE').limit(1).maybeSingle();
-        if (data) active = data;
-        else {
+        const { data } = await sb.from('class_sessions')
+          .select('id, session_type, status, started_at, created_at, custom_duration_minutes')
+          .eq('batch_id', session.batch_id)
+          .eq('status', 'ACTIVE')
+          .limit(1)
+          .maybeSingle();
+
+        if (data) {
+          if (isSessionStillAlive(data)) {
+            active = data;
+          } else {
+            // Auto-heal stale zombie session in background
+            sb.from('class_sessions').update({ status: 'CLOSED', closed_at: new Date().toISOString() }).eq('id', data.id).then(() => {}).catch(() => {});
+          }
+        } else {
           const localSaved = localStorage.getItem('topscore_active_tutor_session');
           if (localSaved) {
-            const parsed = JSON.parse(localSaved);
-            if (parsed && parsed.batch_id === session.batch_id && parsed.status === 'ACTIVE') active = parsed;
+            try {
+              const parsed = JSON.parse(localSaved);
+              if (parsed && parsed.batch_id === session.batch_id && isSessionStillAlive(parsed)) {
+                active = parsed;
+              } else {
+                localStorage.removeItem('topscore_active_tutor_session');
+              }
+            } catch (_) {}
           }
         }
         if (active) {
@@ -4508,6 +4837,199 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
       } catch (_) {}
     }
+
+    let _cachedAttendanceData = {};
+
+    /**
+     * Renders Class Meetings Attendance Calendar Matrix (4 Rows x 5/6 Cols)
+     * For CEC Vocabulary classes: 24 Meetings (4 rows x 6 cols).
+     * For other classes: 20 Meetings (4 rows x 5 cols).
+     */
+    async function renderStudentAttendanceMatrix(forceRefresh = false) {
+      const container = document.getElementById('student-attendance-matrix-container');
+      const titleEl = document.getElementById('attend-matrix-title-text');
+      const kpiChip = document.getElementById('attend-matrix-kpi-chip');
+      if (!container || !session.student_id || !session.batch_id) return;
+
+      const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id) || (window._activeClasses && window._activeClasses[0]?.id);
+      const activeClass = (window._activeClasses || window._loadedClasses || []).find(c => c.id === activeClassId);
+      const className = activeClass ? (activeClass.name || '') : 'Vocabulary';
+
+      // Strictly check institution scope: CEC gets fixed meetings matrix, TOP gets standby notice
+      const isCecInst = isCEC();
+      const legendEl = document.querySelector('.attendance-matrix-legend');
+
+      if (!isCecInst) {
+        if (titleEl) {
+          titleEl.textContent = `${className} Attendance`;
+        }
+        if (kpiChip) {
+          kpiChip.textContent = 'STANDBY';
+          kpiChip.className = 'status-tag unchecked';
+        }
+        if (legendEl) {
+          legendEl.style.display = 'none';
+        }
+        container.innerHTML = `
+          <div style="padding:16px 14px;background:rgba(255,255,255,0.03);border:1px dashed rgba(255,255,255,0.15);border-radius:8px;text-align:center;font-size:12px;color:#94a3b8;line-height:1.5;">
+            <span style="display:block;font-weight:700;color:#38bdf8;margin-bottom:4px;">CLASS SCHEDULE STANDBY</span>
+            Class meeting schedule will be officially announced by instructor. Attendance is tracked live during active classroom sessions.
+          </div>
+        `;
+        return;
+      }
+
+      if (legendEl) {
+        legendEl.style.display = 'flex';
+      }
+
+      const isVocab = /vocab/i.test(className);
+      const totalMeetings = isVocab ? 24 : 20;
+      const weekDays = isVocab ? 6 : 5;
+      const weekCount = 4;
+
+      if (titleEl) {
+        titleEl.textContent = `${className} (${totalMeetings} M)`;
+      }
+
+      const cacheKey = `${session.batch_id}_${activeClassId || 'default'}`;
+
+      let matrixData = _cachedAttendanceData[cacheKey];
+      if (!matrixData || forceRefresh) {
+        try {
+          const sb = await getSupabase();
+          let sessQuery = sb.from('class_sessions')
+            .select('id, session_number, status, started_at, custom_duration_minutes')
+            .eq('batch_id', session.batch_id);
+          if (activeClassId) {
+            sessQuery = sessQuery.eq('class_id', activeClassId);
+          }
+          const { data: dbSessions } = await sessQuery.order('session_number', { ascending: true });
+
+          const sessions = dbSessions || [];
+          const sessionIds = sessions.map(s => s.id);
+
+          let attList = [];
+          if (sessionIds.length > 0) {
+            const { data: dbAtt } = await sb.from('session_attendance')
+              .select('session_id, status')
+              .eq('student_id', session.student_id)
+              .in('session_id', sessionIds);
+            attList = dbAtt || [];
+          }
+
+          matrixData = { sessions, attList };
+          _cachedAttendanceData[cacheKey] = matrixData;
+        } catch (err) {
+          console.warn('[DASHBOARD] renderStudentAttendanceMatrix error:', err);
+          matrixData = { sessions: [], attList: [] };
+        }
+      }
+
+      const sessionMap = new Map();
+      (matrixData.sessions || []).forEach(s => {
+        if (s.session_number) sessionMap.set(s.session_number, s);
+      });
+
+      const attMap = new Map();
+      (matrixData.attList || []).forEach(a => {
+        if (a.session_id) attMap.set(a.session_id, a.status);
+      });
+
+      let presentCount = 0;
+      let excusedCount = 0;
+      let sickCount = 0;
+      let absentCount = 0;
+      let conductedCount = 0;
+
+      let weeksHtml = '<div class="attend-matrix-week-list">';
+
+      for (let w = 1; w <= weekCount; w++) {
+        let boxesHtml = '';
+        for (let d = 1; d <= weekDays; d++) {
+          const mNum = (w - 1) * weekDays + d;
+          const sess = sessionMap.get(mNum);
+          let boxClass = 'upcoming';
+          let valText = '—';
+          let tooltip = `Meeting ${mNum}: Upcoming`;
+
+          if (sess) {
+            const isAlive = isSessionStillAlive(sess);
+            const rawStatus = attMap.get(sess.id);
+
+            if (isAlive) {
+              if (rawStatus && (rawStatus === 'PRESENT' || rawStatus.startsWith('PRESENT'))) {
+                boxClass = 'present';
+                valText = '✓';
+                presentCount++;
+                conductedCount++;
+                tooltip = `Meeting ${mNum}: Present (Session Active)`;
+              } else {
+                boxClass = 'live';
+                valText = 'LIVE';
+                conductedCount++;
+                tooltip = `Meeting ${mNum}: Live Class Session Now`;
+              }
+            } else {
+              conductedCount++;
+              if (rawStatus === 'PRESENT' || (rawStatus && rawStatus.startsWith('PRESENT'))) {
+                boxClass = 'present';
+                valText = '✓';
+                presentCount++;
+                tooltip = `Meeting ${mNum}: Present`;
+              } else if (rawStatus === 'EXCUSED' || rawStatus === 'PERMIT') {
+                boxClass = 'excused';
+                valText = 'E';
+                excusedCount++;
+                tooltip = `Meeting ${mNum}: Excused`;
+              } else if (rawStatus === 'SICK') {
+                boxClass = 'sick';
+                valText = 'S';
+                sickCount++;
+                tooltip = `Meeting ${mNum}: Sick`;
+              } else {
+                boxClass = 'absent';
+                valText = 'A';
+                absentCount++;
+                tooltip = `Meeting ${mNum}: Absent`;
+              }
+            }
+          }
+
+          boxesHtml += `
+            <div class="att-matrix-box ${boxClass}" title="${tooltip}">
+              <span class="att-box-m-num">M${mNum}</span>
+              <span class="att-box-val">${valText}</span>
+            </div>
+          `;
+        }
+
+        weeksHtml += `
+          <div class="attend-matrix-week-row">
+            <div class="attend-matrix-week-label">W${w}</div>
+            <div class="attend-matrix-grid" style="grid-template-columns: repeat(${weekDays}, 1fr);">
+              ${boxesHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      weeksHtml += '</div>';
+      container.innerHTML = weeksHtml;
+
+      const ratePct = conductedCount > 0 ? Math.round((presentCount / conductedCount) * 100) : 100;
+      if (kpiChip) {
+        kpiChip.textContent = `${presentCount}/${conductedCount || totalMeetings} (${ratePct}%)`;
+        if (ratePct >= 90) {
+          kpiChip.className = 'status-tag present';
+        } else if (ratePct >= 75) {
+          kpiChip.className = 'status-tag late';
+        } else {
+          kpiChip.className = 'status-tag alpha';
+        }
+      }
+    }
+    window.renderStudentAttendanceMatrix = renderStudentAttendanceMatrix;
 
     let _currentActiveSessionForStudent = null;
 
@@ -4534,14 +5056,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           .maybeSingle();
 
         if (dbSession) {
-          sessionData = dbSession;
+          if (isSessionStillAlive(dbSession)) {
+            sessionData = dbSession;
+          } else {
+            // Auto-heal stale zombie session in background
+            sb.from('class_sessions').update({ status: 'CLOSED', closed_at: new Date().toISOString() }).eq('id', dbSession.id).then(() => {}).catch(() => {});
+          }
         } else {
           const localSaved = localStorage.getItem('topscore_active_tutor_session');
           if (localSaved) {
-            const parsed = JSON.parse(localSaved);
-            if (parsed && parsed.batch_id === session.batch_id && parsed.status === 'ACTIVE') {
-              sessionData = parsed;
-            }
+            try {
+              const parsed = JSON.parse(localSaved);
+              if (parsed && parsed.batch_id === session.batch_id && isSessionStillAlive(parsed)) {
+                sessionData = parsed;
+              } else {
+                localStorage.removeItem('topscore_active_tutor_session');
+              }
+            } catch (_) {}
           }
         }
 
@@ -4606,11 +5137,21 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (examCtaEl) examCtaEl.classList.add('hidden');
         }
 
-        // Load Fine & Debt summary
+        // Render attendance matrix
+        renderStudentAttendanceMatrix();
+
+        // Load Fine & Debt summary (Strictly for CEC institution only)
+        if (!isCEC()) {
+          const finesBadge = document.getElementById('dock-fines-status-badge');
+          if (finesBadge) finesBadge.style.display = 'none';
+          updateDockTabsVisibility();
+          return;
+        }
+
         let words = 0, fine = 0, debt = 0;
         const { data: violData } = await sb
           .from('language_violations')
-          .select('word_count, fine_amount, paid_amount, debt_amount')
+          .select('word_count, fine_amount, paid_amount, debt_amount, created_at, note')
           .eq('student_id', session.student_id);
 
         if (violData && violData.length > 0) {
@@ -4625,6 +5166,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const fineEl = document.getElementById('student-fine-total');
         const debtEl = document.getElementById('student-fine-debt');
         const fineTag = document.getElementById('student-fine-status-tag');
+        const finesBadge = document.getElementById('dock-fines-status-badge');
 
         if (wordsEl) wordsEl.textContent = words;
         if (fineEl) fineEl.textContent = fine.toLocaleString('id-ID');
@@ -4637,6 +5179,57 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           } else {
             fineTag.className = 'status-tag present';
             fineTag.textContent = 'CLEAR';
+          }
+        }
+
+        // Update FINES tab badge
+        if (finesBadge) {
+          if (debt > 0) {
+            finesBadge.textContent = 'Rp ' + (debt >= 1000 ? (Math.round(debt / 1000) + 'k') : debt);
+            finesBadge.style.display = 'inline-flex';
+            finesBadge.style.background = 'rgba(255,0,0,0.25)';
+            finesBadge.style.color = '#ff0000';
+            finesBadge.style.borderColor = 'rgba(255,0,0,0.4)';
+          } else {
+            finesBadge.textContent = '0';
+            finesBadge.style.display = 'inline-flex';
+            finesBadge.style.background = 'rgba(148,163,184,0.15)';
+            finesBadge.style.color = '#94a3b8';
+            finesBadge.style.borderColor = 'rgba(148,163,184,0.25)';
+          }
+        }
+
+        // Populate Fine history container
+        const historyEl = document.getElementById('student-fine-history-container');
+        if (historyEl) {
+          if (violData && violData.length > 0) {
+            let histHtml = '<div style="display:flex;flex-direction:column;gap:6px;">';
+            violData.forEach(v => {
+              const dt = v.created_at ? new Date(v.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : 'Recent';
+              const isPaid = Number(v.debt_amount) <= 0;
+              histHtml += `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;background:rgba(0,0,0,0.25);border-radius:6px;font-size:11px;">
+                  <div>
+                    <strong style="color:#ffffff;">${v.word_count || 0} Words</strong>
+                    <span style="color:#64748b;margin-left:4px;">(${dt})</span>
+                  </div>
+                  <div style="font-weight:700;color:${isPaid ? '#00c000ff' : '#ff0000'};">
+                    Rp ${Number(v.fine_amount || 0).toLocaleString('id-ID')} ${isPaid ? '(Paid)' : '(Unpaid)'}
+                  </div>
+                </div>
+              `;
+            });
+            histHtml += '</div>';
+            historyEl.innerHTML = histHtml;
+          } else {
+            historyEl.innerHTML = `
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;color:#00c000ff;font-weight:600;">
+                <span>✓</span> Clean English Zone Record
+              </div>
+              <div style="font-size:11px;color:#64748b;">
+                No language violations recorded. Keep using English in classes and camp zone!
+              </div>
+            `;
           }
         }
       } catch (err) {
@@ -4737,7 +5330,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
     }
 
-    async function loadBatchLeaderboard() {
+    async function loadBatchLeaderboard(options = {}) {
       const container = document.getElementById('batch-leaderboard-container');
       const myRankNumEl = document.getElementById('dock-my-rank-number');
       const myRankSummaryEl = document.getElementById('leaderboard-my-rank');
@@ -4757,44 +5350,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       }
 
       try {
-        let studentList = window._cachedBatchStudents;
-        let attempts = window._cachedBatchAttempts;
-
-        if (!studentList || !attempts) {
-          const sb = await getSupabase();
-
-          // 1. Fetch active students in the same batch
-          const { data: students, error: stuErr } = await sb
-            .from('students')
-            .select('id, name, gender, photo_url, is_active')
-            .eq('batch_id', batchId)
-            .eq('is_active', true)
-            .is('deleted_at', null);
-
-          studentList = Array.isArray(students) ? students : (students && typeof students === 'object' && students.id ? [students] : []);
-
-          if (stuErr || studentList.length === 0) {
-            container.innerHTML = `
-              <div class="empty-state p-4 text-center">
-                <p style="color:#94a3b8; font-size:12px;">No active students found in this batch.</p>
-              </div>`;
-            return;
-          }
-
-          const studentIds = studentList.map(s => s.id);
-
-          // 2. Fetch all submitted attempts with complete test metadata
-          const { data: attData, error: attErr } = await sb
-            .from('attempts')
-            .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, forgiven_reason, tests(id, title, test_type, category, test_subtype, shell_code, class_id, deleted_at, status)')
-            .in('student_id', studentIds)
-            .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
-
-          attempts = attData || [];
-          window._cachedBatchStudents = studentList;
-          window._cachedBatchAttempts = attempts;
-        }
-
         // Active Selected Class scope (My Rank & Standings represent selected class only)
         const activeClassId = window._selectedClassId || (window._loadedClasses && window._loadedClasses[0]?.id);
         const allTests = (Array.isArray(window._allTests) && window._allTests.length > 0)
@@ -4808,26 +5363,135 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const selectedClassTestIds = new Set(selectedClassTests.map(t => t.id));
         const totalClassTests = selectedClassTests.length > 0 ? selectedClassTests.length : 40;
 
+        window._cachedBatchAttemptsByClass = window._cachedBatchAttemptsByClass || {};
+        const cacheKey = `${batchId}_${activeClassId || 'all'}`;
+        const forceRefresh = options === true || Boolean(options?.forceRefresh);
+        if (forceRefresh) {
+          delete window._cachedBatchAttemptsByClass[cacheKey];
+          window._cachedBatchAttempts = null;
+        }
+        let studentList = window._cachedBatchStudents;
+        let attempts = window._cachedBatchAttemptsByClass[cacheKey];
+
+        if (!studentList || !attempts) {
+          const sb = await getSupabase();
+
+          // 1. Fetch active students in the same batch
+          if (!studentList || studentList.length === 0) {
+            const { data: students, error: stuErr } = await sb
+              .from('students')
+              .select('id, name, gender, photo_url, is_active, program_status')
+              .eq('batch_id', batchId)
+              .eq('is_active', true)
+              .neq('program_status', 'INACTIVE')
+              .is('deleted_at', null);
+
+            const rawList = Array.isArray(students) ? students : (students && typeof students === 'object' && students.id ? [students] : []);
+            studentList = rawList.filter(s => s && s.id && s.is_active === true && (s.program_status || '').toUpperCase() !== 'INACTIVE');
+
+            if (stuErr || studentList.length === 0) {
+              container.innerHTML = `
+                <div class="empty-state p-4 text-center">
+                  <p style="color:#94a3b8; font-size:12px;">No active students found in this batch.</p>
+                </div>`;
+              return;
+            }
+            window._cachedBatchStudents = studentList;
+          }
+
+          const studentIds = studentList.map(s => s.id);
+
+          // If selectedClassTestIds is empty but we have an activeClassId, fetch test IDs first
+          if (selectedClassTestIds.size === 0 && activeClassId) {
+            const { data: cTests } = await sb
+              .from('tests')
+              .select('id, title, test_type, category, test_subtype, shell_code, class_id, deleted_at, status, payload')
+              .eq('class_id', activeClassId)
+              .is('deleted_at', null);
+            (cTests || []).forEach(t => {
+              selectedClassTestIds.add(t.id);
+              selectedClassTests.push(t);
+            });
+          }
+
+          // 2. Fetch submitted attempts scoped by studentIds and class test_ids using pagination to prevent 1000-row cutoff
+          let allAttempts = [];
+          let from = 0;
+          const PAGE_SIZE = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            let attQuery = sb
+              .from('attempts')
+              .select('id, student_id, test_id, score, total_questions, percentage, effective_score, is_remedial_unlocked, is_best_score, is_forgiven, is_manual_override, status, submitted_at, forgiven_reason, tests(id, title, test_type, category, test_subtype, shell_code, class_id, deleted_at, status, payload)')
+              .in('student_id', studentIds)
+              .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded'])
+              .order('submitted_at', { ascending: false })
+              .range(from, from + PAGE_SIZE - 1);
+
+            if (selectedClassTestIds.size > 0) {
+              attQuery = attQuery.in('test_id', Array.from(selectedClassTestIds));
+            }
+
+            const { data: chunk, error: attErr } = await attQuery;
+            if (attErr) {
+              console.error('[Dashboard] Error fetching attempts for leaderboard:', attErr);
+              break;
+            }
+            if (chunk && chunk.length > 0) {
+              allAttempts.push(...chunk);
+              if (chunk.length < PAGE_SIZE) hasMore = false;
+              else from += PAGE_SIZE;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          attempts = allAttempts;
+          window._cachedBatchAttemptsByClass[cacheKey] = attempts;
+          window._cachedBatchAttempts = attempts;
+        }
+
         // 3. Compute best scores, points & overall averages per student for THIS SELECTED CLASS
         const studentStats = studentList.map(st => {
           const stAtts = (attempts || []).filter(a => {
-            if (a.student_id !== st.id || !a.tests || a.tests.deleted_at) return false;
-            const tid = a.test_id || a.tests.id;
+            if (a.student_id !== st.id) return false;
+            if (a.tests?.deleted_at) return false;
+            const tid = a.test_id || a.tests?.id;
             return selectedClassTestIds.has(tid) || (a.tests?.class_id && a.tests.class_id === activeClassId);
           });
           const bestMap = {};
           let lastSubmittedAt = null;
 
+          // Separate exams from tasks for section-aware resolution
+          const examAttsByTest = {};
+          const taskAtts = [];
+
           stAtts.forEach(att => {
-            const key = att.test_id;
+            if (att.submitted_at) {
+              if (!lastSubmittedAt || new Date(att.submitted_at) > new Date(lastSubmittedAt)) {
+                lastSubmittedAt = att.submitted_at;
+              }
+            }
+            if (isExam(att.tests)) {
+              const tid = att.test_id || att.tests?.id;
+              if (tid) {
+                if (!examAttsByTest[tid]) examAttsByTest[tid] = [];
+                examAttsByTest[tid].push(att);
+              }
+            } else {
+              taskAtts.push(att);
+            }
+          });
+
+          // A. Formative Tasks
+          taskAtts.forEach(att => {
+            const key = att.test_id || att.tests?.id;
             if (!key) return;
             const totalQ = Number(att.total_questions || 50);
             const rawPct = Math.min(100.0, Math.max(0.0, parseFloat(att.percentage || 0)));
             const isRemedial = Boolean(att.is_remedial_unlocked);
 
-            // SAFE EFFECTIVE SCORE RESOLUTION:
-            // effective_score represents percentage (0.0 to 100.0), NEVER raw question points!
-            // If database contains raw points (> 100), fall back to rawPct.
             let effPct = rawPct;
             if (att.effective_score != null) {
               const parsedEff = parseFloat(att.effective_score);
@@ -4837,36 +5501,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             }
             if (isRemedial) effPct = Math.min(effPct, 60.0);
 
-            // Raw question points earned
             const rawScore = parseFloat(att.score != null ? att.score : (rawPct * totalQ / 100));
-            // Remedial points capped at KKM 60% of total questions
             const maxRemedialPts = totalQ * 0.6;
             const effPoints = isRemedial ? Math.min(rawScore, maxRemedialPts) : rawScore;
-
-            const isExamItem = isExam(att.tests);
-
-            // Rule 2.7: Report card stores highest valid score
-            let shouldReplace = false;
             const attTime = new Date(att.submitted_at || att.created_at || 0).getTime();
-            if (!bestMap[key]) {
-              shouldReplace = true;
-            } else {
-              const curPts = Number(bestMap[key].points ?? 0);
-              const curPct = Number(bestMap[key].effPct ?? 0);
-              const curTime = bestMap[key].attTime || 0;
-              if (effPoints > curPts) {
-                shouldReplace = true;
-              } else if (effPoints === curPts && effPct > curPct) {
-                shouldReplace = true;
-              } else if (effPoints === curPts && Math.abs(effPct - curPct) <= 0.01 && attTime > curTime) {
-                shouldReplace = true;
-              }
-            }
 
-            if (shouldReplace) {
+            if (!bestMap[key] || effPoints > (bestMap[key].points ?? 0)) {
               bestMap[key] = {
                 test: att.tests,
-                isExam: isExamItem,
+                isExam: false,
                 effPct,
                 rawPct,
                 points: effPoints,
@@ -4878,11 +5521,96 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 isForgiven: Boolean(att.is_forgiven)
               };
             }
+          });
 
-            if (att.submitted_at) {
-              if (!lastSubmittedAt || new Date(att.submitted_at) > new Date(lastSubmittedAt)) {
-                lastSubmittedAt = att.submitted_at;
-              }
+          // B. Milestone Exams (Section-Aware: Words & Phrases for Unified Exams)
+          Object.entries(examAttsByTest).forEach(([testId, atts]) => {
+            const testMeta = atts[0].tests;
+            const isUnified = testMeta?.payload?.is_unified || testMeta?.payload?.category === 'unified' || Number(testMeta?.payload?.total_questions || 0) === 200;
+
+            if (isUnified) {
+              const wordsAtts = atts.filter(a => {
+                const fr = String(a.forgiven_reason || '');
+                const tQ = Number(a.total_questions || 0);
+                return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
+              });
+              const phrasesAtts = atts.filter(a => {
+                const fr = String(a.forgiven_reason || '');
+                const tQ = Number(a.total_questions || 0);
+                return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
+              });
+              const fullAtts = atts.filter(a => Number(a.total_questions || 0) > 160);
+
+              let bestWords = null;
+              wordsAtts.forEach(a => {
+                const tQ = Number(a.total_questions || 160);
+                const rawPct = Number(a.percentage != null ? a.percentage : (a.score / tQ) * 100);
+                const isRem = Boolean(a.is_remedial_unlocked);
+                const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                const pts = tQ === 160 ? Math.round(Number(a.score || 0)) : Math.round(160 * (effPct / 100));
+                const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
+                if (!bestWords || pts > bestWords.points || (pts === bestWords.points && effPct > bestWords.effPct)) {
+                  bestWords = { test: testMeta, isExam: true, effPct, points: pts, totalQ: 160, attTime, isForgiven: Boolean(a.is_forgiven) };
+                }
+              });
+              fullAtts.forEach(a => {
+                const wSc = Math.min(160, Number(a.score || 0));
+                const wPct = (wSc / 160) * 100;
+                const pts = Math.round(wSc);
+                const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
+                if (!bestWords || pts > bestWords.points || (pts === bestWords.points && wPct > bestWords.effPct)) {
+                  bestWords = { test: testMeta, isExam: true, effPct: wPct, points: pts, totalQ: 160, attTime, isForgiven: Boolean(a.is_forgiven) };
+                }
+              });
+
+              let bestPhrases = null;
+              phrasesAtts.forEach(a => {
+                const tQ = Number(a.total_questions || 40);
+                const rawPct = Number(a.percentage != null ? a.percentage : (a.score / tQ) * 100);
+                const isRem = Boolean(a.is_remedial_unlocked);
+                const effPct = isRem ? Math.min(rawPct, 60.0) : rawPct;
+                const pts = tQ === 40 ? Math.round(Number(a.score || 0)) : Math.round(40 * (effPct / 100));
+                const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
+                if (!bestPhrases || pts > bestPhrases.points || (pts === bestPhrases.points && effPct > bestPhrases.effPct)) {
+                  bestPhrases = { test: testMeta, isExam: true, effPct, points: pts, totalQ: 40, attTime, isForgiven: Boolean(a.is_forgiven) };
+                }
+              });
+              fullAtts.forEach(a => {
+                if (Number(a.score || 0) > 160) {
+                  const pSc = Math.min(40, Number(a.score || 0) - 160);
+                  const pPct = (pSc / 40) * 100;
+                  const pts = Math.round(pSc);
+                  const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
+                  if (!bestPhrases || pts > bestPhrases.points || (pts === bestPhrases.points && pPct > bestPhrases.effPct)) {
+                    bestPhrases = { test: testMeta, isExam: true, effPct: pPct, points: pts, totalQ: 40, attTime, isForgiven: Boolean(a.is_forgiven) };
+                  }
+                }
+              });
+
+              if (bestWords) bestMap[`${testId}_words`] = bestWords;
+              if (bestPhrases) bestMap[`${testId}_phrases`] = bestPhrases;
+            } else {
+              // Standard single exam
+              let bestSingle = null;
+              atts.forEach(a => {
+                const tQ = Number(a.total_questions || testMeta?.total_questions || 100);
+                const rawPct = Math.min(100.0, Math.max(0.0, parseFloat(a.percentage || 0)));
+                const isRem = Boolean(a.is_remedial_unlocked);
+                let effPct = rawPct;
+                if (a.effective_score != null) {
+                  const parsedEff = parseFloat(a.effective_score);
+                  if (parsedEff <= 100.0 && parsedEff >= 0.0) effPct = parsedEff;
+                }
+                if (isRem) effPct = Math.min(effPct, 60.0);
+                const rawScore = parseFloat(a.score != null ? a.score : (rawPct * tQ / 100));
+                const maxRem = tQ * 0.6;
+                const effPoints = isRem ? Math.min(rawScore, maxRem) : rawScore;
+                const attTime = new Date(a.submitted_at || a.created_at || 0).getTime();
+                if (!bestSingle || effPoints > bestSingle.points || (effPoints === bestSingle.points && effPct > bestSingle.effPct)) {
+                  bestSingle = { test: testMeta, isExam: true, effPct, points: effPoints, totalQ: tQ, attTime, isForgiven: Boolean(a.is_forgiven) };
+                }
+              });
+              if (bestSingle) bestMap[testId] = bestSingle;
             }
           });
 
@@ -4909,18 +5637,20 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
                 completedWeeklyCount: examItems.length
               };
 
-          const totalPoints = Math.round(mastery.totalPoints || 0);
+          const totalPoints = Math.round(mastery.totalPoints || examItems.reduce((sum, v) => sum + (v.points || 0), 0));
           const completedExamCount = mastery.completedExamCount ?? mastery.completedWeeklyCount ?? examItems.length;
 
-          // Rule 2.8: overallScore = average percentage of COMPLETED valid exams (not curriculum denominator)
+          // Rule 2.8: overallScore = weighted percentage of COMPLETED valid exams (not curriculum denominator)
           const validExamItems = examItems.filter(e => {
             const isPureForgivenZero = Boolean(e.isForgiven) && Number(e.points ?? e.effPoints ?? 0) === 0;
             return !isPureForgivenZero;
           });
-          const overallScore = validExamItems.length > 0
-            ? Math.min(100, Math.max(0, Math.round(validExamItems.reduce((sum, e) => sum + Number(e.effPct ?? e.pct ?? 0), 0) / validExamItems.length)))
-            : 0;
-          const grade = validExamItems.length > 0
+          const validExamPts = validExamItems.reduce((sum, e) => sum + Number(e.points ?? e.effPoints ?? 0), 0);
+          const validExamQ = validExamItems.reduce((sum, e) => sum + Number(e.totalQ || 0), 0);
+          const overallScore = validExamQ > 0
+            ? Math.min(100, Math.max(0, Math.round((validExamPts / validExamQ) * 100)))
+            : (validExamItems.length > 0 ? Math.round(validExamItems.reduce((sum, e) => sum + Number(e.effPct ?? 0), 0) / validExamItems.length) : 0);
+          const grade = validExamQ > 0
             ? (typeof calculateGrade === 'function' ? calculateGrade(overallScore) : mastery.grade)
             : '—';
 
@@ -5341,8 +6071,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const progName = (session.program_name && session.program_name !== 'undefined') ? session.program_name : 'Program';
       const rawBatch = (session.batch_name && session.batch_name !== 'undefined') ? session.batch_name : 'Batch';
       const batchLabel = /batch/i.test(rawBatch) ? rawBatch : `Batch ${rawBatch}`;
-      const rawLvl = session.level_name || (session.level_number ? toOrdinalLevel(session.level_number) : null);
-      const levelLabel = rawLvl ? (rawLvl.toLowerCase().includes('level') ? rawLvl : `${rawLvl} Level`) : '1st Level';
+      const isCamp = typeof isCampContext === 'function' ? isCampContext(session) : Boolean(/camp/i.test(session.program_name || '') || /cec|cake/i.test(session.institution_name || ''));
+      const rawLvl = session.level_number != null ? session.level_number : (session.level_name || 1);
+      const levelLabel = typeof formatAcademicTier === 'function' ? formatAcademicTier(rawLvl, isCamp, session) : (isCamp ? `${toShortLevel(rawLvl)} Step` : `${toShortLevel(rawLvl)} Level`);
 
       const metaSentence = `${instName} • ${progName} • ${batchLabel} • ${levelLabel}`;
 
@@ -5988,279 +6719,6 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       actionBtn?.addEventListener('click', onAction, { once: true });
       modal.addEventListener('click', onBackdrop, { once: true });
     };
-
-    function formatDobEnglish(dob) {
-      if (!dob) return '—';
-      if (typeof dob === 'string' && (dob.includes('ᵀᴴ') || dob.includes('ˢᵀ') || dob.includes('<sup>'))) return dob;
-      try {
-        const d = new Date(dob);
-        if (isNaN(d.getTime())) return String(dob);
-        const day = d.getDate();
-        const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
-        let ord = 'TH';
-        if (day === 1 || day === 21 || day === 31) ord = 'ST';
-        else if (day === 2 || day === 22) ord = 'ND';
-        else if (day === 3 || day === 23) ord = 'RD';
-        return `${day}<sup>${ord}</sup> ${months[d.getMonth()]} ${d.getFullYear()}`;
-      } catch (_) {
-        return String(dob);
-      }
-    }
-
-    function openStudentCertificateModal(certExam, session, fullProf = null) {
-      const fe = certExam || {};
-      const certNis = fe.certificate_nis || (session.nis ? `CEC/M/C.${session.nis}/${fe.certificate_month || 'XI'}/${fe.certificate_year || 2026}` : 'CEC/M/C.000000/XI/2026');
-      const certPredicates = [fe.practice_predicate, fe.speaking_predicate, fe.vocab_predicate, fe.pronunciation_predicate, fe.grammar_predicate].filter(Boolean);
-      const hasLessPredicate = certPredicates.some(p => String(p).trim().toUpperCase() === 'LESS');
-      const studentName = cleanStudentName(session.name || session.student_name);
-      const birthplace = session.birthplace || fullProf?.birthplace || 'Mataram';
-      const birthDate = session.birth_date || session.dob || fullProf?.birth_date;
-
-      const backdrop = document.createElement('div');
-      backdrop.id = 'student-cert-modal-backdrop';
-      backdrop.className = 'modal-backdrop';
-      backdrop.style.cssText = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:99999; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(4px); padding:16px; box-sizing:border-box;';
-
-      backdrop.innerHTML = `
-        <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; width:94vw; max-width:880px; max-height:92vh; display:flex; flex-direction:column; box-shadow:0 12px 40px rgba(0,0,0,0.6); overflow:hidden;">
-          <div style="height:56px; padding:0 20px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid #334155; background:#1e293b; flex-shrink:0;">
-            <div style="display:flex; align-items:center; gap:8px;">
-              <span style="font-size:18px;">🎓</span>
-              <h3 style="margin:0; font-family:var(--fm-font-display,'Inter',sans-serif); font-size:15px; font-weight:800; color:#ffffff; text-transform:uppercase;">
-                Official Certificate & Academic Transcript
-              </h3>
-            </div>
-            <button type="button" id="btn-close-cert-modal" style="background:transparent; border:none; color:#94a3b8; font-size:20px; cursor:pointer; padding:4px 8px; line-height:1;" title="Close">&times;</button>
-          </div>
-
-          <div style="padding:24px; overflow-y:auto; flex:1; background:#060911;">
-            ${hasLessPredicate ? `
-              <div style="background:#450a0a; border:1.5px solid #ef4444; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(239,68,68,0.2);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <span style="font-size:22px;">⚠️</span>
-                  <div>
-                    <strong style="color:#fecaca; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">STATUS: RETAKE REQUIRED</strong>
-                    <span style="color:#fca5a5; font-size:12px;">A 'LESS' predicate was evaluated. In accordance with academic SSOT, certificate is withheld until remedial exam is completed with passing standing.</span>
-                  </div>
-                </div>
-                <span style="background:#ef4444; color:#ffffff; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase;">WITHHELD</span>
-              </div>
-            ` : `
-              <div style="background:#052e16; border:1.5px solid #22c55e; border-radius:8px; padding:12px 18px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 12px rgba(34,197,94,0.15);">
-                <div style="display:flex; align-items:center; gap:12px;">
-                  <span style="font-size:22px;">✅</span>
-                  <div>
-                    <strong style="color:#bbf7d0; font-size:14px; text-transform:uppercase; letter-spacing:0.04em; display:block;">STATUS: OFFICIAL CREDENTIAL AUTHORIZED</strong>
-                    <span style="color:#86efac; font-size:12px;">All evaluated competencies have achieved passing threshold at Cake English Course.</span>
-                  </div>
-                </div>
-                <span style="background:#22c55e; color:#090d16; font-size:11px; font-weight:900; padding:5px 12px; border-radius:4px; text-transform:uppercase;">VERIFIED</span>
-              </div>
-            `}
-
-            <div id="student-cert-print-sheet" style="display:flex; flex-direction:column; gap:28px;">
-              <!-- PAGE 1: CERTIFICATE OF ACHIEVEMENT -->
-              <div style="background:#fdfbf7; color:#0f172a; border-radius:8px; padding:40px 48px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:800px; margin:0 auto; box-sizing:border-box; border:2.5px solid #b45309; outline:8px solid #fef3c7; outline-offset:-14px; position:relative; font-family:'Times New Roman', Georgia, serif; text-align:center;">
-                
-                <div style="margin-bottom:12px;">
-                  <div style="font-family:'Inter', sans-serif; font-size:11px; font-weight:800; color:#78350f; letter-spacing:0.12em; text-transform:uppercase;">LEMBAGA KURSUS DAN PELATIHAN</div>
-                  <h2 style="font-family:Georgia, serif; font-size:24px; font-weight:900; color:#0f172a; letter-spacing:0.06em; margin:4px 0 2px; text-transform:uppercase;">CAKE ENGLISH COURSE (CEC)</h2>
-                  <div style="font-family:'Inter', sans-serif; font-size:10px; font-weight:700; color:#64748b; letter-spacing:0.03em;">Kampoeng Pare Mataram &bull; NPSN K5669268 &bull; No. P PAUD PNF 421.9/3768/Disdik.B2/XI/2022</div>
-                  <div style="font-family:'Inter', sans-serif; font-size:10px; color:#64748b; margin-top:2px;">Jl. Abdul Kadir Munsyi No.16, Punia, Kec. Mataram, Kota Mataram, Nusa Tenggara Barat</div>
-                  <hr style="border:none; border-top:1.5px solid #b45309; width:65%; margin:12px auto 14px;">
-                </div>
-
-                <h1 style="font-family:Georgia, serif; font-size:28px; font-weight:900; color:#b45309; text-transform:uppercase; letter-spacing:0.08em; margin:8px 0 4px;">CERTIFICATE OF ACHIEVEMENT</h1>
-                <div style="font-family:monospace; font-size:12px; font-weight:800; color:#64748b; letter-spacing:0.05em; margin-bottom:16px;">Certificate No: ${certNis}</div>
-
-                <div style="font-family:Georgia, serif; font-style:italic; font-size:14px; color:#475569; margin-bottom:6px;">This is to certify that</div>
-                <h2 style="font-family:Georgia, serif; font-size:26px; font-weight:900; color:#0f172a; text-transform:uppercase; letter-spacing:0.04em; margin:6px 0 4px;">${studentName}</h2>
-                
-                <div style="font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:#334155; margin-bottom:14px;">
-                  Place, Date of Birth: <strong>${birthplace}, ${formatDobEnglish(birthDate)}</strong>
-                </div>
-
-                <p style="font-family:'Inter', sans-serif; font-size:13px; color:#334155; max-width:620px; margin:0 auto 16px; line-height:1.55;">
-                  has successfully satisfied all educational requirements, practical immersion standards, and comprehensive competency examinations of the <strong>Cake English Course Immersion Program</strong>.
-                </p>
-
-                <div style="display:inline-flex; align-items:center; gap:8px; background:#fffbeb; border:1.5px solid #fde68a; border-radius:6px; padding:6px 18px; margin:8px auto 20px;">
-                  <span style="font-family:'Inter', sans-serif; font-size:12px; font-weight:700; color:#78350f; text-transform:uppercase;">Overall Standing:</span>
-                  <strong style="font-family:Georgia, serif; font-size:16px; font-weight:900; color:#b45309; text-transform:uppercase;">${fe.practice_predicate || 'EXCELLENT'}</strong>
-                </div>
-
-                <div style="text-align:right; font-family:'Inter', sans-serif; font-size:12px; font-weight:600; color:#475569; margin-bottom:24px; padding-right:16px;">
-                  Mataram, ${fe.certificate_month || 'XI'} ${fe.certificate_year || 2026}
-                </div>
-
-                <div style="display:flex; justify-content:space-between; align-items:flex-end; padding:0 24px;">
-                  <div style="text-align:center; width:190px;">
-                    <div style="height:44px;"></div>
-                    <strong style="font-family:'Inter', sans-serif; font-size:13px; font-weight:800; color:#0f172a; text-decoration:underline; display:block;">${fe.examiner_name || 'MR. SIGIT'}</strong>
-                    <span style="font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#64748b;">Lead Examiner</span>
-                  </div>
-
-                  <div style="text-align:center; width:100px;">
-                    <div style="width:72px; height:72px; border-radius:50%; border:2px dashed #b45309; margin:0 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#b45309; font-family:'Inter', sans-serif; font-size:9px; font-weight:900; line-height:1.2;">
-                      <span>OFFICIAL</span>
-                      <span>SEAL</span>
-                      <span>CEC</span>
-                    </div>
-                  </div>
-
-                  <div style="text-align:center; width:190px;">
-                    <div style="height:44px;"></div>
-                    <strong style="font-family:'Inter', sans-serif; font-size:13px; font-weight:800; color:#0f172a; text-decoration:underline; display:block;">DIREKTUR CEC</strong>
-                    <span style="font-family:'Inter', sans-serif; font-size:11px; font-weight:600; color:#64748b;">Course Director</span>
-                  </div>
-                </div>
-
-              </div>
-
-              <!-- PAGE 2: OFFICIAL ACADEMIC TRANSCRIPT -->
-              <div style="background:#ffffff; color:#0f172a; border-radius:8px; padding:36px 40px; box-shadow:0 8px 32px rgba(0,0,0,0.5); width:100%; max-width:800px; margin:0 auto; box-sizing:border-box; border:1.5px solid #cbd5e1; font-family:var(--fm-font-sans, 'Inter', sans-serif);">
-                
-                <div style="text-align:center; border-bottom:2px solid #0f172a; padding-bottom:12px; margin-bottom:18px;">
-                  <h2 style="font-family:var(--fm-font-display, 'Inter', sans-serif); font-size:22px; font-weight:900; color:#0f172a; margin:0 0 4px; text-transform:uppercase; letter-spacing:0.04em;">
-                    OFFICIAL ACADEMIC TRANSCRIPT
-                  </h2>
-                  <div style="font-size:12px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.05em;">
-                    CAKE ENGLISH COURSE &bull; MATARAM ACADEMIC EVALUATION BOARD
-                  </div>
-                </div>
-
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px 16px; margin-bottom:18px; font-size:13px;">
-                  <div><span style="color:#64748b; font-weight:600;">Full Name:</span> <strong style="color:#0f172a; text-transform:uppercase;">${studentName}</strong></div>
-                  <div><span style="color:#64748b; font-weight:600;">Certificate NIS:</span> <strong style="color:#0284c7; font-family:monospace;">${certNis}</strong></div>
-                  <div><span style="color:#64748b; font-weight:600;">Place, DOB:</span> <strong style="color:#0f172a;">${birthplace}, ${formatDobEnglish(birthDate)}</strong></div>
-                  <div><span style="color:#64748b; font-weight:600;">Program:</span> <strong style="color:#0f172a;">CEC Camp Intensive Program</strong></div>
-                </div>
-
-                <table style="width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; margin-bottom:20px; font-size:13px;">
-                  <thead>
-                    <tr style="background:#f1f5f9; border-top:1.5px solid #cbd5e1; border-bottom:2px solid #cbd5e1;">
-                      <th style="width:8%; text-align:center; padding:10px 8px; font-weight:800; color:#0f172a;">NO</th>
-                      <th style="width:28%; text-align:left; padding:10px 12px; font-weight:800; color:#0f172a; text-transform:uppercase;">COMPETENCY / MODALITY</th>
-                      <th style="width:36%; text-align:left; padding:10px 12px; font-weight:800; color:#0f172a; text-transform:uppercase;">EVALUATION SCOPE</th>
-                      <th style="width:14%; text-align:center; padding:10px 10px; font-weight:800; color:#0f172a; text-transform:uppercase;">SCORE</th>
-                      <th style="width:14%; text-align:center; padding:10px 10px; font-weight:800; color:#0f172a; text-transform:uppercase;">PREDICATE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style="border-bottom:1px solid #e2e8f0;">
-                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">1</td>
-                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">VOCABULARY</td>
-                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Active Lexical Acquisition & Cumulative Retention</td>
-                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.vocab_score != null ? `${Math.round(fe.vocab_score)}%` : '—'}</td>
-                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.vocab_predicate || '—'}</span></td>
-                    </tr>
-                    <tr style="border-bottom:1px solid #e2e8f0;">
-                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">2</td>
-                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">SPEAKING</td>
-                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Oral Discourse, Spontaneous Fluency & Interaction</td>
-                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.speaking_score != null ? `${Math.round(fe.speaking_score)}%` : '—'}</td>
-                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.speaking_predicate || '—'}</span></td>
-                    </tr>
-                    <tr style="border-bottom:1px solid #e2e8f0;">
-                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">3</td>
-                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">PRONUNCIATION</td>
-                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Phonetic Articulation, Rhythm, Stress & Intonation</td>
-                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.pronunciation_score != null ? `${Math.round(fe.pronunciation_score)}%` : '—'}</td>
-                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.pronunciation_predicate || '—'}</span></td>
-                    </tr>
-                    <tr style="border-bottom:1px solid #e2e8f0;">
-                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">4</td>
-                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">GRAMMAR</td>
-                      <td style="padding:12px 12px; font-size:12px; color:#475569;">Structural Mechanics, Syntax & Sentence Architecture</td>
-                      <td style="text-align:center; padding:12px 10px; font-weight:700; color:#0f172a;">${fe.grammar_score != null ? `${Math.round(fe.grammar_score)}%` : '—'}</td>
-                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:800; background:#f1f5f9; color:#0f172a; border:1px solid #cbd5e1;">${fe.grammar_predicate || '—'}</span></td>
-                    </tr>
-                    <tr style="border-bottom:2px solid #cbd5e1; background:#f8fafc;">
-                      <td style="text-align:center; padding:12px 8px; font-weight:700; color:#64748b;">5</td>
-                      <td style="padding:12px 12px; font-weight:800; color:#0f172a;">FINAL PRACTICE EXAM</td>
-                      <td style="padding:12px 12px; font-size:12px; color:#475569;">2-Panel Comprehensive Practical Interview</td>
-                      <td style="text-align:center; padding:12px 10px; font-weight:800; color:#0f172a;">${fe.practice_score != null ? `${fe.practice_score}` : '—'}</td>
-                      <td style="text-align:center; padding:12px 10px;"><span style="display:inline-block; padding:3px 10px; border-radius:4px; font-size:11px; font-weight:900; background:#b45309; color:#ffffff;">${fe.practice_predicate || '—'}</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; font-size:11px; color:#475569;">
-                  <strong style="color:#0f172a; margin-right:8px;">Grading Scale:</strong>
-                  <span>96 – 100: <strong>EXCELLENT</strong> &bull; 90 – 95: <strong>VERY GOOD</strong> &bull; 80 – 89: <strong>GOOD</strong> &bull; 60 – 79: <strong>ENOUGH</strong> (Passing Grade C) &bull; &lt; 60: <strong>LESS</strong> (Remedial Required)</span>
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-          <div style="height:56px; padding:10px 20px; display:flex; align-items:center; justify-content:space-between; border-top:1px solid #334155; background:rgba(0,0,0,0.3); flex-shrink:0;">
-            <button type="button" id="btn-close-cert-modal-bot" style="font-weight:700; font-size:13px; background:rgba(255,255,255,0.08); color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:6px 16px; border-radius:6px; cursor:pointer;">
-              CLOSE
-            </button>
-            <button type="button" id="btn-download-cert-pdf" ${hasLessPredicate ? 'disabled style="opacity:0.5; cursor:not-allowed;' : 'style="cursor:pointer;'} background:linear-gradient(135deg, #0284c7, #0369a1); border:1px solid #38bdf8; color:#ffffff; font-size:13px; font-weight:800; padding:6px 18px; border-radius:6px;">
-              ${hasLessPredicate ? '⚠️ Certificate Locked (Retake Required)' : '📥 Download Certificate (PDF)'}
-            </button>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(backdrop);
-
-      const closeFn = () => backdrop.remove();
-      backdrop.querySelector('#btn-close-cert-modal')?.addEventListener('click', closeFn);
-      backdrop.querySelector('#btn-close-cert-modal-bot')?.addEventListener('click', closeFn);
-      backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeFn(); });
-
-      const dlBtn = backdrop.querySelector('#btn-download-cert-pdf');
-      if (dlBtn && !hasLessPredicate) {
-        dlBtn.onclick = async () => {
-          if (typeof window.html2pdf !== 'function') {
-            showToast('Loading PDF engine...', 'info');
-            try {
-              await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = './js/vendor/html2pdf.bundle.min.js?v=20261119_v1';
-                script.onload = resolve;
-                script.onerror = () => {
-                  const cdnScript = document.createElement('script');
-                  cdnScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-                  cdnScript.onload = resolve;
-                  cdnScript.onerror = reject;
-                  document.head.appendChild(cdnScript);
-                };
-                document.head.appendChild(script);
-              });
-            } catch (_) {
-              showToast('Failed to load PDF engine.', 'error');
-              return;
-            }
-          }
-
-          const sheet = backdrop.querySelector('#student-cert-print-sheet');
-          if (!sheet) return;
-          const safeName = studentName.replace(/[^a-zA-Z0-9_-]/g, '_');
-          const filename = `CEC_Certificate_${safeName}_${fe.certificate_month || 'XI'}_${fe.certificate_year || 2026}.pdf`;
-          showToast('Generating Certificate PDF...', 'info');
-          dlBtn.disabled = true;
-          try {
-            const opt = {
-              margin: [8, 10, 8, 10],
-              filename: filename,
-              image: { type: 'jpeg', quality: 0.98 },
-              html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
-              jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
-            };
-            await window.html2pdf().set(opt).from(sheet).save();
-            showToast('Certificate downloaded successfully!', 'success');
-          } catch (err) {
-            showToast('Download error: ' + (err.message || err), 'error');
-          } finally {
-            dlBtn.disabled = false;
-          }
-        };
-      }
-    }
 
     // Logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {

@@ -948,8 +948,8 @@ export const TOPSCORE_COLORS = {
   // 1. Grade & Score Tiers (Nilai Ujian & Persentase)
   STAR: '#00c000ff', // 100% Star ★ uses Pure Green in system (Identical to Grade A Excellent)
   STAR_8HEX: '#00c000ff', // 8-digit hex alias with alpha
-  LEGEND_GIMMICK: '#c084fc', // Vibrant Purple exclusively for 100% celebration gimmick on Result Page
-  LEGEND_GIMMICK_RGB: '192, 132, 252',
+  LEGEND_GIMMICK: '#a855f7', // Vibrant Purple exclusively for 100% celebration gimmick on Result Page
+  LEGEND_GIMMICK_RGB: '168, 85, 247',
   A: '#00c000ff', // 90–99% Grade A (Pure Green - Excellent)
   A_8HEX: '#00c000ff', // 8-digit hex alias with alpha
   B: '#95ff00ff', // 80–89% Grade B (Electric Lime - Very Good)
@@ -958,8 +958,8 @@ export const TOPSCORE_COLORS = {
   E: '#FF0000', // 0–59% Grade E (Pure Red - Less)
   REMEDIAL: '#FFFF00', // Remedial Exam Grade R (Pure Yellow - identical to Grade C)
   FORGIVEN: '#FF0000', // Admin-Forgiven Prerequisite Override Grade F (Pure Red #FF0000 - identical to Grade E)
-  X: '#8B5CF6', // Special Grade X for Alumni (Purple)
-  PURPLE: '#8B5CF6',
+  X: '#a855f7', // Special Grade X for Alumni (Purple)
+  PURPLE: '#a855f7',
   NEUTRAL: '#94a3b8', // Neutral Slate Gray for Cold Start / START / Placeholder
   NEUTRAL_RGB: '148, 163, 184',
 
@@ -972,8 +972,8 @@ export const TOPSCORE_COLORS = {
   E_RGB: '255, 0, 0',
   REMEDIAL_RGB: '255, 255, 0',
   FORGIVEN_RGB: '255, 0, 0',
-  X_RGB: '139, 92, 246',
-  PURPLE_RGB: '139, 92, 246',
+  X_RGB: '168, 85, 247',
+  PURPLE_RGB: '168, 85, 247',
 
   // 3. Question Answer Evaluation Status (Result Page)
   CORRECT: '#00c000ff', // Full point (1.0 pt)  -> Pure Green (Strictly referencing Grade A, never Star)
@@ -1013,7 +1013,7 @@ export const STAR_THEME = {
   officialPredicate: 'Excellent',
   color: TOPSCORE_COLORS.STAR, // Pure Green in system (#00c000ff)
   dark: '#006400',
-  light: '#86efac',
+  light: '#00c000',
   rgb: TOPSCORE_COLORS.A_RGB,
   glow: 'rgba(0, 192, 0, 0.35)',
   textColor: TOPSCORE_COLORS.TEXT_DARK,
@@ -1032,7 +1032,7 @@ export const GRADE_PALETTE = {
     predicate: 'Excellent',
     color: TOPSCORE_COLORS.A,
     dark: '#006400',
-    light: '#86efac',
+    light: '#00c000',
     rgb: TOPSCORE_COLORS.A_RGB,
     glow: 'rgba(0, 192, 0, 0.35)',
     textColor: TOPSCORE_COLORS.TEXT_DARK,
@@ -1135,7 +1135,7 @@ export const GRADE_PALETTE = {
     symbol: 'X',
     label: 'Alumni',
     predicate: 'Alumni',
-    color: '#8B5CF6',
+    color: '#a855f7',
     dark: '#6d28d9',
     light: '#c4b5fd',
     rgb: '139, 92, 246',
@@ -1191,9 +1191,10 @@ export const DEFAULT_COLOR_SYSTEM = Object.freeze({
   partial: '#FFFF00', // Partial (0.5 pt) & Status Warning/Pending/Remedi
   incorrect: '#FF0000', // Incorrect (0.0 pt) & Status Danger/Hapus/Forgive
 
-  // 4. Action Buttons (Primary CTA & Permanent Danger)
-  btnPrimary: '#0284c7', // Primary Action CTA (Save, Proceed, Submit)
-  btnDanger: '#dc2626',  // Permanent Danger Action (Delete, Purge, Kick)
+  // 4. Action Buttons (Primary CTA & Permanent Danger) - Single Accent SSOT (#38bdf8)
+  btnPrimary: '#38bdf8', // Primary Action CTA (Save, Proceed, Submit)
+  btnPrimaryText: '#090d16', // High-contrast dark text on #38bdf8 (WCAG AAA 9.8:1)
+  btnDanger: '#ff0000',  // Permanent Danger Action (Delete, Purge, Kick)
 
   // 5. 7-Step Repetition Rainbow Spectrum (Pips 1-7)
   rainbow1: '#FF0000', // Pip 1: Merah
@@ -1201,11 +1202,11 @@ export const DEFAULT_COLOR_SYSTEM = Object.freeze({
   rainbow3: '#FFFF00', // Pip 3: Kuning
   rainbow4: '#00c000', // Pip 4: Hijau
   rainbow5: '#38bdf8', // Pip 5: Biru
-  rainbow6: '#6366f1', // Pip 6: Nila
-  rainbow7: '#C084FC', // Pip 7: Ungu Spektrum (Tetap Ungu)
+  rainbow6: '#38bdf8', // Pip 6: Nila
+  rainbow7: '#a855f7', // Pip 7: Ungu Spektrum (Tetap Ungu)
 
   // 5. Academic Grade Scale (Rapor Siswa)
-  gradeStar: '#c084fc', // Grade Star ★ (100%)
+  gradeStar: '#a855f7', // Grade Star ★ (100%)
   gradeA: '#00c000', // Grade A (90-99%)
   gradeB: '#95ff00', // Grade B (80-89%)
   gradeC: '#FFFF00', // Grade C (60-79%)

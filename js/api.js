@@ -238,14 +238,78 @@ export function formatMatrixStudentName(name, maxChars = 19) {
 }
 
 /**
+ * Detects whether a student, class, session, or program context belongs to Cake English Course (CEC) Camp.
+ */
+export function isCampContext(ctx) {
+  if (!ctx) return false;
+  const prog = ctx.program_name || ctx.program?.name || ctx.programName || ctx.name || '';
+  const inst = ctx.institution_name || ctx.institution?.name || ctx.institutionName || ctx.institution_code || ctx.institution?.code || '';
+  const batch = ctx.batch_name || ctx.batch?.name || ctx.batchName || '';
+  const code = ctx.code || '';
+  return /camp/i.test(prog) || /cec|cake/i.test(inst) || /camp/i.test(batch) || /^CAMP-/i.test(code);
+}
+
+/**
+ * Resolves calendar year from batch/student/session context for Non-Level programs.
+ */
+export function resolveContextYear(ctx) {
+  if (!ctx) return String(new Date().getFullYear());
+  if (ctx.enrollment_date) {
+    const yr = new Date(ctx.enrollment_date).getFullYear();
+    if (!isNaN(yr) && yr > 2000) return String(yr);
+  }
+  if (ctx.batch_enrollment_date) {
+    const yr = new Date(ctx.batch_enrollment_date).getFullYear();
+    if (!isNaN(yr) && yr > 2000) return String(yr);
+  }
+  if (ctx.batches?.enrollment_date) {
+    const yr = new Date(ctx.batches.enrollment_date).getFullYear();
+    if (!isNaN(yr) && yr > 2000) return String(yr);
+  }
+  const batchName = String(ctx.batch_name || ctx.batch?.name || ctx.batchName || ctx.name || '');
+  const matchFullYear = batchName.match(/\b(20\d{2})\b/);
+  if (matchFullYear) return matchFullYear[1];
+  const matchShortYear = batchName.match(/[-_](\d{2})$/);
+  if (matchShortYear) return `20${matchShortYear[1]}`;
+  if (ctx.created_at) {
+    const yr = new Date(ctx.created_at).getFullYear();
+    if (!isNaN(yr) && yr > 2000) return String(yr);
+  }
+  return String(new Date().getFullYear());
+}
+
+/**
+ * Dual-tenant academic tier formatter (DECISION-083 & AGENTS.md §2.4.3 SSOT):
+ * CEC / Camp: '1st Step', '2nd Step', '3rd Step', 'Alumni'
+ * TOP / Non-Level: Displays batch enrollment year (e.g. '2026') or 'Alumni'
+ */
+export function formatAcademicTier(levelVal, isCamp = false, ctx = null) {
+  const short = toShortLevel(levelVal);
+  if (short === 'X' || short === '99' || String(levelVal).toLowerCase() === 'alumni') {
+    return 'Alumni';
+  }
+  if (isCamp) {
+    if (short === '0' || levelVal == null || levelVal === '' || levelVal === '—' || levelVal === '-') return '1st Step';
+    return `${short} Step`;
+  }
+  // TOP / Non-Level: Replaces Level 0 / No Level with Enrollment Year per User Requirement
+  if (short === '0' || String(levelVal).toLowerCase() === 'non-level' || String(levelVal).toLowerCase() === 'level 0' || levelVal == null || levelVal === '' || levelVal === '—' || levelVal === '-') {
+    return resolveContextYear(ctx);
+  }
+  return `${short} Level`;
+}
+
+/**
  * Konversi nomor level menjadi teks ordinal baku:
  * 1 -> 1st Level, 2 -> 2nd Level, 3 -> 3rd Level, 4 -> 4th Level, dst.
  * 0, 'Non-Level', 'General' -> '0'
  * 99, 'Alumni', 'X' -> 'Alumni'
  * Jika short === true, memanggil toShortLevel: '1st', '2nd', '3rd', 'X', '0'
+ * Jika isCamp === true, memanggil formatAcademicTier: '1st Step', '2nd Step', dst.
  */
-export function toOrdinalLevel(num, short = false) {
+export function toOrdinalLevel(num, short = false, isCamp = false) {
   if (short) return toShortLevel(num);
+  if (isCamp) return formatAcademicTier(num, true);
   if (num == null) return '—';
   const str = String(num).trim().toLowerCase();
   if (str === '0' || str === 'non-level' || str === 'general') {
@@ -321,6 +385,9 @@ if (typeof window !== 'undefined') {
   window.toShortLevel = toShortLevel;
   window.toOrdinalLevel = toOrdinalLevel;
   window.toLevelLetter = toLevelLetter;
+  window.isCampContext = isCampContext;
+  window.formatAcademicTier = formatAcademicTier;
+  window.resolveContextYear = resolveContextYear;
 }
 
 const MOCK_BATCHES = [
@@ -380,7 +447,7 @@ function _isSundayExpired(cachedTimestamp, now = Date.now()) {
   const WITA_OFFSET_MS = 8 * 60 * 60 * 1000;
   const nowWita = new Date(now + WITA_OFFSET_MS);
   const dayOfWeek = nowWita.getUTCDay(); // 0 is Sunday
-  
+
   const sundayStartWita = new Date(nowWita);
   sundayStartWita.setUTCDate(nowWita.getUTCDate() - dayOfWeek);
   sundayStartWita.setUTCHours(0, 0, 0, 0);
@@ -599,16 +666,16 @@ export async function fetchStudentsByProgram(programId, batchId = null, activeOn
   const cacheKey = `students_prog_${programId}_${batchId}_${activeOnly}`;
   if (forceRefresh) clearApiCache(cacheKey);
   return withCache(cacheKey, async () => {
-    let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId) && (!activeOnly || s.is_active !== false));
+    let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId) && (!activeOnly || (s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE')));
     if (!isPlaceholderUrl()) {
       try {
         const sb = await getSupabase();
         let query = sb.from('students')
-          .select('id, name, nis, gender, program_id, batch_id, is_active, batches!batch_id(id, is_active)')
+          .select('id, name, nis, gender, program_id, batch_id, is_active, program_status, batches!batch_id(id, is_active)')
           .eq('program_id', programId)
           .is('deleted_at', null);
         if (activeOnly) {
-          query = query.eq('is_active', true);
+          query = query.eq('is_active', true).neq('program_status', 'INACTIVE');
         }
         if (batchId) {
           query = query.eq('batch_id', batchId);
@@ -616,9 +683,13 @@ export async function fetchStudentsByProgram(programId, batchId = null, activeOn
         const { data, error } = await query.order('name');
         if (error) throw error;
         if (data && data.length) {
-          list = (activeOnly && !batchId)
-            ? data.filter(s => !s.batches || s.batches.is_active !== false)
-            : data;
+          list = data.filter(s => {
+            if (activeOnly) {
+              if (s.is_active === false || (s.program_status || '').toUpperCase() === 'INACTIVE') return false;
+              if (!batchId && s.batches && s.batches.is_active === false) return false;
+            }
+            return true;
+          });
         }
       } catch (e) {
         console.warn('Supabase fetch students failed, falling back to mock data:', e.message);
@@ -672,12 +743,14 @@ export async function verifyStudentLogin({ institutionId, programId, batchId, st
   const sb = await getSupabase();
   const { data: student, error } = await sb
     .from('students')
-    .select('id, name, nis, gender, pin_hash, is_active, program_id, institution_id, batch_id, level_id, batches(current_level_id)')
+    .select('id, name, nis, gender, pin_hash, is_active, program_status, program_id, institution_id, batch_id, level_id, batches!batch_id(current_level_id)')
     .eq('id', studentId)
     .single();
 
   if (error || !student) throw new Error('Student not found.');
-  if (!student.is_active) throw new Error('This student account is inactive.');
+  if (!student.is_active || (student.program_status || '').toUpperCase() === 'INACTIVE') {
+    throw new Error('This student account is inactive.');
+  }
   if (student.program_id !== programId) throw new Error('Student does not belong to the selected program.');
   if (student.institution_id !== institutionId) throw new Error('Student does not belong to the selected institution.');
   if (batchId && student.batch_id && student.batch_id !== batchId) {
@@ -1056,7 +1129,23 @@ export async function fetchClassTestSettings(classId = null) {
           taskMinScore: Math.min(100, Math.max(1, parseInt(parsed.taskMinScore, 10) || 60)),
           examMinScore: Math.min(100, Math.max(1, parseInt(parsed.examMinScore, 10) || 60)),
           taskQuestionOrder: parsed.taskQuestionOrder === 'sequential' ? 'sequential' : 'random',
-          examQuestionOrder: parsed.examQuestionOrder === 'sequential' ? 'sequential' : 'random'
+          examQuestionOrder: parsed.examQuestionOrder === 'sequential' ? 'sequential' : 'random',
+          wordsTaskQuestions: parsed.wordsTaskQuestions || '10',
+          phrasesTaskQuestions: parsed.phrasesTaskQuestions || '10',
+          wordsTaskAnswer: parsed.wordsTaskAnswer || 'spoken',
+          phrasesTaskAnswer: parsed.phrasesTaskAnswer || 'spoken',
+          wordsTaskPace: parseInt(parsed.wordsTaskPace, 10) || 15,
+          phrasesTaskPace: parseInt(parsed.phrasesTaskPace, 10) || 20,
+          wordsTaskDur: parseInt(parsed.wordsTaskDur, 10) || 5,
+          phrasesTaskDur: parseInt(parsed.phrasesTaskDur, 10) || 4,
+          wordsExamQuestions: parsed.wordsExamQuestions || '30',
+          phrasesExamQuestions: parsed.phrasesExamQuestions || '10',
+          wordsExamAnswer: parsed.wordsExamAnswer || 'spoken',
+          phrasesExamAnswer: parsed.phrasesExamAnswer || 'selection',
+          wordsExamPace: parseInt(parsed.wordsExamPace, 10) || 15,
+          phrasesExamPace: parseInt(parsed.phrasesExamPace, 10) || 20,
+          wordsExamDur: parseInt(parsed.wordsExamDur, 10) || 30,
+          phrasesExamDur: parseInt(parsed.phrasesExamDur, 10) || 10
         };
         setLocal(`topscore_test_settings_${classId}`, JSON.stringify(res));
         return res;
@@ -1129,12 +1218,44 @@ export async function fetchClassTestSettings(classId = null) {
 
 export async function saveClassTestSettings(classId, settings = {}, applyToExisting = false) {
   const sb = await getSupabase();
+  let existingSettings = null;
+  try {
+    const rawExisting = (typeof window !== 'undefined' && window.localStorage)
+      ? window.localStorage.getItem(classId ? `topscore_test_settings_${classId}` : 'topscore_test_settings_global')
+      : null;
+    if (rawExisting) existingSettings = JSON.parse(rawExisting);
+  } catch (_) {}
+
+  const resolvedReps = settings.taskRepetitions != null
+    ? Math.max(1, parseInt(settings.taskRepetitions, 10) || 7)
+    : (existingSettings?.taskRepetitions ? Math.max(1, parseInt(existingSettings.taskRepetitions, 10) || 7) : 7);
+
   const cleanSettings = {
-    taskRepetitions: Math.max(1, parseInt(settings.taskRepetitions, 10) || 7),
-    taskMinScore: Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 50)),
-    examMinScore: Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60)),
-    taskQuestionOrder: settings.taskQuestionOrder === 'sequential' ? 'sequential' : 'random',
-    examQuestionOrder: settings.examQuestionOrder === 'sequential' ? 'sequential' : 'random'
+    taskRepetitions: resolvedReps,
+    taskMinScore: settings.taskMinScore != null
+      ? Math.min(100, Math.max(1, parseInt(settings.taskMinScore, 10) || 50))
+      : (existingSettings?.taskMinScore ? Number(existingSettings.taskMinScore) : 50),
+    examMinScore: settings.examMinScore != null
+      ? Math.min(100, Math.max(1, parseInt(settings.examMinScore, 10) || 60))
+      : (existingSettings?.examMinScore ? Number(existingSettings.examMinScore) : 60),
+    taskQuestionOrder: (settings.taskQuestionOrder || existingSettings?.taskQuestionOrder) === 'sequential' ? 'sequential' : 'random',
+    examQuestionOrder: (settings.examQuestionOrder || existingSettings?.examQuestionOrder) === 'sequential' ? 'sequential' : 'random',
+    wordsTaskQuestions: settings.wordsTaskQuestions || existingSettings?.wordsTaskQuestions || '10',
+    phrasesTaskQuestions: settings.phrasesTaskQuestions || existingSettings?.phrasesTaskQuestions || '10',
+    wordsTaskAnswer: settings.wordsTaskAnswer || existingSettings?.wordsTaskAnswer || 'spoken',
+    phrasesTaskAnswer: settings.phrasesTaskAnswer || existingSettings?.phrasesTaskAnswer || 'spoken',
+    wordsTaskPace: parseInt(settings.wordsTaskPace, 10) || existingSettings?.wordsTaskPace || 15,
+    phrasesTaskPace: parseInt(settings.phrasesTaskPace, 10) || existingSettings?.phrasesTaskPace || 20,
+    wordsTaskDur: parseInt(settings.wordsTaskDur, 10) || existingSettings?.wordsTaskDur || 5,
+    phrasesTaskDur: parseInt(settings.phrasesTaskDur, 10) || existingSettings?.phrasesTaskDur || 4,
+    wordsExamQuestions: settings.wordsExamQuestions || existingSettings?.wordsExamQuestions || '30',
+    phrasesExamQuestions: settings.phrasesExamQuestions || existingSettings?.phrasesExamQuestions || '10',
+    wordsExamAnswer: settings.wordsExamAnswer || existingSettings?.wordsExamAnswer || 'spoken',
+    phrasesExamAnswer: settings.phrasesExamAnswer || existingSettings?.phrasesExamAnswer || 'selection',
+    wordsExamPace: parseInt(settings.wordsExamPace, 10) || existingSettings?.wordsExamPace || 15,
+    phrasesExamPace: parseInt(settings.phrasesExamPace, 10) || existingSettings?.phrasesExamPace || 20,
+    wordsExamDur: parseInt(settings.wordsExamDur, 10) || existingSettings?.wordsExamDur || 30,
+    phrasesExamDur: parseInt(settings.phrasesExamDur, 10) || existingSettings?.phrasesExamDur || 10
   };
   const payloadStr = JSON.stringify(cleanSettings);
 
@@ -1183,19 +1304,32 @@ export async function saveClassTestSettings(classId, settings = {}, applyToExist
       if (classTests && classTests.length > 0) {
         for (const t of classTests) {
           const isExamTest = isWeeklyExam(t);
+          const isPhrase = String(t.category || t.payload?.category || t.shell_code || '').toLowerCase().includes('phrase');
           const newScore = isExamTest ? cleanSettings.examMinScore : cleanSettings.taskMinScore;
           const newOrder = isExamTest ? cleanSettings.examQuestionOrder : cleanSettings.taskQuestionOrder;
+          const newAns = isExamTest
+            ? (isPhrase ? cleanSettings.phrasesExamAnswer : cleanSettings.wordsExamAnswer)
+            : (isPhrase ? cleanSettings.phrasesTaskAnswer : cleanSettings.wordsTaskAnswer);
+          const newDur = isExamTest
+            ? (isPhrase ? cleanSettings.phrasesExamDur : cleanSettings.wordsExamDur)
+            : (isPhrase ? cleanSettings.phrasesTaskDur : cleanSettings.wordsTaskDur);
+
           const updatedPayload = {
             ...(t.payload || {}),
             minimum_required_score: newScore,
             min_score: newScore,
             task_repetitions: cleanSettings.taskRepetitions,
-            question_order: newOrder
+            question_order: newOrder,
+            answer_type: newAns,
+            working_duration_minutes: newDur,
+            duration_minutes: newDur
           };
 
           const updateFields = {
             payload: updatedPayload,
-            question_order: newOrder
+            question_order: newOrder,
+            answer_type: newAns,
+            working_duration_minutes: newDur
           };
           if (applyToExisting) {
             updateFields.minimum_required_score = newScore;
@@ -1206,9 +1340,9 @@ export async function saveClassTestSettings(classId, settings = {}, applyToExist
         }
       }
       clearApiCache('tests');
-  clearApiCache('vault');
-  clearAdminCache('tests');
-  clearAdminCache('vocabulary_vault');
+      clearApiCache('vault');
+      clearAdminCache('tests');
+      clearAdminCache('vocabulary_vault');
     } catch (err) {
       console.error('[saveClassTestSettings] Failed to apply to tests:', err);
     }
@@ -1333,11 +1467,11 @@ export const DEFAULT_DISCIPLINE_GOVERNANCE = {
         levelNumber: 0,
         name: 'Non-Level',
         sku: 'EVNK-VOCAB, SHRT-VOCAB, TPTC-VOCAB',
-        scope: 'Words & Phrases',
-        scopeShort: 'Words & Phrases',
-        taskRepetitions: 14,
+        scope: '100% Words Only',
+        scopeShort: '100% Words Only',
+        taskRepetitions: 7,
         wordsReps: 7,
-        phrasesReps: 7,
+        phrasesReps: 0,
         numThemes: 4,
         numTopics: 16,
         engine: 'Vocabulary Mastery Modules',
@@ -1346,7 +1480,7 @@ export const DEFAULT_DISCIPLINE_GOVERNANCE = {
         examMinScore: 60,
         taskDuration: 11,
         examDuration: 54,
-        description: 'Single-Tier Institutional Curriculum · Dual Repetition 7×7'
+        description: 'Single-Tier Institutional Curriculum · 100% Words Only (Zero Phrases SSOT) · Configurable 1–7 Repetitions'
       }
     },
     dataSource: 'vocabulary_vault',
@@ -2043,9 +2177,12 @@ export async function startTest(studentId, testId) {
   let activeSession = null;
 
   const { data: currentStudentInfo } = await sb.from('students')
-    .select('program_status, levels(level_number)')
+    .select('is_active, program_status, levels(level_number)')
     .eq('id', studentId)
     .single();
+  if (currentStudentInfo && (currentStudentInfo.is_active === false || (currentStudentInfo.program_status || '').toUpperCase() === 'INACTIVE')) {
+    throw new Error('This student account is inactive and cannot take tests.');
+  }
   const isAlumniStudent = (currentStudentInfo?.program_status || '').toUpperCase() === 'ALUMNI' || currentStudentInfo?.levels?.level_number === 99;
 
   // Formal Exam determination & schedule mode (Must be evaluated at root of startTest so both new & resumed attempts can access)
@@ -3412,38 +3549,176 @@ export async function adminRestore(table, id) {
 }
 
 // --- Duplicate student detection & merge ---
-export async function detectDuplicateStudents(scope = 'same_class') {
+export async function detectDuplicateStudents(scope = 'all') {
   const sb = await getSupabase();
-  let query = sb.from('students').select('id, name, program_id, batch_id, deleted_at').is('deleted_at', null);
-  const { data, error } = await query;
+  const { data, error } = await sb.from('students')
+    .select('id, name, program_id, batch_id, level_id, is_active, program_status, created_at, deleted_at, batches!batch_id(id, name), programs(id, name, institution_id, institutions(id, name, code)), levels(id, name, level_number)')
+    .is('deleted_at', null);
   if (error) throw error;
   const students = data || [];
   const groups = {};
   for (const s of students) {
-    let key;
-    if (scope === 'same_class') {
-      key = (s.name || '').trim().toLowerCase() + '|' + (s.batch_id || '');
-    } else {
-      key = (s.name || '').trim().toLowerCase();
-    }
+    const key = (s.name || '').trim().toLowerCase();
+    if (!key) continue;
     if (!groups[key]) groups[key] = [];
     groups[key].push(s);
   }
-  return Object.values(groups).filter(g => g.length > 1).map(g => ({
-    name: g[0].name,
-    candidates: g
-  }));
+
+  let dupGroups = Object.values(groups).filter(g => g.length > 1);
+  if (dupGroups.length === 0) return [];
+
+  // Batch query attempt counts for all candidate IDs
+  const candidateIds = dupGroups.flatMap(g => g.map(c => c.id));
+  const attMap = {};
+  if (candidateIds.length > 0) {
+    try {
+      const { data: attempts } = await sb.from('attempts').select('student_id').in('student_id', candidateIds);
+      (attempts || []).forEach(a => {
+        attMap[a.student_id] = (attMap[a.student_id] || 0) + 1;
+      });
+    } catch (attErr) {
+      console.warn('Attempt count query warning:', attErr);
+    }
+  }
+
+  const mapped = dupGroups.map(candidates => {
+    // Enrich candidate fields for crystal-clear presentation
+    candidates.forEach(c => {
+      c.batchName = c.batches?.name ? `Batch ${c.batches.name.replace(/^batch\s*/i, '')}` : 'Unassigned';
+      c.programName = c.programs?.name || '—';
+      c.institutionName = c.programs?.institutions?.code || c.programs?.institutions?.name || '—';
+      c.levelName = c.levels?.name || '—';
+      c.attemptsCount = attMap[c.id] || 0;
+    });
+
+    // Determine similarity type: exact same batch or cross-batch/class
+    const firstBatchId = candidates[0].batch_id;
+    const isSameClass = candidates.every(c => c.batch_id === firstBatchId);
+    const similarityType = isSameClass ? 'SAME_CLASS' : 'CROSS_CLASS';
+    const similarityLabel = isSameClass ? 'Same Class' : 'Cross-Class';
+
+    // Smart candidate sorting for recommended primary:
+    // When candidates span different batches (cross-batch repeat / re-enrollment):
+    // The student is currently studying in the NEWER/LATEST batch!
+    // Therefore, the newer batch must be candidate[0] (PRIMARY TARGET).
+    // The older batch becomes the origin batch whose historical attempts will be merged.
+    candidates.sort((a, b) => {
+      // 1. Batch sequence: Prefer newer/higher batch number (e.g. Batch 133 > Batch 130)
+      const aBatchNum = parseInt((a.batches?.name || a.batchName || '').replace(/\D/g, ''), 10);
+      const bBatchNum = parseInt((b.batches?.name || b.batchName || '').replace(/\D/g, ''), 10);
+      if (!isNaN(aBatchNum) && !isNaN(bBatchNum) && aBatchNum !== bBatchNum) {
+        return bBatchNum - aBatchNum; // Newer batch first!
+      }
+
+      // 2. Active batch assignment (assigned batches come before unassigned)
+      const aHasBatch = (a.batch_id && a.batchName !== 'Unassigned') ? 1 : 0;
+      const bHasBatch = (b.batch_id && b.batchName !== 'Unassigned') ? 1 : 0;
+      if (bHasBatch !== aHasBatch) return bHasBatch - aHasBatch;
+
+      // 3. Higher level progression (e.g. Level 3 > Level 1)
+      const aLvl = a.levels?.level_number || 0;
+      const bLvl = b.levels?.level_number || 0;
+      if (bLvl !== aLvl) return bLvl - aLvl;
+
+      // 4. Same batch duplicates: prefer record with highest attempts
+      if ((b.attemptsCount || 0) !== (a.attemptsCount || 0)) {
+        return (b.attemptsCount || 0) - (a.attemptsCount || 0);
+      }
+
+      // 5. Most recent registration (newest enrollment first)
+      return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+    });
+
+    return {
+      name: candidates[0].name,
+      recommendedPrimaryId: candidates[0].id,
+      similarityType,
+      similarityLabel,
+      isSameClass,
+      candidates
+    };
+  });
+
+  if (scope === 'same_class') {
+    return mapped.filter(g => g.isSameClass);
+  }
+  if (scope === 'cross_class') {
+    return mapped.filter(g => !g.isSameClass);
+  }
+  return mapped;
 }
 
 export async function mergeStudentPair(keepId, removeId) {
   const sb = await getSupabase();
+
+  // Inspect profile fields to preserve any missing demographics on keepId
+  const { data: pairData } = await sb.from('students')
+    .select('id, batch_id, level_id, program_id, institution_id, birth_date, birthplace, gender, education, phone, pin_hash, pin, is_repeat, original_batch_id, program_status, created_at, batches!batch_id(name)')
+    .in('id', [keepId, removeId]);
+
+  const keepStudent = pairData?.find(s => s.id === keepId);
+  const removeStudent = pairData?.find(s => s.id === removeId);
+  const updates = {};
+  if (keepStudent && removeStudent) {
+    if (!keepStudent.batch_id && removeStudent.batch_id) updates.batch_id = removeStudent.batch_id;
+    if (!keepStudent.level_id && removeStudent.level_id) updates.level_id = removeStudent.level_id;
+    if (!keepStudent.program_id && removeStudent.program_id) updates.program_id = removeStudent.program_id;
+    if (!keepStudent.institution_id && removeStudent.institution_id) updates.institution_id = removeStudent.institution_id;
+    if (!keepStudent.birth_date && removeStudent.birth_date) updates.birth_date = removeStudent.birth_date;
+    if (!keepStudent.birthplace && removeStudent.birthplace) updates.birthplace = removeStudent.birthplace;
+    if (!keepStudent.gender && removeStudent.gender) updates.gender = removeStudent.gender;
+    if (!keepStudent.education && removeStudent.education) updates.education = removeStudent.education;
+    if (!keepStudent.phone && removeStudent.phone) updates.phone = removeStudent.phone;
+    if (!keepStudent.pin_hash && removeStudent.pin_hash) updates.pin_hash = removeStudent.pin_hash;
+    if (!keepStudent.pin && removeStudent.pin) updates.pin = removeStudent.pin;
+    if (keepStudent.is_repeat == null && removeStudent.is_repeat != null) updates.is_repeat = removeStudent.is_repeat;
+    if (!keepStudent.original_batch_id && removeStudent.original_batch_id) updates.original_batch_id = removeStudent.original_batch_id;
+
+    // Cross-Batch Re-enrollment Recognition:
+    // If keepStudent and removeStudent are from different batches, track origin batch & mark as repeat!
+    if (keepStudent.batch_id && removeStudent.batch_id && keepStudent.batch_id !== removeStudent.batch_id) {
+      const keepBatchName = keepStudent.batches?.name || '';
+      const removeBatchName = removeStudent.batches?.name || '';
+      const keepNum = parseInt(keepBatchName.replace(/\D/g, ''), 10);
+      const removeNum = parseInt(removeBatchName.replace(/\D/g, ''), 10);
+
+      // Determine which is the newer batch (current active enrollment):
+      const isKeepNewer = (!isNaN(keepNum) && !isNaN(removeNum))
+        ? keepNum > removeNum
+        : new Date(keepStudent.created_at || 0) >= new Date(removeStudent.created_at || 0);
+
+      if (isKeepNewer) {
+        // keepStudent is in the newer batch; the earlier batch becomes original_batch_id
+        updates.original_batch_id = removeStudent.batch_id;
+        updates.is_repeat = true;
+        // If keepStudent was previously flagged ALUMNI, reset to active studying in class
+        if ((keepStudent.program_status || '').toUpperCase() === 'ALUMNI') {
+          updates.program_status = 'IN_PROGRESS';
+        }
+      }
+    }
+  }
+
   // Reassign all attempts and progress records from removeId to keepId
-  await Promise.all([
+  const ops = [
     sb.from('attempts').update({ student_id: keepId }).eq('student_id', removeId),
     sb.from('progress').update({ student_id: keepId }).eq('student_id', removeId),
-  ]);
-  // Soft-delete the duplicate
-  await sb.from('students').update({ deleted_at: new Date().toISOString() }).eq('id', removeId);
+    sb.from('students').update({ deleted_at: new Date().toISOString(), is_active: false, program_status: 'INACTIVE' }).eq('id', removeId)
+  ];
+  if (Object.keys(updates).length > 0) {
+    ops.push(sb.from('students').update(updates).eq('id', keepId));
+  }
+  ops.push(sb.from('audit_logs').insert({
+    actor_role: 'admin',
+    action: 'MERGE_STUDENTS',
+    entity_type: 'students',
+    entity_id: keepId,
+    old_value: { merged_from: removeId },
+    new_value: { kept_id: keepId, removed_id: removeId, inherited_fields: updates },
+    created_at: new Date().toISOString()
+  }));
+
+  await Promise.all(ops);
   clearAdminCache('students');
   return { merged: true, kept: keepId, removed: removeId };
 }
@@ -4820,7 +5095,9 @@ export async function fetchFullStudentProfile(studentId) {
       level_id,
       levels:level_id(id, level_number, name),
       batch_id,
-      batches:batch_id(current_level_id, levels:current_level_id(id, level_number, name))
+      batches:batch_id(id, name, enrollment_date, current_level_id, levels:current_level_id(id, level_number, name)),
+      program_id,
+      programs:program_id(id, name, institution_id, institutions(id, name, code))
     `)
     .eq('id', studentId)
     .maybeSingle();
@@ -5403,6 +5680,7 @@ export async function adminApplyForgiven({
   const inserts = [];
   const updates = [];
   const affectedSet = new Set();
+  const claimedAttIds = new Set();
 
   const testIds = testActions.map(ta => ta.testId);
   const { data: existing, error: existErr } = await sb
@@ -5524,11 +5802,10 @@ export async function adminApplyForgiven({
         affectedSet.add(`${sId}_${testId}`);
 
       } else if (action === 'manual_reps' || (action === 'manual' && ta.reason && ta.reason.includes('MANUAL_REPS'))) {
-        const isUnifiedTask = Boolean(
-          meta?.payload?.is_unified === true ||
-          meta?.category === 'unified' ||
-          (meta?.test_subtype && meta.test_subtype.startsWith('UNIFIED')) ||
-          (meta?.shell_code && meta.shell_code.includes('-TASK'))
+        const isUnifiedTask = !isExamTest && Boolean(
+          (meta?.shell_code && meta.shell_code.includes('-TASK')) ||
+          meta?.payload?.tier === 'TASK' ||
+          meta?.category === 'TASK'
         );
         const parsedM = ta.reason ? String(ta.reason).match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?/i) : null;
         const requestedReps = ta.reps != null ? Number(ta.reps) : (parsedM ? parseInt(parsedM[1], 10) : 0);
@@ -5632,30 +5909,69 @@ export async function adminApplyForgiven({
         affectedSet.add(`${sId}_${testId}`);
 
       } else if (action === 'manual') {
-        const isUnifiedTask = Boolean(
-          meta?.payload?.is_unified === true ||
-          meta?.category === 'unified' ||
-          (meta?.test_subtype && meta.test_subtype.startsWith('UNIFIED')) ||
-          (meta?.shell_code && meta.shell_code.includes('-TASK'))
+        const isUnifiedTask = !isExamTest && Boolean(
+          (meta?.shell_code && meta.shell_code.includes('-TASK')) ||
+          meta?.payload?.tier === 'TASK' ||
+          meta?.category === 'TASK'
         );
+        const section = ta.section ? String(ta.section).toLowerCase() : null;
+        const defaultExamTotalQ = section === 'words' ? 160 : (section === 'phrases' ? 40 : 200);
+        let rawTotalQ = Number(ta.totalQ || (isExamTest ? defaultExamTotalQ : (meta?.payload?.total_questions || 40)));
+        // Strict Exam Invariant Guard (Rule 2.5 SSOT):
+        // Milestone exams can NEVER have total_questions = 10 (which is strictly for formative topic task repetitions).
+        if (isExamTest) {
+          if (section === 'phrases' || (rawTotalQ > 0 && rawTotalQ <= 40)) {
+            rawTotalQ = 40;
+          } else if (section === 'words' || (rawTotalQ > 40 && rawTotalQ <= 160)) {
+            rawTotalQ = 160;
+          } else if (!section && rawTotalQ < 120) {
+            rawTotalQ = (meta?.payload?.total_questions && meta.payload.total_questions >= 120)
+              ? Number(meta.payload.total_questions)
+              : 200;
+          }
+        }
+        const totalQ = rawTotalQ;
         const pct = Math.max(0, Math.min(100, Number(inputPct) || 0));
-        const sc = inputScore != null
+        let sc = inputScore != null
           ? Number(inputScore)
           : Math.round(totalQ * (pct / 100) * 10) / 10;
+        // Anti-Loophole Guard: If an attempt was sent with a small score (e.g. 7 when denominator was 10) but percentage is >= 60, re-evaluate with the guarded denominator
+        if (isExamTest && pct >= 60 && sc <= 10 && totalQ >= 40) {
+          sc = Math.round(totalQ * (pct / 100));
+        }
         const grade = _gradeForScore(pct);
         const itemReason = (ta.reason || reason || '').trim();
-        const baseManualReason = `MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${itemReason ? ': ' + itemReason : ''}`;
+        const sectionTag = section ? `[SECTION: ${section.toUpperCase()}] ` : '';
+        const baseManualReason = `${sectionTag}MANUAL_OVERRIDE: ${pct}% (${sc}/${totalQ} PTS) by ${adminLabel}${itemReason ? ': ' + itemReason : ''}`.trim();
         const manualReason = isUnifiedTask ? `${baseManualReason} [WORDS]` : baseManualReason;
 
         const submittedAtts = existingAtts.filter(a =>
           ['submitted', 'auto_submitted', 'evaluated', 'graded'].includes(String(a.status || '').toLowerCase())
         );
 
-        if (submittedAtts.length > 0) {
-          submittedAtts.sort((x, y) => Number(y.percentage || y.score || 0) - Number(x.percentage || x.score || 0));
-          const topAtt = submittedAtts[0];
+        let targetAtt = null;
+        if (section === 'words') {
+          targetAtt = submittedAtts.find(a => {
+            if (claimedAttIds.has(a.id)) return false;
+            const fr = String(a.forgiven_reason || '');
+            const tQ = Number(a.total_questions || 0);
+            return fr.includes('[SECTION: WORDS]') || (tQ > 40 && tQ <= 160);
+          });
+        } else if (section === 'phrases') {
+          targetAtt = submittedAtts.find(a => {
+            if (claimedAttIds.has(a.id)) return false;
+            const fr = String(a.forgiven_reason || '');
+            const tQ = Number(a.total_questions || 0);
+            return fr.includes('[SECTION: PHRASES]') || (tQ > 0 && tQ <= 40);
+          });
+        } else {
+          targetAtt = submittedAtts.find(a => !claimedAttIds.has(a.id));
+        }
+
+        if (targetAtt) {
+          claimedAttIds.add(targetAtt.id);
           updates.push({
-            id: topAtt.id,
+            id: targetAtt.id,
             score: sc,
             correct_count: Math.round(sc),
             total_questions: totalQ,
@@ -5670,11 +5986,20 @@ export async function adminApplyForgiven({
             forgiven_reason: manualReason,
             updated_at: nowIso
           });
+          targetAtt.score = sc;
+          targetAtt.correct_count = Math.round(sc);
+          targetAtt.total_questions = totalQ;
+          targetAtt.percentage = pct;
+          targetAtt.effective_score = pct;
+          targetAtt.grade = grade;
+          targetAtt.forgiven_reason = manualReason;
+          targetAtt.updated_at = nowIso;
         } else {
-          inserts.push({
+          const newAtt = {
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
             student_id: sId,
             test_id: testId,
-            attempt_number: 1,
+            attempt_number: (existingAtts.length || 0) + 1,
             started_at: nowIso,
             expires_at: nowIso,
             submitted_at: nowIso,
@@ -5692,20 +6017,27 @@ export async function adminApplyForgiven({
             forgiven_reason: manualReason,
             created_at: nowIso,
             updated_at: nowIso
-          });
+          };
+          if (!newAtt.id) delete newAtt.id;
+          else claimedAttIds.add(newAtt.id);
+          inserts.push(newAtt);
+          existingAtts.push(newAtt);
         }
 
-        // Rule 2.6 SSOT: For Unified Tasks, also guarantee Phrases companion attempt is synchronized
-        if (isUnifiedTask && pct >= 60) {
+        // Rule 2.6 SSOT: For Unified Tasks only (NOT Exams), guarantee Phrases companion attempt is synchronized
+        if (isUnifiedTask && !section && pct >= 60) {
           const phrAtts = submittedAtts.filter(a =>
-            (a.forgiven_reason && /PHRASES?/i.test(a.forgiven_reason)) ||
-            (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 20)
+            !claimedAttIds.has(a.id) && (
+              (a.forgiven_reason && /PHRASES?/i.test(a.forgiven_reason)) ||
+              (Number(a.total_questions || 0) > 0 && Number(a.total_questions || 0) <= 20)
+            )
           );
           const phrTotalQ = 10;
           const phrSc = Math.round(phrTotalQ * (pct / 100));
           const phrReason = `${baseManualReason} [PHRASES]`;
 
           if (phrAtts.length > 0) {
+            claimedAttIds.add(phrAtts[0].id);
             updates.push({
               id: phrAtts[0].id,
               score: phrSc,
@@ -5722,11 +6054,14 @@ export async function adminApplyForgiven({
               forgiven_reason: phrReason,
               updated_at: nowIso
             });
+            phrAtts[0].score = phrSc;
+            phrAtts[0].total_questions = phrTotalQ;
+            phrAtts[0].percentage = pct;
           } else {
-            inserts.push({
+            const newPhrAtt = {
               student_id: sId,
               test_id: testId,
-              attempt_number: (submittedAtts.length || 0) + 2,
+              attempt_number: (existingAtts.length || 0) + 1,
               started_at: nowIso,
               expires_at: nowIso,
               submitted_at: nowIso,
@@ -5744,7 +6079,9 @@ export async function adminApplyForgiven({
               forgiven_reason: phrReason,
               created_at: nowIso,
               updated_at: nowIso
-            });
+            };
+            inserts.push(newPhrAtt);
+            existingAtts.push(newPhrAtt);
           }
         }
         affectedSet.add(`${sId}_${testId}`);
@@ -6264,7 +6601,8 @@ export async function updateClassTestsConfig(params = {}) {
     phrasesTestAnswerType = 'selection',
     testPassingScore = 60,
     taskQuestionOrder = 'random',
-    examQuestionOrder = 'random'
+    examQuestionOrder = 'random',
+    taskRepetitions
   } = params;
 
   if (!classId) throw new Error('classId is required.');
@@ -6352,15 +6690,39 @@ export async function updateClassTestsConfig(params = {}) {
           answer_type: taskAns,
           question_order: taskQuestionOrder
         };
+        if (taskRepetitions != null) {
+          updateData.payload.task_repetitions = Math.max(1, Number(taskRepetitions));
+        }
       }
       updatedTasks++;
     }
 
     const { error: updErr } = await sb.from('tests').update(updateData).eq('id', row.id);
     if (updErr) throw updErr;
-
-
   }
+
+  try {
+    const configSettings = {
+      taskMinScore: taskPassingScore,
+      examMinScore: testPassingScore,
+      wordsTaskDur: wordsTaskDurationMinutes || taskDurationMinutes,
+      phrasesTaskDur: phrasesTaskDurationMinutes,
+      wordsTaskPace: params.wordsTaskPaceSeconds,
+      phrasesTaskPace: params.phrasesTaskPaceSeconds,
+      wordsExamPace: params.wordsExamPaceSeconds,
+      phrasesExamPace: params.phrasesExamPaceSeconds,
+      wordsTaskAnswer: wordsTaskAnswerType || taskAnswerType,
+      phrasesTaskAnswer: phrasesTaskAnswerType || taskAnswerType,
+      wordsExamAnswer: wordsTestAnswerType,
+      phrasesExamAnswer: phrasesTestAnswerType,
+      taskQuestionOrder,
+      examQuestionOrder
+    };
+    if (taskRepetitions != null) {
+      configSettings.taskRepetitions = Math.max(1, Number(taskRepetitions));
+    }
+    await saveClassTestSettings(classId, configSettings, false);
+  } catch (_) {}
 
   clearApiCache('tests');
   clearApiCache('vault');

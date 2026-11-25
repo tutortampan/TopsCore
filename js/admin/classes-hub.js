@@ -11,6 +11,7 @@ import {
 import { showToast, escapeHtml } from '../app.js?v=20261106_v160';
 import { detectClassDiscipline, INSTITUTION_GRADING_SCALES, TOPSCORE_COLORS, calculateGrade, getGradeColorByScore } from '../grading.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
+import { renderVocabularySystemPage } from './auto-gen-modal.js?v=20261124_v683';
 
 export async function renderClassesHub(area) {
   if (!area.querySelector('.classes-hub-container') && !area.querySelector('.curriculum-hub-container')) {
@@ -39,7 +40,7 @@ export async function renderClassesHub(area) {
     const activeTests   = (tests       || []).filter(t => !t.deleted_at);
 
     const batchMap   = new Map((batches || []).filter(b => !b.deleted_at).map(b => [b.id, b]));
-    const activeStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false && s.program_status !== 'ALUMNI');
+    const activeStudents = (students || []).filter(s => !s.deleted_at && s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI');
 
     // Live Vocabulary Vault target_level counts
     const vaultCountsByLevel = { 0: 0, 1: 0, 2: 0, 3: 0, total: 0 };
@@ -120,7 +121,7 @@ export async function renderClassesHub(area) {
         name: 'Vocabulary',
         badge: 'Tiered Discipline (L1–L3 + Non-Level)',
         icon: 'book',
-        color: '#c084fc',
+        color: '#a855f7',
         description: 'One continuous tiered discipline sharing identical systemic rules across all levels (1st, 2nd, 3rd, Non-Level): 7×7 repetitive mastery, 4 themes (A–D), and exclusive Vocabulary Vault data binding.',
         levels: ['1st Level', '2nd Level', '3rd Level', 'Non-Level'],
         skus: ['CAMP-1VOCAB', 'CAMP-2VOCAB', 'CAMP-3VOCAB', 'EVNK-VOCAB', 'SHRT-VOCAB', 'TPTC-VOCAB'],
@@ -428,8 +429,13 @@ export async function renderClassesHub(area) {
     // Main Renderer (Strict Zero Scrolling & 100vh Single-Screen Lock)
     const renderView = async () => {
       const activeTenant = window._classesHubActiveTenant || 'CEC';
-      const viewMode = window._classesHubViewMode || 'CARDS'; // 'CARDS' | 'TABLE'
+      const viewMode = window._classesHubViewMode || 'VOCAB_SYSTEM'; // 'VOCAB_SYSTEM' | 'CARDS' | 'TABLE'
       const activeStepFilter = window._classesHubActiveStepFilter || 'ALL'; // 'ALL' | 1 | 2 | 3
+
+      if (viewMode === 'VOCAB_SYSTEM') {
+        await renderVocabularySystemPage(area);
+        return;
+      }
 
       const isCecClass = (c) => {
         const prog = progMap.get(c.program_id);
@@ -468,8 +474,16 @@ export async function renderClassesHub(area) {
         window.setTopbarTabs(tenantTopTabs, activeTenant, 'window.switchClassesHubTenant');
       }
 
-      window.toggleClassesHubView = () => {
-        window._classesHubViewMode = window._classesHubViewMode === 'TABLE' ? 'CARDS' : 'TABLE';
+      window.toggleClassesHubView = (targetMode) => {
+        if (targetMode) {
+          window._classesHubViewMode = targetMode;
+        } else if (window._classesHubViewMode === 'VOCAB_SYSTEM') {
+          window._classesHubViewMode = 'CARDS';
+        } else if (window._classesHubViewMode === 'CARDS') {
+          window._classesHubViewMode = 'TABLE';
+        } else {
+          window._classesHubViewMode = 'VOCAB_SYSTEM';
+        }
         renderView();
       };
 
@@ -646,7 +660,7 @@ export async function renderClassesHub(area) {
               <strong style="color:#f8fafc;">Passing Standard:</strong> Step Composite Average <strong style="color:#ffff00;">&ge; 60% (Grade C)</strong> with zero unresolved fails.
             </div>
             <div style="background:#090D16; border-left:2px solid #38bdf8; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
-              <strong style="color:#f8fafc;">Formula:</strong> <code>Avg(Milestone Exams)</code>. Remedial ceiling: <strong style="color:#ffff00;">60%</strong> clean score. 3rd Step &rarr; <strong style="color:#8b5cf6;">Alumni (Level X)</strong>.
+              <strong style="color:#f8fafc;">Formula:</strong> <code>Avg(Milestone Exams)</code>. Remedial ceiling: <strong style="color:#ffff00;">60%</strong> clean score. 3rd Step &rarr; <strong style="color:#a855f7;">Alumni (Level X)</strong>.
             </div>
           </div>
         </div>
@@ -658,7 +672,7 @@ export async function renderClassesHub(area) {
           </div>
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
             <div style="background:#090D16; border-left:2px solid #38bdf8; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
-              <strong style="color:#f8fafc;">Graduation Standard:</strong> Final Composite <strong style="color:#ffff00;">&ge; 60% (Grade C)</strong>. Passing graduates officially become <strong style="color:#8b5cf6;">Alumni (Level X)</strong>.
+              <strong style="color:#f8fafc;">Graduation Standard:</strong> Final Composite <strong style="color:#ffff00;">&ge; 60% (Grade C)</strong>. Passing graduates officially become <strong style="color:#a855f7;">Alumni (Level X)</strong>.
             </div>
             <div style="background:#090D16; border-left:2px solid #95ff00; border-radius:0 4px 4px 0; padding:4px 6px; font-size:10px; line-height:1.3; color:#cbd5e1;">
               <strong style="color:#f8fafc;">Formula:</strong> <code>Avg(Milestone Exams)</code>. Remedial ceiling: <strong style="color:#ffff00;">60%</strong> clean score. Single-tier completion.
@@ -693,7 +707,7 @@ export async function renderClassesHub(area) {
         const disc = detectClassDiscipline(cls);
 
         let modalityLabel = 'Vocabulary Mastery';
-        let modalityColor = '#c084fc';
+        let modalityColor = '#a855f7';
         if (disc === 'BASIC_ENGLISH') {
           modalityLabel = 'Basic English Structure (M1)';
           modalityColor = '#38bdf8';
@@ -706,7 +720,7 @@ export async function renderClassesHub(area) {
         } else if (disc === 'VOCABULARY') {
           const isL2 = lvlNum === 2 || (cls.name || '').toUpperCase().includes('2ND') || effectiveCode.includes('2VOCAB');
           modalityLabel = isL2 ? 'Vocabulary (100% Words)' : 'Vocabulary (Words & Phrases)';
-          modalityColor = '#c084fc';
+          modalityColor = '#a855f7';
         }
 
         const classTests = testsByClass.get(cls.id) || [];
@@ -934,7 +948,7 @@ export async function renderClassesHub(area) {
             <button type="button" onclick="window.setClassesHubStepFilter('ALL')" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 'ALL' ? '#ff2d87' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 'ALL' ? 'rgba(255,45,135,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 'ALL' ? '#ff2d87' : '#94a3b8'};">ALL STEPS (6)</button>
             <button type="button" onclick="window.setClassesHubStepFilter(1)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 1 ? '#38bdf8' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 1 ? 'rgba(56,189,248,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 1 ? '#38bdf8' : '#94a3b8'};">1st STEP (4)</button>
             <button type="button" onclick="window.setClassesHubStepFilter(2)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 2 ? '#95ff00' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 2 ? 'rgba(149,255,0,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 2 ? '#95ff00' : '#94a3b8'};">2nd STEP (2)</button>
-            <button type="button" onclick="window.setClassesHubStepFilter(3)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 3 ? '#c084fc' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 3 ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 3 ? '#c084fc' : '#94a3b8'};">3rd STEP (1)</button>
+            <button type="button" onclick="window.setClassesHubStepFilter(3)" style="padding:2px 8px; font-size:10px; font-weight:700; border-radius:3px; cursor:pointer; border:1px solid ${activeStepFilter === 3 ? 'var(--grade-star, #a855f7)' : 'rgba(255,255,255,0.1)'}; background:${activeStepFilter === 3 ? 'rgba(192,132,252,0.15)' : 'rgba(255,255,255,0.04)'}; color:${activeStepFilter === 3 ? 'var(--grade-star, #a855f7)' : '#94a3b8'};">3rd STEP (1)</button>
           </div>
         </div>
       ` : `
@@ -1031,12 +1045,15 @@ export async function renderClassesHub(area) {
             <span>·</span>
             <span>Remedial Ceiling: <strong style="color:#ffff00;">60%</strong></span>
             <span>·</span>
-            <span style="color:#8b5cf6; font-weight:700;">Alumni: Level X</span>
+            <span style="color:#a855f7; font-weight:700;">Alumni: Level X</span>
           </div>
         `;
         const rightHtml = `
           <div style="display:flex; align-items:center; gap:8px; white-space:nowrap;">
-            <button type="button" class="btn btn-outline btn-sm" onclick="window.toggleClassesHubView()" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:var(--primary-tactical, #38bdf8); color:var(--primary-tactical, #38bdf8);" title="Toggle between Cards Overview and Datagrid Matrix">
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.toggleClassesHubView('VOCAB_SYSTEM')" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:var(--primary-tactical, #38bdf8); color:var(--primary-tactical, #38bdf8);" title="Switch to Vocabulary System Master Matrix">
+              ${getSvgIcon('book-open', 13)} Vocab System
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="window.toggleClassesHubView(viewMode === 'CARDS' ? 'TABLE' : 'CARDS')" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:#94a3b8; color:#94a3b8;" title="Toggle between Cards Overview and Datagrid Matrix">
               ${getSvgIcon(viewMode === 'CARDS' ? 'grid' : 'layers', 13)} ${viewMode === 'CARDS' ? 'Table Matrix' : 'Cards View'}
             </button>
             <button type="button" class="btn btn-outline btn-sm" onclick="if(typeof window.loadSection==='function'){window.loadSection('exam-rules');}else{window.location.hash='#exam-rules';}" style="height:30px !important; line-height:28px !important; padding:0 10px !important; font-size:12px !important; font-weight:700; border-radius:4px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; border-color:#ff2d87; color:#ff2d87;" title="View Authoritative Exam & Assessment Regulations">
@@ -1056,7 +1073,11 @@ export async function renderClassesHub(area) {
       if (!window._classesHubEditModeListenerBound) {
         window._classesHubEditModeListenerBound = true;
         window.addEventListener('admin-edit-mode-changed', () => {
-          renderView();
+          const isCurriculumActive = (window.location.hash || '').includes('curriculum') || (window.location.hash || '').includes('classes-hub');
+          const container = document.getElementById('classes-hub-container') || document.getElementById('vocabulary-system-page-container');
+          if (isCurriculumActive && container && document.body.contains(container)) {
+            renderView();
+          }
         });
       }
     };

@@ -2372,3 +2372,203 @@ Pada kurikulum berjenjang CEC Camp, Step 3 (Level 3) merupakan jenjang tertinggi
 ### Consequences
 - Standar kelulusan Step 3 mencerminkan rigoritas akademis tingkat lanjut sebelum siswa dipromosikan ke jenjang Alumni (Level X).
 - Seluruh tugas harian (Tasks) dan ujian tema (Exams) pada 3rd Step selaras pada batas penguasaan minimal 70%.
+
+---
+
+## DECISION-085: Strict System-Wide Inactive Student Exclusion & Database Synchronization
+
+### Status
+ACCEPTED (Authoritative Student Lifecycle & Cohort Visibility SSOT)
+
+### Date
+2026-11-25
+
+### Context
+Pengguna melaporkan bahwa siswa yang berstatus tidak aktif (*inactive*) muncul di papan peringkat/standings dan modul sistem lainnya (contoh pada Batch 134: Adinda Karunia Farela, Abdul Basit, Ida Wayan Gana Surya Arta, dan Riska Fetrosia).
+Investigasi akar masalah menemukan 3 celah:
+1. **Desinkronisasi Database (`is_active` vs `program_status`)**: Data siswa di Supabase memiliki `program_status = 'INACTIVE'`, namun kolom `is_active` (boolean) bernilai `true` (karena ter-overwrite oleh script data ingest atau ketiadaan sinkronisasi otomatis).
+2. **Kueri Single-Condition di Frontend**: Beberapa modul seperti `loadBatchLeaderboard` di `dashboard.js`, `fetchStudentsByProgram` di `api.js`, dan modul di `tutor.js` hanya memfilter `.eq('is_active', true)` tanpa memfilter `program_status != 'INACTIVE'`, atau sebaliknya.
+3. **Ketiadaan Constraint/Trigger Postgres**: Di Supabase, belum ada mekanisme otomatis yang menjamin bahwa perubahan pada `program_status = 'INACTIVE'` selalu mematikan `is_active = false` secara atomik, dan sebaliknya.
+
+### Decision
+1. **Aturan Mutlak Visibilitas Siswa Inaktif (Strict Non-Visibility Invariant)**:
+   - Siswa yang berstatus tidak aktif (`is_active = false` ATAU `program_status = 'INACTIVE'`) **DILARANG KERAS MUNCUL DI MANAPUN DI DALAM SISTEM** (Dashboard Standings / Leaderboard, Completed Tests, Student Login Gate, Class Lobby, Tutor Attendance, Class Hub Gradebook, dan KPI aktif), sampai siswa tersebut diaktifkan kembali oleh Admin.
+2. **Sinkronisasi Database Penuh (Database Reconciliation & Migration `20261125010000`)**:
+   - Seluruh record siswa inaktif disinkronkan langsung di Supabase (`is_active = false` dan `program_status = 'INACTIVE'`).
+   - Dibuatkan PostgreSQL trigger `trg_sync_student_active_status` pada tabel `public.students` yang menyinkronkan status secara dwiarah (bidirectional):
+     - `program_status IN ('INACTIVE', 'HOLD')` $\rightarrow$ `is_active = false`.
+     - `is_active = false` (bukan ALUMNI) $\rightarrow$ `program_status = 'INACTIVE'`.
+     - `is_active = true` $\rightarrow$ `program_status = 'ACTIVE'`.
+     - `program_status IN ('ACTIVE', 'IN_PROGRESS')` $\rightarrow$ `is_active = true`.
+3. **Multi-Layer Defensive Filtering di Seluruh Modul**:
+   - `js/dashboard.js`: `loadBatchLeaderboard` memfilter `.eq('is_active', true).neq('program_status', 'INACTIVE')` serta validasi memori `s.is_active === true && s.program_status !== 'INACTIVE'`.
+   - `js/api.js`: `fetchStudentsByProgram` mengecualikan siswa inaktif pada kueri dan filter memori. `verifyStudentLogin` dan `startTest` memblokir akses siswa inaktif.
+   - `js/tutor.js`: `preloadStudentsAllLevels`, `loadStudentsForCecLevel`, dan `loadStudentsForTopProgram` memfilter `is_active = true` dan `program_status != 'INACTIVE'`.
+   - `js/admin/`: Seluruh perhitungan rombel aktif, KPI, presensi, dan kelas di `app.js`, `classes-hub.js`, `admin-deck.js`, `curriculum-management.js`, dan `student-management.js` mengecualikan siswa inaktif.
+   - `scripts/ingest_all_camps.mjs`: Diperbarui agar tidak pernah menimpa `is_active: true` pada siswa yang sudah berstatus inaktif.
+
+### Consequences
+- Zero ghost rows: Papan peringkat (leaderboard), dasbor, dan absensi batch 134 secara bersih hanya menampilkan 12 siswa aktif yang sedang belajar di Level 3.
+- Integritas data terjamin di seluruh lapisan: database, API, admin, tutor, dan aplikasi siswa.
+
+---
+
+## DECISION-086: Unification of Legacy Color Variants into Authoritative 4-Color Palette (Hijau #00c000, Kuning #ffff00, Merah #ff0000, Ungu #a855f7)
+
+### Status
+ACCEPTED (Authoritative Color Palette Unification SSOT)
+
+### Date
+2026-11-25
+
+### Context
+Audit tipografi dan warna teks sistem mengidentifikasi 4.581 titik deklarasi warna font dengan berbagai varian legacy yang tidak seragam (6 varian hijau berbeda, 5 varian kuning berbeda, 6 varian merah berbeda, dan 5 varian ungu berbeda).
+Pengguna menetapkan standardisasi mutlak untuk mengeliminasi varian-varian legacy tersebut dan mengunci 4 warna baku:
+- Hijau: `#00c000` (Grade A / Success)
+- Kuning: `#ffff00` (Grade C / Remedial)
+- Merah: `#ff0000` (Grade E / Failed / Alert)
+- Ungu: `#a855f7` (Grade Star / Alumni / Gimmick — Pilihan Opsi 2 Deep Purple)
+
+### Decision
+1. **Master Vault Token Locking (`css/style.css` & `js/grading.js`)**:
+   - `--grade-star`: `#a855f7` (RGB: `168, 85, 247`, Glow: `rgba(168, 85, 247, 0.5)`).
+   - `--grade-a`: `#00c000` (RGB: `0, 192, 0`).
+   - `--grade-c`: `#ffff00` (RGB: `255, 255, 0`).
+   - `--grade-e`: `#ff0000` (RGB: `255, 0, 0`).
+   - `TOPSCORE_COLORS.STAR` / `LEGEND_GIMMICK` / `X` diupdate ke `#a855f7`.
+2. **Pembersihan Varian Legacy Lintas Basis Kode**:
+   - Varian Hijau legacy (`#15803d`, `#86efac`, `#4ade80`, `#22c55e`, `#10b981`, `#16a34a`) diganti menjadi `var(--grade-a, #00c000)`.
+   - Varian Kuning legacy (`#eab308`, `#facc15`, `#f59e0b`, `#fef08a`, `#fef3c7`) diganti menjadi `var(--grade-c, #ffff00)`.
+   - Varian Merah legacy (`#ef4444`, `#dc2626`, `#f87171`, `#b91c1c`, `#fca5a5`, `#fecaca`, `red`) diganti menjadi `var(--grade-e, #ff0000)`.
+   - Varian Ungu legacy (`#c084fc`, `#8b5cf6`, `#a78bfa`) diganti menjadi `var(--grade-star, #a855f7)`.
+3. **Penyelarasan Verifikasi Otomatis (`scripts/test_universal_color_token_ssot.mjs`)**:
+   - Pillar 1 dan Pillar 6 diperbarui untuk memvalidasi deklarasi `--grade-star: #a855f7;`.
+   - Seluruh 6 Pilar Color Tokenization tetap 100% HIJAU.
+
+### Consequences
+- Menghilangkan kesan "pelangi" dan saturasi warna acak pada antarmuka tabel dan workstation.
+- Kontras visual menjadi tajam, terstandarisasi, dan konsisten di seluruh modul siswa, tutor, dan admin.
+
+---
+
+## DECISION-087: Single Product Accent Color SSOT (#38bdf8 / Tactical Cyan) with High-Contrast Dark Text
+
+### Status
+ACCEPTED (Single Product Accent Architecture SSOT)
+
+### Date
+2026-11-25
+
+### Context
+Audit warna aksen produk (brand highlight, tombol aksi CTA, tab navigasi, border fokus, dan status interaktif) menemukan 986 titik deklarasi dengan 9 varian biru/cyan/indigo yang terfragmentasi (`#6366f1`, `#3b82f6`, `#2563eb`, `#06b6d4`, `#0284c7`, `#0369a1`, `#0ea5e9`, `#7dd3fc`, `#e0f2fe`).
+Pengguna memilih untuk merampingkan seluruh varian aksen produk menjadi **Murni 1 Warna Tunggal (Single Accent)**, yaitu **`#38bdf8`** (Tactical Cyan / Sky 400).
+
+### Decision
+1. **Single Authoritative Hex Token (`--primary-tactical: #38bdf8;`)**:
+   - Seluruh token warna aksen utama diikat langsung ke `--primary-tactical`:
+     - `--clr-primary: var(--primary-tactical);`
+     - `--clr-accent-1: var(--primary-tactical);`
+     - `--clr-accent-3: var(--primary-tactical);`
+     - `--clr-info: var(--primary-tactical);`
+   - Gradien primer dan glow disederhanakan berbasis `#38bdf8` murni tanpa kode hex ekstra.
+   - Decoupled `--rainbow-step-6` (Nila pada 7 Repetisi Pips) ke `#4f46e5` independen.
+2. **High-Contrast Dark Text pada Tombol Solid Primer (WCAG AAA 9.8:1)**:
+   - Sesuai prinsip desain modern (ala Linear, Vercel, Supabase), tombol solid primer dengan background `#38bdf8` wajib menggunakan teks **gelap pekat (`color: #090d16 !important; font-weight: 700 !important;`)**, BUKAN teks putih `#ffffff`.
+   - Menghilangkan glare/silau dan melompatkan rasio kontras dari 2.1:1 (FAIL) menjadi 9.8:1 (PASS AAA).
+   - Efek interaktif tombol hover cukup menggunakan CSS native filter (`filter: brightness(0.92);`).
+   - Tombol sekunder/outline menggunakan border & teks `#38bdf8`.
+3. **Penyelarasan Seluruh Modul JS dan Stylesheet**:
+   - `js/grading.js`: `btnPrimary: '#38bdf8'`, `btnPrimaryText: '#090d16'`.
+   - `js/admin/`: Mengganti seluruh tombol solid `#0284c7` dengan background `#38bdf8` dan teks `#090d16` di `admin-deck.js`, `app.js`, `desk.js`, `exam-rules.js`, `modules.js`, `student-management.js`, `system-architecture.js`, `system-glossary.js`, `tests-access.js`, `tests-management.js`, `vocab-vault.js`.
+   - Client modules (`dashboard.js`, `test.js`) dan stylesheet (`style.css`, `admin.css`, `dashboard.css`, `test.css`, `tutor.css`, `result.css`, `auth.css`) telah sepenuhnya disatukan ke `#38bdf8`.
+4. **Verifikasi SSOT**:
+   - `scripts/test_universal_color_token_ssot.mjs` Pillar 1 memvalidasi deklarasi `--primary-tactical: #38bdf8;` dan keterikatan `--clr-primary`, `--clr-accent-1`, `--clr-info`, serta `btnPrimary: '#38bdf8'`.
+
+### Consequences
+- Sistem kini 100% bebas dari fragmentasi warna aksen biru/indigo liar.
+- Arsitektur warna menjadi ultra-clean dan konsisten dari halaman login, dasbor siswa, ruang tutor, hingga seluruh workstation admin.
+
+---
+
+## DECISION-088: Unified Duplicate Students Resolver, Cross-Batch Repeat Hierarchy & Zero-Box Inline Status SSOT
+
+### Status
+ACCEPTED (Duplicate Resolver, Cross-Batch Repeat & Visual Cleanliness SSOT)
+
+### Date
+2026-11-25
+
+### Context
+Saat siswa yang telah lulus atau pernah belajar di angkatan sebelumnya (misal: Batch 130) mendaftar kembali di angkatan yang lebih baru (misal: Batch 133), sistem mendeteksi adanya profil ganda (*cross-class duplicate*).
+Sebelumnya:
+1. Modal penyelesaian duplikat terpisah menjadi 2 tab navigasi terpisah (`Same Class Duplicates` vs `Cross-Class Same Name`) yang memakan waktu dan membingungkan admin.
+2. Jendela modal terkunci di `max-width: 960px !important;` melalui kelas `.modal-box-lg`, menyebabkan tabel 8 kolom terpotong (*clipped*) dan memicu scrollbar horizontal di dalam kartu.
+3. Rekomendasi target profil aktif salah memilih angkatan lama sebagai primary, bukan angkatan berjalan yang aktif saat ini.
+4. Label status (`[CROSS-CLASS]`) dan suffix siswa berulang/alumni menggunakan kotak border kapsul (pill) yang melanggar estetika kesederhanaan teks (*Zero-Box Invariant*).
+5. Terdapat deklarasi font sub-12px (10px dan 11px) pada pratinjau hasil penggabungan dan label status.
+6. Terjadi bentrok kueri PostgREST (`more than one relationship was found for 'students' and 'batches'`) akibat penambahan kolom `original_batch_id` pada tabel `students`.
+
+### Decision
+1. **Penyatuan Modal Duplikat (Single Unified Workspace)**:
+   - Menghapus tab pemisah; seluruh duplikat (Same Class & Cross-Class) disatukan dalam satu tampilan ringkas dengan bilah status informatif di bagian atas.
+   - Tombol `QUICK MERGE ALL GROUPS` diposisikan secara konsisten di pojok kanan bawah (*modal footer CTA area*) mengikuti aturan spasial Ujung-ke-Ujung.
+2. **Pelebaran Modal ke 1380px & Eliminasi Scrollbar Horizontal**:
+   - Menetapkan `max-width: 1380px !important; width: 96vw !important;` di `css/admin/admin-modals.css`, `css/admin.css`, dan `admin.html`.
+   - Menghapus wrapper `overflow-x: auto`; kedelapan kolom tabel (`RECORD UUID`, `PROGRAM / LEVEL`, `BATCH`, `INSTITUTION`, `ATTEMPTS`, `CREATED AT`, `ACTION`, dan `RESULT PREVIEW`) tampil utuh tanpa terpotong (*Universal Zero-Truncation*).
+3. **Hirarki Siswa Mengulang (Cross-Batch Repeat Hierarchy)**:
+   - Siswa yang mendaftar ulang di angkatan baru diposisikan sebagai **Profil Aktif Utama (Primary Target / Batch Baru)**.
+   - Angkatan asal siswa dicatat di kolom `original_batch_id` dengan flag `is_repeat = true`.
+   - Seluruh riwayat ujian/tugas (attempts) dan data progres dari angkatan lama dipindahkan secara atomik ke profil aktif di angkatan baru, lalu profil lama di-*soft-delete*.
+4. **Tipografi Bersih Tanpa Kotak (Strict Zero-Box & Zero Sub-12px)**:
+   - Menghapus seluruh border, background box, dan pill pada tag status.
+   - Suffix siswa mengulang berformat teks tebal: `Nama Siswa (Repeat - <Batch Awal>)` dengan warna Oranye (`#FF8C00` / `var(--quad-b)`).
+   - Suffix alumni berformat teks tebal: `Nama Siswa (Alumni - <Batch>)` dengan warna Ungu (`#c084fc` / `var(--grade-star)`).
+   - Tag jenis duplikat: `(Same Class)` (cyan) dan `(Cross-Class)` (oranye).
+   - Seluruh teks label dan rincian berukuran minimum 12px baku.
+5. **Standarisasi Tombol CTA (Ghost-to-Solid)**:
+   - Tombol `QUICK MERGE ALL GROUPS` dan `Resolve All Duplicates` mengikuti pola Ghost Outline transparan pada mode standby dan Solid Matte Yellow pada mode hover, dengan font 14px / 13px.
+6. **Disambiguasi Kueri PostgREST**:
+   - Seluruh kueri join `students` ke `batches` mendisambiguasi relasi secara eksplisit: `batches!batch_id(...)` dan `original_batches:batches!original_batch_id(...)`.
+
+### Consequences
+- Peninjauan dan penggabungan siswa duplikat berjalan cepat, intuitif, dan bebas error relasi database.
+- Riwayat belajar siswa mengulang terjaga 100% tanpa ada attempt yang hilang.
+- Tampilan antarmuka rapi, lega, bersih tanpa kotak-kotak mengganggu, dan 100% patuh pada aturan SSOT.
+
+---
+
+## DECISION-088: Comprehensive Codebase Sweep & Total Eradication of Rogue Color Variants (Zero Legacy Leakage SSOT)
+
+### Status
+ACCEPTED (Zero Legacy Color Leakage SSOT)
+
+### Date
+2026-11-25
+
+### Context
+Menindaklanjuti DECISION-086 (Unifikasi 4 Warna Akademik) dan DECISION-087 (Single Product Accent #38bdf8), audit mendalam mendeteksi 573 titik deklarasi hex legacy yang masih tertinggal di modul-modul CSS, JS, dan HTML (termasuk 119 titik ungu muda `#c084fc`, 80 titik `#0284c7`, 30 titik `#15803d`, 27 titik `#86efac`, 27 titik `#ea580c`, 25 titik `#16a34a`, 18 titik `#dc2626`, 14 titik `#ef4444`, 12 titik `#facc15`, 10 titik `#fef08a`).
+Pengguna memerintahkan penyisiran total ("Rapikan!") untuk membersihkan seluruh sisa warna legacy tersebut agar sistem 100% patuh pada SSOT token resmi.
+
+### Decision
+1. **Universal Canonical Replacement Rules**:
+   - **Ungu Legacy** (`#c084fc`, `#8b5cf6`, `#a78bfa`) $\rightarrow$ `var(--grade-star, #a855f7)`
+   - **Hijau Legacy** (`#15803d`, `#86efac`, `#4ade80`, `#22c55e`, `#16a34a`, `#10b981`) $\rightarrow$ `var(--grade-a, #00c000)`
+   - **Kuning Legacy** (`#eab308`, `#facc15`, `#f59e0b`, `#fef08a`, `#fef3c7`) $\rightarrow$ `var(--grade-c, #ffff00)`
+   - **Merah Legacy** (`#ef4444`, `#dc2626`, `#f87171`, `#b91c1c`, `#fca5a5`, `#fecaca`) $\rightarrow$ `var(--grade-e, #ff0000)`
+   - **Oranye Legacy** (`#ea580c`, `#c2410c`, `#fdba74`, `#fb923c`, `#f97316`) $\rightarrow$ `var(--grade-d, #ff8c00)`
+   - **Aksen Biru/Cyan Legacy** (`#0284c7`, `#0369a1`, `#6366f1`, `#3b82f6`, `#2563eb`, `#06b6d4`, `#0ea5e9`, `#7dd3fc`, `#e0f2fe`, `#00e5ff`) $\rightarrow$ `var(--primary-tactical, #38bdf8)`
+   - **Merah Muda Legacy** (`#f472b6`, `#ec4899`) $\rightarrow$ `var(--quad-a, #ff2d87)`
+2. **Cakupan Eksekusi Menyeluruh (573 replacements across 44 files)**:
+   - Seluruh modul stylesheet: `css/admin.css`, `admin-tables.css`, `admin-views.css`, `admin-layout.css`, `admin-modals.css`, `admin-theme.css`, `tutor.css`, `dashboard.css`, `test.css`, `result.css`, `conversation.css`, `style.css`.
+   - Seluruh modul workstation admin: `student-management.js` (36x), `tests-access.js` (20x), `tests-management.js` (13x), `system-glossary-data.js` (11x), `admin-deck.js` (8x), `system-architecture.js` (8x), `app.js` (7x), `class-attendance.js` (7x), `crud-modals.js` (6x), `auto-gen-modal.js` (5x), `desk.js` (5x), `system-glossary.js` (5x), `table-designs.js` (4x), `vocab-vault.js` (3x), `classes-hub.js` (2x), `curriculum-management.js` (2x), `exam-rules.js` (2x), `quick-score-wizards.js` (2x), `classes-management.js` (1x), `exam-rules-engine.js` (1x), `modules.js` (1x), `student-registration.js` (1x).
+   - Seluruh modul client & engine: `test.js` (13x), `result.js` (10x), `tutor.js` (7x), `grading.js` (7x), `avatar-engine.js` (2x), `dashboard.js` (1x).
+   - Template HTML: `tutor.html` (4x), `admin.html` (4x), `offline.html` (2x), `result.html` (1x).
+3. **Pilar 5 Untokenized Hex Compliance**:
+   - Seluruh penggantian di file JavaScript dibungkus dengan token fallback `var(--..., #...)` sehingga tidak melanggar aturan larangan *untokenized raw hexes*.
+4. **Verifikasi Zero Rogue Hexes**:
+   - Audit pasca-eksekusi memvalidasi: **TOTAL REMAINING ROGUE HEXES = 0**.
+
+### Consequences
+- Tidak ada lagi perbedaan saturasi atau kontras di halaman mana pun di dalam sistem.
+- Arsitektur token warna mencapai tingkat kepatuhan 100% Single Source of Truth (*Zero Legacy Leakage*).
+

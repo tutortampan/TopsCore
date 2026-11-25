@@ -20,22 +20,26 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       studentId: null, studentName: null,
     };
 
-    // ── Remember Me ──
+    // ── Remember Me (Default: Enabled) ──
     const REMEMBER_KEY = 'topscore_saved_login_v2';
-    let rememberEnabled = localStorage.getItem('topscore_remember_enabled') === 'true';
+    let rememberEnabled = localStorage.getItem('topscore_remember_enabled') !== 'false';
 
     const rmbToggleEl = document.getElementById('rmb-toggle');
     const clearLinkEl = document.getElementById('clear-session-link');
     const rmbBanner = document.getElementById('remember-me-banner');
 
     function updateRememberUI() {
-      rmbToggleEl.classList.toggle('on', rememberEnabled);
-      rmbToggleEl.setAttribute('aria-checked', String(rememberEnabled));
+      if (rmbToggleEl) {
+        rmbToggleEl.classList.toggle('on', rememberEnabled);
+        rmbToggleEl.setAttribute('aria-checked', String(rememberEnabled));
+      }
       const saved = getSavedLogin();
-      if (saved && rememberEnabled) {
-        clearLinkEl.classList.add('visible');
-      } else {
-        clearLinkEl.classList.remove('visible');
+      if (clearLinkEl) {
+        if (saved && rememberEnabled) {
+          if (clearLinkEl) clearLinkEl.classList.add('visible');
+        } else {
+          clearLinkEl.classList.remove('visible');
+        }
       }
     }
 
@@ -60,21 +64,25 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       updateRememberUI();
     }
 
-    rmbBanner.addEventListener('click', () => {
-      rememberEnabled = !rememberEnabled;
-      localStorage.setItem('topscore_remember_enabled', String(rememberEnabled));
-      updateRememberUI();
-      if (!rememberEnabled) clearSavedLogin();
-    });
-    rmbBanner.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') rmbBanner.click(); });
+    if (rmbBanner) {
+      rmbBanner.addEventListener('click', () => {
+        rememberEnabled = !rememberEnabled;
+        localStorage.setItem('topscore_remember_enabled', String(rememberEnabled));
+        updateRememberUI();
+        if (!rememberEnabled) clearSavedLogin();
+      });
+      rmbBanner.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') rmbBanner.click(); });
+    }
 
-    clearLinkEl.addEventListener('click', () => {
-      clearSavedLogin();
-      state.institutionId = null; state.institutionName = null;
-      resetFrom('program');
-      reopenSection('sec-institution');
-      showToast('Saved login cleared.', 'info');
-    });
+    if (clearLinkEl) {
+      clearLinkEl.addEventListener('click', () => {
+        clearSavedLogin();
+        state.institutionId = null; state.institutionName = null;
+        resetFrom('program');
+        reopenSection('sec-institution');
+        showToast('Saved login cleared.', 'info');
+      });
+    }
 
     updateRememberUI();
 
@@ -503,7 +511,7 @@ import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram,
       collapseSection('sec-student', saved.studentName || state.studentName, 'step-num-4');
       document.getElementById('pin-welcome-text').innerHTML = `Welcome back, <strong>${escHtml(saved.studentName || state.studentName)}</strong>! Enter your PIN.`;
       unlockSection('sec-pin');
-      clearLinkEl.classList.add('visible');
+      if (clearLinkEl) clearLinkEl.classList.add('visible');
       setTimeout(() => document.getElementById('pin-0').focus(), 300);
     }
 

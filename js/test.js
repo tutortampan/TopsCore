@@ -1377,7 +1377,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             detailsEl.textContent = fallbackParts.length ? fallbackParts.join(' • ') : 'Cake English Course';
           }
 
-          fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${session.student_id}&select=*,institutions(name),programs(name),batches(name),levels(name)`, {
+          fetch(`${SUPABASE_URL}/rest/v1/students?id=eq.${session.student_id}&select=*,institutions(name),programs(name),batches!batch_id(name),levels(name)`, {
             headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` }
           }).then(r => r.json()).then(stuRes => {
             if (stuRes && stuRes[0]) {
@@ -1688,14 +1688,22 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                 if (phrasesPips) phrasesPips.classList.remove('hidden');
                 if (wordsExamView) wordsExamView.classList.add('hidden');
                 if (phrasesExamView) phrasesExamView.classList.add('hidden');
+                const targetReps = Number(testData?.payload?.task_repetitions) || 7;
                 const renderPips = (elId, cnt) => {
                   const el = document.getElementById(elId);
-                  if (el) el.querySelectorAll('.pip-box').forEach((pip, i) => pip.classList.toggle('active', i < cnt));
+                  if (!el) return;
+                  const safeTarget = Math.max(1, parseInt(targetReps, 10) || 7);
+                  let html = '';
+                  for (let i = 1; i <= safeTarget; i++) {
+                    const isPassed = i <= cnt;
+                    html += `<div class="pip-box ${isPassed ? 'active' : ''}" data-pip="${i}">${isPassed ? '✓' : i}</div>`;
+                  }
+                  el.innerHTML = html;
                 };
                 renderPips('component-words-pips', wPasses);
                 renderPips('component-phrases-pips', pPasses);
-                if (wStat) wStat.textContent = `${wPasses}/7`;
-                if (pStat) pStat.textContent = `${pPasses}/7`;
+                if (wStat) wStat.textContent = `${wPasses}/${targetReps}`;
+                if (pStat) pStat.textContent = `${pPasses}/${targetReps}`;
               }
             } catch (_) {}
 
@@ -1743,7 +1751,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                       Go to Prerequisite Task &rarr;
                     </button>
                   ` : ''}
-                  <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'" style="background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:#fff;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">
+                  <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'" style="background:#38bdf8;color:#090d16;font-weight:700;padding:10px 24px;border:none;border-radius:8px;cursor:pointer;">
                     Return to Dashboard
                   </button>
                 </div>
@@ -2139,7 +2147,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
           const titleSpan = document.createElement('span');
           titleSpan.style.cssText = `font-size:12px; font-weight:800; color:${(secIdx === currentSectionIndex) ? '#38bdf8' : '#e2e8f0'}; letter-spacing:0.3px; display:inline-flex; align-items:center; gap:6px;`;
-          const activeTag = (secIdx === currentSectionIndex) ? '<span style="font-size:12px;background:#0284c7;color:#ffffff;padding:2px 6px;border-radius:4px;font-weight:700;">ACTIVE</span>' : '';
+          const activeTag = (secIdx === currentSectionIndex) ? '<span style="font-size:12px;background:#38bdf8;color:#090d16;padding:2px 6px;border-radius:4px;font-weight:800;">ACTIVE</span>' : '';
           titleSpan.innerHTML = `${sec.title || `Section ${secIdx + 1}`} (${secRows.length} Questions) ${activeTag}`;
 
           const progressSpan = document.createElement('span');
@@ -2911,9 +2919,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:12px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:12px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
 
-        btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? '#06b6d4' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
+        btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? 'var(--primary-tactical, #38bdf8)' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
 
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -2928,12 +2936,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           });
           btn.classList.add('selected');
           btn.setAttribute('aria-checked', 'true');
-          btn.style.border = '1.5px solid #06b6d4';
+          btn.style.border = '1.5px solid var(--primary-tactical, #38bdf8)';
           btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)';
           btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           btn.style.color = '#ffffff';
           const activeLetter = btn.querySelector('.mc-letter');
-          if (activeLetter) { activeLetter.style.background = '#06b6d4'; activeLetter.style.color = '#000000'; }
+          if (activeLetter) { activeLetter.style.background = 'var(--primary-tactical, #38bdf8)'; activeLetter.style.color = '#000000'; }
 
           answeredMap[row.id] = optText;
           updateActiveChipOnly(row.id, optText);
@@ -2985,7 +2993,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.className = `mc-option ${isSelected ? 'selected' : ''}`;
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid #06b6d4' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:12px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
+        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; justify-content:center; padding:4px 10px; border-radius:10px; border:${isSelected ? '1.5px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; font-weight:600; font-size:12px; cursor:pointer; text-align:center; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 2px 8px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; flex-shrink:0;`;
         btn.innerHTML = `<div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25;">${optText}</div>`;
         btn.addEventListener('click', () => {
           area.querySelectorAll('.mc-option').forEach(o => {
@@ -2998,7 +3006,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           });
           btn.classList.add('selected');
           btn.setAttribute('aria-checked', 'true');
-          btn.style.border = '1.5px solid #06b6d4';
+          btn.style.border = '1.5px solid var(--primary-tactical, #38bdf8)';
           btn.style.background = 'linear-gradient(135deg, rgba(6,182,212,0.2) 0%, rgba(16,185,129,0.2) 100%)';
           btn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           btn.style.color = '#ffffff';
@@ -3059,7 +3067,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         updateWordCount = (val) => {
           const words = (val || '').trim().split(/\s+/).filter(Boolean).length;
           const isDone = words >= targetPhraseWords;
-          wordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : '#0284c7'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
+          wordCounter.innerHTML = `<span style="color:${isDone ? 'var(--clr-success)' : 'var(--primary-tactical, #38bdf8)'}; font-weight:800;">${words}</span> / ${targetPhraseWords} words`;
         };
         updateWordCount(ta.value);
         area.appendChild(wordCounter);
@@ -3075,7 +3083,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         hintBtn.className = 'task-hint-btn';
         hintBtn.innerHTML = 'Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
-        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:#fef08a; border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:var(--grade-c, #ffff00); border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
 
         const hintDisplay = document.createElement('div');
         hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#854d0e; margin-top:3px; display:none;';
@@ -3196,7 +3204,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           Tap to Open Camera
         </div>
         <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-          <button type="button" class="btn-cam-open-trigger" style="padding:4px 12px; border-radius:6px; border:1px solid #38bdf8; background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
+          <button type="button" class="btn-cam-open-trigger" style="padding:4px 12px; border-radius:6px; border:1px solid #38bdf8; background:#38bdf8; color:#090d16; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
             ${getSvgIcon('camera', 13)} Take Photo
           </button>
           <button type="button" class="btn-cam-upload-trigger" style="padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:12px; font-weight:600; cursor:pointer;">
@@ -3341,7 +3349,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
       // Header: Formula Pattern Pill
       const formulaPill = document.createElement('div');
-      formulaPill.style.cssText = 'font-size:12px; font-weight:800; color:#c084fc; letter-spacing:0.04em; background:rgba(192, 132, 252, 0.14); border:1px solid #c084fc; border-radius:6px; padding:2px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%; text-align:center;';
+      formulaPill.style.cssText = 'font-size:12px; font-weight:800; color:var(--grade-star, #a855f7); letter-spacing:0.04em; background:rgba(192, 132, 252, 0.14); border:1px solid var(--grade-star, #a855f7); border-radius:6px; padding:2px 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%; text-align:center;';
       formulaPill.textContent = `Formula: ${formulaPattern}`;
       card2.appendChild(formulaPill);
 
@@ -3379,12 +3387,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           }
         } else if (text && text.trim().length > 0) {
           hasTriggeredSuccess = false;
-          card2.style.borderColor = '#ea580c';
+          card2.style.borderColor = 'var(--grade-d, #ff8c00)';
           card2.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           validatorCard.style.background = 'rgba(255, 140, 0, 0.12)';
-          validatorCard.style.border = '1px solid #ea580c';
+          validatorCard.style.border = '1px solid var(--grade-d, #ff8c00)';
           validatorCard.style.color = '#fed7aa';
-          validatorCard.innerHTML = `<span style="font-weight:700; color:#ea580c;">Notice:</span> ${escapeHtml(valRes.error)}`;
+          validatorCard.innerHTML = `<span style="font-weight:700; color:var(--grade-d, #ff8c00);">Notice:</span> ${escapeHtml(valRes.error)}`;
         } else {
           hasTriggeredSuccess = false;
           card2.style.borderColor = 'rgba(255, 255, 255, 0.12)';
@@ -3546,7 +3554,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         hintBtn.className = 'task-hint-btn';
         hintBtn.innerHTML = 'Hint';
         hintBtn.title = 'Get first-letter clue (Task practice only)';
-        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:#fef08a; border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
+        hintBtn.style.cssText = 'font-size:12px; font-weight:700; color:#854d0e; background:var(--grade-c, #ffff00); border:1px solid #ca8a04; border-radius:6px; padding:2px 10px; cursor:pointer; margin-top:4px; transition:all 0.2s;';
 
         const hintDisplay = document.createElement('div');
         hintDisplay.style.cssText = 'font-size:12px; font-weight:800; letter-spacing:0.18em; color:#854d0e; margin-top:3px; display:none;';

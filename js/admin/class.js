@@ -178,9 +178,9 @@ function renderTopicRows(topicsList) {
     <tr>
       <td><strong style="color:var(--clr-text-1);">${escapeHtml(t.name)}</strong></td>
       <td><code>${escapeHtml(t.code || '-')}</code></td>
-      <td><span class="badge badge-info">${escapeHtml(t.classes?.name || 'General')}</span></td>
+      <td><span style="color:#38bdf8; font-size:12px; font-weight:600;">${escapeHtml(t.classes?.name || 'General')}</span></td>
       <td>
-        <span class="badge ${t.status === 'active' ? 'badge-success' : 'badge-secondary'}">
+        <span style="font-size:12px; font-weight:700; color:${t.status === 'active' ? 'var(--grade-a)' : 'var(--grade-e)'};">
           ${escapeHtml(t.status || 'active')}
         </span>
       </td>
@@ -420,7 +420,7 @@ export async function renderCentralQuestionImport(area) {
 export async function renderResults(area) {
   const filterOpts = window._filterTestResults ? { test_id: window._filterTestResults } : { is_best_score: true };
   const [rawData, allInstitutions, allPrograms, allBatches] = await Promise.all([
-    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, percentage, effective_score, is_remedial_unlocked, created_at, submitted_at, students(name, gender, batch_id, batches(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)', filterOpts),
+    adminFetchAll('attempts', 'id, student_id, test_id, attempt_number, status, score, percentage, effective_score, is_remedial_unlocked, created_at, submitted_at, students(name, gender, batch_id, batches!batch_id(name), program_id, programs(name, institution_id, institutions(name))), tests(id, title, test_type, prerequisite_test_id, minimum_required_score, shell_code)', filterOpts),
     adminFetchAll('institutions', 'id, name, is_active'),
     adminFetchAll('programs', 'id, name, is_active, institution_id'),
     adminFetchAll('batches', 'id, name, is_active, program_id')

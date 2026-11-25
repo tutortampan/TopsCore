@@ -351,7 +351,7 @@ export async function renderAcademicGradebook({ container, currentClass, student
                   ${escapeHtml(cleanStudentName(s.name))}
                 </td>
                 <td style="text-align:center; padding:6px; border-right:1px solid var(--clr-border-muted);">
-                  <span class="badge" style="background:rgba(255,255,255,0.06); padding:2px 6px; border-radius:4px; font-size:11px;">${escapeHtml(bName)}</span>
+                  <span style="color:var(--clr-text-2); font-size:12px; font-weight:500;">${escapeHtml(bName)}</span>
                 </td>
 
                 ${allCols.map(col => {

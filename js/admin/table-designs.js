@@ -702,7 +702,7 @@ export async function renderTableDesigns(area) {
                     <th colspan="2" style="padding:0 4px; font-size:11px; font-weight:700; color:#95ff00; text-transform:uppercase; border-right:1px solid rgba(255,255,255,0.08); text-align:center;">
                       WIDTH
                     </th>
-                    <th colspan="2" style="padding:0 4px; font-size:11px; font-weight:700; color:#c084fc; text-transform:uppercase; border-right:1px solid rgba(255,255,255,0.08); text-align:center;">
+                    <th colspan="2" style="padding:0 4px; font-size:11px; font-weight:700; color:var(--grade-star, #a855f7); text-transform:uppercase; border-right:1px solid rgba(255,255,255,0.08); text-align:center;">
                       TYPOGRAPHY
                     </th>
                     <th rowspan="2" style="padding:0 4px; font-size:11px; font-weight:700; color:#cbd5e1; text-transform:uppercase; text-align:center; width:45px;">
@@ -991,7 +991,7 @@ export async function renderTableDesigns(area) {
 
               <!-- SECTION 3: ROW BOUNDS, NUMERIC METRICS & TYPOGRAPHY SSOT -->
               <div>
-                <div style="font-weight:700; color:#c084fc; margin-bottom:2px;">3. ROW BOUNDS, NUMERIC METRICS &amp; TYPOGRAPHY SSOT (PILLARS 1, 2, 5 &amp; 10)</div>
+                <div style="font-weight:700; color:var(--grade-star, #a855f7); margin-bottom:2px;">3. ROW BOUNDS, NUMERIC METRICS &amp; TYPOGRAPHY SSOT (PILLARS 1, 2, 5 &amp; 10)</div>
                 <div style="color:#94a3b8; line-height:1.45;">
                   • <strong>Uniform 12px Font Size (Pillar 1)</strong>: All table body cells and headers strictly enforce 12px font size.<br>
                   • <strong>Anti-Ballooning Bounded Height (Pillar 5)</strong>: Body row height bounded between ${cfg.bodyRowMinHeight}px and ${cfg.bodyRowMaxHeight}px (dynamic if min !== max, fixed if min === max). Vertical row stretching is strictly forbidden.<br>
@@ -1016,7 +1016,7 @@ export async function renderTableDesigns(area) {
 
               <!-- SECTION 5: SUPER-HEADER & SUB-HEADER EXACT GROUP COLOR MATCH -->
               <div>
-                <div style="font-weight:700; color:#00e5ff; margin-bottom:2px;">5. SUPER-HEADER &amp; SUB-HEADER EXACT GROUP COLOR MATCH (PILLAR 12 &amp; §2.34)</div>
+                <div style="font-weight:700; color:var(--primary-tactical, #38bdf8); margin-bottom:2px;">5. SUPER-HEADER &amp; SUB-HEADER EXACT GROUP COLOR MATCH (PILLAR 12 &amp; §2.34)</div>
                 <div style="color:#94a3b8; line-height:1.45;">
                   • <strong>4 Quadrant Color Identity</strong>: A (<span style="color:#ff2d87;">Electric Pink #ff2d87</span>), B (<span style="color:#ff8c00;">Dark Orange #ff8c00</span>), C (<span style="color:#95ff00;">Electric Lime #95ff00</span>), D (<span style="color:#38bdf8;">Tactical Cyan #38bdf8</span>).<br>
                   • <strong>Exact Group Color Match Invariant</strong>: Sub-headers underneath a theme super-header strictly match their parent theme color, never mismatching or forced yellow!
@@ -1032,7 +1032,7 @@ export async function renderTableDesigns(area) {
                   • <strong>Zero Truncation Invariant</strong>: No broken words, ellipsis cutoffs, or unauthorized text wrapping on workstation tables.<br>
                   • <strong>Zero Student ID (Rule 2.2)</strong>: Never display or request Student ID in any table.<br>
                   • <strong>Level 0 Programs (Rule 2.4.2)</strong>: Non-Level programs display <code>0</code> in LVL column (never dashes <code>—</code>).<br>
-                  • <strong>Alumni Level X (Rule 2.4.2)</strong>: Graduated students display <code>X</code> with color dynamically matched to graduation grade (Grade A = Pure Green <code>#00c000</code>). Purple (<code>#c084fc</code>) is reserved exclusively for Star ★ (100%).<br>
+                  • <strong>Alumni Level X (Rule 2.4.2)</strong>: Graduated students display <code>X</code> with color dynamically matched to graduation grade (Grade A = Pure Green <code>#00c000</code>). Purple (<code>var(--grade-star, #a855f7)</code>) is reserved exclusively for Star ★ (100%).<br>
                   • <strong>Level Promotion Passing Threshold (Rule 2.4.1)</strong>: Grade C (60%), Grade F (forgiven), or Grade R (remedial). No arbitrary thresholds like 70%.<br>
                   • <strong>Language Purity</strong>: 100% English across all headers, cells, tooltips, and labels.
                 </div>

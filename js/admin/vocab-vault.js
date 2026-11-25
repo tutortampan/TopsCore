@@ -323,7 +323,7 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
     const isEditOn = document.body.classList.contains('global-edit-mode-on') || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;box-shadow:0 0 10px rgba(56,189,248,0.45);'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -1046,7 +1046,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
       const distributionBadge = `
         <div class="d-flex gap-2 flex-wrap mt-2">
           <span style="background:rgba(var(--grade-a-rgb),0.15);color:var(--grade-a);border:1px solid rgba(var(--grade-a-rgb),0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('book-open', 14)} Single Words: ${vocabRows.length} (${vocabDupes} dupes)</span>
-          <span style="background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('activity', 14)} Phrases: ${phraseRows.length} (${phraseDupes} dupes)</span>
+          <span style="background:rgba(139,92,246,0.15);color:#a855f7;border:1px solid rgba(139,92,246,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('activity', 14)} Phrases: ${phraseRows.length} (${phraseDupes} dupes)</span>
           <span style="background:rgba(99,102,241,0.1);color:#818cf8;border:1px solid rgba(99,102,241,0.25);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('search', 14)} Unique Questions: ${uniqueIndoCount}</span>
           <span style="background:rgba(56,189,248,0.12);color:#38bdf8;border:1px solid rgba(56,189,248,0.3);padding:3px 8px;border-radius:4px;font-size: 12px;font-weight:600;">${getSvgIcon('layers', 14)} Themes: ${uniqueThemes} | Topics: ${uniqueTopics}</span>
         </div>`;
@@ -1094,7 +1094,7 @@ function openImportModal(existingWords, topics, onSuccess, mode = 'single_words'
                       <div class="text-xs" style="color:#a5b4fc;">${escapeHtml(c.existingRecord.topic)}</div>
                     </td>
                     <td class="text-center">
-                      <span class="badge ${c.conflictType === 'EXACT' ? 'badge-danger' : 'badge-warning'}" style="font-size: 12px;">
+                      <span style="font-size: 12px; font-weight:700; color:${c.conflictType === 'EXACT' ? 'var(--grade-e)' : 'var(--grade-c)'};">
                         ${escapeHtml(c.conflictType)}
                       </span>
                     </td>
@@ -2064,7 +2064,7 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
 
     const isEditOn = document.body.classList.contains('global-edit-mode-on') || Boolean(window._globalEditMode);
     const editBtnStyle = isEditOn
-      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#0284c7;border:1px solid #38bdf8;color:#ffffff;box-shadow:0 0 10px rgba(56,189,248,0.45);'
+      ? 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:#38bdf8;border:1px solid #38bdf8;color:#090d16;box-shadow:0 0 10px rgba(56,189,248,0.45);'
       : 'height:30px !important;min-height:30px !important;max-height:30px !important;line-height:28px !important;padding:0 12px !important;font-size:12px !important;font-weight:700;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px solid #38bdf8;color:#38bdf8;transition:all 0.15s ease;';
     const editBtnLabel = isEditOn
       ? `${getSvgIcon('check-circle', 14)} Done Editing`
@@ -2302,11 +2302,11 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
                 <span style="color: ${tp.phrasesOtherCount > 0 ? '#d8b4fe' : '#334155'}; font-weight: ${tp.phrasesOtherCount > 0 ? '600' : '400'};">${tp.phrasesOtherCount}</span>
               </td>
               <!-- 15. WORDS -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #60a5fa; background: rgba(59, 130, 246, 0.08); border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsCount}</td>
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #60a5fa; background: transparent; border-right: 1px solid rgba(255,255,255,0.08);">${tp.wordsCount}</td>
               <!-- 16. PHRASES -->
-              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #c084fc; background: rgba(192, 132, 252, 0.08); border-right: 1px solid rgba(255,255,255,0.1);">${tp.phrasesCount}</td>
+              <td style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: var(--grade-star, #a855f7); background: transparent; border-right: 1px solid rgba(255,255,255,0.1);">${tp.phrasesCount}</td>
               <!-- 17. TOTAL (Boundary Column 4) -->
-              <td class="super-hdr-divider" style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #38bdf8; background: rgba(56, 189, 248, 0.1); border-right: 2px solid rgba(255,255,255,0.22) !important;">${tp.totalCount}</td>
+              <td class="super-hdr-divider" style="text-align: center; font-size: 12px; font-variant-numeric: tabular-nums; font-weight: 800; color: #38bdf8; background: transparent; border-right: 2px solid rgba(255,255,255,0.22) !important;">${tp.totalCount}</td>
               <!-- 18. PROGRAMS (Boundary Column 5) -->
               <td class="super-hdr-divider" style="padding: 6px 10px; font-size: 12px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
@@ -3115,7 +3115,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
     `;
     const centerHtml = `
       <div class="bottom-info-chip"><span class="chip-label">Tasks:</span><span class="chip-val" style="color: var(--grade-a);">${totalTasksReady}/${totalTasksExpected}</span></div>
-      <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val" style="color: #c084fc;">${totalExamsReady}/${totalExamsExpected}</span></div>
+      <div class="bottom-info-chip"><span class="chip-label">Exams:</span><span class="chip-val" style="color: var(--grade-star, #a855f7);">${totalExamsReady}/${totalExamsExpected}</span></div>
       <div class="bottom-info-chip"><span class="chip-label">Readiness:</span><span class="chip-val" style="color: ${getGradeColorByScore(pctReady)}; font-weight: 800; font-variant-numeric: tabular-nums;">${pctReady}%</span></div>
     `;
     const rightHtml = `
@@ -3220,7 +3220,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
                 <span style="color: #cbd5e1; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
               </td>
               <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
-                <span style="color: #a78bfa; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
+                <span style="color: var(--grade-star, #a855f7); font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
 
               <!-- Generation Blueprint Split: Duration -->
@@ -3325,7 +3325,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
             <!-- Super-Header Row (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
             <tr class="bp-super-header-row">
               <th colspan="4" class="bp-sh-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(56,189,248,0.35);">CURRICULUM TOPIC</th>
-              <th colspan="3" class="bp-sh-vocab" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(192,132,252,0.35);">VOCABULARY POOL</th>
+              <th colspan="3" class="bp-sh-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(192,132,252,0.35);">VOCABULARY POOL</th>
               <th colspan="4" class="bp-sh-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); border-right:2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px; text-shadow:0 0 10px rgba(255,140,0,0.35);">GENERATION BLUEPRINT</th>
               <th colspan="2" class="bp-sh-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding:5px 8px; font-size:12px; font-weight:800; text-align:center; border-bottom:1px solid rgba(255,255,255,0.18); height:30px; line-height:30px; text-shadow:0 0 10px rgba(149,255,0,0.35);">READINESS STATUS</th>
             </tr>
@@ -3336,9 +3336,9 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">THEME NAME</th>
               <th class="col-subhdr-topic col-bp-sep" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">TOPIC NAME</th>
 
-              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">ITEMS</th>
-              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">WORDS</th>
-              <th class="col-subhdr-vocab col-bp-sep" style="background:#0b1120 !important; color:var(--grade-star, #c084fc) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES</th>
+              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">ITEMS</th>
+              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">WORDS</th>
+              <th class="col-subhdr-vocab col-bp-sep" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES</th>
 
               <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">DURATION</th>
               <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">PASS RATE</th>
@@ -3555,7 +3555,7 @@ function openDuplicateCheckerModal(allWords, onResolved) {
         <tr data-gi="${gi}" data-wi="${wi}" data-id="${escapeHtml(w.id)}">
           <td class="fw-600" style="padding:10px 8px;">${wi === 0 ? escapeHtml(w.indonesian) : ''}</td>
           <td style="padding:10px 8px; color:var(--clr-text-2);" class="cell-eng-${gi}-${wi}">${escapeHtml(w.english)}</td>
-          <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size: 12px;">${escapeHtml(w.topic)}</span></td>
+          <td style="padding:10px 8px;"><span style="color:#a5b4fc;font-size: 12px;font-weight:600;">${escapeHtml(w.topic)}</span></td>
           <td style="padding:10px 8px; text-align:right;">
             <button class="btn btn-xs btn-keep-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" style="background:transparent;color:var(--grade-a);border:1px solid var(--grade-a);margin-right:4px;display:inline-flex;align-items:center;gap:3px;" title="Keep this entry, delete others">${getSvgIcon('check', 12)} Keep</button>
             <button class="btn btn-danger btn-xs btn-del-this" data-gi="${gi}" data-id="${escapeHtml(w.id)}" title="Delete this entry" style="display:inline-flex;align-items:center;justify-content:center;">${getSvgIcon('trash', 12)}</button>
@@ -3869,7 +3869,7 @@ function openTopicDuplicateCheckerModal(topicEntries, allWords, onResolved) {
     return duplicateGroups.map((group, gi) => {
       const rows = group.map((t, ti) => `
         <tr data-gi="${gi}" data-ti="${ti}">
-          <td style="padding:10px 8px;"><span class="badge" style="background:rgba(99,102,241,0.15);color:#a5b4fc;font-size: 12px;">${escapeHtml(t)}</span></td>
+          <td style="padding:10px 8px;"><span style="color:#a5b4fc;font-size: 12px;font-weight:600;">${escapeHtml(t)}</span></td>
         </tr>
       `).join('');
 

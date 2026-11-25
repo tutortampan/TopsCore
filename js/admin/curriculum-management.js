@@ -11,7 +11,7 @@ import { calculateGrade, getGradeColorByScore, getGradeSymbol } from '../grading
 
 // Theme Colors (SSOT Vault)
 const C = {
-  STAR: '#c084fc',
+  STAR: '#a855f7',
   A: '#00c000',
   B: '#95ff00',
   C: '#ffff00',
@@ -204,10 +204,10 @@ export async function renderCurriculum(area) {
 
     // Filter active & valid records
     const allValidStudents = students.filter(s => !s.deleted_at);
-    const activeStudents = allValidStudents.filter(s => s.is_active !== false && s.program_status !== 'ALUMNI');
+    const activeStudents = allValidStudents.filter(s => s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI');
     const activeClasses  = classes.filter(c => !c.deleted_at && c.is_active !== false);
     const allValidBatches = batches.filter(b => !b.deleted_at);
-    const activeBatches  = allValidBatches.filter(b => b.is_active !== false && allValidStudents.some(s => s.batch_id === b.id && s.is_active !== false && s.program_status !== 'ALUMNI'));
+    const activeBatches  = allValidBatches.filter(b => b.is_active !== false && allValidStudents.some(s => s.batch_id === b.id && s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI'));
     const activePrograms = programs.filter(p => !p.deleted_at && p.is_active !== false);
     const publishedTests = tests.filter(t => !t.deleted_at && t.status === 'PUBLISHED');
 
@@ -490,7 +490,7 @@ export async function renderCurriculum(area) {
 
         // Students in this batch
         const bStus = allValidStudents.filter(s => s.batch_id === b.id);
-        const activeBStus = bStus.filter(s => s.is_active && !s.deleted_at && s.program_status !== 'ALUMNI');
+        const activeBStus = bStus.filter(s => s.is_active && !s.deleted_at && (s.program_status || '').toUpperCase() !== 'INACTIVE' && s.program_status !== 'ALUMNI');
         const activeStudentCount = activeBStus.length;
         const studentCount = bStus.length;
 
@@ -508,7 +508,7 @@ export async function renderCurriculum(area) {
         const l3 = computeLevelMetrics(b, 3, bStus, lvlNum ?? -1, cleanBatch, passRate);
 
         // Status badge & tagging
-        let statusBadge = `<span class="status-tag status-inactive" data-status="inactive" style="color:var(--grade-e, #dc2626);font-size:11px;font-weight:700;">Inactive</span>`;
+        let statusBadge = `<span class="status-tag status-inactive" data-status="inactive" style="color:var(--grade-e, #ff0000);font-size:11px;font-weight:700;">Inactive</span>`;
         let statusTag = 'Inactive';
         if (b.is_active && activeStudentCount > 0) {
           statusTag = 'Active';
@@ -518,7 +518,7 @@ export async function renderCurriculum(area) {
           statusBadge = `<span class="status-tag status-ongoing" data-status="ongoing" style="color:var(--primary-tactical, #38bdf8);font-size:11px;font-weight:700;">Ongoing</span>`;
         } else {
           statusTag = 'Completed';
-          statusBadge = `<span class="status-tag status-completed" data-status="completed" style="color:var(--grade-a, #15803d);font-size:11px;font-weight:700;">Completed</span>`;
+          statusBadge = `<span class="status-tag status-completed" data-status="completed" style="color:var(--grade-a, #00c000);font-size:11px;font-weight:700;">Completed</span>`;
         }
 
         return {
@@ -671,7 +671,7 @@ export async function renderCurriculum(area) {
             <button type="button" onclick="window._setBoardBatchFilter('ALL')" style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;${curBatchFilter === 'ALL' ? 'background:#38bdf8;color:#060b18;border:none;' : 'background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);'}">ALL (${processedBatches.length})</button>
             <button type="button" onclick="window._setBoardBatchFilter('ACTIVE')" style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;${curBatchFilter === 'ACTIVE' ? 'background:#95ff00;color:#060b18;border:none;' : 'background:rgba(149,255,0,0.1);color:#95ff00;border:1px solid rgba(149,255,0,0.3);'}">ACTIVE (${processedBatches.filter(b => b.isActive).length})</button>
             <button type="button" onclick="window._setBoardBatchFilter('COMPLETED')" style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;${curBatchFilter === 'COMPLETED' ? 'background:#ff8c00;color:#060b18;border:none;' : 'background:rgba(255,140,0,0.1);color:#ff8c00;border:1px solid rgba(255,140,0,0.3);'}">COMPLETED (${processedBatches.filter(b => !b.isActive).length})</button>
-            <button type="button" onclick="window._setBoardBatchFilter('SCORED')" style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;${curBatchFilter === 'SCORED' ? 'background:#c084fc;color:#060b18;border:none;' : 'background:rgba(192,132,252,0.1);color:#c084fc;border:1px solid rgba(192,132,252,0.3);'}">SCORED (${processedBatches.filter(b => b.avgScore !== null).length})</button>
+            <button type="button" onclick="window._setBoardBatchFilter('SCORED')" style="padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;${curBatchFilter === 'SCORED' ? 'background:var(--grade-star, #a855f7);color:#060b18;border:none;' : 'background:rgba(192,132,252,0.1);color:var(--grade-star, #a855f7);border:1px solid rgba(192,132,252,0.3);'}">SCORED (${processedBatches.filter(b => b.avgScore !== null).length})</button>
           </div>
         `;
 
@@ -918,6 +918,6 @@ export async function renderCurriculum(area) {
 
   } catch (error) {
     console.error('[BoardHub] Load error:', error);
-    area.innerHTML = `<div class="empty-state"><p style="color:red;">Error loading Board Data: ${error.message}</p></div>`;
+    area.innerHTML = `<div class="empty-state"><p style="color:var(--grade-e, #ff0000);">Error loading Board Data: ${error.message}</p></div>`;
   }
 }

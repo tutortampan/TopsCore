@@ -393,10 +393,11 @@
       color: #f8fafc;
     }
     .ans-section-btn.active {
-      background: linear-gradient(135deg, #0284c7, #2563eb);
+      background: var(--primary-tactical, #38bdf8);
       border-color: #38bdf8;
-      color: #ffffff;
-      box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+      color: #090d16;
+      font-weight: 800;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.4);
     }
 
     /* ===== SEARCH INPUT FOCUS ===== */
@@ -427,12 +428,12 @@
       line-height: 1.15 !important;
       box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35) !important;
       border: 1px solid rgba(56, 189, 248, 0.4) !important;
-      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
-      color: #ffffff !important;
+      background: var(--primary-tactical, #38bdf8) !important;
+      color: #090d16 !important;
       flex-shrink: 0 !important;
     }
     .btn-next-milestone.btn-next-test {
-      background: linear-gradient(135deg, #0284c7 0%, #2563eb 100%) !important;
+      background: linear-gradient(135deg, var(--primary-tactical, #38bdf8) 0%, var(--primary-tactical, #38bdf8) 100%) !important;
       border: 1px solid #38bdf8 !important;
       box-shadow: 0 4px 14px rgba(56, 189, 248, 0.45) !important;
     }
@@ -575,7 +576,7 @@
       height: clamp(74px, 14vh, 92px);
       border-radius: 50% !important;
       overflow: hidden;
-      background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%) !important;
+      background: linear-gradient(135deg, #4f46e5 0%, var(--primary-tactical, #38bdf8) 100%) !important;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1997,7 +1998,7 @@
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: #c084fc;
+  color: var(--grade-star, #a855f7);
   margin-bottom: 6px;
 }
 .fc-back-target {

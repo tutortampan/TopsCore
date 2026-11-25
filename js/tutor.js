@@ -1386,15 +1386,19 @@ async function loadMasterData() {
 async function preloadStudentsAllLevels() {
   try {
     const { data } = await _sb.from('students')
-      .select('id, name, level_id, batch_id, program_status')
+      .select('id, name, level_id, batch_id, is_active, program_status')
+      .eq('is_active', true)
+      .neq('program_status', 'INACTIVE')
       .neq('program_status', 'ALUMNI')
       .order('name');
     _levels.forEach(lvl => {
       if (lvl.level_number >= 1 && lvl.level_number <= 3) {
-        const lStudents = (data || []).filter(s => s.level_id === lvl.id).map(s => ({
-          ...s,
-          name: cleanStudentName(s.name)
-        }));
+        const lStudents = (data || [])
+          .filter(s => s.level_id === lvl.id && s.is_active === true && (s.program_status || '').toUpperCase() !== 'INACTIVE')
+          .map(s => ({
+            ...s,
+            name: cleanStudentName(s.name)
+          }));
         if (lStudents.length > 0) {
           _studentsCacheByLevel[lvl.level_number] = lStudents;
         } else if (COHORT_STUDENTS_BY_LEVEL[lvl.level_number]) {
@@ -1619,6 +1623,7 @@ async function loadStudentsForCecLevel(levelId) {
     let query = _sb.from('students')
       .select('id, name, level_id, batch_id, is_active, program_status')
       .eq('is_active', true)
+      .neq('program_status', 'INACTIVE')
       .neq('program_status', 'ALUMNI')
       .order('name');
 
@@ -1627,10 +1632,12 @@ async function loadStudentsForCecLevel(levelId) {
     }
 
     const { data } = await query;
-    _students = (data || []).map(s => ({
-      ...s,
-      name: cleanStudentName(s.name)
-    }));
+    _students = (data || [])
+      .filter(s => s.is_active === true && (s.program_status || '').toUpperCase() !== 'INACTIVE')
+      .map(s => ({
+        ...s,
+        name: cleanStudentName(s.name)
+      }));
 
     // Fallback if empty in cloud (standard 30-student cohort)
     if (_students.length === 0) {
@@ -1725,13 +1732,16 @@ async function loadStudentsForTopProgram(programCode) {
     const { data } = await _sb.from('students')
       .select('id, name, level_id, batch_id, is_active, program_status')
       .eq('is_active', true)
+      .neq('program_status', 'INACTIVE')
       .neq('program_status', 'ALUMNI')
       .order('name');
 
-    _students = (data || []).map(s => ({
-      ...s,
-      name: cleanStudentName(s.name)
-    }));
+    _students = (data || [])
+      .filter(s => s.is_active === true && (s.program_status || '').toUpperCase() !== 'INACTIVE')
+      .map(s => ({
+        ...s,
+        name: cleanStudentName(s.name)
+      }));
     if (_students.length === 0) {
       _students = [
         { id: 's_top_1', name: 'Budi Prasetyo', program_status: 'IN_PROGRESS' },
@@ -1880,7 +1890,7 @@ function openExamSelectionModal() {
           <span style="font-size:13px; font-weight:800; color:#ff2d87; text-transform:uppercase; letter-spacing:0.04em;">
             ${themeCode} - ${topicName}
           </span>
-          <span style="font-size:12px; font-weight:800; padding:2px 8px; border-radius:4px; background:rgba(255,255,0,0.15); color:var(--grade-c, #facc15); border:1px solid rgba(255,255,0,0.3);">
+          <span style="font-size:12px; font-weight:800; padding:2px 8px; border-radius:4px; background:rgba(255,255,0,0.15); color:var(--grade-c, #ffff00); border:1px solid rgba(255,255,0,0.3);">
             ${normalCount}/${totalStudents} Ready (${totalStudents > 0 ? Math.round((normalCount / totalStudents) * 100) : 0}%)
           </span>
         </div>
@@ -1904,10 +1914,10 @@ function openExamSelectionModal() {
 
         <!-- Mode Toggle Buttons -->
         <div style="display:flex; gap:10px;">
-          <button type="button" id="btn-tutor-mode-normal" style="flex:1; height:36px; font-size:12px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${!_tutorExamIsRemedial ? '#16a34a' : 'rgba(255,255,255,0.15)'}; background:${!_tutorExamIsRemedial ? 'rgba(22,163,74,0.15)' : 'transparent'}; color:${!_tutorExamIsRemedial ? '#4ade80' : '#94a3b8'};">
+          <button type="button" id="btn-tutor-mode-normal" style="flex:1; height:36px; font-size:12px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${!_tutorExamIsRemedial ? 'var(--grade-a, #00c000)' : 'rgba(255,255,255,0.15)'}; background:${!_tutorExamIsRemedial ? 'rgba(22,163,74,0.15)' : 'transparent'}; color:${!_tutorExamIsRemedial ? 'var(--grade-a, #00c000)' : '#94a3b8'};">
             NORMAL (${normalCount})
           </button>
-          <button type="button" id="btn-tutor-mode-remedial" style="flex:1; height:36px; font-size:12px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${_tutorExamIsRemedial ? '#f59e0b' : 'rgba(255,255,255,0.15)'}; background:${_tutorExamIsRemedial ? 'rgba(245,158,11,0.15)' : 'transparent'}; color:${_tutorExamIsRemedial ? '#fbbf24' : '#94a3b8'};">
+          <button type="button" id="btn-tutor-mode-remedial" style="flex:1; height:36px; font-size:12px; font-weight:800; border-radius:6px; cursor:pointer; border:1px solid ${_tutorExamIsRemedial ? 'var(--grade-c, #ffff00)' : 'rgba(255,255,255,0.15)'}; background:${_tutorExamIsRemedial ? 'rgba(245,158,11,0.15)' : 'transparent'}; color:${_tutorExamIsRemedial ? '#fbbf24' : '#94a3b8'};">
             REMEDI (${remedialCount})
           </button>
         </div>
@@ -3083,7 +3093,7 @@ function renderFinesTable() {
           <button type="button" class="btn-step-plus" data-id="${s.id}" title="Add violation">+</button>
         </div>
       </td>
-      <td class="td-fines-amount" style="color:${amount > 0 ? '#f87171' : '#94a3b8'};">
+      <td class="td-fines-amount" style="color:${amount > 0 ? 'var(--grade-e, #ff0000)' : '#94a3b8'};">
         ${formatCompactAmount(amount)}
       </td>
       <td class="td-fines-paid">
@@ -3234,10 +3244,10 @@ function renderPaymentTable() {
     const studentDisplayName = cleanStudentName(s.name);
     tr.innerHTML = `
       <td class="td-student-name" title="${studentDisplayName}">${studentDisplayName}</td>
-      <td class="td-pay-debt" style="text-align:right; font-weight:700; color:${debt > 0 ? '#f87171' : '#94a3b8'};">
+      <td class="td-pay-debt" style="text-align:right; font-weight:700; color:${debt > 0 ? 'var(--grade-e, #ff0000)' : '#94a3b8'};">
         ${formatCompactAmount(debt)}
       </td>
-      <td class="td-pay-paid" style="text-align:right; font-weight:700; color:${paid > 0 ? '#4ade80' : '#94a3b8'};">
+      <td class="td-pay-paid" style="text-align:right; font-weight:700; color:${paid > 0 ? 'var(--grade-a, #00c000)' : '#94a3b8'};">
         ${formatCompactAmount(paid)}
       </td>
       <td class="td-pay-action" style="text-align:center;">
@@ -3246,9 +3256,9 @@ function renderPaymentTable() {
             PAY
           </button>
         ` : (isPaidFull ? `
-          <span class="badge-status-pill badge-paid-full" title="Paid in Full">PAID ★</span>
+          <span style="color:var(--grade-a, #00c000); font-weight:800; font-size:12px;" title="Paid in Full">PAID ★</span>
         ` : `
-          <span class="badge-status-pill badge-clear" title="No Outstanding Debt">CLEAR</span>
+          <span style="color:var(--clr-text-muted, #94a3b8); font-weight:700; font-size:12px;" title="No Outstanding Debt">CLEAR</span>
         `)}
       </td>
     `;

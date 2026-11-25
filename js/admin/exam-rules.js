@@ -227,7 +227,7 @@ export const ASSESSMENT_MASTER_DATA = [
     phaseKey: 'STEP_3',
     phaseName: '3rd Step (Month 3 / Level 3)',
     levelLabel: '3rd Level',
-    badgeColor: '#c084fc', // Violet / Star
+    badgeColor: '#a855f7', // Violet / Star
     component: 'Daily Attendance (Presensi)',
     timing: 'Mon–Fri (2 Sessions/Day)',
     frequency: '40 Sessions (4 Wks × 10)',
@@ -241,7 +241,7 @@ export const ASSESSMENT_MASTER_DATA = [
     phaseKey: 'STEP_3',
     phaseName: '3rd Step (Month 3 / Level 3)',
     levelLabel: '3rd Level',
-    badgeColor: '#c084fc',
+    badgeColor: '#a855f7',
     component: 'Vocabulary Mastery (Advanced)',
     timing: 'Weekly (End of W1, W2, W3, W4)',
     frequency: '4 Assessments',
@@ -255,7 +255,7 @@ export const ASSESSMENT_MASTER_DATA = [
     phaseKey: 'STEP_3',
     phaseName: '3rd Step (Month 3 / Level 3)',
     levelLabel: '3rd Level',
-    badgeColor: '#c084fc',
+    badgeColor: '#a855f7',
     component: 'Complex Grammar Mastery (W1–W2)',
     timing: 'Week 1 & Week 2',
     frequency: '2 Assessments',
@@ -269,7 +269,7 @@ export const ASSESSMENT_MASTER_DATA = [
     phaseKey: 'STEP_3',
     phaseName: '3rd Step (Month 3 / Level 3)',
     levelLabel: '3rd Level',
-    badgeColor: '#c084fc',
+    badgeColor: '#a855f7',
     component: 'Pronunciation Mastery (W1–W2)',
     timing: 'Week 1 & Week 2',
     frequency: '2 Assessments',
@@ -283,7 +283,7 @@ export const ASSESSMENT_MASTER_DATA = [
     phaseKey: 'STEP_3',
     phaseName: '3rd Step (Month 3 / Level 3)',
     levelLabel: '3rd Level',
-    badgeColor: '#c084fc',
+    badgeColor: '#a855f7',
     component: 'Speaking Practice (W1–W3)',
     timing: 'Week 1, Week 2, Week 3',
     frequency: '3 Assessments',
@@ -368,7 +368,7 @@ function renderCurrentView(area) {
       label: t.label,
       icon: getSvgIcon(t.icon, 14),
       val: t.count,
-      valColor: t.id === 'FINAL_PANELS' ? '#ff2d87' : (t.id === 'SIMULATOR' ? '#38bdf8' : (t.id === 'FORMULAS' ? '#95ff00' : '#c084fc'))
+      valColor: t.id === 'FINAL_PANELS' ? '#ff2d87' : (t.id === 'SIMULATOR' ? '#38bdf8' : (t.id === 'FORMULAS' ? '#95ff00' : 'var(--grade-star, #a855f7)'))
     }));
     window.setTopbarTabs(tabsData, _activePhaseTab, 'window.switchExamRulesPhase');
   }
@@ -447,11 +447,11 @@ function renderMasterQuotasViewHtml(items) {
             <tr style="border-bottom:1px solid rgba(255,255,255,0.05); background:${idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}; transition:background 0.15s ease;" onmouseover="this.style.background='rgba(56,189,248,0.05)'" onmouseout="this.style.background='${idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)'}'">
               <td style="padding:8px 10px; vertical-align:top;">
                 <div style="display:inline-flex; align-items:center; gap:5px;">
-                  <span class="badge" style="background:${row.badgeColor}22; color:${row.badgeColor}; border:1px solid ${row.badgeColor}44; font-size:11px; font-weight:800; padding:2px 6px; border-radius:3px;">
+                  <span style="color:${row.badgeColor}; font-size:12px; font-weight:800;">
                     ${escHtml(row.levelLabel)}
                   </span>
                 </div>
-                <div style="font-size:11px; color:#64748b; margin-top:3px; font-weight:600;">
+                <div style="font-size:12px; color:#64748b; margin-top:3px; font-weight:600;">
                   ${escHtml(row.weightCategory)}
                 </div>
               </td>
@@ -472,7 +472,7 @@ function renderMasterQuotasViewHtml(items) {
                 </div>
               </td>
               <td style="padding:8px 10px; vertical-align:top;">
-                <div style="color:#facc15; font-weight:700; font-size:11px; font-family:monospace; background:rgba(250,204,21,0.08); padding:3px 6px; border-radius:4px; display:inline-block; border:1px solid rgba(250,204,21,0.2);">
+                <div style="color:var(--grade-c, #ffff00); font-weight:700; font-size:11px; font-family:monospace; background:rgba(250,204,21,0.08); padding:3px 6px; border-radius:4px; display:inline-block; border:1px solid rgba(250,204,21,0.2);">
                   ${escHtml(row.targetMetric)}
                 </div>
               </td>
@@ -557,8 +557,8 @@ function renderFormulasViewHtml() {
         <!-- Formula Box: Certificate Predicate Scale -->
         <div class="card" style="background:#0f172a; border:1px solid #334155; border-radius:6px; padding:12px;">
           <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
-            <span style="font-weight:800; color:#c084fc; font-size:13px; text-transform:uppercase;">4. Official Certificate Predicate Scale</span>
-            <span class="badge" style="background:#c084fc22; color:#c084fc; border:1px solid #c084fc; font-size:11px; font-weight:800;">Angket Sertifikat</span>
+            <span style="font-weight:800; color:#a855f7; font-size:13px; text-transform:uppercase;">4. Official Certificate Predicate Scale</span>
+            <span class="badge" style="background:#a855f722; color:#a855f7; border:1px solid #a855f7; font-size:11px; font-weight:800;">Angket Sertifikat</span>
           </div>
           <div style="display:flex; flex-direction:column; gap:4px; font-size:12px;">
             ${EXAM_RULES_SCHEMA.CERTIFICATE_PREDICATES.map(p => `
@@ -663,7 +663,7 @@ function renderWeeklyRubricsViewHtml() {
               <div style="display:flex; flex-direction:column; gap:4px;">
                 ${wObj.indicators.map(ind => `
                   <div style="display:flex; align-items:flex-start; gap:8px; padding:4px 6px; background:#070a13; border-radius:3px; font-size:11px;">
-                    <span class="badge" style="background:#1e293b; color:#facc15; border:1px solid #334155; font-size:11px; font-weight:800; min-width:20px; text-align:center;">${ind.score}</span>
+                    <span class="badge" style="background:#1e293b; color:var(--grade-c, #ffff00); border:1px solid #334155; font-size:11px; font-weight:800; min-width:20px; text-align:center;">${ind.score}</span>
                     <span style="color:#e2e8f0; line-height:1.4;">${escHtml(ind.text)}</span>
                   </div>
                 `).join('')}
@@ -695,7 +695,7 @@ function renderSpeaking5AxisViewHtml() {
               <div style="display:flex; flex-direction:column; gap:4px;">
                 ${axes[axisKey].map(ind => `
                   <div style="font-size:10.5px; padding:4px; background:#070a13; border-radius:3px; color:#cbd5e1; line-height:1.35;">
-                    <strong style="color:#facc15;">${ind.score}.</strong> ${escHtml(ind.text)}
+                    <strong style="color:var(--grade-c, #ffff00);">${ind.score}.</strong> ${escHtml(ind.text)}
                   </div>
                 `).join('')}
               </div>
@@ -711,7 +711,7 @@ function renderSpeaking5AxisViewHtml() {
           <div style="display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;">
             ${axes.totalBands.map(b => `
               <div style="background:#070a13; border:1px solid #334155; border-radius:4px; padding:6px; text-align:center;">
-                <div style="font-weight:800; color:#facc15; font-size:12px;">${b.min} – ${b.max} Pts</div>
+                <div style="font-weight:800; color:var(--grade-c, #ffff00); font-size:12px;">${b.min} – ${b.max} Pts</div>
                 <div style="font-weight:700; color:#38bdf8; font-size:11px; margin-top:2px;">${b.predicate}</div>
               </div>
             `).join('')}
@@ -775,7 +775,7 @@ function renderSimulatorViewHtml() {
               <input type="number" id="sim-practice" placeholder="0 - 100" value="85" style="width:100%; box-sizing:border-box; background:#070a13; border:1px solid #334155; color:#fff; padding:4px 6px; border-radius:3px; font-size:11px; margin-top:3px;" />
             </div>
 
-            <button type="button" class="btn btn-primary btn-sm" onclick="window.runLiveSimulatorCalculation()" style="height:28px; line-height:26px; font-size:12px; font-weight:800; background:#0284c7; border:1px solid #38bdf8; color:#fff; border-radius:4px; cursor:pointer; margin-top:6px;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="window.runLiveSimulatorCalculation()" style="height:28px; line-height:26px; font-size:12px; font-weight:800; background:#38bdf8; border:1px solid #38bdf8; color:#090d16; border-radius:4px; cursor:pointer; margin-top:6px;">
               Calculate Official Transcript
             </button>
           </div>
@@ -827,7 +827,7 @@ function executeSimulator() {
 
   const getPredColor = (pred) => {
     switch (pred) {
-      case 'EXCELLENT': return '#c084fc';
+      case 'EXCELLENT': return 'var(--grade-star, #a855f7)';
       case 'VERY GOOD': return '#00c000';
       case 'GOOD': return '#95ff00';
       case 'ENOUGH': return '#ffff00';
@@ -889,7 +889,7 @@ function renderSubPanel() {
         <span class="badge" style="background:#1e293b; color:#ff8c00; border:1px solid #334155; font-size:11px; font-weight:800; padding:1px 6px; border-radius:3px;">
           Step 2: 51 Pts
         </span>
-        <span class="badge" style="background:#1e293b; color:#c084fc; border:1px solid #334155; font-size:11px; font-weight:800; padding:1px 6px; border-radius:3px;">
+        <span class="badge" style="background:#1e293b; color:#a855f7; border:1px solid #334155; font-size:11px; font-weight:800; padding:1px 6px; border-radius:3px;">
           Step 3: 11 Pts
         </span>
         <span class="badge" style="background:#1e293b; color:#ff2d87; border:1px solid #334155; font-size:11px; font-weight:800; padding:1px 6px; border-radius:3px;">

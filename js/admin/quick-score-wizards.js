@@ -142,7 +142,7 @@ export async function openQuickRemedialModal({ classId, classTests = [], student
 
       <!-- Footer CTA -->
       <div style="padding: 12px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(30, 41, 59, 0.4); display: flex; align-items: center; justify-content: space-between;">
-        <button type="button" id="btn-cancel-quick-remedial" class="btn btn-secondary btn-sm">Cancel</button>
+        <button type="button" id="btn-cancel-quick-remedial" class="btn btn-secondary btn-sm btn-modal-close-left">CLOSE</button>
         <button type="button" id="btn-save-quick-remedial" class="btn btn-sm" style="background: var(--grade-c); border: 1px solid var(--grade-c); color: #0f172a; font-weight: 800; padding: 6px 18px; display: inline-flex; align-items: center; gap: 6px;">
           ${getSvgIcon('check-circle', 14)} Apply Remedial Authorizations (Grade R)
         </button>
@@ -322,7 +322,7 @@ export async function openQuickForgivenModal({ classId, classTests = [], student
 
       <!-- Footer CTA -->
       <div style="padding: 12px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(30, 41, 59, 0.4); display: flex; align-items: center; justify-content: space-between;">
-        <button type="button" id="btn-cancel-quick-forgiven" class="btn btn-secondary btn-sm">Cancel</button>
+        <button type="button" id="btn-cancel-quick-forgiven" class="btn btn-secondary btn-sm btn-modal-close-left">CLOSE</button>
         <button type="button" id="btn-save-quick-forgiven" class="btn btn-sm" style="background: var(--grade-e); border: 1px solid var(--grade-e); color: #ffffff; font-weight: 800; padding: 6px 18px; display: inline-flex; align-items: center; gap: 6px;">
           ${getSvgIcon('shield', 14)} Grant Forgiven Waivers (Grade F)
         </button>
@@ -430,8 +430,8 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
         </td>
         <td style="padding: 10px 12px; text-align: center;">
           ${s.isEligibleNext
-            ? `<span class="badge" style="background:var(--grade-a); color:#0F172A; font-weight:700;">✓ Eligible</span>`
-            : `<span class="badge" style="background:rgba(168,85,247,0.15); border:1px solid rgba(168,85,247,0.3); color:#c084fc; font-weight:700;">Direct Force</span>`}
+            ? `<span style="color:var(--grade-a); font-weight:700; font-size:12px;">✓ Eligible</span>`
+            : `<span style="color:var(--grade-star, #a855f7); font-weight:700; font-size:12px;">Direct Force</span>`}
         </td>
       </tr>
     `;
@@ -453,7 +453,7 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
       <!-- Quick select tools -->
       <div style="padding: 10px 20px; background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; justify-content: space-between;">
         <span style="font-size: 12px; color: #cbd5e1; font-weight: 600;">
-          Graduating from Current Roster View: <strong style="color: #c084fc;">${activeStudents.length} Active Students</strong>
+          Graduating from Current Roster View: <strong style="color: var(--grade-star, #a855f7);">${activeStudents.length} Active Students</strong>
         </span>
         <div style="display: flex; gap: 8px;">
           <button type="button" id="btn-select-all-alumni" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15); color: #fff; font-size: 12px; padding: 3px 10px; border-radius: 4px; cursor: pointer;">Select All</button>
@@ -481,7 +481,7 @@ export async function openQuickAlumniGraduateModal({ students = [], onSaved }) {
 
       <!-- Footer CTA -->
       <div style="padding: 12px 20px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(30, 41, 59, 0.4); display: flex; align-items: center; justify-content: space-between;">
-        <button type="button" id="btn-cancel-quick-alumni" class="btn btn-secondary btn-sm">Cancel</button>
+        <button type="button" id="btn-cancel-quick-alumni" class="btn btn-secondary btn-sm btn-modal-close-left">CLOSE</button>
         <button type="button" id="btn-confirm-quick-alumni" class="btn btn-purple btn-sm" style="font-weight: 800; padding: 6px 18px; display: inline-flex; align-items: center; gap: 6px;">
           ${getSvgIcon('graduation-cap', 16)} Confirm Graduation to ALUMNI
         </button>
