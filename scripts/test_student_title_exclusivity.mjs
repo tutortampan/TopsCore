@@ -55,13 +55,13 @@ console.log('  ✅ [PASS] updateStudentGender only updates gender column in data
 // ============================================================
 console.log('\n▶ Pillar 3: Auditing consumer screens (Result, Test, Conversation)...');
 
-// 3.1 Result screen (js/result.js)
+// 3.1 Result screen (js/result.js) — Displays Mr./Miss (and King/Queen for batch champions) matching Dashboard
 const resultContent = fs.readFileSync('js/result.js', 'utf8');
-assert(!resultContent.includes("`Mr. ${formattedName}`") && !resultContent.includes("`Miss ${formattedName}`"),
-  'js/result.js MUST NOT prepend Mr./Miss to student name');
-assert(resultContent.includes('nameLabel.textContent = studentFullName') || resultContent.includes('nameLabel.textContent = cleanStudentName(studentFullName)'),
-  'js/result.js must set result-student-name-label using studentFullName directly');
-console.log('  ✅ [PASS] js/result.js directly displays standard studentFullName');
+assert(resultContent.includes('formatStudentDashboardName'),
+  'js/result.js MUST import and apply formatStudentDashboardName for Mr./Miss & King/Queen titles');
+assert(resultContent.includes('nameLabel.textContent = formatStudentDashboardName'),
+  'js/result.js must format result-student-name-label using formatStudentDashboardName');
+console.log('  ✅ [PASS] js/result.js displays Mr./Miss (and King/Queen) matching Student Dashboard');
 
 // 3.2 Test room (js/test.js)
 const testContent = fs.readFileSync('js/test.js', 'utf8');
@@ -102,7 +102,7 @@ assert(dashContent.includes("initFormattedName = `Mr. ${initFormattedName}`") &&
   'dashboard.js welcome greeting must support Mr./Miss');
 assert(dashContent.includes("formattedName = `Mr. ${cleanFullName}`") && dashContent.includes("formattedName = `Miss ${cleanFullName}`"),
   'dashboard.js applyStudentGenderUI must support Mr./Miss');
-console.log('  ✅ [PASS] js/dashboard.js is the sole location presenting Mr. and Miss');
+console.log('  ✅ [PASS] js/dashboard.js & js/result.js present Mr./Miss (and King/Queen)');
 
 // ============================================================
 // PILLAR 5: Governance SSOT Codification Audit
@@ -111,27 +111,27 @@ console.log('\n▶ Pillar 5: Auditing SSOT Governance codification...');
 
 // 5.1 AGENTS.md
 const agentsContent = fs.readFileSync('AGENTS.md', 'utf8');
-assert(agentsContent.includes('## 2.23 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`)'),
+assert(agentsContent.includes('## 2.23 Standard Student Name (`studentName`) & Dashboard/Result Title (`Mr.` / `Miss`)'),
   'AGENTS.md must define Rule 2.23');
-assert(agentsContent.includes('DO NOT prepend "Mr." or "Miss" titles to student names outside the Student Dashboard'),
+assert(agentsContent.includes('DO NOT prepend "Mr." or "Miss" titles to student names outside the Student Dashboard and Result Page'),
   'AGENTS.md Section 5.2 must contain prohibition');
 console.log('  ✅ [PASS] AGENTS.md §2.23 & §5.2 authoritatively codified');
 
 // 5.2 ui-invariants.md
 const uiContent = fs.readFileSync('.agents/rules/ui-invariants.md', 'utf8');
-assert(uiContent.includes('### 2.8 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`)'),
+assert(uiContent.includes('### 2.8 Standard Student Name (`studentName`) & Dashboard/Result Title (`Mr.` / `Miss`)'),
   'ui-invariants.md must define Rule 2.8');
 console.log('  ✅ [PASS] .agents/rules/ui-invariants.md §2.8 authoritatively codified');
 
 // 5.3 DECISIONS.md
 const decisionsContent = fs.readFileSync('docs/DECISIONS.md', 'utf8');
-assert(decisionsContent.includes('## DECISION-053 — Standard Student Name (`studentName`) and Dashboard-Only Title (`Mr.` / `Miss`)'),
+assert(decisionsContent.includes('## DECISION-053 — Standard Student Name (`studentName`) and Dashboard/Result Title (`Mr.` / `Miss`)'),
   'docs/DECISIONS.md must contain DECISION-053');
 console.log('  ✅ [PASS] docs/DECISIONS.md DECISION-053 authoritatively ratified');
 
 // 5.4 .antigravityrules
 const rulesContent = fs.readFileSync('.antigravityrules', 'utf8');
-assert(rulesContent.includes('Standard Student Name & Dashboard-Only Title (`Mr.` / `Miss`)'),
+assert(rulesContent.includes('STUDENT NAME & DASHBOARD/RESULT TITLE'),
   '.antigravityrules must index Rule 2.23');
 console.log('  ✅ [PASS] .antigravityrules master index synchronized');
 

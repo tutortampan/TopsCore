@@ -5984,10 +5984,6 @@ body.dashboard-page .dashboard-header-brand {
   margin: 0 !important;
   padding: 0 4px !important;
 }
-  text-overflow: clip !important;
-  margin: 0 !important;
-  padding: 0 4px !important;
-}
 
 body.dashboard-page .dashboard-header-right,
 body.dashboard-page .dashboard-header-actions {
@@ -6716,7 +6712,6 @@ body.dashboard-page .next-test-col-right .is-exam-lock {
   background: rgba(var(--grade-c-rgb), 0.15) !important;
   border: 1.5px solid var(--grade-c) !important;
   box-shadow: none !important;
-}
 }
 
 /* 6. Standings & Leaderboard: Scroll INSIDE Table (Page remains locked) */

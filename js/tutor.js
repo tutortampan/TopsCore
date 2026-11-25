@@ -1979,6 +1979,28 @@ async function startSession(sessionType, targetTestId = null) {
 
   localStorage.setItem('topscore_active_tutor_session', JSON.stringify(_activeSession));
 
+  // Sync existing violations from Supabase for this session into _violationsMap
+  if (_activeSession && _activeSession.id) {
+    sb.from('language_violations')
+      .select('student_id, word_count, fine_amount, paid_amount, debt_amount')
+      .eq('session_id', _activeSession.id)
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          data.forEach(v => {
+            _violationsMap.set(v.student_id, {
+              word_count: v.word_count || 0,
+              fine_amount: Number(v.fine_amount) || 0,
+              paid_amount: Number(v.paid_amount) || 0,
+              debt_amount: Number(v.debt_amount) || 0
+            });
+          });
+          try {
+            localStorage.setItem('topscore_fines_data', JSON.stringify(Array.from(_violationsMap.entries())));
+          } catch (_) {}
+        }
+      });
+  }
+
   // Reset student attendance to ABSENT/UNCHECKED initially
   _students.forEach(s => _attendanceMap.set(s.id, 'ABSENT'));
 
@@ -3131,6 +3153,23 @@ function stepFinesViolation(studentId, delta) {
     localStorage.setItem('topscore_fines_data', JSON.stringify(Array.from(_violationsMap.entries())));
   } catch (_) {}
 
+  // Sync to Supabase if a live session is active
+  if (_activeSession && _activeSession.id) {
+    const sessionId = _activeSession.id;
+    sb.from('language_violations')
+      .upsert({
+        session_id: sessionId,
+        student_id: studentId,
+        word_count: viol.word_count,
+        fine_amount: viol.fine_amount,
+        paid_amount: viol.paid_amount || 0,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'session_id,student_id', ignoreDuplicates: false })
+      .then(({ error }) => {
+        if (error) console.warn('[TUTOR FINES] Supabase upsert error (stepFines):', error.message);
+      });
+  }
+
   renderFinesTable();
   renderPaymentTable();
 }
@@ -3182,6 +3221,24 @@ function confirmPayment() {
   try {
     localStorage.setItem('topscore_fines_data', JSON.stringify(Array.from(_violationsMap.entries())));
   } catch (_) {}
+
+  // Sync payment update to Supabase if a live session is active
+  if (_activeSession && _activeSession.id) {
+    const sessionId = _activeSession.id;
+    const studentId = _selectedStudentForPayment;
+    sb.from('language_violations')
+      .upsert({
+        session_id: sessionId,
+        student_id: studentId,
+        word_count: viol.word_count,
+        fine_amount: viol.fine_amount,
+        paid_amount: viol.paid_amount,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'session_id,student_id', ignoreDuplicates: false })
+      .then(({ error }) => {
+        if (error) console.warn('[TUTOR FINES] Supabase upsert error (confirmPayment):', error.message);
+      });
+  }
 
   document.getElementById('modal-payment')?.classList.add('hidden');
   _selectedStudentForPayment = null;
@@ -3305,6 +3362,28 @@ async function checkRestorableSession() {
           }
         }
         transitionToLiveActiveArena();
+
+        // Sync violations from Supabase for the restored session
+        if (_activeSession && _activeSession.id) {
+          sb.from('language_violations')
+            .select('student_id, word_count, fine_amount, paid_amount, debt_amount')
+            .eq('session_id', _activeSession.id)
+            .then(({ data, error }) => {
+              if (!error && data && data.length > 0) {
+                data.forEach(v => {
+                  _violationsMap.set(v.student_id, {
+                    word_count: v.word_count || 0,
+                    fine_amount: Number(v.fine_amount) || 0,
+                    paid_amount: Number(v.paid_amount) || 0,
+                    debt_amount: Number(v.debt_amount) || 0
+                  });
+                });
+                try {
+                  localStorage.setItem('topscore_fines_data', JSON.stringify(Array.from(_violationsMap.entries())));
+                } catch (_) {}
+              }
+            });
+        }
       }
     } catch (_) {}
   }

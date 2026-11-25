@@ -1,7 +1,7 @@
 // TOPSCORE LMS — Quick Single-Step Action Wizards
 // Phase 545: Focused Single-Step Modals for Manual (Cyan/M), Remedi (Yellow/R), Forgive (Red/F), and Alumni (Purple/X)
 
-import { adminApplyForgiven, labelAttemptRemedial, labelAttemptForgiven, clearAdminCache } from '../api.js?v=20261115_v539';
+import { adminApplyForgiven, labelAttemptRemedial, labelAttemptForgiven, clearAdminCache } from '../api.js?v=20261125_v688';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { TOPSCORE_COLORS, getGradeColorByScore, isExam, isWeeklyExam } from '../app.js?v=20261112_v423';

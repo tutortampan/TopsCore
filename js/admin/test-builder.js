@@ -18,7 +18,7 @@ import {
   adminFetchAll,
   clearAdminCache,
   reorderTest
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261125_v688';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { getAllowedModulesForClass, OFFICIAL_MODULES } from './modules.js';

@@ -306,7 +306,6 @@ Deno.serve(async (req) => {
               wordsPasses = Math.max(wordsPasses, reps);
               phrasesPasses = Math.max(phrasesPasses, reps);
             }
-            return;
           }
           if (a.is_forgiven) {
             wordsPasses = Math.max(wordsPasses, 7);
@@ -330,7 +329,6 @@ Deno.serve(async (req) => {
           const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)/i);
           if (mMatch) {
             passCount = Math.max(passCount, Math.min(7, parseInt(mMatch[1], 10)));
-            return;
           }
           if (a.is_forgiven) {
             passCount = Math.max(passCount, 7);
@@ -374,6 +372,8 @@ Deno.serve(async (req) => {
         .eq('class_id', test.class_id)
         .eq('level_id', test.level_id)
         .eq('test_type', 'exam')
+        .eq('status', 'PUBLISHED')
+        .is('deleted_at', null)
         .neq('id', test.id);
 
       const matchingPriorExams = (priorExams || []).filter((t: any) => {
@@ -682,7 +682,6 @@ Deno.serve(async (req) => {
                     phrasesPassByTask[tid] = Math.max(phrasesPassByTask[tid] || 0, reps);
                   }
                   passCountByTask[tid] = Math.max(passCountByTask[tid] || 0, reps);
-                  return;
                 }
 
                 if (att.is_forgiven) {
@@ -741,6 +740,8 @@ Deno.serve(async (req) => {
             .eq('class_id', test.class_id)
             .eq('level_id', test.level_id)
             .eq('test_type', 'exam')
+            .eq('status', 'PUBLISHED')
+            .is('deleted_at', null)
             .neq('id', test.id);
 
           const matchingPriorExams = (priorExams || []).filter((t: any) => {
@@ -891,8 +892,27 @@ Deno.serve(async (req) => {
       const sessAnsweringMode = liveSession?.answering_mode;
       const sessModes = liveSession?.answering_modes;
 
-      let wordsAnswerType = sessModes?.words || sessAnsweringMode || dynamicAnswerType;
-      let phrasesAnswerType = sessModes?.phrases || sessAnsweringMode || (isUnified ? (dynamicAnswerType === 'written' ? 'selection' : dynamicAnswerType) : dynamicAnswerType);
+      let classSettings: any = null;
+      if (test.class_id) {
+        try {
+          const { data: csRow } = await supabase
+            .from('site_settings')
+            .select('value')
+            .eq('key', `class_test_settings_${test.class_id}`)
+            .maybeSingle();
+          if (csRow?.value) {
+            classSettings = typeof csRow.value === 'string' ? JSON.parse(csRow.value) : csRow.value;
+          }
+        } catch (_) {}
+      }
+      const isExamTest = String(test.test_type || '').toLowerCase() === 'exam' || String(test.category || '').toUpperCase() === 'EXAM';
+      const payloadWordsAns = test.payload?.words_answer_type || test.payload?.wordsAnswerType;
+      const payloadPhrasesAns = test.payload?.phrases_answer_type || test.payload?.phrasesAnswerType;
+      const settingsWordsAns = isExamTest ? classSettings?.wordsExamAnswer : classSettings?.wordsTaskAnswer;
+      const settingsPhrasesAns = isExamTest ? classSettings?.phrasesExamAnswer : classSettings?.phrasesTaskAnswer;
+
+      let wordsAnswerType = sessModes?.words || sessAnsweringMode || payloadWordsAns || settingsWordsAns || dynamicAnswerType;
+      let phrasesAnswerType = sessModes?.phrases || sessAnsweringMode || payloadPhrasesAns || settingsPhrasesAns || (isUnified ? (dynamicAnswerType === 'written' ? 'selection' : dynamicAnswerType) : dynamicAnswerType);
 
       if (isSelfPacedRetake) {
         // Outside active tutor sessions, self-paced retakes strictly enforce 100% SPOKEN modality (SSOT Standard)

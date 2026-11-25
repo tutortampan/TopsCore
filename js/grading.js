@@ -2594,6 +2594,41 @@ export function isCbtEvaluationClass(classObjOrName) {
   return !isManualEvaluationClass(classObjOrName);
 }
 
+/**
+ * Resolve dynamic per-component repetition targets (supports 7x7, 5x5, 3x6, 5x4, 1x1, 10x10, etc.).
+ * Explicit words_reps / phrases_reps always take precedence over legacy single task_repetitions.
+ */
+export function resolveTaskRepTargets(testObj = null, classSettings = null) {
+  const isUni = Boolean(
+    testObj?.payload?.is_unified === true ||
+    testObj?.category === 'unified' ||
+    (testObj?.test_subtype && String(testObj.test_subtype).startsWith('UNIFIED'))
+  );
+  const rawBase = Number(
+    testObj?.payload?.task_repetitions ??
+    classSettings?.taskRepetitions ??
+    7
+  ) || 7;
+  const normalizedBase = (isUni && rawBase >= 14) ? Math.round(rawBase / 2) : Math.max(1, rawBase);
+
+  const rawWords = testObj?.payload?.words_reps ?? classSettings?.wordsRepetitions ?? classSettings?.words_reps;
+  const rawPhrases = testObj?.payload?.phrases_reps ?? classSettings?.phrasesRepetitions ?? classSettings?.phrases_reps;
+
+  const wordsTarget = (rawWords != null && !isNaN(Number(rawWords)))
+    ? Math.max(0, parseInt(rawWords, 10))
+    : normalizedBase;
+  const phrasesTarget = (rawPhrases != null && !isNaN(Number(rawPhrases)))
+    ? Math.max(0, parseInt(rawPhrases, 10))
+    : normalizedBase;
+
+  return {
+    wordsTarget,
+    phrasesTarget,
+    maxTarget: Math.max(1, wordsTarget, phrasesTarget),
+    label: `${wordsTarget}×${phrasesTarget}`
+  };
+}
+
 // ── EXAM RULES & FINAL ASSESSMENT SSOT ENGINE ──
 export {
   EXAM_RULES_SCHEMA,

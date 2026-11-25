@@ -3,12 +3,12 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, toShortLevel, isCampContext, formatAcademicTier, resolveContextYear, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261125_v681';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, toShortLevel, isCampContext, formatAcademicTier, resolveContextYear, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261125_v688';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass } from './grading.js?v=20261106_v160';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets } from './grading.js?v=20261125_v688';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
     import { getSupabase } from './supabase.js?v=20261121_v161';
@@ -1760,6 +1760,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       } catch (_) {}
 
       const allTestsMap = Object.fromEntries((allTests || []).map(t => [t.id, t]));
+      const shellToTestId = {};
+      (allTests || []).forEach(t => {
+        if (t.deleted_at) return;
+        const sc = t.shell_code || t.payload?.shell_code;
+        if (sc && !shellToTestId[sc]) shellToTestId[sc] = t.id;
+      });
       const bestMap = {};
       const passCountByTest = {};
       const isForgivenByTest = {};
@@ -1801,7 +1807,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       };
 
       (attempts || []).forEach(a => {
-        const aid = a.test_id || a.Test_id;
+        const aid = a.test_id || a.Test_id || (a.test_shell_code ? shellToTestId[a.test_shell_code] : null);
         if (!aid) return;
         const pct = parseFloat(a.effective_score ?? a.percentage ?? 0);
         if (bestMap[aid] == null || pct > bestMap[aid]) {
@@ -1919,12 +1925,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (score == null) return false;
           return score >= req || (isRemedialByTest[t.id] && score >= 60);
         } else {
-          // Task: Strictly requires targetReps (7 passes >= minScore)
+          // Task: Strictly requires dynamic per-component passes (supports 7x7, 5x5, 3x6, 5x4, 1x1, etc.)
+          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(t, { taskRepetitions: targetReps });
           if (isUni) {
-            const compTarget = (targetReps >= 14) ? Math.round(targetReps / 2) : (targetReps || 7);
-            return (wordsPassCountByTest[t.id] || 0) >= compTarget && (phrasesPassCountByTest[t.id] || 0) >= compTarget;
+            return (wordsPassCountByTest[t.id] || 0) >= wT && (phrasesPassCountByTest[t.id] || 0) >= pT;
           }
-          return (passCountByTest[t.id] || 0) >= targetReps;
+          return (passCountByTest[t.id] || 0) >= mT;
         }
       };
 
@@ -1988,12 +1994,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         if (pair && pair.isPair) {
           visitedPairIds.add(pair.wordsTest.id);
           if (pair.phrasesTest) visitedPairIds.add(pair.phrasesTest.id);
-          const compTarget = (targetReps >= 14) ? Math.round(targetReps / 2) : (targetReps || 7);
+          const { wordsTarget: wT, phrasesTarget: pT } = resolveTaskRepTargets(pair.wordsTest, { taskRepetitions: targetReps });
           const wordsPassed = pair.isUnified
-            ? (pair.isExam ? ((wordsBestByTest[pair.wordsTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.wordsTest.id])) : ((wordsPassCountByTest[pair.wordsTest.id] || 0) >= compTarget || Boolean(isForgivenByTest[pair.wordsTest.id])))
+            ? (pair.isExam ? ((wordsBestByTest[pair.wordsTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.wordsTest.id])) : ((wordsPassCountByTest[pair.wordsTest.id] || 0) >= wT || Boolean(isForgivenByTest[pair.wordsTest.id])))
             : isTestPassed(pair.wordsTest);
           const phrasesPassed = pair.isUnified
-            ? (pair.isExam ? ((phrasesBestByTest[pair.phrasesTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.phrasesTest.id])) : ((phrasesPassCountByTest[pair.phrasesTest.id] || 0) >= compTarget || Boolean(isForgivenByTest[pair.phrasesTest.id])))
+            ? (pair.isExam ? ((phrasesBestByTest[pair.phrasesTest.id] ?? 0) >= minScore || Boolean(isForgivenByTest[pair.phrasesTest.id])) : ((phrasesPassCountByTest[pair.phrasesTest.id] || 0) >= pT || Boolean(isForgivenByTest[pair.phrasesTest.id])))
             : isTestPassed(pair.phrasesTest);
           if (!wordsPassed || !phrasesPassed) {
             nextAssignment = {
@@ -2103,8 +2109,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             /PHRASE/i.test(nextAssignment.primaryTest?.shell_code || nextAssignment.primaryTest?.title || '')
           );
 
-          const rawReps = Math.max(1, Number(activeTestItem.payload?.task_repetitions || targetReps || 7));
-          const maxBoxes = (hasPhrasesComp && rawReps >= 14) ? Math.round(rawReps / 2) : Math.min(rawReps, 7);
+          const { wordsTarget: wBoxTarget, phrasesTarget: pBoxTarget } = resolveTaskRepTargets(activeTestItem, { taskRepetitions: targetReps });
 
           const wordsP = nextAssignment.isPair
             ? (nextAssignment.isUnified ? (wordsPassCountByTest[nextAssignment.wordsTest.id] || 0) : (passCountByTest[nextAssignment.wordsTest.id] || 0))
@@ -2115,9 +2120,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
 
           let wordsBoxesHtml = '';
           let phrasesBoxesHtml = '';
-          for (let s = 1; s <= maxBoxes; s++) {
+          for (let s = 1; s <= wBoxTarget; s++) {
             wordsBoxesHtml += `<span class="rainbow-box ${s <= wordsP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
-            if (hasPhrasesComp) {
+          }
+          if (hasPhrasesComp) {
+            for (let s = 1; s <= pBoxTarget; s++) {
               phrasesBoxesHtml += `<span class="rainbow-box ${s <= phrasesP ? 'is-lit' : 'is-dim'}" data-step="${s}">${s}</span>`;
             }
           }
@@ -2179,7 +2186,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const phrasesP = nextAssignment.isUnified
             ? (phrasesPassCountByTest[nextAssignment.phrasesTest.id] || 0)
             : (passCountByTest[nextAssignment.phrasesTest.id] || 0);
-          const compTargetReps = (targetReps >= 14) ? Math.round(targetReps / 2) : (targetReps || 7);
+          const { wordsTarget: wModTarget, phrasesTarget: pModTarget, maxTarget: compTargetReps } = resolveTaskRepTargets(nextAssignment.primaryTest, { taskRepetitions: targetReps });
           const encoded = encodeURIComponent(JSON.stringify({
             badge: 'TOPIC TASK',
             title: displayTitle,
@@ -2190,6 +2197,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             phrasesTestId: nextAssignment.phrasesTest.id,
             wordsPasses: wordsP,
             phrasesPasses: phrasesP,
+            wordsTarget: wModTarget,
+            phrasesTarget: pModTarget,
             targetReps: compTargetReps
           }));
           container.onclick = () => {
@@ -2736,6 +2745,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         }
 
         const compTargetReps = (Number(data.targetReps) >= 14) ? Math.round(Number(data.targetReps) / 2) : (Number(data.targetReps) || 7);
+        const wordsTargetReps = (data.wordsTarget != null && !isNaN(Number(data.wordsTarget))) ? Math.max(0, Number(data.wordsTarget)) : compTargetReps;
+        const phrasesTargetReps = (data.phrasesTarget != null && !isNaN(Number(data.phrasesTarget))) ? Math.max(0, Number(data.phrasesTarget)) : compTargetReps;
 
         if (wordsIconEl) wordsIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
         if (phrasesIconEl) phrasesIconEl.innerHTML = getSvgIcon('book-open', 18, '#38bdf8');
@@ -2755,8 +2766,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             selectedPart = data.phrasesTestId ? 'phrases' : null;
           }
         } else {
-          const wordsDone = (Number(data.wordsPasses) || 0) >= compTargetReps;
-          const phrasesDone = (Number(data.phrasesPasses) || 0) >= compTargetReps;
+          const wordsDone = (Number(data.wordsPasses) || 0) >= wordsTargetReps;
+          const phrasesDone = (Number(data.phrasesPasses) || 0) >= phrasesTargetReps;
           if (wordsDone && !phrasesDone && data.phrasesTestId) {
             selectedPart = 'phrases';
           } else if (data.wordsTestId) {
@@ -2824,8 +2835,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (wordsPips) wordsPips.classList.remove('hidden');
             if (wordsExamView) wordsExamView.classList.add('hidden');
             const wordsPasses = Number(data.wordsPasses || 0);
-            renderComponentPips('component-words-pips', Math.min(compTargetReps, wordsPasses), compTargetReps);
-            if (wordsStatus) wordsStatus.textContent = `${Math.min(compTargetReps, wordsPasses)}/${compTargetReps}`;
+            renderComponentPips('component-words-pips', Math.min(wordsTargetReps, wordsPasses), wordsTargetReps);
+            if (wordsStatus) wordsStatus.textContent = `${Math.min(wordsTargetReps, wordsPasses)}/${wordsTargetReps}`;
           }
           wordsCard.onclick = () => {
             if (selectedPart === 'words') {
@@ -2861,8 +2872,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             if (phrasesPips) phrasesPips.classList.remove('hidden');
             if (phrasesExamView) phrasesExamView.classList.add('hidden');
             const phrasesPasses = Number(data.phrasesPasses || 0);
-            renderComponentPips('component-phrases-pips', Math.min(compTargetReps, phrasesPasses), compTargetReps);
-            if (phrasesStatus) phrasesStatus.textContent = `${Math.min(compTargetReps, phrasesPasses)}/${compTargetReps}`;
+            renderComponentPips('component-phrases-pips', Math.min(phrasesTargetReps, phrasesPasses), phrasesTargetReps);
+            if (phrasesStatus) phrasesStatus.textContent = `${Math.min(phrasesTargetReps, phrasesPasses)}/${phrasesTargetReps}`;
           }
           phrasesCard.onclick = () => {
             if (selectedPart === 'phrases') {
@@ -3125,12 +3136,15 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
             );
 
             // Dynamic Repetitive Mastery Hard Gate: All sibling tasks must reach N passes (>= passing threshold)
-            const _themeGateTarget = Math.max(1, Number(window._classTestSettings?.taskRepetitions || 7));
             for (const task of siblingTasks) {
-              const pCount = passCountByTest[task.id] || 0;
-              if (pCount < _themeGateTarget) {
+              const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, label: tLabel } = resolveTaskRepTargets(task, window._classTestSettings);
+              const isUniTask = task?.payload?.is_unified === true || task?.category === 'unified' || (task?.test_subtype && task.test_subtype.startsWith('UNIFIED'));
+              const isTaskComplete = isUniTask
+                ? ((wordsPassCountByTest[task.id] || 0) >= wT && (phrasesPassCountByTest[task.id] || 0) >= pT)
+                : ((passCountByTest[task.id] || 0) >= mT);
+              if (!isTaskComplete) {
                 prereqMet = false;
-                prereqTitle = `All Theme Tasks Mastery (${_themeGateTarget}/${_themeGateTarget} Passes Required)`;
+                prereqTitle = `All Theme Tasks Mastery (${tLabel} Passes Required)`;
                 break;
               }
             }
@@ -3249,11 +3263,12 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const pObj = tests.find(a => a.id === pid);
           const isPrereqTask = pObj ? !isExam(pObj) : false;
           if (isPrereqTask) {
+            const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT, label: pLabel } = resolveTaskRepTargets(pObj, window._classTestSettings);
+            const isUniPrereq = pObj?.payload?.is_unified === true || pObj?.category === 'unified' || (pObj?.test_subtype && pObj.test_subtype.startsWith('UNIFIED'));
             const pCount = passCountByTest[pid] || 0;
             const isForgiven = Boolean(bestByTest[pid]?.is_forgiven);
-            const _prereqGateTarget = Math.max(1, Number(pObj?.payload?.task_repetitions || window._classTestSettings?.taskRepetitions || 7));
-            prereqMet = isForgiven || pCount >= _prereqGateTarget;
-            prereqTitle = pObj ? `${pObj.title || 'Prerequisite'} (${_prereqGateTarget}/${_prereqGateTarget} Passes Required)` : `Prerequisite Task (${_prereqGateTarget}/${_prereqGateTarget} Passes Required)`;
+            prereqMet = isForgiven || (isUniPrereq ? ((wordsPassCountByTest[pid] || 0) >= wT && (phrasesPassCountByTest[pid] || 0) >= pT) : (pCount >= mT));
+            prereqTitle = pObj ? `${pObj.title || 'Prerequisite'} (${pLabel} Passes Required)` : `Prerequisite Task (${pLabel} Passes Required)`;
           } else {
             const prereqBest = bestByTest[pid];
             const prereqPct = prereqBest ? parseFloat(prereqBest.effective_score ?? prereqBest.percentage ?? 0) : null;
@@ -5151,7 +5166,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         let words = 0, fine = 0, debt = 0;
         const { data: violData } = await sb
           .from('language_violations')
-          .select('word_count, fine_amount, paid_amount, debt_amount, created_at, note')
+          .select('word_count, fine_amount, paid_amount, debt_amount, created_at')
           .eq('student_id', session.student_id);
 
         if (violData && violData.length > 0) {

@@ -234,9 +234,9 @@ TopsCore LMS operates on a strict Dual-Scale Typography Architecture:
 ### 2.4 Mobile 350px Standard Viewport & Responsiveness
 - All dialogs, cards, and forms must render cleanly on 350px mobile viewports without clipped text.
 
-### 2.8 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`) (AGENTS.md §2.23)
-- Student names across database, sessions, admin tables, exam rooms, result screens, and exports are authentic standard names (`studentName`).
-- Gender honorific titles (`Mr.` / `Miss`) and champion titles (`King` / `Queen`) are **strictly exclusive to the Student Dashboard greeting**.
+### 2.8 Standard Student Name (`studentName`) & Dashboard/Result Title (`Mr.` / `Miss`) (AGENTS.md §2.23)
+- Student names across database, sessions, admin tables, exam rooms, and exports are authentic standard names (`studentName`).
+- Gender honorific titles (`Mr.` / `Miss`) and champion titles (`King` / `Queen`) are presented on both the **Student Dashboard** (`dashboard.html`) and **Result Page** (`result.html`).
 
 ---
 
@@ -248,7 +248,7 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
   - **Semua Merah Ikut Grade E**: Error, delete, bahaya, tanda bintang wajib `*`, alert kritis WAJIB merujuk ke Grade E (`--grade-e`, `var(--grade-e)`, `TOPSCORE_COLORS.E`, `.text-fail`).
   - **Semua Kuning Ikut Grade C**: Warning, latency alert, pending, draft WAJIB merujuk ke Grade C (`--grade-c`, `var(--grade-c)`, `TOPSCORE_COLORS.C`, `.text-warning`).
   - **Semua Hijau Ikut Grade A**: Sukses, kelulusan, online, published WAJIB merujuk ke Grade A (`--grade-a`, `var(--grade-a)`, `TOPSCORE_COLORS.A`, `.text-success`).
-  - **Star (★) Independence & Exclusivity**: 100% Star Purple (`--grade-star: #c084fc` / `TOPSCORE_COLORS.STAR`). Green elements reference Grade A (`#00c000ff`), never Star. Pink (`#ff2d87`) is exclusively reserved for Pillar A / Quad A.
+  - **Star (★) Independence & Exclusivity**: System Grade `★` (100%) uses Pure Green (`#00c000ff` / `var(--grade-a)`) per `AGENTS.md` §2.10, while Result Page Celebration Gimmick (`LEGEND`) & CSS `--grade-star` use Vibrant Purple (`#a855f7` / `#c084fc`). Pink (`#ff2d87`) is exclusively reserved for Pillar A / Quad A (`--quad-a`), never merged with Grade Star.
   - **Universal Dark Badge Text**: Grade badges (`.grade-circle`) render dark slate (`#0F172A`) for all symbols.
 - **UI Chrome**: Kanvas workstation `#090D16`, sidebar `#0F172A`, border `rgba(255,255,255,0.08)`, metadata slate `#94A3B8`, tactical blue `#38BDF8`, indigo `#6366F1`.
 - **Standar Warna 4-Pillar (ABCD System & ABCD Tema)**:
@@ -262,8 +262,8 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 - Negative error metrics (Error Rate, Mistake Rate, Fail Rate, Timeout Rate) MUST invert scale via `getInvertedGradeColor()`: $\le 10\%$ (Green Grade A), $11-20\%$ (Lime Grade B), $21-40\%$ (Yellow Grade C), $41-70\%$ (Orange Grade D), $> 70\%$ (Red Grade E).
 
 ### 3.3 Anti-Ambiguity Disambiguation Guard (12 System Truths)
-1. **Grade Star (★) vs Theme A Pink**: Grade Star (100% score) is strictly Vibrant Purple (`--grade-star: #c084fc` / `TOPSCORE_COLORS.STAR`), completely decoupled and distinct from Theme A Pink (`--quad-a: #ff2d87`). Never swap or merge them.
-2. **Student Name Scope**: Standard authentic name (`studentName`) system-wide; `Mr.` / `Miss` strictly exclusive to Student Dashboard greeting (Rule 2.23).
+1. **Grade Star (★) vs Theme A Pink**: System Grade `★` (`TOPSCORE_COLORS.STAR`, Pure Green `#00c000ff`) and Result Page `★` Gimmick (`--grade-star: #a855f7` / `#c084fc`) are completely decoupled and distinct from Theme A Pink (`--quad-a: #ff2d87`). Never swap or merge them.
+2. **Student Name Scope**: Standard authentic name (`studentName`) in database, sessions, test room, conversation room, and admin tables; `Mr.` / `Miss` (and `King` / `Queen`) honorific titles presented exclusively on **Student Dashboard** (`dashboard.html`) and **Result Page** (`result.html`) (Rule 2.23).
 3. **Sub-Header Typography**: Super-header baris 1 bold (700); Sub-header baris 2 **REGULAR (400, strictly NOT bold)**; Spanning standalone header 60px (`rowspan="2"`). Sel data tabel normal menggunakan weight 500 (Medium), dan nama siswa/kolom sticky menggunakan weight 600 (SemiBold).
 4. **Words vs Phrases & Task vs Exam Colors**: Words & TASK = Electric Lime (`#95ff00`, `var(--grade-b)`); Phrases & EXAM = Electric Pink (`#ff2d87`, `var(--quad-a)`). Konteks semantik dengan Grade B dibedakan secara visual melalui tipe elemen UI (chip/label teks vs badge rapor bulat). Pip 7 spektrum pelangi tetap menggunakan Ungu Spektrum (`#C084FC` / `--rainbow-step-7`).
 5. **Inverted Scale on Negative Metrics**: Error/timeout/fail rate $\le 10\%$ is Green Grade A, $>70\%$ is Red Grade E via `getInvertedGradeColor()`.
@@ -272,11 +272,11 @@ Pemisahan Tegas Warna Akademik vs UI Chrome:
 8. **Continuous Neutral Dividers**: Super-header boundary vertical dividers from row 1 to footer are strictly thick 2px neutral (`rgba(255, 255, 255, 0.22)`), never colored.
 9. **Zero Emojis**: Dilarang unicode emojis di UI/tabel; strictly vector SVG icons via `getClassSvgIcon()`.
 10. **Zero Table Capsule & Zero Table Glow**: Seluruh isi sel tabel bebas kapsul, pill, badge, border kotak kapsul, dan background-fill (status semantik hanya melalui warna font teks); mutlak nol glow, text-shadow, atau box-shadow di seluruh sel tabel (`AGENTS.md` §2.31 & §4.9). Sel data tabel (`td`) WAJIB memiliki garis pembatas kisi adaptif (Adaptive Dual-Layer Gridlines: `border-bottom` dan `border-right`, dengan `:last-child { border-right: none; }`).
-11. **Level 0 (Non-Level `0`) vs Alumni (Level X)**: `Level 0` (`level_number = 0`) adalah program tanpa jenjang (single-tier, misal institusi TOP). Ditampilkan di seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`). `Level X` (`level_number = 99`) adalah Alumni kelulusan puncak setelah Level 3, ditampilkan sebagai simbol **`X`** ungu neon (`#C084FC` / `var(--quad-d)`). Alumni mutlak dilarang menggunakan angka 0.
-12. **Zero-Level Omission Invariant**: Program tanpa jenjang (Level 0) wajib meniadakan seluruh segmen level pada nama kelas, kode kelas, judul tes, dan kode tes (`EVN-VOCAB`, `Evnikom Vocabulary G1 Task - Time Name`, `EVN-VCB-G1-TASK`).
+11. **Level 0 (Non-Level `0`) vs Alumni (Level X)**: `Level 0` (`level_number = 0`) adalah program tanpa jenjang (single-tier, misal institusi TOP). Ditampilkan di seluruh tabel workstation admin (kolom `LVL`), filter dropdown, dan modal sebagai angka **`0`** (bukan tanda strip `—`), dan pada baris metadata identitas Student Dashboard/Result sebagai tahun enrollment (misal `2026`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`). `Level X` (`level_number = 99`) adalah Alumni kelulusan puncak setelah Level 3, ditampilkan sebagai simbol **`X`** ungu (`#c084fc` / `var(--grade-star, #a855f7)`). Alumni mutlak dilarang menggunakan angka 0.
+12. **Zero-Level Omission Invariant**: Program tanpa jenjang (Level 0) wajib meniadakan seluruh segmen level pada nama kelas & kode kelas (`EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB`), serta menggunakan prefix `0` konsisten pada kode tema/tes Level 0 (`Evnikom Vocabulary Task 0G1 - Time Name`, `EVNK-VCB-0G1-TASK`).
 13. **Interface System (3-Pillar UI Governance SSOT)**: Seluruh kendali tema UI dipusatkan di panel **Interface System** (Domain D System Settings) dengan 3 sub-tab terpadu: *Colours & Palette*, *Typography & Texts*, serta *Surface & Chrome*. Seluruh perubahan dipropagasi secara realtime ke CSS variables (`:root`) dan dipersistensikan secara global ke `site_settings` serta `localStorage`.
 
-### 3.4 Ghost-to-Solid-Glow Button Invariant (Aturan Baku Tombol TopsCore SSOT)
+### 3.4 Ghost-to-Solid Matte Button Invariant (Aturan Baku Tombol TopsCore SSOT)
 Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem:
 1. **Standby / Inaktif = Ghost Outline Mode & Flat Precision**:
    - Latar belakang transparan (`background: transparent`).
@@ -284,17 +284,17 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
    - **Flat Enterprise Precision (Zero Standby Glow & Zero Heavy Shadow)**: Pada posisi standby/diam, tombol, badge, dan kartu MUTLAK BEBAS dari efek glow atau bayangan berat (`box-shadow: none !important; text-shadow: none !important;`). Pada Light Mode, kartu kerja menggunakan elevasi mikro `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`.
    - Mengeliminasi *visual noise* dan kejenuhan mata pada semua tema.
 2. **Aktif / ON / Pressed = Solid Filled Mode**:
-   - Latar terisi penuh warna padat sesuai alokasi token (`#0284c7` untuk Cyan, `var(--grade-c)` untuk Kuning, `var(--grade-e)` untuk Merah, `var(--grade-a)` untuk Hijau, `var(--quad-d)` untuk Ungu).
-   - Efek iluminasi aktif terfokus hanya pada interaksi tombol CTA primer, tanpa pendaran berlebih (*no excessive glow bleed*).
+   - Latar terisi penuh warna padat sesuai alokasi token (`#0284c7` / `var(--quad-d)` untuk Cyan, `var(--grade-c)` untuk Kuning, `var(--grade-e)` untuk Merah, `var(--grade-a)` untuk Hijau, `var(--grade-star, #a855f7)` untuk Ungu).
+   - Efek iluminasi aktif terfokus hanya pada interaksi tombol CTA primer dengan tampilan matte bersih tanpa neon bleed (`text-shadow: none !important;`).
 3. **Aturan Kontras Teks (Luminance Contrast)**:
    - Warna latar terang (Kuning `var(--grade-c)`, Hijau `var(--grade-a)`): Teks WAJIB gelap (**`#0F172A`**).
-   - Warna latar pekat (Merah `var(--grade-e)`, Cyan `#0284c7`, Ungu `var(--quad-d)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
+   - Warna latar pekat (Merah `var(--grade-e)`, Cyan `#0284c7`, Ungu `var(--grade-star, #a855f7)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
 4. **Anti-Layout Shift (Zero CLS)**:
    - Tombol toggle mode yang labelnya berganti (misal: `Edit Mode` $\to$ `Done Editing`) WAJIB mengunci lebar tetap (`width`, `min-width`, `max-width`) untuk mencegah pergeseran layout tombol di sekitarnya.
 5. **Strict Zero-Movement Hover Invariant (Anti-Clipping & Anti-Jitter SSOT)**:
    - **DILARANG KERAS** menggunakan animasi pergerakan fisik saat hover atau ditekan (`transform: translateY(...)`, `transform: scale(...)`, `translate`, atau pergeseran margin/top).
    - Pergerakan fisik sekecil 1px (`translateY(-1px)`) terbukti membuat garis batas atas tombol (*top border*) terpotong/hilang karena membentur batas *overflow* kontainer atau terdistorsi *sub-pixel rendering*.
-   - Efek hover MURNI HANYA pendaran cahaya halus (*subtle glow* via `box-shadow`) dan peningkatan saturasi warna latar tipis (*subtle background tint*), posisi fisik tombol WAJIB tetap diam 100% (*strictly stationary* `transform: none !important;`).
+   - Efek hover MURNI HANYA elevasi bayangan matte bersih (`box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);`, nol *neon glow* & `text-shadow: none !important;`) dan peningkatan saturasi warna latar tipis (*subtle background tint*), posisi fisik tombol WAJIB tetap diam 100% (*strictly stationary* `transform: none !important;`).
 
 ---
 
@@ -400,12 +400,12 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Teks di dalam tabel wajib terbaca tegas, bersih (*crisp, matte*), kontras tinggi, dan bebas blur atau efek neon yang mengaburkan ketajaman angka dan huruf.
 
 ### 4.10 Standar Formula Kode Kelas: PROGRAM-LEVELCLASS (SSOT)
-- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CMP-3VOCAB`, `CMP-1BASIC`, `CMP-2SPEAK`).
-- **Segmen 1 (PROGRAM)**: Singkatan program 3-huruf resmi (`CMP` = Camp, `EVN` = Evnikom, `SHR` = Sheraton, `TMT` = Tamata, `EXP` = English Explorer).
+- **Formula Baku**: `PROGRAM-LEVELCLASS` (contoh bertingkat: `CAMP-3VOCAB`, `CAMP-1BASIC`, `CAMP-2SPEAK`).
+- **Segmen 1 (PROGRAM)**: Singkatan program 4-huruf resmi (`CAMP` = Camp, `EVNK` = Evnikom, `SHRT` = Sheraton, `TPTC` = Tamata, `EXPL` = English Explorer).
 - **Separator**: Tanda hubung (`-`).
 - **Segmen 2 (LEVELCLASS)**: Angka level belajar murni langsung digabung dengan singkatan kelas tanpa spasi dan tanpa huruf 'L' (contoh: `3VOCAB`, `1BASIC`, `1STORY`, `2SPEAK`).
 - **Pengecualian Program Tanpa Jenjang (Level 0 / Zero-Level Omission Invariant)**:
-  - Pada program yang tidak memiliki jenjang bertahap (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB`). Dilarang keras mencantumkan angka 1 (`EVN-1VOCAB`).
+  - Pada program yang tidak memiliki jenjang bertahap (seperti seluruh program institusi TOP: Evnikom, Sheraton, Tamata), angka level **wajib ditiadakan (dianggap kosong)** sehingga formulanya murni `PROGRAM-CLASS` (contoh: `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB`). Dilarang keras mencantumkan angka 1 (`EVNK-1VOCAB`).
 - **Penegakan Sistemik**:
   - Kolom `classes.code` di database Supabase wajib mematuhi formula ini.
   - Tampilan pada tabel admin (`admin.html#classes-hub`) dan auto-generator/placeholder di `crud-modals.js` wajib menghasilkan format ini.
@@ -456,7 +456,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Universal Table Perimeter Framing (2px Solid)**:
   Garis tepi terluar tabel (first-child left, last-child right, top thead, bottom tfoot/tbody) wajib menggunakan `var(--admin-border-perimeter)` (`#64748b` di Light, `#52525b` di Charcoal Dark, `rgba(255, 255, 255, 0.28)` di Navy).
 - **Universal Semantic Column Colors Across All Tables (Statuses & Percentages)**:
-  1. **Status**: Wajib berwarna semantik (`.status-active` hijau `var(--grade-a)`, `.status-inactive` merah `var(--grade-e)`, `.status-hold` amber `var(--grade-c)`, `.status-alumni` ungu `var(--quad-d)`, `.status-ongoing` cyan `var(--primary-tactical)`). Dilarang dipaksa hitam pada Light Mode.
+  1. **Status**: Wajib berwarna semantik (`.status-active` hijau `var(--grade-a)`, `.status-inactive` merah `var(--grade-e)`, `.status-hold` amber `var(--grade-c)`, `.status-alumni` ungu `var(--grade-star, #a855f7)`, `.status-ongoing` cyan `var(--primary-tactical)`). Dilarang dipaksa hitam pada Light Mode.
   2. **Persentase**: Seluruh angka persentase (`RATE`, `DONE %`, `WRD %`, `PHR %`, `TASK %`, `ACC`) wajib berwarna grade-tier ($\ge 80\%$ hijau, $60\% - 79\%$ amber/kuning, $< 60\%$ merah).
   3. **Tombol Promosi Level (`.btn-level-up-cell`)**: Menampilkan badge tombol hijau taktis interaktif dengan styling adaptif per tema.
 - **Intensified Excel Gridlines in Master Edit Mode**:
@@ -496,7 +496,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - Setiap seksi yang telah dipilih **wajib tetap terlihat dalam kondisi terlipat (`.selected`)**, lengkap dengan label nilai yang dipilih dan tombol `Change` (`.cascade-change-btn`) untuk memungkinkan siswa mengubah pilihan.
   - Pemanggilan fungsi reset cascade wajib menargetkan langkah persis di bawahnya (`resetFrom('program')` saat institusi dipilih), DILARANG memanggil reset pada langkah yang baru saja dipilih karena akan melenyapkan elemen tersebut dari DOM visual (`max-height: 0`).
 - **Brand Header & Pure Typography (SSOT)**:
-  - **Judul Brand `TOPS CORE`**: Menggunakan tipografi murni tanpa boks squircle/emblem (`<h1 class="brand-title">TOPS <span class="brand-core">CORE</span></h1>`) berukuran **32px (`font-size: 32px; font-weight: 900; font-family: 'Outfit', sans-serif; line-height: 1.1; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;`)** — **Level 0 Brand Hero Landmark**. Teks `TOPS` putih bersih dan `CORE` Tactical Cyan `#38bdf8`, terpusat rapi dan proporsional dalam koridor mobile 430px.
+  - **Judul Brand `TOPS CORE`**: Menggunakan tipografi murni tanpa boks squircle/emblem (`<h1 class="brand-title">TOPS <span class="brand-core">CORE</span></h1>`) berukuran **30px (`font-size: 30px; font-weight: 900; font-family: 'Inter', sans-serif; line-height: 1.1; margin: 0; text-transform: uppercase; letter-spacing: 0.05em;`)** — **Level 0 Brand Hero Landmark**. Teks `TOPS` putih bersih dan `CORE` Tactical Cyan `#38bdf8`, terpusat rapi dan proporsional dalam koridor mobile 430px.
   - **Eliminasi Subtitle (Zero Subtitle Clutter)**: Deskripsi atau subtitle di bawah judul (`Student Gate — Sign in to continue`) **DIHAPUS SECARA PERMANEN**. Menghilangkan elemen teks dekoratif yang berulang, memaksimalkan ruang vertikal *above-the-fold*, dan menjaga tampilan gerbang login tetap bersih (*ultra-lean, high-focus*). Margin bawah brand ke kartu langkah 1 terkunci tepat 10px (*Strict 10px Container Gap Invariant*).
 - **Rata Kiri Kolom Label (90px Fixed Label Alignment) & Eliminasi Angka Langkah**:
   - **Eliminasi Angka Langkah (`.cascade-step-num`)**: Lingkaran angka langkah (1, 2, 3, 4, 5) di sebelah kiri setiap panel **DIHAPUS** untuk memaksimalkan ruang horizontal nama siswa dan menyajikan antarmuka yang bersih dan modern.
@@ -533,8 +533,8 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 
 ### 5.4 Universal 2-Line Test Title Architecture (SSOT Format 2 Baris Judul Tes)
 - **Cakupan Universal**: Seluruh tampilan antarmuka yang menyajikan judul tes (Dashboard Next Assignment Card, Header Ruang Ujian `test.html`, Halaman Hasil `result.html`, dan Modal Konfirmasi/Pilihan Komponen Tes) WAJIB menggunakan format **2 Baris Terpisah**:
-  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Task B1`, `Task C1`, `Exam A`, `Exam D`). Ditampilkan tebal (Inter 800), kontras tinggi (Putih `#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman.
-  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Shopping & Choosing Products`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan warna Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
+  - **Baris 1 (Jenis & Kode Tes)**: Pada Dashboard & Ruang Ujian (`test.html`) yang sudah menampilkan header kelas di bagian atas, digunakan `[TASK/EXAM] [CODE]` (misal `Task A1`, `Task B1`, `Exam A`, `Exam D`) tanpa mengulang nama kelas (*Zero Class Redundancy*). Pada **Halaman Hasil (`result.html` — §5.6)** yang tidak memiliki ambient class header, Baris 1 menampilkan judul tipe autentik sebelum tanda ` - ` (misal `3rd Vocabulary Task B1`) tanpa `text-transform: uppercase`. Ditampilkan tebal (Inter 800), kontras tinggi (Putih `#FFFFFF` / `#F8FAFC`).
+  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Travel Planning, Flights & Accommodation`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan warna Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), `text-transform: none`, tanpa pemotongan teks atau elipsis (*zero truncation*).
 - **Formula Resolusi**: Menggunakan helper resmi `formatTestDisplay(test)` (`line1` untuk Baris 1, `line2` untuk Baris 2) dan `formatTestTitleHtml(test)`.
 - **Invarian Eliminasi Truncation**: Pembagian 2 baris ini menjamin judul tes dapat terbaca utuh 100% pada koridor mobile 350px–430px tanpa terpotong elipsis (`...`).
 
@@ -562,8 +562,21 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Spatial & Typography Invariants**:
   - Padding internal kartu strictly **10px** (`padding: 10px !important`).
   - Gap antar kartu strictly **10px** (`gap: 10px`).
-  - Tipografi 100% Inter (Nama 13px–14px Bold `#ffffff`, Label 11px `#94a3b8`, Value 11px–12px `#f8fafc`).
+  - Tipografi 100% Inter (Nama **14px Bold** `#ffffff`, Label **12px** `#94a3b8`, Value **12px** `#f8fafc`). Zero sub-12px.
   - Dilarang keras menggunakan warna abu-abu pudar untuk nama tutor; nama wajib kontras tinggi dan mudah diidentifikasi.
+
+### 5.6 Result Page Unified Student Architecture & Vertical Card Invariants (`result.html` SSOT)
+- **Unified Student-Only View (Zero Admin Override UI)**:
+  - `result.html`, `js/result.js`, dan `css/result.css` wajib 100% seragam untuk siswa maupun admin (versi admin dibuang permanen: nol `isAdminSession` split, nol segmen `NORMAL | REMEDIAL | FORGIVE`, nol override grade `R`/`F`, nol tombol `BACK TO ROOM`).
+  - Aksi navigasi bawah standar siswa: `#smart-next-action-container` (`NEXT TEST`) dan `#back-dashboard-btn` (`BACK TO CLASS`).
+- **Strict Vertical Card Sequence (`#result-hero-section`)**:
+  1. **`#result-identity-card` (Student Identity Card — Topmost)**: Mutlak berada di atas kartu judul tes, menampilkan `#result-student-name-label` berprefiks `Mr.` / `Miss` / `King` / `Queen` (`§2.8`, termasuk deteksi `Lalu`/`Baiq`), metadata akademik (`CEC/TOP • PROGRAM • BATCH • 3RD STEP`), avatar 3:4 (inisial dari nama dasar tanpa prefiks), dan tabel biodata (`Sex`, `DOB`, `Age`, `Adr`).
+  2. **`#result-Test-name-container` (Exam Title Card — Below Student Card)**: Format 2 Baris Autentik tanpa `text-transform: uppercase` dan tanpa elipsis (`#result-test-type-row` `#F8FAFC`, `#result-test-topic-row` `#38bdf8`).
+  3. **`#result-metrics-composite-card`**: Baris metrik `CORRECT`, `PARTIAL`, `INCORRECT`, `POINTS`.
+  4. **`#result-score-grade-card`**: Skor `%` & simbol Grade.
+  5. **`#result-motivation-msg`**: Kartu deskripsi grade.
+  6. **`#smart-next-action-container` & `#back-dashboard-btn`**, berjarak tepat 10px dari footer terpusat 50px `#bottom-ad-banner` (`TopsCore by Mr. Top`).
+- **Spatial & Matte Compliance**: Single 10px mobile perimeter padding (zero double padding), matte surfaces tanpa neon `text-shadow` / `drop-shadow` glow, dan relasi Camp menggunakan relasi jamak PostgREST agar selalu tampil `3RD STEP` (`AGENTS.md §2.41`).
 
 ---
 
@@ -575,21 +588,21 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - Profile modal opens on student photo/name click in Active Students tab. Actions column purged.
 
 ### 6.2 Single-Line Compact Program Chips
-- Standardized 3–4 letter uppercase codes: `CMP` (Camp), `EVN` (Evnikom), `SHR` (Sheraton), `EXP` (Explorer). Native tooltip for full name.
+- Standardized 4-letter uppercase codes: `CAMP` (Camp), `EVNK` (Evnikom), `SHRT` (Sheraton), `TPTC` (Tamata Persada), `EXPL` (Explorer). Native tooltip for full name.
 
 ### 6.3 DataGrid Default Configuration & Zero Neon Glow
 - `DataGrid` defaults to `bulkActions: false`. Neon box-shadow glows purged; dividers render as crisp flat lines.
 
 ### 6.4 Level Promotion & Passing Threshold Invariant (NEXT Action Invariant SSOT)
-- **Kepatuhan Ambang Batas Resmi (Grade C >= 60%)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**) per [`AGENTS.md` §2.4.1](file:///AGENTS.md#241-level-promotion--passing-threshold-invariant-ssot-aturan-baku-promosi-level).
-- **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai Grade C (60%–79%) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
+- **Kepatuhan Ambang Batas Resmi ($\ge 60\%$)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **skor $\ge 60\%$** (**Grade D — Enough** pada CEC / **Grade C — Enough** pada TOP per `AGENTS.md` §2.10) atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**) per [`AGENTS.md` §2.4.1](file:///AGENTS.md#241-level-promotion--passing-threshold-invariant-ssot-aturan-baku-promosi-level).
+- **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai ambang kelulusan resmi ($\ge 60\%$) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
 - **Aktivasi Tombol Aksi NEXT di Roster**: Tombol `NEXT` di Sub Panel atau toolbar roster otomatis aktif (*enabled*) hanya saat seluruh siswa aktif dalam batch telah memenuhi batas kelulusan (lulus, remedial tuntas, atau dispensasi Grade F). Jika masih ada siswa yang belum tuntas, tombol dinonaktifkan (*disabled*) dengan tooltip alasan.
 
 ### 6.5 Arsitektur Tampilan Level: Level 0 (Non-Level `0`), Level 1–3, dan Alumni (Level X) SSOT
 - **Prinsip Identitas Level Resmi**:
   1. **Level 0 (Non-Level Programs)**: Khusus untuk program yang sejak awal tidak memiliki jenjang bertahap (single-tier, misal seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata Persada). Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard siswa, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`). Dilarang keras menampilkan teks "L0" atau tanda strip pada entitas Level 0 yang valid.
   2. **Level 1–3 (Jenjang Reguler)**: Ditampilkan sebagai `1st`, `2nd`, `3rd` dengan tabular numbers tebal (`color: #f8fafc; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;`).
-  3. **Level X (Alumni Graduation)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, `program_status = 'ALUMNI'`). Ditampilkan sebagai huruf **`X`** tebal berwarna ungu neon (`#c084fc` / `var(--quad-d)`). Alumni mutlak DILARANG menggunakan angka 0.
+  3. **Level X (Alumni Graduation)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, `program_status = 'ALUMNI'`). Ditampilkan sebagai huruf **`X`** tebal berwarna ungu (`#c084fc` / `var(--grade-star, #a855f7)`). Alumni mutlak DILARANG menggunakan angka 0.
 - **In-Memory & Inline Master Edit Mode Select Control**:
   - Kontainer dropdown select inline level (`.student-inline-select`) di tabel workstation menyajikan 5 opsi terstruktur:
     - `value="0"`: `—` (Non-Level)
@@ -604,9 +617,9 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Aturan Penamaan Kosong (Zero-Level Omission Invariant)**:
   - Seluruh program tanpa jenjang meniadakan (menganggap kosong) segmen angka level pada:
     - **Nama Kelas**: `Evnikom Vocabulary`, `Sheraton Vocabulary`, `Tamata Vocabulary` (dilarang menggunakan `1st`).
-    - **Kode Kelas**: `EVN-VOCAB`, `SHR-VOCAB`, `TMT-VOCAB` (dilarang menggunakan `EVN-1VOCAB`).
-    - **Judul Tes**: `Evnikom Vocabulary G1 Task - Time Name`, `Evnikom Vocabulary G Exam - General` (dilarang menggunakan `1st`).
-    - **Kode Tes**: `EVN-VCB-G1-TASK`, `EVN-VCB-G-EXAM`, `EVN-VCB-G2-TASK` (dilarang menggunakan `EVN-1VCB-...`).
+    - **Kode Kelas**: `EVNK-VOCAB`, `SHRT-VOCAB`, `TPTC-VOCAB` (dilarang menggunakan `EVNK-1VOCAB`).
+    - **Judul Tes**: `Evnikom Vocabulary Task 0G1 - Time Name`, `Evnikom Vocabulary Exam 0G - General` (dilarang menggunakan `1st`).
+    - **Kode Tes**: `EVNK-VCB-0G1-TASK`, `EVNK-VCB-0G-EXAM`, `EVNK-VCB-0G2-TASK` (dilarang menggunakan `EVNK-1VCB-...`).
 - **Student Dashboard & Class Lobby Invariants**:
   - **Non-Level**: Badge Level pada header dashboard disembunyikan/ditiadakan (dianggap kosong), dan seluruh kelas program dapat diakses langsung.
   - **Alumni**: Mempertahankan *Lifetime Universal Access* ke seluruh kelas program di Class Lobby dan Dashboard, dengan badge bertuliskan **`ALUMNI`** / **`X`** berwarna ungu matte (`#c084fc`).
@@ -655,7 +668,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
   - **Tabel Tanpa Kolom Nomor**: Kolom **`CODE`** WAJIB diletakkan sebagai **kolom pertama (paling kiri)** di tabel tersebut (`[CODE] | [NAME] | ...`).
   - **Penerapan Resmi**:
     - *Academic Classes Matrix*: `LVL | CODE | CLASS NAME | DAY | START | END | ROOM | TUTOR | STD | RATE | STATUS`.
-    - *Faculty & Tutors*: `CODE | PIC | NAME | DoB | AGE | ACT`.
+    - *Faculty & Tutors*: `CODE | PIC | NAME | DOB | AGE | ACT`.
     - *Camp Rooms & Venues*: `CODE | ROOM NAME | CAP | TYPE | ACT`.
 - **2. Zero Header-Repetition in Data Cells (Header/Data Non-Redundancy SSOT)**:
   - Dilarang keras mengulang kata atau label yang sudah ada di header kolom ke dalam nilai sel data.

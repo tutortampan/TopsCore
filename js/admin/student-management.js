@@ -1,5 +1,5 @@
 import { openQuickAlumniGraduateModal } from './quick-score-wizards.js?v=20261115_v549';
-import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal, adminApplyForgiven } from '../api.js?v=20261120_v640';
+import { adminFetchAll, formatStudentName, cleanStudentName, normalizeStudentNameForMatch, adminSoftDelete, clearAdminCache, adminInsert, adminUpdate, sha256, toLevelLetter, toShortLevel, labelAttemptRemedial, labelAttemptForgiven, labelAttemptNormal, adminApplyForgiven } from '../api.js?v=20261125_v688';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGrade, showToast, getGradeColor, getGradeColorByScore, TOPSCORE_COLORS, isWeeklyExam, isExam, computeMilestoneExamMastery, calculateGrade } from '../app.js?v=20261112_v423';
 import { processAndCompressAvatar, uploadStudentAvatar, generateAvatarSvg, generateAvatarDataUri, getBustedAvatarUrl, stripHonorific, getStudentInitial } from '../utils/avatar-engine.js?v=20261112_v423';

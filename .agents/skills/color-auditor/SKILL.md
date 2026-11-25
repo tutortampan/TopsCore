@@ -19,13 +19,13 @@ npm.cmd run test:color-ssot
 ```
 
 ## Governed Color Rules
-1. **Grade Color Vault**:
-   - ★ Excellent (100%): Vibrant Purple (`--grade-star: #c084fc`)
-   - A Very Good (90%–99%): Pure Green (`--grade-a: #00c000`)
-   - B Good (80%–89%): Electric Lime (`--grade-b: #95ff00`)
-   - C Enough (60%–79%): Pure Yellow (`--grade-c: #ffff00`)
-   - D Less (30%–59%): Dark Orange (`--grade-d: #ff8c00`)
-   - E Fail (0%–29%): Pure Red (`--grade-e: #ff0000`)
+1. **Grade Color Vault** (`AGENTS.md` §2.10 & `INSTITUTION_GRADING_SCALES`):
+   - ★ System Grade (100%): Pure Green (`--grade-a: #00c000`); Result Page Celebration Gimmick: Vibrant Purple (`--grade-star: #a855f7` / `#c084fc`)
+   - A Excellent (90%–99%): Pure Green (`--grade-a: #00c000`)
+   - B Very Good (80%–89% CEC) / Good (70%–89% TOP): Electric Lime (`--grade-b: #95ff00`)
+   - C Good (70%–79% CEC) / Enough (60%–69% TOP): Pure Yellow (`--grade-c: #ffff00`)
+   - D Enough (60%–69% CEC) / Less (30%–59% TOP): Dark Orange (`--grade-d: #ff8c00`)
+   - E Less (0%–59% CEC) / Fail (0%–29% TOP): Pure Red (`--grade-e: #ff0000`)
 2. **One-Touch Semantic Propagation**:
    - All red elements (delete, alert, error) MUST link to Grade E (`var(--grade-e)` / `.text-fail`).
    - All yellow elements (warning, pending) MUST link to Grade C (`var(--grade-c)` / `.text-warning`).

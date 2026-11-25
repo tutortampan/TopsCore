@@ -3,7 +3,7 @@
 // Panel Kiri: Batch Performance Matrix (Rank, Batch, Program, LVL, STD, Avg Score, Pass %, Top Achiever, Most Diligent, Least Active, Status)
 // Panel Kanan: Classes Performance Matrix (Rank, Code, Class Name, Tutor, STD, Avg Score, Pass %, Top Student, Least Active, Status)
 
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261124_v680';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, toShortLevel } from '../api.js?v=20261125_v688';
 import { openCrudModal } from './crud-modals.js?v=20261115_v528';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';

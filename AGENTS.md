@@ -144,7 +144,7 @@ INSTITUTION -> PROGRAM -> BATCH -> STUDENT NAME -> PERSONAL PIN -> LOGIN
 ```
 Server verifies that Program belongs to Institution, Batch belongs to Program, Student belongs to Batch, Student is active, and PIN is valid. Never store plaintext PINs.
 - **Cascade Section Visibility**: Every completed step remains visible in a collapsed `.selected` card with its chosen label and a functional `Change` button.
-- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, pure typography TOPS CORE header in Outfit 900 without squircle box, 90px fixed label width for razor-sharp column alignment, elimination of step circle numbers, default persistent login across sessions, viewport auto-centering on 100dvh - 50px visible area, eradication of redundant remember-me banner, and Zero Subtitle Clutter).
+- **Student Gate UI Invariants**: Strictly governed by `.agents/rules/ui-invariants.md` §5.3 (10px container gap & card internal padding, dynamic shrink-to-fit list without artificial min-height, 44px ergonomic touch capsule, neutral PIN digit input, pure typography TOPS CORE header in Inter 900 without squircle box, 90px fixed label width for razor-sharp column alignment, elimination of step circle numbers, default persistent login across sessions, viewport auto-centering on 100dvh - 50px visible area, eradication of redundant remember-me banner, and Zero Subtitle Clutter).
 
 ### 2.3.1 Strict Inactive Student Exclusion Invariant (Zero Inactive Visibility SSOT)
 - **Aturan Baku Visibilitas Siswa Inaktif**: Siswa yang berstatus tidak aktif (`is_active = false` ATAU `program_status = 'INACTIVE'`) **MUTLAK DILARANG KERAS TAMPIL DI DALAM SISTEM DIMANAPUN** (Student Dashboard Standings / Leaderboard, Completed Tests, Student Login Gate, Class Lobby, Tutor Attendance, Class Hub Gradebook, dan KPI aktif), sampai siswa tersebut diaktifkan kembali oleh Admin (`is_active = true` dan `program_status = 'ACTIVE'`).
@@ -165,7 +165,7 @@ Server verifies that Program belongs to Institution, Batch belongs to Program, S
   - **Single Unified Workspace**: Menyatukan duplikat satu kelas (*Same Class*) dan lintas angkatan (*Cross-Class*) dalam satu halaman ringkas tanpa tab terpisah untuk menghemat waktu peninjauan admin.
   - **Dimensi Lebar Modal**: Wajib berdimensi `max-width: 1380px !important; width: 96vw !important;` agar 8 kolom datagrid (`RECORD UUID`, `PROGRAM / LEVEL`, `BATCH`, `INSTITUTION`, `ATTEMPTS`, `CREATED AT`, `ACTION`, dan `RESULT PREVIEW`) muat 100% tanpa ada yang terpotong (*Universal Zero-Truncation*) dan bebas dari scrollbar horizontal di dalam kartu.
   - **Zero-Box Type Tag**: Tag pembeda kelompok (`(Same Class)` dan `(Cross-Class)`) murni berupa teks inline tanpa kotak border atau latar pill.
-  - **CTA Ghost-to-Solid**: Tombol aksi `QUICK MERGE ALL GROUPS` dan `Resolve All Duplicates` mengikuti aturan baku Standby Ghost Outline -> Hover Solid Matte Yellow, font-size 14px / 13px.
+  - **CTA Ghost-to-Solid**: Tombol aksi `QUICK MERGE ALL GROUPS` dan `Resolve All Duplicates` mengikuti aturan baku Standby Ghost Outline -> Hover Solid Matte Yellow, font-size 14px / 12px.
 - **Disambiguasi Relasi Foreign Key Database (PostgREST Disambiguation SSOT)**:
   - Karena tabel `students` memiliki 2 foreign key ke `batches` (`batch_id` dan `original_batch_id`), seluruh kueri join PostgREST wajib mendisambiguasi relasi secara eksplisit: `batches!batch_id(...)` dan `original_batches:batches!original_batch_id(...)`.
 
@@ -173,8 +173,8 @@ Server verifies that Program belongs to Institution, Batch belongs to Program, S
 Classes are assigned to a **Level**. Students/Batches progress through Levels.
 
 ### 2.4.1 Level Promotion & Passing Threshold Invariant (SSOT Aturan Baku Promosi Level)
-- **Syarat Kelulusan Promosi (Passing Threshold)**: Kelayakan kenaikan level (`isEligibleNext` / tombol `NEXT`) WAJIB merujuk 100% pada batas kelulusan resmi TopsCore, yaitu **Grade C (skor $\ge 60\%$)** atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**).
-- **Mutlak Nol Angka Ambang Batas Arbitrer pada Promosi**: DILARANG KERAS menggunakan angka ambang batas arbitrer atau hardcoded di luar SSOT (seperti angka liar `70%` untuk menahan kenaikan level). Siswa yang telah mencapai Grade C (60%–79%) telah resmi lulus (*Enough*) dan mutlak berhak dipromosikan bersamaan tanpa ada yang tertahan.
+- **Syarat Kelulusan Promosi (Passing Threshold)**: Kelayakan kenaikan level (`isEligibleNext` / tombol `NEXT`) WAJIB merujuk 100% pada batas kelulusan resmi TopsCore, yaitu **skor $\ge 60\%$** (**Grade D — Enough** pada CEC atau **Grade C — Enough** pada TOP per §2.10) atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**).
+- **Mutlak Nol Angka Ambang Batas Arbitrer pada Promosi**: DILARANG KERAS menggunakan angka ambang batas arbitrer atau hardcoded di luar SSOT (seperti angka liar `70%` untuk menahan kenaikan level). Siswa yang telah mencapai ambang kelulusan resmi **$\ge 60\%$** (**Grade D — Enough** pada CEC / **Grade C — Enough** pada TOP) telah resmi lulus (*Enough*) dan mutlak berhak dipromosikan bersamaan tanpa ada yang tertahan.
 - **Pembedaan Ranah Baku (Vocabulary Tasks vs Theme Exams/Promotion SSOT)**:
   - **Aturan Baku Kelas VOCABULARY**: Sistem penguasaan tugas formatif kosakata (Vocabulary Tasks) menerapkan aturan khusus **7x7 Repetitions dengan standar minimal 70% per attempt** agar sebuah repetisi dinyatakan sah lulus (*passed repetition*). Pada Ujian Akhir Tema (Vocabulary Exam), batas kelulusan standar umum adalah **60% (Grade C)**, kecuali pada **3rd Step (Level 3)** di mana batas kelulusan Ujian Akhir Tema ditetapkan **70%** (DECISION-084).
   - **Isolasi Domain Multi-Kelas (Multi-Class Scope Invariant)**: Aturan 7x7 minimal 70% ini **HANYA BERLAKU UNTUK KELAS VOCABULARY**. Setiap jenis kelas di TopsCore (Speaking, Storytelling, Grammar, Basic, dll.) memiliki passing grade, modalitas evaluasi, dan struktur tugasnya masing-masing. Sistem secara tegas membedakan aturan per-kelas melalui kode kelas, kode tes, dan metadata kurikulum agar tidak terjadi kerancuan antar-kelas.
@@ -372,8 +372,8 @@ Sistem identitas tes di TopsCore secara resmi HANYA menggunakan 2 identitas baku
   - **Program Tanpa Jenjang (Level 0 per DECISION-061)**: Segmen `[LEVEL_ORDINAL]` ditiadakan (karena kurikulum tidak bertingkat), namun kode tetap menyertakan prefix `0` (`0G1`, `0G`, `0A1`): `[CLASS_NAME] [TASK/EXAM] [0_CODE] - [TOPIC/THEME_NAME]` (contoh: `Evnikom Vocabulary Task 0G1 - Time Name`, `Evnikom Vocabulary Exam 0G - General`, `Sheraton Vocabulary Task 0A1 - Pre-Test`). Dilarang mencantumkan kata `1st` pada judul tes program tanpa jenjang.
 - **Universal 2-Line Test Title Architecture (SSOT Tampilan Card Dashboard & Header)**:
   Tampilan kartu ujian (Dashboard Next Assignment Hero Card) dan header ruang ujian dirender menjadi **2 Baris Terpisah** via pemisah ` - `:
-  - **Baris 1 (Jenis & Kode Tes)**: `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`). Ditampilkan tebal (Inter 800), warna putih bersih (`#FFFFFF` / `#F8FAFC`). Zero Class Redundancy: Nama kelas (seperti `2nd Vocabulary`) dilarang diulang pada Baris 1 karena sudah terpampang jelas di header atas halaman (`CAMP 3RD VOCABULARY`).
-  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Job Hunting & Application`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan aksen Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), huruf rapi tanpa pemotongan teks atau elipsis (*zero truncation*).
+  - **Baris 1 (Jenis & Kode Tes)**: Pada Dashboard & Ruang Ujian (`test.html`) yang sudah memiliki header kelas di atasnya, digunakan `[TASK/EXAM] [CODE]` (misal `Task A1`, `Exam A`, `Exam D`) tanpa mengulang nama kelas (*Zero Class Redundancy*). Khusus pada **Result Page (`result.html` — §2.41)** yang tidak memiliki ambient class header, Baris 1 menampilkan judul tipe autentik sebelum tanda ` - ` (`3rd Vocabulary Task B1`) tanpa `text-transform: uppercase`. Keduanya tebal (Inter 800) dengan warna putih bersih (`#FFFFFF` / `#F8FAFC`).
+  - **Baris 2 (Nama Tema dan/atau Topik)**: `[NAMA_TEMA/TOPIK]` (misal `Greetings & Basics`, `Travel Planning, Flights & Accommodation`, `World of Work`, `Cooking Class`). Ditampilkan di baris kedua secara mandiri dengan aksen Tactical Blue (`#38bdf8`) atau Slate Cerah (`#cbd5e1`), casing alami tanpa pemaksaan huruf kapital (*no forced uppercase*), dan tanpa pemotongan teks atau elipsis (*zero truncation*).
 - **Unifikasi Mutlak**: Tidak boleh mencantumkan kata `Words` atau `Phrases` di judul karena materi sudah disatukan (*Unified Topic Package* per DECISION-034).
 - **Peniadaan `display_name`**: Seluruh referensi display name dihilangkan. Database dan sistem hanya mengenal `title` sebagai nama tes dan `shell_code` sebagai kode tes.
 
@@ -552,10 +552,10 @@ All table columns, labels, titles, and metrics must display 100% in full without
 - **Peniadaan Tombol Edit di Baris Tabel**: Dilarang keras membuat kolom `ACTIONS` atau tombol `Edit` di dalam baris tabel hanya untuk membuka modal edit, karena pengeditan dilakukan secara terpusat melalui tombol Edit Mode di Sub Panel untuk mode inline gridline Excel.
 - **Excel Gridlines Activation**: Saat Master Edit Mode aktif (`body.global-edit-mode-on`), seluruh tabel me-render garis batas putih tegas khas Excel (`rgba(255, 255, 255, 0.45)`) dengan input dan select borderless transparan per [`.agents/rules/ui-invariants.md` §4.3](file:///.agents/rules/ui-invariants.md#43-universal-master-edit-mode-white-excel-gridlines-invariant-agentsmd-222).
 
-## 2.23 Standard Student Name (`studentName`) & Dashboard-Only Title (`Mr.` / `Miss`)
+## 2.23 Standard Student Name (`studentName`) & Dashboard/Result Title (`Mr.` / `Miss`)
 - **Default Principle**: Authentic standard name (`studentName` / `name` / `session.student_name`) everywhere across system.
-- **Single Location of Title Addition (Dashboard-Only)**: The **Student Dashboard** (`dashboard.html` / `js/dashboard.js`) is the SOLE location where gender honorific titles (`Mr.` / `Miss`) or batch champion titles (`King` / `Queen`) are prepended to `studentName` for greeting.
-- **Universal Standard Name Everywhere Else**: Standard authentic name directly in database (`students.name`), session, admin tables, test/result/conversation rooms, dropdowns, and exports.
+- **Two Approved Presentation Screens Only (Dashboard & Result Page)**: Both the **Student Dashboard** (`dashboard.html` / `js/dashboard.js`) and **Result Page** (`result.html` / `js/result.js`) prepend gender honorific titles (`Mr.` / `Miss`) or batch champion titles (`King` / `Queen`) to `studentName` identically (including `Lalu` -> `Mr.`/`King` and `Baiq` -> `Miss`/`Queen` detection).
+- **Universal Standard Name Everywhere Else**: Standard authentic name directly in database (`students.name`), session, admin tables, test/conversation rooms, dropdowns, and exports.
 
 ## 2.24 Authoritative Dummy Account Standard ("Top") & Ultra-Compact Avatars
 - **Canonical Dummy Name**: Strictly **"Top"** (e.g. `Top`, `Top Evnikom`, `Top Anon`). "Test", "Test Student", "test_anon" are permanently deprecated.
@@ -601,11 +601,11 @@ All table columns, labels, titles, and metrics must display 100% in full without
 
 ## 2.32 Standardized 50px Bottom Banner Invariant (`#bottom-ad-banner` / `.topscore-locked-banner`)
 - **Strict 50px Height Lock**: Tinggi banner bawah di seluruh antarmuka aplikasi terkunci mati tepat **`50px`** (`height: 50px !important; min-height: 50px !important; max-height: 50px !important; box-sizing: border-box !important;`).
-- **Centered Alignment SSOT**: Teks `"TopsCore by Mr. Top"` berada tepat di tengah (*centered*) secara mutlak di seluruh viewport (`justify-content: center !important; text-align: center !important; padding: 0 16px !important;`), baik pada kontainer banner maupun inner wrapper (`.banner-brand-wrap` & `.banner-brand-content`). Aturan lama yang menerapkan rata kiri (*left-aligned*) atau asymmetric padding kiri resmi dihapus dan dilarang.
+- **Centered Alignment SSOT**: Teks `"TopsCore by Mr. Top"` berada tepat di tengah (*centered*) secara mutlak di seluruh viewport (`justify-content: center !important; text-align: center !important; padding: 0 16px !important;`), baik pada kontainer banner maupun inner wrapper (`.banner-brand-wrap` & `.banner-brand-content`) — atau terpusat simetris di koridor tengah saat diapit tombol aksi kiri-kanan pada Student Dashboard dan Result Page. Aturan lama yang menerapkan rata kiri (*left-aligned*) atau asymmetric padding kiri resmi dihapus dan dilarang.
 - **Uniform 12px Font & Weight SSOT**:
   - Seluruh teks pada banner (`TopsCore` maupun `by Mr. Top`) wajib menggunakan ukuran seragam **`12px`** (`font-size: 12px !important;`), font baku tunggal `'Inter', sans-serif`, dan bobot identik **`font-weight: 700 !important;` (Bold)** (`letter-spacing: 0.04em`).
   - Aturan lama yang membedakan ukuran dan ketebalan font (16px vs 14px, 900 vs 800) resmi dihapus dan digantikan oleh standar 12px seragam demi kerapian visual.
-  - Warna: `TopsCore` menggunakan Tactical Cyan (`#38bdf8`) dengan pendaran halus (`text-shadow: 0 0 8px rgba(56, 189, 248, 0.35)`), dan `by Mr. Top` menggunakan White Slate (`#f8fafc`).
+  - Warna: `TopsCore` menggunakan Tactical Cyan (`#38bdf8`) dengan tampilan matte murni (`text-shadow: none !important;` sesuai §2.39 Zero Neon Glow), dan `by Mr. Top` menggunakan White Slate (`#f8fafc`).
 - **Dual-Viewport Execution**:
   - Pada Student Realm (koridor mobile 430px), banner terkunci di dasar layar terpusat (`max-width: 430px; margin: 0 auto;`).
   - Pada Admin Desktop Realm (100vh workstation), konsol kerja `#admin-console` memotong tepat 50px (`height: calc(100vh - 50px) !important; max-height: calc(100vh - 50px) !important;`) untuk menjamin zero outer page scroll.
@@ -731,6 +731,23 @@ Sistem antarmuka TopsCore LMS mengelola 3 tema resmi yang didukung secara natif 
 - **Spreadsheet Grid Score Input Invariant (Zero Floating Capsule Boxes)**:
   Seluruh input nilai manual pada datagrid nilai (`.grade-manual-input` di kelas Vocabulary, Speaking, Storytelling, Grammar, Basic English, dsb.) WAJIB berformat **Spreadsheet Grid Cell murni**. Dilarang keras menggunakan kotak floating capsule, border terpisah, border-radius melengkung, atau latar belakang gelap terpisah di dalam sel data (`border: none !important; border-radius: 0 !important; background: transparent !important;`). Input mengisi 100% sel `<td>` dengan garis pembatas tabel adaptif. State fokus memberikan outline highlight Excel (`outline: none !important; background: rgba(56, 189, 248, 0.12) !important; box-shadow: inset 0 0 0 1.5px var(--primary-tactical, #38bdf8) !important;`). Browser number spinners disembunyikan sepenuhnya.
 
+## 2.41 Result Page Unified Student Architecture, Card Ordering & Display Invariants (`result.html` SSOT)
+- **Single Unified Student View (Zero Admin Variant)**:
+  Halaman hasil ujian (`result.html` / `js/result.js` / `css/result.css`) MUTLAK HANYA memiliki **satu tampilan terpadu versi siswa**. DILARANG KERAS membuat tampilan versi admin terpisah (`isAdminSession` override), panel kontrol `NORMAL | REMEDIAL | FORGIVE`, grade huruf khusus admin (`R` / `F`) yang menyamarkan tampilan skor siswa, ataupun tombol `BACK TO ROOM`. Baik siswa maupun Admin Console yang membuka hasil siswa melihat antarmuka identik dengan Smart Next Action (`NEXT TEST`) dan tombol utama `#back-dashboard-btn` (`BACK TO CLASS`).
+- **Strict Vertical Stacking & Card Order Invariant (`#result-hero-section`)**:
+  Urutan kartu vertikal dari atas ke bawah wajib dikunci secara presisi:
+  1. **`#result-identity-card` (Student Identity Card — Paling Atas)**: Wajib berada **di atas** kartu judul tes (`#result-Test-name-container`). Menampilkan nama dengan title honorifik/royal (`Mr.` / `Miss` / `King` / `Queen`), metadata institusi (`CEC/TOP • PROGRAM • BATCH • STEP/LEVEL`), pembatas, foto 3:4 / inisial dasar tanpa title, dan biodata (`Sex`, `DoB`, `Age`, `Adr`).
+  2. **`#result-Test-name-container` (Exam Title Card — Tepat di Bawah Student Card)**: Menggunakan format **2 Baris Autentik** (`§2.6.2`): Baris 1 (`#result-test-type-row`) menampilkan tipe/judul sebelum ` - ` (dengan strip kata `Words`/`Phrases`, contoh: `3rd Vocabulary Task B1`) berwarna putih `#F8FAFC` tebal tanpa *forced uppercase*; Baris 2 (`#result-test-topic-row`) menampilkan topik/tema penuh setelah ` - ` (contoh: `Travel Planning, Flights & Accommodation`) berwarna `#38bdf8` Tactical Cyan tanpa *forced uppercase* dan tanpa *truncation*.
+  3. **`#result-metrics-composite-card`**: Breakdown `CORRECT`, `PARTIAL`, `INCORRECT`, `POINTS`.
+  4. **`#result-score-grade-card`**: Skor `%` dan Grade Symbol (`★`/`A`–`E`).
+  5. **`#result-motivation-msg`**: Kartu predikat / deskripsi grade.
+  6. **`#smart-next-action-container` (`NEXT TEST`) & `#back-dashboard-btn` (`BACK TO CLASS`)**: Berjarak tepat 10px di atas bottom banner `#bottom-ad-banner` (`TopsCore by Mr. Top`, centered).
+- **Title Honorific, Champion Scoping & Camp Context Integrity**:
+  - Gelar `Mr.`/`Miss` dan `King`/`Queen` (`#result-crown-badge`) diterapkan via `formatStudentDashboardName(...)` lengkap dengan deteksi `Lalu` (male) & `Baiq` (female) serta bebas duplikasi prefiks.
+  - Pengecekan Batch Champion (`King` per male / `Queen` per female dengan skor positif) terlingkup ketat pada siswa aktif (`is_active === true && program_status !== 'INACTIVE'` per §2.3.1) di `batch_id` terkait (bukan scan global seluruh tabel `attempts` per §0.1).
+  - Deteksi konteks CEC Camp pada `isCampContext()` memeriksa kunci relasi jamak PostgREST (`programs?.name`, `institutions?.name`, `batches?.name`) sehingga tier akademik tampil benar sebagai `3RD STEP` (bukan `3RD LEVEL`).
+  - Styling wajib datar matte (nol neon `text-shadow` / `drop-shadow`) dan perimeter mobile 430px hanya menerapkan padding tunggal 10px (nol *double padding*).
+
 ---
 
 # 3. TARGET ARCHITECTURE
@@ -776,7 +793,7 @@ Every change must be executed atomically:
 - DO NOT invent business Student IDs.
 - DO NOT create Test Version entities.
 - DO NOT hardcode colors outside `TOPSCORE_COLORS` / CSS variables.
-- DO NOT prepend "Mr." or "Miss" titles to student names outside the Student Dashboard (strictly exclusive to Student Dashboard greeting per Rule 2.23).
+- DO NOT prepend "Mr." or "Miss" titles to student names outside the Student Dashboard and Result Page (Rule 2.23).
 - DO NOT use "Test", "Test Student", or "test_anon" for dummy accounts; strictly use "Top" (Rule 2.24).
 - DO NOT upload large binary files or uncompressed avatars to Supabase; strictly client-side processing (Rule 2.25).
 - DO NOT keep or upload oversized screenshots; max height ~600–800px (< 30 KB). WAJIB terapkan protokol Rolling Single Screenshot & Auto-Purge: saat screenshot baru dibuat, screenshot lama wajib langsung dihapus dari sistem untuk mencegah penumpukan file.

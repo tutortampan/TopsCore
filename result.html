@@ -51,7 +51,7 @@
     rel="stylesheet" />
   <link rel="stylesheet" href="css/style.css?v=20261119_v631" />
   <link rel="stylesheet" href="css/dashboard.css?v=20261119_v631" />
-  <link rel="stylesheet" href="css/result.css?v=20261119_v631" />
+  <link rel="stylesheet" href="css/result.css?v=20261125_v685" />
   <!-- Instant Transition Prefetch Pipeline (Prefetch dashboard for return trip) -->
   <link rel="prefetch" href="dashboard.html" />
   <link rel="prefetch" href="css/dashboard.css" />
@@ -72,14 +72,6 @@
 
   <canvas id="bg-particle-canvas" class="bg-particle-canvas"></canvas>
   <div id="toast-container"></div>
-
-  <header class="dashboard-header" id="result-page-header">
-    <div class="result-test-title-wrap" id="result-Test-name-container">
-      <div class="result-title-row-type" id="result-test-type-row">TEST RESULT</div>
-      <div class="result-title-row-topic" id="result-test-topic-row"></div>
-      <span id="result-Test-name" class="hidden"></span>
-    </div>
-  </header>
 
   <canvas id="confetti-canvas" class="confetti-canvas"></canvas>
 
@@ -151,6 +143,13 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- 2. Exam Title Card (Positioned below Student Identity Card) -->
+      <div class="result-test-title-wrap cascade-item" id="result-Test-name-container">
+        <div class="result-title-row-type" id="result-test-type-row">TEST RESULT</div>
+        <div class="result-title-row-topic" id="result-test-topic-row"></div>
+        <span id="result-Test-name" class="hidden"></span>
       </div>
 
       <!-- 2. Dynamic Vertical Metrics Table (Dinamis di sisa layar) -->
@@ -228,7 +227,7 @@
     </div>
   </div>
 
-  <script type="module" src="./js/result.js?v=20261125_v676"></script>
+  <script type="module" src="./js/result.js?v=20261125_v690"></script>
   <!-- PWA Service Worker & Install Handler -->
   <script type="module" src="./js/pwa.js?v=20261125_v681"></script>
   <footer id="bottom-ad-banner" class="topscore-locked-banner">

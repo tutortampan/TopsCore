@@ -45,7 +45,7 @@ Whenever `/check-ui` is invoked on a live screen, component, or screenshot, insp
 - **Strict Zero Sub-12px Font**: No microscopic text below 12px anywhere.
 - **Tabular Numbers**: Numeric columns enforce monospace/tabular alignment.
 
-### 4. Table & Datagrid Standardization (11 Pillars)
+### 4. Table & Datagrid Standardization (13 Pillars)
 - **Two-Tier Sticky Headers**: Super-Header (30px) + Sub-Header (30px) = exactly 60px height. Solid background, no muddy opacity.
 - **Gridlines**: Crisp white Excel gridlines (`rgba(255, 255, 255, 0.12)`).
 - **Zero Truncation**: Single-line non-wrapped text (`white-space: nowrap !important;`), zero ellipsis.
@@ -53,13 +53,13 @@ Whenever `/check-ui` is invoked on a live screen, component, or screenshot, insp
 - **Master Edit Mode**: Centered 24px input/select height.
 
 ### 5. Color Tokens & Semantic SSOT ("Rubah Satu Maka Rubah Semua")
-- **Grade Vault**:
-  - ★ Excellent (100%): Purple (`#c084fc`)
-  - A Very Good (90%–99%): Pure Green (`#00c000`)
-  - B Good (80%–89%): Electric Lime (`#95ff00`)
-  - C Enough (60%–79%): Pure Yellow (`#ffff00`)
-  - D Less (30%–59%): Dark Orange (`#ff8c00`)
-  - E Fail (0%–29%): Pure Red (`#ff0000`)
+- **Grade Vault** (`AGENTS.md` §2.10 & `INSTITUTION_GRADING_SCALES`):
+  - ★ System Grade (100%): Pure Green (`#00c000` / `--grade-a`); Result Page Celebration Gimmick: Vibrant Purple (`--grade-star`: `#a855f7` / `#c084fc`)
+  - A Excellent (90%–99%): Pure Green (`#00c000`)
+  - B Very Good (80%–89% CEC) / Good (70%–89% TOP): Electric Lime (`#95ff00`)
+  - C Good (70%–79% CEC) / Enough (60%–69% TOP): Pure Yellow (`#ffff00`)
+  - D Enough (60%–69% CEC) / Less (30%–59% TOP): Dark Orange (`#ff8c00`)
+  - E Less (0%–59% CEC) / Fail (0%–29% TOP): Pure Red (`#ff0000`)
 - **Semantic Precision**: Red actions (delete, alert) link to Grade E (`#ff0000`). Yellow warnings link to Grade C (`#ffff00`). Green active states link to Grade A (`#00c000`).
 - **Optimal Text Contrast**: Dark surfaces (Navy, Slate, Pink) enforce crisp white text (`#ffffff`). Light surfaces (Tactical Blue, Orange, Lime) enforce dark slate text (`#0f172a`).
 

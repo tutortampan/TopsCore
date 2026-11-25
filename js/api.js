@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass } from './grading.js?v=20261106_v160';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets } from './grading.js?v=20261125_v688';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -9,7 +9,7 @@ export function getGrade(pct, options) {
   return calculateGrade(pct, options);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -99,7 +99,7 @@ export function formatStudentName(name) {
 }
 
 export function formatStudentDashboardName(name, gender, isChampion = false) {
-  // Rule 2.23: Mr. and Miss are strictly exclusive to the Student Dashboard (dashboard.html)
+  // Rule 2.23: Mr. and Miss (plus King/Queen) are presented on the Student Dashboard (dashboard.html) and Result Page (result.html)
   if (!name) return '';
   const g = String(gender || '').toLowerCase().trim();
   const isMale = g === 'male' || g === 'm' || g === 'laki-laki' || g === 'l';
@@ -242,9 +242,10 @@ export function formatMatrixStudentName(name, maxChars = 19) {
  */
 export function isCampContext(ctx) {
   if (!ctx) return false;
-  const prog = ctx.program_name || ctx.program?.name || ctx.programName || ctx.name || '';
-  const inst = ctx.institution_name || ctx.institution?.name || ctx.institutionName || ctx.institution_code || ctx.institution?.code || '';
-  const batch = ctx.batch_name || ctx.batch?.name || ctx.batchName || '';
+  const isEntityWithRelations = Boolean(ctx.birth_date || ctx.batch_id || ctx.program_id || ctx.programs || ctx.institutions || ctx.batches);
+  const prog = ctx.program_name || ctx.program?.name || ctx.programs?.name || ctx.programName || (!isEntityWithRelations ? ctx.name : '') || '';
+  const inst = ctx.institution_name || ctx.institution?.name || ctx.institutions?.name || ctx.institutionName || ctx.institution_code || ctx.institution?.code || ctx.institutions?.code || '';
+  const batch = ctx.batch_name || ctx.batch?.name || ctx.batches?.name || ctx.batchName || '';
   const code = ctx.code || '';
   return /camp/i.test(prog) || /cec|cake/i.test(inst) || /camp/i.test(batch) || /^CAMP-/i.test(code);
 }
@@ -1039,20 +1040,45 @@ export async function fetchTestsForStudentLevel(programId, levelId, institutionI
   return [];
 }
 
+function buildAttemptTestFallback(att) {
+  if (att?.tests) return att.tests;
+  if (!att?.test_title && !att?.test_shell_code) return null;
+  return {
+    id: att.test_id || null,
+    class_id: att.class_id || null,
+    level_id: att.level_id || null,
+    title: att.test_title || att.test_shell_code || 'Archived Test',
+    display_name: att.test_title || null,
+    test_type: att.test_type || null,
+    category: att.test_category || null,
+    test_subtype: att.test_subtype || null,
+    shell_code: att.test_shell_code || null,
+    status: 'ARCHIVED',
+    deleted_at: null,
+    is_snapshot_fallback: true,
+    payload: {
+      shell_code: att.test_shell_code || null,
+      category: att.test_category || null,
+      theme_code: att.theme_code || null,
+      topic_code: att.topic_code || null
+    }
+  };
+}
+
 export async function fetchAllStudentAttempts(studentId) {
   if (!studentId) return [];
   const sb = await getSupabase();
   const { data, error } = await sb.from('attempts')
-    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, status, is_best_score, submitted_at, tests(id, class_id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, status, is_best_score, submitted_at, test_shell_code, test_title, test_type, test_subtype, test_category, class_id, level_id, theme_code, topic_code, tests(id, class_id, title, test_type, category, test_subtype, shell_code, payload, deleted_at, status, classes(name))')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
 
-  if (!error) return data || [];
+  if (!error) return (data || []).map(att => ({ ...att, tests: buildAttemptTestFallback(att) }));
 
   // Fallback 2-step jika foreign key cache Supabase belum sinkron
   const { data: attempts, error: attErr } = await sb.from('attempts')
-    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, status, is_best_score, submitted_at')
+    .select('id, test_id, score, correct_count, total_questions, percentage, effective_score, is_remedial_unlocked, is_remedial, is_forgiven, forgiven_reason, is_manual_override, forgiven_by, forgiven_at, grade, status, is_best_score, submitted_at, test_shell_code, test_title, test_type, test_subtype, test_category, class_id, level_id, theme_code, topic_code')
     .eq('student_id', studentId)
     .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED'])
     .order('submitted_at', { ascending: false });
@@ -1066,10 +1092,13 @@ export async function fetchAllStudentAttempts(studentId) {
     if (asmData) asmData.forEach(a => { testMap[a.id] = a; });
   }
 
-  return attempts.map(att => ({
-    ...att,
-    tests: testMap[att.test_id] || null
-  }));
+  return attempts.map(att => {
+    const resolved = testMap[att.test_id] || null;
+    return {
+      ...att,
+      tests: resolved || buildAttemptTestFallback(att)
+    };
+  });
 }
 
 export async function fetchStudentAttemptsForTest(studentId, testId) {
@@ -1943,9 +1972,21 @@ export async function generateTestQuestions(sb, test) {
       const sessAnsweringMode = test.payload?.test_session?.answering_mode;
       const sessModes = test.payload?.test_session?.answering_modes;
 
+      let classTestSettings = null;
+      if (test.class_id) {
+        try {
+          classTestSettings = await fetchClassTestSettings(test.class_id);
+        } catch (_) {}
+      }
+      const isExamShell = isWeeklyExam(test) || String(test.test_type || '').toLowerCase() === 'exam';
+      const payloadWordsAns = test.payload?.words_answer_type || test.payload?.wordsAnswerType;
+      const payloadPhrasesAns = test.payload?.phrases_answer_type || test.payload?.phrasesAnswerType;
+      const settingsWordsAns = isExamShell ? classTestSettings?.wordsExamAnswer : classTestSettings?.wordsTaskAnswer;
+      const settingsPhrasesAns = isExamShell ? classTestSettings?.phrasesExamAnswer : classTestSettings?.phrasesTaskAnswer;
+
       const baseAnsType = test.answer_type || test.payload?.answer_type || (test.test_subtype === 'PHRASE_TEST' ? 'selection' : 'spoken');
-      const wordsAnsType = sessModes?.words || sessAnsweringMode || baseAnsType;
-      const phrasesAnsType = sessModes?.phrases || sessAnsweringMode || (isUnified ? (baseAnsType === 'written' ? 'selection' : baseAnsType) : baseAnsType);
+      const wordsAnsType = sessModes?.words || sessAnsweringMode || payloadWordsAns || settingsWordsAns || baseAnsType;
+      const phrasesAnsType = sessModes?.phrases || sessAnsweringMode || payloadPhrasesAns || settingsPhrasesAns || (isUnified ? (baseAnsType === 'written' ? 'selection' : baseAnsType) : baseAnsType);
 
       const isWordsSelection = wordsAnsType.startsWith('dropdown') || wordsAnsType === 'multiple_choice' || wordsAnsType === 'selection';
       const isPhrasesSelection = phrasesAnsType.startsWith('dropdown') || phrasesAnsType === 'multiple_choice' || phrasesAnsType === 'selection';
@@ -2218,8 +2259,7 @@ export async function startTest(studentId, testId) {
     const prereqAttempts = prereqAttRes.data || [];
     const prereqTest = prereqTestRes.data;
     const testSettings = await fetchClassTestSettings(asmData.class_id);
-    const rawTargetReps = Number(testSettings?.taskRepetitions) || 7;
-    const targetReps = (rawTargetReps >= 14) ? Math.round(rawTargetReps / 2) : rawTargetReps;
+    const { wordsTarget, phrasesTarget, maxTarget: targetReps, label: repLabel } = resolveTaskRepTargets(prereqTest, testSettings);
     const defaultTaskMin = Number(testSettings?.taskMinScore) || 50;
     const defaultExamMin = Number(testSettings?.examMinScore) || 60;
 
@@ -2252,19 +2292,18 @@ export async function startTest(studentId, testId) {
         const fr = String(a.forgiven_reason || '');
         const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
         if (mMatch) {
-          const reps = Math.min(targetReps, parseInt(mMatch[1], 10));
+          const rawM = parseInt(mMatch[1], 10);
           const comp = (mMatch[3] || '').toUpperCase();
-          if (comp === 'PHRASES') phrasesPasses = Math.max(phrasesPasses, reps);
-          else if (comp === 'WORDS') wordsPasses = Math.max(wordsPasses, reps);
+          if (comp === 'PHRASES') phrasesPasses = Math.max(phrasesPasses, Math.min(phrasesTarget, rawM));
+          else if (comp === 'WORDS') wordsPasses = Math.max(wordsPasses, Math.min(wordsTarget, rawM));
           else {
-            wordsPasses = Math.max(wordsPasses, reps);
-            phrasesPasses = Math.max(phrasesPasses, reps);
+            wordsPasses = Math.max(wordsPasses, Math.min(wordsTarget, rawM));
+            phrasesPasses = Math.max(phrasesPasses, Math.min(phrasesTarget, rawM));
           }
-          return;
         }
         if (a.is_forgiven) {
-          wordsPasses = Math.max(wordsPasses, targetReps);
-          phrasesPasses = Math.max(phrasesPasses, targetReps);
+          wordsPasses = Math.max(wordsPasses, wordsTarget);
+          phrasesPasses = Math.max(phrasesPasses, phrasesTarget);
           return;
         }
         const pct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || a.score || 0);
@@ -2277,14 +2316,13 @@ export async function startTest(studentId, testId) {
           else wordsPasses++;
         }
       });
-      passCount = Math.min(wordsPasses, phrasesPasses);
+      passCount = (wordsPasses >= wordsTarget && phrasesPasses >= phrasesTarget) ? 1 : 0;
     } else {
       prereqAttempts.forEach(a => {
         const fr = String(a.forgiven_reason || '');
         const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)/i);
         if (mMatch) {
           passCount = Math.max(passCount, Math.min(targetReps, parseInt(mMatch[1], 10)));
-          return;
         }
         if (a.is_forgiven) {
           passCount = Math.max(passCount, targetReps);
@@ -2298,13 +2336,15 @@ export async function startTest(studentId, testId) {
       });
     }
 
-    const requiredPasses = isPrereqExam ? 1 : targetReps;
-    if (passCount < requiredPasses) {
+    const prereqMet = isPrereqExam
+      ? (passCount >= 1)
+      : (isPrereqUnified ? (wordsPasses >= wordsTarget && phrasesPasses >= phrasesTarget) : (passCount >= targetReps));
+    if (!prereqMet) {
       const pErr = isPrereqExam
         ? new Error(`Prerequisite not completed. You must pass "${prereqTest?.title || 'the prerequisite exam'}" with at least ${reqScore}% before starting this test.`)
         : (isPrereqUnified
-            ? new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery on both Words (${wordsPasses}/${targetReps}) and Phrases (${phrasesPasses}/${targetReps}) with at least ${reqScore}% on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`)
-            : new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery (${passCount}/${requiredPasses} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`));
+            ? new Error(`Prerequisite not completed. You must achieve ${repLabel} Repetitive Mastery on both Words (${wordsPasses}/${wordsTarget}) and Phrases (${phrasesPasses}/${phrasesTarget}) with at least ${reqScore}% on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`)
+            : new Error(`Prerequisite not completed. You must achieve Repetitive Mastery (${passCount}/${targetReps} passes with at least ${reqScore}%) on "${prereqTest?.title || 'the prerequisite task'}" before starting this test.`));
       pErr.code = 'PREREQUISITE_NOT_MET';
       pErr.status = 403;
       pErr.prereqTestId = prereqTest?.id;
@@ -2333,34 +2373,67 @@ export async function startTest(studentId, testId) {
 
       if (themeTasks.length > 0) {
         const testSettings = await fetchClassTestSettings(asmData.class_id);
-        const rawTargetReps = Number(testSettings?.taskRepetitions) || 7;
-        const targetReps = (rawTargetReps >= 14) ? Math.round(rawTargetReps / 2) : rawTargetReps;
         const taskMinScore = Number(testSettings?.taskMinScore) || 50;
         const taskMap = Object.fromEntries(themeTasks.map(t => [t.id, t]));
 
         const taskIds = themeTasks.map(t => t.id);
         const { data: taskAttempts } = await sb.from('attempts')
-          .select('test_id, percentage, effective_score, status, is_forgiven')
+          .select('test_id, percentage, effective_score, status, is_forgiven, total_questions, correct_count, score, forgiven_reason')
           .eq('student_id', studentId)
           .in('test_id', taskIds)
           .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
 
         const passCountByTask = {};
+        const wordsPassByTask = {};
+        const phrasesPassByTask = {};
         (taskAttempts || []).forEach(att => {
+          const tid = att.test_id;
+          const tObj = taskMap[tid];
+          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(tObj, testSettings);
+          const isUni = Boolean(
+            (tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'))) &&
+            tObj?.payload?.has_phrases !== false &&
+            tObj?.payload?.is_unified !== false &&
+            tObj?.payload?.category !== 'words'
+          );
           if (att.is_forgiven) {
-            passCountByTask[att.test_id] = Math.max(passCountByTask[att.test_id] || 0, targetReps);
+            passCountByTask[tid] = Math.max(passCountByTask[tid] || 0, mT);
+            wordsPassByTask[tid] = Math.max(wordsPassByTask[tid] || 0, wT);
+            phrasesPassByTask[tid] = Math.max(phrasesPassByTask[tid] || 0, pT);
           } else {
             const pct = att.effective_score != null ? Number(att.effective_score) : Number(att.percentage || 0);
-            const minReq = Number(taskMap[att.test_id]?.minimum_required_score || taskMap[att.test_id]?.payload?.min_score || taskMinScore);
+            const minReq = Number(tObj?.minimum_required_score || tObj?.payload?.min_score || taskMinScore);
             if (pct >= minReq) {
-              passCountByTask[att.test_id] = (passCountByTask[att.test_id] || 0) + 1;
+              if (isUni) {
+                const fr = String(att.forgiven_reason || '');
+                const tQ = Number(att.total_questions || 0);
+                const cCount = Number(att.correct_count || att.score || 0);
+                const isPhrases = (tQ > 0 && tQ <= 20) || (cCount > 0 && cCount <= 10 && tQ <= 20) || /PHRASES/i.test(fr);
+                if (isPhrases) phrasesPassByTask[tid] = (phrasesPassByTask[tid] || 0) + 1;
+                else wordsPassByTask[tid] = (wordsPassByTask[tid] || 0) + 1;
+              } else {
+                passCountByTask[tid] = (passCountByTask[tid] || 0) + 1;
+              }
             }
           }
         });
 
-        const unmasteredTask = themeTasks.find(t => (passCountByTask[t.id] || 0) < targetReps);
+        const unmasteredTask = themeTasks.find(t => {
+          const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(t, testSettings);
+          const isUni = Boolean(
+            (t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))) &&
+            t.payload?.has_phrases !== false &&
+            t.payload?.is_unified !== false &&
+            t.payload?.category !== 'words'
+          );
+          if (isUni) {
+            return (wordsPassByTask[t.id] || 0) < wT || (phrasesPassByTask[t.id] || 0) < pT;
+          }
+          return (passCountByTask[t.id] || 0) < mT;
+        });
         if (unmasteredTask) {
-          const mErr = new Error(`Prerequisite not completed. You must achieve Repetitive Mastery (${targetReps} passes with at least ${taskMinScore}%) on all Theme Tasks before taking the Exam.`);
+          const { label: unmLabel } = resolveTaskRepTargets(unmasteredTask, testSettings);
+          const mErr = new Error(`Prerequisite not completed. You must achieve Repetitive Mastery (${unmLabel} passes with at least ${taskMinScore}%) on all Theme Tasks before taking the Exam.`);
           mErr.code = 'MASTERY_REPETITION_NOT_MET';
           mErr.status = 403;
           throw mErr;
@@ -2388,6 +2461,8 @@ export async function startTest(studentId, testId) {
       .eq('class_id', asmData.class_id)
       .eq('level_id', asmData.level_id)
       .eq('test_type', 'exam')
+      .eq('status', 'PUBLISHED')
+      .is('deleted_at', null)
       .neq('id', asmData.id);
 
     const matchingPriorExams = (priorExams || []).filter(t => {
@@ -2437,6 +2512,7 @@ export async function startTest(studentId, testId) {
       .select('id, title, payload, shell_code, test_type, test_subtype, category, minimum_required_score')
       .eq('class_id', asmData.class_id)
       .eq('level_id', asmData.level_id)
+      .eq('status', 'PUBLISHED')
       .is('deleted_at', null);
 
     const filteredPriorTasks = (priorTopicTasks || []).filter(t => {
@@ -2485,7 +2561,6 @@ export async function startTest(studentId, testId) {
             phrasesPassByTask[tid] = Math.max(phrasesPassByTask[tid] || 0, reps);
           }
           passCountByTask[tid] = Math.max(passCountByTask[tid] || 0, reps);
-          return;
         }
 
         if (att.is_forgiven) {
@@ -2511,6 +2586,7 @@ export async function startTest(studentId, testId) {
       });
 
       const unmasteredTask = filteredPriorTasks.find(t => {
+        const { wordsTarget: wT, phrasesTarget: pT, maxTarget: mT } = resolveTaskRepTargets(t, testSettings);
         const isUni = Boolean(
           (t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))) &&
           t.payload?.has_phrases !== false &&
@@ -2518,14 +2594,15 @@ export async function startTest(studentId, testId) {
           t.payload?.category !== 'words'
         );
         if (isUni) {
-          return (wordsPassByTask[t.id] || 0) < targetReps || (phrasesPassByTask[t.id] || 0) < targetReps;
+          return (wordsPassByTask[t.id] || 0) < wT || (phrasesPassByTask[t.id] || 0) < pT;
         }
-        return (passCountByTask[t.id] || 0) < targetReps;
+        return (passCountByTask[t.id] || 0) < mT;
       });
 
       if (unmasteredTask) {
+        const { wordsTarget: uW, phrasesTarget: uP, label: uLabel } = resolveTaskRepTargets(unmasteredTask, testSettings);
         const unmasteredMin = unmasteredTask.minimum_required_score || unmasteredTask.payload?.min_score || 50;
-        const topErr = new Error(`Prerequisite not completed. You must achieve 7×7 Repetitive Mastery on both Words and Phrases (${targetReps} passes each with at least ${unmasteredMin}%) on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
+        const topErr = new Error(`Prerequisite not completed. You must achieve ${uLabel} Repetitive Mastery on Words (${uW}) and Phrases (${uP}) with at least ${unmasteredMin}% on Topic ${currentThemeFallback}${priorTopicNum} before starting Topic ${cleanTopicNumFallback}.`);
         topErr.code = 'TOPIC_MASTERY_NOT_MET';
         topErr.status = 403;
         topErr.prereqTestId = unmasteredTask?.id;
@@ -2671,7 +2748,7 @@ export async function startTest(studentId, testId) {
       }));
       const { data: insertedAns, error: ansInsertErr } = await sb.from('attempt_answers')
         .insert(answerRows)
-        .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, student_answer, score');
+        .select('id, attempt_id, question_id, question_snapshot, topic_snapshot, question_type_snapshot, accepted_answers_snapshot, correct_answer_snapshot, student_answer, score');
       if (ansInsertErr) {
         console.error('Failed to insert attempt answers:', ansInsertErr);
       } else {
@@ -2711,12 +2788,18 @@ export async function startTest(studentId, testId) {
 
   const sessAnsweringModes = asmData.payload?.test_session?.answering_modes || {};
   const sessAnsweringMode = asmData.payload?.test_session?.answering_mode;
-  const isUnifiedTestSession = Boolean(
-    asmData.payload?.is_unified === true ||
-    asmData.payload?.category === 'unified' ||
-    asmData.category === 'unified' ||
-    (asmData.test_subtype && asmData.test_subtype.startsWith('UNIFIED'))
-  );
+  let _csSync = null;
+  if (asmData.class_id) {
+    try { _csSync = await fetchClassTestSettings(asmData.class_id); } catch (_) {}
+  }
+  const resolvedWordsMode = sessAnsweringModes.words || sessAnsweringMode
+    || asmData.payload?.words_answer_type || asmData.payload?.wordsAnswerType
+    || (isFormalExam ? _csSync?.wordsExamAnswer : _csSync?.wordsTaskAnswer)
+    || null;
+  const resolvedPhrasesMode = sessAnsweringModes.phrases || sessAnsweringMode
+    || asmData.payload?.phrases_answer_type || asmData.payload?.phrasesAnswerType
+    || (isFormalExam ? _csSync?.phrasesExamAnswer : _csSync?.phrasesTaskAnswer)
+    || null;
 
   // Distractor candidate pool from all attempt answers
   const candidatePool = [];
@@ -2743,9 +2826,7 @@ export async function startTest(studentId, testId) {
       /phrase/i.test(snap.section_label || '') ||
       ['expression', 'idiom', 'proverb', 'phrase'].includes((snap.word_type || a.question_type_snapshot || '').toLowerCase())
     );
-    const targetMode = isPhrase
-      ? (sessAnsweringModes.phrases || (isUnifiedTestSession ? 'multiple_choice' : sessAnsweringMode))
-      : (sessAnsweringModes.words || sessAnsweringMode);
+    const targetMode = isPhrase ? resolvedPhrasesMode : resolvedWordsMode;
 
     let changed = false;
     if (targetMode) {
@@ -2759,10 +2840,11 @@ export async function startTest(studentId, testId) {
     if (snap.answer_type === 'selection') {
       if (!Array.isArray(snap.options_snapshot) || snap.options_snapshot.length < 2) {
         const acc = Array.isArray(a.accepted_answers_snapshot) ? a.accepted_answers_snapshot[0] : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
-        const correctOpt = acc || snap.question_text || 'Option';
-        const distractors = candidatePool.filter(c => c !== correctOpt).sort(() => 0.5 - Math.random()).slice(0, 3);
-        snap.options_snapshot = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
-        changed = true;
+        if (acc) {
+          const distractors = candidatePool.filter(c => c !== acc).sort(() => 0.5 - Math.random()).slice(0, 4);
+          snap.options_snapshot = [acc, ...distractors].sort(() => 0.5 - Math.random());
+          changed = true;
+        }
       }
     }
 
@@ -3119,11 +3201,13 @@ export async function fetchAttemptResult(attemptId) {
     .select(`
       id, student_id, status, score, total_questions, percentage, effective_score, is_remedial_unlocked, grade, submitted_at, started_at,
       expires_at, test_id, is_best_score,
+      test_shell_code, test_title, test_type, test_subtype, test_category, class_id, level_id, theme_code, topic_code,
       tests:test_id(id, title, display_name, shell_code, status, test_subtype, test_type, class_id, classes(name), levels(name, level_number))
     `)
     .eq('id', attemptId)
     .single();
   if (error) throw error;
+  if (data) data.tests = buildAttemptTestFallback(data);
   return data;
 }
 
@@ -5922,10 +6006,11 @@ export async function adminApplyForgiven({
             }
           }
         } else if (reps === 0 && submittedAtts.length > 0) {
-          // Clean up dummy 0% attempts so unattempted tasks remain clean
+          // Clean up synthetic MANUAL_REPS attempts so reset-to-0 persists cleanly
           for (const att of submittedAtts) {
-            if (Number(att.percentage || att.score || 0) === 0 && att.forgiven_reason && att.forgiven_reason.includes('MANUAL_REPS')) {
-              await sb.from('attempts').delete().eq('id', att.id);
+            if (att.forgiven_reason && att.forgiven_reason.includes('MANUAL_REPS')) {
+              const { error: delErr } = await sb.from('attempts').delete().eq('id', att.id);
+              if (delErr) throw delErr;
             }
           }
         }
@@ -7651,10 +7736,11 @@ export async function updateLiveSessionModality({ testId, wordsMode = null, phra
               const acc = Array.isArray(a.accepted_answers_snapshot)
                 ? a.accepted_answers_snapshot[0]
                 : (typeof a.accepted_answers_snapshot === 'string' ? a.accepted_answers_snapshot.split(/[;,/]/)[0]?.trim() : (a.correct_answer_snapshot || ''));
-              const correctOpt = acc || snap.question_text || 'Option';
-              const distractors = pool.filter(cand => cand !== correctOpt).sort(() => 0.5 - Math.random()).slice(0, 4);
-              snap.options_snapshot = [correctOpt, ...distractors].sort(() => 0.5 - Math.random());
-              changed = true;
+              if (acc) {
+                const distractors = pool.filter(cand => cand !== acc).sort(() => 0.5 - Math.random()).slice(0, 4);
+                snap.options_snapshot = [acc, ...distractors].sort(() => 0.5 - Math.random());
+                changed = true;
+              }
             }
           }
 

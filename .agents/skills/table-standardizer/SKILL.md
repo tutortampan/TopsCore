@@ -6,7 +6,7 @@ description: >-
 
 # Table Matrix Standardizer (`/check-table` / `/fix-table`)
 
-This skill enforces the 11 Pillars of Universal Table Standardization and the Single-Pass Table Editing Protocol for TopsCore LMS.
+This skill enforces the 13 Pillars of Universal Table Standardization and the Single-Pass Table Editing Protocol for TopsCore LMS.
 
 ## Trigger Shortcuts
 - `/check-table`
@@ -28,8 +28,8 @@ npm.cmd run test:table
 6. **Sort Icon Modernization**: Pure directional indicators (`▲` / `▼`), no idle clutter `⇅`.
 7. **Live Monitor & Pure English**: 100% English messaging and semantic badges.
 8. **Curriculum & Topics Harmonization**: Standardized column widths across matrices.
-9. **Universal Master Edit Mode White Excel Gridlines**: Clean `1px solid rgba(255, 255, 255, 0.12)` gridlines.
+9. **Universal Master Edit Mode White Excel Gridlines**: Crisp `1px solid rgba(255, 255, 255, 0.45)` gridlines during Master Edit Mode (`rgba(255, 255, 255, 0.12)` when subtle/read-only).
 10. **Universal Zero-Truncation Invariant**: Single-line non-wrapped text (`white-space: nowrap !important;`), zero ellipsis/clipping.
-11. **Level Promotion Passing Threshold**: Grade C (60%), Grade F (forgiven), or Grade R (remedial).
+11. **Level Promotion Passing Threshold**: Minimum score **$\ge 60\%$** (Grade D *Enough* on CEC / Grade C *Enough* on TOP), Grade F (forgiven), or Grade R (remedial).
 12. **Super-Header & Sub-Header Exact Group Color Match**: Header borders and text themes matching parent quadrants.
 13. **Universal Zero False-Red & Code-After-Numbering Sequence**: Pending grades render neutral slate (`#64748b`), never red; entity codes immediately follow numbering before long descriptive titles; demographics enforce standard `Male`/`Female` (strictly zero `Mister`/`Miss`); legends dock in Sub Panel (`setBottomInfobar`).

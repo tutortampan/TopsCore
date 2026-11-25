@@ -27,7 +27,7 @@ import {
   reopenStudentAttempt,
   updateLiveSessionModality,
   getGrade
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261125_v688';
 import { getSupabase } from '../supabase.js';
 import { getGradeColorByScore, getInvertedGradeColor, GRADE_PALETTE, detectClassDiscipline, isVocabularyClass } from '../grading.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';

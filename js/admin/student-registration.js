@@ -4,7 +4,7 @@
 import {
   adminFetchAll, adminInsert, adminUpdate, formatStudentName, cleanStudentName,
   normalizeStudentNameForMatch, clearAdminCache, sha256
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261125_v688';
 import { showToast, showLoading, hideLoading, updateLoadingProgress, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';

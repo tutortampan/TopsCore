@@ -17,7 +17,7 @@ import {
   testSupabaseConnection,
   previewRecalibrateTest,
   applyRecalibrateTest
-} from '../api.js?v=20261114_v517';
+} from '../api.js?v=20261125_v688';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { openDuplicateStudentsModal, openDuplicateQuestionsModal } from './crud-modals.js?v=20261115_v528';

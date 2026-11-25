@@ -4,7 +4,7 @@
 // ============================================================
 
 import { getSupabase } from '../supabase.js';
-import { escapeHtml } from '../api.js';
+import { escapeHtml } from '../api.js?v=20261125_v688';
 import { TOPSCORE_COLORS, getGradeColorByScore, getInvertedGradeColor } from '../grading.js';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 import { buildClassThemesData, loadThemeExamAnalyticsData, renderThemeExamAnalyticsBoard } from './tests-access.js';

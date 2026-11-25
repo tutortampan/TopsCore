@@ -1,7 +1,7 @@
 import { DataGrid } from './datagrid.js?v=20261114_v500';
 import { escapeHtml, escHtml, showToast, showLoading, hideLoading, getGrade, calculateGrade, getGradeColorByScore, getGradeColor, getGradeSymbol, GRADE_PALETTE, TOPSCORE_COLORS, isExam, isWeeklyExam, computeMilestoneExamMastery } from '../app.js?v=20261106_v160';
 import { computeUnifiedScore, computeTopicPassLevel, detectClassDiscipline, isVocabularyClass, isManualEvaluationClass, isCbtEvaluationClass } from '../grading.js?v=20261106_v160';
-import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261125_v687';
+import { fetchClassTestSettings, updateTestPassingScore, saveClassTestSettings, formatMatrixStudentName, adminApplyForgiven, logAuditEvent, calculateAutoDurationMinutes } from '../api.js?v=20261125_v688';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 
 if (typeof window !== 'undefined') {
@@ -396,7 +396,7 @@ import {
   fetchInstitutions, fetchPrograms, fetchBatches, formatStudentName, cleanStudentName, stripHonorific, getStudentInitial,
   testSupabaseConnection, previewRecalibrateTest, applyRecalibrateTest, isPassing, calculatePercentage, toLevelLetter, toShortLevel,
   adminOverridePrerequisitesWithRemedial, autoSyncClassTestsForLevel
-} from '../api.js?v=20261124_v683';
+} from '../api.js?v=20261125_v688';
 import { parseExcelWorkbook, processStudentImportRows, processQuestionImportRows } from '../excel-parser.js?v=20261106_v160';
 import { setAdminSession, getAdminSession, clearAdminSession, isTutorRole, isAdminRole, getAdminRole } from '../session.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -1706,10 +1706,13 @@ if (typeof window !== 'undefined') {
           }).length;
         };
 
-        const formatAnswerType = (type) => {
-          if (!type) return 'Recognition';
+        // Multiple Choice, Selection, and Recognition are distinct modes; Recognition is strictly for Vocabulary with Vocab Vault.
+        const formatAnswerType = (type, isVocabVault = false) => {
+          if (!type) return isVocabVault ? 'Recognition' : 'Selection';
           const t = String(type).toLowerCase().replace(/_/g, ' ').trim();
-          if (t === 'multiple choice' || t === 'selection' || t === 'recognition' || t === 'm2') return 'Recognition';
+          if (t === 'recognition' || t === 'm2') return 'Recognition';
+          if (t === 'multiple choice' || t === 'mc') return 'Multiple Choice';
+          if (t === 'selection') return isVocabVault ? 'Recognition' : 'Selection';
           if (t === 'voice match' || t === 'spoken' || t === 'm3') return 'Spoken';
           if (t === 'text match' || t === 'written' || t === 'm4') return 'Written';
           if (t === 'description' || t === 'point & speak' || t === 'm1') return 'Description';
@@ -1757,17 +1760,24 @@ if (typeof window !== 'undefined') {
           const qCount = r?.total_questions || r?.payload?.total_questions || (r?.test_type === 'exam' ? 120 : 40);
           const effectiveQCount = _isDyn ? _vaultQ : qCount;
 
-          // Repetitions Calculation (DECISION-084 / Rule 2.4.1)
-          let classTaskReps = null;
+          // Repetitions & Per-Component Answer Mode Resolution (DECISION-084 / Rule 2.4.1)
+          let parsedClassSettings = null;
           try {
             const cachedSettings = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage.getItem(`topscore_test_settings_${classId}`) : null;
             if (cachedSettings) {
-              const parsed = JSON.parse(cachedSettings);
-              if (parsed.taskRepetitions) classTaskReps = Number(parsed.taskRepetitions);
+              parsedClassSettings = JSON.parse(cachedSettings);
             }
           } catch (_) {}
+          const classTaskReps = parsedClassSettings?.taskRepetitions ? Number(parsedClassSettings.taskRepetitions) : null;
           const isExamTest = String(r?.category || r?.test_type || '').toLowerCase().includes('exam') || String(r?.title || '').toLowerCase().includes('exam');
           const repetitions = isExamTest ? 1 : Math.max(1, parseInt(r?.payload?.task_repetitions || r?.required_repetitions || classTaskReps, 10) || 7);
+
+          const rawWordsAns = r?.payload?.words_answer_type || r?.payload?.wordsAnswerType
+            || (isExamTest ? parsedClassSettings?.wordsExamAnswer : parsedClassSettings?.wordsTaskAnswer)
+            || rawAns;
+          const rawPhrasesAns = r?.payload?.phrases_answer_type || r?.payload?.phrasesAnswerType
+            || (isExamTest ? parsedClassSettings?.phrasesExamAnswer : parsedClassSettings?.phrasesTaskAnswer)
+            || rawAns;
 
           // Words vs Phrases Count Calculation
           const isVocab = typeof isVocabularyClass === 'function' ? isVocabularyClass(currentClass) : true;
@@ -1805,7 +1815,9 @@ if (typeof window !== 'undefined') {
             level: levelDisplay,
             order: r?.display_order ?? r?.order_index ?? 1,
             prereq: prereqTitle,
-            answerType: formatAnswerType(rawAns),
+            answerType: formatAnswerType(rawAns, isVocab && _isDyn),
+            wordsAnswerType: (isVocab && wordsCount > 0) ? formatAnswerType(rawWordsAns, isVocab && _isDyn) : '—',
+            phrasesAnswerType: (isVocab && phrasesCount > 0) ? formatAnswerType(rawPhrasesAns, isVocab && _isDyn) : '—',
             questionOrder: (String(r?.question_order || r?.payload?.question_order || 'random').toLowerCase() === 'sequential') ? 'Seq' : 'Random',
             TestCategory,
             repetitions,
@@ -2006,8 +2018,8 @@ if (typeof window !== 'undefined') {
               }
             });
 
-            if (manualRepsW != null) wordsPasses = manualRepsW;
-            if (manualRepsP != null) phrasesPasses = manualRepsP;
+            if (manualRepsW != null) wordsPasses = Math.max(wordsPasses, manualRepsW);
+            if (manualRepsP != null) phrasesPasses = Math.max(phrasesPasses, manualRepsP);
             if (hasForgiven) {
               wordsPasses = Math.max(wordsPasses, compTargetReps);
               phrasesPasses = Math.max(phrasesPasses, compTargetReps);
@@ -2782,19 +2794,6 @@ if (typeof window !== 'undefined') {
                 }
               },
               {
-                key: 'answerType',
-                label: 'ANSWER',
-                sortable: true,
-                width: '90px',
-                align: 'center',
-                render: (val, row) => {
-                  const ans = String(row.answerType || 'Selection');
-                  const cleanAns = ans.replace(/[^\w\s]/gi, '').trim();
-                  const titleCaseAns = cleanAns.charAt(0).toUpperCase() + cleanAns.slice(1);
-                  return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(titleCaseAns)}</span>`;
-                }
-              },
-              {
                 key: 'questionOrder',
                 label: 'ORDER',
                 sortable: true,
@@ -2868,6 +2867,18 @@ if (typeof window !== 'undefined') {
                 }
               },
               {
+                key: 'wordsAnswerType',
+                label: 'W-MODE',
+                sortable: true,
+                width: '90px',
+                align: 'center',
+                render: (val, row) => {
+                  const mode = String(row.wordsAnswerType || '—');
+                  if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                  return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
+                }
+              },
+              {
                 key: 'phrasesCount',
                 label: 'PHRASES',
                 shortLabel: 'PHR',
@@ -2879,6 +2890,18 @@ if (typeof window !== 'undefined') {
                   const count = row.phrasesCount || 0;
                   if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
                   return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Phrases in test">${count}</span>`;
+                }
+              },
+              {
+                key: 'phrasesAnswerType',
+                label: 'P-MODE',
+                sortable: true,
+                width: '90px',
+                align: 'center',
+                render: (val, row) => {
+                  const mode = String(row.phrasesAnswerType || '—');
+                  if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                  return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
                 }
               },
               {
@@ -2939,7 +2962,7 @@ if (typeof window !== 'undefined') {
               btn.disabled = true;
               if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
 
-              const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v683');
+              const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261125_v688');
               if (window._classHubCache) delete window._classHubCache[targetClassId];
               clearAdminCache();
               clearApiCache();
@@ -3669,6 +3692,14 @@ if (typeof window !== 'undefined') {
                   reason: 'Score Edit'
                 });
 
+                if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                const curClassId = window._selectedClassId || classId || cid || window._currentClassHubContext?.classId;
+                if (window._classHubCache && curClassId) {
+                  delete window._classHubCache[curClassId];
+                }
                 if (typeof showToast === 'function') showToast('✓ Exam rate saved successfully!', 'success');
               } catch (err) {
                 console.error('Save exam rate error:', err);
@@ -3911,14 +3942,16 @@ if (typeof window !== 'undefined') {
                     }
                   }
 
+                  const compTag = d?.component ? ` ${String(d.component).toUpperCase()}` : '';
                   targetTasks.forEach(t => {
                     testActions.push({
                       testId: t.id,
                       action: 'manual_reps',
                       reps,
                       maxReps,
+                      section: d?.component || undefined,
                       percentage: 70, // SSOT minimal passing 70% per process
-                      reason: `MANUAL_REPS: ${reps}/${maxReps}`
+                      reason: `MANUAL_REPS: ${reps}/${maxReps}${compTag}`
                     });
                   });
                 } else if (k.startsWith('exam_')) {
@@ -4010,36 +4043,50 @@ if (typeof window !== 'undefined') {
                     const g = typeof calculateGrade === 'function' ? calculateGrade(item.pct) : (typeof getGrade === 'function' ? getGrade(item.pct) : 'C');
                     const now = new Date().toISOString();
                     if (item.attemptId) {
-                      await sb.from('attempts').update({
+                      const { error: repUpdErr } = await sb.from('attempts').update({
                         percentage: item.pct,
+                        effective_score: item.pct,
                         score: item.rawScore,
+                        correct_count: Math.round(item.rawScore || 0),
                         grade: g,
                         status: 'evaluated',
                         updated_at: now
                       }).eq('id', item.attemptId);
+                      if (repUpdErr) throw repUpdErr;
                     } else {
-                      await sb.from('attempts').insert({
+                      const { error: repInsErr } = await sb.from('attempts').insert({
                         student_id: item.studentId,
                         test_id: item.taskId,
+                        attempt_number: Math.max(1, Number(item.repIdx || 1)),
                         total_questions: item.totalQ,
                         score: item.rawScore,
+                        correct_count: Math.round(item.rawScore || 0),
                         percentage: item.pct,
+                        effective_score: item.pct,
                         grade: g,
                         status: 'evaluated',
+                        is_best_score: false,
+                        is_forgiven: false,
                         started_at: now,
+                        expires_at: now,
                         submitted_at: now,
                         created_at: now,
-                        forgiven_reason: `MANUAL_REPS: 1/1 ${String(item.component || 'words').toUpperCase()}`
+                        updated_at: now,
+                        forgiven_reason: `MANUAL_SCORE_REP [SECTION: ${String(item.component || 'words').toUpperCase()}]`
                       });
+                      if (repInsErr) throw repInsErr;
                     }
                   } else if (item.attemptId) {
-                    await sb.from('attempts').update({
+                    const { error: repClrErr } = await sb.from('attempts').update({
                       percentage: 0,
+                      effective_score: 0,
                       score: 0,
+                      correct_count: 0,
                       grade: 'E',
                       status: 'evaluated',
                       updated_at: new Date().toISOString()
                     }).eq('id', item.attemptId);
+                    if (repClrErr) throw repClrErr;
                   }
                 }
                 if (typeof clearAdminCache === 'function') {
@@ -7379,7 +7426,7 @@ if (typeof window !== 'undefined') {
             btn.disabled = true;
             if (window.showLoading) window.showLoading(`Synchronizing tests for ${currentClass?.name || 'Class'}...`);
 
-            const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261124_v683');
+            const { syncAllCurriculumTests, clearAdminCache, clearApiCache } = await import('../api.js?v=20261125_v688');
             if (window._classHubCache) delete window._classHubCache[targetClassId];
             clearAdminCache();
             clearApiCache();

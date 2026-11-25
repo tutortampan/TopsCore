@@ -17,7 +17,7 @@ import {
   toShortLevel,
   escapeHtml,
   showToast
-} from '../api.js?v=20261125_v681';
+} from '../api.js?v=20261125_v688';
 import { getSupabase } from '../supabase.js?v=20261027c';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { isVocabularyClass, detectClassDiscipline } from '../grading.js?v=20261106_v160';

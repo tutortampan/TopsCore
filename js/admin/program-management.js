@@ -1,4 +1,4 @@
-import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache, toShortLevel } from '../api.js?v=20261114_v517';
+import { adminFetchAll, adminUpdate, adminInsert, adminSoftDelete, clearAdminCache, toShortLevel } from '../api.js?v=20261125_v688';
 import { showToast, escapeHtml, escHtml } from '../app.js?v=20261106_v160';
 import { DataGrid } from './datagrid.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';

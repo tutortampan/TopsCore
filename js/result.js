@@ -5,8 +5,8 @@
  *           Time Taken, Tutor Note Card, Staggered Entrance Animations
  */
 
-import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, labelAttemptRemedial, labelAttemptNormal, labelAttemptForgiven, cleanStudentName, formatAcademicTier, isCampContext } from './api.js?v=20261125_v681';
-import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay, validateDescriptionSentence } from './grading.js?v=20261106_v160';
+import { fetchAttemptResult, fetchAttemptAnswers, fetchAllStudentAttempts, fetchTestsForStudentLevel, fetchActiveTestSession, fetchStudentClasses, fetchClassTestSettings, startTest, submitTest, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, getGradeColor, getScoreColor, getGradeTheme, cleanStudentName, formatStudentDashboardName, formatAcademicTier, isCampContext } from './api.js?v=20261125_v688';
+import { isExam, getGradeColorByScore, calculateGrade, formatTestDisplay, validateDescriptionSentence } from './grading.js?v=20261125_v688';
 import { getStudentSession, getAdminSession } from './session.js?v=20261106_v160';
 import { showToast, getGrade, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 import { getSupabase } from './supabase.js?v=20261106_v160';
@@ -20,7 +20,7 @@ let session = getStudentSession();
 if (!session) {
   const admin = getAdminSession();
   if (admin || isAdminParam) {
-    session = { student_name: 'Administrator', is_admin: true };
+    session = { student_name: 'Student' };
   } else {
     window.location.replace('index.html');
     throw new Error('Not authenticated');
@@ -31,7 +31,7 @@ if (!session) {
 let attemptId = urlParams.get('attempt_id') || sessionStorage.getItem('topscore_attempt_id');
 if (attemptId === 'undefined' || attemptId === 'null') attemptId = null;
 if (!attemptId) {
-  window.location.href = (isAdminParam || session?.is_admin) ? 'admin.html#class-hub' : 'dashboard.html';
+  window.location.href = 'dashboard.html';
 }
 
 // ─── Universal Netlify Badge & External Floating Injections Purge ───
@@ -114,8 +114,8 @@ setTimeout(purgeExternalBadges, 2000);
       const dColor = TOPSCORE_COLORS.D;
       const eColor = TOPSCORE_COLORS.E;
       const palettes = {
-        '★': [starColor, '#d8b4fe', '#7e22ce', '#e9d5ff'],
-        S: [starColor, '#d8b4fe', '#7e22ce', '#e9d5ff'],
+        '★': [starColor, '#86efac', starColor, '#dcfce7'],
+        S: [starColor, '#86efac', starColor, '#dcfce7'],
         A: [aColor, aColor, aColor, aColor],
         B: [bColor, '#d9f99d', TOPSCORE_COLORS.B, '#bef264'],
         C: [cColor, '#ffff99', TOPSCORE_COLORS.C, 'var(--grade-c, #ffff00)'],
@@ -236,7 +236,7 @@ setTimeout(purgeExternalBadges, 2000);
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
 
-      const colors = [TOPSCORE_COLORS.C, TOPSCORE_COLORS.D, TOPSCORE_COLORS.B, '#38bdf8', 'var(--grade-star, #a855f7)', TOPSCORE_COLORS.STAR, '#ffffff'];
+      const colors = [TOPSCORE_COLORS.C, TOPSCORE_COLORS.D, TOPSCORE_COLORS.B, '#38bdf8', TOPSCORE_COLORS.A, TOPSCORE_COLORS.STAR, '#ffffff'];
       const particles = [];
       const count = 75;
       for (let i = 0; i < count; i++) {
@@ -488,7 +488,7 @@ setTimeout(purgeExternalBadges, 2000);
               <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center; gap:6px;">
                   <span style="font-weight:800; font-size:12px; color:#F8FAFC;">Object #${qNum}</span>
-                  <span style="font-size:12px; font-weight:800; color:var(--grade-star, #a855f7); background:rgba(192, 132, 252, 0.15); border:1px solid var(--grade-star, #a855f7); border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
+                  <span style="font-size:12px; font-weight:800; color:var(--grade-star); background:rgba(var(--grade-star-rgb), 0.15); border:1px solid var(--grade-star); border-radius:4px; padding:1px 6px; letter-spacing:0.5px;">${targetDemo.toUpperCase()}</span>
                 </div>
                 <span style="font-size:12px; font-weight:800; color:${statusColor}; background:${statusBg}; border:1px solid ${statusBorder}; border-radius:6px; padding:2px 8px;">
                   ${pointStr} PTS
@@ -629,83 +629,6 @@ setTimeout(purgeExternalBadges, 2000);
     async function renderSmartNextAction(attempt, answers, pct) {
       const container = document.getElementById('smart-next-action-container');
       if (!container) return;
-
-      const isAdmin = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
-      const isRemedial = Boolean(attempt.is_remedial_unlocked || attempt.is_remedial);
-
-      const isForgiven = Boolean(attempt.is_forgiven);
-      const isNormal = !isRemedial && !isForgiven;
-
-      // IF ADMIN / TUTOR: Render the 3-COLUMN SPLIT SEGMENTED CONTROL [ NORMAL ] | [ REMIDI ] | [ FORGIVE ] directly in this slot
-      if (isAdmin) {
-        container.innerHTML = `
-          <div class="tutor-remedial-segmented" role="group" aria-label="Exam Status Controls">
-            <button type="button" class="remedial-segment-btn segment-normal ${isNormal ? 'active' : ''}" id="btn-segment-normal" title="Set Status: Normal Exam">
-              <span>${isNormal ? '●' : '○'}</span> NORMAL
-            </button>
-            <button type="button" class="remedial-segment-btn segment-remidi ${isRemedial ? 'active' : ''}" id="btn-segment-remidi" title="Set Status: Remedial Exam (Max 60%)">
-              <span>${isRemedial ? '●' : '○'}</span> REMEDIAL
-            </button>
-            <button type="button" class="remedial-segment-btn segment-forgive ${isForgiven ? 'active' : ''}" id="btn-segment-forgive" title="Set Status: Forgiven Waiver (Skor F)">
-              <span>${isForgiven ? '●' : '○'}</span> FORGIVE
-            </button>
-          </div>
-        `;
-        const btnNormal = document.getElementById('btn-segment-normal');
-        const btnRemidi = document.getElementById('btn-segment-remidi');
-        const btnForgive = document.getElementById('btn-segment-forgive');
-
-        if (btnNormal && btnRemidi && btnForgive) {
-          btnNormal.onclick = async () => {
-            if (isNormal) return;
-            if (!confirm('Revert this test status to NORMAL (original evaluation without remedial cap or exemption)?')) return;
-            try {
-              showLoading();
-              await labelAttemptNormal(attempt.id);
-              showToast('Status successfully changed: NORMAL', 'success');
-              setTimeout(() => window.location.reload(), 300);
-            } catch (err) {
-              console.error(err);
-              showToast('Failed to change status: ' + err.message, 'error');
-            } finally {
-              hideLoading();
-            }
-          };
-
-          btnRemidi.onclick = async () => {
-            if (isRemedial) return;
-            if (!confirm('Apply REMEDIAL status to this test (maximum rate capped at 60% / Grade R)?')) return;
-            try {
-              showLoading();
-              await labelAttemptRemedial(attempt.id, true, 60);
-              showToast('Status successfully changed: REMEDIAL (Grade R, Max 60%)', 'warning');
-              setTimeout(() => window.location.reload(), 300);
-            } catch (err) {
-              console.error(err);
-              showToast('Failed to change status: ' + err.message, 'error');
-            } finally {
-              hideLoading();
-            }
-          };
-
-          btnForgive.onclick = async () => {
-            if (isForgiven) return;
-            if (!confirm('Grant GRADE EXEMPTION (FORGIVE) on this test so the student fulfills prerequisites for the next curriculum module?')) return;
-            try {
-              showLoading();
-              await labelAttemptForgiven(attempt.id, 'Test Grade Exemption by Tutor');
-              showToast('Status successfully changed: FORGIVEN (Grade F)', 'success');
-              setTimeout(() => window.location.reload(), 300);
-            } catch (err) {
-              console.error(err);
-              showToast('Failed to change status: ' + err.message, 'error');
-            } finally {
-              hideLoading();
-            }
-          };
-        }
-        return;
-      }
 
       const targetStudentId = attempt.student_id || session.student_id;
       if (!targetStudentId) return;
@@ -1007,7 +930,7 @@ setTimeout(purgeExternalBadges, 2000);
         }
         if (!nextTest) {
           container.innerHTML = `
-            <div class="result-complete-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.12) !important; border:1.5px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.45) !important; border-radius:10px !important; padding:4px 12px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important; box-shadow:0 4px 14px rgba(var(--grade-a-rgb, 0, 192, 0),0.20) !important;">
+            <div class="result-complete-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.12) !important; border:1.5px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.45) !important; border-radius:10px !important; padding:4px 10px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important; box-shadow:0 2px 8px rgba(0,0,0,0.35) !important;">
               <div style="font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.08em !important; color:var(--grade-a) !important; font-weight:800 !important; line-height:1.2 !important;">Level Curriculum Complete</div>
               <div style="font-size:12px !important; font-weight:600 !important; color:#E2E8F0 !important; margin-top:2px !important; line-height:1.2 !important;">All tests completed!</div>
             </div>
@@ -1026,18 +949,29 @@ setTimeout(purgeExternalBadges, 2000);
         const gradeColor = getGradeColorByScore(safeAttemptPct);
         const launchTargetUrl = targetUrl || `test.html?id=${nextTest.id}`;
 
-        if (!isTest) {
+        const hasStudentSession = Boolean(getStudentSession()?.student_id);
+
+        const renderNextMilestoneButton = (extraClass = '') => {
+          const cls = extraClass ? `btn-next-milestone ${extraClass}` : 'btn-next-milestone';
           container.innerHTML = `
-            <button class="btn-next-milestone" id="btn-next-milestone" type="button" style="--tier-color: ${gradeColor}; border-color: ${gradeColor}; box-shadow: 0 4px 14px ${gradeColor}55;">
+            <button class="${cls}" id="btn-next-milestone" type="button" style="--tier-color: ${gradeColor}; border-color: ${gradeColor}; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);">
               <span class="next-btn-tag">${escapeHtml(actionTag)}</span>
               <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
             </button>
           `;
           document.getElementById('btn-next-milestone').onclick = () => {
+            if (!hasStudentSession) {
+              showToast(`Next test: ${cleanTitle(nextName)}`, 'info');
+              return;
+            }
             sessionStorage.setItem('topscore_test_id', nextTest.id);
             sessionStorage.removeItem('topscore_attempt_id');
             window.location.href = launchTargetUrl;
           };
+        };
+
+        if (!isTest) {
+          renderNextMilestoneButton();
         } else {
           // If continuing counterpart component of the SAME exam, session is already actively unlocked
           const isSameExamComponent = (nextTest.id === curAsm?.id);
@@ -1052,20 +986,10 @@ setTimeout(purgeExternalBadges, 2000);
           );
 
           if (isUnlocked && isWhitelisted) {
-            container.innerHTML = `
-              <button class="btn-next-milestone btn-next-test" id="btn-next-milestone" type="button" style="--tier-color: ${gradeColor}; border-color: ${gradeColor}; box-shadow: 0 4px 14px ${gradeColor}55;">
-                <span class="next-btn-tag">${escapeHtml(actionTag)}</span>
-                <span class="next-btn-title">${escapeHtml(cleanTitle(nextName))} &rarr;</span>
-              </button>
-            `;
-            document.getElementById('btn-next-milestone').onclick = () => {
-              sessionStorage.setItem('topscore_test_id', nextTest.id);
-              sessionStorage.removeItem('topscore_attempt_id');
-              window.location.href = launchTargetUrl;
-            };
+            renderNextMilestoneButton('btn-next-test');
           } else {
             container.innerHTML = `
-              <div class="result-waiting-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.10) !important; border:1.5px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35) !important; border-radius:10px !important; padding:4px 12px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important;">
+              <div class="result-waiting-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.10) !important; border:1.5px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35) !important; border-radius:10px !important; padding:4px 10px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important;">
                 <div style="font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.06em !important; color:var(--grade-c) !important; font-weight:800 !important; line-height:1.2 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; max-width:100% !important;">
                   Next Milestone: ${escapeHtml(cleanTitle(nextName))}
                 </div>
@@ -1118,7 +1042,7 @@ setTimeout(purgeExternalBadges, 2000);
       if (avatarCont) {
         avatarCont.style.setProperty('--tier-color', gradeColor);
         if (isGradeSOr100) {
-          avatarCont.style.background = `linear-gradient(135deg, ${TOPSCORE_COLORS.STAR} 0%, #7e22ce 100%)`;
+          avatarCont.style.background = TOPSCORE_COLORS.STAR;
           avatarCont.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
           avatarCont.style.border = `2.5px solid ${TOPSCORE_COLORS.STAR}`;
         } else {
@@ -1141,10 +1065,10 @@ setTimeout(purgeExternalBadges, 2000);
         pageHeader.style.setProperty('--tier-rgb', rgbColor);
       }
 
-      // Topic Row inside Title Panel
+      // Topic Row inside Title Panel (Authoritative Tactical Blue SSOT per §5.4)
       const topicEl = document.getElementById('result-test-topic-row');
       if (topicEl) {
-        topicEl.style.color = gradeColor;
+        topicEl.style.color = '#38bdf8';
         topicEl.style.textShadow = 'none';
       }
 
@@ -1327,18 +1251,12 @@ setTimeout(purgeExternalBadges, 2000);
             effPct = parsedEff;
           }
         }
-        const isAdminSession = Boolean(getAdminSession()) || session?.is_admin === true || urlParams.get('admin') === '1' || urlParams.get('is_admin') === 'true' || urlParams.get('from') === 'admin' || urlParams.get('mode') === 'tutor';
         const pct = isRemedial ? Math.min(effPct, 60.0) : Math.min(effPct, 100.0);
-        // Student always sees the official canonical grade based on their score percentage!
-        const canonicalGrade = typeof calculateGrade === 'function' ? calculateGrade(pct) : getGrade(pct);
-        const grade = (!isAdminSession)
-          ? canonicalGrade
-          : (isForgiven ? 'F' : (isRemedial ? 'R' : canonicalGrade));
-        let gradeColor = (!isAdminSession)
-          ? getGradeColorByScore(pct)
-          : (isForgiven ? TOPSCORE_COLORS.E : (isRemedial ? TOPSCORE_COLORS.C : getGradeColorByScore(pct)));
-        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, !isAdminSession ? false : isRemedial) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
-        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || (pct >= 100 && (!isAdminSession || (!isRemedial && !isForgiven))));
+        // Official canonical grade based on score percentage (Unified Student View SSOT)
+        const grade = typeof calculateGrade === 'function' ? calculateGrade(pct) : getGrade(pct);
+        let gradeColor = getGradeColorByScore(pct);
+        const theme = (typeof getGradeTheme === 'function' ? getGradeTheme(grade, false) : null) || GRADE_PALETTE[grade] || GRADE_PALETTE['★'] || GRADE_PALETTE.E;
+        const isGradeS = (grade === '★' || grade === 'S' || grade === 'STAR' || pct >= 100);
 
         // Background particles and dynamic tier atmosphere are deferred to Step 5 (Grade Reveal)
         // to deliver the authentic surprise impact requested by the user.
@@ -1352,65 +1270,61 @@ setTimeout(purgeExternalBadges, 2000);
         if (headerBrand) headerBrand.textContent = 'RESULT PAGE';
         const profileBtn = document.getElementById('view-profile-btn');
         const logoutBtn = document.getElementById('logout-btn');
-        const headerAvatarInit = document.getElementById('header-avatar-initial');
 
-        if (isAdminSession) {
-          if (profileBtn) {
-            profileBtn.title = "Back to Tutor's Room";
-            profileBtn.onclick = () => location.href = 'admin.html#class-hub';
-          }
-          if (logoutBtn) {
-            logoutBtn.onclick = () => {
-              sessionStorage.clear();
-              localStorage.removeItem('topscore_admin_session');
-              location.href = 'admin.html';
-            };
-          }
-          if (headerAvatarInit) headerAvatarInit.textContent = 'T';
-          const backBtn = document.getElementById('back-dashboard-btn');
-          if (backBtn) {
-            backBtn.textContent = 'BACK TO ROOM';
-            backBtn.href = 'admin.html#class-hub';
-          }
-        } else {
-          if (profileBtn) {
-            profileBtn.title = "Back to Class";
-            profileBtn.onclick = () => location.href = 'dashboard.html';
-          }
-          if (logoutBtn) {
-            logoutBtn.onclick = () => {
-              sessionStorage.clear();
-              localStorage.removeItem('topscore_student_session');
-              location.href = 'index.html';
-            };
-          }
-          const backBtn = document.getElementById('back-dashboard-btn');
-          if (backBtn) {
-            backBtn.textContent = 'BACK TO CLASS';
-            backBtn.href = 'dashboard.html';
-          }
+        if (profileBtn) {
+          profileBtn.title = 'Back to Class';
+          profileBtn.onclick = () => location.href = 'dashboard.html';
+        }
+        if (logoutBtn) {
+          logoutBtn.onclick = () => {
+            sessionStorage.clear();
+            localStorage.removeItem('topscore_student_session');
+            location.href = 'index.html';
+          };
+        }
+        const backBtn = document.getElementById('back-dashboard-btn');
+        if (backBtn) {
+          backBtn.textContent = 'BACK TO CLASS';
+          backBtn.href = 'dashboard.html';
         }
 
-        // Fetch user photo + FEATURE 3: student name label
+        // Helper utilities for consistent Student Dashboard + Result Page naming (Mr./Miss & King/Queen)
+        const extractCleanStudentBase = (rawName) => {
+          const cleaned = cleanStudentName(rawName || '') || String(rawName || '').trim();
+          const parts = cleaned.split(/\s+/).filter(Boolean);
+          const firstLower = (parts[0] || '').toLowerCase();
+          if (['mr.', 'mr', 'miss', 'mrs.', 'mrs', 'ms.', 'ms', 'king', 'queen'].includes(firstLower)) {
+            parts.shift();
+          }
+          return parts.join(' ').trim() || cleaned || 'Student';
+        };
+        const getEffectiveStudentGender = (cleanBase, rawGender) => {
+          if (/^lalu\s+/i.test(cleanBase)) return 'male';
+          if (/^baiq\s+/i.test(cleanBase)) return 'female';
+          return String(rawGender || '').trim().toLowerCase();
+        };
+
         // Fetch student identity, institutional metadata, and photo
         let studentFullName = session.student_name || 'Student';
         let studentGender = session.gender || '';
-        let resolvedInstName = session.institution_name || 'Cake English Course';
+        let resolvedBatchId = session.batch_id || null;
+        let resolvedInstName = session.institution_name || 'CEC';
         let resolvedProgName = (session.program_name || 'CAMP').toUpperCase();
         let resolvedBatchName = session.batch_name || '133';
-        let resolvedLvlName = session.level_name || '3rd Level';
+        let resolvedLvlName = session.level_name || '3rd Step';
 
         const targetStudentId = attempt.student_id || session.student_id;
         try {
           const supabase = await getSupabase();
           if (targetStudentId) {
             const { data: st } = await supabase.from('students')
-              .select('id, name, gender, birth_date, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches!batch_id(name), levels(name)')
+              .select('id, name, gender, birth_date, village, district, city, province, photo_url, batch_id, level_id, program_id, institution_id, institutions(name), programs(name), batches!batch_id(name, enrollment_date), levels(name)')
               .eq('id', targetStudentId)
               .maybeSingle();
             if (st) {
               studentFullName = st.name || studentFullName;
               studentGender = st.gender || studentGender;
+              if (st.batch_id) resolvedBatchId = st.batch_id;
 
               // Populate institutional metadata hierarchy (Wireframe: Institution | Program | Batch | Level)
               const metaInstEl = document.getElementById('meta-inst');
@@ -1443,9 +1357,9 @@ setTimeout(purgeExternalBadges, 2000);
               if (resGenderEl) {
                 resGenderEl.textContent = gText;
                 if (gRaw === 'female') {
-                  resGenderEl.style.color = '#ff2d87';
+                  resGenderEl.style.color = 'var(--quad-a, #ff2d87)';
                 } else if (gRaw === 'male') {
-                  resGenderEl.style.color = '#38bdf8';
+                  resGenderEl.style.color = 'var(--primary-tactical, #38bdf8)';
                 } else {
                   resGenderEl.style.color = '#f8fafc';
                 }
@@ -1553,21 +1467,28 @@ setTimeout(purgeExternalBadges, 2000);
               }
               if (headerAvatarInitEl) headerAvatarInitEl.classList.add('hidden');
             } else {
-              const cleanStudentName = (st?.name || session.student_name || 'Student').replace(/^(mr\.?|miss\.?|mrs\.?|ms\.?)\s+/i, '').trim();
-              const initLetter = cleanStudentName.charAt(0).toUpperCase() || 'S';
+              const rawInitBase = extractCleanStudentBase(st?.name || session.student_name || 'Student');
+              const initLetter = rawInitBase.charAt(0).toUpperCase() || 'S';
               document.getElementById('result-avatar-initial').textContent = initLetter;
               const headerAvatarInitEl = document.getElementById('header-avatar-initial');
-              if (headerAvatarInitEl && !isAdminSession) headerAvatarInitEl.textContent = initLetter;
+              if (headerAvatarInitEl) headerAvatarInitEl.textContent = initLetter;
             }
           }
         } catch (err) {
           console.warn('Could not load student photo:', err);
         }
 
-        // Render student name below divider in header card
+        // Render student name with honorific title (Mr. / Miss, or King / Queen for batch champions)
+        const studentBaseName = extractCleanStudentBase(studentFullName);
+        const studentEffGender = getEffectiveStudentGender(studentBaseName, studentGender);
+        const avatarInitialFallback = document.getElementById('result-avatar-initial');
+        if (avatarInitialFallback && !avatarInitialFallback.textContent.trim()) {
+          avatarInitialFallback.textContent = studentBaseName.charAt(0).toUpperCase() || 'S';
+        }
         const nameLabel = document.getElementById('result-student-name-label');
+        const isSessionChampion = Boolean(session.is_king || session.is_queen);
         if (nameLabel && studentFullName) {
-          nameLabel.textContent = studentFullName;
+          nameLabel.textContent = formatStudentDashboardName(studentBaseName, studentEffGender, isSessionChampion);
         }
 
         // Authoritative Standard Grading System (Official Scale)
@@ -1618,7 +1539,7 @@ setTimeout(purgeExternalBadges, 2000);
               <defs>
                 <linearGradient id="starHeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                  <stop offset="100%" stop-color="#7e22ce" />
+                  <stop offset="100%" stop-color="${TOPSCORE_COLORS.STAR}" />
                 </linearGradient>
               </defs>
               <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starHeroGrad)" />
@@ -1643,7 +1564,7 @@ setTimeout(purgeExternalBadges, 2000);
                   <defs>
                     <linearGradient id="starGrad" x1="0%" y1="0%" x2="100%" y2="100%">
                       <stop offset="0%" stop-color="${TOPSCORE_COLORS.STAR}" />
-                      <stop offset="100%" stop-color="#7e22ce" />
+                      <stop offset="100%" stop-color="${TOPSCORE_COLORS.STAR}" />
                     </linearGradient>
                   </defs>
                   <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="url(#starGrad)" />
@@ -1708,25 +1629,32 @@ setTimeout(purgeExternalBadges, 2000);
         // Initialize score to 0% for animated count-up sequence
         pctEl.textContent = '0%';
 
-        // 2. Test Title: 2-Line Format (Line 1: Test Title, Line 2: Topic / Theme) via SSOT formatTestDisplay (AGENTS.md § 2.6 / DECISION-056)
-        const asmRawTitle = asmData?.title || asmData?.name || 'Test';
+        // 2. Test Title: Authentic 2-Line Format (Line 1: Level + Class + Type/Code, Line 2: Topic/Theme in #38bdf8) per Phase 638 & AGENTS.md § 2.6.2
         const formattedAsm = formatTestDisplay(asmData);
-        const titleType = formattedAsm.line1 || 'TEST';
-        const titleTopic = formattedAsm.line2 || '';
+        const asmRawTitle = String(asmData?.title || asmData?.name || formattedAsm.fullTitle || 'Test')
+          .replace(/\s+(?:Words|Phrases)\s+/i, ' ')
+          .trim();
+        const titleParts = asmRawTitle.split(/\s+[-–:]\s+/);
+        const titleType = titleParts.length > 1
+          ? titleParts[0].trim()
+          : (formattedAsm.typeLabel || asmRawTitle);
+        const titleTopic = titleParts.length > 1
+          ? titleParts.slice(1).join(' - ').trim()
+          : (formattedAsm.line2 || '');
 
         const typeEl = document.getElementById('result-test-type-row') || document.getElementById('result-asm-type-row');
         const topicEl = document.getElementById('result-test-topic-row') || document.getElementById('result-asm-topic-row');
         const legacyNameEl = document.getElementById('result-Test-name');
         if (typeEl) {
           typeEl.textContent = titleType;
-          typeEl.setAttribute('title', formattedAsm.fullTitle || titleType);
+          typeEl.setAttribute('title', formattedAsm.fullTitle || asmRawTitle);
         }
         if (topicEl) {
           if (titleTopic) {
             topicEl.textContent = titleTopic;
             topicEl.setAttribute('title', titleTopic);
             topicEl.style.display = 'block';
-            topicEl.style.color = '#cbd5e1';
+            topicEl.style.color = '#38bdf8';
             topicEl.style.textShadow = 'none';
           } else {
             topicEl.style.display = 'none';
@@ -1800,29 +1728,83 @@ setTimeout(purgeExternalBadges, 2000);
         const crumbEl = document.getElementById('result-curriculum-crumb');
         if (crumbEl) {
           const className = asmData?.classes?.name || 'VOCABULARY';
-          const levelName = asmData?.levels?.name || 'LEVEL 3';
+          const levelName = document.getElementById('meta-lvl')?.textContent || asmData?.levels?.name || '3RD STEP';
           const asmCategory = (asmData?.category || asmData?.test_type || 'TASK').toUpperCase();
           crumbEl.textContent = `${className.toUpperCase()} • ${levelName.toUpperCase()} • ${humanizeType(asmCategory).toUpperCase()}`;
         }
 
-        // Batch Champion Crown Check (King / Queen)
+        // Batch Champion Crown Check (King / Queen per batch, scoped strictly to active batch students)
         try {
-          const targetStudentId = attempt.student_id || session.student_id;
           if (targetStudentId) {
             const supabase = await getSupabase();
-            const { data: stData } = await supabase.from('students').select('batch_id').eq('id', targetStudentId).maybeSingle();
-            if (stData?.batch_id) {
-              const { data: bAtts } = await supabase
-                .from('attempts')
-                .select('student_id, percentage')
-                .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
-              const scoreMap = {};
-              (bAtts || []).forEach(a => {
-                scoreMap[a.student_id] = (scoreMap[a.student_id] || 0) + Number(a.percentage || 0);
-              });
-              const top = Object.entries(scoreMap).sort((a,b) => b[1] - a[1])[0];
-              if (top && top[0] === targetStudentId) {
-                document.getElementById('result-crown-badge')?.classList.remove('hidden');
+            let batchId = resolvedBatchId;
+            if (!batchId) {
+              const { data: stData } = await supabase.from('students').select('batch_id').eq('id', targetStudentId).maybeSingle();
+              batchId = stData?.batch_id || null;
+            }
+            if (batchId) {
+              const { data: batchStudents } = await supabase
+                .from('students')
+                .select('id, name, gender, is_active, program_status')
+                .eq('batch_id', batchId)
+                .eq('is_active', true);
+
+              // Dual defensive filter: strictly exclude INACTIVE students (AGENTS.md §2.3.1)
+              const activeBatchStudents = (batchStudents || []).filter(
+                s => s.is_active === true && String(s.program_status || '').toUpperCase() !== 'INACTIVE'
+              );
+              const activeBatchIds = activeBatchStudents.map(s => s.id);
+
+              if (activeBatchIds.length > 0) {
+                const { data: bAtts } = await supabase
+                  .from('attempts')
+                  .select('student_id, test_id, score, percentage, effective_score, is_remedial_unlocked, total_questions')
+                  .in('student_id', activeBatchIds)
+                  .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
+
+                const bestByStudentTest = {};
+                (bAtts || []).forEach(a => {
+                  const sid = a.student_id;
+                  const tid = a.test_id || '_';
+                  const isRem = Boolean(a.is_remedial_unlocked);
+                  const rawPct = a.effective_score != null ? Number(a.effective_score) : Number(a.percentage || 0);
+                  const effPct = Math.min(100, Math.max(0, isRem ? Math.min(rawPct, 60.0) : rawPct));
+                  const tQ = Number(a.total_questions || 100);
+                  const rawPts = a.score != null ? Number(a.score) : (effPct * tQ / 100);
+                  const effPts = isRem ? Math.min(rawPts, tQ * 0.6) : rawPts;
+                  if (!bestByStudentTest[sid]) bestByStudentTest[sid] = {};
+                  const prev = bestByStudentTest[sid][tid];
+                  if (!prev || effPts > prev.pts || (effPts === prev.pts && effPct > prev.pct)) {
+                    bestByStudentTest[sid][tid] = { pts: effPts, pct: effPct };
+                  }
+                });
+
+                const ranked = activeBatchStudents.map(s => {
+                  const testEntries = Object.values(bestByStudentTest[s.id] || {});
+                  const ptsSum = Math.round(testEntries.reduce((sum, v) => sum + v.pts, 0));
+                  const pctSum = testEntries.reduce((sum, v) => sum + v.pct, 0);
+                  const base = extractCleanStudentBase(s.name);
+                  const effG = getEffectiveStudentGender(base, s.gender);
+                  return { id: s.id, base, effG, ptsSum, pctSum };
+                }).sort((a, b) => {
+                  if (b.ptsSum !== a.ptsSum) return b.ptsSum - a.ptsSum;
+                  if (b.pctSum !== a.pctSum) return b.pctSum - a.pctSum;
+                  return a.base.localeCompare(b.base, undefined, { sensitivity: 'base' });
+                });
+
+                const topMale = ranked.find(s => s.effG === 'male' && (s.ptsSum > 0 || s.pctSum > 0)) || null;
+                const topFemale = ranked.find(s => s.effG === 'female' && (s.ptsSum > 0 || s.pctSum > 0)) || null;
+                const isKing = Boolean(topMale && topMale.id === targetStudentId);
+                const isQueen = Boolean(topFemale && topFemale.id === targetStudentId);
+                const isChampion = isKing || isQueen;
+
+                const crownBadgeEl = document.getElementById('result-crown-badge');
+                if (crownBadgeEl) {
+                  crownBadgeEl.classList.toggle('hidden', !isChampion);
+                }
+                if (nameLabel && studentFullName) {
+                  nameLabel.textContent = formatStudentDashboardName(studentBaseName, studentEffGender, isChampion);
+                }
               }
             }
           }
@@ -1870,7 +1852,7 @@ setTimeout(purgeExternalBadges, 2000);
           const heroSection = document.querySelector('.result-hero');
           if (heroSection && !document.getElementById('ai-narrative-card')) {
             const narrativeHtml = `
-              <div id="ai-narrative-card" style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:0.85rem 1.1rem; margin:6px auto 0 auto; max-width:440px; text-align:left;">
+              <div id="ai-narrative-card" style="background:rgba(56,189,248,0.07); border:1px solid rgba(56,189,248,0.25); border-radius:12px; padding:10px; margin:0; max-width:100%; text-align:left; box-sizing:border-box;">
                 <div style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px;">${getSvgIcon('edit', 12)} Tutor Note</div>
                 <p style="font-size:12px; color:#cbd5e1; line-height:1.55; margin:0;">${escapeHtml(attempt.narrative_report).replace(/\n/g, '<br>')}</p>
               </div>
@@ -1907,15 +1889,6 @@ setTimeout(purgeExternalBadges, 2000);
 
         if (tryAgainBtn) {
           tryAgainBtn.style.display = 'none';
-        }
-
-        // Back navigation customization for Admin
-        if (isAdminSession) {
-          const backBtn = document.getElementById('back-dashboard-btn');
-          if (backBtn) {
-            backBtn.textContent = 'BACK TO ROOM';
-            backBtn.href = 'admin.html#class-hub';
-          }
         }
 
         // Setup complete: Reveal content & hide centered loading overlay smoothly
@@ -1968,9 +1941,7 @@ setTimeout(purgeExternalBadges, 2000);
 
       const rows = attempts.map(a => {
         const apct = parseFloat(a.percentage || 0).toFixed(1);
-        const isRemRow = Boolean(a.is_remedial_unlocked || a.is_remedial);
-        const isForgivenRow = Boolean(a.is_forgiven);
-        const ag = isForgivenRow ? 'F' : (isRemRow ? 'R' : (a.grade || getGrade(parseFloat(apct))));
+        const ag = typeof calculateGrade === 'function' ? calculateGrade(parseFloat(apct)) : (a.grade || getGrade(parseFloat(apct)));
         const isThis = a.id === currentAttemptId;
         const isBestRow = (a.is_best_score && parseFloat(a.percentage || 0) === maxPct) || (maxPct > 0 && a.id === bestAttempt?.id);
         const dateStr = a.submitted_at ? new Date(a.submitted_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -1995,7 +1966,7 @@ setTimeout(purgeExternalBadges, 2000);
       }).join('');
 
       histSection.innerHTML = `
-        <div style="background:var(--clr-card,rgba(30,41,59,0.8));border:1px solid var(--clr-border,rgba(255,255,255,0.08));border-radius:14px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;">
+        <div style="background:var(--clr-card,rgba(30,41,59,0.8));border:1px solid var(--clr-border,rgba(255,255,255,0.08));border-radius:14px;padding:10px;margin-bottom:10px;">
           <h3 style="font-size:16px;font-weight:700;color:var(--clr-text-1);margin:0 0 1rem;text-transform:uppercase;letter-spacing:0.04em;">Attempt History</h3>
           <div class="table-responsive" style="max-height:280px;overflow-y:auto;overflow-x:auto;">
             <table style="width:100%;border-collapse:collapse;">

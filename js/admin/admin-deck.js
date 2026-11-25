@@ -1,4 +1,4 @@
-import { adminFetchAll, formatStudentName } from '../api.js?v=20261124_v680';
+import { adminFetchAll, formatStudentName } from '../api.js?v=20261125_v688';
 import { escHtml } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { getGradeColorByScore, getGradeSymbol, detectClassDiscipline } from '../grading.js?v=20261106_v160';

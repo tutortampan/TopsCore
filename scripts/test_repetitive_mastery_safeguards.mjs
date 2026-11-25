@@ -277,4 +277,25 @@ assert(dashboardContent.includes('.range(from, from + PAGE_SIZE - 1)'), 'dashboa
 
 console.log('  ✔ Pillar 7: Dashboard section-aware exam resolution & zero-truncation pagination strictly verified');
 
-console.log('\n✅ ALL 7 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');
+// ============================================================
+// 8. MANUAL_REPS SYNC & UNIFIED ADMIN API CACHE SAFEGUARD
+// ============================================================
+assert(appJsContent.includes('if (manualRepsW != null) wordsPasses = Math.max(wordsPasses, manualRepsW);'), 'app.js MUST use Math.max for manualRepsW so 1/1 tags never clobber passing counts');
+assert(appJsContent.includes('if (manualRepsP != null) phrasesPasses = Math.max(phrasesPasses, manualRepsP);'), 'app.js MUST use Math.max for manualRepsP so 1/1 tags never clobber passing counts');
+assert(!appJsContent.includes('MANUAL_REPS: 1/1'), 'app.js MUST NOT tag individual repetition attempts with MANUAL_REPS: 1/1');
+
+const adminDir = 'js/admin';
+const apiVersions = new Set();
+for (const file of fs.readdirSync(adminDir)) {
+  if (!file.endsWith('.js')) continue;
+  const content = fs.readFileSync(`${adminDir}/${file}`, 'utf8');
+  const matches = content.matchAll(/['"]\.\.\/api\.js(?:\?v=([^'"]+))?['"]/g);
+  for (const m of matches) {
+    apiVersions.add(m[1] || 'UNVERSIONED');
+  }
+}
+assert.strictEqual(apiVersions.size, 1, `All js/admin/*.js modules MUST share a single api.js version (found: ${Array.from(apiVersions).join(', ')})`);
+
+console.log('  ✔ Pillar 8: MANUAL_REPS pass-count preservation & unified admin api.js cache version strictly verified');
+
+console.log('\n✅ ALL 8 REPETITIVE MASTERY & EXAM ISOLATION SAFEGUARDS PASSED WITH 100% SUCCESS!\n');

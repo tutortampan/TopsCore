@@ -1462,7 +1462,7 @@ Following user directive regarding awkward table displays, text truncation in do
 
 ---
 
-## DECISION-053 — Standard Student Name (`studentName`) and Dashboard-Only Title (`Mr.` / `Miss`)
+## DECISION-053 — Standard Student Name (`studentName`) and Dashboard/Result Title (`Mr.` / `Miss`)
 
 Date: 2026-11-14  
 Status: ACCEPTED
@@ -1483,13 +1483,12 @@ Historically, `formatStudentName` in `js/api.js`, `updateStudentGender`, student
    - `verifyStudentLogin` and `fetchStudentsByProgram` return standard student names (`name: student.name`).
    - `formatStudentName(name)` simply returns `name || ''`.
 3. **Frontend Presentation Screens & Batch Royal Titles (King & Queen)**:
-   - Result screen (`js/result.js`), Test Room (`js/test.js`), Conversation Room (`js/conversation-room.js`), and Admin Console simply display standard `session.student_name` or `student.name`.
-   - **Student Dashboard (`dashboard.html` / `js/dashboard.js`) Title & Crown Mechanics**:
+   - Test Room (`js/test.js`), Conversation Room (`js/conversation-room.js`), and Admin Console display standard `session.student_name` or `student.name`.
+   - **Student Dashboard (`dashboard.html` / `js/dashboard.js`) & Result Page (`result.html` / `js/result.js`) Title & Crown Mechanics** *(Result Page alignment updated 2026-11-25 per user directive)*:
      * In each batch, the male student with the highest score / points earns the title **`King`**.
      * The female student with the highest score / points in that batch earns the title **`Queen`**.
-     * Both King and Queen receive the dynamic royal title prefix (`King <Name>` / `Queen <Name>`) across the dashboard header, welcome banner, profile modal, and standings list.
-     * Both King and Queen are awarded a glowing golden crown effect (`👑`, `.avatar-crown-badge`) floating directly above their photo avatar on the dashboard and profile modal.
-     * All other students in the batch retain the standard `Mr.` (male) or `Miss` (female) greeting without the crown effect.
+     * Both King and Queen receive the dynamic royal title prefix (`King <Name>` / `Queen <Name>`) on the Student Dashboard and Result Page.
+     * All other students retain `Mr.` (male) or `Miss` (female) on the Student Dashboard and Result Page.
 
 ---
 
@@ -2571,4 +2570,37 @@ Pengguna memerintahkan penyisiran total ("Rapikan!") untuk membersihkan seluruh 
 ### Consequences
 - Tidak ada lagi perbedaan saturasi atau kontras di halaman mana pun di dalam sistem.
 - Arsitektur token warna mencapai tingkat kepatuhan 100% Single Source of Truth (*Zero Legacy Leakage*).
+
+---
+
+## DECISION-089: Result Page Unified Student-Only Architecture, Card Ordering (Student Above Title), 2-Line Exam Display & Honorific Titles SSOT
+
+### Status
+ACCEPTED (Unified Result Page Architecture & Layout SSOT)
+
+### Date
+2026-11-25
+
+### Context
+Sebelumnya halaman hasil ujian (`result.html` / `js/result.js` / `css/result.css`) memiliki beberapa penyimpangan dari standar antarmuka TopsCore dan kebutuhan operasional:
+1. Terdapat mode terpisah versi Admin (`isAdminSession` dengan kontrol segmen `NORMAL | REMEDIAL | FORGIVE`, kode grade huruf `R` / `F` menimpa tampilan skor siswa, dan tombol `BACK TO ROOM`) yang berbeda dari tampilan siswa (`NEXT TEST` + `BACK TO CLASS`).
+2. Kartu judul ujian (`#result-Test-name-container`) berada di atas Kartu Identitas Siswa (`#result-identity-card`), dan judul tes tampil terpotong (`TASK B1`) dengan `text-transform: uppercase` pada nama topik.
+3. Terdapat pelanggaran detail SSOT: double padding di viewport mobile, efek neon `text-shadow` / `drop-shadow` glow, ketidakcocokan relasi tunggal vs jamak Supabase pada `isCampContext` (membuat CEC Camp tampil `3RD LEVEL` alih-alih `3RD STEP`), serta perataan footer banner.
+4. Kartu identitas siswa pada Result Page belum menampilkan title honorifik `Mr.` / `Miss` (dan `King` / `Queen` batch champion) secara identik dengan Student Dashboard, serta pengecekan juara batch memindai seluruh tabel `attempts` tanpa lingkup `batch_id`.
+
+### Decision
+1. **Unified Student-Only Result View**:
+   - Menghapus total tampilan terpisah Admin dan kontrol `NORMAL | REMEDIAL | FORGIVE`, override grade `R`/`F`, serta tombol `BACK TO ROOM` di `result.html`, `js/result.js`, dan `css/result.css`. Baik siswa maupun admin melihat antarmuka siswa terpadu dengan Smart Next Action (`NEXT TEST`) dan `BACK TO CLASS`.
+2. **Urutan Kartu Vertikal Baku (Student Card Above Exam Title)**:
+   - Memindahkan `#result-identity-card` tepat ke posisi teratas `#result-hero-section`, berada langsung **di atas** `#result-Test-name-container`, disusul Breakdown Matrix (`#result-metrics-composite-card`), Dual Score & Grade (`#result-score-grade-card`), Predikat (`#result-motivation-msg`), dan CTA (`#smart-next-action-container`, `#back-dashboard-btn`).
+3. **2-Line Exam Title Format Bebas Uppercase & Truncation**:
+   - `js/result.js` merender Baris 1 (`#result-test-type-row`) dari segmen tipe penuh sebelum ` - ` (strip `Words`/`Phrases`, misal `3rd Vocabulary Task B1`) berwarna `#F8FAFC`, dan Baris 2 (`#result-test-topic-row`) berupa topik/tema penuh setelah ` - ` berwarna `#38bdf8`, keduanya tanpa `text-transform: uppercase` dan bebas truncation di `css/result.css`.
+4. **Honorific (`Mr.`/`Miss`) & Batch-Scoped Champion (`King`/`Queen`) Titles**:
+   - `#result-student-name-label` diformat melalui `formatStudentDashboardName(...)` lengkap dengan deteksi `Lalu` (male) / `Baiq` (female) dan bebas penumpukan prefiks, sementara inisial avatar fallback diambil dari nama dasar tanpa title.
+   - Pengecekan juara batch (`#result-crown-badge` + `King`/`Queen`) dibatasi ketat pada siswa aktif di `batch_id` bersangkutan (`is_active === true && program_status !== 'INACTIVE'`).
+5. **Perimeter Padding, Matte Surface, & Relasi Camp**:
+   - Memastikan single 10px mobile perimeter padding, permukaan datar matte tanpa neon glow, `isCampContext` memeriksa relasi jamak Supabase (`programs?.name`, `institutions?.name`, `batches?.name`), dan banner bawah `TopsCore by Mr. Top` terpusat presisi.
+
+### Consequences
+- Seluruh aturan Result Page (`AGENTS.md` §2.41, `.agents/rules/ui-invariants.md` §5.6, `.antigravityrules` #19) terdokumentasi utuh secara persisten agar konsistensi UI dan perilaku terjaga pada sesi pengembangan berikutnya.
 

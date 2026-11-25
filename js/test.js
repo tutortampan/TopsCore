@@ -4,7 +4,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160'
  * Extracted from test.html
  */
 
-import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261125_v681';
+import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261125_v688';
     import { requireStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
@@ -619,14 +619,6 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         return false;
       }
 
-      // Re-enter Fullscreen mode to restore the secure test container
-      if (isFullscreenSupported() && !isFullscreenActive()) {
-        try {
-          await requestFullscreenMode();
-        } catch (err) {
-          console.warn('Could not re-enter fullscreen:', err);
-        }
-      }
       setTimeout(initScreenSizeBaseline, 500);
 
       // Restore question readability
@@ -1031,54 +1023,23 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       return result;
     }
 
-    // ─── Smart Web Proctored Shield: Fullscreen Helpers ─────────────
+    // ─── Smart Web Proctored Shield: Fullscreen Disabled (Browser & PWA) ─────────────
     async function requestFullscreenMode() {
-      try {
-        const docEl = document.documentElement;
-        if (docEl.requestFullscreen) {
-          await docEl.requestFullscreen();
-        } else if (docEl.webkitRequestFullscreen) {
-          await docEl.webkitRequestFullscreen();
-        } else if (docEl.mozRequestFullScreen) {
-          await docEl.mozRequestFullScreen();
-        } else if (docEl.msRequestFullscreen) {
-          await docEl.msRequestFullscreen();
-        }
-      } catch (err) {
-        console.warn('Fullscreen request bypassed or denied:', err);
-      }
+      // Disabled per user request: never force fullscreen in browser or PWA
+      return;
     }
 
     function isFullscreenSupported() {
-      const docEl = document.documentElement;
-      return !!(
-        document.fullscreenEnabled ||
-        document.webkitFullscreenEnabled ||
-        document.mozFullScreenEnabled ||
-        document.msFullscreenEnabled ||
-        docEl?.requestFullscreen ||
-        docEl?.webkitRequestFullscreen ||
-        docEl?.mozRequestFullScreen ||
-        docEl?.msRequestFullscreen
-      );
+      return false;
     }
 
     function isFullscreenActive() {
-      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+      return false;
     }
 
     function handleFullscreenChange() {
-      if (!isTestActive || !isFullscreenSupported()) return;
-
-      if (!isFullscreenActive()) {
-        triggerCheatAlert('Fullscreen Mode Exited / Left Exam Area');
-      } else {
-        setTimeout(initScreenSizeBaseline, 500);
-      }
+      return;
     }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
 
     // —— Boot ——
     async function bootTest() {
@@ -1585,9 +1546,6 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
                 url.searchParams.set('section', chosenPart);
                 window.history.replaceState(null, '', url.toString());
               } catch (_) {}
-              if (isFullscreenSupported() && !isFullscreenActive()) {
-                try { await requestFullscreenMode(); } catch (_) {}
-              }
               await proceedStartExam();
             };
 
@@ -1713,10 +1671,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           }
         }
 
-        // Direct exam start without blocking fullscreen modal prompt
-        if (isFullscreenSupported() && !isFullscreenActive()) {
-          try { await requestFullscreenMode(); } catch (_) {}
-        }
+        // Direct exam start without fullscreen prompt
         await proceedStartExam();
       } catch(e) {
         hideLoading();
@@ -2882,7 +2837,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       // Dynamic Distractor Self-Healing:
       // If snapshot options are empty (e.g. attempt initialized prior to modality selection),
       // dynamically construct distractors from other questions in this attempt
-      if (options.length === 0) {
+      if (options.length < 2) {
         const accepted = snap?.accepted_answers || snap?.accepted_answers_snapshot || row?.accepted_answers_snapshot || row?.accepted_answers;
         const correctOpt = Array.isArray(accepted) ? accepted[0] : (snap?.correct_answer || row?.correct_answer_snapshot || row?.correct_answer || '');
         if (correctOpt) {
@@ -2959,7 +2914,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       // Dynamic Distractor Self-Healing:
       // If snapshot options are empty (e.g. attempt initialized prior to modality selection),
       // dynamically construct distractors from other questions in this attempt
-      if (options.length === 0) {
+      if (options.length < 2) {
         const accepted = snap?.accepted_answers || snap?.accepted_answers_snapshot || row?.accepted_answers_snapshot || row?.accepted_answers;
         const correctOpt = Array.isArray(accepted) ? accepted[0] : (snap?.correct_answer || row?.correct_answer_snapshot || row?.correct_answer || '');
         if (correctOpt) {
