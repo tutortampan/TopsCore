@@ -407,7 +407,7 @@ import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261121_v665';
 import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261123_v678';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
-import { renderVocabularyVault } from './vocab-vault.js?v=20261121_v664';
+import { renderVocabularyVault } from './vocab-vault.js?v=20261125_v686';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderInterfaceSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261121_v665';
 import { renderSystemArchitecture } from './system-architecture.js?v=20261121_v656';
@@ -3495,7 +3495,13 @@ if (typeof window !== 'undefined') {
                     reason: `Manual Task Progress Input: ${earnedVal}/${maxTasks}`
                   });
 
-                  if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                  if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                   if (typeof showToast === 'function') showToast(`✓ Theme ${themeCode} task progress (${earnedVal}/${maxTasks}) saved successfully!`, 'success');
                 } catch (err) {
                   console.error('Save manual task progress error:', err);
@@ -3566,7 +3572,13 @@ if (typeof window !== 'undefined') {
                     reason: mReason
                   });
 
-                  if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                  if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                   if (typeof showToast === 'function') showToast(`✓ Topic ${topicCode} ${compLabel} repetitions (${reps}/${maxReps}) saved successfully!`, 'success');
                 } catch (err) {
                   console.error('Save manual topic repetitions error:', err);
@@ -3774,7 +3786,13 @@ if (typeof window !== 'undefined') {
                     });
                   }
 
-                  if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                  if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                   if (typeof showToast === 'function') showToast(`✓ Scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
                 } catch (err) {
                   console.error('Batch save error:', err);
@@ -3845,10 +3863,31 @@ if (typeof window !== 'undefined') {
                   const taskAsmsInTheme = window._themeTaskAsmsMap?.[tc] || [];
                   let targetTasks = [];
                   if (topCode) {
-                    targetTasks = taskAsmsInTheme.filter(a => String(a.payload?.topic_code || '') === topCode);
+                    targetTasks = taskAsmsInTheme.filter(a => {
+                      const topic = String(a.payload?.topic_code || a.topic_code || '').toUpperCase();
+                      const code = String(a.shell_code || a.test_code || a.code || '').toUpperCase();
+                      const targetTop = String(topCode).toUpperCase();
+                      return topic === targetTop || code.includes(`-${targetTop}-`) || code.endsWith(`-${targetTop}`) || topic.includes(targetTop);
+                    });
                   }
                   if (targetTasks.length === 0) {
-                    targetTasks = taskAsmsInTheme;
+                    if (taskAsmsInTheme.length > 0) {
+                      targetTasks = taskAsmsInTheme;
+                    } else {
+                      const allClassTests = (window._currentClassHubContext?.classTests || classTests || []);
+                      const nonExams = allClassTests.filter(a => !isWeeklyExam(a));
+                      if (topCode) {
+                        targetTasks = nonExams.filter(a => {
+                          const topic = String(a.payload?.topic_code || a.topic_code || '').toUpperCase();
+                          const code = String(a.shell_code || a.test_code || a.code || '').toUpperCase();
+                          const targetTop = String(topCode).toUpperCase();
+                          return topic === targetTop || code.includes(`-${targetTop}-`) || code.endsWith(`-${targetTop}`) || topic.includes(targetTop);
+                        });
+                      }
+                      if (targetTasks.length === 0) {
+                        targetTasks = nonExams;
+                      }
+                    }
                   }
 
                   targetTasks.forEach(t => {
@@ -3923,7 +3962,13 @@ if (typeof window !== 'undefined') {
                   });
                 }
 
-                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                 if (typeof showToast === 'function') showToast(`✓ Scores saved successfully for ${updatesByStudent.length} student(s)!`, 'success');
               } catch (err) {
                 console.error('Batch save score error:', err);
@@ -3975,7 +4020,13 @@ if (typeof window !== 'undefined') {
                     }).eq('id', item.attemptId);
                   }
                 }
-                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                 if (typeof showToast === 'function') showToast(`✓ ${repetitionActions.length} repetition score(s) saved!`, 'success');
               } catch (repErr) {
                 console.error('Repetition save error:', repErr);
@@ -4216,7 +4267,13 @@ if (typeof window !== 'undefined') {
                   forgivenBy: 'Mr. Top',
                   reason: 'Tutor Result Waiver'
                 });
-                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                 if (typeof showToast === 'function') showToast('✓ Forgiven waiver (Grade F - Passed) granted', 'success');
               } else {
                 // Uncheck: revoke waiver
@@ -4249,7 +4306,13 @@ if (typeof window !== 'undefined') {
                     }
                   }
                 }
-                if (typeof clearAdminCache === 'function') clearAdminCache('attempts');
+                if (typeof clearAdminCache === 'function') {
+                  clearAdminCache('attempts');
+                  clearAdminCache('tests');
+                }
+                if (window._classHubCache && targetClassId) {
+                  delete window._classHubCache[targetClassId];
+                }
                 if (typeof showToast === 'function') showToast('✓ Forgiven waiver removed', 'info');
               }
 

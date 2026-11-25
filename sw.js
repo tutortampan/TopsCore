@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-option-a-v236';
+const CACHE_NAME = 'topscore-cache-v238-bulletproof';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -20,7 +20,7 @@ const ASSETS_TO_CACHE = [
   './css/tutor.css?v=20261123_v50',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
-  './js/api.js?v=20261124_v642',
+  './js/api.js?v=20261125_v681',
   './js/auth.js?v=20261125_v680',
   './js/dashboard.js?v=20261125_v677',
   './js/tutor.js?v=20261123_v50',
@@ -34,13 +34,25 @@ const ASSETS_TO_CACHE = [
   './js/vendor/xlsx.full.min.js?v=20261027d',
   './js/vendor/html2pdf.bundle.min.js?v=20261119_v1',
   './js/wake-lock.js?v=20261027d',
-  './js/pwa.js?v=20261116_v548'
+  './js/pwa.js?v=20261125_v681'
 ];
 
 self.addEventListener('install', event => {
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(ASSETS_TO_CACHE))
+    caches.open(CACHE_NAME).then(async cache => {
+      // Resilient Pre-caching: Do not fail-stop if a single non-essential asset or slow network occurs
+      const promises = ASSETS_TO_CACHE.map(async asset => {
+        try {
+          const res = await fetch(asset, { cache: 'no-cache' });
+          if (res && res.status === 200) {
+            await cache.put(asset, res);
+          }
+        } catch (err) {
+          console.warn('[SW] Non-fatal precache failure for:', asset, err);
+        }
+      });
+      await Promise.allSettled(promises);
+    })
   );
   self.skipWaiting();
 });
@@ -56,6 +68,17 @@ self.addEventListener('activate', event => {
       return self.clients.claim().catch(() => {});
     })
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data === 'SKIP_WAITING' || (event.data && event.data.type === 'SKIP_WAITING')) {
+    self.skipWaiting();
+  }
+  if (event.data === 'PURGE_CACHE' || (event.data && event.data.type === 'PURGE_CACHE')) {
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => {
+      if (event.ports && event.ports[0]) event.ports[0].postMessage({ done: true });
+    });
+  }
 });
 
 self.addEventListener('fetch', event => {
@@ -77,50 +100,49 @@ self.addEventListener('fetch', event => {
   const isDoc = event.request.destination === 'document' || url.pathname.endsWith('.html');
   const isScript = event.request.destination === 'script' || url.pathname.endsWith('.js');
   const isStyle = event.request.destination === 'style' || url.pathname.endsWith('.css');
-  const isVersionedStatic = (isScript || isStyle) && url.search.includes('v=');
+  const isCodeOrDoc = isDoc || isScript || isStyle;
 
-  if (isVersionedStatic) {
-    // Cache-first for versioned JS and CSS assets (?v=...)
-    // Versioned assets are immutable for that specific version tag, enabling instant zero-network page hydration
+  if (isCodeOrDoc) {
+    // Network-First with Fast Timeout (2500ms) for HTML documents, scripts, and stylesheets
+    // Guarantees zero-stale code updates propagate immediately when online,
+    // while gracefully falling back to cache if offline or slow network.
     event.respondWith(
-      caches.match(event.request).then(cachedResponse => {
-        if (cachedResponse) return cachedResponse;
-        return fetch(event.request).then(response => {
-          if (response && response.status === 200 && response.type === 'basic' && event.request.url.startsWith('http')) {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+      new Promise(resolve => {
+        let timedOut = false;
+        const timer = setTimeout(async () => {
+          timedOut = true;
+          const cached = await caches.match(event.request);
+          if (cached) return resolve(cached);
+          if (isDoc) {
+            const offlineResp = await caches.match('./offline.html');
+            if (offlineResp) return resolve(offlineResp);
           }
-          return response;
-        });
-      }).catch(async () => {
-        const cached = await caches.match(event.request);
-        if (cached) return cached;
-        return new Response('', { status: 408, statusText: 'Network Failed or Offline' });
-      })
-    );
-    return;
-  }
+          resolve(new Response('', { status: 408, statusText: 'Network Timeout' }));
+        }, 2500);
 
-  const isScriptOrDoc = isDoc || isScript || isStyle;
-
-  if (isScriptOrDoc) {
-    // Network-first for unversioned scripts, unversioned styles, and documents so bug fixes and updates propagate immediately
-    event.respondWith(
-      fetch(event.request).then(response => {
-        if (response && response.status === 200 && response.type === 'basic' && event.request.url.startsWith('http')) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
-        }
-        return response;
-      }).catch(async () => {
-        const cached = await caches.match(event.request);
-        if (cached) return cached;
-        // If document navigation fails while completely offline, serve offline fallback
-        if (isDoc) {
-          const offlineResp = await caches.match('./offline.html');
-          if (offlineResp) return offlineResp;
-        }
-        return new Response('', { status: 408, statusText: 'Network Failed or Offline' });
+        fetch(event.request, { cache: isDoc ? 'no-cache' : 'default' })
+          .then(response => {
+            if (!timedOut) {
+              clearTimeout(timer);
+              if (response && response.status === 200 && response.type === 'basic' && event.request.url.startsWith('http')) {
+                const responseToCache = response.clone();
+                caches.open(CACHE_NAME).then(cache => cache.put(event.request, responseToCache));
+              }
+              resolve(response);
+            }
+          })
+          .catch(async () => {
+            if (!timedOut) {
+              clearTimeout(timer);
+              const cached = await caches.match(event.request);
+              if (cached) return resolve(cached);
+              if (isDoc) {
+                const offlineResp = await caches.match('./offline.html');
+                if (offlineResp) return resolve(offlineResp);
+              }
+              resolve(new Response('', { status: 408, statusText: 'Network Failed or Offline' }));
+            }
+          });
       })
     );
     return;

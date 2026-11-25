@@ -4,22 +4,53 @@
 let deferredInstallPrompt = null;
 
 export function initPWA() {
-  // 1. Register Service Worker
+  // 1. Register Service Worker with safe update detection
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=20261116_v548')
+      navigator.serviceWorker.register('sw.js?v=20261125_v681')
         .then(reg => {
           reg.update();
           console.log('[PWA] ServiceWorker registered with scope:', reg.scope);
+
+          // Listen for new service worker installation
+          reg.addEventListener('updatefound', () => {
+            const installingWorker = reg.installing;
+            if (!installingWorker) return;
+            installingWorker.addEventListener('statechange', () => {
+              if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                console.log('[PWA] New version ready! Activating immediately...');
+                installingWorker.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          });
         })
         .catch(err => {
           console.warn('[PWA] ServiceWorker registration failed:', err);
         });
     });
+
+    // Seamless auto-reload on version controller change (with Exam Protection)
+    let isRefreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (isRefreshing) return;
+      // Active test invariant: NEVER auto-reload while student is actively in test.html
+      const isTakingTest = window.location.pathname.includes('test.html') &&
+        (sessionStorage.getItem('test_state') || document.getElementById('test-screen'));
+      if (isTakingTest) {
+        console.warn('[PWA] Active test in progress. Deferring reload until exam completion.');
+        return;
+      }
+      isRefreshing = true;
+      console.log('[PWA] Controller updated. Seamlessly reloading to latest version...');
+      window.location.reload();
+    });
   }
 
   // 2. Network Resilience & Offline Detection
   initNetworkStatusListener();
+
+  // 3. Self-healing UI Sync Control Binding
+  bindSelfHealingSync();
 
   // Check if running in standalone mode (already installed as PWA)
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
@@ -170,6 +201,50 @@ function initNetworkStatusListener() {
   if (typeof navigator !== 'undefined' && navigator.onLine === false) {
     showStatus(false);
   }
+}
+
+/**
+ * Emergency Self-Healing Cache Reset Protocol
+ * Purges all service workers, clears CacheStorage, and triggers a hard clean reload.
+ */
+export async function forceHardResetApp() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        await reg.unregister();
+      }
+    }
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      for (const key of keys) {
+        await caches.delete(key);
+      }
+    }
+    sessionStorage.removeItem('topscore_pwa_dismissed');
+  } catch (err) {
+    console.error('[PWA] Force reset error:', err);
+  } finally {
+    const cleanUrl = window.location.origin + window.location.pathname + '?refresh=' + Date.now();
+    window.location.replace(cleanUrl);
+  }
+}
+
+export function bindSelfHealingSync() {
+  if (typeof document === 'undefined') return;
+  const syncBtn = document.getElementById('app-sync-btn');
+  if (!syncBtn) return;
+  syncBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    syncBtn.disabled = true;
+    syncBtn.classList.add('syncing');
+    syncBtn.setAttribute('aria-label', 'Syncing updates...');
+    await forceHardResetApp();
+  });
+}
+
+if (typeof window !== 'undefined') {
+  window.forceHardResetApp = forceHardResetApp;
 }
 
 // Auto-run if imported directly

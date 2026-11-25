@@ -4,7 +4,7 @@ import { generateAvatarDataUri } from './utils/avatar-engine.js?v=20261106_v160'
  * Extracted from test.html
  */
 
-import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261124_v642';
+import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSecuritySettings } from './api.js?v=20261125_v681';
     import { requireStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';

@@ -37,7 +37,7 @@ import {
   updateVaultThemeLevelCascade,
   toTitleCase,
   formatVaultTerm
-} from '../api.js?v=20261118_v600';
+} from '../api.js?v=20261125_v686';
 import { showToast, showLoading, hideLoading } from '../app.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
 import { getGradeColorByScore, getInvertedGradeColor } from '../grading.js?v=20261106_v160';

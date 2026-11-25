@@ -280,9 +280,9 @@ async function main() {
       } else {
         // Insert new student with batch current level
         payload.level_id = batchLevelMap.get(batchId) || LEVEL_1_ID;
-        const pin = String(Math.floor(100000 + Math.random() * 900000));
+        const pin = '1234';
         payload.pin = pin;
-        payload.pin_hash = pin;
+        payload.pin_hash = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'; // SHA-256 of 1234
         const [inserted] = await apiReq('students', 'POST', payload);
         studentDbMap.set(name, inserted);
         studentByNis.set(st.nis, inserted);

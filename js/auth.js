@@ -3,7 +3,7 @@
  * Extracted from index.html
  */
 
-import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './api.js?v=20261115_v541';
+import { fetchInstitutions, fetchPrograms, fetchBatches, fetchStudentsByProgram, verifyStudentLogin, formatStudentName } from './api.js?v=20261125_v681';
     import { setStudentSession, getStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, escapeHtml, escHtml } from './app.js?v=20261106_v160';
 

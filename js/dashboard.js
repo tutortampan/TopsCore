@@ -3,7 +3,7 @@
  * Extracted from dashboard.html
  */
 
-import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, toShortLevel, isCampContext, formatAcademicTier, resolveContextYear, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261119_v630';
+import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, toShortLevel, isCampContext, formatAcademicTier, resolveContextYear, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261125_v681';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { testMicrophoneCapability } from './speech.js?v=20261106_v160';

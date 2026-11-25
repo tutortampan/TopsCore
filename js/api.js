@@ -2225,10 +2225,13 @@ export async function startTest(studentId, testId) {
 
     const isPrereqExam = prereqTest ? isWeeklyExam(prereqTest) : false;
     const isPrereqUnified = Boolean(
-      prereqTest?.payload?.is_unified === true ||
-      prereqTest?.payload?.category === 'unified' ||
-      prereqTest?.category === 'unified' ||
-      (prereqTest?.test_subtype && prereqTest.test_subtype.startsWith('UNIFIED'))
+      (prereqTest?.payload?.is_unified === true ||
+       prereqTest?.payload?.category === 'unified' ||
+       prereqTest?.category === 'unified' ||
+       (prereqTest?.test_subtype && prereqTest.test_subtype.startsWith('UNIFIED'))) &&
+      prereqTest?.payload?.has_phrases !== false &&
+      prereqTest?.payload?.is_unified !== false &&
+      prereqTest?.payload?.category !== 'words'
     );
 
     // Prerequisite passing threshold:
@@ -2463,7 +2466,12 @@ export async function startTest(studentId, testId) {
       (priorTaskAttempts || []).forEach(att => {
         const tid = att.test_id;
         const tObj = taskMap[tid];
-        const isUni = tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'));
+        const isUni = Boolean(
+          (tObj?.payload?.is_unified === true || tObj?.category === 'unified' || (tObj?.test_subtype && tObj.test_subtype.startsWith('UNIFIED'))) &&
+          tObj?.payload?.has_phrases !== false &&
+          tObj?.payload?.is_unified !== false &&
+          tObj?.payload?.category !== 'words'
+        );
         const fr = String(att.forgiven_reason || '');
         const mMatch = fr.match(/MANUAL_REPS:?\s*(\d+)(?:\/(\d+))?(?:\s*(WORDS|PHRASES))?/i);
 
@@ -2503,7 +2511,12 @@ export async function startTest(studentId, testId) {
       });
 
       const unmasteredTask = filteredPriorTasks.find(t => {
-        const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
+        const isUni = Boolean(
+          (t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'))) &&
+          t.payload?.has_phrases !== false &&
+          t.payload?.is_unified !== false &&
+          t.payload?.category !== 'words'
+        );
         if (isUni) {
           return (wordsPassByTask[t.id] || 0) < targetReps || (phrasesPassByTask[t.id] || 0) < targetReps;
         }
@@ -4026,7 +4039,7 @@ export async function fetchVaultWords({ topic = null, search = null, targetLevel
 
       while (true) {
         const { data, error } = await sb.from('vocabulary_vault')
-          .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category, program_id')
+          .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
           .is('deleted_at', null)
           .order('target_level', { ascending: true })
           .order('theme_code', { ascending: true })
@@ -5848,10 +5861,14 @@ export async function adminApplyForgiven({
               }
             }
 
-            if (r < submittedAtts.length) {
-              const att = submittedAtts[r];
+            const usableAtt = (r < submittedAtts.length)
+              ? submittedAtts[r]
+              : existingAtts.find(a => !claimedAttIds.has(a.id));
+
+            if (usableAtt) {
+              claimedAttIds.add(usableAtt.id);
               updates.push({
-                id: att.id,
+                id: usableAtt.id,
                 score: itemSc,
                 correct_count: itemSc,
                 total_questions: itemTotalQ,
@@ -5864,13 +5881,15 @@ export async function adminApplyForgiven({
                 forgiven_by: validForgivenBy,
                 forgiven_at: nowIso,
                 forgiven_reason: itemReason,
+                submitted_at: usableAtt.submitted_at || nowIso,
                 updated_at: nowIso
               });
             } else {
-              inserts.push({
+              const newAtt = {
+                id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
                 student_id: sId,
                 test_id: testId,
-                attempt_number: r + 1,
+                attempt_number: (existingAtts.length || 0) + 1,
                 started_at: nowIso,
                 expires_at: nowIso,
                 submitted_at: nowIso,
@@ -5888,7 +5907,11 @@ export async function adminApplyForgiven({
                 forgiven_reason: itemReason,
                 created_at: nowIso,
                 updated_at: nowIso
-              });
+              };
+              if (!newAtt.id) delete newAtt.id;
+              else claimedAttIds.add(newAtt.id);
+              inserts.push(newAtt);
+              existingAtts.push(newAtt);
             }
           }
           // Any remaining attempts beyond reps: mark is_best_score = false
@@ -5968,6 +5991,12 @@ export async function adminApplyForgiven({
           targetAtt = submittedAtts.find(a => !claimedAttIds.has(a.id));
         }
 
+        // Defensive: If no submitted attempt found, claim ANY existing attempt (such as 'in_progress' or unsubmitted)
+        // so that in-progress attempts are cleanly repurposed to submitted rather than orphaned!
+        if (!targetAtt) {
+          targetAtt = existingAtts.find(a => !claimedAttIds.has(a.id));
+        }
+
         if (targetAtt) {
           claimedAttIds.add(targetAtt.id);
           updates.push({
@@ -5984,6 +6013,7 @@ export async function adminApplyForgiven({
             forgiven_by: validForgivenBy,
             forgiven_at: nowIso,
             forgiven_reason: manualReason,
+            submitted_at: targetAtt.submitted_at || nowIso,
             updated_at: nowIso
           });
           targetAtt.score = sc;
@@ -5992,8 +6022,17 @@ export async function adminApplyForgiven({
           targetAtt.percentage = pct;
           targetAtt.effective_score = pct;
           targetAtt.grade = grade;
+          targetAtt.status = 'submitted';
+          targetAtt.is_best_score = true;
           targetAtt.forgiven_reason = manualReason;
           targetAtt.updated_at = nowIso;
+
+          // Demote any other attempts for this test
+          existingAtts.forEach(att => {
+            if (att.id !== targetAtt.id && att.is_best_score) {
+              updates.push({ id: att.id, is_best_score: false, updated_at: nowIso });
+            }
+          });
         } else {
           const newAtt = {
             id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : undefined,
@@ -6022,6 +6061,13 @@ export async function adminApplyForgiven({
           else claimedAttIds.add(newAtt.id);
           inserts.push(newAtt);
           existingAtts.push(newAtt);
+
+          // Demote existing attempts
+          existingAtts.forEach(att => {
+            if (att.id !== newAtt.id && att.is_best_score) {
+              updates.push({ id: att.id, is_best_score: false, updated_at: nowIso });
+            }
+          });
         }
 
         // Rule 2.6 SSOT: For Unified Tasks only (NOT Exams), guarantee Phrases companion attempt is synchronized
@@ -6836,7 +6882,7 @@ export async function autoGenerateTestsHierarchy(targetLevels, config = {}) {
       words = await fetchVaultWords({ targetLevel: levelNum, programId, limit: 10000 });
     } catch (_) {
       let vaultQuery = sb.from('vocabulary_vault')
-        .select('theme_code, theme, topic_code, topic, word_type, category, program_id')
+        .select('theme_code, theme, topic_code, topic, word_type, category')
         .is('deleted_at', null)
         .eq('target_level', levelNum);
 
