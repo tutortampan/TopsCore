@@ -915,12 +915,53 @@ export function calculateOverallStudentScore(takenPercentages = []) {
 }
 
 /**
+ * Authoritative Helper to identify Vocabulary Pre-Tests (no repetition, no prerequisites, 1 attempt max, excluded from SCORE).
+ */
+export function isPretest(test) {
+  if (!test) return false;
+  const sub = String(test.test_subtype || '').toUpperCase();
+  const cat = String(test.category || test.payload?.tier || '').toUpperCase();
+  const shell = String(test.shell_code || test.payload?.shell_code || '').toUpperCase();
+  return cat === 'PRETEST' || sub === 'VOCAB_PRETEST' || sub === 'PHRASE_PRETEST' || shell.startsWith('PRETEST-');
+}
+
+/**
+ * Authoritative Helper to identify Vocabulary Standalone Quizzes (no repetition, no prerequisites, retakes allowed, included in SCORE).
+ */
+export function isVocabQuiz(test) {
+  if (!test || isPretest(test)) return false;
+  const sub = String(test.test_subtype || '').toUpperCase();
+  const tier = String(test.payload?.tier || '').toUpperCase();
+  const shell = String(test.shell_code || test.payload?.shell_code || '').toUpperCase();
+  return tier === 'QUIZ' || sub === 'VOCAB_QUIZ_TEST' || shell.startsWith('QUIZ-');
+}
+
+/**
+ * Authoritative Helper to identify tests that operate WITHOUT repetition mastery or prerequisite gating
+ * (Vocabulary Quiz, Vocabulary Pre-Test, and Placement/Try-Out).
+ */
+export function isNoRepetitionTest(test) {
+  if (!test) return false;
+  return Boolean(
+    test.payload?.no_repetition === true ||
+    test.payload?.no_prerequisites === true ||
+    test.payload?.is_standalone_tryout === true ||
+    isPretest(test) ||
+    isVocabQuiz(test) ||
+    String(test.category || test.payload?.tier || '').toUpperCase() === 'TRYOUT' ||
+    String(test.shell_code || test.payload?.shell_code || '').toUpperCase().startsWith('TRYOUT-')
+  );
+}
+
+/**
  * Authoritative Helper to accurately identify milestone exams vs tasks.
  * Canonical nomenclature: isExam (replaces legacy isWeeklyExam).
  * Used for exam-only points, academic score, and grade isolation across Admin Class Hub and Student Dashboard.
  */
 export function isExam(test) {
   if (!test) return false;
+  if (isPretest(test)) return false;
+  if (isVocabQuiz(test)) return true;
   const t = String(test.test_type || test.type || '').toLowerCase();
   if (t === 'exam') return true;
   if (t === 'quiz') return false;
@@ -928,7 +969,7 @@ export function isExam(test) {
     test.category || test.payload?.tier || test.payload?.category || ''
   ).toUpperCase();
   if (c === 'EXAM') return true;
-  if (c === 'QUIZ' || c === 'TASK') return false;
+  if (c === 'QUIZ' || c === 'TASK' || c === 'PRETEST') return false;
   const shell = String(test.shell_code || test.payload?.shell_code || '').toUpperCase();
   if (shell.endsWith('-EXAM') || shell.includes('-EXAM-')) return true;
   if (shell.endsWith('-QUIZ') || shell.includes('-QUIZ-')) return false;

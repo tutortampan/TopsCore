@@ -1,7 +1,7 @@
 // TOPS CORE — API Module (Stabilized & Synchronized)
 // Centralized server & database interface for TOPS CORE LMS.
 import { getSupabase, SUPABASE_URL, callEdgeFunction, isEdgeFunctionOffline, markEdgeFunctionOffline } from './supabase.js?v=20261106_v160';
-import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets } from './grading.js?v=20261125_v688';
+import { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets } from './grading.js?v=20261127_v692';
 import { stripHonorific, getStudentInitial } from './utils/avatar-engine.js?v=20261106_v160';
 import { escapeHtml, escHtml, showToast } from './app.js?v=20261106_v160';
 
@@ -9,7 +9,7 @@ export function getGrade(pct, options) {
   return calculateGrade(pct, options);
 }
 
-export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
+export { evaluateAnswer, calculatePercentage, isPassing, calculateGrade, calculateOverallStudentScore, parseCorrectAnswers, stripHyphens, TOPSCORE_COLORS, getEvaluationColor, GRADE_PALETTE, INSTITUTION_GRADING_SCALES, getGradeColor, getGradeColorByScore, getInvertedGradeColor, getScoreColor, getGradeSymbol, getGradeTheme, formatGradeBadgeHtml, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, computeMilestoneExamMastery, validateDescriptionSentence, classifyAdjective, ADJECTIVE_CATEGORIES, detectClassDiscipline, isVocabularyClass, resolveTaskRepTargets, callEdgeFunction, stripHonorific, getStudentInitial, escapeHtml, escHtml, showToast };
 
 // ============================================================
 // AUTH / LOGIN & UTILITIES
@@ -636,37 +636,58 @@ export async function fetchPrograms(institutionId, forceRefresh = false) {
 export async function fetchBatches(programId, forceRefresh = false, activeOnly = true) {
   const cacheKey = `batches_${programId}_${activeOnly}`;
   if (forceRefresh) clearApiCache(cacheKey);
-  return withCache(cacheKey, async () => {
-    let list = MOCK_BATCHES.filter(b => b.program_id === programId && (!activeOnly || b.is_active !== false));
-    if (!isPlaceholderUrl()) {
-      if (!programId || programId === 'undefined') {
-        console.warn('Cannot fetch batches: programId is undefined');
-        return [];
-      }
-      try {
-        const sb = await getSupabase();
-        let query = sb.from('batches')
-          .select('id, name, program_id, current_level_id, is_active')
-          .eq('program_id', programId)
-          .is('deleted_at', null);
-        if (activeOnly) {
-          query = query.eq('is_active', true);
-        }
-        const { data, error } = await query.order('name');
-        if (error) throw error;
-        if (data && data.length) list = data;
-      } catch (e) {
-        console.warn('Supabase fetch batches failed, falling back to mock data:', e.message);
-      }
+  // Batches use short in-memory-only cache (90s) — NEVER persisted to localStorage.
+  // Reason: Admin may create new batches at any time; a 7-day localStorage hit
+  // would hide newly created batches from the student login gate dropdown.
+  const BATCH_TTL = 90 * 1000;
+  const existing = _apiCache.get(cacheKey);
+  const now = Date.now();
+  if (!forceRefresh && existing && (now - existing.timestamp < BATCH_TTL)) {
+    return Array.isArray(existing.data) ? [...existing.data] : existing.data;
+  }
+  _apiCache.delete(cacheKey);
+  let list = MOCK_BATCHES.filter(b => b.program_id === programId && (!activeOnly || b.is_active !== false));
+  if (!isPlaceholderUrl()) {
+    if (!programId || programId === 'undefined') {
+      console.warn('Cannot fetch batches: programId is undefined');
+      return [];
     }
-    return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  });
+    try {
+      const sb = await getSupabase();
+      let query = sb.from('batches')
+        .select('id, name, program_id, current_level_id, is_active')
+        .eq('program_id', programId)
+        .is('deleted_at', null);
+      if (activeOnly) {
+        query = query.eq('is_active', true);
+      }
+      const { data, error } = await query.order('name');
+      if (error) throw error;
+      if (data && data.length) list = data;
+    } catch (e) {
+      console.warn('Supabase fetch batches failed, falling back to mock data:', e.message);
+    }
+  }
+  const result = [...list].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  // In-memory only — skip _writeMasterStorage to prevent stale batch list on student HP
+  _apiCache.set(cacheKey, { data: result, timestamp: now });
+  return [...result];
 }
 
 export async function fetchStudentsByProgram(programId, batchId = null, activeOnly = true, forceRefresh = false) {
   const cacheKey = `students_prog_${programId}_${batchId}_${activeOnly}`;
   if (forceRefresh) clearApiCache(cacheKey);
-  return withCache(cacheKey, async () => {
+  // Students use short in-memory-only cache (90s) — NEVER persisted to localStorage.
+  // Reason: Admin may add/edit/deactivate students at any time; a 7-day localStorage
+  // hit would hide new students from the login gate until students manually clear cache.
+  const SHORT_TTL = 90 * 1000; // 90 seconds in-memory only
+  const existing = _apiCache.get(cacheKey);
+  const now = Date.now();
+  if (!forceRefresh && existing && (now - existing.timestamp < SHORT_TTL)) {
+    return Array.isArray(existing.data) ? [...existing.data] : existing.data;
+  }
+  _apiCache.delete(cacheKey); // always evict before re-fetch
+  const fetcher = async () => {
     let list = MOCK_STUDENTS.filter(s => s.program_id === programId && (!batchId || s.batch_id === batchId) && (!activeOnly || (s.is_active !== false && (s.program_status || '').toUpperCase() !== 'INACTIVE')));
     if (!isPlaceholderUrl()) {
       try {
@@ -705,7 +726,12 @@ export async function fetchStudentsByProgram(programId, batchId = null, activeOn
       const nameB = b.name || b.displayName || '';
       return nameA.localeCompare(nameB, undefined, { sensitivity: 'base', numeric: true });
     });
-  });
+  };
+  const data = await fetcher();
+  // Store in-memory only — deliberately skip _writeMasterStorage to prevent
+  // stale student lists surviving across sessions on student devices.
+  _apiCache.set(cacheKey, { data, timestamp: now });
+  return Array.isArray(data) ? [...data] : data;
 }
 
 export async function verifyStudentLogin({ institutionId, programId, batchId, studentId, pin }) {
@@ -2240,8 +2266,24 @@ export async function startTest(studentId, testId) {
 
   // Prerequisite & Whitelist gates only apply when initiating a NEW attempt for non-alumni (Alumni has Universal Lifetime Access)
   if (!attempt && !isAlumniStudent) {
-    // Guard: Prerequisite check in client DB fallback
-    const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true;
+    const isPretestFallback = isPretest(asmData);
+    const isQuizFallback = !isPretestFallback && isVocabQuiz(asmData);
+    const isStandaloneTryout = asmData.payload?.is_standalone_tryout === true ||
+                               asmData.payload?.no_prerequisites === true ||
+                               isPretestFallback ||
+                               isQuizFallback;
+    if (isPretestFallback) {
+      const { count: preCount } = await sb.from('attempts')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_id', studentId)
+        .eq('test_id', asmData.id)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'SUBMITTED', 'AUTO_SUBMITTED', 'EVALUATED']);
+      if ((preCount || 0) >= 1) {
+        const pErr = new Error('Pre-test can only be taken once (retake is not allowed).');
+        pErr.code = 'MAX_ATTEMPTS_REACHED';
+        throw pErr;
+      }
+    }
     const prereqId = asmData.prerequisite_test_id || asmData.prerequisite_id;
     if (prereqId && !isStandaloneTryout) {
     const [prereqAttRes, prereqTestRes] = await Promise.all([
@@ -3569,34 +3611,45 @@ export async function logCheatingEvent(studentId, testId, action, detail) {
 
 export async function fetchTests(filters = {}) {
   const cacheKey = 'tests|' + JSON.stringify(filters);
-  return withCache(cacheKey, async () => {
-    const sb = await getSupabase();
-    try {
-      let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
-      if (filters.class_id) query = query.eq('class_id', filters.class_id);
-      if (filters.class_ids && Array.isArray(filters.class_ids)) {
-        if (filters.class_ids.length === 0) return [];
-        query = query.in('class_id', filters.class_ids);
-      }
-      if (filters.level_id) query = query.eq('level_id', filters.level_id);
-      if (filters.program_id) query = query.eq('program_id', filters.program_id);
-      if (!filters.include_deleted) {
-        query = query.is('deleted_at', null);
-      }
-
-      const { data, error } = await query.order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
-      if (!error && data) {
-        return data.map(a => ({
-          ...a,
-          prerequisite_id: a.prerequisite_test_id || a.prerequisite_id,
-          prerequisite_test_id: a.prerequisite_test_id || a.prerequisite_id
-        }));
-      }
-    } catch (err) {
-      console.warn('fetchTests fallback notice:', err.message);
+  // Tests use short in-memory-only cache (2 min) — NEVER persisted to localStorage.
+  // Reason: Admin may publish/update tests at any time; a 7-day localStorage hit
+  // would show stale test lists on student devices until manual cache clear.
+  const TEST_TTL = 2 * 60 * 1000;
+  const existing = _apiCache.get(cacheKey);
+  const now = Date.now();
+  if (existing && (now - existing.timestamp < TEST_TTL)) {
+    return Array.isArray(existing.data) ? [...existing.data] : existing.data;
+  }
+  _apiCache.delete(cacheKey);
+  const sb = await getSupabase();
+  try {
+    let query = sb.from('tests').select('id, title, display_name, test_subtype, category, payload, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, working_duration_minutes, schedule_mode, test_type, is_dynamic_shell, shell_code, max_attempts, retake_allowed, created_at, deleted_at, classes(name), levels(name, level_number)');
+    if (filters.class_id) query = query.eq('class_id', filters.class_id);
+    if (filters.class_ids && Array.isArray(filters.class_ids)) {
+      if (filters.class_ids.length === 0) return [];
+      query = query.in('class_id', filters.class_ids);
     }
-    return [];
-  }, 2 * 60 * 1000);
+    if (filters.level_id) query = query.eq('level_id', filters.level_id);
+    if (filters.program_id) query = query.eq('program_id', filters.program_id);
+    if (!filters.include_deleted) {
+      query = query.is('deleted_at', null);
+    }
+
+    const { data, error } = await query.order('display_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: false });
+    if (!error && data) {
+      const result = data.map(a => ({
+        ...a,
+        prerequisite_id: a.prerequisite_test_id || a.prerequisite_id,
+        prerequisite_test_id: a.prerequisite_test_id || a.prerequisite_id
+      }));
+      // In-memory only — skip _writeMasterStorage to prevent stale test list on student HP
+      _apiCache.set(cacheKey, { data: result, timestamp: now });
+      return [...result];
+    }
+  } catch (err) {
+    console.warn('fetchTests fallback notice:', err.message);
+  }
+  return [];
 }
 
 export async function fetchAssignments(filters = {}) {
@@ -4825,10 +4878,12 @@ export async function createVocabMasteryTest(config) {
     console.warn("Could not fetch level_number, defaulting to 1");
   }
 
-  const isTryoutTier = tier === 'TRYOUT' || isStandalone;
+  const isQuizStandalone = tier === 'QUIZ';
+  const isPretestTier = tier === 'PRETEST';
+  const isTryoutTier = tier === 'TRYOUT' || isStandalone || isQuizStandalone || isPretestTier;
 
   if (isTryoutTier) {
-    // STANDALONE / PLACEMENT TRYOUT: Gather words across selected themes without prerequisites
+    // STANDALONE / QUIZ / PRETEST / TRYOUT: Gather words across selected themes without prerequisites
     let q = sb.from('vocabulary_vault')
       .select('id, topic, indonesian, english, word_type, target_level, theme, theme_code, topic_code, category')
       .is('deleted_at', null);
@@ -4946,10 +5001,10 @@ export async function createVocabMasteryTest(config) {
     selectedWords = stratifiedSample(topicMap, customQuota);
   }
 
-  // Resolve the final test_type (PostgreSQL enum 'quiz' | 'exam') and category ('TASK' | 'EXAM'):
-  const isQuizTier = (tier === 'QUIZ' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || String(test_type).toLowerCase() === 'task') && !isTryoutTier;
+  // Resolve the final test_type (PostgreSQL enum 'quiz' | 'exam') and category ('TASK' | 'EXAM' | 'QUIZ' | 'PRETEST'):
+  const isQuizTier = (tier === 'QUIZ' || tier === 'PRETEST' || tier === 'TASK' || String(test_type).toLowerCase() === 'quiz' || String(test_type).toLowerCase() === 'task');
   const resolvedType = isQuizTier ? 'quiz' : 'exam';
-  const resolvedCategory = isQuizTier ? 'TASK' : 'EXAM';
+  const resolvedCategory = isPretestTier ? 'PRETEST' : (isQuizStandalone ? 'QUIZ' : (isQuizTier ? 'TASK' : 'EXAM'));
 
   let defaultAnswerType = answerType;
   if (testType === 'IDIOM_PROVERB' ) {
@@ -4963,25 +5018,47 @@ export async function createVocabMasteryTest(config) {
   }
 
   const cleanThemesStr = (selectedThemes && Array.isArray(selectedThemes) && selectedThemes.length > 0) ? selectedThemes.join('') : 'ALL';
-  const generatedShellCode = isTryoutTier
-    ? `TRYOUT-${category === 'phrases' ? 'PHRASE' : 'VOCAB'}-L${targetLevel}-${cleanThemesStr}-${Date.now().toString(36).slice(-4).toUpperCase()}`
-    : null;
+  const catShellTag = category === 'phrases' ? 'PHRASE' : (category === 'all' ? 'COMP' : 'VOCAB');
+  const tsTag = Date.now().toString(36).slice(-4).toUpperCase();
+  const generatedShellCode = isPretestTier
+    ? `PRETEST-${catShellTag}-L${targetLevel}-${cleanThemesStr}-${tsTag}`
+    : isQuizStandalone
+      ? `QUIZ-${catShellTag}-L${targetLevel}-${cleanThemesStr}-${tsTag}`
+      : isTryoutTier
+        ? `TRYOUT-${category === 'phrases' ? 'PHRASE' : 'VOCAB'}-L${targetLevel}-${cleanThemesStr}-${tsTag}`
+        : null;
+
+  const resolvedSubtype = isPretestTier
+    ? 'VOCAB_PRETEST'
+    : isQuizStandalone
+      ? 'VOCAB_QUIZ_TEST'
+      : isTryoutTier
+        ? (category === 'phrases' ? 'PHRASE_TEST' : 'VOCAB_TEST')
+        : ('VOCAB_' + (isQuizTier ? 'TASK' : 'EXAM'));
+
+  const resolvedScheduleMode = isTryoutTier ? (scheduleMode === 'manual' ? 'manual' : 'flexible') : (scheduleMode || 'batch');
 
   const testPayload = {
     institution_id:           institutionId,
     program_id:               programId,
     class_id:                 classId,
     level_id:                 levelId,
-    test_subtype:             isTryoutTier ? (category === 'phrases' ? 'PHRASE_TEST' : 'VOCAB_TEST') : ('VOCAB_' + (isQuizTier ? 'TASK' : 'EXAM')),
+    test_subtype:             resolvedSubtype,
     test_type:                resolvedType,
     category:                 resolvedCategory,
     shell_code:               generatedShellCode,
     is_dynamic_shell:         isTryoutTier ? true : false,
     title:                    title,
-    description:              isTryoutTier
-      ? `Placement / Standalone Try-Out across Themes: ${(selectedThemes || ['A','B','C','D']).join(', ')} (${category === 'phrases' ? 'Phrases' : (category === 'all' ? 'Comprehensive' : 'Words')})`
-      : 'Vocabulary Mastery (' + (isQuizTier ? 'Task' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
+    description:              isPretestTier
+      ? `Vocabulary Pre-Test (No Repetition, 1 Attempt Only) across Themes: ${(selectedThemes || ['A','B','C','D']).join(', ')} (${category === 'phrases' ? 'Phrases' : (category === 'all' ? 'Comprehensive' : 'Words')})`
+      : isQuizStandalone
+        ? `Vocabulary Quiz (No Repetition, Retakes Allowed) across Themes: ${(selectedThemes || ['A','B','C','D']).join(', ')} (${category === 'phrases' ? 'Phrases' : (category === 'all' ? 'Comprehensive' : 'Words')})`
+        : isTryoutTier
+          ? `Placement / Standalone Try-Out across Themes: ${(selectedThemes || ['A','B','C','D']).join(', ')} (${category === 'phrases' ? 'Phrases' : (category === 'all' ? 'Comprehensive' : 'Words')})`
+          : 'Vocabulary Mastery (' + (isQuizTier ? 'Task' : 'Exam') + '). Topics: ' + sourceTopics.join(', '),
     status:                   'PUBLISHED',
+    schedule_mode:            resolvedScheduleMode,
+    max_attempts:             isPretestTier ? 1 : null,
     availability_start:       windowStart || null,
     availability_end:         windowEnd || null,
     working_duration_minutes: durationMinutes || null,
@@ -5081,15 +5158,20 @@ export async function createVocabMasteryTest(config) {
     questions: aqRows,
     total_questions: aqRows.length,
     is_dynamic_shell: true,
+    tier: tier,
     is_standalone_tryout: isTryoutTier,
-    is_placement_test: isTryoutTier,
+    is_placement_test: tier === 'TRYOUT',
+    no_repetition: isTryoutTier,
+    no_prerequisites: isTryoutTier,
+    include_in_score: isQuizStandalone ? true : (isPretestTier ? false : undefined),
+    max_attempts: isPretestTier ? 1 : null,
     themes: isTryoutTier ? (selectedThemes || ['A', 'B', 'C', 'D']) : null,
     category: isTryoutTier ? category : (testType === 'IDIOM_PROVERB' ? 'phrases' : 'words'),
     duration_minutes: durationMinutes,
     working_duration_minutes: durationMinutes,
     answer_type: defaultAnswerType,
     question_order: questionOrder,
-    schedule_mode: scheduleMode
+    schedule_mode: resolvedScheduleMode
   };
 
   await sb.from('tests').update({

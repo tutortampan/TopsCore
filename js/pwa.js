@@ -3,11 +3,15 @@
 
 let deferredInstallPrompt = null;
 
+// ─── DEPLOY VERSION: Keep in sync with BUILD_DATE in sw.js ───────────────────
+// Update this string every deploy so browsers re-fetch the latest sw.js.
+const SW_VERSION = '20261127_v248';
+
 export function initPWA() {
   // 1. Register Service Worker with safe update detection
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js?v=20261125_v681')
+      navigator.serviceWorker.register(`sw.js?v=${SW_VERSION}`)
         .then(reg => {
           reg.update();
           console.log('[PWA] ServiceWorker registered with scope:', reg.scope);

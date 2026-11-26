@@ -1237,7 +1237,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
     classId: editAsm?.class_id || overrides.classId || '', className: overrides.className || '',
     levelId: editAsm?.level_id || overrides.levelId || '', levelName: overrides.levelName || '',
     testType: editAsm?.test_type || overrides.testType || 'VOCAB_MASTERY',
-    tier: editAsm ? (editAsm.payload?.is_standalone_tryout ? 'TRYOUT' : (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'TASK')) : (overrides.tier || 'TASK'),
+    tier: editAsm ? (
+      (editAsm.category === 'PRETEST' || editAsm.payload?.tier === 'PRETEST' || editAsm.test_subtype === 'VOCAB_PRETEST') ? 'PRETEST' :
+      (editAsm.category === 'QUIZ' || editAsm.payload?.tier === 'QUIZ' || editAsm.test_subtype === 'VOCAB_QUIZ_TEST') ? 'QUIZ' :
+      (editAsm.payload?.is_standalone_tryout ? 'TRYOUT' : (editAsm.test_type?.includes('EXAM') ? 'EXAM' : 'TASK'))
+    ) : (overrides.tier || 'TASK'),
     title: editAsm?.title || '',
     sourceTopic: null,
     sourceTaskIds: [],
@@ -1245,11 +1249,11 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
     selectedThemes: editAsm?.payload?.themes || ['A', 'B', 'C', 'D'],
     category: editAsm?.payload?.category || 'words',
     answerType: editAsm?.answer_type || editAsm?.payload?.answer_type || 'written',
-    isStandalone: overrides.tier === 'TRYOUT' || overrides.isStandalone || false,
+    isStandalone: ['TRYOUT', 'QUIZ', 'PRETEST'].includes(overrides.tier) || overrides.isStandalone || false,
     questionOrder: 'random',
     quotaMode: 'full',
     customQuota: null,
-    scheduleMode: editAsm ? (editAsm.availability_start ? 'batch' : 'anytime') : 'batch',
+    scheduleMode: editAsm ? (editAsm.availability_start ? 'batch' : (editAsm.schedule_mode || 'flexible')) : (['TRYOUT', 'QUIZ', 'PRETEST'].includes(overrides.tier) ? 'flexible' : 'batch'),
     windowStart: editAsm?.availability_start || null,
     windowEnd: editAsm?.availability_end || null,
     durationMinutes: editAsm?.working_duration_minutes || 60
@@ -1271,9 +1275,13 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
 
   function updateAutoTitle() {
     const parts = [state.institutionName, state.programName, state.levelName, state.className].filter(Boolean);
-    let suffix = state.tier === 'EXAM' ? 'Exam' : (state.tier === 'TRYOUT' ? 'Placement Test' : 'Task');
-    if ((state.tier === 'QUIZ' || state.tier === 'TASK') && state.sourceTopic) suffix += ` - ${state.sourceTopic}`;
-    if (state.tier === 'TRYOUT') {
+    let suffix = state.tier === 'EXAM' ? 'Exam'
+      : state.tier === 'TRYOUT' ? 'Placement Test'
+      : state.tier === 'QUIZ' ? 'Quiz'
+      : state.tier === 'PRETEST' ? 'Pre-Test'
+      : 'Task';
+    if (state.tier === 'TASK' && state.sourceTopic) suffix += ` - ${state.sourceTopic}`;
+    if (state.tier === 'TRYOUT' || state.tier === 'QUIZ' || state.tier === 'PRETEST') {
       const catLabel = state.category === 'phrases' ? 'Phrases' : (state.category === 'all' ? 'Comprehensive' : 'Words');
       const themesLabel = (state.selectedThemes && state.selectedThemes.length > 0) ? state.selectedThemes.join('') : 'ALL';
       suffix += ` (${catLabel} Themes ${themesLabel})`;
@@ -1325,12 +1333,14 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             <label class="form-label">Test Tier</label>
             <div class="d-flex flex-column gap-3 mb-3">
               ${[
-          { val: 'TASK', icon: getSvgIcon('zap', 14), label: 'Task', desc: 'Single topic drill' },
+          { val: 'TASK', icon: getSvgIcon('zap', 14), label: 'Task', desc: 'Single topic drill (7×7 mastery)' },
           { val: 'EXAM', icon: getSvgIcon('award', 14), label: 'Exam', desc: 'Milestone aggregated exam' },
+          { val: 'QUIZ', icon: getSvgIcon('check-circle', 14) || getSvgIcon('zap', 14), label: 'Quiz', desc: 'No repetition, no prerequisites, retakes allowed (counts in Score)' },
+          { val: 'PRETEST', icon: getSvgIcon('compass', 14) || getSvgIcon('target', 14), label: 'Pre-Test', desc: 'No repetition, no prerequisites, 1 attempt only (excluded from Score)' },
           { val: 'TRYOUT', icon: getSvgIcon('target', 14), label: 'Placement / Try-Out', desc: 'Standalone diagnostic across themes (no prerequisites)' }
         ].map(t => `
-                <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
-                  <input type="radio" name="vocab-tier" value="${t.val}" ${(state.tier === t.val || (state.tier === 'QUIZ' && t.val === 'TASK')) ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
+                <label class="d-flex align-center gap-3 p-2 rounded" style="cursor:pointer;border:2px solid ${state.tier === t.val ? 'var(--clr-primary)' : 'var(--clr-border)'};background:${state.tier === t.val ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)'};">
+                  <input type="radio" name="vocab-tier" value="${t.val}" ${state.tier === t.val ? 'checked' : ''} style="accent-color:var(--clr-primary);" />
                   <div>
                     <div class="fw-700">${t.icon} ${t.label}</div>
                     <div class="text-muted text-xs mt-1">${t.desc}</div>
@@ -1401,6 +1411,8 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       document.querySelectorAll('input[name="vocab-tier"]').forEach(r => {
         r.addEventListener('change', () => {
           state.tier = r.value;
+          state.isStandalone = ['TRYOUT', 'QUIZ', 'PRETEST'].includes(state.tier);
+          state.scheduleMode = state.isStandalone ? 'flexible' : 'batch';
           document.querySelectorAll('label[style*="border: 2px solid"]').forEach(l => {
             l.style.borderColor = 'var(--clr-border)';
             l.style.background = 'rgba(255,255,255,0.02)';
@@ -1488,7 +1500,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
       content.innerHTML = `<h4 class="fw-600 mb-3 text-sm" style="color:var(--clr-text-2);">Step 2 — Select Source</h4><div id="source-area"><div class="topscore-loading-center" style="min-height: 100px !important;"><div class="spinner"></div><p class="loading-text">Loading sources...</p></div></div>`;
       const sourceArea = document.getElementById('source-area');
 
-      if (state.tier === 'QUIZ' || state.tier === 'TASK') {
+      if (state.tier === 'TASK') {
         sourceArea.innerHTML = `
           <p class="text-muted text-sm mb-3">Select the Vault topic for this Task:</p>
           <div class="d-flex flex-column gap-2" style="max-height:280px;overflow-y:auto;" id="topic-radio-list">
@@ -1538,15 +1550,25 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             });
           });
         }
-      } else if (state.tier === 'TRYOUT') {
-        // PLACEMENT / STANDALONE TRYOUT STEP 2
+      } else if (state.tier === 'TRYOUT' || state.tier === 'QUIZ' || state.tier === 'PRETEST') {
+        // STANDALONE VAULT POOL STEP 2 (Quiz, Pre-Test, Placement / Try-Out)
+        const bannerTitle = state.tier === 'QUIZ'
+          ? 'Vocabulary Quiz (No Repetition &bull; Counts in Score)'
+          : state.tier === 'PRETEST'
+            ? 'Vocabulary Pre-Test (No Repetition &bull; 1 Attempt Only &bull; Excluded from Score)'
+            : 'Standalone Placement &amp; Try-Out Engine';
+        const bannerDesc = state.tier === 'QUIZ'
+          ? 'Operates without prerequisites or 7×7 repetition. Retakes are allowed, schedule is flexible, and the score counts toward the student&#39;s final grade.'
+          : state.tier === 'PRETEST'
+            ? 'Diagnostic pre-test without prerequisites or 7×7 repetition. Students can only take it once (no retake), schedule is flexible, and it does not affect final Score.'
+            : 'This test operates independently from curriculum gating. Students can take it anytime without needing to complete prerequisite tasks or 7×7 repetitive mastery.';
         sourceArea.innerHTML = `
           <div class="p-3 mb-3 rounded" style="background:rgba(56, 189, 248, 0.08);border:1px solid rgba(56, 189, 248, 0.25);">
             <div class="d-flex align-center gap-2 mb-1" style="color:#38bdf8;font-weight:700;font-size:12px;">
-              ${getSvgIcon('compass', 16) || getSvgIcon('target', 16)} Standalone Placement &amp; Try-Out Engine
+              ${getSvgIcon('compass', 16) || getSvgIcon('target', 16)} ${bannerTitle}
             </div>
             <div class="text-xs" style="color:var(--clr-text-2);line-height:1.5;">
-              This test operates independently from curriculum gating. Students can take it anytime without needing to complete prerequisite tasks or 7×7 repetitive mastery.
+              ${bannerDesc}
             </div>
           </div>
 
@@ -1668,7 +1690,7 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
           <div id="custom-quota-area" style="display:${state.quotaMode === 'custom' ? 'block' : 'none'};margin-top:0.75rem;">
             <input type="number" class="form-control" id="custom-quota-input" min="1" placeholder="Number of questions to sample" value="${state.customQuota || ''}" style="max-width:240px;" />
             <p class="text-muted text-xs mt-1">Words will be sampled proportionally across all source topics (stratified sampling).</p>
-            ${state.tier === 'TRYOUT' ? `
+            ${['TRYOUT', 'QUIZ', 'PRETEST'].includes(state.tier) ? `
               <div class="d-flex gap-2 mt-2 flex-wrap" id="tryout-quota-presets">
                 <button type="button" class="btn btn-secondary btn-sm" data-q="30" style="font-size:12px;padding:2px 8px;">30 Items (Quick Diagnostic)</button>
                 <button type="button" class="btn btn-secondary btn-sm" data-q="50" style="font-size:12px;padding:2px 8px;">50 Items (Standard Placement)</button>
@@ -1775,14 +1797,14 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
         showToast('Please complete all scope fields.', 'warning'); return;
       }
     } else if (state.step === 2) {
-      if ((state.tier === 'QUIZ' || state.tier === 'TASK') && !state.sourceTopic) {
+      if (state.tier === 'TASK' && !state.sourceTopic) {
         showToast('Please select a Vault topic.', 'warning'); return;
       }
       if (state.tier === 'EXAM' && !state.sourceQuizIds.length && !state.sourceTaskIds.length) {
         showToast('Please select at least one Task.', 'warning'); return;
       }
-      if (state.tier === 'TRYOUT' && (!state.selectedThemes || !state.selectedThemes.length)) {
-        showToast('Please select at least one theme for the placement test.', 'warning'); return;
+      if (['TRYOUT', 'QUIZ', 'PRETEST'].includes(state.tier) && (!state.selectedThemes || !state.selectedThemes.length)) {
+        showToast('Please select at least one theme for this test.', 'warning'); return;
       }
     } else if (state.step === 4) {
       // Final submission
@@ -1824,13 +1846,13 @@ export async function openTestBuilderModal(initialVaultTopics, overrides = {}) {
             sourceQuizIds: state.sourceQuizIds,
             testType: state.testType,
             answerType: state.answerType || (state.testType === 'IDIOM_PROVERB' ? 'dropdown_10' : 'written'),
-            isStandalone: state.tier === 'TRYOUT',
+            isStandalone: ['TRYOUT', 'QUIZ', 'PRETEST'].includes(state.tier),
             selectedThemes: state.selectedThemes || ['A', 'B', 'C', 'D'],
             category: state.category || 'words'
           });
           hideLoading();
           modal.remove();
-          const tierLabel = state.tier === 'TRYOUT' ? 'Placement Test' : state.tier;
+          const tierLabel = state.tier === 'TRYOUT' ? 'Placement Test' : (state.tier === 'PRETEST' ? 'Pre-Test' : (state.tier === 'QUIZ' ? 'Quiz' : state.tier));
           showToast(`${tierLabel} created: "${result.title}" — ${result.sampledWords} questions.`, 'success');
         }
       } catch (e) {

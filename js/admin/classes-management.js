@@ -694,38 +694,47 @@ export async function loadClassLearningPath(classId) {
 
     let taskCount = 0;
     let quizCount = 0;
+    let pretestCount = 0;
     let examCount = 0;
     let tryoutCount = 0;
 
     tests.forEach(asm => {
       const typeStr = (asm.test_type || '').toUpperCase();
-      const catStr = (asm.category || '').toUpperCase();
+      const catStr = (asm.category || asm.payload?.tier || '').toUpperCase();
+      const subStr = (asm.test_subtype || '').toUpperCase();
       const shell = (asm.shell_code || asm.payload?.shell_code || '').toUpperCase();
       const titleLower = (asm.title || '').toLowerCase();
 
-      const isExam = catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam');
-      const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
+      const isPretest = catStr === 'PRETEST' || subStr === 'VOCAB_PRETEST' || shell.startsWith('PRETEST-');
+      const isVocabQuiz = !isPretest && (String(asm.payload?.tier || '').toUpperCase() === 'QUIZ' || subStr === 'VOCAB_QUIZ_TEST' || shell.startsWith('QUIZ-'));
+      const isTryout = !isPretest && !isVocabQuiz && (catStr === 'TRYOUT' || shell.startsWith('TRYOUT'));
+      const isExam = !isPretest && !isVocabQuiz && !isTryout && (catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam'));
 
-      if (isTryout) {
+      if (isPretest) {
+        pretestCount++;
+      } else if (isVocabQuiz) {
+        quizCount++;
+      } else if (isTryout) {
         tryoutCount++;
       } else if (isExam) {
         examCount++;
       } else {
         taskCount++;
-        quizCount++;
       }
     });
 
-    const totalCount = taskCount + examCount + tryoutCount;
+    const totalCount = taskCount + examCount + quizCount + pretestCount + tryoutCount;
 
     const summaryHtml = `
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap;">
         <div style="display:flex; gap:1rem;">
         </div>
-        <div style="display:flex; gap:0.5rem;">
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
           <button class="btn btn-sm" id="filter-all" style="background:var(--clr-primary); color:#fff;">All (${totalCount})</button>
           <button class="btn btn-sm btn-secondary" id="filter-tasks">Tasks (${taskCount})</button>
           <button class="btn btn-sm btn-secondary" id="filter-exams">Exams (${examCount})</button>
+          <button class="btn btn-sm btn-secondary" id="filter-quizzes">Quizzes (${quizCount})</button>
+          <button class="btn btn-sm btn-secondary" id="filter-pretests">Pre-Tests (${pretestCount})</button>
           <button class="btn btn-sm btn-secondary" id="filter-tryouts">Try-Outs (${tryoutCount})</button>
         </div>
       </div>
@@ -735,14 +744,17 @@ export async function loadClassLearningPath(classId) {
 
     const gridData = tests.map((r, idx) => {
       const typeStr = (r.test_type || '').toUpperCase();
-      const catStr = (r.category || '').toUpperCase();
+      const catStr = (r.category || r.payload?.tier || '').toUpperCase();
+      const subStr = (r.test_subtype || '').toUpperCase();
       const shell = (r.shell_code || r.payload?.shell_code || '').toUpperCase();
       const titleLower = (r.title || '').toLowerCase();
 
-      const isExam = catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam');
-      const isTryout = catStr === 'TRYOUT' || shell.startsWith('TRYOUT');
-      const isTask = !isExam && !isTryout;
-      const isQuiz = isTask;
+      const isPretest = catStr === 'PRETEST' || subStr === 'VOCAB_PRETEST' || shell.startsWith('PRETEST-');
+      const isVocabQuiz = !isPretest && (String(r.payload?.tier || '').toUpperCase() === 'QUIZ' || subStr === 'VOCAB_QUIZ_TEST' || shell.startsWith('QUIZ-'));
+      const isTryout = !isPretest && !isVocabQuiz && (catStr === 'TRYOUT' || shell.startsWith('TRYOUT'));
+      const isExam = !isPretest && !isVocabQuiz && !isTryout && (catStr === 'EXAM' || typeStr === 'EXAM' || shell.endsWith('-EXAM') || titleLower.includes('exam'));
+      const isTask = !isExam && !isTryout && !isPretest && !isVocabQuiz;
+      const isQuiz = isVocabQuiz;
 
       const _isDyn = r?.payload?.is_dynamic_shell;
       const _vaultQ = r?.payload?.snapshot_question_count || r?.payload?.total_questions || 0;
@@ -760,7 +772,7 @@ export async function loadClassLearningPath(classId) {
         }
       } catch (_) {}
       const isVocab = detectClassType(className) === 'VOCABULARY';
-      const repetitions = isExam ? 1 : Math.max(1, parseInt(r?.payload?.task_repetitions || r?.required_repetitions || classTaskReps, 10) || 7);
+      const repetitions = (isExam || isTryout || isPretest || isVocabQuiz) ? 1 : Math.max(1, parseInt(r?.payload?.task_repetitions || r?.required_repetitions || classTaskReps, 10) || 7);
 
       let wordsCount = 0;
       let phrasesCount = 0;
@@ -794,7 +806,7 @@ export async function loadClassLearningPath(classId) {
         wordsCount,
         phrasesCount,
         status: r.status,
-        isExam, isTask, isQuiz, isTryout,
+        isExam, isTask, isQuiz, isPretest, isTryout,
         isTest: isExam, // backwards compatibility
         display_order: r.display_order,
         _raw: r
@@ -876,8 +888,17 @@ export async function loadClassLearningPath(classId) {
           }
         },
         {
-          key: 'type', label: 'TYPE', sortable: true, align: 'center', width: '75px',
+          key: 'type', label: 'TYPE', sortable: true, align: 'center', width: '85px',
           render: (val, row) => {
+            if (row.isPretest) {
+              return `<div style="font-size:12px; color:#38bdf8; white-space:nowrap; font-weight:600;">Pre-Test</div>`;
+            }
+            if (row.isQuiz) {
+              return `<div style="font-size:12px; color:var(--grade-c, #facc15); white-space:nowrap; font-weight:600;">Quiz</div>`;
+            }
+            if (row.isTryout) {
+              return `<div style="font-size:12px; color:#a855f7; white-space:nowrap; font-weight:600;">Try-Out</div>`;
+            }
             const rawType = String(row.type || 'Task').toLowerCase();
             const isExam = rawType.includes('exam');
             const label = isExam ? 'Exam' : 'Task';
@@ -887,8 +908,9 @@ export async function loadClassLearningPath(classId) {
         {
           key: 'repetitions', label: 'REPETITIONS', shortLabel: 'REPS', microLabel: 'REP', sortable: true, align: 'center', width: '85px',
           render: (val, row) => {
-            if (row.isExam) {
-              return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-3, #94a3b8); font-variant-numeric:tabular-nums;" title="Milestone Exam (1x Final)">1x</span>`;
+            if (row.isExam || row.isPretest || row.isQuiz || row.isTryout) {
+              const titleTip = row.isPretest ? 'Pre-Test (1 Attempt Only)' : (row.isQuiz ? 'Quiz (No Repetition)' : (row.isTryout ? 'Try-Out (No Repetition)' : 'Milestone Exam (1x Final)'));
+              return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-3, #94a3b8); font-variant-numeric:tabular-nums;" title="${titleTip}">1x</span>`;
             }
             const rCount = row.repetitions || 7;
             return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${rCount}x Repetitions Target">${rCount}x</span>`;
@@ -970,10 +992,12 @@ export async function loadClassLearningPath(classId) {
     const filterAll = document.getElementById('filter-all');
     const filterTasks = document.getElementById('filter-tasks');
     const filterExams = document.getElementById('filter-exams');
+    const filterQuizzes = document.getElementById('filter-quizzes');
+    const filterPretests = document.getElementById('filter-pretests');
     const filterTryouts = document.getElementById('filter-tryouts');
 
     const updateFilters = (btn, filterFn) => {
-      [filterAll, filterTasks, filterExams, filterTryouts].forEach(b => {
+      [filterAll, filterTasks, filterExams, filterQuizzes, filterPretests, filterTryouts].forEach(b => {
         if (!b) return;
         b.style.background = 'transparent';
         b.style.color = 'var(--clr-text)';
@@ -989,8 +1013,10 @@ export async function loadClassLearningPath(classId) {
     };
 
     if (filterAll) filterAll.onclick = () => updateFilters(filterAll, () => true);
-    if (filterTasks) filterTasks.onclick = () => updateFilters(filterTasks, r => r.isTask || r.isQuiz);
+    if (filterTasks) filterTasks.onclick = () => updateFilters(filterTasks, r => r.isTask);
     if (filterExams) filterExams.onclick = () => updateFilters(filterExams, r => r.isExam || r.isTest);
+    if (filterQuizzes) filterQuizzes.onclick = () => updateFilters(filterQuizzes, r => r.isQuiz);
+    if (filterPretests) filterPretests.onclick = () => updateFilters(filterPretests, r => r.isPretest);
     if (filterTryouts) filterTryouts.onclick = () => updateFilters(filterTryouts, r => r.isTryout);
 
   } catch (err) {

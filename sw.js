@@ -1,4 +1,9 @@
-const CACHE_NAME = 'topscore-cache-v246-bulletproof';
+// ─── AUTO-INVALIDATION: Bump BUILD_DATE any time you deploy changes ───────────
+// Format: YYYYMMDD_vNNN  — This single change forces ALL student devices to
+// automatically download the new Service Worker and clear the old cache.
+// Students NEVER need to manually clear their browser cache.
+const BUILD_DATE = '20261127_v248';
+const CACHE_NAME = `topscore-cache-${BUILD_DATE}`;
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -20,16 +25,16 @@ const ASSETS_TO_CACHE = [
   './css/tutor.css?v=20261123_v50',
   './css/components/avatars.css?v=20261028',
   './js/app.js?v=20261029',
-  './js/api.js?v=20261125_v688',
+  './js/api.js?v=20261127_v689',
   './js/auth.js?v=20261125_v680',
-  './js/dashboard.js?v=20261126_v691',
+  './js/dashboard.js?v=20261127_v692',
   './js/tutor.js?v=20261123_v50',
-  './js/test.js?v=20261126_v691',
-  './js/result.js?v=20261125_v690',
+  './js/test.js?v=20261127_v692',
+  './js/result.js?v=20261127_v692',
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261121_v161',
   './js/indonesia-regions.js?v=20261117_v547',
-  './js/grading.js?v=20261125_v688',
+  './js/grading.js?v=20261127_v692',
   './js/vendor/supabase.js',
   './js/vendor/xlsx.full.min.js?v=20261027d',
   './js/vendor/html2pdf.bundle.min.js?v=20261119_v1',
@@ -120,7 +125,9 @@ self.addEventListener('fetch', event => {
           resolve(new Response('', { status: 408, statusText: 'Network Timeout' }));
         }, 2500);
 
-        fetch(event.request, { cache: isDoc ? 'no-cache' : 'default' })
+        // Force no-cache for all code assets (HTML, JS, CSS) so HTTP cache
+        // never serves stale files even if the Service Worker update is pending.
+        fetch(event.request, { cache: 'no-cache' })
           .then(response => {
             if (!timedOut) {
               clearTimeout(timer);

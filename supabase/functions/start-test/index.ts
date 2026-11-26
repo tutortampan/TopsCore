@@ -255,7 +255,18 @@ Deno.serve(async (req) => {
     }
 
     // 5. Check Prerequisite Test
-    const isStandaloneTryout = test.payload?.is_standalone_tryout === true;
+    const isPretestTest = (test.category || test.payload?.tier || '').toUpperCase() === 'PRETEST' ||
+                          (test.test_subtype || '').toUpperCase() === 'VOCAB_PRETEST' ||
+                          (test.shell_code || '').toUpperCase().startsWith('PRETEST-');
+    const isQuizTest = !isPretestTest && (
+                       (test.category || test.payload?.tier || '').toUpperCase() === 'QUIZ' ||
+                       (test.test_subtype || '').toUpperCase() === 'VOCAB_QUIZ_TEST' ||
+                       (test.shell_code || '').toUpperCase().startsWith('QUIZ-')
+                     );
+    const isStandaloneTryout = test.payload?.is_standalone_tryout === true ||
+                               test.payload?.no_prerequisites === true ||
+                               isPretestTest ||
+                               isQuizTest;
     const prereqId = test.prerequisite_test_id;
     if (prereqId && !isStandaloneTryout) {
       const [prereqAttRes, prereqTestRes] = await Promise.all([
@@ -497,11 +508,18 @@ Deno.serve(async (req) => {
       return pct >= 60 || Boolean(a.is_forgiven) || Boolean(a.is_remedial_unlocked || a.is_remedial);
     });
 
+    // Strict 1-attempt cap for Pre-Test (retake is not allowed even if passed)
+    if (isPretestTest && attemptCount >= 1) {
+      return new Response(JSON.stringify({ error: "Pre-test can only be taken once (retake is not allowed)." }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
+      });
+    }
+
     // Exam retake cap: max 2 retakes = max 3 attempts total (unless authorized for remedial by tutor OR eligible for 24/7 self-paced retake)
     const isRemedialSession = test.payload?.test_session?.is_remedial === true ||
                               (Array.isArray(test.payload?.test_session?.remedial_student_ids) && test.payload.test_session.remedial_student_ids.includes(student_id)) ||
                               hasPastRemedialUnlocked;
-    if (test.test_type === 'exam' && attemptCount >= 3 && !isRemedialSession && !isEligibleForSelfPaced) {
+    if (!isStandaloneTryout && test.test_type === 'exam' && attemptCount >= 3 && !isRemedialSession && !isEligibleForSelfPaced) {
       return new Response(JSON.stringify({ error: "Maximum retake limit reached (2 retakes allowed)." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
@@ -593,7 +611,12 @@ Deno.serve(async (req) => {
             const isEx = (t.test_type || '').toLowerCase() === 'exam' ||
                          t.category === 'EXAM' ||
                          (t.shell_code || '').endsWith('-EXAM');
-            return !isEx;
+            const isNoRep = t.payload?.no_repetition === true ||
+                            t.payload?.is_standalone_tryout === true ||
+                            ['QUIZ', 'PRETEST', 'TRYOUT'].includes((t.category || t.payload?.tier || '').toUpperCase()) ||
+                            ['VOCAB_QUIZ_TEST', 'VOCAB_PRETEST'].includes((t.test_subtype || '').toUpperCase()) ||
+                            /^(QUIZ|PRETEST|TRYOUT)-/i.test(t.shell_code || '');
+            return !isEx && !isNoRep;
           });
 
           if (filteredTasks && filteredTasks.length > 0) {
@@ -644,6 +667,12 @@ Deno.serve(async (req) => {
                          t.category === 'EXAM' ||
                          (t.shell_code || '').endsWith('-EXAM');
             if (isEx) return false;
+            const isNoRep = t.payload?.no_repetition === true ||
+                            t.payload?.is_standalone_tryout === true ||
+                            ['QUIZ', 'PRETEST', 'TRYOUT'].includes((t.category || t.payload?.tier || '').toUpperCase()) ||
+                            ['VOCAB_QUIZ_TEST', 'VOCAB_PRETEST'].includes((t.test_subtype || '').toUpperCase()) ||
+                            /^(QUIZ|PRETEST|TRYOUT)-/i.test(t.shell_code || '');
+            if (isNoRep) return false;
             const tc = String(t.payload?.theme_code || (t.shell_code ? t.shell_code.replace(/^[0-9]+/, '').charAt(0) : '')).toUpperCase();
             if (tc !== themeCode) return false;
             const tTop = parseInt(String(t.payload?.topic_code || '').replace(/^[A-Za-z]+/, ''), 10);
@@ -908,8 +937,8 @@ Deno.serve(async (req) => {
       const isExamTest = String(test.test_type || '').toLowerCase() === 'exam' || String(test.category || '').toUpperCase() === 'EXAM';
       const payloadWordsAns = test.payload?.words_answer_type || test.payload?.wordsAnswerType;
       const payloadPhrasesAns = test.payload?.phrases_answer_type || test.payload?.phrasesAnswerType;
-      const settingsWordsAns = isExamTest ? classSettings?.wordsExamAnswer : classSettings?.wordsTaskAnswer;
-      const settingsPhrasesAns = isExamTest ? classSettings?.phrasesExamAnswer : classSettings?.phrasesTaskAnswer;
+      const settingsWordsAns = isStandaloneTryout ? null : (isExamTest ? classSettings?.wordsExamAnswer : classSettings?.wordsTaskAnswer);
+      const settingsPhrasesAns = isStandaloneTryout ? null : (isExamTest ? classSettings?.phrasesExamAnswer : classSettings?.phrasesTaskAnswer);
 
       let wordsAnswerType = sessModes?.words || sessAnsweringMode || payloadWordsAns || settingsWordsAns || dynamicAnswerType;
       let phrasesAnswerType = sessModes?.phrases || sessAnsweringMode || payloadPhrasesAns || settingsPhrasesAns || (isUnified ? (dynamicAnswerType === 'written' ? 'selection' : dynamicAnswerType) : dynamicAnswerType);
