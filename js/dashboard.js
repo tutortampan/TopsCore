@@ -6,9 +6,9 @@
 import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, fetchStudentAttemptsForTest, fetchAllStudentAttempts, fetchAttemptAnswers, updateStudentPin, changePin, uploadStudentPhoto, updateStudentGender, updateStudentBirthday, updateStudentEducation, formatStudentName, cleanStudentName, formatMatrixStudentName, fetchAssignments, fetchTests, toOrdinalLevel, toShortLevel, isCampContext, formatAcademicTier, resolveContextYear, fetchBatches, fetchStudentLevel, fetchFullStudentProfile, fetchActiveTestSession, fetchClassTestSettings } from './api.js?v=20261125_v688';
     import { requireStudentSession, clearStudentSession, updateStudentSessionGender, setStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, getGrade, withTimeout, escapeHtml, escHtml } from './app.js?v=20261106_v160';
-    import { testMicrophoneCapability } from './speech.js?v=20261106_v160';
+    import { testMicrophoneCapability } from './speech.js?v=20261126_v691';
     import { processAndCompressAvatar } from './utils/avatar-engine.js?v=20261106_v160';
-    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets } from './grading.js?v=20261125_v688';
+    import { TOPSCORE_COLORS, GRADE_PALETTE, getGradeSymbol, getGradeColor, getScoreColor, getGradeColorByScore, getAchievementStatus, getTaskProgressVisual, isExam, isWeeklyExam, isPretest, isVocabQuiz, isNoRepetitionTest, calculateGrade, computeMilestoneExamMastery, computeUnifiedScore, computeTopicPassLevel, getClassSvgIcon, formatTestDisplay, formatTestTitleHtml, detectClassDiscipline, isVocabularyClass, formatGradeBadgeHtml, isManualEvaluationClass, isCbtEvaluationClass, resolveTaskRepTargets } from './grading.js?v=20261125_v688';
     import { INDONESIA_REGIONS, formatProvinceName, formatCityDistrict, formatDistrictName, formatVillageName, getDistrictsForCity, getVillagesForDistrict } from './indonesia-regions.js?v=20261117_v547';
     import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
     import { getSupabase } from './supabase.js?v=20261121_v161';
@@ -980,22 +980,30 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       headerMic.className = res?.ok ? 'header-mic-badge active' : 'header-mic-badge warning';
     }
 
-    async function checkMicrophoneOnEntry() {
+    async function checkMicrophoneOnEntry(fromUserGesture = false) {
       try {
         const res = await testMicrophoneCapability();
         updateHeaderMicStatus(res);
         micReady = !!res?.ok;
         updatePhotoGateState();
+        if (!res?.ok && fromUserGesture && res?.message) {
+          showToast(res.message, 'warning');
+        } else if (res?.ok && fromUserGesture) {
+          showToast('Microphone is active and ready.', 'success');
+        }
         return res;
       } catch (err) {
         console.warn('Microphone entry test error:', err);
         micReady = false;
         updatePhotoGateState();
+        if (fromUserGesture) {
+          showToast('Could not activate microphone. Please check browser permissions.', 'warning');
+        }
       }
     }
 
-    document.getElementById('card-status-mic')?.addEventListener('click', checkMicrophoneOnEntry);
-    document.getElementById('btn-retry-mic')?.addEventListener('click', checkMicrophoneOnEntry);
+    document.getElementById('card-status-mic')?.addEventListener('click', () => checkMicrophoneOnEntry(true));
+    document.getElementById('btn-retry-mic')?.addEventListener('click', () => checkMicrophoneOnEntry(true));
 
     // Single Camera Action Button (Toggles Snap / Retake)
     document.getElementById('btn-camera-action')?.addEventListener('click', async () => {
@@ -1626,7 +1634,7 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           if (t.deleted_at) return false;
           const status = (t.status || '').toUpperCase();
           if (status !== 'PUBLISHED' && status !== 'ACTIVE') return false;
-          return t.class_id === activeClassId && !isExam(t);
+          return t.class_id === activeClassId && !isExam(t) && !isNoRepetitionTest(t);
         });
         classTasks.sort((a, b) => {
           const ordA = a.display_order ?? 999;
@@ -1912,6 +1920,11 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       const isTestPassed = (t) => {
         if (!t) return true;
         if (isForgivenByTest[t.id]) return true;
+        if (isPretest(t)) return bestMap[t.id] != null;
+        if (isNoRepetitionTest(t)) {
+          const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
+          return bestMap[t.id] != null && bestMap[t.id] >= req;
+        }
         const isUni = t.payload?.is_unified === true || t.category === 'unified' || (t.test_subtype && t.test_subtype.startsWith('UNIFIED'));
         if (isExam(t)) {
           const req = Number(t.minimum_required_score) || Number(t.payload?.min_score) || 60;
@@ -3103,7 +3116,8 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const gradeColor = bestPct !== null ? getGradeColorByScore(bestPct) : 'var(--clr-text-1)';
         const passed = bestPct !== null && (bestPct >= (asm.pass_threshold || 60) || isForgiven || (isRem && bestPct >= 60));
 
-        const isTaskItem = !isExam(asm);
+        const isNoGate = isNoRepetitionTest(asm);
+        const isTaskItem = !isExam(asm) && !isNoGate;
         const taskVisual = isTaskItem ? getTaskProgressVisual(passCountByTest[asm.id] || 0) : null;
         const taskProgressBadge = taskVisual
           ? `<span class="task-progress-chip ${taskVisual.tierClass}" style="background:${taskVisual.bg};color:${taskVisual.color};border:1px solid ${taskVisual.border};">${taskVisual.text}</span>`
@@ -3116,19 +3130,23 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         const isExamSubtype = asm.test_subtype === 'VOCAB_EXAM' || asm.test_subtype === 'PHRASE_EXAM' || asm.test_subtype === 'VOCAB_TEST' || asm.test_subtype === 'PHRASE_TEST';
         const isExamShell = (asm.shell_code || '').endsWith('-EXAM') || (asm.shell_code || '').endsWith('-TEST');
         const isExamTitle = ((asm.title || '').toLowerCase().includes('exam') || (asm.title || '').toLowerCase().includes('test')) && !(asm.title || '').toLowerCase().includes('quiz') && !(asm.title || '').toLowerCase().includes('task');
-        const isThemeTest = ((asm.test_type || '').toLowerCase() === 'exam' || asm.category === 'EXAM' || isExamSubtype || isExamShell || isExamTitle) &&
+        const isThemeTest = !isNoGate && ((asm.test_type || '').toLowerCase() === 'exam' || asm.category === 'EXAM' || isExamSubtype || isExamShell || isExamTitle) &&
                             !(asm.shell_code || '').includes('-QUIZ') &&
                             !(asm.shell_code || '').includes('-TASK') &&
                             !(asm.test_subtype || '').includes('QUIZ') &&
+                            !(asm.test_subtype || '').includes('PRETEST') &&
                             !(asm.test_subtype || '').includes('TASK') &&
                             !(asm.title || '').toLowerCase().includes('quiz') &&
                             !(asm.title || '').toLowerCase().includes('task') &&
                             (asm.test_type || '').toLowerCase() !== 'quiz';
 
-        if (isThemeTest) {
+        if (isNoGate) {
+          prereqMet = true;
+        } else if (isThemeTest) {
           const themeCode = asm.payload?.theme_code;
           if (themeCode) {
             const siblingTasks = tests.filter(a =>
+              !isNoRepetitionTest(a) &&
               (a.test_type === 'task' || a.test_type === 'quiz' || a.category === 'TASK' || a.category === 'QUIZ' || a.test_subtype === 'VOCAB_TASK' || a.test_subtype === 'PHRASE_TASK' || a.test_subtype === 'VOCAB_QUIZ' || a.test_subtype === 'PHRASE_QUIZ' || (a.shell_code || '').includes('-TASK') || (a.shell_code || '').includes('-QUIZ')) &&
               a.payload?.theme_code === themeCode &&
               a.level_id === asm.level_id &&
@@ -3318,7 +3336,9 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
           const session = asm.payload?.test_session;
           const isSessionUnlocked = isAlumni || (session?.status === 'UNLOCKED' && (!session.auto_close_at || new Date(session.auto_close_at) > new Date()));
 
-          let retakesAllowed = isAlumni || asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length));
+          let retakesAllowed = isPretest(asm)
+            ? false
+            : (isAlumni || asm.max_attempts == null || (asm.max_attempts > (allAttempts.filter(a => (a.test_id || a.Test_id) === asm.id && (a.status || '').toUpperCase() !== 'IN_PROGRESS').length)));
 
           const isEligibleForSelfPacedExam = Boolean(isAlumni || passed || bestAtt?.is_forgiven || hasForgivenByTest[asm.id] || isStudentRemedialUnlocked || isRemedialSession);
 

@@ -87,13 +87,22 @@ export async function testMicrophoneCapability() {
   // 4. Active Device Stream Test & Immediate Cleanup
   let stream = null;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+    } catch (constraintErr) {
+      // iOS Safari / WKWebView fallback: retry with minimal constraint { audio: true }
+      if (constraintErr.name === 'OverconstrainedError' || constraintErr.name === 'NotReadableError' || isIOS()) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } else {
+        throw constraintErr;
       }
-    });
+    }
 
     // Check if audio tracks are active
     const audioTracks = stream.getAudioTracks();
@@ -115,7 +124,9 @@ export async function testMicrophoneCapability() {
 
     if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
       state = 'permission_denied';
-      message = 'Microphone permission was denied. Please allow microphone access to take speech Tests.';
+      message = isIOS()
+        ? 'Microphone blocked on iPhone. Open Safari (not Chrome/in-app browser), tap "aA" or site settings > Website Settings > Microphone > Allow, and check iOS Settings > Safari > Microphone.'
+        : 'Microphone permission was denied. Please allow access in browser settings.';
     } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
       state = 'no_device';
       message = 'No microphone device was detected on your phone or computer. Please connect a microphone or headset.';
@@ -161,7 +172,10 @@ export function createSpeechSession({
   onEnd,
 } = {}) {
   if (!isSpeechSupported()) {
-    onError?.('Speech recognition is not supported in this browser. Please use Chrome or Edge.');
+    const unsupportedMsg = isIOS()
+      ? 'Speech recognition on iPhone requires Safari with Dictation enabled (Settings > General > Keyboard > Enable Dictation).'
+      : 'Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.';
+    onError?.(unsupportedMsg);
     return { start: () => {}, stop: () => {}, abort: () => {}, isListening: () => false, getState: () => 'idle' };
   }
 
@@ -299,16 +313,17 @@ export function createSpeechSession({
       _isAborted = false;
       _isStopping = false;
 
-      // 4-second watchdog in case browser speech service hangs on start
+      // Watchdog in case browser speech service hangs on start (longer on iOS for permission prompt / Siri init)
       _clearWatchdog();
+      const watchdogMs = isIOS() ? 8000 : 4000;
       _watchdogTimer = setTimeout(() => {
         if (_state === 'starting') {
-          console.warn('[SpeechSession] Watchdog timeout: microphone initialization took >4s. Forcing abort.');
+          console.warn(`[SpeechSession] Watchdog timeout: microphone initialization took >${watchdogMs / 1000}s. Forcing abort.`);
           _state = 'idle';
           try { recognition.abort(); } catch(_) {}
           onError?.('Microphone initialization timed out. Please tap to retry.');
         }
-      }, 4000);
+      }, watchdogMs);
 
       try {
         recognition.start();

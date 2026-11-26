@@ -1,4 +1,4 @@
-const CACHE_NAME = 'topscore-cache-v245-bulletproof';
+const CACHE_NAME = 'topscore-cache-v246-bulletproof';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -22,9 +22,9 @@ const ASSETS_TO_CACHE = [
   './js/app.js?v=20261029',
   './js/api.js?v=20261125_v688',
   './js/auth.js?v=20261125_v680',
-  './js/dashboard.js?v=20261125_v688',
+  './js/dashboard.js?v=20261126_v691',
   './js/tutor.js?v=20261123_v50',
-  './js/test.js?v=20261125_v688',
+  './js/test.js?v=20261126_v691',
   './js/result.js?v=20261125_v690',
   './js/session.js?v=20261108_v162',
   './js/supabase.js?v=20261121_v161',

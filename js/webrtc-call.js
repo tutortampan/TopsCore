@@ -40,14 +40,22 @@ export class WebRTCCallEngine {
     if (this.localStream) return this.localStream;
 
     try {
-      this.localStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        },
-        video: false
-      });
+      try {
+        this.localStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          },
+          video: false
+        });
+      } catch (constraintErr) {
+        if (constraintErr.name === 'OverconstrainedError' || constraintErr.name === 'NotReadableError' || /iPad|iPhone|iPod/.test(navigator.userAgent)) {
+          this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        } else {
+          throw constraintErr;
+        }
+      }
 
       this._initAudioContext();
       this._attachLocalAnalyser(this.localStream);

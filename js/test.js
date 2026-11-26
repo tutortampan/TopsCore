@@ -8,7 +8,7 @@ import { startTest, submitTest, getServerTimeWita, checkAndTriggerLevelUp, getSe
     import { requireStudentSession } from './session.js?v=20261106_v160';
     import { showToast, showLoading, hideLoading, formatTime, escapeHtml, escHtml } from './app.js?v=20261106_v160';
     import { startCountdown, isExpired } from './timer.js?v=20261106_v160';
-    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261106_v160';
+    import { createSpeechSession, isSpeechSupported } from './speech.js?v=20261126_v691';
     import { SUPABASE_URL, SUPABASE_ANON_KEY, getSupabase } from './supabase.js?v=20261106_v160';
     import { requestScreenWakeLock, releaseScreenWakeLock, bindWakeLockGestures, getWakeLockStatus } from './wake-lock.js?v=20261106_v160';
 import { getSvgIcon } from './svg-icons.js?v=20261114_v487';
@@ -3444,7 +3444,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             console.warn('Speech recognition error:', err);
             micBtn.style.transform = 'scale(1)';
             micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
-            micStatus.innerHTML = '<span style="color:var(--grade-e, #ff0000);">Mic Error — Tap to Retry</span>';
+            micStatus.innerHTML = `<span style="color:var(--grade-e, #ff0000);">${escapeHtml(typeof err === 'string' ? err : 'Mic Error — Tap to Retry')}</span>`;
+            if (typeof err === 'string' && err) showToast(err, 'warning');
           }
         });
 
