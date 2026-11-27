@@ -44,9 +44,26 @@ const DEFAULT_THEME_PALETTE = { color: 'var(--quad-a, #ff2d87)', bgRgba: 'rgba(v
 let _activeClassHubContext = null;
 let _selectedBatchId = null;
 let _selectedMatrixTheme = 'A';
+let _selectedExamKey = null;
+let _selectedExamClassId = null;
 let _currentOpenModalTheme = null;
 let _currentOpenModalMode = 'normal'; // 'normal' | 'remedial'
 let _currentLateModalTheme = null;
+
+function getExamItemKey(t, idx = 0) {
+  if (!t) return '';
+  return String(t.examTest?.id || t.wordsTest?.id || t.phrasesTest?.id || `${t.code || 'EXAM'}_${idx}`);
+}
+
+function findThemeByEventTarget(el, themesData) {
+  const examKey = el?.getAttribute('data-exam-key');
+  if (examKey) {
+    const byKey = themesData.find((t, idx) => getExamItemKey(t, idx) === examKey);
+    if (byKey) return byKey;
+  }
+  const themeCode = el?.getAttribute('data-theme');
+  return themesData.find(t => t.code === themeCode);
+}
 
 // Backward-compatibility delegator for loadSection('test-access')
 export async function renderTestAccess(area) {
@@ -356,9 +373,12 @@ export function buildClassThemesData(classTests = [], context = {}, selectedBatc
         phrasesTest: null,
         examTest: t,
         tasks,
-        duration: t.working_duration_minutes || 40,
-        totalQuestions: t.total_questions || (Array.isArray(t.questions) ? t.questions.length : 20),
-        moduleName: t.test_type || 'Exam Module',
+        duration: t.working_duration_minutes || t.payload?.working_duration_minutes || 60,
+        totalQuestions: t.payload?.topic_questions_count ?? t.total_questions ?? t.payload?.total_questions ?? (Array.isArray(t.questions) ? t.questions.length : 20),
+        moduleName: (() => {
+          const m = String(t.answer_type || t.payload?.answer_type || t.payload?.module_key || '').trim();
+          return m ? (m.charAt(0).toUpperCase() + m.slice(1)) : (t.test_type || 'Exam Module');
+        })(),
         isLive,
         remainingMinutes,
         liveBatchName,
@@ -417,22 +437,22 @@ function renderRegularAttendanceCard({
   uncheckedCount,
   totalDebt
 }) {
-  const borderRgba = isLive ? 'rgba(34, 197, 94, 0.7)' : 'rgba(34, 197, 94, 0.35)';
+  const borderRgba = 'rgba(255, 255, 255, 0.1)';
 
   const topBlock = `
     <div style="display: flex; flex-direction: column; gap: 6px;">
       <!-- Line 1: Header + Live/Standby Badge -->
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 2px; line-height: 1.4;">
-        <span style="font-size: 12px; font-weight: 800; color: var(--grade-a, #00c000); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
-          <span style="color: var(--grade-a, #00c000);">REGULAR CLASS</span> &bull; ATTENDANCE
+        <span style="font-size: 12px; font-weight: 800; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
+          REGULAR CLASS &bull; ATTENDANCE
         </span>
         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           ${isLive ? `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.15); border: 1px solid var(--grade-a, #00c000); color: var(--grade-a, #00c000);">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.55); color: var(--grade-a, #00c000);">
               LIVE (ACTIVE)
             </span>
           ` : `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.08); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.15);">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background: rgba(255, 255, 255, 0.06); color: #94a3b8; border: 1px solid rgba(255, 255, 255, 0.12);">
               STANDBY
             </span>
           `}
@@ -440,7 +460,7 @@ function renderRegularAttendanceCard({
       </div>
 
       <!-- Line 2: Class Meeting Title -->
-      <div style="font-size: 12px; font-weight: 700; color: #93c5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
+      <div style="font-size: 12px; font-weight: 600; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
         ${escapeHtml(className || 'General Class')} &bull; Meeting ${meetingNum} / ${totalMeetings}
       </div>
 
@@ -448,7 +468,7 @@ function renderRegularAttendanceCard({
       <div style="background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; line-height: 1.5;">
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: #94a3b8; font-weight: 500;">Dynamic Code:</span>
-          <span style="color: #38bdf8; font-weight: 800; font-family: var(--fm-font-mono, monospace); letter-spacing: 0.08em;">${isLive ? liveCode : 'AUTO GENERATE'}</span>
+          <span style="color: ${isLive ? '#38bdf8' : '#cbd5e1'}; font-weight: 800; font-family: var(--fm-font-mono, monospace); letter-spacing: 0.08em;">${isLive ? liveCode : 'AUTO GENERATE'}</span>
         </div>
         <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px;">
           <span style="color: #94a3b8; font-weight: 500;">Discipline &amp; QRIS:</span>
@@ -464,20 +484,20 @@ function renderRegularAttendanceCard({
   if (isLive) {
     row2Content = `
       <div style="height:36px;">
-        <button type="button" class="btn btn-wireframe-live-view btn-regular-live-view" style="width:100%; border:1px solid var(--grade-a, #00c000); background:var(--grade-a, #00c000); color:#ffffff; font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Regular Class Attendance Session is Live">
+        <button type="button" class="btn btn-wireframe-live-view btn-regular-live-view" title="Regular Class Attendance Session is Live">
           LIVE ATTENDANCE &bull; ${presentCount} PRESENT (${uncheckedCount} PENDING)
         </button>
       </div>
     `;
     row3Content = `
       <div class="card-block-row-buttons" style="display:flex; gap:6px;">
-        <button type="button" class="btn btn-wireframe-beacon btn-toggle-beacon" style="flex:1; border:1px solid rgba(56,189,248,0.7); color:#38bdf8; background:rgba(56,189,248,0.06); font-weight:700; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;">
+        <button type="button" class="btn btn-wireframe-beacon btn-toggle-beacon" style="padding:4px 6px;">
           BEACON: 10m
         </button>
-        <button type="button" class="btn btn-wireframe-code btn-copy-code" data-code="${liveCode}" style="flex:1; border:1px solid rgba(255,255,255,0.2); color:#ffffff; background:rgba(255,255,255,0.06); font-weight:700; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Copy 6-character check-in code">
+        <button type="button" class="btn btn-wireframe-code btn-copy-code" data-code="${liveCode}" style="flex:1; border:1px solid rgba(255,255,255,0.14); color:#cbd5e1; background:rgba(255,255,255,0.04); font-weight:700; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Copy 6-character check-in code">
           CODE: ${liveCode}
         </button>
-        <button type="button" class="btn btn-wireframe-close btn-close-regular-session" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:var(--grade-e, #ff0000); background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); font-weight:800; font-size:12px; padding:4px 6px; border-radius:6px; cursor:pointer;" title="Close Active Attendance Session (Auto-Alpha Unchecked)">
+        <button type="button" class="btn btn-wireframe-close btn-close-regular-session" style="padding:4px 6px;" title="Close Active Attendance Session (Auto-Alpha Unchecked)">
           CLOSE
         </button>
       </div>
@@ -485,7 +505,7 @@ function renderRegularAttendanceCard({
   } else {
     row2Content = `
       <div class="card-block-row-buttons" style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-wireframe-normal btn-start-regular-session" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:var(--grade-a, #00c000); background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.08); font-weight:800; font-size:12px; height:36px; border-radius:6px; cursor:pointer;" title="Start Regular Class Session with Live Attendance">
+        <button type="button" class="btn btn-wireframe-normal btn-start-regular-session" style="height:36px;" title="Start Regular Class Session with Live Attendance">
           START CLASS (${activeBatchStudents.length} Students)
         </button>
       </div>
@@ -498,7 +518,7 @@ function renderRegularAttendanceCard({
   }
 
   return `
-    <div class="theme-test-card-frame" style="height:250px !important; min-height:250px !important; max-height:250px !important; padding:12px 14px !important; box-sizing:border-box !important; border:1px solid ${borderRgba} !important; background:#0f172a !important; border-radius:8px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; overflow:hidden !important;">
+    <div class="theme-test-card-frame" style="height:250px !important; min-height:250px !important; max-height:250px !important; padding:12px 14px !important; box-sizing:border-box !important; border:1px solid rgba(255,255,255,0.1) !important; background:#0f172a !important; border-radius:8px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; overflow:hidden !important;">
       <div class="theme-test-card-inner" style="height:100% !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; background:transparent !important; border:none !important; padding:0 !important; overflow:hidden !important;">
         ${topBlock}
         <div style="display:flex; flex-direction:column; gap:10px;">
@@ -649,10 +669,12 @@ function renderExamEligibleStudentsTable(activeTheme, activeBatchStudents, theme
     return { student, rank, badgeLabel, badgeColor, detail, detailColor, examScores };
   }).sort((a, b) => a.rank - b.rank || String(a.student.name || '').localeCompare(String(b.student.name || '')));
 
+  const isSameExamCol = (th) => Boolean(activeTheme && th && (th === activeTheme || (th.examTest?.id && activeTheme.examTest?.id ? th.examTest.id === activeTheme.examTest.id : th.code === activeTheme.code)));
+
   const eligibleTotal = items.filter(i => i.rank < 2).length;
   const examHeadersHtml = examThemes.map((th, i) => {
     const exTitle = th.examTest?.title || `${th.code} - ${th.name}`;
-    const isActiveCol = activeTheme && th.code === activeTheme.code;
+    const isActiveCol = isSameExamCol(th);
     const hdrColor = isActiveCol ? '#ff2d87' : '#38bdf8';
     return `<th style="min-width: 78px; padding: 6px 6px; text-align: center; color: ${hdrColor}; position: sticky; top: 0; background: #1e293b; z-index: 5; white-space: nowrap;" title="${escapeHtml(exTitle)}">EX-${i + 1}</th>`;
   }).join('');
@@ -663,7 +685,7 @@ function renderExamEligibleStudentsTable(activeTheme, activeBatchStudents, theme
     : items.map((item, idx) => {
         const examCellsHtml = item.examScores.map((sc, i) => {
           const th = examThemes[i];
-          const isActiveCol = activeTheme && th?.code === activeTheme.code;
+          const isActiveCol = isSameExamCol(th);
           if (isActiveCol && item.badgeLabel !== 'PASSED') {
             return `<td style="padding:6px 6px; text-align:center; color:${item.badgeColor}; font-size:12px; font-weight:800; white-space:nowrap;" title="EX-${i + 1}: ${escapeHtml(item.detail)}">${item.badgeLabel}</td>`;
           }
@@ -782,15 +804,34 @@ export async function renderClassTestSessions(container, context = {}) {
   // Count active sessions
   const liveCount = themesData.filter(t => t.isLive).length;
 
-  // Update Lower Infobar Metadata (50px Lower Sub-Panel)
-  if (typeof window.setBottomInfobar === 'function') {
+  if (_selectedExamClassId !== classId) {
+    _selectedExamKey = null;
+    _selectedExamClassId = classId;
+  }
+
+  let activeTheme = _selectedExamKey
+    ? themesData.find((t, idx) => getExamItemKey(t, idx) === _selectedExamKey)
+    : null;
+  if (!activeTheme) {
+    activeTheme = themesData.find(t => t.isLive) ||
+      themesData.find(t => t.eligibleNormalCount > 0 || t.eligibleRemedialCount > 0) ||
+      themesData[0];
+  }
+  if (activeTheme) {
+    const activeIdx = themesData.indexOf(activeTheme);
+    _selectedExamKey = getExamItemKey(activeTheme, activeIdx >= 0 ? activeIdx : 0);
+    _selectedMatrixTheme = activeTheme.code;
+  }
+
+  const updateBottomInfobarForTheme = (selTheme) => {
+    if (typeof window.setBottomInfobar !== 'function') return;
     const totalExamsCount = isVocab
       ? themesData.reduce((acc, t) => acc + (t.examTest ? 1 : ((t.wordsTest ? 1 : 0) + (t.phrasesTest ? 1 : 0))), 0)
       : themesData.length;
     const selectedBatch = effectiveBatches.find(b => b.id === _selectedBatchId) || effectiveBatches[0];
-    const selTheme = themesData.find(t => t.code === _selectedMatrixTheme) || themesData[0];
-    const readyRatio = selTheme ? `${selTheme.eligibleNormalCount}/${selTheme.batchTotalStudents}` : '0/0';
-    const readyPct = selTheme && selTheme.batchTotalStudents > 0 ? Math.round((selTheme.eligibleNormalCount / selTheme.batchTotalStudents) * 100) : 0;
+    const targetTheme = selTheme || themesData[0];
+    const readyRatio = targetTheme ? `${targetTheme.eligibleNormalCount}/${targetTheme.batchTotalStudents}` : '0/0';
+    const readyPct = targetTheme && targetTheme.batchTotalStudents > 0 ? Math.round((targetTheme.eligibleNormalCount / targetTheme.batchTotalStudents) * 100) : 0;
 
     const leftHtml = isVocab ? `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
@@ -808,7 +849,7 @@ export async function renderClassTestSessions(container, context = {}) {
     const centerHtml = isVocab ? `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
         <span style="color:#cbd5e1; font-weight:700;">Batch ${escapeHtml(selectedBatch?.name || '')} (${activeBatchStudents.length} Students):</span>
-        <span style="color:${getGradeColorByScore(readyPct)}; font-weight:800;">Theme ${selTheme?.code || 'A'}: ${readyRatio} Ready (${readyPct}%)</span>
+        <span style="color:${getGradeColorByScore(readyPct)}; font-weight:800;">Theme ${targetTheme?.code || 'A'}: ${readyRatio} Ready (${readyPct}%)</span>
       </div>
     ` : `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px;">
@@ -824,7 +865,9 @@ export async function renderClassTestSessions(container, context = {}) {
       </div>
     `;
     window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
-  }
+  };
+
+  updateBottomInfobarForTheme(activeTheme);
 
   // 1. Attendance & Active Regular Session Data
   let activeRegularSession = null;
@@ -898,11 +941,6 @@ export async function renderClassTestSessions(container, context = {}) {
     else regularUncheckedCount++;
   });
 
-  // Progressive Next Stage Active Theme (Theme A -> B -> C -> D)
-  const activeTheme = themesData.find(t => t.isLive) ||
-    themesData.find(t => t.eligibleNormalCount > 0 || t.eligibleRemedialCount > 0) ||
-    themesData[0];
-
   container.innerHTML = `
     <div class="test-sessions-tab-wrapper" style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; overflow: hidden; padding: 2px 0 0;">
       <!-- Single-Line Sleek Top Toolbar (Streamlined & Compact) -->
@@ -944,7 +982,7 @@ export async function renderClassTestSessions(container, context = {}) {
         </div>
       </div>
 
-      <!-- Dual Harmonious Session Cards (Regular Attendance & Progressive Exam, Matching 250px Height & 10px Gap) -->
+      <!-- Dual Harmonious Session Cards (Regular Attendance & Selected Exam, Matching 250px Height & 10px Gap) -->
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; flex-shrink: 0;">
         ${renderRegularAttendanceCard({
           className: className || currentClass?.name || 'General Class',
@@ -957,7 +995,9 @@ export async function renderClassTestSessions(container, context = {}) {
           uncheckedCount: regularUncheckedCount,
           totalDebt: totalViolationsDebt
         })}
-        ${renderThemeCard(activeTheme, context)}
+        <div id="exam-session-active-card-container">
+          ${renderThemeCard(activeTheme, context)}
+        </div>
       </div>
 
       <!-- Dual Harmonized Monitor Tables (Left: Live Attendance, Right: Exam Eligibility) -->
@@ -973,7 +1013,7 @@ export async function renderClassTestSessions(container, context = {}) {
 
     <!-- Modal 1: Open Test Session (Normal / Remedial) — Standardized Slim Floating Window (Phase 610 Mobile-Ready) -->
     <div id="modal-theme-open-session" class="modal-backdrop hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.8); display:flex; align-items:center; justify-content:center; z-index:9999; padding:10px;">
-      <div class="modal-box" style="background:#0f172a; border:1.5px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:520px; max-height:88vh; height:660px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9); padding:0 !important;">
+      <div class="modal-box" style="background:#0f172a; border:1.5px solid rgba(255,255,255,0.18); border-radius:14px; width:100%; max-width:580px; max-height:90vh; height:700px; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,0.9); padding:0 !important;">
 
         <!-- 1. Header (Standardized Title Area 60px Solid Navy Banner per Invariant 1.5.1, Centered ALL CAPS) -->
         <div class="modal-header title-area" style="height:60px; min-height:60px; max-height:60px; padding:0 20px; border-bottom:1.5px solid rgba(255,255,255,0.16); display:flex; justify-content:center; align-items:center; background:#1E293B; box-sizing:border-box; flex-shrink:0; margin:0 !important;">
@@ -983,13 +1023,28 @@ export async function renderClassTestSessions(container, context = {}) {
         <!-- 2. Modal Body: Streamlined Vertical Stack (Compact Settings Top, Full Student Table Bottom) -->
         <div style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
 
-          <!-- TOP CONFIG SECTION: Batch, Modules (Dropdowns), Duration, Tutor Override -->
+          <!-- TOP CONFIG SECTION: Exam Selector (if >1 exam), Batch, Modules (Dropdowns), Duration, Tutor Override -->
           <div style="padding:10px; display:flex; flex-direction:column; gap:10px; background:rgba(0,0,0,0.25); border-bottom:1px solid rgba(255,255,255,0.12); flex-shrink:0;">
+
+            <!-- Row 0: Exam Selector (Shown when class has multiple exams) -->
+            <div id="open-modal-exam-select-row" style="${themesData.length > 1 ? 'display:block;' : 'display:none;'}">
+              <label for="open-modal-exam-select" class="form-label" style="font-weight:800; font-size:12px; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Select Exam</label>
+              <select id="open-modal-exam-select" class="form-control" style="width:100%; height:30px; background:#1e293b; border:1px solid rgba(56,189,248,0.4); color:#ffffff; padding:2px 8px; border-radius:5px; font-weight:700; font-size:12px; cursor:pointer;">
+                ${themesData.map((t, idx) => {
+                  const key = getExamItemKey(t, idx);
+                  const label = t.isNonVocab
+                    ? `EX-${idx + 1} • ${t.name}`
+                    : `EX-${idx + 1} • ${t.code} - ${t.name}`;
+                  const statusStr = t.isLive ? ` (LIVE ${t.remainingMinutes}m)` : ` (${t.eligibleNormalCount}/${t.batchTotalStudents} Ready)`;
+                  return `<option value="${escapeHtml(key)}">${escapeHtml(label + statusStr)}</option>`;
+                }).join('')}
+              </select>
+            </div>
 
             <!-- Row 1: Target Batch & Enrolled Counter -->
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:flex-end;">
               <div>
-                <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">1. Target Batch</label>
+                <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:4px; display:block;">${themesData.length > 1 ? '2. Target Batch' : '1. Target Batch'}</label>
                 ${isSingleBatch ? `
                   <div style="height:30px; background:#1e293b; border:1px solid rgba(56,189,248,0.3); border-radius:5px; padding:0 10px; display:flex; align-items:center; color:#38bdf8; font-weight:800; font-size:12px;">
                     Batch ${escapeHtml(effectiveBatches[0]?.name || _selectedBatchId || '—')}
@@ -1005,9 +1060,9 @@ export async function renderClassTestSessions(container, context = {}) {
               </div>
 
               <!-- Enrolled Students Counter Badge -->
-              <div style="height:30px; padding:0 10px; background:#1e293b; border:1px solid rgba(255,255,255,0.16); border-radius:5px; display:flex; align-items:center; justify-content:space-between; box-sizing:border-box;">
-                <span style="font-size:12px; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.04em;">Enrolled</span>
-                <span id="open-modal-student-count" style="color:var(--primary-tactical); font-weight:800; font-size:12px;">0 selected</span>
+              <div style="height:30px; padding:0 10px; background:#1e293b; border:1px solid rgba(255,255,255,0.16); border-radius:5px; display:flex; align-items:center; justify-content:space-between; gap:8px; box-sizing:border-box; white-space:nowrap;">
+                <span style="font-size:12px; font-weight:800; color:#cbd5e1; text-transform:uppercase; letter-spacing:0.04em; white-space:nowrap;">Enrolled</span>
+                <span id="open-modal-student-count" style="color:var(--primary-tactical); font-weight:800; font-size:12px; white-space:nowrap;">0 / 0 selected</span>
               </div>
             </div>
 
@@ -1046,15 +1101,15 @@ export async function renderClassTestSessions(container, context = {}) {
 
             <!-- Row 3: Duration Allocation & Tutor Override -->
             <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <div style="display:flex; align-items:center; gap:10px;">
-                <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.04em; margin:0;">Duration:</label>
-                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="360" step="5" style="width:65px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; font-size:12px; text-align:center;">
-                <span id="open-modal-duration-suggestion-text" style="font-size:12px; color:var(--grade-c); font-weight:700;">60 min</span>
+              <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+                <label class="form-label" style="font-weight:800; font-size:12px; color:#ffffff; text-transform:uppercase; letter-spacing:0.04em; margin:0; white-space:nowrap;">Duration:</label>
+                <input type="number" id="open-modal-duration-input" class="form-control" value="60" min="5" max="360" step="5" style="width:65px; height:30px; background:#1e293b; border:1px solid rgba(255,255,255,0.25); color:#ffffff; padding:2px 6px; border-radius:5px; font-weight:800; font-size:12px; text-align:center; flex-shrink:0;">
+                <span id="open-modal-duration-suggestion-text" style="font-size:12px; color:var(--grade-c); font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">60 min</span>
               </div>
 
-              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:10px; cursor:pointer; margin:0;" title="Allow students who haven't completed tasks to participate">
+              <label id="open-modal-override-wrapper" style="font-size:12px; color:var(--grade-c); display:flex; align-items:center; gap:6px; cursor:pointer; margin:0; white-space:nowrap; flex-shrink:0;" title="Allow students who haven't completed tasks to participate">
                 <input type="checkbox" id="open-modal-override-checkbox" style="cursor:pointer; width:15px; height:15px; accent-color:var(--grade-c);">
-                <span style="font-weight:800; letter-spacing:0.03em; text-transform:uppercase;">Tutor Override</span>
+                <span style="font-weight:800; letter-spacing:0.03em; text-transform:uppercase; white-space:nowrap;">Tutor Override</span>
               </label>
             </div>
 
@@ -1728,6 +1783,7 @@ function renderThemeCard(theme, context) {
   } = theme;
 
   const isNonVocab = Boolean(theme.isNonVocab);
+  const examKey = getExamItemKey(theme);
   const wordsQ = wordsTest?.total_questions || wordsTest?.payload?.total_questions || (Array.isArray(wordsTest?.questions) ? wordsTest.questions.length : 0);
   const phrasesQ = phrasesTest?.total_questions || phrasesTest?.payload?.total_questions || (Array.isArray(phrasesTest?.questions) ? phrasesTest.questions.length : 0);
   const examQ = examTest?.total_questions || examTest?.payload?.total_questions || (Array.isArray(examTest?.questions) ? examTest.questions.length : 0);
@@ -1823,16 +1879,16 @@ function renderThemeCard(theme, context) {
     <div style="display: flex; flex-direction: column; gap: 6px;">
       <!-- Line 1: Theme Code + Name + Readiness / Live Badge -->
       <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px; margin-bottom: 2px; line-height: 1.4;">
-        <span style="font-size: 12px; font-weight: 800; color: ${color}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
-          ${isNonVocab ? `<span style="color: ${color};">[EXAM]</span> ${escapeHtml(name)}` : `<span style="color: ${color};">${code}</span> - ${escapeHtml(name)}`}
+        <span style="font-size: 12px; font-weight: 800; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.02em;">
+          ${isNonVocab ? `[EXAM] ${escapeHtml(name)}` : `${code} - ${escapeHtml(name)}`}
         </span>
         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           ${isLive ? `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isRemedial ? 'background:rgba(var(--grade-c-rgb),0.15); border:1px solid var(--grade-c); color:var(--grade-c, #ffff00);' : 'background:rgba(var(--grade-a-rgb),0.15); border:1px solid var(--grade-a); color:var(--grade-a, #00c000);'}">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 6px; border-radius: 4px; ${isRemedial ? 'background:rgba(var(--grade-c-rgb),0.12); border:1px solid rgba(var(--grade-c-rgb),0.55); color:var(--grade-c, #ffff00);' : 'background:rgba(var(--grade-a-rgb),0.12); border:1px solid rgba(var(--grade-a-rgb),0.55); color:var(--grade-a, #00c000);'}">
               LIVE (${remainingMinutes}m)
             </span>
           ` : `
-            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; ${eligibleNormalCount === batchTotalStudents && batchTotalStudents > 0 ? 'background:rgba(var(--grade-a-rgb),0.15); color:var(--grade-a, #00c000); border:1px solid rgba(var(--grade-a-rgb),0.3);' : 'background:rgba(var(--grade-c-rgb),0.12); color:var(--grade-c, #ffff00); border:1px solid rgba(var(--grade-c-rgb),0.3);'}">
+            <span style="font-size: 12px; font-weight: 800; padding: 2px 7px; border-radius: 4px; background:rgba(255,255,255,0.06); color:#cbd5e1; border:1px solid rgba(255,255,255,0.12);">
               ${eligibleNormalCount}/${batchTotalStudents} Ready (${readinessPct}%)
             </span>
           `}
@@ -1840,7 +1896,7 @@ function renderThemeCard(theme, context) {
       </div>
 
       <!-- Line 2: Associated Exam Title -->
-      <div style="font-size: 12px; font-weight: 700; color: #93c5fd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
+      <div style="font-size: 12px; font-weight: 600; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;">
         ${isLive ? `${examTitleStr} &bull; ${escapeHtml(liveBatchName || '')} (${enrolledCount})` : examTitleStr}
       </div>
 
@@ -1863,7 +1919,7 @@ function renderThemeCard(theme, context) {
   if (isLive) {
     row2Content = `
       <div style="height:36px;">
-        <button type="button" class="btn btn-wireframe-live-view btn-theme-live-monitor" data-theme="${code}">
+        <button type="button" class="btn btn-wireframe-live-view btn-theme-live-monitor" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}">
           LIVE VIEW &bull; REALTIME MONITOR (${enrolledCount} STUDENTS)
         </button>
       </div>
@@ -1871,10 +1927,10 @@ function renderThemeCard(theme, context) {
   } else {
     row2Content = `
       <div class="card-block-row-buttons" style="display:flex; gap:10px;">
-        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-mode="normal" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:var(--grade-a, #00c000); background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none;" title="Open Normal Session (Full Score) - ${eligibleNormalCount} Eligible">
+        <button type="button" class="btn btn-wireframe-normal btn-theme-open-session" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mode="normal" title="Open Normal Session (Full Score) - ${eligibleNormalCount} Eligible">
           NORMAL (${eligibleNormalCount})
         </button>
-        <button type="button" class="btn btn-wireframe-remidi ${eligibleRemedialCount === 0 ? 'btn-dimmed' : ''} btn-theme-open-session" data-theme="${code}" data-mode="remedial" style="flex:1; ${eligibleRemedialCount > 0 ? 'border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none;' : ''}" title="Open Remedial Session (Max 60%) - ${eligibleRemedialCount} Eligible" ${eligibleRemedialCount === 0 ? 'disabled' : ''}>
+        <button type="button" class="btn btn-wireframe-remidi ${eligibleRemedialCount === 0 ? 'btn-dimmed' : ''} btn-theme-open-session" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mode="remedial" title="Open Remedial Session (Max 60%) - ${eligibleRemedialCount} Eligible" ${eligibleRemedialCount === 0 ? 'disabled' : ''}>
           REMEDI (${eligibleRemedialCount})
         </button>
       </div>
@@ -1893,13 +1949,13 @@ function renderThemeCard(theme, context) {
 
     row3Content = `
       <div class="card-block-row-buttons" style="position:relative; display:flex; gap:6px;">
-        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75); color:var(--grade-a, #00c000); background:rgba(var(--grade-a-rgb, 0, 192, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Add Late Arrival Students">
+        <button type="button" class="btn btn-wireframe-late btn-theme-add-late" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" style="padding:4px 6px;" title="Add Late Arrival Students">
           +LATE
         </button>
 
         <!-- Edit Time Popover -->
         <div style="position:relative; flex:1; height:100%; display:flex;">
-          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="width:100%; border:1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85); color:var(--grade-c); background:rgba(var(--grade-c-rgb, 255, 255, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Edit Exam Time (+ / -)">
+          <button type="button" class="btn btn-wireframe-edit-time btn-card-add-time" data-theme="${code}" style="padding:4px 6px;" title="Edit Exam Time (+ / -)">
             TIME
           </button>
           <div id="card-add-time-menu-${code}" class="card-add-time-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid var(--grade-c); border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(var(--grade-c-rgb), 0.18); z-index:99999; width:220px; padding:8px; flex-direction:column; gap:6px;">
@@ -1914,10 +1970,10 @@ function renderThemeCard(theme, context) {
                 ADD TIME (+)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+5m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+10m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+15m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+30m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="5" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+5m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="10" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+10m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="15" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+15m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="30" style="background:rgba(var(--grade-a-rgb), 0.08); border:1px solid rgba(var(--grade-a-rgb), 0.4); color:var(--grade-a, #00c000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">+30m</button>
               </div>
             </div>
 
@@ -1927,14 +1983,14 @@ function renderThemeCard(theme, context) {
                 REDUCE TIME (-)
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-5m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-10m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-15m</button>
-                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-30m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="-5" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-5m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="-10" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-10m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="-15" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-15m</button>
+                <button type="button" class="btn-card-add-time-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-mins="-30" style="background:rgba(var(--grade-e-rgb), 0.08); border:1px solid rgba(var(--grade-e-rgb), 0.4); color:var(--grade-e, #ff0000); padding:5px 6px; border-radius:5px; font-size: 12px; font-weight:700; cursor:pointer;">-30m</button>
               </div>
             </div>
 
-            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" style="width:100%; text-align:center; background:rgba(var(--grade-c-rgb), 0.07); border:1px dashed rgba(var(--grade-c-rgb), 0.5); color:var(--grade-c); padding:6px 8px; border-radius:6px; font-size: 12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
+            <button type="button" class="btn-card-add-time-custom" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" style="width:100%; text-align:center; background:rgba(var(--grade-c-rgb), 0.07); border:1px dashed rgba(var(--grade-c-rgb), 0.5); color:var(--grade-c); padding:6px 8px; border-radius:6px; font-size: 12px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; margin-top:2px;">
               Custom Minutes (+ / -)...
             </button>
           </div>
@@ -1942,7 +1998,7 @@ function renderThemeCard(theme, context) {
 
         <!-- Live Modality Switch Popover -->
         <div style="position:relative; flex:1; height:100%; display:flex;">
-          <button type="button" class="btn btn-wireframe-edit-mode btn-card-edit-mode" data-theme="${code}" style="width:100%; border:1px solid rgba(56, 189, 248, 0.85); color:#38bdf8; background:rgba(56, 189, 248, 0.06); box-shadow:none; padding:4px 6px;" title="Live Modality Switch (Written / Selection / Spoken)">
+          <button type="button" class="btn btn-wireframe-edit-mode btn-card-edit-mode" data-theme="${code}" style="padding:4px 6px;" title="Live Modality Switch (Written / Selection / Spoken)">
             MODE
           </button>
           <div id="card-edit-mode-menu-${code}" class="card-edit-mode-menu" style="display:none; position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0f172a; border:2px solid #38bdf8; border-radius:10px; box-shadow:0 16px 36px rgba(0,0,0,0.92), 0 0 14px rgba(56, 189, 248, 0.25); z-index:99999; width:230px; padding:8px; flex-direction:column; gap:6px;">
@@ -1958,9 +2014,9 @@ function renderThemeCard(theme, context) {
                 <span id="label-live-words-${code}" style="color:#ffffff; font-weight:700;">${curWordsMode}</span>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px;">
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="written" style="background:${curWordsMode === 'written' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Written</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="multiple_choice" style="background:${curWordsMode === 'multiple_choice' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Select</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="words" data-mode="spoken" style="background:${curWordsMode === 'spoken' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Spoken</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-section="words" data-mode="written" style="background:${curWordsMode === 'written' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Written</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-section="words" data-mode="multiple_choice" style="background:${curWordsMode === 'multiple_choice' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Select</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-section="words" data-mode="spoken" style="background:${curWordsMode === 'spoken' ? '#38bdf8' : 'rgba(56, 189, 248, 0.1)'}; color:${curWordsMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid #38bdf8; padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Spoken</button>
               </div>
             </div>
 
@@ -1971,9 +2027,9 @@ function renderThemeCard(theme, context) {
                 <span id="label-live-phrases-${code}" style="color:#ffffff; font-weight:700;">${curPhrasesMode}</span>
               </div>
               <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px;">
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="written" style="background:${curPhrasesMode === 'written' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Written</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="multiple_choice" style="background:${curPhrasesMode === 'multiple_choice' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Select</button>
-                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-section="phrases" data-mode="spoken" style="background:${curPhrasesMode === 'spoken' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Spoken</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-section="phrases" data-mode="written" style="background:${curPhrasesMode === 'written' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'written' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Written</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-section="phrases" data-mode="multiple_choice" style="background:${curPhrasesMode === 'multiple_choice' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'multiple_choice' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Select</button>
+                <button type="button" class="btn-live-mode-opt" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" data-section="phrases" data-mode="spoken" style="background:${curPhrasesMode === 'spoken' ? 'var(--quad-d)' : 'rgba(192, 132, 252, 0.1)'}; color:${curPhrasesMode === 'spoken' ? '#0f172a' : '#cbd5e1'}; border:1px solid var(--quad-d); padding:4px 2px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;">Spoken</button>
               </div>
             </div>
 
@@ -1984,7 +2040,7 @@ function renderThemeCard(theme, context) {
         </div>
 
         <!-- Close Session -->
-        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" style="flex:1; border:1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75); color:var(--grade-e, #ff0000); background:rgba(var(--grade-e-rgb, 255, 0, 0), 0.06); box-shadow:none; padding:4px 6px;" title="Close Active Exam Session">
+        <button type="button" class="btn btn-wireframe-close btn-theme-close-session" data-theme="${code}" data-exam-key="${escapeHtml(examKey)}" style="padding:4px 6px;" title="Close Active Exam Session">
           CLOSE
         </button>
       </div>
@@ -1998,7 +2054,7 @@ function renderThemeCard(theme, context) {
   }
 
   return `
-    <div class="theme-test-card-frame" style="height:250px !important; min-height:250px !important; max-height:250px !important; padding:12px 14px !important; box-sizing:border-box !important; border:1px solid ${borderRgba} !important; background:#0f172a !important; border-radius:8px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; overflow:hidden !important;">
+    <div class="theme-test-card-frame" style="height:250px !important; min-height:250px !important; max-height:250px !important; padding:12px 14px !important; box-sizing:border-box !important; border:1px solid rgba(255,255,255,0.1) !important; background:#0f172a !important; border-radius:8px !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; overflow:hidden !important;">
       <div class="theme-test-card-inner" style="height:100% !important; display:flex !important; flex-direction:column !important; justify-content:space-between !important; background:transparent !important; border:none !important; padding:0 !important; overflow:hidden !important;">
         ${topBlock}
         <div style="display:flex; flex-direction:column; gap:10px;">
@@ -2010,11 +2066,266 @@ function renderThemeCard(theme, context) {
   `;
 }
 
+function bindThemeCardEvents(cardRoot, container, themesData, context) {
+  if (!cardRoot) return;
+
+  // 2. Open Session Triggers
+  cardRoot.querySelectorAll('.btn-theme-open-session').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const mode = e.currentTarget.getAttribute('data-mode') || 'normal';
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme) return;
+
+      openThemeSessionModal(container, theme, mode, context, themesData);
+    });
+  });
+
+  // 3. Add Late Student Triggers
+  cardRoot.querySelectorAll('.btn-theme-add-late').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme) return;
+
+      openThemeLateModal(container, theme, context);
+    });
+  });
+
+  // 3b. Live Monitor Triggers
+  cardRoot.querySelectorAll('.btn-theme-live-monitor').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme) return;
+
+      openThemeLiveMonitorModal(container, theme, context);
+    });
+  });
+
+  // 3c. Card Direct Extend Time Triggers ('Di Luar')
+  cardRoot.querySelectorAll('.btn-card-add-time').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const menu = cardRoot.querySelector(`#card-add-time-menu-${themeCode}`);
+      if (!menu) return;
+
+      // Close all other menus first
+      cardRoot.querySelectorAll('.card-add-time-menu').forEach(m => {
+        if (m !== menu) m.style.display = 'none';
+      });
+
+      // Toggle current menu
+      menu.style.display = (menu.style.display === 'flex' || menu.style.display === 'block') ? 'none' : 'flex';
+    });
+  });
+
+  // Quick preset buttons (+5, +10, +15, +30, -5, -10, -15, -30)
+  cardRoot.querySelectorAll('.btn-card-add-time-opt').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const mins = parseInt(e.currentTarget.getAttribute('data-mins'), 10);
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme || isNaN(mins) || mins === 0) return;
+
+      // Close menu
+      const menu = cardRoot.querySelector(`#card-add-time-menu-${themeCode}`);
+      if (menu) menu.style.display = 'none';
+
+      const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
+        await Promise.all(promises);
+
+        const targetName = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+        showToast(`Exam timer for ${targetName} successfully ${actionText}!`, 'success');
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error adjusting session time from card:', err);
+        showToast('Failed to adjust exam timer: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    });
+  });
+
+  // Custom minute button (+ / -)
+  cardRoot.querySelectorAll('.btn-card-add-time-custom').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme) return;
+
+      // Close menu
+      const menu = cardRoot.querySelector(`#card-add-time-menu-${themeCode}`);
+      if (menu) menu.style.display = 'none';
+
+      const targetLabel = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+      const input = prompt(
+        `Adjust exam time for ${targetLabel}:\n` +
+        `• Enter a positive number to extend (e.g. 15 or +15)\n` +
+        `• Enter a negative number to reduce (e.g. -10)\n` +
+        `Allowed range: -180 to +180 minutes (cannot be 0).`,
+        '10'
+      );
+      if (input === null) return;
+      const cleanInput = input.trim();
+      const mins = parseInt(cleanInput, 10);
+      if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
+        showToast('Invalid minutes (enter a number between -180 and +180, non-zero)', 'warning');
+        return;
+      }
+
+      const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
+        await Promise.all(promises);
+
+        showToast(`Exam timer for ${targetLabel} successfully ${actionText}!`, 'success');
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error adjusting session time from card:', err);
+        showToast('Failed to adjust exam timer: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    });
+  });
+
+  // 3d. Card Direct Edit Modality Triggers (Live Answering Mode Switch)
+  cardRoot.querySelectorAll('.btn-card-edit-mode').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const themeCode = e.currentTarget.getAttribute('data-theme');
+      const menu = cardRoot.querySelector(`#card-edit-mode-menu-${themeCode}`);
+      if (!menu) return;
+
+      // Close all other menus first
+      cardRoot.querySelectorAll('.card-add-time-menu, .card-edit-mode-menu').forEach(m => {
+        if (m !== menu) m.style.display = 'none';
+      });
+
+      menu.style.display = (menu.style.display === 'flex' || menu.style.display === 'block') ? 'none' : 'flex';
+    });
+  });
+
+  // Quick live mode opt buttons
+  cardRoot.querySelectorAll('.btn-live-mode-opt').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const section = e.currentTarget.getAttribute('data-section');
+      const mode = e.currentTarget.getAttribute('data-mode');
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme || !section || !mode) return;
+
+      const examTest = theme.examTest || theme.wordsTest || theme.phrasesTest;
+      if (!examTest) return;
+
+      const currentSession = examTest.payload?.test_session || {};
+      const currentModes = currentSession.answering_modes || {};
+
+      const newWordsMode = section === 'words' ? mode : (currentModes.words || currentSession.answering_mode || 'written');
+      const newPhrasesMode = section === 'phrases' ? mode : (currentModes.phrases || currentSession.answering_mode || 'written');
+
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.examTest) {
+          promises.push(updateLiveSessionModality({ testId: theme.examTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
+        }
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
+          promises.push(updateLiveSessionModality({ testId: theme.wordsTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
+        }
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
+          promises.push(updateLiveSessionModality({ testId: theme.phrasesTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
+        }
+        await Promise.all(promises);
+
+        const targetLabel = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+        const secLabel = section === 'words' ? 'Words' : 'Phrases';
+        showToast(`Live modality for ${targetLabel} (${secLabel}) changed to ${mode.toUpperCase()}! Students will automatically switch on their next question.`, 'success');
+
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error updating session modality:', err);
+        showToast('Failed to update modality: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    });
+  });
+
+  // 4. Close Session Triggers
+  cardRoot.querySelectorAll('.btn-theme-close-session').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const theme = findThemeByEventTarget(e.currentTarget, themesData);
+      if (!theme) return;
+
+      const targetSessionLabel = theme.isNonVocab ? theme.name : `THEME ${theme.code} (${theme.name})`;
+      const confirmed = confirm(`Close test session for ${targetSessionLabel} for ${theme.liveBatchName}?\nStudents will no longer be able to access the test once closed.`);
+      if (!confirmed) return;
+
+      showLoading();
+      try {
+        const promises = [];
+        if (theme.examTest) promises.push(closeTestSession(theme.examTest.id));
+        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(closeTestSession(theme.wordsTest.id));
+        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(closeTestSession(theme.phrasesTest.id));
+        await Promise.all(promises);
+
+        showToast(`Test session "${theme.name}" closed successfully.`, 'success');
+        if (window.renderClassHub) {
+          window.renderClassHub(document.getElementById('admin-content-area'));
+        }
+      } catch (err) {
+        console.error('Error closing test session:', err);
+        showToast('Failed to close session: ' + err.message, 'error');
+      } finally {
+        hideLoading();
+      }
+    });
+  });
+}
+
 /**
  * Event binding and interactive modal controller
  */
 function bindTestSessionsEvents(container, themesData, context) {
   const { allStudents = [], allAttempts = [], batchMap = {} } = context;
+
+  // Close card popovers when clicking outside (bound once per container)
+  if (!container.dataset.cardMenuDocClickBound) {
+    container.dataset.cardMenuDocClickBound = 'true';
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.btn-card-add-time') && !e.target.closest('.card-add-time-menu')) {
+        container.querySelectorAll('.card-add-time-menu').forEach(m => {
+          m.style.display = 'none';
+        });
+      }
+      if (!e.target.closest('.btn-card-edit-mode') && !e.target.closest('.card-edit-mode-menu')) {
+        container.querySelectorAll('.card-edit-mode-menu').forEach(m => {
+          m.style.display = 'none';
+        });
+      }
+    });
+  }
+
+  const initialCardRoot = container.querySelector('#exam-session-active-card-container') || container;
+  bindThemeCardEvents(initialCardRoot, container, themesData, context);
 
   // 1. Batch Selection Toolbar
   const batchSelect = container.querySelector('#test-session-batch-select');
@@ -2127,266 +2438,14 @@ function bindTestSessionsEvents(container, themesData, context) {
     });
   });
 
-  // 2. Open Session Triggers
-  container.querySelectorAll('.btn-theme-open-session').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const mode = e.currentTarget.getAttribute('data-mode') || 'normal';
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme) return;
-
-      openThemeSessionModal(container, theme, mode, context);
-    });
-  });
-
-  // 3. Add Late Student Triggers
-  container.querySelectorAll('.btn-theme-add-late').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme) return;
-
-      openThemeLateModal(container, theme, context);
-    });
-  });
-
-  // 3b. Live Monitor Triggers
-  container.querySelectorAll('.btn-theme-live-monitor').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme) return;
-
-      openThemeLiveMonitorModal(container, theme, context);
-    });
-  });
-
-  // 3c. Card Direct Extend Time Triggers ('Di Luar')
-  container.querySelectorAll('.btn-card-add-time').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
-      if (!menu) return;
-
-      // Close all other menus first
-      container.querySelectorAll('.card-add-time-menu').forEach(m => {
-        if (m !== menu) m.style.display = 'none';
-      });
-
-      // Toggle current menu
-      menu.style.display = (menu.style.display === 'flex' || menu.style.display === 'block') ? 'none' : 'flex';
-    });
-  });
-
-  // Close menus when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.btn-card-add-time') && !e.target.closest('.card-add-time-menu')) {
-      container.querySelectorAll('.card-add-time-menu').forEach(m => {
-        m.style.display = 'none';
-      });
-    }
-  });
-
-  // Quick preset buttons (+5, +10, +15, +30, -5, -10, -15, -30)
-  container.querySelectorAll('.btn-card-add-time-opt').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const mins = parseInt(e.currentTarget.getAttribute('data-mins'), 10);
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme || isNaN(mins) || mins === 0) return;
-
-      // Close menu
-      const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
-      if (menu) menu.style.display = 'none';
-
-      const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
-      showLoading();
-      try {
-        const promises = [];
-        if (theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
-        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
-        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
-        await Promise.all(promises);
-
-        const targetName = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
-        showToast(`Exam timer for ${targetName} successfully ${actionText}!`, 'success');
-        if (window.renderClassHub) {
-          window.renderClassHub(document.getElementById('admin-content-area'));
-        }
-      } catch (err) {
-        console.error('Error adjusting session time from card:', err);
-        showToast('Failed to adjust exam timer: ' + err.message, 'error');
-      } finally {
-        hideLoading();
-      }
-    });
-  });
-
-  // Custom minute button (+ / -)
-  container.querySelectorAll('.btn-card-add-time-custom').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme) return;
-
-      // Close menu
-      const menu = container.querySelector(`#card-add-time-menu-${themeCode}`);
-      if (menu) menu.style.display = 'none';
-
-      const targetLabel = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
-      const input = prompt(
-        `Adjust exam time for ${targetLabel}:\n` +
-        `• Enter a positive number to extend (e.g. 15 or +15)\n` +
-        `• Enter a negative number to reduce (e.g. -10)\n` +
-        `Allowed range: -180 to +180 minutes (cannot be 0).`,
-        '10'
-      );
-      if (input === null) return;
-      const cleanInput = input.trim();
-      const mins = parseInt(cleanInput, 10);
-      if (isNaN(mins) || mins === 0 || mins < -180 || mins > 180) {
-        showToast('Invalid minutes (enter a number between -180 and +180, non-zero)', 'warning');
-        return;
-      }
-
-      const actionText = mins > 0 ? `extended by +${mins} minutes` : `reduced by ${Math.abs(mins)} minutes`;
-      showLoading();
-      try {
-        const promises = [];
-        if (theme.examTest) promises.push(extendTestSessionTime(theme.examTest.id, mins));
-        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.wordsTest.id, mins));
-        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(extendTestSessionTime(theme.phrasesTest.id, mins));
-        await Promise.all(promises);
-
-        showToast(`Exam timer for ${targetLabel} successfully ${actionText}!`, 'success');
-        if (window.renderClassHub) {
-          window.renderClassHub(document.getElementById('admin-content-area'));
-        }
-      } catch (err) {
-        console.error('Error adjusting session time from card:', err);
-        showToast('Failed to adjust exam timer: ' + err.message, 'error');
-      } finally {
-        hideLoading();
-      }
-    });
-  });
-
-  // 3d. Card Direct Edit Modality Triggers (Live Answering Mode Switch)
-  container.querySelectorAll('.btn-card-edit-mode').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const menu = container.querySelector(`#card-edit-mode-menu-${themeCode}`);
-      if (!menu) return;
-
-      // Close all other menus first
-      container.querySelectorAll('.card-add-time-menu, .card-edit-mode-menu').forEach(m => {
-        if (m !== menu) m.style.display = 'none';
-      });
-
-      menu.style.display = (menu.style.display === 'flex' || menu.style.display === 'block') ? 'none' : 'flex';
-    });
-  });
-
-  // Close modality menus when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.btn-card-edit-mode') && !e.target.closest('.card-edit-mode-menu')) {
-      container.querySelectorAll('.card-edit-mode-menu').forEach(m => {
-        m.style.display = 'none';
-      });
-    }
-  });
-
-  // Quick live mode opt buttons
-  container.querySelectorAll('.btn-live-mode-opt').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const section = e.currentTarget.getAttribute('data-section');
-      const mode = e.currentTarget.getAttribute('data-mode');
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme || !section || !mode) return;
-
-      const examTest = theme.examTest || theme.wordsTest || theme.phrasesTest;
-      if (!examTest) return;
-
-      const currentSession = examTest.payload?.test_session || {};
-      const currentModes = currentSession.answering_modes || {};
-
-      const newWordsMode = section === 'words' ? mode : (currentModes.words || currentSession.answering_mode || 'written');
-      const newPhrasesMode = section === 'phrases' ? mode : (currentModes.phrases || currentSession.answering_mode || 'written');
-
-      showLoading();
-      try {
-        const promises = [];
-        if (theme.examTest) {
-          promises.push(updateLiveSessionModality({ testId: theme.examTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
-        }
-        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
-          promises.push(updateLiveSessionModality({ testId: theme.wordsTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
-        }
-        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
-          promises.push(updateLiveSessionModality({ testId: theme.phrasesTest.id, wordsMode: newWordsMode, phrasesMode: newPhrasesMode }));
-        }
-        await Promise.all(promises);
-
-        const targetLabel = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
-        const secLabel = section === 'words' ? 'Words' : 'Phrases';
-        showToast(`Live modality for ${targetLabel} (${secLabel}) changed to ${mode.toUpperCase()}! Students will automatically switch on their next question.`, 'success');
-
-        if (window.renderClassHub) {
-          window.renderClassHub(document.getElementById('admin-content-area'));
-        }
-      } catch (err) {
-        console.error('Error updating session modality:', err);
-        showToast('Failed to update modality: ' + err.message, 'error');
-      } finally {
-        hideLoading();
-      }
-    });
-  });
-
-  // 4. Close Session Triggers
-  container.querySelectorAll('.btn-theme-close-session').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      const themeCode = e.currentTarget.getAttribute('data-theme');
-      const theme = themesData.find(t => t.code === themeCode);
-      if (!theme) return;
-
-      const targetSessionLabel = theme.isNonVocab ? theme.name : `THEME ${theme.code} (${theme.name})`;
-      const confirmed = confirm(`Close test session for ${targetSessionLabel} for ${theme.liveBatchName}?\nStudents will no longer be able to access the test once closed.`);
-      if (!confirmed) return;
-
-      showLoading();
-      try {
-        const promises = [];
-        if (theme.examTest) promises.push(closeTestSession(theme.examTest.id));
-        if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) promises.push(closeTestSession(theme.wordsTest.id));
-        if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) promises.push(closeTestSession(theme.phrasesTest.id));
-        await Promise.all(promises);
-
-        showToast(`Test session "${theme.name}" closed successfully.`, 'success');
-        if (window.renderClassHub) {
-          window.renderClassHub(document.getElementById('admin-content-area'));
-        }
-      } catch (err) {
-        console.error('Error closing test session:', err);
-        showToast('Failed to close session: ' + err.message, 'error');
-      } finally {
-        hideLoading();
-      }
-    });
-  });
 }
 
 /**
  * Open Modal: Buka Sesi Ujian (Normal / Remidi)
  */
-function openThemeSessionModal(container, theme, mode, context) {
-  _currentOpenModalTheme = theme;
+function openThemeSessionModal(container, theme, mode, context, themesData = []) {
+  let activeModalTheme = theme;
+  _currentOpenModalTheme = activeModalTheme;
   _currentOpenModalMode = mode;
 
   let modal = document.getElementById('modal-theme-open-session');
@@ -2400,63 +2459,62 @@ function openThemeSessionModal(container, theme, mode, context) {
 
   const titleEl = modal.querySelector('#open-modal-title');
   const badgeEl = modal.querySelector('#open-modal-theme-badge');
+  const examSelectRow = modal.querySelector('#open-modal-exam-select-row');
+  const examSelect = modal.querySelector('#open-modal-exam-select');
   const batchSelect = modal.querySelector('#open-modal-batch-select');
   const wordsModuleSelect = modal.querySelector('#open-modal-words-module-select');
   const phrasesModuleSelect = modal.querySelector('#open-modal-phrases-module-select');
-
-  // Pre-populate selections from active session or previous settings if present
-  const existingSessModes = theme.examTest?.payload?.test_session?.answering_modes ||
-                            theme.wordsTest?.payload?.test_session?.answering_modes;
-  const existingSessMode = theme.examTest?.payload?.test_session?.answering_mode ||
-                           theme.wordsTest?.payload?.test_session?.answering_mode;
-
-  if (wordsModuleSelect) {
-    if (existingSessModes?.words) {
-      wordsModuleSelect.value = existingSessModes.words;
-    } else if (existingSessMode) {
-      wordsModuleSelect.value = existingSessMode;
-    }
+  const vocabModulesRow = modal.querySelector('#open-modal-vocab-modules-row');
+  const nonVocabDetailsRow = modal.querySelector('#open-modal-nonvocab-details-row');
+  const durationInput = modal.querySelector('#open-modal-duration-input');
+  if (durationInput) {
+    delete durationInput.dataset.userSet;
+    durationInput.oninput = () => { durationInput.dataset.userSet = '1'; };
+    durationInput.onchange = () => { durationInput.dataset.userSet = '1'; };
   }
-  if (phrasesModuleSelect) {
-    if (existingSessModes?.phrases) {
-      phrasesModuleSelect.value = existingSessModes.phrases;
+
+  const allExamsList = Array.isArray(themesData) && themesData.length > 0 ? themesData : [theme];
+  if (examSelectRow && examSelect) {
+    if (allExamsList.length > 1) {
+      examSelectRow.style.display = 'block';
+      examSelect.innerHTML = allExamsList.map((t, idx) => {
+        const key = getExamItemKey(t, idx);
+        const label = t.isNonVocab
+          ? `EX-${idx + 1} • ${t.name}`
+          : `EX-${idx + 1} • ${t.code} - ${t.name}`;
+        const statusStr = t.isLive ? ` (LIVE ${t.remainingMinutes}m)` : ` (${t.eligibleNormalCount}/${t.batchTotalStudents} Ready)`;
+        return `<option value="${escapeHtml(key)}">${escapeHtml(label + statusStr)}</option>`;
+      }).join('');
+      const initialIdx = allExamsList.indexOf(activeModalTheme);
+      examSelect.value = getExamItemKey(activeModalTheme, initialIdx >= 0 ? initialIdx : 0);
     } else {
-      phrasesModuleSelect.value = 'multiple_choice';
+      examSelectRow.style.display = 'none';
     }
   }
 
   let _selectedAnswerModeWords = wordsModuleSelect ? wordsModuleSelect.value : 'written';
   let _selectedAnswerModePhrases = phrasesModuleSelect ? phrasesModuleSelect.value : 'multiple_choice';
 
-  const isNonVocab = Boolean(theme.isNonVocab);
-  const vocabModulesRow = modal.querySelector('#open-modal-vocab-modules-row');
-  const nonVocabDetailsRow = modal.querySelector('#open-modal-nonvocab-details-row');
-  const durationInput = modal.querySelector('#open-modal-duration-input');
-  if (durationInput) {
-    delete durationInput.dataset.userSet;
-    durationInput.addEventListener('input', () => { durationInput.dataset.userSet = '1'; });
-    durationInput.addEventListener('change', () => { durationInput.dataset.userSet = '1'; });
-  }
-
   // ── Auto-duration calculation (SSOT DECISION-063 Khusus Vocabulary Class) ────
   // Words: 10s spoken / 15s written / 10s selection
   // Phrases: 20s spoken / 10s selection / 20s written
   const recalcVocabDuration = () => {
-    if (isNonVocab) return;
+    const curTheme = activeModalTheme;
+    if (Boolean(curTheme.isNonVocab)) return;
     const wordsAns = (_selectedAnswerModeWords || 'written').toLowerCase();
     const phrasesAns = (_selectedAnswerModePhrases || 'multiple_choice').toLowerCase();
 
     const wPace = (wordsAns === 'written') ? 15 : 10;
     const pPace = (phrasesAns === 'selection' || phrasesAns === 'multiple_choice' || phrasesAns === 'recognition') ? 10 : 20;
 
-    const _examQ = theme.examTest?.total_questions || theme.examTest?.payload?.total_questions || (Array.isArray(theme.examTest?.questions) ? theme.examTest.questions.length : 0) || 0;
+    const _examQ = curTheme.examTest?.total_questions || curTheme.examTest?.payload?.total_questions || (Array.isArray(curTheme.examTest?.questions) ? curTheme.examTest.questions.length : 0) || 0;
     let wCount = 0;
     let pCount = 0;
 
-    const isUnified = theme.examTest?.payload?.is_unified || theme.examTest?.payload?.category === 'unified' || _examQ === 200;
+    const isUnified = curTheme.examTest?.payload?.is_unified || curTheme.examTest?.payload?.category === 'unified' || _examQ === 200;
     if (isUnified && _examQ > 0) {
-      if (Array.isArray(theme.examTest?.payload?.questions) && theme.examTest.payload.questions.length > 0) {
-        theme.examTest.payload.questions.forEach(q => {
+      if (Array.isArray(curTheme.examTest?.payload?.questions) && curTheme.examTest.payload.questions.length > 0) {
+        curTheme.examTest.payload.questions.forEach(q => {
           if (q.test_section === 'phrases' || q.category === 'phrases') pCount++;
           else wCount++;
         });
@@ -2473,30 +2531,30 @@ function openThemeSessionModal(container, theme, mode, context) {
           wCount = _examQ - pCount;
         }
       }
-    } else if (theme.examTest) {
-      const cat = (theme.examTest.payload?.category || theme.examTest.category || '').toLowerCase();
+    } else if (curTheme.examTest) {
+      const cat = (curTheme.examTest.payload?.category || curTheme.examTest.category || '').toLowerCase();
       if (cat === 'phrases') {
         pCount = _examQ;
       } else {
         wCount = _examQ;
       }
     } else {
-      wCount = theme.wordsTest?.payload?.total_questions || theme.wordsTest?.total_questions || 0;
-      pCount = theme.phrasesTest?.payload?.total_questions || theme.phrasesTest?.total_questions || 0;
+      wCount = curTheme.wordsTest?.payload?.total_questions || curTheme.wordsTest?.total_questions || 0;
+      pCount = curTheme.phrasesTest?.payload?.total_questions || curTheme.phrasesTest?.total_questions || 0;
     }
 
     const totalSeconds = (wCount * wPace) + (pCount * pPace);
-    const savedWordsDur = Number(theme.examTest?.payload?.words_duration_minutes || 0);
-    const savedPhrasesDur = Number(theme.examTest?.payload?.phrases_duration_minutes || 0);
+    const savedWordsDur = Number(curTheme.examTest?.payload?.words_duration_minutes || 0);
+    const savedPhrasesDur = Number(curTheme.examTest?.payload?.phrases_duration_minutes || 0);
     const savedExamDur = (savedWordsDur > 0 && savedPhrasesDur > 0)
       ? (savedWordsDur + savedPhrasesDur)
-      : Number(theme.examTest?.working_duration_minutes || 0);
+      : Number(curTheme.examTest?.working_duration_minutes || 0);
     const useExamSavedDur = !modal.dataset.modeChanged && savedExamDur > 0;
     const autoDur = useExamSavedDur
       ? savedExamDur
       : (totalSeconds > 0
           ? Math.max(5, Math.ceil(totalSeconds / 60))
-          : (theme.examTest?.working_duration_minutes || 45));
+          : (curTheme.examTest?.working_duration_minutes || 45));
 
     const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
     if (_suggEl) {
@@ -2517,7 +2575,56 @@ function openThemeSessionModal(container, theme, mode, context) {
     }
   };
 
-  delete modal.dataset.modeChanged;
+  const applyThemeConfigToModal = (curTheme) => {
+    activeModalTheme = curTheme;
+    _currentOpenModalTheme = curTheme;
+
+    const existingSessModes = curTheme.examTest?.payload?.test_session?.answering_modes ||
+                              curTheme.wordsTest?.payload?.test_session?.answering_modes;
+    const existingSessMode = curTheme.examTest?.payload?.test_session?.answering_mode ||
+                             curTheme.wordsTest?.payload?.test_session?.answering_mode;
+
+    if (wordsModuleSelect) {
+      wordsModuleSelect.value = existingSessModes?.words || existingSessMode || 'written';
+    }
+    if (phrasesModuleSelect) {
+      phrasesModuleSelect.value = existingSessModes?.phrases || 'multiple_choice';
+    }
+    _selectedAnswerModeWords = wordsModuleSelect ? wordsModuleSelect.value : 'written';
+    _selectedAnswerModePhrases = phrasesModuleSelect ? phrasesModuleSelect.value : 'multiple_choice';
+
+    delete modal.dataset.modeChanged;
+    if (durationInput) delete durationInput.dataset.userSet;
+
+    const curIsNonVocab = Boolean(curTheme.isNonVocab);
+    if (curIsNonVocab) {
+      if (vocabModulesRow) vocabModulesRow.style.display = 'none';
+      if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'flex';
+      const nonVocabTitleEl = modal.querySelector('#open-modal-nonvocab-exam-title');
+      const nonVocabInfoEl = modal.querySelector('#open-modal-nonvocab-engine-info');
+      if (nonVocabTitleEl) nonVocabTitleEl.textContent = (curTheme.examTest?.title || curTheme.name);
+      const qCount = curTheme.examTest?.total_questions || curTheme.examTest?.payload?.total_questions || (Array.isArray(curTheme.examTest?.questions) ? curTheme.examTest.questions.length : 0) || (curTheme.totalQuestions || 20);
+      const engName = curTheme.moduleName || 'Exam Engine';
+      if (nonVocabInfoEl) nonVocabInfoEl.textContent = `${engName} • ${qCount} Questions`;
+
+      const autoDur = curTheme.duration || 40;
+      const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
+      if (_suggEl) _suggEl.textContent = `Default: ${autoDur} min`;
+      if (durationInput && !durationInput.dataset.userSet) durationInput.value = autoDur;
+    } else {
+      if (vocabModulesRow) vocabModulesRow.style.display = 'grid';
+      if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'none';
+      recalcVocabDuration();
+    }
+
+    const sessionTypeLabel = mode === 'normal' ? 'EXAM SESSION' : 'REMEDIAL SESSION';
+    if (titleEl) {
+      titleEl.textContent = curIsNonVocab
+        ? `${curTheme.name} • ${sessionTypeLabel}`.toUpperCase()
+        : `THEME ${curTheme.code || 'A'} — ${curTheme.name || 'WORKPLACE'} • ${sessionTypeLabel}`.toUpperCase();
+    }
+  };
+
   if (wordsModuleSelect) {
     wordsModuleSelect.onchange = (e) => {
       _selectedAnswerModeWords = e.target.value;
@@ -2533,38 +2640,9 @@ function openThemeSessionModal(container, theme, mode, context) {
     };
   }
 
-  if (isNonVocab) {
-    if (vocabModulesRow) vocabModulesRow.style.display = 'none';
-    if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'flex';
-    const nonVocabTitleEl = modal.querySelector('#open-modal-nonvocab-exam-title');
-    const nonVocabInfoEl = modal.querySelector('#open-modal-nonvocab-engine-info');
-    if (nonVocabTitleEl) nonVocabTitleEl.textContent = (theme.examTest?.title || theme.name);
-    const qCount = theme.examTest?.total_questions || theme.examTest?.payload?.total_questions || (Array.isArray(theme.examTest?.questions) ? theme.examTest.questions.length : 0) || (theme.totalQuestions || 20);
-    const engName = theme.moduleName || 'Exam Engine';
-    if (nonVocabInfoEl) nonVocabInfoEl.textContent = `${engName} • ${qCount} Questions`;
-
-    const autoDur = theme.duration || 40;
-    const _suggEl = modal.querySelector('#open-modal-duration-suggestion-text');
-    if (_suggEl) _suggEl.textContent = `Default: ${autoDur} min`;
-    if (durationInput && !durationInput.dataset.userSet) durationInput.value = autoDur;
-  } else {
-    // VOCABULARY CLASSES (both Unified Exam & separate Words/Phrases modules):
-    // Answering module selectors (Written M3, Selection M2, Spoken M4) must always be visible!
-    if (vocabModulesRow) vocabModulesRow.style.display = 'grid';
-    if (nonVocabDetailsRow) nonVocabDetailsRow.style.display = 'none';
-
-    // Calculate duration using modality-specific pacing SSOT
-    recalcVocabDuration();
-  }
+  applyThemeConfigToModal(activeModalTheme);
 
   const confirmBtn = modal.querySelector('#btn-confirm-open-session');
-
-  const sessionTypeLabel = mode === 'normal' ? 'EXAM SESSION' : 'REMEDIAL SESSION';
-  if (titleEl) {
-    titleEl.textContent = isNonVocab
-      ? `${theme.name} • ${sessionTypeLabel}`.toUpperCase()
-      : `THEME ${theme.code || 'A'} — ${theme.name || 'WORKPLACE'} • ${sessionTypeLabel}`.toUpperCase();
-  }
   if (badgeEl) {
     badgeEl.style.display = 'none';
   }
@@ -2599,11 +2677,11 @@ function openThemeSessionModal(container, theme, mode, context) {
     // Evaluate eligibility
     const evaluated = evaluateStudentsEligibility({
       students: batchStudents,
-      theme,
-      themeTasks: theme.tasks,
-      wordsTest: theme.wordsTest,
-      phrasesTest: theme.phrasesTest,
-      examTest: theme.examTest,
+      theme: activeModalTheme,
+      themeTasks: activeModalTheme.tasks,
+      wordsTest: activeModalTheme.wordsTest,
+      phrasesTest: activeModalTheme.phrasesTest,
+      examTest: activeModalTheme.examTest,
       classTests: context.classTests || [],
       allAttempts: context.allAttempts || [],
       mode
@@ -2635,7 +2713,7 @@ function openThemeSessionModal(container, theme, mode, context) {
 
     // Update count display in left panel
     const countEl = modal.querySelector('#open-modal-student-count');
-    if (countEl) countEl.textContent = `Enrolled: ${checkedStudentIds.size} / ${selectableList.length} selected`;
+    if (countEl) countEl.textContent = `${checkedStudentIds.size} / ${selectableList.length} selected`;
 
     // ALL students from the batch are rendered in the table (zero hidden voids)
     let displayList = evaluated;
@@ -2648,8 +2726,11 @@ function openThemeSessionModal(container, theme, mode, context) {
       });
     }
 
-    // Sort by clean name
+    // Sort eligible students at the top and non-eligible at the bottom, then by clean name
     displayList.sort((a, b) => {
+      const eligA = a.isEligible ? 0 : 1;
+      const eligB = b.isEligible ? 0 : 1;
+      if (eligA !== eligB) return eligA - eligB;
       const nA = cleanStudentName(a.student.name);
       const nB = cleanStudentName(b.student.name);
       const cmp = nA.localeCompare(nB, undefined, { sensitivity: 'base', numeric: true });
@@ -2778,6 +2859,23 @@ function openThemeSessionModal(container, theme, mode, context) {
     };
   }
 
+  // Exam changed inside wizard
+  if (examSelect) {
+    examSelect.onchange = () => {
+      const selectedKey = examSelect.value;
+      const matched = allExamsList.find((t, idx) => getExamItemKey(t, idx) === selectedKey);
+      if (!matched) return;
+      applyThemeConfigToModal(matched);
+      checkedStudentIds.clear();
+      hasInitializedSelection = false;
+      if (overrideCheckbox) {
+        overrideCheckbox.checked = false;
+        delete overrideCheckbox.dataset.userInteracted;
+      }
+      renderModalStudents();
+    };
+  }
+
   // Batch changed
   batchSelect.onchange = () => {
     checkedStudentIds.clear();
@@ -2870,27 +2968,31 @@ function openThemeSessionModal(container, theme, mode, context) {
 
     showLoading();
     try {
+      const targetTheme = activeModalTheme;
       const promises = [];
-      if (theme.examTest) {
+      if (targetTheme.examTest) {
+        const resolvedNonVocabMode =
+          targetTheme.examTest.answer_type ||
+          targetTheme.examTest.payload?.answer_type ||
+          targetTheme.examTest.payload?.module_key ||
+          targetTheme.examTest.payload?.answering_mode ||
+          'description';
         promises.push(openTestSession({
-          testId: theme.examTest.id,
+          testId: targetTheme.examTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
           isRemedial: isRemedial,
           remedialStudentIds: isRemedial ? allowedStudentIds : [],
-          answeringMode: theme.isNonVocab
-            ? (theme.examTest.payload?.answering_mode || 'description')
-            : selectedWordsMode,
-          answeringModes: {
-            words: selectedWordsMode,
-            phrases: selectedPhrasesMode
-          }
+          answeringMode: targetTheme.isNonVocab ? resolvedNonVocabMode : selectedWordsMode,
+          answeringModes: targetTheme.isNonVocab
+            ? null
+            : { words: selectedWordsMode, phrases: selectedPhrasesMode }
         }));
       }
-      if (theme.wordsTest && (!theme.examTest || theme.wordsTest.id !== theme.examTest.id)) {
+      if (targetTheme.wordsTest && (!targetTheme.examTest || targetTheme.wordsTest.id !== targetTheme.examTest.id)) {
         promises.push(openTestSession({
-          testId: theme.wordsTest.id,
+          testId: targetTheme.wordsTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
@@ -2903,11 +3005,11 @@ function openThemeSessionModal(container, theme, mode, context) {
           }
         }));
       }
-      if (theme.phrasesTest && (!theme.examTest || theme.phrasesTest.id !== theme.examTest.id)) {
+      if (targetTheme.phrasesTest && (!targetTheme.examTest || targetTheme.phrasesTest.id !== targetTheme.examTest.id)) {
         // Sequential prerequisite (Phrases requires Words Exam >= 60%) is dynamically enforced
         // on the student dashboard at test attempt time
         promises.push(openTestSession({
-          testId: theme.phrasesTest.id,
+          testId: targetTheme.phrasesTest.id,
           batchId: targetBatchId,
           allocatedMinutes: duration,
           allowedStudentIds: allowedStudentIds,
@@ -2922,12 +3024,12 @@ function openThemeSessionModal(container, theme, mode, context) {
       }
 
       if (promises.length === 0) {
-        throw new Error(`No test modules found for ${theme.name || theme.code}.`);
+        throw new Error(`No test modules found for ${targetTheme.name || targetTheme.code}.`);
       }
 
       await Promise.all(promises);
 
-      const targetTitle = theme.isNonVocab ? theme.name : `Theme ${theme.code}`;
+      const targetTitle = targetTheme.isNonVocab ? targetTheme.name : `Theme ${targetTheme.code}`;
       showToast(`Test session "${targetTitle}" (${mode.toUpperCase()}) successfully opened for ${allowedStudentIds.length} students (${duration} mins)!`, 'success');
       closeModal();
       if (window.renderClassHub) {
@@ -2960,6 +3062,7 @@ function openThemeLateModal(container, theme, context) {
   const confirmBtn = modal.querySelector('#btn-confirm-add-late');
 
   const isNonVocab = Boolean(theme.isNonVocab);
+  const examKey = getExamItemKey(theme);
   titleEl.textContent = isNonVocab
     ? `${(theme.name || 'EXAM').toUpperCase()} • LATE ARRIVAL`
     : `THEME ${theme.code || 'G'} — ${(theme.name || 'GENERAL').toUpperCase()} • LATE ARRIVAL`;

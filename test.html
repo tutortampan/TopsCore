@@ -90,10 +90,6 @@
 
     <!-- Right: Countdown Timer Badge (Dynamic Background Color green -> red) -->
     <div class="test-timer-wrap">
-      <div id="test-sync-indicator" class="sync-status-badge" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--clr-text-2,#94a3b8);margin-right:8px;">
-        <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--clr-success);display:inline-block;"></span>
-        <span id="sync-status-text">Saved</span>
-      </div>
       <div class="test-timer shrink-0" id="test-timer">
         <span id="timer-display" class="timer-display">18:02</span>
       </div>
@@ -150,6 +146,10 @@
 
   <!-- Permanent Bottom Banner: Exactly 50px Height Locked Base Footer per Invariant SSOT §1.8 -->
   <footer id="bottom-ad-banner" class="topscore-locked-banner">
+    <div id="test-sync-indicator" class="sync-status-badge" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--clr-text-2,#94a3b8);">
+      <span id="sync-dot" style="width:8px;height:8px;border-radius:50%;background:var(--clr-success);display:inline-block;"></span>
+      <span id="sync-status-text">Saved</span>
+    </div>
     <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
   </footer>
 

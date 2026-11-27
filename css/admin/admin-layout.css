@@ -144,12 +144,12 @@ body {
   height: var(--fm-topbar-h, 40px) !important;
   min-height: var(--fm-topbar-h, 40px) !important;
   max-height: var(--fm-topbar-h, 40px) !important;
-  padding: 0 10px !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 8px !important;
+  gap: 0 !important;
   border-bottom: 1px solid var(--fm-border-subtle) !important;
   background: var(--fm-bg-topbar) !important;
   flex-shrink: 0 !important;
@@ -370,13 +370,13 @@ body {
   height: 40px !important;
   min-height: 40px !important;
   max-height: 40px !important;
-  padding: 0 10px !important;
+  padding: 0 !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 10px !important;
+  gap: 0 !important;
   border-top: 1px solid var(--fm-border-subtle, rgba(255, 255, 255, 0.08)) !important;
   background: var(--fm-bg-sidebar) !important;
   flex-shrink: 0 !important;
@@ -420,24 +420,25 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Tenant Switcher Capsule in Sidebar Header (Top Corner Alongside Exit Button) */
+/* Tenant Switcher Capsule in Sidebar Header (40px Full-Panel Alignment: ALL | CEC | TOP) */
 .tenant-switcher-capsule {
   width: 100% !important;
-  height: 28px !important;
+  height: 100% !important;
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   background: rgba(0, 0, 0, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 6px !important;
-  padding: 2px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 3px !important;
   box-sizing: border-box !important;
 }
 
 .sidebar-corner-top .tenant-switcher-capsule {
   flex: 1 1 0% !important;
   min-width: 0 !important;
-  width: auto !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .btn-tenant-toggle {
@@ -448,9 +449,9 @@ body {
   background: transparent !important;
   color: #94a3b8 !important;
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: 0.4px !important;
   text-transform: uppercase !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
@@ -480,17 +481,17 @@ body {
   color: #060b18 !important;
 }
 
-/* Theme Switcher Capsule in Sidebar Footer (40px Container Alignment: Light | Navy | Dark) */
+/* Theme Switcher Capsule in Sidebar Footer (40px Full-Panel Alignment: Light | Navy | Dark) */
 .theme-switcher-capsule {
   width: 100% !important;
-  height: 28px !important;
+  height: 100% !important;
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   background: rgba(0, 0, 0, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 6px !important;
-  padding: 2px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 3px !important;
   box-sizing: border-box !important;
 }
 
@@ -502,9 +503,9 @@ body {
   background: transparent !important;
   color: #94a3b8 !important;
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: 0.4px !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   display: flex !important;
@@ -1845,6 +1846,28 @@ div#class-analytics-grid,
   font-weight: 700 !important;
   color: #f8fafc !important;
   letter-spacing: 0.04em !important;
+}
+
+#bottom-ad-banner .bottom-banner-exit-btn {
+  position: absolute !important;
+  left: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--fm-radius-sm, 4px) !important;
+  box-sizing: border-box !important;
+  z-index: 2 !important;
+}
+
+#admin-console.hidden ~ #bottom-ad-banner .bottom-banner-exit-btn {
+  display: none !important;
 }
 
 /* Phase 370: Theme Manager vs Theme Blueprint Separation */

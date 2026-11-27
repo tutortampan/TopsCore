@@ -1,5 +1,5 @@
 import { adminFetchAll, formatStudentName } from '../api.js?v=20261125_v688';
-import { escHtml } from '../app.js?v=20261106_v160';
+import { escHtml, showToast } from '../app.js?v=20261106_v160';
 import { getSvgIcon } from '../svg-icons.js?v=20261114_v487';
 import { getGradeColorByScore, getGradeSymbol, detectClassDiscipline } from '../grading.js?v=20261106_v160';
 import { getSupabase } from '../supabase.js?v=20261106_v160';
@@ -297,6 +297,56 @@ function saveRoomsDirectory() {
 // Active Tab state in Attendance ('CEC' | 'TOP')
 let _currentDashboardTab = 'CEC';
 let _isDashboardEditMode = false;
+
+// Class Mode SSOT ('System' | 'Manual')
+const DEFAULT_CLASS_MODE_MAP = {
+  'CAMP-1BASIC': 'System',
+  'CAMP-1VOCAB': 'Manual',
+  'CAMP-1STORY': 'Manual',
+  'CAMP-1SPEAK': 'Manual',
+  'CAMP-1GRMMR': 'Manual',
+  'CAMP-2GFORS': 'Manual',
+  'CAMP-2VOCAB': 'Manual',
+  'CAMP-2STORY': 'Manual',
+  'CAMP-2SPEAK': 'Manual',
+  'CAMP-2GRMMR': 'Manual',
+  'CAMP-3PRONC': 'Manual',
+  'CAMP-3VOCAB': 'System',
+  'CAMP-3STORY': 'Manual',
+  'CAMP-3SPEAK': 'Manual',
+  'CAMP-3GRMMR': 'Manual',
+  'EVNK-VOCAB':  'System',
+  'SHRT-VOCAB':  'System',
+  'TPTC-VOCAB':  'System',
+};
+
+function getSavedClassModeMap() {
+  try {
+    const saved = localStorage.getItem('topscore_class_mode_map');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return Object.assign({}, DEFAULT_CLASS_MODE_MAP, parsed);
+      }
+    }
+  } catch (_) {}
+  return Object.assign({}, DEFAULT_CLASS_MODE_MAP);
+}
+
+let _classModeMap = getSavedClassModeMap();
+
+function getClassMode(code) {
+  const cCode = canonicalizeClassCode(code);
+  const val = _classModeMap[cCode] || _classModeMap[code] || 'Manual';
+  return /^system|cbt$/i.test(val) ? 'System' : 'Manual';
+}
+
+function saveClassModeMap() {
+  try {
+    localStorage.setItem('topscore_class_mode_map', JSON.stringify(_classModeMap));
+  } catch (_) {}
+  saveSettingToSupabase('deck_class_mode_map', _classModeMap);
+}
 
 // Default Class-to-Tutor mapping (Persistent in Supabase & LocalStorage — 0 Clashes SSOT)
 const DEFAULT_CLASS_TUTOR_MAP = {
@@ -1489,12 +1539,26 @@ export async function renderDashboard(container) {
     } else {
       saveSettingToSupabase('deck_class_tutor_map', _classTutorMap);
     }
+
+    const modeMapSetting = siteSettings.find(s => s.key === 'deck_class_mode_map');
+    if (modeMapSetting && modeMapSetting.value) {
+      try {
+        const parsed = typeof modeMapSetting.value === 'string' ? JSON.parse(modeMapSetting.value) : modeMapSetting.value;
+        if (parsed && typeof parsed === 'object') {
+          _classModeMap = Object.assign({}, DEFAULT_CLASS_MODE_MAP, _classModeMap, parsed);
+          try { localStorage.setItem('topscore_class_mode_map', JSON.stringify(_classModeMap)); } catch (_) {}
+        }
+      } catch (_) {}
+    } else {
+      saveSettingToSupabase('deck_class_mode_map', _classModeMap);
+    }
   } else {
     // Seed Supabase if settings don't exist yet
     saveSettingToSupabase('deck_faculty_registry', FACULTY_REGISTRY);
     saveSettingToSupabase('deck_rooms_directory', _roomsDirectory);
     saveSettingToSupabase('deck_class_schedule_map', _classScheduleMap);
     saveSettingToSupabase('deck_class_tutor_map', _classTutorMap);
+    saveSettingToSupabase('deck_class_mode_map', _classModeMap);
   }
   syncFacultyAssignedClasses();
 
@@ -1579,8 +1643,13 @@ export async function renderDashboard(container) {
   const cecProgram = programs.find(p => (p.name || '').toUpperCase().includes('CAMP'));
   const cecProgramId = cecProgram?.id;
 
-  // Strict Active Student Count by Level for Scheduling & Room Capacity SSOT
-  const activeCECStudents = activeStudents.filter(s => (!s.program_id || s.program_id === cecProgramId) && s.program_status !== 'ALUMNI');
+  // Strict Active Student Count by Level (Only Active Batches) for Scheduling & Room Capacity SSOT
+  const activeBatchIds = new Set(batches.filter(b => b.is_active && !b.deleted_at).map(b => b.id));
+  const activeCECStudents = activeStudents.filter(s =>
+    (!s.program_id || s.program_id === cecProgramId) &&
+    s.program_status !== 'ALUMNI' &&
+    s.batch_id && activeBatchIds.has(s.batch_id)
+  );
   const activeLevel1Students = activeCECStudents.filter(s => {
     const lvl = levels.find(l => l.id === s.level_id);
     return lvl && lvl.level_number === 1;
@@ -1788,6 +1857,21 @@ export async function renderDashboard(container) {
 
     window._rerenderDashboardView = renderView;
 
+    window._onDashboardModeChange = (classCode, newMode) => {
+      const cCode = canonicalizeClassCode(classCode);
+      const val = /^system|cbt$/i.test(newMode) ? 'System' : 'Manual';
+      _classModeMap[cCode] = val;
+      if (classCode !== cCode) _classModeMap[classCode] = val;
+      saveClassModeMap();
+      if (typeof window.loadSidebarClasses === 'function') {
+        window.loadSidebarClasses();
+      }
+      if (typeof showToast === 'function') {
+        showToast(`${classCode} mode set to ${val}`, 'success');
+      }
+      renderView();
+    };
+
     // ── 1. REGISTER TOP PANEL TABS IN #topbar-tabs-container (SSOT Point 1) ──
     window._switchDashboardTab = (tabId) => {
       if (_currentDashboardTab !== tabId) {
@@ -1880,71 +1964,48 @@ export async function renderDashboard(container) {
     // ── 3. RENDER DYNAMIC WORKSPACE SPLIT (CLASSES MATRIX + COMPACT TUTOR & ROOMS DIRECTORY) ──
     // Single Perimeter Ownership SSOT: #admin-content-area provides the 10px perimeter padding. Zero nested padding.
     container.innerHTML = `
-      <div style="display:grid;grid-template-columns:minmax(0, 1.85fr) minmax(0, 1.15fr);gap:10px;box-sizing:border-box;height:100%;overflow:hidden;">
+      <div style="display:grid;grid-template-columns:minmax(0, 2.35fr) minmax(0, 0.95fr);gap:10px;box-sizing:border-box;height:100%;overflow:hidden;">
 
         <!-- ────────────────────────────────────────────────────────── -->
         <!-- PANEL KIRI (LARGER): 15 KELAS CEC / TOP CLASSES MATRIX     -->
         <!-- ────────────────────────────────────────────────────────── -->
-        <div class="glass-card" style="padding:10px !important;display:flex;flex-direction:column;height:100%;box-sizing:border-box;overflow:hidden;min-width:0;">
-
-          <!-- Standardized Header Bar Panel Kiri -->
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;height:24px;">
-            <h3 style="margin:0;font-size:12px;font-weight:800;text-transform:uppercase;color:var(--admin-text-main, #f8fafc);display:flex;align-items:center;gap:6px;">
-              <span>${isCEC ? '15 CLASSES MATRIX' : 'CORPORATE CLASSES MATRIX'}</span>
-              <span style="font-size:10px;font-weight:800;padding:1px 6px;background:${isCEC ? 'rgba(56,189,248,0.15)' : 'rgba(255,140,0,0.15)'};color:${isCEC ? C.TACT : C.ORANGE};border-radius:10px;">
-                ${currentClasses.length} CLASSES
-              </span>
-            </h3>
-            <div style="display:inline-flex;align-items:center;gap:8px;">
-              ${audit.totalConflicts === 0 ? `
-                <span style="font-size:10px;color:#00c000;font-weight:700;display:inline-flex;align-items:center;gap:4px;" title="Zero schedule, room or capacity conflicts">
-                  <span style="width:6px;height:6px;border-radius:50%;background:#00c000;display:inline-block;"></span>
-                  SCHEDULE VALIDATED
-                </span>
-              ` : `
-                <span style="font-size:10px;background:rgba(255,0,0,0.15);color:var(--grade-e, #ff0000);border:1px solid rgba(255,0,0,0.45);border-radius:10px;padding:1px 8px;font-weight:800;display:inline-flex;align-items:center;gap:4px;cursor:pointer;" title="${escHtml(conflictSummaryTitle)}" onclick="window._toggleDashboardEditMode()">
-                  ⚠ ${audit.totalConflicts} CONFLICT${audit.totalConflicts > 1 ? 'S' : ''} DETECTED
-                </span>
-              `}
-              <span style="font-size:10px;color:${C.MUTED};font-weight:600;">ACADEMIC MATRIX</span>
-            </div>
-          </div>
-
-          <!-- Zero-Scroll Authoritative Datagrid Wrapper (System Colors & Zero Ellipsis) -->
-          <div style="flex:1 1 0;min-height:0;height:calc(100% - 30px);overflow:hidden !important;margin-bottom:0 !important;display:flex;flex-direction:column;">
+        <div class="table-wrap" style="display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;overflow-y:auto;overflow-x:auto;min-width:0;margin:0 !important;background:#0f172a;border:2px solid rgba(255,255,255,0.28) !important;border-radius:6px;">
             <style>
               .dashboard-academic-table {
                 width: 100%;
                 height: 100%;
-                border-collapse: collapse;
+                border-collapse: separate;
+                border-spacing: 0;
+                table-layout: auto !important;
                 font-size: 12px !important;
                 font-family: 'Inter', sans-serif !important;
-                display: flex;
-                flex-direction: column;
               }
               .dashboard-academic-table th {
-                padding: 0 4px !important;
+                padding: 0 6px !important;
                 vertical-align: middle !important;
                 font-size: 12px !important;
                 font-weight: 700 !important;
                 color: #94a3b8 !important;
                 font-family: 'Inter', sans-serif !important;
                 border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.12) !important;
+                border-bottom: 2px solid rgba(255, 255, 255, 0.22) !important;
+                background: #0f172a !important;
+                height: 30px;
+                white-space: nowrap !important;
               }
               .dashboard-academic-table th:last-child {
                 border-right: none !important;
               }
               .dashboard-academic-table td {
-                padding: 0 4px !important;
+                padding: 0 6px !important;
                 vertical-align: middle !important;
                 font-size: 12px !important;
                 font-weight: 500 !important;
                 color: var(--admin-text-main, #f8fafc) !important;
                 border-bottom: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.05)) !important;
                 border-right: 1px solid var(--admin-border-subtle, rgba(255, 255, 255, 0.08)) !important;
-                height: auto !important;
                 font-family: 'Inter', sans-serif !important;
+                white-space: nowrap !important;
               }
               .dashboard-academic-table td:last-child {
                 border-right: none !important;
@@ -1972,27 +2033,29 @@ export async function renderDashboard(container) {
                 background: rgba(255, 255, 255, 0.08) !important;
               }
             </style>
-            <table class="dashboard-academic-table" style="width:100%;height:100%;border-collapse:collapse;display:flex;flex-direction:column;">
-              <thead style="flex-shrink:0;background:#0f172a;border-bottom:2px solid rgba(255,255,255,0.22);display:table;width:100%;table-layout:fixed;">
+            <table class="dashboard-academic-table">
+              <thead style="position:sticky;top:0;z-index:10;background:#0f172a;">
                 <tr style="height:30px;">
-                  <th style="padding:0 2px;text-align:center;width:30px;white-space:nowrap;">LVL</th>
-                  <th style="padding:0 4px;text-align:left;width:78px;white-space:nowrap;">CODE</th>
-                  <th style="padding:0 6px;text-align:left;width:20%;min-width:105px;white-space:nowrap;">CLASS NAME</th>
-                  <th style="padding:0 2px;text-align:center;width:64px;white-space:nowrap;">DAY</th>
-                  <th style="padding:0 2px;text-align:center;width:52px;white-space:nowrap;">START</th>
-                  <th style="padding:0 2px;text-align:center;width:52px;white-space:nowrap;">END</th>
-                  <th style="padding:0 2px;text-align:center;width:54px;white-space:nowrap;" title="Class Duration (Minutes: 60, 90, 120, 150, 180)">DUR</th>
-                  <th style="padding:0 4px;text-align:center;width:82px;white-space:nowrap;">ROOM</th>
-                  <th style="padding:0 4px;text-align:left;width:82px;white-space:nowrap;">TUTOR</th>
-                  <th style="padding:0 2px;text-align:center;width:30px;white-space:nowrap;">STD</th>
-                  <th style="padding:0 4px;text-align:right;width:40px;white-space:nowrap;" title="Class Attendance Rate (%)">RATE</th>
-                  <th style="padding:0 2px;text-align:center;width:48px;white-space:nowrap;">STATUS</th>
+                  <th style="text-align:center;min-width:38px;">LVL</th>
+                  <th style="text-align:left;min-width:108px;">CODE</th>
+                  <th style="text-align:left;min-width:200px;">CLASS NAME</th>
+                  <th style="text-align:center;min-width:72px;">DAY</th>
+                  <th style="text-align:center;min-width:54px;">START</th>
+                  <th style="text-align:center;min-width:54px;">END</th>
+                  <th style="text-align:center;min-width:48px;" title="Class Duration (Minutes: 60, 90, 120, 150, 180)">DUR</th>
+                  <th style="text-align:left;min-width:96px;">ROOM</th>
+                  <th style="text-align:left;min-width:90px;">TUTOR</th>
+                  <th style="text-align:center;min-width:48px;">STD</th>
+                  <th style="text-align:right;min-width:52px;" title="Class Attendance Rate (%)">RATE</th>
+                  <th style="text-align:center;min-width:68px;">STATUS</th>
+                  <th style="text-align:center;min-width:64px;">MODE</th>
                 </tr>
               </thead>
-              <tbody style="flex:1 1 0;min-height:0;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;">
+              <tbody>
                 ${currentClasses.map((item, idx) => {
                   const lvlStr = item.level === 0 ? '—' : item.level === 1 ? '1st' : item.level === 2 ? '2nd' : '3rd';
                   const cCode = canonicalizeClassCode(item.code);
+                  const clsMode = getClassMode(item.code);
                   const assignedTutorId = _classTutorMap[item.code] || _classTutorMap[cCode];
                   const assignedTutor = activeTutors.find(t => t.id === assignedTutorId);
                   const sched = _classScheduleMap[item.code] || _classScheduleMap[cCode] || { room: '—', start: '08:00', end: '09:30', day: 'Mon–Fri' };
@@ -2019,24 +2082,24 @@ export async function renderDashboard(container) {
                     : '';
 
                   return `
-                    <tr class="dashboard-class-row" data-class-code="${escHtml(item.code || '')}" data-class-id="${item.id || ''}" data-orig-bg="${rowBg}" style="display:table;width:100%;table-layout:fixed;flex:1 1 0;min-height:0;height:calc((100% - 30px) / ${currentClasses.length});background:${rowBg};transition:background .15s;${rowBorderLeft}">
+                    <tr class="dashboard-class-row" data-class-code="${escHtml(item.code || '')}" data-class-id="${item.id || ''}" data-orig-bg="${rowBg}" style="background:${rowBg};transition:background .15s;${rowBorderLeft}">
                       <!-- 1. LVL -->
-                      <td style="padding:0 2px;text-align:center;font-weight:600;font-size:12px;color:var(--admin-text-main, #f8fafc);font-variant-numeric:tabular-nums;white-space:nowrap;width:30px;">
+                      <td style="text-align:center;font-weight:600;font-size:12px;color:var(--admin-text-main, #f8fafc);font-variant-numeric:tabular-nums;white-space:nowrap;">
                         ${lvlStr}
                       </td>
 
                       <!-- 2. CODE (Tepat Setelah Kolom Numbering LVL) -->
-                      <td style="padding:0 4px;text-align:left;font-family:monospace;font-size:12px;color:var(--admin-text-main, #f8fafc);font-weight:600;white-space:nowrap;width:78px;">
+                      <td style="text-align:left;font-family:monospace;font-size:12px;color:var(--admin-text-main, #f8fafc);font-weight:600;white-space:nowrap;">
                         ${escHtml(item.code || '—')}
                       </td>
 
-                      <!-- 3. CLASS NAME (12px) -->
-                      <td style="padding:0 6px;text-align:left;font-weight:400;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;width:20%;min-width:105px;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(item.name)}">
+                      <!-- 3. CLASS NAME (12px, Zero Truncation) -->
+                      <td style="text-align:left;font-weight:400;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;" title="${escHtml(item.name)}">
                         ${escHtml(item.name)}
                       </td>
 
                       <!-- 4. DAY (Schedule Day Selector in Edit Mode) -->
-                      <td style="padding:0 2px;text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;width:64px;">
+                      <td style="text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;">
                         ${isEditOn ? `
                           <select onchange="window._onDashboardScheduleChange('${escHtml(item.code)}', 'day', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:500;background:transparent;border:none;outline:none;color:var(--admin-text-main, #f8fafc);box-sizing:border-box;text-align:center;cursor:pointer;">
                             ${CLASS_DAY_OPTIONS.map(d => `<option value="${d}" ${(sched.day || 'Mon–Fri') === d ? 'selected' : ''} style="background:#0f172a;color:#f8fafc;">${d}</option>`).join('')}
@@ -2047,7 +2110,7 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 5. START (Quarter-Hour Dropdown 00, 15, 30, 45 in Edit Mode) -->
-                      <td style="padding:0;text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);font-variant-numeric:tabular-nums;white-space:nowrap;width:52px;">
+                      <td style="text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);font-variant-numeric:tabular-nums;white-space:nowrap;">
                         ${isEditOn ? `
                           ${renderQuarterHourTimeSelect(sched.start || '07:30', `window._onDashboardScheduleChange('${escHtml(item.code)}', 'start', this.value)`, '', hasTimeClash)}
                         ` : `
@@ -2056,7 +2119,7 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 6. END (Quarter-Hour Dropdown 00, 15, 30, 45 in Edit Mode) -->
-                      <td style="padding:0;text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);font-variant-numeric:tabular-nums;white-space:nowrap;width:52px;">
+                      <td style="text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);font-variant-numeric:tabular-nums;white-space:nowrap;">
                         ${isEditOn ? `
                           ${renderQuarterHourTimeSelect(sched.end || '09:00', `window._onDashboardScheduleChange('${escHtml(item.code)}', 'end', this.value)`, '', hasTimeClash)}
                         ` : `
@@ -2065,7 +2128,7 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 7. DUR (Class Duration: 60m min, +30m step up to 180m max) -->
-                      <td style="padding:0 2px;text-align:center;white-space:nowrap;width:54px;">
+                      <td style="text-align:center;white-space:nowrap;">
                         ${isEditOn ? `
                           <select onchange="window._onDashboardScheduleChange('${escHtml(item.code)}', 'duration', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:600;background:transparent;border:none;outline:none;color:var(--admin-text-main, #f8fafc);cursor:pointer;box-sizing:border-box;text-align:center;" title="Select Duration (60–180 min)">
                             <option value="60" ${schedDur === 60 ? 'selected' : ''} style="background:#0f172a;color:#f8fafc;">60m</option>
@@ -2080,32 +2143,32 @@ export async function renderDashboard(container) {
                         `}
                       </td>
 
-                      <!-- 8. ROOM (Strict Hyphenated Room Code SSOT, Dropdown with Capacity in Edit Mode) -->
-                      <td style="padding:0 4px;text-align:center;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;width:82px;">
+                      <!-- 8. ROOM (Room Name Display, Dropdown with Capacity in Edit Mode) -->
+                      <td style="text-align:left;font-weight:500;font-size:12px;color:var(--admin-text-main, #f8fafc);white-space:nowrap;">
                         ${isEditOn ? `
-                          <select onchange="window._onDashboardScheduleChange('${escHtml(item.code)}', 'room', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:500;background:transparent;border:${hasRoomClash ? '1px solid var(--grade-e, #ff0000) !important' : hasCapIssue ? '1px solid var(--grade-c, #ffff00) !important' : 'none'};outline:none;color:${hasRoomClash ? 'var(--grade-e, #ff0000)' : hasCapIssue ? 'var(--grade-c, #ffff00)' : 'var(--admin-text-main, #f8fafc)'};box-sizing:border-box;text-align:center;cursor:pointer;" title="${hasRoomClash ? `⚠ Room Clash: ${schedRoomCode} double-booked at this time!` : hasCapIssue ? `⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)` : 'Select Room'}">
+                          <select onchange="window._onDashboardScheduleChange('${escHtml(item.code)}', 'room', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:500;background:transparent;border:${hasRoomClash ? '1px solid var(--grade-e, #ff0000) !important' : hasCapIssue ? '1px solid var(--grade-c, #ffff00) !important' : 'none'};outline:none;color:${hasRoomClash ? 'var(--grade-e, #ff0000)' : hasCapIssue ? 'var(--grade-c, #ffff00)' : 'var(--admin-text-main, #f8fafc)'};box-sizing:border-box;text-align:left;cursor:pointer;" title="${hasRoomClash ? `⚠ Room Clash: ${schedRoomName} double-booked at this time!` : hasCapIssue ? `⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)` : 'Select Room'}">
                             <option value="—" style="background:#0f172a;color:#f8fafc;">— None —</option>
-                            ${activeRooms.map(r => `<option value="${escHtml(r.code)}" ${schedRoomCode === r.code ? 'selected' : ''} style="background:#0f172a;color:#f8fafc;">${escHtml(r.code)} (${r.capacity || '—'})</option>`).join('')}
+                            ${activeRooms.map(r => `<option value="${escHtml(r.code)}" ${schedRoomCode === r.code ? 'selected' : ''} style="background:#0f172a;color:#f8fafc;">${escHtml(r.name || r.code)} (${r.capacity || '—'})</option>`).join('')}
                           </select>
                         ` : `
                           ${hasRoomClash ? `
-                            <span style="font-size:12px;font-weight:700;color:var(--grade-e, #ff0000);display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Room Clash: ${escHtml(schedRoomCode)} is also booked by ${escHtml(rowAudit.roomClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
+                            <span style="font-size:12px;font-weight:700;color:var(--grade-e, #ff0000);display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Room Clash: ${escHtml(schedRoomName)} (${escHtml(schedRoomCode)}) is also booked by ${escHtml(rowAudit.roomClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
                               <span>⚠</span>
-                              <span style="overflow:hidden;text-overflow:ellipsis;max-width:65px;">${escHtml(schedRoomCode)}</span>
+                              <span>${escHtml(schedRoomName)}</span>
                             </span>
                           ` : hasCapIssue ? `
-                            <span style="font-size:12px;font-weight:600;color:var(--grade-c, #ffff00);display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed ${escHtml(schedRoomCode)} capacity (${rowAudit.capacityIssue.capacity} max by +${rowAudit.capacityIssue.diff})" onclick="window._toggleDashboardEditMode()">
+                            <span style="font-size:12px;font-weight:600;color:var(--grade-c, #ffff00);display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed ${escHtml(schedRoomName)} capacity (${rowAudit.capacityIssue.capacity} max by +${rowAudit.capacityIssue.diff})" onclick="window._toggleDashboardEditMode()">
                               <span>⚠</span>
-                              <span style="overflow:hidden;text-overflow:ellipsis;max-width:65px;">${escHtml(schedRoomCode)}</span>
+                              <span>${escHtml(schedRoomName)}</span>
                             </span>
                           ` : `
-                            <span style="font-size:12px;font-weight:500;color:var(--admin-text-main, #f8fafc);">${escHtml(schedRoomCode)}</span>
+                            <span style="font-size:12px;font-weight:500;color:var(--admin-text-main, #f8fafc);" title="Room Code: ${escHtml(schedRoomCode)}">${escHtml(schedRoomName)}</span>
                           `}
                         `}
                       </td>
 
                       <!-- 9. TUTOR (Tanpa Titik/Dot, Dropdown with Conflict Detection in Edit Mode) -->
-                      <td style="padding:0 4px;text-align:left;white-space:nowrap;width:82px;">
+                      <td style="text-align:left;white-space:nowrap;">
                         ${isEditOn ? `
                           <select class="dashboard-tutor-select" onchange="window._onDashboardTutorChange('${escHtml(item.code)}', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:600;background:transparent;border:${hasTutorClash ? '1px solid var(--grade-e, #ff0000) !important' : 'none'};outline:none;color:${hasTutorClash ? 'var(--grade-e, #ff0000)' : 'var(--admin-text-main, #f8fafc)'};cursor:pointer;box-sizing:border-box;" title="${hasTutorClash ? `⚠ Tutor Clash: ${assignedTutor ? assignedTutor.nickname : 'Tutor'} double-booked at this time!` : 'Select Tutor'}">
                             <option value="" style="background:#0f172a;color:#f8fafc;">— None —</option>
@@ -2115,7 +2178,7 @@ export async function renderDashboard(container) {
                           ${hasTutorClash ? `
                             <span style="color:var(--grade-e, #ff0000);font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:3px;cursor:pointer;" title="⚠ Tutor Clash: ${escHtml(assignedTutor ? assignedTutor.nickname : 'Tutor')} is also teaching ${escHtml(rowAudit.tutorClashes.map(c => c.otherCode + ' [' + c.otherTime + ']').join(', '))}" onclick="window._toggleDashboardEditMode()">
                               <span>⚠</span>
-                              <span style="overflow:hidden;text-overflow:ellipsis;max-width:65px;">${escHtml(assignedTutor ? assignedTutor.nickname : 'Tutor')}</span>
+                              <span>${escHtml(assignedTutor ? assignedTutor.nickname : 'Tutor')}</span>
                             </span>
                           ` : assignedTutor ? `
                             <span style="color:var(--admin-text-main, #f8fafc);font-weight:600;font-size:12px;cursor:pointer;" title="Tutor: ${escHtml(assignedTutor.full_name)} (Click Edit Mode to reassign)" onclick="window._toggleDashboardEditMode()">${escHtml(assignedTutor.nickname)}</span>
@@ -2126,11 +2189,11 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 10. STD (Highlight if Overcapacity) -->
-                      <td style="padding:0 2px;text-align:center;font-weight:${hasCapIssue ? '700' : '400'};font-size:12px;color:${hasCapIssue ? 'var(--grade-c, #ffff00)' : 'var(--admin-text-main, #f8fafc)'};font-variant-numeric:tabular-nums;white-space:nowrap;width:30px;">
+                      <td style="text-align:center;font-weight:${hasCapIssue ? '700' : '400'};font-size:12px;color:${hasCapIssue ? 'var(--grade-c, #ffff00)' : 'var(--admin-text-main, #f8fafc)'};font-variant-numeric:tabular-nums;white-space:nowrap;">
                         ${hasCapIssue ? `
-                          <span style="display:inline-flex;align-items:center;gap:1px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)" onclick="window._toggleDashboardEditMode()">
+                          <span style="display:inline-flex;align-items:center;gap:2px;cursor:pointer;" title="⚠ Overcapacity: ${item.studentCount} students exceed room capacity (${rowAudit.capacityIssue.capacity} max)" onclick="window._toggleDashboardEditMode()">
                             <span>${item.studentCount}</span>
-                            <span style="font-size:9px;">⚠</span>
+                            <span style="font-size:12px;">⚠</span>
                           </span>
                         ` : `
                           ${item.studentCount}
@@ -2138,7 +2201,7 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 11. ATTENDANCE RATE (Strictly Attendance Rate SSOT) -->
-                      <td style="padding:0 4px;text-align:right;white-space:nowrap;width:40px;">
+                      <td style="text-align:right;white-space:nowrap;">
                         ${item.attendanceRate !== null && item.attendanceRate !== undefined ? `
                           <span class="metric-pct ${item.attendanceRate >= 80 ? 'pct-high' : item.attendanceRate >= 60 ? 'pct-mid' : 'pct-low'}" data-pct-tier="${item.attendanceRate >= 80 ? 'high' : item.attendanceRate >= 60 ? 'mid' : 'low'}" style="color:${gradeColor(item.attendanceRate)};font-weight:700;font-size:12px;font-variant-numeric:tabular-nums;" title="Class Attendance Rate: ${item.attendanceRate}%">${item.attendanceRate}%</span>
                         ` : `
@@ -2147,11 +2210,23 @@ export async function renderDashboard(container) {
                       </td>
 
                       <!-- 12. STATUS (Active = #00c000 Green, Inactive = var(--grade-e, #ff0000) Red) -->
-                      <td style="padding:0 2px;text-align:center;white-space:nowrap;width:48px;">
+                      <td style="text-align:center;white-space:nowrap;">
                         ${item.isActive ? `
                           <span class="status-tag status-active" data-status="active" style="color:var(--grade-a, #00c000);font-weight:700;font-size:12px;">Active</span>
                         ` : `
                           <span class="status-tag status-inactive" data-status="inactive" style="color:var(--grade-e, #ff0000);font-weight:700;font-size:12px;">Inactive</span>
+                        `}
+                      </td>
+
+                      <!-- 13. MODE (Manual | System - Far Right Next to Status) -->
+                      <td style="text-align:center;white-space:nowrap;">
+                        ${isEditOn ? `
+                          <select onchange="window._onDashboardModeChange('${escHtml(item.code)}', this.value)" style="height:100%;width:100%;padding:0 2px;font-size:12px !important;font-family:'Inter',sans-serif !important;font-weight:700;background:transparent;border:none;outline:none;color:${clsMode === 'System' ? '#38bdf8' : '#ff8c00'};box-sizing:border-box;text-align:center;cursor:pointer;">
+                            <option value="Manual" ${clsMode === 'Manual' ? 'selected' : ''} style="background:#0f172a;color:#ff8c00;">Manual</option>
+                            <option value="System" ${clsMode === 'System' ? 'selected' : ''} style="background:#0f172a;color:#38bdf8;">System</option>
+                          </select>
+                        ` : `
+                          <span style="font-size:12px;font-weight:700;color:${clsMode === 'System' ? '#38bdf8' : '#ff8c00'};">${clsMode}</span>
                         `}
                       </td>
 
@@ -2160,7 +2235,6 @@ export async function renderDashboard(container) {
                 }).join('')}
               </tbody>
             </table>
-          </div>
         </div>
 
         <!-- ────────────────────────────────────────────────────────── -->

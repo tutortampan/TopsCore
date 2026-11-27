@@ -110,7 +110,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       _mcAutoAdvanceTimer = setTimeout(() => {
         _mcAutoAdvanceTimer = null;
         const nextBtn = document.getElementById('bottom-next-btn');
-        if (nextBtn && nextBtn.textContent.includes('Next') && !nextBtn.disabled) {
+        if (nextBtn && (nextBtn.textContent.includes('Next') || nextBtn.textContent.includes('Bonus') || nextBtn.textContent.includes('Submit')) && !nextBtn.disabled) {
           nextBtn.click();
         }
       }, delay);
@@ -1178,19 +1178,162 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           return sec === 'phrases' || cat === 'phrases' || lbl.includes('phrase') || top.includes('phrase') || ['expression', 'idiom', 'proverb', 'phrase'].includes(wt);
         };
 
-        // Question order shuffle (if random, default in TopsCore)
+        // ── Basic English Live Dynamic Questions (Pinned 1–3) & Bonus Round Gating ──
+        const getRowSnap = (r) => {
+          if (typeof r?.question_snapshot === 'string') {
+            try { return JSON.parse(r.question_snapshot); } catch (_) { return {}; }
+          }
+          return r?.question_snapshot || {};
+        };
+        const getDynamicType = (r) => String(getRowSnap(r)?.dynamic_type || r?.dynamic_type || '').toLowerCase();
+
+        // Separate Bonus Round rows (held back until all core questions are answered)
+        const detectedBonusRows = allAnswerRows.filter(r => {
+          const s = getRowSnap(r);
+          return Boolean(s?.is_bonus_round || r?.is_bonus_round || getDynamicType(r) === 'bonus_round');
+        });
+        if (detectedBonusRows.length > 0) {
+          window._bonusRoundRows = detectedBonusRows;
+          window._bonusRoundUnlocked = false;
+          window._bonusRoundCompleted = false;
+          allAnswerRows = allAnswerRows.filter(r => !detectedBonusRows.includes(r));
+          window.allAnswerRows = allAnswerRows;
+        }
+
+        // Hydrate live_time / live_day / live_date rows using WITA server time & attempt seed
+        const liveDynamicRows = allAnswerRows.filter(r => ['live_time', 'live_day', 'live_date'].includes(getDynamicType(r)));
+        if (liveDynamicRows.length > 0) {
+          const witaBase = await getServerTimeWita().catch(() => new Date());
+          const seedBase = String(attemptData?.id || testId || 'live');
+          const seededPick = (arr, salt) => {
+            const shuffled = shuffleWithSeed(arr, seedBase + '_' + salt);
+            return shuffled[0];
+          };
+          const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+          const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+          const ordinals = ['', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth', 'eleventh', 'twelfth', 'thirteenth', 'fourteenth', 'fifteenth', 'sixteenth', 'seventeenth', 'eighteenth', 'nineteenth', 'twentieth', 'twenty-first', 'twenty-second', 'twenty-third', 'twenty-fourth', 'twenty-fifth', 'twenty-sixth', 'twenty-seventh', 'twenty-eighth', 'twenty-ninth', 'thirtieth', 'thirty-first'];
+          const hourWords = ['twelve', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+
+          const formatTimeExpr = (h24, m) => {
+            const h12 = h24 % 12;
+            const nextH12 = (h24 + 1) % 12;
+            if (m === 0) return `${hourWords[h12 === 0 ? 12 : h12]} o'clock`;
+            if (m === 15) return `quarter past ${hourWords[h12 === 0 ? 12 : h12]}`;
+            if (m === 30) return `half past ${hourWords[h12 === 0 ? 12 : h12]}`;
+            if (m === 45) return `quarter to ${hourWords[nextH12 === 0 ? 12 : nextH12]}`;
+            if (m < 30) return `${m} minutes past ${hourWords[h12 === 0 ? 12 : h12]}`;
+            return `${60 - m} minutes to ${hourWords[nextH12 === 0 ? 12 : nextH12]}`;
+          };
+
+          const livePersistPromises = [];
+          liveDynamicRows.forEach(r => {
+            const s = getRowSnap(r);
+            const dtype = getDynamicType(r);
+            const alreadyHydrated = Array.isArray(s.accepted_answers_snapshot) &&
+              s.accepted_answers_snapshot.length > 0 &&
+              !String(s.accepted_answers_snapshot[0] || '').includes('Dynamic');
+            if (alreadyHydrated) {
+              r.question_text_snapshot = s.question_text || r.question_text_snapshot;
+              r.options_snapshot = s.options_snapshot || r.options_snapshot;
+              r.accepted_answers_snapshot = s.accepted_answers_snapshot;
+              return;
+            }
+            if (dtype === 'live_time') {
+              const hh = witaBase.getHours();
+              const mm = witaBase.getMinutes();
+              const snappedMin = Math.round(mm / 5) * 5;
+              const adjHour = snappedMin === 60 ? (hh + 1) % 24 : hh;
+              const finalMin = snappedMin === 60 ? 0 : snappedMin;
+              const displayClock = `${String(adjHour).padStart(2, '0')}:${String(finalMin).padStart(2, '0')} WITA`;
+              const correctExpr = formatTimeExpr(adjHour, finalMin);
+              const d1 = formatTimeExpr((adjHour + 1) % 24, finalMin);
+              const d2 = formatTimeExpr(adjHour, (finalMin + 15) % 60);
+              const d3 = formatTimeExpr((adjHour + 23) % 24, (finalMin + 30) % 60);
+              const opts = [...new Set([correctExpr, d1, d2, d3])].slice(0, 4);
+              s.question_text = `Look at the current time (${displayClock}). How do you express this time in English?`;
+              s.options_snapshot = opts;
+              s.correct_answer = correctExpr;
+              s.accepted_answers_snapshot = [correctExpr];
+            } else if (dtype === 'live_day') {
+              const targets = [
+                { prompt: 'What day is today?', offset: 0 },
+                { prompt: 'What day was yesterday?', offset: -1 },
+                { prompt: 'What day is tomorrow?', offset: 1 },
+                { prompt: 'What day was the day before yesterday?', offset: -2 },
+                { prompt: 'What day is the day after tomorrow?', offset: 2 }
+              ];
+              const chosen = seededPick(targets, 'live_day');
+              const targetIdx = (witaBase.getDay() + chosen.offset + 7) % 7;
+              const correctDay = daysEn[targetIdx];
+              const opts = [
+                correctDay,
+                daysEn[(targetIdx + 1) % 7],
+                daysEn[(targetIdx + 6) % 7],
+                daysEn[(targetIdx + 2) % 7]
+              ];
+              s.question_text = chosen.prompt;
+              s.options_snapshot = opts;
+              s.correct_answer = correctDay;
+              s.accepted_answers_snapshot = [correctDay];
+            } else if (dtype === 'live_date') {
+              const targets = [
+                { prompt: "How do you read today's date in English?", offset: 0 },
+                { prompt: "How do you read yesterday's date in English?", offset: -1 },
+                { prompt: "How do you read tomorrow's date in English?", offset: 1 }
+              ];
+              const chosen = seededPick(targets, 'live_date');
+              const dt = new Date(witaBase.getTime() + chosen.offset * 86400000);
+              const mName = monthsEn[dt.getMonth()];
+              const dNum = dt.getDate();
+              const ordWord = ordinals[dNum] || `${dNum}th`;
+              const correctDate = `${mName} the ${ordWord}`;
+              const nextDt = new Date(dt.getTime() + 86400000);
+              const prevDt = new Date(dt.getTime() - 86400000);
+              const opts = [
+                correctDate,
+                `${mName} ${dNum}`,
+                `${monthsEn[nextDt.getMonth()]} the ${ordinals[nextDt.getDate()] || nextDt.getDate()}`,
+                `${monthsEn[prevDt.getMonth()]} the ${ordinals[prevDt.getDate()] || prevDt.getDate()}`
+              ];
+              s.question_text = chosen.prompt;
+              s.options_snapshot = opts;
+              s.correct_answer = correctDate;
+              s.accepted_answers_snapshot = [correctDate];
+            }
+            r.question_snapshot = s;
+            r.question_text_snapshot = s.question_text;
+            r.options_snapshot = s.options_snapshot;
+            r.accepted_answers_snapshot = s.accepted_answers_snapshot;
+            if (r.id) {
+              livePersistPromises.push(
+                getSupabase().then(sb => sb.from('attempt_answers').update({
+                  question_snapshot: s,
+                  accepted_answers_snapshot: s.accepted_answers_snapshot,
+                  correct_answer_snapshot: s.correct_answer || (s.accepted_answers_snapshot?.[0] || '')
+                }).eq('id', r.id)).catch(() => {})
+              );
+            }
+          });
+          if (livePersistPromises.length > 0) {
+            Promise.all(livePersistPromises).catch(() => {});
+          }
+        }
+
+        // Question order shuffle (if random, default in TopsCore) — keep live_time/live_day/live_date pinned at 1–3
         const orderSetting = String(testData?.question_order || testData?.payload?.question_order || 'random').toLowerCase();
         if (orderSetting === 'random' && allAnswerRows.length > 1) {
-          const hasTwoSections = allAnswerRows.some(r => !isPhraseRowUnified(r)) &&
-                                allAnswerRows.some(r => isPhraseRowUnified(r));
+          const pinnedLive = allAnswerRows.filter(r => ['live_time', 'live_day', 'live_date'].includes(getDynamicType(r)));
+          const regularRows = allAnswerRows.filter(r => !['live_time', 'live_day', 'live_date'].includes(getDynamicType(r)));
+          const hasTwoSections = regularRows.some(r => !isPhraseRowUnified(r)) &&
+                                regularRows.some(r => isPhraseRowUnified(r));
           if (hasTwoSections) {
-            const wordRows = allAnswerRows.filter(r => !isPhraseRowUnified(r));
-            const phraseRows = allAnswerRows.filter(r => isPhraseRowUnified(r));
+            const wordRows = regularRows.filter(r => !isPhraseRowUnified(r));
+            const phraseRows = regularRows.filter(r => isPhraseRowUnified(r));
             const shuffledWords = shuffleWithSeed(wordRows, (attemptData?.id || testId) + '_words');
             const shuffledPhrases = shuffleWithSeed(phraseRows, (attemptData?.id || testId) + '_phrases');
-            allAnswerRows = [...shuffledWords, ...shuffledPhrases];
+            allAnswerRows = [...pinnedLive, ...shuffledWords, ...shuffledPhrases];
           } else {
-            allAnswerRows = shuffleWithSeed(allAnswerRows, attemptData?.id || testId);
+            allAnswerRows = [...pinnedLive, ...shuffleWithSeed(regularRows, attemptData?.id || testId)];
           }
           window.allAnswerRows = allAnswerRows;
         }
@@ -1974,7 +2117,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       timerController = startCountdown(activeEndAt.toISOString(), {
         totalSeconds: totalDurationSeconds,
         onTick(remaining) {
-          display.textContent = formatTime(remaining);
+          if (!window._perQuestionInterval && !document.getElementById('tc-phase-splash-overlay')) {
+            display.textContent = formatTime(remaining);
+          }
           if (remaining <= graceThreshold) {
             updateGracePeriodBanner(remaining);
           } else if (_isGracePeriodActive) {
@@ -2226,15 +2371,36 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }, 300);
     }
 
+    function getRowPhaseKey(r) {
+      const s = typeof r?.question_snapshot === 'string' ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })() : (r?.question_snapshot || {});
+      const dyn = String(s?.dynamic_type || r?.dynamic_type || '').toLowerCase();
+      if (['live_time', 'live_day', 'live_date'].includes(dyn)) return 'warmup';
+      if (s?.is_bonus_round || r?.is_bonus_round || dyn === 'bonus_round') return 'bonus';
+      return 'core';
+    }
+
     function updateNavGrid() {
       const activeMap = window.answeredMap || answeredMap;
+      const isPhased = Number(testData?.payload?.per_question_seconds || 0) > 0;
+      const activePhase = isPhased && answerRows[currentIndex] ? getRowPhaseKey(answerRows[currentIndex]) : null;
+      const visibleRows = activePhase ? answerRows.filter(r => getRowPhaseKey(r) === activePhase) : allAnswerRows;
+      const visibleRowIds = new Set(visibleRows.map(r => r.id));
 
-      // Update all buttons by data-row-id
+      // Update all buttons by data-row-id (strictly isolate 3-100-2 phases when phased)
       const allButtons = document.querySelectorAll('.q-nav-btn[data-row-id]');
       if (allButtons.length > 0) {
+        let phaseNum = 0;
         allButtons.forEach(btn => {
           const rowId = btn.dataset.rowId;
           if (!rowId) return;
+          if (activePhase) {
+            const inPhase = visibleRowIds.has(rowId);
+            btn.style.display = inPhase ? '' : 'none';
+            if (inPhase) {
+              phaseNum++;
+              btn.textContent = String(phaseNum);
+            }
+          }
           const isAnswered = hasAnswer(activeMap[rowId]);
           btn.classList.toggle('answered', isAnswered);
 
@@ -2269,9 +2435,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         });
       }
 
-      // Update Question Matrix header counts and progress bar
-      const totalAnswered = Object.values(activeMap).filter(hasAnswer).length;
-      const totalQuestions = allAnswerRows.length;
+      // Update Question Matrix header counts and progress bar (scoped to active phase when phased)
+      const totalAnswered = activePhase
+        ? visibleRows.filter(r => hasAnswer(activeMap[r.id])).length
+        : Object.values(activeMap).filter(hasAnswer).length;
+      const totalQuestions = activePhase ? visibleRows.length : allAnswerRows.length;
       const totalUnanswered = Math.max(0, totalQuestions - totalAnswered);
 
       const titleAnsweredEl = document.getElementById('matrix-title-answered');
@@ -2405,8 +2573,93 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
     }
     window.syncLiveSessionModality = syncLiveSessionModality;
 
+    // —— 3-Phase Timed Flow & Splash Helpers (Warm-up 60s/Q -> Core 20s/Q -> Bonus 60s/Q) ——
+    window._seenPhaseSplashes = window._seenPhaseSplashes || new Set();
+    function clearPerQuestionTimer() {
+      if (window._perQuestionInterval) {
+        clearInterval(window._perQuestionInterval);
+        window._perQuestionInterval = null;
+      }
+    }
+    function startPerQuestionTimer(seconds, onExpire) {
+      clearPerQuestionTimer();
+      const timerEl = document.getElementById('timer-display');
+      let rem = Math.max(1, Number(seconds || 20));
+      const paint = () => {
+        if (!timerEl) return;
+        const mm = String(Math.floor(rem / 60)).padStart(2, '0');
+        const ss = String(rem % 60).padStart(2, '0');
+        timerEl.textContent = `${mm}:${ss}`;
+        if (rem <= 5) {
+          timerEl.style.color = '#ff4d4d';
+        } else if (rem <= 10) {
+          timerEl.style.color = '#fbbf24';
+        } else {
+          timerEl.style.color = '';
+        }
+      };
+      paint();
+      window._perQuestionInterval = setInterval(() => {
+        if (!isTestActive) { clearPerQuestionTimer(); return; }
+        rem--;
+        paint();
+        if (rem <= 0) {
+          clearPerQuestionTimer();
+          if (typeof onExpire === 'function') onExpire();
+        }
+      }, 1000);
+    }
+    function showPhaseSplash(phaseKey, headline, subtitle, btnLabel, accentColor, onStart) {
+      if (window._seenPhaseSplashes.has(phaseKey)) {
+        if (typeof onStart === 'function') onStart();
+        return;
+      }
+      window._seenPhaseSplashes.add(phaseKey);
+      clearPerQuestionTimer();
+      const existing = document.getElementById('tc-phase-splash-overlay');
+      if (existing) existing.remove();
+      const ov = document.createElement('div');
+      ov.id = 'tc-phase-splash-overlay';
+      ov.style.cssText = 'position:fixed; inset:0; z-index:9999; background:rgba(6,10,20,0.94); backdrop-filter:blur(12px); display:flex; align-items:center; justify-content:center; padding:20px;';
+      ov.innerHTML = `
+        <div style="width:100%; max-width:360px; background:linear-gradient(180deg, rgba(20,32,58,0.95) 0%, rgba(10,16,30,0.98) 100%); border:1.5px solid ${accentColor}; border-radius:16px; padding:24px 20px; text-align:center; display:flex; flex-direction:column; gap:14px; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+          <div style="font-size:28px; font-weight:900; letter-spacing:0.04em; color:${accentColor}; line-height:1.15;">${headline}</div>
+          <div style="font-size:14px; font-weight:600; color:#cbd5e1; line-height:1.4;">${subtitle}</div>
+          <button type="button" id="tc-phase-splash-btn" style="margin-top:6px; height:44px; border-radius:10px; border:none; background:${accentColor}; color:#090d16; font-size:15px; font-weight:800; cursor:pointer;">${btnLabel}</button>
+        </div>
+      `;
+      document.body.appendChild(ov);
+      ov.querySelector('#tc-phase-splash-btn').onclick = () => {
+        ov.remove();
+        if (typeof onStart === 'function') onStart();
+      };
+    }
+
+    // —— Phase Gating Helper (3 Live Dynamic -> 100 Shuffled Topic -> 2 Bonus Round) ——
+    function getLiveGateBlockIdx(targetIdx) {
+      if (!Array.isArray(answerRows) || answerRows.length === 0) return -1;
+      const getDyn = (r) => {
+        const s = typeof r?.question_snapshot === 'string' ? (() => { try { return JSON.parse(r.question_snapshot); } catch(_) { return {}; } })() : (r?.question_snapshot || {});
+        return String(s?.dynamic_type || r?.dynamic_type || '').toLowerCase();
+      };
+      const liveIndices = [];
+      answerRows.forEach((r, i) => {
+        if (['live_time', 'live_day', 'live_date'].includes(getDyn(r))) liveIndices.push(i);
+      });
+      if (liveIndices.length === 0) return -1;
+      const maxLiveIdx = Math.max(...liveIndices);
+      if (targetIdx <= maxLiveIdx) return -1;
+      const firstUnansweredLive = liveIndices.find(i => !String(answeredMap[answerRows[i].id] || '').trim());
+      return firstUnansweredLive !== undefined ? firstUnansweredLive : -1;
+    }
+
     // —— Render Question ——
     function renderQuestion(idx) {
+      const blockedLiveIdx = getLiveGateBlockIdx(idx);
+      if (blockedLiveIdx !== -1) {
+        showToast('Answer all 3 Live Questions first before starting the 100 Topic Questions.', 'warning');
+        idx = blockedLiveIdx;
+      }
       abortActiveSpeechSession();
       cancelMcAutoAdvance();
       currentIndex = idx;
@@ -2467,6 +2720,8 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }
       if (testData?.answer_type === 'description' || testData?.module === 'description' || testData?.module_type === 'POINT_AND_SPEAK' || snap?.module === 'description' || snap?.answer_type === 'description' || (testData?.title && testData.title.includes('Tell Me What You See'))) {
         answerType = 'description';
+      } else if (testData?.answer_type === 'selection' || testData?.test_subtype === 'BASIC_ENGLISH_SELECTION_EXAM' || String(testData?.shell_code || '').toUpperCase().includes('1BSC-B')) {
+        answerType = 'selection';
       }
       const questionText = snap?.question_text || snap?.questionText || snap?.question || snap?.text || snap?.soal || snap?.indonesia || row.question_text_snapshot || (typeof row.question_snapshot === 'string' ? row.question_snapshot : '') || 'Question text unavailable';
       // Extract Theme (Name + Code), Topic, Category, and Type for 4 corners
@@ -2553,6 +2808,19 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       else if (displayCategory) displayCategory = displayCategory.charAt(0).toUpperCase() + displayCategory.slice(1);
       else displayCategory = 'Vocabulary';
 
+      // Basic English Metadata Override (4-corner labels: Basic English | Selection/Description | Topic | Sub-topic)
+      const isBasicEnglishTest =
+        String(testData?.shell_code || '').toUpperCase().includes('1BSC') ||
+        String(testData?.test_subtype || '').toUpperCase().includes('BASIC_ENGLISH') ||
+        /basic\s*english/i.test(testData?.title || '');
+      if (isBasicEnglishTest) {
+        const isBonus = Boolean(snap?.is_bonus_round || row?.is_bonus_round || snap?.dynamic_type === 'bonus_round');
+        displayTheme = isBonus ? 'Bonus Round' : 'Basic English';
+        displayCategory = answerType === 'description' ? 'Description' : 'Selection';
+        displayTopic = snap?.topic || row?.topic_snapshot || 'General';
+        displayType = snap?.word_type || row?.word_type_snapshot || (answerType === 'description' ? 'Point & Speak' : 'MCQ');
+      }
+
       const savedAnswer = answeredMap[row.id] || '';
 
       // CRITICAL FIX: Safely park virtual keyboard in document.body BEFORE clearing main,
@@ -2563,6 +2831,18 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         if (vk.parentElement && vk.parentElement !== document.body) {
           document.body.appendChild(vk);
         }
+      }
+
+      // Safely park .bottom-nav-bar back into .test-bottom-container BEFORE clearing main
+      const fixedBottomArea = document.getElementById('fixed-bottom-area');
+      const bottomContainer = fixedBottomArea?.querySelector('.test-bottom-container');
+      const parkedBottomBar = document.querySelector('.bottom-nav-bar');
+      if (parkedBottomBar && bottomContainer && parkedBottomBar.parentElement !== bottomContainer) {
+        parkedBottomBar.style.removeProperty('margin');
+        bottomContainer.appendChild(parkedBottomBar);
+      }
+      if (fixedBottomArea) {
+        fixedBottomArea.style.removeProperty('display');
       }
 
       const main = document.getElementById('test-main');
@@ -2632,6 +2912,16 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; display:flex; flex-direction:column; justify-content:center; align-items:center; overflow-y:auto; box-sizing:border-box; padding:6px 12px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:12px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; position:relative; margin:0 auto !important;';
         main.appendChild(answerArea);
 
+        // Place Prev / Answered / Next bar above the Virtual Keyboard
+        if (parkedBottomBar) {
+          parkedBottomBar.style.display = 'flex';
+          parkedBottomBar.style.setProperty('margin', '5px auto', 'important');
+          main.appendChild(parkedBottomBar);
+        }
+        if (fixedBottomArea) {
+          fixedBottomArea.style.setProperty('display', 'none', 'important');
+        }
+
         // 4. Virtual Keyboard Container (Flex 3: Matches questionBox & answerArea 1:1)
         if (vk) {
           vk.style.display = 'flex';
@@ -2684,6 +2974,16 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:3 1 0 !important; min-height:60px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:6px 12px; background:#ffffff !important; border:1.5px solid #e2e8f0 !important; border-radius:14px; box-shadow:0 4px 20px rgba(0, 0, 0, 0.12) !important; box-sizing:border-box; position:relative;';
           main.appendChild(answerArea);
 
+          // Place Prev / Answered / Next bar above the Mic Control Panel
+          if (parkedBottomBar) {
+            parkedBottomBar.style.display = 'flex';
+            parkedBottomBar.style.setProperty('margin', '5px auto', 'important');
+            main.appendChild(parkedBottomBar);
+          }
+          if (fixedBottomArea) {
+            fixedBottomArea.style.setProperty('display', 'none', 'important');
+          }
+
           // 4. Speaking Mic Control Panel (Flex 3: Matches questionBox & answerArea 1:1)
           controlArea = document.createElement('div');
           controlArea.id = 'speech-control-container';
@@ -2693,11 +2993,24 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
           renderSpeech(answerArea, controlArea, row, savedAnswer, snap);
         } else if (answerType === 'multiple_choice' || answerType === 'selection' || answerType === 'recognition') {
-          // 3. Multiple Choice Options Container (Flex 6: Full options area)
+          // Allow questionBox to expand cleanly when options panel shrinks to fit 4-5 options
+          questionBox.style.setProperty('flex', '1 1 0', 'important');
+
+          // Place Prev / Answered / Next bar below the question box and above the options
+          if (parkedBottomBar) {
+            parkedBottomBar.style.display = 'flex';
+            parkedBottomBar.style.setProperty('margin', '5px auto', 'important');
+            main.appendChild(parkedBottomBar);
+          }
+          if (fixedBottomArea) {
+            fixedBottomArea.style.setProperty('display', 'none', 'important');
+          }
+
+          // 3. Multiple Choice Options Container (Dynamic shrink-to-fit height + strict 10px gap)
           answerArea = document.createElement('div');
           answerArea.id = 'answer-container-mc';
           answerArea.className = 'w-full flex flex-col';
-          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:6 1 0 !important; min-height:28px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; justify-content:space-between; gap:clamp(4px, 0.8vh, 8px); padding:13px 8px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px); margin-bottom:6px !important;';
+          answerArea.style.cssText = 'width:100% !important; max-width:440px !important; flex:0 1 auto !important; min-height:28px !important; overflow-y:auto; margin:0 auto !important; display:flex; flex-direction:column; justify-content:flex-start; gap:10px; padding:10px; background:linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%); border:1px solid rgba(255, 255, 255, 0.12); border-radius:14px; -webkit-overflow-scrolling:touch; box-sizing:border-box; box-shadow:0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08); backdrop-filter:blur(16px); margin-bottom:6px !important;';
           main.appendChild(answerArea);
 
           renderMC(answerArea, row, savedAnswer, snap);
@@ -2737,7 +3050,27 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (bottomNext) {
         const isLast = (idx === answerRows.length - 1);
         const isLastSection = (currentSectionIndex === testsections.length - 1);
-        if (isLast) {
+        const hasPendingBonus = isLast && isLastSection && Array.isArray(window._bonusRoundRows) && window._bonusRoundRows.length > 0 && !window._bonusRoundUnlocked;
+        if (hasPendingBonus) {
+          bottomNext.innerHTML = `Bonus ${getSvgIcon('arrow-right', 14)}`;
+          bottomNext.className = 'btn-nav-next';
+          bottomNext.style.background = '';
+          bottomNext.style.color = '';
+          bottomNext.style.borderColor = '';
+          bottomNext.onclick = () => {
+            cancelMcAutoAdvance();
+            abortActiveSpeechSession();
+            saveCurrentAnswer();
+            clearPerQuestionTimer();
+            window._bonusRoundUnlocked = true;
+            const firstBonusIdx = allAnswerRows.length;
+            allAnswerRows = [...allAnswerRows, ...window._bonusRoundRows];
+            window.allAnswerRows = allAnswerRows;
+            answerRows = [...answerRows, ...window._bonusRoundRows];
+            if (typeof renderQuestionMap === 'function') renderQuestionMap();
+            renderQuestion(firstBonusIdx);
+          };
+        } else if (isLast) {
           if (isLastSection) {
             bottomNext.textContent = 'Submit';
             bottomNext.className = 'btn-nav-next is-submit';
@@ -2772,6 +3105,11 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             cancelMcAutoAdvance();
             abortActiveSpeechSession();
             saveCurrentAnswer();
+            const curDyn = String(snap?.dynamic_type || row?.dynamic_type || '').toLowerCase();
+            if (['live_time', 'live_day', 'live_date'].includes(curDyn) && !String(answeredMap[row.id] || '').trim()) {
+              showToast('Please answer this Live Question first.', 'warning');
+              return;
+            }
             await syncLiveSessionModality();
             if (idx < answerRows.length - 1) {
               renderQuestion(idx + 1);
@@ -2781,6 +3119,64 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       }
       updateNavGrid();
       bindQuestionSwipeNavigation(main);
+
+      // 3-Phase Per-Question Timer & Splash Screens (when per_question_seconds is configured, e.g. 100 Questions Exam)
+      const perQSec = Number(testData?.payload?.per_question_seconds || 0);
+      if (perQSec > 0) {
+        const dynType = String(snap?.dynamic_type || row?.dynamic_type || '').toLowerCase();
+        const isWarmup = ['live_time', 'live_day', 'live_date'].includes(dynType);
+        const isBonusQ = Boolean(snap?.is_bonus_round || row?.is_bonus_round || dynType === 'bonus_round');
+        const warmupSec = Number(testData?.payload?.warmup_per_question_seconds || 60);
+        const bonusSec = Number(testData?.payload?.bonus_per_question_seconds || 60);
+
+        // Lock Prev button during timed phases so per-question timers cannot be bypassed
+        if (bottomPrev) bottomPrev.disabled = true;
+
+        const armPhaseTimer = () => {
+          const sec = isWarmup ? warmupSec : (isBonusQ ? bonusSec : perQSec);
+          startPerQuestionTimer(sec, () => {
+            cancelMcAutoAdvance();
+            saveCurrentAnswer();
+            if (idx < answerRows.length - 1) {
+              renderQuestion(idx + 1);
+            } else {
+              const bNext = document.getElementById('bottom-next-btn');
+              if (bNext) bNext.click();
+            }
+          });
+        };
+
+        if (isWarmup && !window._seenPhaseSplashes.has('warmup')) {
+          showPhaseSplash(
+            'warmup',
+            "LET'S WARM UP!",
+            `<div style="display:flex; flex-direction:column; gap:4px;"><div>3 Opening Questions</div><div>${warmupSec >= 60 ? `${Math.round(warmupSec / 60)} minute` : `${warmupSec} seconds`} per question</div></div>`,
+            'Start Warm Up →',
+            '#ff2d87',
+            armPhaseTimer
+          );
+        } else if (!isWarmup && !isBonusQ && !window._seenPhaseSplashes.has('core')) {
+          showPhaseSplash(
+            'core',
+            'HERE WE GO!',
+            `<div style="display:flex; flex-direction:column; gap:4px;"><div>100 Questions</div><div>${perQSec} seconds per question • Auto-advance</div></div>`,
+            'Start 100 Questions →',
+            '#FF8C00',
+            armPhaseTimer
+          );
+        } else if (isBonusQ && !window._seenPhaseSplashes.has('bonus')) {
+          showPhaseSplash(
+            'bonus',
+            'BONUS ROUNDS!',
+            `<div style="display:flex; flex-direction:column; gap:4px;"><div>2 Bonus Questions (Excluded from Score)</div><div>${bonusSec >= 60 ? `${Math.round(bonusSec / 60)} minute` : `${bonusSec} seconds`} per question</div></div>`,
+            'Start Bonus Round →',
+            '#95ff00',
+            armPhaseTimer
+          );
+        } else {
+          armPhaseTimer();
+        }
+      }
 
       if (window._pendingSwipeDir && main) {
         const dirClass = window._pendingSwipeDir === 'next' ? 'tc-swipe-in-next' : 'tc-swipe-in-prev';
@@ -2905,9 +3301,12 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
     function renderUnansweredPanel(container, currentIdx) {
       container.innerHTML = '';
-      const unanswered = answerRows.map((r, i) => ({ r, i })).filter(({ r }) => !hasAnswer(answeredMap[r.id]));
+      const isPhased = Number(testData?.payload?.per_question_seconds || 0) > 0;
+      const activePhase = isPhased && answerRows[currentIdx] ? getRowPhaseKey(answerRows[currentIdx]) : null;
+      const phaseRows = activePhase ? answerRows.map((r, i) => ({ r, i })).filter(({ r }) => getRowPhaseKey(r) === activePhase) : answerRows.map((r, i) => ({ r, i }));
+      const unanswered = phaseRows.filter(({ r }) => !hasAnswer(answeredMap[r.id]));
       if (unanswered.length === 0) {
-        container.innerHTML = `<div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);"><div class="speech-all-answered-msg">All ${answerRows.length} questions answered!</div></div>`;
+        container.innerHTML = `<div class="speech-unanswered-panel" style="border-color:rgba(52,211,153,0.25);background:rgba(52,211,153,0.06);"><div class="speech-all-answered-msg">All ${phaseRows.length} questions answered!</div></div>`;
         return;
       }
       const panel = document.createElement('div');
@@ -2978,7 +3377,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         let distractors = options.filter(o => o !== correctItem).sort(() => 0.5 - Math.random()).slice(0, 4);
         options = correctItem ? [...distractors, correctItem] : distractors;
       }
-      options = options.sort(() => 0.5 - Math.random());
+      const isFixedOrder = Boolean(snap?.fixed_option_order || row?.fixed_option_order || snap?.dynamic_type === 'bonus_round' || row?.is_bonus_round);
+      if (!isFixedOrder && options.length > 1) {
+        for (let idxOpt = options.length - 1; idxOpt > 0; idxOpt--) {
+          const j = Math.floor(Math.random() * (idxOpt + 1));
+          [options[idxOpt], options[j]] = [options[j], options[idxOpt]];
+        }
+      }
 
       const letters = ['A','B','C','D','E','F','G','H','I','J'];
       options.forEach((opt, i) => {
@@ -2989,7 +3394,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         btn.setAttribute('role', 'radio');
         btn.setAttribute('aria-checked', isSelected ? 'true' : 'false');
         btn.setAttribute('tabindex', '0');
-        btn.style.cssText = `min-height:38px; height:clamp(38px, 5.5vh, 50px); display:flex; align-items:center; gap:10px; padding:4px 10px; border-radius:10px; border:${isSelected ? '2px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'rgba(56, 189, 248, 0.22)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:14px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 0 1px rgba(56,189,248,0.25), 0 4px 12px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
+        btn.style.cssText = `min-height:40px; height:auto; display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:10px; border:${isSelected ? '2px solid var(--primary-tactical, #38bdf8)' : '1px solid rgba(255,255,255,0.08)'}; background:${isSelected ? 'rgba(56, 189, 248, 0.22)' : 'rgba(255,255,255,0.04)'}; color:${isSelected ? '#ffffff' : '#e2e8f0'}; cursor:pointer; font-size:14px; font-weight:600; box-sizing:border-box; transition:all 0.15s ease; box-shadow:${isSelected ? '0 0 0 1px rgba(56,189,248,0.25), 0 4px 12px rgba(0,0,0,0.35)' : '0 2px 6px rgba(0,0,0,0.2)'}; -webkit-tap-highlight-color:transparent; flex-shrink:0;`;
 
         btn.innerHTML = `<div class="mc-letter" style="background:${isSelected ? 'var(--primary-tactical, #38bdf8)' : 'rgba(255,255,255,0.08)'}; color:${isSelected ? '#000000' : '#94a3b8'}; border-radius:8px; width:24px; height:24px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:12px; font-weight:800;">${letters[i] || i+1}</div><div style="flex:1; white-space:normal; word-break:break-word; line-height:1.25; text-align:left;">${optText}</div>`;
 
@@ -3055,7 +3460,13 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         let distractors = options.filter(o => o !== correctItem).sort(() => 0.5 - Math.random()).slice(0, 4);
         options = correctItem ? [...distractors, correctItem] : distractors;
       }
-      options = options.sort(() => 0.5 - Math.random());
+      const isFixedOrder = Boolean(snap?.fixed_option_order || row?.fixed_option_order || snap?.dynamic_type === 'bonus_round' || row?.is_bonus_round);
+      if (!isFixedOrder && options.length > 1) {
+        for (let idxOpt = options.length - 1; idxOpt > 0; idxOpt--) {
+          const j = Math.floor(Math.random() * (idxOpt + 1));
+          [options[idxOpt], options[j]] = [options[j], options[idxOpt]];
+        }
+      }
       options.forEach((opt, i) => {
         const optText = typeof opt === 'string' ? opt : opt.text || opt.value || JSON.stringify(opt);
         const isSelected = (savedAnswer === optText);
@@ -3197,6 +3608,30 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       });
     }
 
+    // —— Unified Microphone Button SSOT (Shared across ALL Speech & Description Tests) ——
+    const UNIFIED_MIC_IDLE_SVG = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/></svg>';
+    const UNIFIED_MIC_ACTIVE_SVG = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="3" height="6" rx="1.5"/><rect x="9.5" y="4" width="3" height="16" rx="1.5"/><rect x="15" y="7" width="3" height="10" rx="1.5"/><rect x="20" y="10" width="2.5" height="4" rx="1.25"/></svg>';
+
+    function createUnifiedMicControl(title = 'Tap to Speak') {
+      const micBtn = document.createElement('button');
+      micBtn.type = 'button';
+      micBtn.className = 'speech-mic-btn-lg';
+      micBtn.title = title;
+      const setListening = (isListening) => {
+        if (isListening) {
+          micBtn.classList.add('listening');
+          micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid #7dd3fc; background:linear-gradient(135deg, #38bdf8 0%, #0284c7 100%); color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 4px 16px rgba(56,189,248,0.4); flex-shrink:0; touch-action:manipulation;';
+          micBtn.innerHTML = UNIFIED_MIC_ACTIVE_SVG;
+        } else {
+          micBtn.classList.remove('listening');
+          micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(148, 163, 184, 0.35); background:linear-gradient(135deg, #334155 0%, #1e293b 100%); color:#e2e8f0; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 4px 12px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
+          micBtn.innerHTML = UNIFIED_MIC_IDLE_SVG;
+        }
+      };
+      setListening(false);
+      return { micBtn, setListening };
+    }
+
     function renderDescription(main, row, savedAnswer, snap = {}, questionIdx = 0) {
       stopActiveCameraStream();
 
@@ -3263,23 +3698,15 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       previewImg.alt = 'Captured Object';
       card1.appendChild(previewImg);
 
-      // Idle State Container (Centered Icon Camera & Action Buttons)
+      // Idle State Container (Clean Photo Preview Placeholder — capture button lives in Card 3)
       const idleState = document.createElement('div');
       idleState.style.cssText = 'display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; width:100%; height:100%; cursor:pointer;';
       idleState.innerHTML = `
-        <div style="width:42px; height:42px; border-radius:50%; background:rgba(56, 189, 248, 0.15); border:1.5px solid #38bdf8; display:flex; align-items:center; justify-content:center; color:#38bdf8;">
+        <div style="width:42px; height:42px; border-radius:50%; background:rgba(56, 189, 248, 0.12); border:1.5px solid rgba(56, 189, 248, 0.45); display:flex; align-items:center; justify-content:center; color:#38bdf8;">
           ${getSvgIcon('camera', 22)}
         </div>
-        <div style="font-size:12px; font-weight:700; color:#f8fafc; text-align:center;">
-          Tap to Open Camera
-        </div>
-        <div style="display:flex; align-items:center; gap:6px; margin-top:2px;">
-          <button type="button" class="btn-cam-open-trigger" style="padding:4px 12px; border-radius:6px; border:1px solid #38bdf8; background:#38bdf8; color:#090d16; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:4px;">
-            ${getSvgIcon('camera', 13)} Take Photo
-          </button>
-          <button type="button" class="btn-cam-upload-trigger" style="padding:4px 8px; border-radius:6px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.06); color:#94a3b8; font-size:12px; font-weight:600; cursor:pointer;">
-            Upload
-          </button>
+        <div style="font-size:12px; font-weight:700; color:#94a3b8; text-align:center;">
+          Take a photo first to unlock Mic
         </div>
       `;
       card1.appendChild(idleState);
@@ -3486,52 +3913,129 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       });
 
       // =========================================================================
-      // CARD 3: SPEECH INPUT / MIC CARD (Language Select + Big Mic Button + Live Speech)
+      // CARD 3: BOTTOM CONTROL CARD (Photo Capture First -> Swaps to Unified Mic)
       // =========================================================================
       const card3 = document.createElement('div');
       card3.id = `desc-mic-card-${row.id}`;
       card3.className = 'desc-card desc-card-mic notranslate';
       card3.setAttribute('translate', 'no');
-      card3.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:0 !important; margin:0 auto !important; box-sizing:border-box !important; background:linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important; border:1.5px solid rgba(0, 192, 0, 0.25) !important; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; gap:6px; padding:8px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.3);';
+      card3.style.cssText = 'width:100% !important; max-width:440px !important; flex:1 1 0 !important; min-height:0 !important; margin:0 auto !important; box-sizing:border-box !important; background:linear-gradient(180deg, rgba(15, 23, 42, 0.85) 0%, rgba(10, 16, 30, 0.98) 100%) !important; border:1.5px solid rgba(56, 189, 248, 0.3) !important; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; position:relative; gap:6px; padding:8px 10px; box-shadow:0 4px 16px rgba(0,0,0,0.3);';
 
-      // Language Select pill in top-right of Card 3
+      // Upload fallback button (top-left, shown during Camera mode)
+      const uploadFallbackBtn = document.createElement('button');
+      uploadFallbackBtn.type = 'button';
+      uploadFallbackBtn.style.cssText = 'position:absolute; top:8px; left:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#cbd5e1; padding:2px 8px; font-size:12px; font-weight:700; height:24px; cursor:pointer;';
+      uploadFallbackBtn.textContent = 'Upload';
+      uploadFallbackBtn.addEventListener('click', () => fileInput.click());
+      card3.appendChild(uploadFallbackBtn);
+
+      // Language Select pill in top-right of Card 3 (shown during Mic mode)
       const langSelect = document.createElement('select');
       langSelect.className = 'speech-lang-select';
-      langSelect.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:12px; font-weight:700; outline:none; height:24px; cursor:pointer;';
+      langSelect.style.cssText = 'position:absolute; top:8px; right:8px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15); border-radius:6px; color:#fff; padding:2px 6px; font-size:12px; font-weight:700; outline:none; height:24px; cursor:pointer; display:none;';
       langSelect.innerHTML = `<option value="en-US">EN-US</option><option value="en-GB">EN-UK</option>`;
       card3.appendChild(langSelect);
 
-      // Large Prominent Microphone Button
-      const micBtn = document.createElement('button');
-      micBtn.type = 'button';
-      micBtn.className = 'speech-mic-btn-lg';
-      micBtn.title = 'Speak your description sentence';
-      micBtn.style.cssText = 'width:52px; height:52px; border-radius:50%; border:3px solid rgba(0,192,0,0.45); background:linear-gradient(135deg, var(--grade-a) 0%, #009900 100%); color:#0F172A; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0; transition:all 0.2s ease; box-shadow:0 4px 16px rgba(0,192,0,0.3);';
-      micBtn.innerHTML = '<svg style="width:24px; height:24px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>';
+      // Camera Circular Button (occupies Mic position before photo is taken)
+      const camActionBtn = document.createElement('button');
+      camActionBtn.type = 'button';
+      camActionBtn.className = 'desc-cam-btn-lg';
+      camActionBtn.title = 'Take Photo';
+      camActionBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(56, 189, 248, 0.45); background:linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color:#ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 4px 12px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
+      camActionBtn.innerHTML = getSvgIcon('camera', 26);
+      card3.appendChild(camActionBtn);
+
+      const camStatus = document.createElement('div');
+      camStatus.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; text-align:center;';
+      camStatus.textContent = 'Tap to Take Photo';
+      card3.appendChild(camStatus);
+
+      // Unified Mic Control (shown automatically after photo is captured)
+      const { micBtn, setListening: setDescMicListening } = createUnifiedMicControl('Speak your description sentence');
+      micBtn.style.display = 'none';
       card3.appendChild(micBtn);
 
-      // Mic Status Text
       const micStatus = document.createElement('div');
-      micStatus.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; text-align:center;';
-      micStatus.textContent = 'Tap to Speak (Speech-to-Text)';
+      micStatus.style.cssText = 'font-size:12px; font-weight:700; color:#94a3b8; text-align:center; display:none;';
+      micStatus.textContent = 'Tap to Speak';
       card3.appendChild(micStatus);
 
       main.appendChild(card3);
+
+      const syncCard3Mode = (hasPhoto) => {
+        if (hasPhoto) {
+          camActionBtn.style.display = 'none';
+          camStatus.style.display = 'none';
+          uploadFallbackBtn.style.display = 'none';
+          micBtn.style.display = 'flex';
+          micStatus.style.display = 'block';
+          langSelect.style.display = 'block';
+          card3.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+        } else {
+          abortActiveSpeechSession();
+          setDescMicListening(false);
+          micBtn.style.display = 'none';
+          micStatus.style.display = 'none';
+          langSelect.style.display = 'none';
+          camActionBtn.style.display = 'flex';
+          camStatus.style.display = 'block';
+          uploadFallbackBtn.style.display = 'block';
+          card3.style.borderColor = 'rgba(56, 189, 248, 0.3)';
+        }
+      };
+
+      camActionBtn.addEventListener('click', () => {
+        if (window._activeCameraStream) {
+          snapBtn.click();
+        } else {
+          startCamera();
+        }
+      });
+
+      // Hook Card 3 swap into photo capture & retake
+      const origUpdatePhotoView = updatePhotoView;
+      const syncPhotoAndCard3 = (dataUrl, isInitial = false) => {
+        origUpdatePhotoView(dataUrl, isInitial);
+        syncCard3Mode(Boolean(dataUrl));
+      };
+      // Re-bind retake/cancel/snap/fileInput to use syncPhotoAndCard3
+      retakeBtn.onclick = () => {
+        syncCard3Mode(false);
+        startCamera();
+      };
+      cancelBtn.onclick = () => syncPhotoAndCard3(window._capturedPhotos[row.id] || null, true);
+      snapBtn.onclick = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          canvas.width = videoEl.videoWidth || 640;
+          canvas.height = videoEl.videoHeight || 480;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+          syncPhotoAndCard3(canvas.toDataURL('image/jpeg', 0.85));
+        } catch (err) {
+          fileInput.click();
+        }
+      };
+      fileInput.onchange = (e) => {
+        const f = e.target.files?.[0];
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => syncPhotoAndCard3(ev.target.result);
+        reader.readAsDataURL(f);
+      };
 
       // Mic Speech Recognition Handler
       micBtn.addEventListener('click', () => {
         if (currentActiveSpeechSession?.isListening()) {
           currentActiveSpeechSession.stop();
-          micBtn.style.transform = 'scale(1)';
-          micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
-          micStatus.innerHTML = '<span style="color:#94a3b8;">Tap to Speak (Speech-to-Text)</span>';
+          setDescMicListening(false);
+          micStatus.innerHTML = '<span style="color:#94a3b8;">Tap to Speak</span>';
           return;
         }
 
         abortActiveSpeechSession();
-        micBtn.style.transform = 'scale(1.1)';
-        micBtn.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.35)';
-        micStatus.innerHTML = '<span style="color:var(--grade-a);font-weight:800;">● Listening... Speak your description</span>';
+        setDescMicListening(true);
+        micStatus.innerHTML = '<span style="color:var(--primary-tactical, #38bdf8);font-weight:800;">● Listening... Speak your description</span>';
 
         currentActiveSpeechSession = createSpeechSession({
           lang: langSelect.value,
@@ -3545,18 +4049,16 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
             }
           },
           onEnd: () => {
-            micBtn.style.transform = 'scale(1)';
-            micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
+            setDescMicListening(false);
             if (transcriptInput.value && transcriptInput.value.trim().length > 0) {
               micStatus.innerHTML = '<span style="color:var(--grade-a);font-weight:700;">● Speech Captured</span>';
             } else {
-              micStatus.innerHTML = '<span style="color:#94a3b8;">Tap to Speak (Speech-to-Text)</span>';
+              micStatus.innerHTML = '<span style="color:#94a3b8;">Tap to Speak</span>';
             }
           },
           onError: (err) => {
             console.warn('Speech recognition error:', err);
-            micBtn.style.transform = 'scale(1)';
-            micBtn.style.boxShadow = '0 4px 16px rgba(0,192,0,0.3)';
+            setDescMicListening(false);
             micStatus.innerHTML = `<span style="color:var(--grade-e, #ff0000);">${escapeHtml(typeof err === 'string' ? err : 'Mic Error — Tap to Retry')}</span>`;
             if (typeof err === 'string' && err) showToast(err, 'warning');
           }
@@ -3564,6 +4066,9 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
 
         currentActiveSpeechSession.start();
       });
+
+      // Initialize Card 3 state based on whether photo already exists
+      syncCard3Mode(Boolean(existingPhoto));
 
       // Initial State
       updatePhotoView(existingPhoto, true);
@@ -3656,13 +4161,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
         area.appendChild(areaFooter);
       }
 
-      const MIC_IDLE_SVG = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3z"/><path d="M19 11a1 1 0 1 0-2 0 5 5 0 0 1-10 0 1 1 0 1 0-2 0 7 7 0 0 0 6 6.92V21H8a1 1 0 1 0 0 2h8a1 1 0 1 0 0-2h-3v-3.08A7 7 0 0 0 19 11z"/></svg>';
-      const MIC_ACTIVE_SVG = '<svg style="width:clamp(22px, 5.5vw, 30px); height:clamp(22px, 5.5vw, 30px);" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="9" width="3" height="6" rx="1.5"/><rect x="9.5" y="4" width="3" height="16" rx="1.5"/><rect x="15" y="7" width="3" height="10" rx="1.5"/><rect x="20" y="10" width="2.5" height="4" rx="1.25"/></svg>';
-
-      const micBtn = document.createElement('button');
-      micBtn.className = 'speech-mic-btn-lg';
-      micBtn.style.cssText = 'width:clamp(56px, 14vw, 72px); height:clamp(56px, 14vw, 72px); border-radius:50%; border:3px solid rgba(148, 163, 184, 0.35); background:linear-gradient(135deg, #334155 0%, #1e293b 100%); color:#e2e8f0; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1); outline:none; box-shadow:0 4px 12px rgba(0,0,0,0.35); flex-shrink:0; touch-action:manipulation;';
-      micBtn.innerHTML = MIC_IDLE_SVG;
+      const { micBtn, setListening: setSpeechMicListening } = createUnifiedMicControl('Tap to Speak');
 
       const micHelp = document.createElement('div');
       micHelp.style.cssText = 'margin-top:4px; font-size:12px; color:#94a3b8; font-weight:700; letter-spacing:0.04em;';
@@ -3698,12 +4197,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           lang: langSelect.value,
           onStart() {
             window._isSpeechRecognitionEngaged = true;
-            micBtn.classList.add('listening');
-            micBtn.style.background = 'linear-gradient(135deg, #38bdf8 0%, #0284c7 100%)';
-            micBtn.style.borderColor = '#7dd3fc';
-            micBtn.style.boxShadow = '';
-            micBtn.style.color = '#ffffff';
-            micBtn.innerHTML = MIC_ACTIVE_SVG;
+            setSpeechMicListening(true);
             statusEl.innerHTML = '● Listening <span class="speech-wave-bars"><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span><span class="speech-wave-bar"></span></span>';
             statusEl.style.color = 'var(--primary-tactical, #38bdf8)';
             micHelp.textContent = 'Listening... (Tap to stop)';
@@ -3733,12 +4227,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           onEnd() {
             window._isSpeechRecognitionEngaged = false;
             currentActiveSpeechSession = null;
-            micBtn.classList.remove('listening');
-            micBtn.style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
-            micBtn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
-            micBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
-            micBtn.style.color = '#e2e8f0';
-            micBtn.innerHTML = MIC_IDLE_SVG;
+            setSpeechMicListening(false);
 
             // Fail-safe commit: If interim transcript exists in box but onFinal never fired, commit it!
             const boxText = (transcriptBox.textContent || '').trim();
@@ -3759,12 +4248,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
           onError(msg) {
             window._isSpeechRecognitionEngaged = false;
             currentActiveSpeechSession = null;
-            micBtn.classList.remove('listening');
-            micBtn.style.background = 'linear-gradient(135deg, #334155 0%, #1e293b 100%)';
-            micBtn.style.borderColor = 'rgba(148, 163, 184, 0.35)';
-            micBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.35)';
-            micBtn.style.color = '#e2e8f0';
-            micBtn.innerHTML = MIC_IDLE_SVG;
+            setSpeechMicListening(false);
 
             // Suppress disruptive toasts for normal stops or intentional aborts
             const isNormalStop = !msg || msg.includes('stopped') || msg.includes('aborted');
@@ -3964,6 +4448,18 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       const total = allAnswerRows.length;
       const unanswered = total - answered;
 
+      // Unlock Bonus Round only after all 100 core questions are answered
+      if (unanswered === 0 && Array.isArray(window._bonusRoundRows) && window._bonusRoundRows.length > 0 && !window._bonusRoundUnlocked) {
+        window._bonusRoundUnlocked = true;
+        const firstBonusIdx = allAnswerRows.length;
+        allAnswerRows = [...allAnswerRows, ...window._bonusRoundRows];
+        window.allAnswerRows = allAnswerRows;
+        answerRows = [...answerRows, ...window._bonusRoundRows];
+        if (typeof renderQuestionMap === 'function') renderQuestionMap();
+        renderQuestion(firstBonusIdx);
+        return;
+      }
+
       const answeredCountEl = document.getElementById('answered-count');
       const totalCountEl = document.getElementById('total-count');
       const totalCountReadyEl = document.getElementById('total-count-ready');
@@ -4138,6 +4634,7 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       if (_sessionHeartbeatTimer) { clearInterval(_sessionHeartbeatTimer); _sessionHeartbeatTimer = null; }
       releaseScreenWakeLock();
       timerController?.stop();
+      clearPerQuestionTimer();
       saveCurrentAnswer();
       if (attemptData?.id) {
         sessionStorage.setItem('topscore_attempt_id', attemptData.id);
@@ -4145,10 +4642,15 @@ import { formatTestDisplay, isExam, validateDescriptionSentence } from './gradin
       showLoading(isAuto ? 'Time is up. Auto-submitting the TEST.' : 'Submitting your TEST.');
 
       const activeAnswers = window.answeredMap || answeredMap;
-      const payload = allAnswerRows.map(row => ({
-        attempt_answer_id: row.id,
-        student_answer: (activeAnswers && activeAnswers[row.id]) || answeredMap[row.id] || '',
-      }));
+      const payload = allAnswerRows
+        .filter(row => {
+          const s = typeof row?.question_snapshot === 'string' ? (() => { try { return JSON.parse(row.question_snapshot); } catch(_) { return {}; } })() : (row?.question_snapshot || {});
+          return !(s?.is_bonus_round || row?.is_bonus_round || s?.dynamic_type === 'bonus_round');
+        })
+        .map(row => ({
+          attempt_answer_id: row.id,
+          student_answer: (activeAnswers && activeAnswers[row.id]) || answeredMap[row.id] || '',
+        }));
 
       // Safety buffer for fallback if Edge function fails
       try {

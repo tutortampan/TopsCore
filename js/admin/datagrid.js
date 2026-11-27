@@ -415,10 +415,13 @@ export class DataGrid {
         }
       });
 
+      const hasSubSubHdr = visibleCols.some(c => c.subSubLabel);
       this.thead.classList.add('has-super-headers');
       superHtml = '<tr class="datagrid-super-header-row">';
       if (this.bulkActions) {
-        superHtml += '<th rowspan="2" style="width:40px; text-align:center; position:sticky; top:0; left:0; z-index:26; background:var(--fm-bg-panel,#0f172a); border-bottom:1px solid rgba(255,255,255,0.12); height:60px !important; line-height:60px !important; vertical-align:middle !important;"><input type="checkbox" class="datagrid-select-all" /></th>';
+        const bulkSpan = hasSubSubHdr ? 3 : 2;
+        const bulkH = hasSubSubHdr ? 82 : 60;
+        superHtml += `<th rowspan="${bulkSpan}" style="width:40px; text-align:center; position:sticky; top:0; left:0; z-index:26; background:var(--fm-bg-panel,#0f172a); border-bottom:1px solid rgba(255,255,255,0.12); height:${bulkH}px !important; line-height:${bulkH}px !important; vertical-align:middle !important;"><input type="checkbox" class="datagrid-select-all" /></th>`;
       }
       this.superHeaders.forEach((sh, shIdx) => {
         if (sh.rowSpan === 2 && sh.key) {
@@ -438,14 +441,15 @@ export class DataGrid {
             const customClass = (col.className ? ` ${col.className}` : '') + dividerClass;
             const rawTitle = col.headerTitle || col.title || col.label;
             const titleAttr = rawTitle ? ` title="${String(rawTitle).replace(/"/g, '&quot;')}"` : '';
-            const align = col.align || 'left';
+            const rSpan = hasSubSubHdr ? 3 : 2;
+            const rH = hasSubSubHdr ? 82 : 60;
             superHtml += `
-              <th rowspan="2"
+              <th rowspan="${rSpan}"
                   class="text-center ${col.sortable ? 'datagrid-sortable' : ''}${customClass} datagrid-rowspan-2-header"
                   data-key="${col.key || ''}"
                   data-idx="${this.columns.indexOf(col)}"
                   draggable="true"${titleAttr}
-                  style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${borderLeftStyle} height:60px !important; line-height:60px !important; vertical-align:middle !important; font-size:12px !important; font-weight:700 !important; text-align:center !important; border-bottom:2px solid rgba(255,255,255,0.28) !important; ${sh.style || ''}">
+                  style="${col.sortable ? 'cursor:pointer; user-select:none;' : ''} ${widthStyle} ${stickyStyle} ${borderLeftStyle} height:${rH}px !important; line-height:${rH}px !important; vertical-align:middle !important; font-size:12px !important; font-weight:700 !important; text-align:center !important; border-bottom:2px solid rgba(255,255,255,0.28) !important; ${sh.style || ''}">
                 <div class="datagrid-header-content" style="display:inline-flex; align-items:center; justify-content:center; gap:2px; width:100%; max-width:100%; white-space:nowrap; vertical-align:middle; overflow:hidden;">
                   <span class="datagrid-header-label" data-full="${String(col.label || '').replace(/"/g, '&quot;')}" style="display:inline-flex; align-items:center;">${displayLabel}</span>
                   ${col.sortable ? (this.sortKey === col.key ? `<span class="sort-icon" style="display:inline-flex; align-items:center; font-size: 12px; line-height:1; color:#38bdf8; margin-left:2px; flex-shrink:0;">${this.sortAsc ? '▲' : '▼'}</span>` : '') : ''}
@@ -474,13 +478,15 @@ export class DataGrid {
     visibleCols.forEach((col, visibleIdx) => {
       if (spannedKeys.has(col.key)) return;
 
+      const hasSubSubHdr = hasSuperHdr && visibleCols.some(c => !spannedKeys.has(c.key) && c.subSubLabel);
       const topOffset = hasSuperHdr ? 'top:30px;' : 'top:0;';
       const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
+      const tier2Border = hasSubSubHdr ? 'border-bottom:1px solid rgba(255,255,255,0.12) !important;' : 'border-bottom:2px solid rgba(255,255,255,0.28) !important;';
       const stickyStyle = isStickyRight
-        ? `position:sticky; ${topOffset} right:0; z-index:21; border-bottom:2px solid rgba(255,255,255,0.28) !important;`
+        ? `position:sticky; ${topOffset} right:0; z-index:21; ${tier2Border}`
         : (hasSuperHdr
-          ? `position:sticky; top:30px; z-index:19; border-bottom:2px solid rgba(255,255,255,0.28) !important;`
-          : `position:sticky; top:0; z-index:19; border-bottom:2px solid rgba(255,255,255,0.28) !important;`);
+          ? `position:sticky; top:30px; z-index:19; ${tier2Border}`
+          : `position:sticky; top:0; z-index:19; ${tier2Border}`);
       const widthVal = col.width || col.minWidth || '';
       const widthNum = parseInt(widthVal, 10) || null;
       const displayLabel = resolveHeaderLabel(col.label, widthNum, col.shortLabel, col.microLabel);
@@ -505,7 +511,32 @@ export class DataGrid {
       `;
     });
     html += '</tr>';
-    this.thead.innerHTML = superHtml + html;
+
+    const hasSubSubHdr = hasSuperHdr && visibleCols.some(c => !spannedKeys.has(c.key) && c.subSubLabel);
+    // Tier 3: Sub-Sub Header Row (Min / Max) when columns define subSubLabel
+    let subSubHtml = '';
+    if (hasSubSubHdr) {
+      subSubHtml = '<tr>';
+      visibleCols.forEach((col, visibleIdx) => {
+        if (spannedKeys.has(col.key)) return;
+        const isDivider = this.dividerColKeys && this.dividerColKeys.has(col.key);
+        const dividerClass = isDivider ? ' super-hdr-divider' : '';
+        const customClass = (col.className ? ` ${col.className}` : '') + dividerClass;
+        const isStickyRight = this.stickyActionCol && visibleIdx === visibleCols.length - 1;
+        const stickyStyle = isStickyRight
+          ? 'position:sticky; top:60px; right:0; z-index:21;'
+          : 'position:sticky; top:60px; z-index:19;';
+        const lbl = col.subSubLabel || '—';
+        subSubHtml += `
+          <th class="text-center${customClass}" style="${stickyStyle} height:22px !important; line-height:22px !important; padding:0 4px !important; font-size:10px !important; font-weight:700 !important; color:#94a3b8 !important; background:#0b1120 !important; border-bottom:2px solid rgba(255,255,255,0.28) !important; white-space:nowrap;">
+            ${lbl}
+          </th>
+        `;
+      });
+      subSubHtml += '</tr>';
+    }
+
+    this.thead.innerHTML = superHtml + html + subSubHtml;
 
     // Attach Sorting
     this.thead.querySelectorAll('.datagrid-sortable').forEach(th => {

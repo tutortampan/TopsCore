@@ -160,21 +160,17 @@ console.log('\n▶ Pillar 4: Auditing Student Dashboard...');
 
 const dashboardHtml = fs.readFileSync('dashboard.html', 'utf8');
 assert(
-  dashboardHtml.includes('<label class="intro-field-label" for="intro-city">REGENCY</label>'),
-  "dashboard.html must contain '<label class=\"intro-field-label\" for=\"intro-city\">REGENCY</label>'"
+  dashboardHtml.includes('id="intro-address-search"') && dashboardHtml.includes('id="intro-city"'),
+  "dashboard.html onboarding modal must contain address autocomplete ('intro-address-search') and 'intro-city'"
 );
-assert(
-  dashboardHtml.includes('id="intro-city"') && dashboardHtml.includes('title="Regency"'),
-  "dashboard.html onboarding modal must contain intro-city select with title 'Regency'"
-);
-console.log('  ✅ [PASS] dashboard.html onboarding modal uses REGENCY');
+console.log('  ✅ [PASS] dashboard.html onboarding modal uses unified address autocomplete with intro-city');
 
 const dashboardJs = fs.readFileSync('js/dashboard.js', 'utf8');
 assert(
-  dashboardJs.includes("Select regency…"),
-  "js/dashboard.js must use 'Select regency…' in dropdown"
+  dashboardJs.includes("intro-address-search") && dashboardJs.includes("intro-city"),
+  "js/dashboard.js must wire intro-address-search and intro-city"
 );
-console.log('  ✅ [PASS] js/dashboard.js dropdown uses "Select regency…"');
+console.log('  ✅ [PASS] js/dashboard.js wires intro-address-search and intro-city');
 
 // ── 5. Audit SSOT Governance Documents ──────────────────────────────────────
 console.log('\n▶ Pillar 5: Auditing SSOT Governance Rules in ui-invariants.md...');

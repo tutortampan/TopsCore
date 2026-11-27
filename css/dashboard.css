@@ -6506,7 +6506,7 @@ body.dashboard-page .next-test-header-bar {
   flex-direction: column !important;
   justify-content: center !important;
   padding: 8px 10px !important; /* Strict 10px side padding */
-  border-bottom: 1.5px solid rgba(var(--tier-rgb), 0.40) !important; /* Sekat horizontal */
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important; /* Neutral crisp horizontal divider */
   background: rgba(255, 255, 255, 0.02) !important;
   box-sizing: border-box !important;
   overflow: hidden !important;
@@ -6583,7 +6583,7 @@ body.dashboard-page .next-test-col-right {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-left: 1.5px solid rgba(var(--tier-rgb), 0.40) !important; /* Sekat vertikal */
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important; /* Neutral crisp vertical divider */
   background: transparent !important; /* Murni slot tombol tanpa filler latar */
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
@@ -6740,12 +6740,11 @@ body.dashboard-page .next-test-col-right {
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
-  border-left: 1.5px solid rgba(var(--tier-rgb), 0.40) !important; /* Sekat dibiarkan */
+  border-left: 1px solid rgba(255, 255, 255, 0.1) !important; /* Neutral crisp vertical divider */
   background: transparent !important; /* Murni slot tombol tanpa filler latar */
   box-sizing: border-box !important;
   flex-shrink: 0 !important;
   padding: 10px !important; /* Strict 10px Card Internal Padding */
-  border-top-right-radius: 11px !important;
   border-bottom-right-radius: 11px !important;
 }
 

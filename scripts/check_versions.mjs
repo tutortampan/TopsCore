@@ -8,7 +8,7 @@ console.log('datagrid.js version:', dgMatch);
 const smMatch = html.match(/student-management\.js\?v=[^\s"']*/g);
 console.log('student-management.js version:', smMatch);
 
-const cssMatch = html.match(/admin\.css\?v=[^\s"']*/g);
+const cssMatch = html.match(/admin(?:\.min)?\.css\?v=[^\s"']*/g);
 console.log('admin.css version:', cssMatch);
 
 // Also check if admin.html imports from app.js and what version

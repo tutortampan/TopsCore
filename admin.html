@@ -107,9 +107,6 @@
     <!-- Sidebar -->
     <aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
       <div class="sidebar-logo sidebar-corner-top" id="sidebar-top-corner-container" title="Tutor's Room">
-        <button type="button" class="btn btn-sm btn-sidebar-exit" id="admin-logout-btn" title="Exit Console" aria-label="Exit Console">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-exit-svg"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-        </button>
         <div class="tenant-switcher-capsule" id="sidebar-tenant-switcher-container" role="group" aria-label="Institution Filter">
           <button type="button" class="btn-tenant-toggle active" id="btn-tenant-all" data-tenant="ALL" title="View All Institutions">ALL</button>
           <button type="button" class="btn-tenant-toggle" id="btn-tenant-cec" data-tenant="CEC" title="Filter to CEC Only">CEC</button>
@@ -181,11 +178,7 @@
         <div class="topbar-tabs-container" id="topbar-tabs-container">
           <!-- Elevated sleek summary KPI tabs render dynamically here -->
         </div>
-        <div class="admin-topbar-actions" id="admin-topbar-actions">
-          <button type="button" class="btn btn-ghost btn-icon" id="admin-theme-toggle" title="Switch Theme (Navy / Black / Light)" style="height:26px;width:26px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;font-size:13px;border-radius:4px;border:1px solid rgba(255,255,255,0.15);">
-            <span id="admin-theme-icon">🌊</span>
-          </button>
-        </div>
+        <div class="admin-topbar-actions" id="admin-topbar-actions"></div>
       </header>
 
       <main class="admin-content" id="admin-content-area">
@@ -551,6 +544,9 @@
 
 
   <div id="bottom-ad-banner" class="topscore-locked-banner">
+    <button type="button" class="btn btn-sm btn-sidebar-exit bottom-banner-exit-btn" id="admin-logout-btn" title="Exit Console" aria-label="Exit Console">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="sidebar-exit-svg"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+    </button>
     <div class="banner-brand-content">
       <span class="banner-brand">TopsCore</span>&nbsp;<span class="banner-author">by Mr. Top</span>
     </div>

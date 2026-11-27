@@ -20,7 +20,7 @@ async function run() {
   console.log(`   [OK] Retrieved ${wordsCold.length} words in ${tCold}ms.`);
 
   // Verify persistent storage was populated
-  const persistedRaw = globalThis.localStorage.getItem('topscore_vault_cache_v1');
+  const persistedRaw = globalThis.localStorage.getItem('topscore_vault_cache_v4');
   if (!persistedRaw) {
     throw new Error('FAIL: Persistent storage was not populated on cold fetch!');
   }

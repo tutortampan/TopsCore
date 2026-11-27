@@ -2536,7 +2536,7 @@ Sebelumnya:
 
 ---
 
-## DECISION-088: Comprehensive Codebase Sweep & Total Eradication of Rogue Color Variants (Zero Legacy Leakage SSOT)
+## DECISION-088B: Comprehensive Codebase Sweep & Total Eradication of Rogue Color Variants (Zero Legacy Leakage SSOT)
 
 ### Status
 ACCEPTED (Zero Legacy Color Leakage SSOT)

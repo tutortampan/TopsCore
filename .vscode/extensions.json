@@ -10,6 +10,8 @@
     "naumovs.color-highlight",             // Color Highlight — Inline color previews for hex/rgb (essential for TopsCore grading tiers)
 
     // ─── ⚡ HTML, API & ASSET PRODUCTIVITY ──────────────────────────────
+    "formulahendry.auto-close-tag",        // Auto Close Tag — Automatically closes HTML tags in pages & template strings
+    "formulahendry.auto-rename-tag",       // Auto Rename Tag — Syncs paired opening/closing HTML tags automatically
     "christian-kohler.path-intellisense",  // Path Intellisense — Autocompletes filenames for assets, scripts, and styles
     "rangav.vscode-thunder-client",        // Thunder Client — Lightweight REST API client for testing Supabase Edge Functions
     "mikestead.dotenv",                    // DotENV — Syntax highlighting & env variable support for .env files

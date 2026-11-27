@@ -131,19 +131,6 @@
   "errorLens.messageTemplate": "[$source] $message",
   "errorLens.gutterIconsEnabled": true,
 
-  // ─── SPELL CHECKER (Disable in Code to Prevent False Problems) ───────
-  "cSpell.enabled": false,
-  "cSpell.diagnosticLevel": "Hint",
-  "cSpell.ignorePaths": [
-    "**/node_modules/**",
-    "**/js/**",
-    "**/css/**",
-    "**/scripts/**",
-    "**/supabase/**",
-    "**/*.json",
-    "**/*.sql"
-  ],
-
   // ─── ESLINT & CODE QUALITY ──────────────────────────────────────────
   "eslint.enable": true,
   "eslint.experimental.useFlatConfig": true,

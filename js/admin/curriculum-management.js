@@ -502,6 +502,40 @@ export async function renderCurriculum(area) {
         const passRate = bAtts.length ? Math.round((passCount / bAtts.length) * 100) : null;
         const totalReps = bAtts.length;
 
+        // Cumulative King (Top Male Achiever across all levels in this batch)
+        let king = '—';
+        const maleStus = bStus.filter(s => {
+          const g = (s.gender || '').toLowerCase();
+          return g.startsWith('m') || g.startsWith('l');
+        }).map(s => {
+          const allAtts = studentAttemptsMap[s.id] || [];
+          const scs = allAtts.map(a => Number(a.percentage)).filter(p => !isNaN(p));
+          return { name: s.name, avg: scs.length ? scs.reduce((x, y) => x + y, 0) / scs.length : -1 };
+        }).filter(x => x.avg >= 0).sort((x, y) => y.avg - x.avg);
+
+        if (maleStus.length > 0) {
+          king = maleStus[0].name;
+        } else if (DEFAULT_BATCH_SUPERLATIVES_MAP[cleanBatch]?.king) {
+          king = DEFAULT_BATCH_SUPERLATIVES_MAP[cleanBatch].king;
+        }
+
+        // Cumulative Queen (Top Female Achiever across all levels in this batch)
+        let queen = '—';
+        const femStus = bStus.filter(s => {
+          const g = (s.gender || '').toLowerCase();
+          return g.startsWith('f') || g.startsWith('p');
+        }).map(s => {
+          const allAtts = studentAttemptsMap[s.id] || [];
+          const scs = allAtts.map(a => Number(a.percentage)).filter(p => !isNaN(p));
+          return { name: s.name, avg: scs.length ? scs.reduce((x, y) => x + y, 0) / scs.length : -1 };
+        }).filter(x => x.avg >= 0).sort((x, y) => y.avg - x.avg);
+
+        if (femStus.length > 0) {
+          queen = femStus[0].name;
+        } else if (DEFAULT_BATCH_SUPERLATIVES_MAP[cleanBatch]?.queen) {
+          queen = DEFAULT_BATCH_SUPERLATIVES_MAP[cleanBatch].queen;
+        }
+
         // Level 1, Level 2, Level 3 Breakdowns
         const l1 = computeLevelMetrics(b, 1, bStus, lvlNum ?? -1, cleanBatch, passRate);
         const l2 = computeLevelMetrics(b, 2, bStus, lvlNum ?? -1, cleanBatch, passRate);
@@ -539,6 +573,8 @@ export async function renderCurriculum(area) {
           l1,
           l2,
           l3,
+          king,
+          queen,
           statusTag,
           statusBadge,
           isActive: b.is_active && studentCount > 0
@@ -582,26 +618,18 @@ export async function renderCurriculum(area) {
           diff = (typeof a.l1.std === 'number' ? a.l1.std : -1) - (typeof b.l1.std === 'number' ? b.l1.std : -1);
         } else if (bKey === 'l1_att') {
           diff = (a.l1.att ?? -1) - (b.l1.att ?? -1);
-        } else if (bKey === 'l1_king') {
-          diff = a.l1.king.localeCompare(b.l1.king);
-        } else if (bKey === 'l1_queen') {
-          diff = a.l1.queen.localeCompare(b.l1.queen);
         } else if (bKey === 'l2_std') {
           diff = (typeof a.l2.std === 'number' ? a.l2.std : -1) - (typeof b.l2.std === 'number' ? b.l2.std : -1);
         } else if (bKey === 'l2_att') {
           diff = (a.l2.att ?? -1) - (b.l2.att ?? -1);
-        } else if (bKey === 'l2_king') {
-          diff = a.l2.king.localeCompare(b.l2.king);
-        } else if (bKey === 'l2_queen') {
-          diff = a.l2.queen.localeCompare(b.l2.queen);
         } else if (bKey === 'l3_std') {
           diff = (typeof a.l3.std === 'number' ? a.l3.std : -1) - (typeof b.l3.std === 'number' ? b.l3.std : -1);
         } else if (bKey === 'l3_att') {
           diff = (a.l3.att ?? -1) - (b.l3.att ?? -1);
-        } else if (bKey === 'l3_king') {
-          diff = a.l3.king.localeCompare(b.l3.king);
-        } else if (bKey === 'l3_queen') {
-          diff = a.l3.queen.localeCompare(b.l3.queen);
+        } else if (bKey === 'king') {
+          diff = a.king.localeCompare(b.king);
+        } else if (bKey === 'queen') {
+          diff = a.queen.localeCompare(b.queen);
         }
         return bAsc ? diff : -diff;
       });
@@ -718,12 +746,16 @@ export async function renderCurriculum(area) {
       // ────────────────────────────────────────────────────────────
       let batchRowsHtml = '';
       if (filteredBatches.length === 0) {
-        batchRowsHtml = `<tr><td colspan="22" style="text-align:center;padding:24px;color:#94a3b8;font-style:italic;">No batches match the selected criteria.</td></tr>`;
+        batchRowsHtml = `<tr><td colspan="19" style="text-align:center;padding:24px;color:#94a3b8;font-style:italic;">No batches match the selected criteria.</td></tr>`;
       } else {
         batchRowsHtml = filteredBatches.map((b, idx) => {
           const rowBg = idx % 2 === 1 ? 'rgba(255,255,255,0.015)' : 'transparent';
           const scoreHtml = b.avgScore !== null
-            ? `<span style="font-weight:700;color:${getGradeColorByScore(b.avgScore)};font-variant-numeric:tabular-nums;">${b.avgScore}%</span> <span style="display:inline-block;padding:0 4px;font-size:9px;font-weight:800;border-radius:2px;background:rgba(255,255,255,0.08);color:${getGradeColorByScore(b.avgScore)};border:1px solid ${getGradeColorByScore(b.avgScore)};line-height:14px;vertical-align:middle;margin-left:3px;">${calculateGrade(b.avgScore)}</span>`
+            ? `<span style="font-weight:700;color:${getGradeColorByScore(b.avgScore)};font-variant-numeric:tabular-nums;">${b.avgScore}%</span>`
+            : `<span style="color:#64748b;">—</span>`;
+
+          const gradeHtml = b.avgScore !== null
+            ? `<span style="font-weight:800;color:${getGradeColorByScore(b.avgScore)};">${calculateGrade(b.avgScore)}</span>`
             : `<span style="color:#64748b;">—</span>`;
 
           const passHtml = b.passRate !== null
@@ -733,49 +765,40 @@ export async function renderCurriculum(area) {
           return `
             <tr style="height:30px;line-height:30px;border-bottom:1px solid rgba(255,255,255,0.05);background:${rowBg};cursor:pointer;" ondblclick="window._editBoardBatch('${b.id}')" title="Double click to edit batch">
               <!-- Batch Profile -->
-              <td style="text-align:center;padding:0 6px;font-weight:700;color:var(--primary-tactical, #38bdf8);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.cleanBatch)}</td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:500;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(b.progName)}</td>
-              <td style="text-align:center;padding:0 4px;color:#94a3b8;font-weight:700;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.lvlName)}</td>
-              <td class="col-board-std" style="text-align:center;padding:0 6px;font-weight:700;color:var(--primary-tactical, #38bdf8);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.studentCount}</td>
-              <td style="text-align:center;padding:0 6px;color:#94a3b8;font-size:11px;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.startDate)}</td>
-              <td style="text-align:center;padding:0 6px;color:#94a3b8;font-size:11px;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.endDate)}</td>
+              <td style="text-align:center;padding:0 8px;font-weight:700;color:var(--primary-tactical, #38bdf8);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.cleanBatch)}</td>
+              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:500;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.progName)}</td>
+              <td style="text-align:center;padding:0 6px;color:#94a3b8;font-weight:700;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.lvlName)}</td>
+              <td class="col-board-std" style="text-align:center;padding:0 8px;font-weight:700;color:var(--primary-tactical, #38bdf8);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.studentCount}</td>
+              <td style="text-align:center;padding:0 8px;color:#94a3b8;font-size:12px;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.startDate)}</td>
+              <td style="text-align:center;padding:0 8px;color:#94a3b8;font-size:12px;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${escHtml(b.endDate)}</td>
               <td style="text-align:right;padding:0 8px;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${scoreHtml}</td>
+              <td style="text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${gradeHtml}</td>
               <td style="text-align:right;padding:0 8px;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${passHtml}</td>
-              <td style="text-align:center;padding:0 6px;white-space:nowrap;border-right:2px solid rgba(255,255,255,0.18);">${b.statusBadge}</td>
+              <td style="text-align:center;padding:0 8px;white-space:nowrap;border-right:2px solid rgba(255,255,255,0.18);">${b.statusBadge}</td>
 
               <!-- 1st Level -->
-              <td style="text-align:center;padding:0 4px;font-weight:700;color:var(--grade-b, #95ff00);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l1.std}</td>
-              <td style="text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l1.attHtml}</td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(b.l1.king)}">
-                ${b.l1.king !== '—' ? escHtml(b.l1.king) : '<span style="color:#64748b;">—</span>'}
-              </td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(b.l1.queen)}">
-                ${b.l1.queen !== '—' ? escHtml(b.l1.queen) : '<span style="color:#64748b;">—</span>'}
-              </td>
+              <td style="text-align:center;padding:0 8px;font-weight:700;color:var(--grade-b, #95ff00);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l1.std}</td>
+              <td style="text-align:right;padding:0 10px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">${b.l1.attHtml}</td>
 
               <!-- 2nd Level -->
-              <td style="text-align:center;padding:0 4px;font-weight:700;color:var(--grade-d, #ff8c00);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l2.std}</td>
-              <td style="text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l2.attHtml}</td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(b.l2.king)}">
-                ${b.l2.king !== '—' ? escHtml(b.l2.king) : '<span style="color:#64748b;">—</span>'}
-              </td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(b.l2.queen)}">
-                ${b.l2.queen !== '—' ? escHtml(b.l2.queen) : '<span style="color:#64748b;">—</span>'}
-              </td>
+              <td style="text-align:center;padding:0 8px;font-weight:700;color:var(--grade-d, #ff8c00);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l2.std}</td>
+              <td style="text-align:right;padding:0 10px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">${b.l2.attHtml}</td>
 
               <!-- 3rd Level -->
-              <td style="text-align:center;padding:0 4px;font-weight:700;color:var(--quad-a, #ff2d87);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l3.std}</td>
-              <td style="text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l3.attHtml}</td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(b.l3.king)}">
-                ${b.l3.king !== '—' ? escHtml(b.l3.king) : '<span style="color:#64748b;">—</span>'}
+              <td style="text-align:center;padding:0 8px;font-weight:700;color:var(--quad-a, #ff2d87);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;">${b.l3.std}</td>
+              <td style="text-align:right;padding:0 10px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">${b.l3.attHtml}</td>
+
+              <!-- Cumulative King & Queen -->
+              <td style="text-align:left;padding:0 10px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:1px solid rgba(255,255,255,0.04);white-space:nowrap;" title="${escHtml(b.king)}">
+                ${b.king !== '—' ? escHtml(b.king) : '<span style="color:#64748b;">—</span>'}
               </td>
-              <td style="text-align:left;padding:0 8px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${escHtml(b.l3.queen)}">
-                ${b.l3.queen !== '—' ? escHtml(b.l3.queen) : '<span style="color:#64748b;">—</span>'}
+              <td style="text-align:left;padding:0 10px;color:var(--admin-text-main, #f8fafc);font-weight:600;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;" title="${escHtml(b.queen)}">
+                ${b.queen !== '—' ? escHtml(b.queen) : '<span style="color:#64748b;">—</span>'}
               </td>
 
               <!-- Action -->
-              <td style="text-align:center;padding:0 4px;white-space:nowrap;">
-                <button type="button" class="btn btn-ghost btn-xs text-primary" onclick="window._editBoardBatch('${b.id}')" title="Edit Batch Details" style="padding:2px 8px;font-size:11px;font-weight:700;color:var(--primary-tactical, #38bdf8);border:1px solid rgba(56,189,248,0.3);border-radius:3px;background:rgba(56,189,248,0.08);cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
+              <td style="text-align:center;padding:0 8px;white-space:nowrap;">
+                <button type="button" class="btn btn-ghost btn-xs text-primary" onclick="window._editBoardBatch('${b.id}')" title="Edit Batch Details" style="padding:2px 8px;font-size:12px;font-weight:700;color:var(--primary-tactical, #38bdf8);border:1px solid rgba(56,189,248,0.3);border-radius:3px;background:rgba(56,189,248,0.08);cursor:pointer;display:inline-flex;align-items:center;gap:4px;">
                   ${getSvgIcon('edit', 12)} Edit
                 </button>
               </td>
@@ -790,88 +813,67 @@ export async function renderCurriculum(area) {
       area.innerHTML = `
         <div style="display:flex;flex-direction:column;box-sizing:border-box;height:100%;overflow:hidden;">
 
-          <!-- ════════════════════════════════════════════════════════ -->
-          <!-- FULL-HEIGHT MASTER DATAGRID: BATCH ROSTER                -->
-          <!-- ════════════════════════════════════════════════════════ -->
-          <div class="glass-card" style="padding:10px !important;display:flex;flex-direction:column;height:100%;min-height:0;box-sizing:border-box;overflow:hidden;min-width:0;">
-
-            <!-- Standardized Header Bar Panel -->
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;height:24px;">
-              <h3 style="margin:0;font-size:12px;font-weight:800;text-transform:uppercase;color:#f8fafc;display:flex;align-items:center;gap:6px;">
-                <span>BATCH ROSTER</span>
-                <span style="font-size:10px;font-weight:800;padding:1px 6px;background:rgba(56,189,248,0.15);color:${C.TACT};border-radius:10px;">
-                  ${filteredBatches.length} BATCHES
-                </span>
-              </h3>
-              <div style="display:inline-flex;align-items:center;gap:8px;font-size:10px;">
-                <span style="color:#64748b;font-weight:600;">CLICK HEADER TO SORT</span>
-                <span style="color:${C.MUTED};">·</span>
-                <span style="color:${C.TACT};font-weight:700;">COHORT PROGRESSION</span>
-              </div>
-            </div>
-
             <!-- Zero-Scroll Datagrid Wrapper with Two-Tier Sticky Header & Footer -->
-            <div class="table-wrap" style="flex:1 1 0;min-height:0;height:calc(100% - 30px);overflow-y:auto;overflow-x:auto;margin:0 !important;background:#0f172a;border:1px solid rgba(255,255,255,0.08);border-radius:6px;">
-              <table class="datagrid-table has-super-headers" style="width:100%;min-width:1680px;table-layout:fixed;border-collapse:collapse;font-size:12px;font-family:'Inter',sans-serif;">
+            <div class="table-wrap" style="flex:0 1 auto;min-height:0;max-height:100%;overflow-y:auto;overflow-x:auto;margin:0 !important;background:#0f172a;border:2px solid rgba(255,255,255,0.28) !important;border-radius:6px;">
+              <table id="board-batches-table" class="datagrid-table has-super-headers" style="width:100%;table-layout:auto;border-collapse:separate;border-spacing:0;font-size:12px;font-family:'Inter',sans-serif;">
                 <thead class="datagrid-thead has-super-headers" style="position:sticky;top:0;z-index:20;background:#0f172a;">
                   <!-- Row 1: Super Headers (top: 0) -->
                   <tr class="datagrid-super-header-row" style="height:30px;line-height:30px;border-bottom:1px solid rgba(255,255,255,0.12);">
-                    <th colspan="9" class="super-hdr super-hdr-identity" style="background:#0e1b2f !important;color:var(--primary-tactical, #38bdf8) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);border-top:2px solid rgba(255,255,255,0.28);">
-                      BATCH PROFILE & OVERALL
+                    <th colspan="10" class="super-hdr super-hdr-identity" style="background:#0e1b2f !important;color:var(--primary-tactical, #38bdf8) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);">
+                      BATCH PROFILE &amp; OVERALL
                     </th>
-                    <th colspan="4" class="super-hdr super-hdr-theme-c" style="background:#0d1e18 !important;color:var(--grade-b, #95ff00) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);border-top:2px solid rgba(255,255,255,0.28);">
-                      1ST LEVEL (BASIC & VOCABULARY)
+                    <th colspan="2" class="super-hdr super-hdr-theme-c" style="background:#0d1e18 !important;color:var(--grade-b, #95ff00) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);">
+                      1ST LEVEL
                     </th>
-                    <th colspan="4" class="super-hdr super-hdr-theme-b" style="background:#22160d !important;color:var(--grade-d, #ff8c00) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);border-top:2px solid rgba(255,255,255,0.28);">
-                      2ND LEVEL (INTERMEDIATE)
+                    <th colspan="2" class="super-hdr super-hdr-theme-b" style="background:#22160d !important;color:var(--grade-d, #ff8c00) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);">
+                      2ND LEVEL
                     </th>
-                    <th colspan="4" class="super-hdr super-hdr-theme-a" style="background:#220e1d !important;color:var(--quad-a, #ff2d87) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);border-top:2px solid rgba(255,255,255,0.28);">
-                      3RD LEVEL (ADVANCED & ALUMNI)
+                    <th colspan="2" class="super-hdr super-hdr-theme-a" style="background:#220e1d !important;color:var(--quad-a, #ff2d87) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);">
+                      3RD LEVEL
                     </th>
-                    <th colspan="1" class="super-hdr super-hdr-action" style="background:#0e1726 !important;color:#94a3b8 !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-top:2px solid rgba(255,255,255,0.28);">
+                    <th colspan="2" class="super-hdr" style="background:#1c122e !important;color:var(--grade-star, #a855f7) !important;font-weight:800;letter-spacing:0.04em;text-align:center;border-right:2px solid rgba(255,255,255,0.22);">
+                      KING &amp; QUEEN
+                    </th>
+                    <th rowspan="2" class="super-hdr super-hdr-action" style="background:#0e1726 !important;color:#94a3b8 !important;font-weight:800;letter-spacing:0.04em;text-align:center;vertical-align:middle;height:60px;padding:0 10px;white-space:nowrap;" title="Batch Action Controls">
                       ACTION
                     </th>
                   </tr>
                   <!-- Row 2: Sub Headers (top: 30px) -->
                   <tr style="height:30px;line-height:30px;border-bottom:1px solid rgba(255,255,255,0.12);background:#0f172a;">
                     <!-- Batch Profile Columns -->
-                    <th style="width:70px;min-width:70px;text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('batch')" title="Sort by Cohort Batch">BATCH ${getSIcon(window._boardBatchSort, 'batch')}</th>
-                    <th style="width:75px;min-width:75px;text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('program')" title="Sort by Program">PROGRAM ${getSIcon(window._boardBatchSort, 'program')}</th>
-                    <th style="width:45px;min-width:45px;text-align:center;padding:0 4px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('lvl')" title="Sort by Current Level">LVL ${getSIcon(window._boardBatchSort, 'lvl')}</th>
-                    <th style="width:50px;min-width:50px;text-align:center;padding:0 4px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('std')" title="Sort by Total Enrolled Students">STD ${getSIcon(window._boardBatchSort, 'std')}</th>
-                    <th style="width:85px;min-width:85px;text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('start')" title="Batch Start Date">START ${getSIcon(window._boardBatchSort, 'start')}</th>
-                    <th style="width:85px;min-width:85px;text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('end')" title="Batch End Date">END ${getSIcon(window._boardBatchSort, 'end')}</th>
-                    <th style="width:80px;min-width:80px;text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('score')" title="Sort by Average Score">AVG SCORE ${getSIcon(window._boardBatchSort, 'score')}</th>
-                    <th style="width:60px;min-width:60px;text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('pass')" title="Sort by Passing Rate %">PASS % ${getSIcon(window._boardBatchSort, 'pass')}</th>
-                    <th style="width:75px;min-width:75px;text-align:center;padding:0 6px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('status')" title="Batch Operational Status">STATUS ${getSIcon(window._boardBatchSort, 'status')}</th>
+                    <th style="min-width:60px;text-align:center;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('batch')" title="Sort by Cohort Batch">BATCH ${getSIcon(window._boardBatchSort, 'batch')}</th>
+                    <th style="min-width:75px;text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('program')" title="Sort by Program">PROGRAM ${getSIcon(window._boardBatchSort, 'program')}</th>
+                    <th style="min-width:45px;text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('lvl')" title="Sort by Current Level">LVL ${getSIcon(window._boardBatchSort, 'lvl')}</th>
+                    <th style="min-width:48px;text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('std')" title="Sort by Total Enrolled Students">STD ${getSIcon(window._boardBatchSort, 'std')}</th>
+                    <th style="min-width:96px;text-align:center;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('start')" title="Batch Start Date">START ${getSIcon(window._boardBatchSort, 'start')}</th>
+                    <th style="min-width:96px;text-align:center;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('end')" title="Batch End Date">END ${getSIcon(window._boardBatchSort, 'end')}</th>
+                    <th style="min-width:85px;text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('score')" title="Sort by Average Score">AVG SCORE ${getSIcon(window._boardBatchSort, 'score')}</th>
+                    <th style="min-width:48px;text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('score')" title="Sort by Average Grade">GRD ${getSIcon(window._boardBatchSort, 'score')}</th>
+                    <th style="min-width:65px;text-align:right;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('pass')" title="Sort by Passing Rate %">PASS % ${getSIcon(window._boardBatchSort, 'pass')}</th>
+                    <th style="min-width:88px;text-align:center;padding:0 8px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('status')" title="Batch Operational Status">STATUS ${getSIcon(window._boardBatchSort, 'status')}</th>
 
                     <!-- 1st Level Columns -->
-                    <th style="width:45px;min-width:45px;text-align:center;padding:0 4px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l1_std')" title="1st Level Students">STD ${getSIcon(window._boardBatchSort, 'l1_std')}</th>
-                    <th style="width:55px;min-width:55px;text-align:right;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l1_att')" title="1st Level Attendance Rate">ATT % ${getSIcon(window._boardBatchSort, 'l1_att')}</th>
-                    <th style="width:115px;min-width:115px;text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l1_king')" title="1st Level King (Top Male Achiever)">KING ${getSIcon(window._boardBatchSort, 'l1_king')}</th>
-                    <th style="width:115px;min-width:115px;text-align:left;padding:0 8px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l1_queen')" title="1st Level Queen (Top Female Achiever)">QUEEN ${getSIcon(window._boardBatchSort, 'l1_queen')}</th>
+                    <th style="min-width:48px;text-align:center;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l1_std')" title="1st Level Students">STD ${getSIcon(window._boardBatchSort, 'l1_std')}</th>
+                    <th style="min-width:60px;text-align:right;padding:0 10px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l1_att')" title="1st Level Attendance Rate">ATT % ${getSIcon(window._boardBatchSort, 'l1_att')}</th>
 
                     <!-- 2nd Level Columns -->
-                    <th style="width:45px;min-width:45px;text-align:center;padding:0 4px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l2_std')" title="2nd Level Students">STD ${getSIcon(window._boardBatchSort, 'l2_std')}</th>
-                    <th style="width:55px;min-width:55px;text-align:right;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l2_att')" title="2nd Level Attendance Rate">ATT % ${getSIcon(window._boardBatchSort, 'l2_att')}</th>
-                    <th style="width:115px;min-width:115px;text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l2_king')" title="2nd Level King (Top Male Achiever)">KING ${getSIcon(window._boardBatchSort, 'l2_king')}</th>
-                    <th style="width:115px;min-width:115px;text-align:left;padding:0 8px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l2_queen')" title="2nd Level Queen (Top Female Achiever)">QUEEN ${getSIcon(window._boardBatchSort, 'l2_queen')}</th>
+                    <th style="min-width:48px;text-align:center;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l2_std')" title="2nd Level Students">STD ${getSIcon(window._boardBatchSort, 'l2_std')}</th>
+                    <th style="min-width:60px;text-align:right;padding:0 10px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l2_att')" title="2nd Level Attendance Rate">ATT % ${getSIcon(window._boardBatchSort, 'l2_att')}</th>
 
                     <!-- 3rd Level Columns -->
-                    <th style="width:45px;min-width:45px;text-align:center;padding:0 4px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l3_std')" title="3rd Level Students">STD ${getSIcon(window._boardBatchSort, 'l3_std')}</th>
-                    <th style="width:55px;min-width:55px;text-align:right;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l3_att')" title="3rd Level Attendance Rate">ATT % ${getSIcon(window._boardBatchSort, 'l3_att')}</th>
-                    <th style="width:115px;min-width:115px;text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l3_king')" title="3rd Level King (Top Male Achiever)">KING ${getSIcon(window._boardBatchSort, 'l3_king')}</th>
-                    <th style="width:115px;min-width:115px;text-align:left;padding:0 8px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l3_queen')" title="3rd Level Queen (Top Female Achiever)">QUEEN ${getSIcon(window._boardBatchSort, 'l3_queen')}</th>
+                    <th style="min-width:48px;text-align:center;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l3_std')" title="3rd Level Students">STD ${getSIcon(window._boardBatchSort, 'l3_std')}</th>
+                    <th style="min-width:60px;text-align:right;padding:0 10px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('l3_att')" title="3rd Level Attendance Rate">ATT % ${getSIcon(window._boardBatchSort, 'l3_att')}</th>
 
-                    <!-- Action Column -->
-                    <th style="width:65px;min-width:65px;text-align:center;padding:0 4px;white-space:nowrap;" title="Batch Action Controls">ACTION</th>
+                    <!-- Cumulative King & Queen Columns -->
+                    <th style="min-width:130px;text-align:left;padding:0 10px;border-right:1px solid rgba(255,255,255,0.06);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('king')" title="Batch King (Top Cumulative Male Achiever)">KING ${getSIcon(window._boardBatchSort, 'king')}</th>
+                    <th style="min-width:130px;text-align:left;padding:0 10px;border-right:2px solid rgba(255,255,255,0.22);cursor:pointer;white-space:nowrap;" onclick="window._sortBoardBatches('queen')" title="Batch Queen (Top Cumulative Female Achiever)">QUEEN ${getSIcon(window._boardBatchSort, 'queen')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${batchRowsHtml}
                 </tbody>
                 <tfoot style="position:sticky;bottom:0;z-index:10;background:#090d16;border-top:1px solid rgba(255,255,255,0.12);">
-                  <tr style="height:30px;line-height:30px;font-weight:700;color:#94a3b8;font-size:11px;">
+                  <tr style="height:30px;line-height:30px;font-weight:700;color:#94a3b8;font-size:12px;">
                     <!-- Batch Profile Totals -->
                     <td style="text-align:center;padding:0 4px;font-weight:700;color:#f8fafc;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">TOTAL</td>
                     <td style="text-align:left;padding:0 8px;color:var(--primary-tactical, #38bdf8);font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${filteredBatches.length} Batches</td>
@@ -879,27 +881,26 @@ export async function renderCurriculum(area) {
                     <td class="col-board-std" style="text-align:center;padding:0 4px;color:var(--primary-tactical, #38bdf8);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalStudents}</td>
                     <td style="text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">—</td>
                     <td style="text-align:center;padding:0 6px;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">—</td>
-                    <td style="text-align:right;padding:0 8px;color:${getGradeColorByScore(overallAvgBatchScore)};font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${overallAvgBatchScore > 0 ? `${overallAvgBatchScore}% Avg` : '—'}</td>
+                    <td style="text-align:right;padding:0 8px;color:${getGradeColorByScore(overallAvgBatchScore)};font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${overallAvgBatchScore > 0 ? `${overallAvgBatchScore}%` : '—'}</td>
+                    <td style="text-align:center;padding:0 6px;color:${getGradeColorByScore(overallAvgBatchScore)};font-weight:800;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${overallAvgBatchScore > 0 ? calculateGrade(overallAvgBatchScore) : '—'}</td>
                     <td style="text-align:right;padding:0 8px;color:#00c000;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${overallPassRate > 0 ? `${overallPassRate}%` : '—'}</td>
                     <td style="text-align:center;padding:0 6px;white-space:nowrap;border-right:2px solid rgba(255,255,255,0.18);">—</td>
 
                     <!-- 1st Level Totals -->
-                    <td style="text-align:center;padding:0 4px;color:var(--grade-b, #95ff00);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalL1Students}</td>
-                    <td style="text-align:right;padding:0 8px;color:var(--grade-b, #95ff00);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${avgL1Att > 0 ? `${avgL1Att}%` : '—'}</td>
-                    <td style="text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">—</td>
-                    <td style="text-align:left;padding:0 8px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">—</td>
+                    <td style="text-align:center;padding:0 8px;color:var(--grade-b, #95ff00);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalL1Students}</td>
+                    <td style="text-align:right;padding:0 10px;color:var(--grade-b, #95ff00);font-weight:700;font-variant-numeric:tabular-nums;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">${avgL1Att > 0 ? `${avgL1Att}%` : '—'}</td>
 
                     <!-- 2nd Level Totals -->
-                    <td style="text-align:center;padding:0 4px;color:var(--grade-d, #ff8c00);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalL2Students}</td>
-                    <td style="text-align:right;padding:0 8px;color:var(--grade-d, #ff8c00);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${avgL2Att > 0 ? `${avgL2Att}%` : '—'}</td>
-                    <td style="text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">—</td>
-                    <td style="text-align:left;padding:0 8px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">—</td>
+                    <td style="text-align:center;padding:0 8px;color:var(--grade-d, #ff8c00);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalL2Students}</td>
+                    <td style="text-align:right;padding:0 10px;color:var(--grade-d, #ff8c00);font-weight:700;font-variant-numeric:tabular-nums;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">${avgL2Att > 0 ? `${avgL2Att}%` : '—'}</td>
 
                     <!-- 3rd Level Totals -->
-                    <td style="text-align:center;padding:0 4px;color:var(--quad-a, #ff2d87);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalL3Students}</td>
-                    <td style="text-align:right;padding:0 8px;color:var(--quad-a, #ff2d87);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${avgL3Att > 0 ? `${avgL3Att}%` : '—'}</td>
-                    <td style="text-align:left;padding:0 8px;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">—</td>
-                    <td style="text-align:left;padding:0 8px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">—</td>
+                    <td style="text-align:center;padding:0 8px;color:var(--quad-a, #ff2d87);font-weight:700;font-variant-numeric:tabular-nums;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">${totalL3Students}</td>
+                    <td style="text-align:right;padding:0 10px;color:var(--quad-a, #ff2d87);font-weight:700;font-variant-numeric:tabular-nums;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">${avgL3Att > 0 ? `${avgL3Att}%` : '—'}</td>
+
+                    <!-- Cumulative King & Queen Totals -->
+                    <td style="text-align:left;padding:0 10px;border-right:1px solid rgba(255,255,255,0.06);white-space:nowrap;">—</td>
+                    <td style="text-align:left;padding:0 10px;border-right:2px solid rgba(255,255,255,0.18);white-space:nowrap;">—</td>
 
                     <!-- Action Column Footer -->
                     <td style="text-align:center;padding:0 4px;white-space:nowrap;">—</td>
@@ -907,8 +908,6 @@ export async function renderCurriculum(area) {
                 </tfoot>
               </table>
             </div>
-
-          </div>
 
         </div>
       `;

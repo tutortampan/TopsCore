@@ -139,8 +139,8 @@ export async function renderClassesHub(area) {
         description: 'Elementary English foundations: Grammar structure, sentence formation, and turn-based photo description.',
         levels: ['1st Level', 'Foundation'],
         skus: ['CAMP-1BASIC', 'EVNK-BASIC', 'SHRT-BASIC', 'TPTC-BASIC'],
-        exclusiveModules: ['Basic English - Description (M1)'],
-        dataSourceLabel: 'Item Bank (Basic English Repository)'
+        exclusiveModules: ['Description', 'Selection'],
+        dataSourceLabel: 'Questions Bank (Basic English Repository)'
       },
       {
         key: 'SPEAKING',
@@ -151,7 +151,7 @@ export async function renderClassesHub(area) {
         description: 'Speech fluency, audio dialogue turn-taking, and pronunciation evaluation.',
         levels: ['2nd Level', 'Intermediate Speech'],
         skus: ['CAMP-2SPEAK', 'EVNK-SPEAK', 'SHRT-SPEAK', 'TPTC-SPEAK'],
-        exclusiveModules: ['Public Speaking (M5, M7)'],
+        exclusiveModules: ['Speech', 'Dialogue'],
         dataSourceLabel: 'Item Bank (Public Speaking Topics)'
       },
       {
@@ -163,7 +163,7 @@ export async function renderClassesHub(area) {
         description: 'Story comprehension, audio narrative retelling, and contextual expression.',
         levels: ['1st Level', 'Narrative Performance'],
         skus: ['CAMP-1STORY', 'EVNK-STORY', 'SHRT-STORY', 'TPTC-STORY'],
-        exclusiveModules: ['Storytelling (M6)'],
+        exclusiveModules: ['Monologue'],
         dataSourceLabel: 'Item Bank (Story Audio & Scripts)'
       },
       {
@@ -721,13 +721,13 @@ export async function renderClassesHub(area) {
         let modalityLabel = 'Vocabulary Mastery';
         let modalityColor = '#a855f7';
         if (disc === 'BASIC_ENGLISH') {
-          modalityLabel = 'Basic English Structure (M1)';
+          modalityLabel = 'Description & Selection';
           modalityColor = '#38bdf8';
         } else if (disc === 'SPEAKING') {
-          modalityLabel = 'Speaking Oral Articulation (M5, M7)';
+          modalityLabel = 'Speech & Dialogue';
           modalityColor = '#95ff00';
         } else if (disc === 'STORYTELLING') {
-          modalityLabel = 'Storytelling Narrative (M6)';
+          modalityLabel = 'Monologue Narrative';
           modalityColor = '#FF8C00';
         } else if (disc === 'VOCABULARY') {
           const isL2 = lvlNum === 2 || (cls.name || '').toUpperCase().includes('2ND') || effectiveCode.includes('2VOCAB');
@@ -847,14 +847,14 @@ export async function renderClassesHub(area) {
           scopeHtml = '<span style="font-weight:700;font-size:12px;"><span style="color:#95ff00;">Words</span> <span style="color:#94a3b8;">&amp;</span> <span style="color:#ff2d87;">Phrases</span></span>';
           engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Vocabulary Mastery</span>';
         } else if (disc === 'BASIC_ENGLISH') {
-          scopeHtml = '<span style="color:#38bdf8;font-weight:700;font-size:12px;">Photo Description</span>';
-          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Basic English (M1)</span>';
+          scopeHtml = '<span style="color:#38bdf8;font-weight:700;font-size:12px;">Photo &amp; Selection</span>';
+          engineHtml = '<span style="color:#38bdf8;font-size:12px;font-weight:700;">Description &amp; Selection</span>';
         } else if (disc === 'SPEAKING') {
           scopeHtml = '<span style="color:#95ff00;font-weight:700;font-size:12px;">Speech &amp; Dialogue</span>';
-          engineHtml = '<span style="color:#95ff00;font-size:12px;font-weight:700;">Public Speaking (M5)</span>';
+          engineHtml = '<span style="color:#95ff00;font-size:12px;font-weight:700;">Speech &amp; Dialogue</span>';
         } else if (disc === 'STORYTELLING') {
           scopeHtml = '<span style="color:#FF8C00;font-weight:700;font-size:12px;">Narrative &amp; Retell</span>';
-          engineHtml = '<span style="color:#FF8C00;font-size:12px;font-weight:700;">Storytelling (M6)</span>';
+          engineHtml = '<span style="color:#FF8C00;font-size:12px;font-weight:700;">Monologue</span>';
         }
 
         const classTests = testsByClass.get(cls.id) || [];

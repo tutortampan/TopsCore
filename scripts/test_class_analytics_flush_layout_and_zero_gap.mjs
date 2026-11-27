@@ -79,13 +79,13 @@ console.log('\n--- 4. Testing Cache Busters ---');
 const adminHtml = fs.readFileSync(path.resolve('admin.html'), 'utf8');
 const swJs = fs.readFileSync(path.resolve('sw.js'), 'utf8');
 const vAdmin = parseInt((adminHtml.match(/css\/admin(?:\.min)?\.css\?v=202611\d+_v(\d+)/) || [])[1] || '0', 10);
-const vSw = parseInt((swJs.match(/topscore-cache-(?:option-a-)?v(\d+)/) || [])[1] || '0', 10);
+const vSw = parseInt((swJs.match(/topscore-cache-(?:option-a-)?v(\d+)/) || swJs.match(/BUILD_DATE\s*=\s*['"]\d+_v(\d+)['"]/) || [])[1] || '0', 10);
 assert(
   vAdmin >= 180,
   `admin.html cache busters incremented (>= v180, current: v${vAdmin})`
 );
 assert(
-  vSw >= 105,
+  vSw >= 105 && swJs.includes('CACHE_NAME'),
   `sw.js cache name incremented (>= v105, current: v${vSw})`
 );
 

@@ -1722,6 +1722,55 @@ export async function fetchStudentTaskPassCounts(studentId, classId = null) {
 
 export async function generateTestQuestions(sb, test) {
   let questions = [];
+  const isExplicitSelectionBank =
+    String(test.test_subtype || '').toUpperCase() === 'BASIC_ENGLISH_SELECTION_EXAM' ||
+    String(test.shell_code || '').toUpperCase().includes('1BSC-B') ||
+    (Array.isArray(test.payload?.questions) && test.payload.questions.length > 0 && !test.payload?.is_dynamic_shell);
+
+  const isDescriptionExam = !isExplicitSelectionBank && (
+    String(test.answer_type || '').toLowerCase() === 'description' ||
+    String(test.payload?.answer_type || '').toLowerCase() === 'description' ||
+    String(test.payload?.module || '').toLowerCase() === 'description' ||
+    String(test.payload?.module_type || '').toUpperCase() === 'POINT_AND_SPEAK' ||
+    String(test.shell_code || '').toUpperCase().includes('1BSC-A') ||
+    String(test.title || '').toLowerCase().includes('tell me what you see')
+  );
+
+  if (isDescriptionExam) {
+    const dist = test.payload?.demonstrative_distribution || { this: 5, that: 5, these: 5, those: 5 };
+    const promptsMap = {
+      this: 'Take a photo of a nearby singular object and describe it using "THIS".',
+      that: 'Take a photo of a distant singular object and describe it using "THAT".',
+      these: 'Take a photo of nearby plural objects and describe them using "THESE".',
+      those: 'Take a photo of distant plural objects and describe them using "THOSE".'
+    };
+    const pool = [];
+    ['this', 'that', 'these', 'those'].forEach(demo => {
+      const cnt = Math.max(0, Number(dist[demo] ?? 5));
+      for (let i = 0; i < cnt; i++) {
+        pool.push({
+          question_id: null,
+          question_text_snapshot: promptsMap[demo],
+          accepted_answers_snapshot: [demo],
+          options_snapshot: [],
+          target_demonstrative: demo,
+          topic_snapshot: 'Point & Speak',
+          theme_snapshot: 'Tell Me What You See',
+          theme_code: test.payload?.theme_code || 'A',
+          category_snapshot: 'description',
+          word_type_snapshot: demo.toUpperCase(),
+          answer_type: 'description',
+          module: 'description'
+        });
+      }
+    });
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pool[i], pool[j]] = [pool[j], pool[i]];
+    }
+    return pool.map((item, idx) => ({ ...item, display_order: idx + 1 }));
+  }
+
   if (test.payload && test.payload.is_dynamic_shell) {
     const themeCode = test.payload.theme_code;
     const topicCode = test.payload.topic_code;
@@ -2244,7 +2293,7 @@ export async function startTest(studentId, testId) {
   let activeSession = null;
 
   const { data: currentStudentInfo } = await sb.from('students')
-    .select('is_active, program_status, levels(level_number)')
+    .select('is_active, program_status, batch_id, levels(level_number)')
     .eq('id', studentId)
     .single();
   if (currentStudentInfo && (currentStudentInfo.is_active === false || (currentStudentInfo.program_status || '').toUpperCase() === 'INACTIVE')) {
@@ -2645,7 +2694,8 @@ export async function startTest(studentId, testId) {
   } // End if (!attempt && !isAlumniStudent)
 
   // Enforce strict session lock on ALL formal exams (both new & resumed attempts, and even for Alumni or missing test_session)
-  if (isFormalExam && !isStandaloneExamExempt) {
+  const isStandaloneExamExemptOuter = isPretest(asmData) || isVocabQuiz(asmData) || asmData.payload?.is_standalone_tryout === true;
+  if (isFormalExam && !isStandaloneExamExemptOuter) {
     const liveSess = asmData.payload?.test_session;
     const isSessOpen = liveSess && liveSess.status === 'UNLOCKED' && (!liveSess.auto_close_at || new Date(liveSess.auto_close_at) > new Date());
     const allowedIds = Array.isArray(liveSess?.allowed_student_ids) ? liveSess.allowed_student_ids : [];
@@ -2733,6 +2783,39 @@ export async function startTest(studentId, testId) {
   if (!answers || answers.length === 0) {
     const questions = await generateTestQuestions(sb, test);
     if (questions && questions.length > 0) {
+      // Dynamic Classmate Name Hydration ({MEMBER_1}, {MEMBER_2}) per student & per question
+      const needsMemberHydration = questions.some(sq => {
+        const qt = String(sq.question_text_snapshot || sq.question_text || sq.prompt || '');
+        return qt.includes('{MEMBER_1}') || qt.includes('{MEMBER_2}');
+      });
+      if (needsMemberHydration) {
+        let memberPool = [];
+        try {
+          let memQuery = sb.from('students')
+            .select('name, is_active, program_status')
+            .eq('is_active', true)
+            .is('deleted_at', null);
+          if (currentStudentInfo?.batch_id) memQuery = memQuery.eq('batch_id', currentStudentInfo.batch_id);
+          const { data: batchMembers } = await memQuery.limit(60);
+          memberPool = (batchMembers || [])
+            .filter(m => m.is_active === true && String(m.program_status || '').toUpperCase() !== 'INACTIVE')
+            .map(m => stripHonorific(m.name || '').trim().split(/\s+/)[0])
+            .filter(n => n && n.length > 1 && n.toLowerCase() !== 'test');
+        } catch (_) {}
+        if (memberPool.length < 2) {
+          memberPool = ['Risma', 'Aditya', 'Zahira', 'Lucky', 'Faesal', 'Shinta', 'Amri'];
+        }
+        questions.forEach(sq => {
+          const idx1 = Math.floor(Math.random() * memberPool.length);
+          let idx2 = Math.floor(Math.random() * memberPool.length);
+          if (memberPool.length > 1 && idx2 === idx1) idx2 = (idx1 + 1) % memberPool.length;
+          const m1 = memberPool[idx1];
+          const m2 = memberPool[idx2];
+          if (sq.question_text_snapshot) sq.question_text_snapshot = String(sq.question_text_snapshot).replace(/\{MEMBER_1\}/g, m1).replace(/\{MEMBER_2\}/g, m2);
+          if (sq.question_text) sq.question_text = String(sq.question_text).replace(/\{MEMBER_1\}/g, m1).replace(/\{MEMBER_2\}/g, m2);
+          if (sq.prompt) sq.prompt = String(sq.prompt).replace(/\{MEMBER_1\}/g, m1).replace(/\{MEMBER_2\}/g, m2);
+        });
+      }
       const isUuid = (val) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
       const answerRows = questions.map((sq, idx) => ({
         attempt_id: attempt.id,
@@ -2752,7 +2835,10 @@ export async function startTest(studentId, testId) {
           section_label: sq.section_label || null,
           section_id: sq.test_section || 'default',
           target_demonstrative: sq.target_demonstrative || null,
-          module: sq.module || test.payload?.module || (test.module_type === 'POINT_AND_SPEAK' ? 'description' : null)
+          module: sq.module || test.payload?.module || (test.module_type === 'POINT_AND_SPEAK' ? 'description' : null),
+          dynamic_type: sq.dynamic_type || null,
+          is_bonus_round: Boolean(sq.is_bonus_round),
+          fixed_option_order: Boolean(sq.fixed_option_order)
         },
         topic_snapshot: sq.topic_snapshot || sq.topic,
         question_type_snapshot: sq.word_type_snapshot || sq.word_type,
@@ -2769,13 +2855,14 @@ export async function startTest(studentId, testId) {
       } else {
         answers = insertedAns || [];
 
-        // Authoritative: Update total_questions on attempt in database and memory
+        // Authoritative: Update total_questions on attempt in database and memory (exclude Bonus Round)
         if (answers.length > 0) {
+          const scoredTotal = answers.filter(a => !(a.question_snapshot?.is_bonus_round || a.question_snapshot?.dynamic_type === 'bonus_round')).length || answers.length;
           await sb.from('attempts').update({
-            total_questions: answers.length,
+            total_questions: scoredTotal,
             updated_at: new Date().toISOString()
           }).eq('id', attempt.id);
-          attempt.total_questions = answers.length;
+          attempt.total_questions = scoredTotal;
         }
       }
     }

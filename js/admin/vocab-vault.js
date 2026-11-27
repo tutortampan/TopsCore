@@ -179,26 +179,26 @@ function _renderVaultGrid(area, words, topics, mode = 'single_words') {
 
   area.innerHTML = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; margin: 0; background: #0f172a;">
-        <table id="vault-table" class="${mode === 'phrases' ? 'mode-phrases' : ''}" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; margin: 0; background: #0f172a;">
+        <table id="vault-table" class="${mode === 'phrases' ? 'mode-phrases' : ''}" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px; table-layout: auto;">
           <colgroup>
-            <col style="width: 85px;">
-            <col style="width: 140px;">
-            <col style="width: 180px;">
-            <col style="width: 80px;">
-            <col style="min-width: 220px;">
-            <col style="width: 280px;">
+            <col style="min-width: 85px;">
+            <col style="min-width: 180px;">
+            <col style="min-width: 180px;">
+            <col style="min-width: 90px;">
+            <col style="min-width: 220px; width: auto;">
+            <col style="min-width: 240px; width: auto;">
             <col class="edit-mode-only" style="width: 55px;">
           </colgroup>
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20; border-bottom: 2px solid rgba(255, 255, 255, 0.12);">
             <tr>
-              <th data-sort="lex_code" style="padding: 6px 8px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; width: 85px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Lexicon Coordinate Code">LEX-CD <span class="sort-indicator" id="sort-ind-lex_code">▲</span></th>
-              <th data-sort="theme" style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 140px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Theme">THEME <span class="sort-indicator" id="sort-ind-theme"></span></th>
+              <th data-sort="lex_code" style="padding: 6px 8px; font-weight: 800; color: #38bdf8; text-transform: uppercase; font-size: 12px; min-width: 85px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Lexicon Coordinate Code">LEX-CD <span class="sort-indicator" id="sort-ind-lex_code">▲</span></th>
+              <th data-sort="theme" style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Theme">THEME <span class="sort-indicator" id="sort-ind-theme"></span></th>
               <th data-sort="topic" style="padding: 6px 10px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Topic">TOPIC <span class="sort-indicator" id="sort-ind-topic"></span></th>
-              <th data-sort="word_type" style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 80px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Word Type">TYPE <span class="sort-indicator" id="sort-ind-word_type"></span></th>
+              <th data-sort="word_type" style="padding: 6px 8px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 90px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Word Type">TYPE <span class="sort-indicator" id="sort-ind-word_type"></span></th>
               <!-- Flex Primary Column — absorbs all remaining viewport space (§TABLE-FLEX-PRIMARY) -->
               <th data-sort="indonesian" style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by Indonesian">INDONESIAN <span class="sort-indicator" id="sort-ind-indonesian"></span></th>
-              <th data-sort="english" style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; width: 280px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by English">ENGLISH <span class="sort-indicator" id="sort-ind-english"></span></th>
+              <th data-sort="english" style="padding: 6px 12px; font-weight: 800; color: #ffffff; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08); cursor: pointer; user-select: none;" title="Sort by English">ENGLISH <span class="sort-indicator" id="sort-ind-english"></span></th>
               <th class="edit-mode-only" style="padding: 6px 8px; font-weight: 800; color: var(--grade-e); text-transform: uppercase; font-size: 12px; text-align: center; width: 55px; position: sticky; right: 0; background: #1e293b; border-left: 1px solid rgba(255, 255, 255, 0.1); z-index: 25;" title="Actions">ACT</th>
             </tr>
           </thead>
@@ -2393,27 +2393,27 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
 
       <!-- Modernized Flat Data Table (Flush to top, only table container scrolls) -->
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden !important; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 0; margin: 0;">
-        <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 0; margin: 0;">
+        <table id="theme-manager-flat-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px; table-layout: auto;">
           <colgroup>
-            <col style="width: 45px;">
-            <col style="width: 48px;">
-            <col style="width: 140px;">
-            <col style="width: 48px;">
-            <col style="min-width: 240px;">
-            <col style="width: 50px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 30px;">
-            <col style="width: 52px;">
-            <col style="width: 58px;">
-            <col style="width: 52px;">
-            <col style="width: 105px;">
+            <col style="min-width: 45px;">
+            <col style="min-width: 58px;">
+            <col style="min-width: 180px;">
+            <col style="min-width: 52px;">
+            <col style="min-width: 220px; width: auto;">
+            <col style="min-width: 72px;">
+            <col style="min-width: 38px;">
+            <col style="min-width: 38px;">
+            <col style="min-width: 38px;">
+            <col style="min-width: 38px;">
+            <col style="min-width: 40px;">
+            <col style="min-width: 40px;">
+            <col style="min-width: 40px;">
+            <col style="min-width: 40px;">
+            <col style="min-width: 56px;">
+            <col style="min-width: 68px;">
+            <col style="min-width: 56px;">
+            <col style="min-width: 110px;">
             <col class="edit-mode-only" style="width: 65px;">
           </colgroup>
           <thead style="background: #1e293b; position: sticky; top: 0; z-index: 20;">
@@ -2429,42 +2429,42 @@ function _renderThemeManagerTab(area, words, topics, meta = {}) {
             <!-- Sub-Headers (Matching Themed Parent Colors on Dark Surface SSOT) -->
             <tr>
               <!-- 1. LVL -->
-              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Level">LVL</th>
+              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 45px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Level">LVL</th>
               <!-- 2. TH-CD -->
-              <th style="padding: 6px 4px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
+              <th style="padding: 6px 6px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Theme Letter Code (e.g. A, B, G)">TH-CD</th>
               <!-- 3. THEME -->
-              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 140px; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Theme Name">THEME</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Theme Name">THEME</th>
               <!-- 4. TP-CD -->
-              <th style="padding: 6px 4px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 48px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
+              <th style="padding: 6px 6px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Topic Number Code (e.g. 1, 2)">TP-CD</th>
               <!-- 5. TOPIC NAME (Flex Primary) -->
-              <th style="padding: 6px 8px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Topic Name">TOPIC NAME</th>
+              <th style="padding: 6px 10px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Topic Name">TOPIC NAME</th>
               <!-- 6. CODE (Boundary Column 1) -->
-              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; width: 50px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Composite Code (e.g. 1G1)">CODE</th>
+              <th class="super-hdr-divider" style="padding: 6px 6px; font-weight: 700; color: #ffffff !important; text-transform: uppercase; font-size: 12px; min-width: 72px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Composite Code (e.g. 1G1)">CODE</th>
 
               <!-- 7. VERB -->
-              <th style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Verb Count">VERB</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; min-width: 38px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Verb Count">VERB</th>
               <!-- 8. NOUN -->
-              <th style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Noun Count">NOUN</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; min-width: 38px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Noun Count">NOUN</th>
               <!-- 9. ADJ -->
-              <th style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Adjective Count">ADJ</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; min-width: 38px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Adjective Count">ADJ</th>
               <!-- 10. OTH (Boundary Column 2) -->
-              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Words Other (Adverbs, etc.)">OTH</th>
+              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 700; color: var(--primary-tactical, #38bdf8) !important; text-transform: uppercase; font-size: 12px; min-width: 38px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Words Other (Adverbs, etc.)">OTH</th>
 
               <!-- 11. EXP -->
-              <th style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Expression Count">EXP</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; min-width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Expression Count">EXP</th>
               <!-- 12. PRV -->
-              <th style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Proverb Count">PRV</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; min-width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Proverb Count">PRV</th>
               <!-- 13. IDM -->
-              <th style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Idiom Count">IDM</th>
+              <th style="padding: 6px 4px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; min-width: 40px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Idiom Count">IDM</th>
               <!-- 14. OTH (Boundary Column 3) -->
-              <th class="super-hdr-divider" style="padding: 6px 2px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; width: 30px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
+              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 700; color: var(--quad-a, #ff2d87) !important; text-transform: uppercase; font-size: 12px; min-width: 40px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Phrases Other (Phrasal verbs, etc.)">OTH</th>
 
               <!-- 15. WORDS -->
-              <th style="padding: 6px 4px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Total Single Words">WORDS</th>
+              <th style="padding: 6px 6px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; min-width: 56px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Total Single Words">WORDS</th>
               <!-- 16. PHRASES -->
-              <th style="padding: 6px 4px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Total Phrases &amp; Idioms">PHRASES</th>
+              <th style="padding: 6px 6px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; min-width: 68px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); background: #0b1120 !important; height:30px; line-height:30px;" title="Total Phrases &amp; Idioms">PHRASES</th>
               <!-- 17. TOTAL (Boundary Column 4) -->
-              <th class="super-hdr-divider" style="padding: 6px 4px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; width: 52px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Grand Total Vocabulary">TOTAL</th>
+              <th class="super-hdr-divider" style="padding: 6px 6px; font-weight: 700; color: var(--grade-b, #95ff00) !important; text-transform: uppercase; font-size: 12px; min-width: 56px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; background: #0b1120 !important; height:30px; line-height:30px;" title="Grand Total Vocabulary">TOTAL</th>
             </tr>
           </thead>
           <tbody id="theme-manager-tbody">
@@ -3296,32 +3296,32 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
 
           rowsHtml += `
             <tr class="blueprint-table-row" data-topic-code="${escapeHtml(compositeCode)}" data-raw-topic-code="${escapeHtml(tp.topicCode)}" data-level="${lvl}" style="border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
-              <td style="text-align: center; font-weight: 800; font-size: 12px; color: ${lvl === 0 ? '#94a3b8' : '#38bdf8'}; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); width: 55px;">
+              <td style="text-align: center; font-weight: 800; font-size: 12px; color: ${lvl === 0 ? '#94a3b8' : '#38bdf8'}; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); min-width: 58px;">
                 ${escapeHtml(lvlDisplay)}
               </td>
-              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; width: 55px;">
+              <td style="text-align: center; color: #a5b4fc; font-family: monospace; font-weight: 700; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; min-width: 58px;">
                 ${escapeHtml(compositeCode)}
               </td>
-              <td style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; min-width: 180px;">
+              <td style="color: ${(['A','B','C','D'].includes(thCode)) ? `var(--quad-${thCode.toLowerCase()})` : '#ffffff'}; font-weight: 700; padding: 8px 12px; border-right: 1px solid rgba(255,255,255,0.08); font-size: 12px; min-width: 220px;">
                 ${escapeHtml(th.name || '—')}
               </td>
-              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 12px; min-width: 220px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
+              <td class="col-bp-sep" style="color: #f1f5f9; font-weight: 600; padding: 8px 12px; font-size: 12px; min-width: 240px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 ${escapeHtml(tp.name)}
               </td>
 
               <!-- Vocab Pool Split (Single Responsibility) -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; min-width: 58px;">
                 <span class="bp-count-total" style="color: #38bdf8; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalCount}</span>
               </td>
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 55px;">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; min-width: 62px;">
                 <span style="color: #cbd5e1; font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalWords}</span>
               </td>
-              <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; width: 55px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
+              <td class="col-bp-sep" style="text-align: center; padding: 8px 6px; white-space: nowrap; min-width: 76px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <span style="color: var(--grade-star, #a855f7); font-weight: 600; font-size: 12px; font-variant-numeric: tabular-nums;">${tp.totalPhrases}</span>
               </td>
 
               <!-- Generation Blueprint Split: Duration -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; min-width: 82px;">
                 <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: #f8fafc; font-variant-numeric: tabular-nums;">${taskDuration} min</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
                   <input type="number" class="bp-inline-duration" data-topic="${escapeHtml(tp.name)}" value="${taskDuration}" min="5" max="180" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid var(--primary-tactical, #38bdf8); border-radius:4px; padding:0 3px; text-align:center;">
@@ -3330,7 +3330,7 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               </td>
 
               <!-- Generation Blueprint Split: Pass Score -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; min-width: 88px;">
                 <span class="bp-setting-badge" style="font-size: 12px; font-weight: 700; color: var(--grade-c, ${getGradeColorByScore(taskScore)}); font-variant-numeric: tabular-nums;">${taskScore}%</span>
                 <span class="bp-setting-input edit-mode-only" style="align-items:center; gap:2px;">
                   <input type="number" class="bp-inline-score" data-topic="${escapeHtml(tp.name)}" value="${taskScore}" min="10" max="100" style="width:44px; height:24px; font-size: 12px; background:#0f172a; color:#fff; border:1px solid var(--primary-tactical, #38bdf8); border-radius:4px; padding:0 3px; text-align:center;">
@@ -3339,12 +3339,12 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
               </td>
 
               <!-- Generation Blueprint Split: Format -->
-              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; width: 75px;">
+              <td style="text-align: center; padding: 8px 6px; border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap; min-width: 72px;">
                 <span style="color: #38bdf8; font-weight: 600; font-size: 12px;">${formatLabel}</span>
               </td>
 
               <!-- Generation Blueprint Split: Answer Type -->
-              <td class="col-bp-sep" style="text-align: center; padding: 8px 8px; white-space: nowrap; width: 95px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
+              <td class="col-bp-sep" style="text-align: center; padding: 8px 10px; white-space: nowrap; min-width: 132px; border-right: 2px solid rgba(255,255,255,0.22) !important;">
                 <span class="badge-answer-type badge-answer-${ansType}" style="display:inline-flex; align-items:center; gap:4px; font-weight:700; font-size:12px; color:var(--grade-a);" title="Vocabulary Mastery Modules: Recognition, Spoken, Written">
                   ${getSvgIcon('layers', 12)} Vocab Mastery
                 </span>
@@ -3401,22 +3401,22 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
   let html = `
     <div style="display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; box-sizing: border-box; overflow: hidden; font-family: 'Inter', sans-serif;">
       <!-- Batch Configuration Grid (ONLY Container With Vertical Scroll) -->
-      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden !important; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 8px;">
-        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px;">
+      <div class="table-wrap sticky-first" style="flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto; background: #0f172a; border: 2px solid rgba(255, 255, 255, 0.28) !important; border-radius: 8px;">
+        <table id="blueprint-matrix-table" style="width: 100%; border-collapse: separate; border-spacing: 0; text-align: left; font-size: 12px; table-layout: auto;">
           <colgroup>
-            <col style="width: 55px;">
-            <col style="width: 55px;">
-            <col style="width: 180px;">
-            <col style="min-width: 220px; width: auto;">
-            <col style="width: 55px;">
-            <col style="width: 55px;">
-            <col style="width: 55px;">
-            <col style="width: 75px;">
-            <col style="width: 75px;">
-            <col style="width: 75px;">
-            <col style="width: 95px;">
-            <col style="width: 95px;">
-            <col style="width: 95px;">
+            <col style="min-width: 58px;">
+            <col style="min-width: 58px;">
+            <col style="min-width: 220px;">
+            <col style="min-width: 240px; width: auto;">
+            <col style="min-width: 58px;">
+            <col style="min-width: 62px;">
+            <col style="min-width: 76px;">
+            <col style="min-width: 82px;">
+            <col style="min-width: 88px;">
+            <col style="min-width: 72px;">
+            <col style="min-width: 132px;">
+            <col style="min-width: 105px;">
+            <col style="min-width: 105px;">
           </colgroup>
           <thead style="position: sticky; top: 0; z-index: 10;">
             <!-- Super-Header Row (Dark Surface with Themed Colored Fonts SSOT §2.34 & Rule 4.11) -->
@@ -3428,22 +3428,22 @@ async function _renderThemeBlueprintTab(area, words, topics, meta = {}) {
             </tr>
             <!-- Sub-Header Row (Matching Themed Parent Colors on Dark Surface SSOT) -->
             <tr>
-              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">LEVEL</th>
-              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">CODE</th>
-              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 180px; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">THEME NAME</th>
-              <th class="col-subhdr-topic col-bp-sep" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">TOPIC NAME</th>
+              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">LEVEL</th>
+              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">CODE</th>
+              <th class="col-subhdr-topic" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 220px; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">THEME NAME</th>
+              <th class="col-subhdr-topic col-bp-sep" style="background:#0b1120 !important; color:var(--primary-tactical, #38bdf8) !important; padding: 7px 12px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 240px; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">TOPIC NAME</th>
 
-              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">ITEMS</th>
-              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">WORDS</th>
-              <th class="col-subhdr-vocab col-bp-sep" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 55px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES</th>
+              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 58px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">ITEMS</th>
+              <th class="col-subhdr-vocab" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 62px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">WORDS</th>
+              <th class="col-subhdr-vocab col-bp-sep" style="background:#0b1120 !important; color:var(--grade-star, #a855f7) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 76px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">PHRASES</th>
 
-              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">DURATION</th>
-              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">PASS RATE</th>
-              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 75px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">FORMAT</th>
-              <th class="col-subhdr-blueprint col-bp-sep" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 8px; font-weight: 700; text-transform: uppercase; font-size: 12px; width: 95px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">MODULE</th>
+              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 82px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">DURATION</th>
+              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 88px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">PASS RATE</th>
+              <th class="col-subhdr-blueprint" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 6px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 72px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">FORMAT</th>
+              <th class="col-subhdr-blueprint col-bp-sep" style="background:#0b1120 !important; color:var(--quad-b, #ff8c00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 132px; text-align: center; border-right: 2px solid rgba(255,255,255,0.22) !important; height:30px; line-height:30px;">MODULE</th>
 
-              <th class="col-subhdr-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">TASK STATUS</th>
-              <th class="col-subhdr-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 95px; text-align: center; height:30px; line-height:30px;">EXAM STATUS</th>
+              <th class="col-subhdr-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 105px; text-align: center; border-right: 1px solid rgba(255,255,255,0.08); height:30px; line-height:30px;">TASK STATUS</th>
+              <th class="col-subhdr-status" style="background:#0b1120 !important; color:var(--grade-b, #95ff00) !important; padding: 7px 10px; font-weight: 700; text-transform: uppercase; font-size: 12px; min-width: 105px; text-align: center; height:30px; line-height:30px;">EXAM STATUS</th>
             </tr>
           </thead>
           <tbody id="bp-matrix-tbody">

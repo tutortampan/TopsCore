@@ -328,6 +328,14 @@ setTimeout(purgeExternalBadges, 2000);
         return;
       }
 
+      // Exclude Bonus Round items from Result Breakdown (they are ungraded surprise items)
+      answers = answers.filter(a => {
+        const snap = typeof a?.question_snapshot === 'string'
+          ? (() => { try { return JSON.parse(a.question_snapshot); } catch(_) { return {}; } })()
+          : (a?.question_snapshot || {});
+        return !(snap?.is_bonus_round || snap?.dynamic_type === 'bonus_round' || a?.is_bonus_round);
+      });
+
       window._allAttemptAnswers = answers;
       if (asmData) window._currentAsmData = asmData;
       const effectiveAsmData = asmData || window._currentAsmData;
@@ -805,7 +813,10 @@ setTimeout(purgeExternalBadges, 2000);
 
         // Current drill pass count & outcome
         const currentPassCount = passCountByTest[curAsm?.id] || 0;
-        const currentAttemptPassed = Boolean(attempt.is_forgiven) || (parseFloat(attempt.percentage || 0) >= minScore) || (parseFloat(attempt.effective_score || 0) >= minScore);
+        const curExamReq = Number(curAsm?.minimum_required_score) || Number(curAsm?.payload?.min_score) || 60;
+        const curReq = curIsExam ? curExamReq : minScore;
+        const curAttScore = parseFloat(attempt.effective_score != null ? attempt.effective_score : (attempt.percentage || 0));
+        const currentAttemptPassed = Boolean(attempt.is_forgiven) || (curAttScore >= curReq) || (parseFloat(attempt.percentage || 0) >= curReq);
 
         let nextTest = null;
         let actionTag = 'GO TO NEXT TEST:';
@@ -928,9 +939,19 @@ setTimeout(purgeExternalBadges, 2000);
             }
           }
         }
+        if (!nextTest && !currentAttemptPassed && curAsm) {
+          nextTest = curAsm;
+          actionTag = curIsExam ? 'RETAKE THE EXAM:' : `RETRY THE DRILL (${currentPassCount}/${targetReps}):`;
+        }
+
         if (!nextTest) {
+          const allPublishedPassed = published.length > 0 && published.every(t => Boolean(isPassedByTest[t.id]));
+          if (!allPublishedPassed || !currentAttemptPassed) {
+            container.innerHTML = '';
+            return;
+          }
           container.innerHTML = `
-            <div class="result-complete-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.12) !important; border:1.5px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.45) !important; border-radius:10px !important; padding:4px 10px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important; box-shadow:0 2px 8px rgba(0,0,0,0.35) !important;">
+            <div class="result-complete-banner" style="width:100% !important; max-width:100% !important; height:80px !important; min-height:80px !important; max-height:80px !important; box-sizing:border-box !important; background:rgba(var(--grade-a-rgb, 0, 192, 0),0.12) !important; border:1.5px solid rgba(var(--grade-a-rgb, 0, 192, 0),0.45) !important; border-radius:10px !important; padding:4px 10px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important; box-shadow:0 2px 8px rgba(0,0,0,0.35) !important;">
               <div style="font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.08em !important; color:var(--grade-a) !important; font-weight:800 !important; line-height:1.2 !important;">Level Curriculum Complete</div>
               <div style="font-size:12px !important; font-weight:600 !important; color:#E2E8F0 !important; margin-top:2px !important; line-height:1.2 !important;">All tests completed!</div>
             </div>
@@ -986,7 +1007,7 @@ setTimeout(purgeExternalBadges, 2000);
             renderNextMilestoneButton('btn-next-test');
           } else {
             container.innerHTML = `
-              <div class="result-waiting-banner" style="width:100% !important; max-width:100% !important; height:50px !important; min-height:50px !important; max-height:50px !important; box-sizing:border-box !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.10) !important; border:1.5px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35) !important; border-radius:10px !important; padding:4px 10px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important;">
+              <div class="result-waiting-banner" style="width:100% !important; max-width:100% !important; height:80px !important; min-height:80px !important; max-height:80px !important; box-sizing:border-box !important; background:rgba(var(--grade-c-rgb, 255, 255, 0),0.10) !important; border:1.5px solid rgba(var(--grade-c-rgb, 255, 255, 0),0.35) !important; border-radius:10px !important; padding:4px 10px !important; display:flex !important; flex-direction:column !important; align-items:center !important; justify-content:center !important; text-align:center !important; margin:0 !important;">
                 <div style="font-size:12px !important; text-transform:uppercase !important; letter-spacing:0.06em !important; color:var(--grade-c) !important; font-weight:800 !important; line-height:1.2 !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; max-width:100% !important;">
                   Next Milestone: ${escapeHtml(cleanTitle(nextName))}
                 </div>

@@ -157,12 +157,12 @@ body {
   height: var(--fm-topbar-h, 40px) !important;
   min-height: var(--fm-topbar-h, 40px) !important;
   max-height: var(--fm-topbar-h, 40px) !important;
-  padding: 0 10px !important;
+  padding: 0 !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 8px !important;
+  gap: 0 !important;
   border-bottom: 1px solid var(--fm-border-subtle) !important;
   background: var(--fm-bg-topbar) !important;
   flex-shrink: 0 !important;
@@ -383,13 +383,13 @@ body {
   height: 40px !important;
   min-height: 40px !important;
   max-height: 40px !important;
-  padding: 0 10px !important;
+  padding: 0 !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: row !important;
   align-items: center !important;
   justify-content: flex-start !important;
-  gap: 10px !important;
+  gap: 0 !important;
   border-top: 1px solid var(--fm-border-subtle, rgba(255, 255, 255, 0.08)) !important;
   background: var(--fm-bg-sidebar) !important;
   flex-shrink: 0 !important;
@@ -433,24 +433,25 @@ body {
   flex-shrink: 0 !important;
 }
 
-/* Tenant Switcher Capsule in Sidebar Header (Top Corner Alongside Exit Button) */
+/* Tenant Switcher Capsule in Sidebar Header (40px Full-Panel Alignment: ALL | CEC | TOP) */
 .tenant-switcher-capsule {
   width: 100% !important;
-  height: 28px !important;
+  height: 100% !important;
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   background: rgba(0, 0, 0, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 6px !important;
-  padding: 2px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 3px !important;
   box-sizing: border-box !important;
 }
 
 .sidebar-corner-top .tenant-switcher-capsule {
   flex: 1 1 0% !important;
   min-width: 0 !important;
-  width: auto !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .btn-tenant-toggle {
@@ -461,9 +462,9 @@ body {
   background: transparent !important;
   color: #94a3b8 !important;
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: 0.4px !important;
   text-transform: uppercase !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
@@ -493,17 +494,17 @@ body {
   color: #060b18 !important;
 }
 
-/* Theme Switcher Capsule in Sidebar Footer (40px Container Alignment: Light | Navy | Dark) */
+/* Theme Switcher Capsule in Sidebar Footer (40px Full-Panel Alignment: Light | Navy | Dark) */
 .theme-switcher-capsule {
   width: 100% !important;
-  height: 28px !important;
+  height: 100% !important;
   display: flex !important;
   align-items: center !important;
   gap: 3px !important;
   background: rgba(0, 0, 0, 0.45) !important;
-  border: 1px solid rgba(255, 255, 255, 0.08) !important;
-  border-radius: 6px !important;
-  padding: 2px !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 3px !important;
   box-sizing: border-box !important;
 }
 
@@ -515,9 +516,9 @@ body {
   background: transparent !important;
   color: #94a3b8 !important;
   font-family: var(--fm-font-sans, 'Inter', sans-serif) !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 800 !important;
-  letter-spacing: 0.5px !important;
+  letter-spacing: 0.4px !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
   display: flex !important;
@@ -1860,6 +1861,28 @@ div#class-analytics-grid,
   letter-spacing: 0.04em !important;
 }
 
+#bottom-ad-banner .bottom-banner-exit-btn {
+  position: absolute !important;
+  left: 10px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--fm-radius-sm, 4px) !important;
+  box-sizing: border-box !important;
+  z-index: 2 !important;
+}
+
+#admin-console.hidden ~ #bottom-ad-banner .bottom-banner-exit-btn {
+  display: none !important;
+}
+
 /* Phase 370: Theme Manager vs Theme Blueprint Separation */
 .badge-program-assigned {
   display: inline-flex;
@@ -2881,11 +2904,19 @@ input[type="checkbox"], input[type="radio"] {
 /* Dynamic Column Sizing & Single-Line Text Invariant (Rule 21 / Sec 2.34) */
 .datagrid-table,
 .table-wrap table,
-#class-attendance-grid table,
-#blueprint-matrix-table {
+#class-attendance-grid table {
   width: 100% !important;
   max-width: 100% !important;
   table-layout: fixed !important;
+}
+
+#blueprint-matrix-table,
+#vault-table,
+#theme-manager-flat-table,
+#board-batches-table,
+.table-wrap table.dashboard-academic-table {
+  width: 100% !important;
+  table-layout: auto !important;
 }
 
 .datagrid-table th,
@@ -6920,11 +6951,11 @@ body.global-edit-mode-on .vault-edit-input:focus {
   align-items: stretch !important;
 }
 
-/* Outline Styling: Green = Normal / +Late */
+/* Neutral Idle -> Semantic Color on Hover/Active */
 .btn-wireframe-normal {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75) !important;
-  color: var(--grade-a, #00c000) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -6940,18 +6971,19 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-normal:hover {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.22) !important;
-  border-color: var(--grade-a) !important;
-  color: #ffffff !important;
+.btn-wireframe-normal:hover,
+.btn-wireframe-normal:active {
+  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.18) !important;
+  border-color: var(--grade-a, #00c000) !important;
+  color: var(--grade-a, #00c000) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
 .btn-wireframe-late {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75) !important;
-  color: var(--grade-a, #00c000) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -6967,19 +6999,20 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-late:hover {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.22) !important;
-  border-color: var(--grade-a) !important;
-  color: #ffffff !important;
+.btn-wireframe-late:hover,
+.btn-wireframe-late:active {
+  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.18) !important;
+  border-color: var(--grade-a, #00c000) !important;
+  color: var(--grade-a, #00c000) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
-/* Outline Styling: Yellow = Remidi / Edit Time */
+/* Neutral Idle -> Yellow on Hover/Active */
 .btn-wireframe-remidi {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85) !important;
-  color: var(--grade-c) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -6995,10 +7028,11 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-remidi:hover {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.22) !important;
+.btn-wireframe-remidi:hover:not(:disabled),
+.btn-wireframe-remidi:active:not(:disabled) {
+  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.16) !important;
   border-color: var(--grade-c) !important;
-  color: #ffffff !important;
+  color: var(--grade-c) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
@@ -7012,9 +7046,9 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 
 .btn-wireframe-edit-time {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85) !important;
-  color: var(--grade-c) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -7031,10 +7065,43 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-edit-time:hover {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.22) !important;
+.btn-wireframe-edit-time:hover,
+.btn-wireframe-edit-time:active {
+  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.16) !important;
   border-color: var(--grade-c) !important;
-  color: #ffffff !important;
+  color: var(--grade-c) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  transform: none;
+}
+
+.btn-wireframe-edit-mode,
+.btn-wireframe-beacon {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+.btn-wireframe-edit-mode:hover,
+.btn-wireframe-edit-mode:active,
+.btn-wireframe-beacon:hover,
+.btn-wireframe-beacon:active {
+  background: rgba(56, 189, 248, 0.16) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
@@ -7106,9 +7173,9 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 
 .btn-wireframe-close {
-  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75) !important;
-  color: var(--grade-e, #ff0000) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -7124,18 +7191,19 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-close:hover {
-  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.22) !important;
-  border-color: var(--grade-e) !important;
-  color: #ffffff !important;
+.btn-wireframe-close:hover,
+.btn-wireframe-close:active {
+  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.18) !important;
+  border-color: var(--grade-e, #ff0000) !important;
+  color: var(--grade-e, #ff0000) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
 /* Semantics: Tactical Dark Slate = Live Monitor Hero Button */
 .btn-wireframe-live-view {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
   color: #f8fafc !important;
   font-weight: 800 !important;
   font-size: 12px !important;
@@ -7147,14 +7215,16 @@ body.global-edit-mode-on .vault-edit-input:focus {
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
-.btn-wireframe-live-view:hover {
-  background: linear-gradient(180deg, #263348 0%, #1e293b 100%) !important;
+.btn-wireframe-live-view:hover,
+.btn-wireframe-live-view:active {
+  background: rgba(56, 189, 248, 0.14) !important;
   border-color: #38bdf8 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 

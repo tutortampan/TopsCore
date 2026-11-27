@@ -1,7 +1,7 @@
 /**
  * TopsCore LMS — Academic Gradebook for Manual Input Classes
  * (Speaking, Storytelling, Grammar, Grammar for Speaking, Pronunciation)
- * 
+ *
  * Rules:
  * - Direct manual input & evaluation by tutors/admins
  * - 100% English SSOT, 12px uniform typography, 100vh locked datagrid
@@ -17,6 +17,7 @@ import { detectClassDiscipline, calculateGrade, formatGradeBadgeHtml, getGradeCo
 let _activeGradebookEditMode = false;
 let _cachedAssessments = [];
 let _activeClassId = null;
+let _cachedCbtTests = [];
 
 function escapeHtml(str) {
   if (str == null) return '';
@@ -57,34 +58,56 @@ function resolveClassSubjectAndStep(currentClass, levelMap = {}) {
   return { discipline, subjectCode, stepLevel };
 }
 
+function getMinMaxCellColor(raw, min, max) {
+  if (raw === '' || raw === null || raw === undefined || isNaN(Number(raw))) return 'var(--clr-text-3)';
+  const val = Number(raw);
+  if (max != null && val >= max) return 'var(--grade-star, #a855f7)';
+  if (min != null) {
+    if (val < min) return 'var(--grade-e, #ff0000)';
+    // Borderline / pas-pasan: exactly at MIN or within 10% above MIN
+    const range = (max || min) - min;
+    const yellowCap = min + Math.max(1, Math.floor(range * 0.1));
+    if (val <= yellowCap && val < (max || Infinity)) return 'var(--grade-c, #ffff00)';
+    return 'var(--grade-a, #00c000)';
+  }
+  const pct = max > 0 ? (val / max) * 100 : 0;
+  return getGradeColorByScore(pct);
+}
+
 /**
- * Schema definition for each subject's columns and assessment targets
+ * Schema definition for each subject's columns and assessment targets (Official Step 1/2/3 Min & Max SSOT)
  */
 function getSubjectSchema(subjectCode, stepLevel) {
   switch (subjectCode) {
     case 'VOCABULARY': {
+      const ptTarget = stepLevel === 1 ? 30 : 50;
       const vTargets = stepLevel === 2
         ? { W1: 120, W2: 280, W3: 440, W4: 600 }
         : (stepLevel === 3
             ? { W1: 150, W2: 400, W3: 650, W4: 800 }
-            : { W1: 98, W2: 266, W3: 431, W4: 574 });
+            : { W1: 90, W2: 210, W3: 300, W4: 450 });
+      const vMins = stepLevel === 2
+        ? { W1: 75, W2: 155, W3: 235, W4: 315 }
+        : (stepLevel === 3
+            ? { W1: 90, W2: 215, W3: 340, W4: 415 }
+            : { W1: 60, W2: 120, W3: 180, W4: 240 });
       return {
         groups: [
           {
             title: 'DIAGNOSTIC',
             colorVar: '--primary-tactical',
             cols: [
-              { key: 'PT', type: 'DIAGNOSTIC', target: 30, label: 'PT' }
+              { key: 'PT', type: 'DIAGNOSTIC', min: null, target: ptTarget, label: 'PT' }
             ]
           },
           {
             title: 'WEEKLY WORD DEPOSITS',
             colorVar: '--grade-b',
             cols: [
-              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: vTargets.W1, label: 'W1' },
-              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: vTargets.W2, label: 'W2' },
-              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: vTargets.W3, label: 'W3' },
-              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: vTargets.W4, label: 'W4' }
+              { key: 'W1', type: 'WEEKLY_DEPOSIT', min: vMins.W1, target: vTargets.W1, label: 'W1' },
+              { key: 'W2', type: 'WEEKLY_DEPOSIT', min: vMins.W2, target: vTargets.W2, label: 'W2' },
+              { key: 'W3', type: 'WEEKLY_DEPOSIT', min: vMins.W3, target: vTargets.W3, label: 'W3' },
+              { key: 'W4', type: 'WEEKLY_DEPOSIT', min: vMins.W4, target: vTargets.W4, label: 'W4' }
             ]
           }
         ],
@@ -110,13 +133,13 @@ function getSubjectSchema(subjectCode, stepLevel) {
       return {
         groups: [
           {
-            title: 'WEEKLY PERFORMANCE EXAMS (SCALE 1–5)',
+            title: 'WEEKLY PERFORMANCE EXAMS',
             colorVar: '--grade-d',
             cols: [
-              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-1' },
-              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-2' },
-              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-3' },
-              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: 5, label: 'EX-4' }
+              { key: 'W1', type: 'WEEKLY_DEPOSIT', min: 3, target: 5, label: 'EX-1' },
+              { key: 'W2', type: 'WEEKLY_DEPOSIT', min: 3, target: 5, label: 'EX-2' },
+              { key: 'W3', type: 'WEEKLY_DEPOSIT', min: 3, target: 5, label: 'EX-3' },
+              { key: 'W4', type: 'WEEKLY_DEPOSIT', min: 3, target: 5, label: 'EX-4' }
             ]
           }
         ],
@@ -130,35 +153,70 @@ function getSubjectSchema(subjectCode, stepLevel) {
         }
       };
 
-    case 'GRAMMAR':
-    case 'GFS': {
-      const gU1Target = (stepLevel === 1 ? 15 : (stepLevel === 2 ? 30 : 15));
-      const gU2Target = (stepLevel === 1 ? 20 : (stepLevel === 2 ? 30 : 15));
+    case 'GFS':
+      return {
+        groups: [
+          {
+            title: 'PERIODICAL EXAMS',
+            colorVar: '--grade-a',
+            cols: [
+              { key: 'U1', type: 'PERIODIC_EXAM', min: 12, target: 20, label: 'EX-1' },
+              { key: 'U2', type: 'PERIODIC_EXAM', min: 12, target: 20, label: 'EX-2' }
+            ]
+          }
+        ],
+        calcFinal: (scores) => {
+          const exams = ['U1', 'U2'].map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
+          if (!exams.length) return { score: null, pct: null, grade: '—' };
+          const avg = exams.reduce((a, b) => a + b, 0) / exams.length;
+          const pct = Math.min(100, Math.round((avg / 20) * 100));
+          return { score: avg.toFixed(1), pct, grade: calculateGrade(pct) };
+        }
+      };
+
+    case 'PRONUNCIATION':
+      return {
+        groups: [
+          {
+            title: 'PERIODICAL EXAMS',
+            colorVar: '--grade-a',
+            cols: [
+              { key: 'U1', type: 'PERIODIC_EXAM', min: 10, target: 25, label: 'EX-1' },
+              { key: 'U2', type: 'PERIODIC_EXAM', min: 10, target: 25, label: 'EX-2' }
+            ]
+          }
+        ],
+        calcFinal: (scores) => {
+          const exams = ['U1', 'U2'].map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
+          if (!exams.length) return { score: null, pct: null, grade: '—' };
+          const avg = exams.reduce((a, b) => a + b, 0) / exams.length;
+          const pct = Math.min(100, Math.round((avg / 25) * 100));
+          return { score: avg.toFixed(1), pct, grade: calculateGrade(pct) };
+        }
+      };
+
+    case 'GRAMMAR': {
+      const ptTarget = stepLevel === 2 ? 30 : (stepLevel === 3 ? 15 : 25);
+      const ptMin = stepLevel === 2 ? 10 : null;
+      const gU1Target = stepLevel === 2 ? 30 : 15;
+      const gU2Target = stepLevel === 1 ? 20 : (stepLevel === 2 ? 30 : 15);
+      const gU1Min = stepLevel === 2 ? 17 : 8;
+      const gU2Min = stepLevel === 1 ? 12 : (stepLevel === 2 ? 17 : 8);
       return {
         groups: [
           {
             title: 'DIAGNOSTIC',
             colorVar: '--primary-tactical',
             cols: [
-              { key: 'PT', type: 'DIAGNOSTIC', target: 25, label: 'PT' }
+              { key: 'PT', type: 'DIAGNOSTIC', min: ptMin, target: ptTarget, label: 'PT' }
             ]
           },
-          ...(stepLevel === 3 ? [{
-            title: 'WEEKLY ATTENDANCE',
-            colorVar: '--grade-b',
-            cols: [
-              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W1' },
-              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W2' },
-              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W3' },
-              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W4' }
-            ]
-          }] : []),
           {
             title: 'PERIODICAL EXAMS',
             colorVar: '--grade-a',
             cols: [
-              { key: 'U1', type: 'PERIODIC_EXAM', target: gU1Target, label: `EX-1 (Max ${gU1Target})` },
-              { key: 'U2', type: 'PERIODIC_EXAM', target: gU2Target, label: `EX-2 (Max ${gU2Target})` }
+              { key: 'U1', type: 'PERIODIC_EXAM', min: gU1Min, target: gU1Target, label: 'EX-1' },
+              { key: 'U2', type: 'PERIODIC_EXAM', min: gU2Min, target: gU2Target, label: 'EX-2' }
             ]
           }
         ],
@@ -168,16 +226,7 @@ function getSubjectSchema(subjectCode, stepLevel) {
           const pcts = [];
           if (u1 != null && u1 !== '') pcts.push(Math.min(100, (Number(u1) / gU1Target) * 100));
           if (u2 != null && u2 !== '') pcts.push(Math.min(100, (Number(u2) / gU2Target) * 100));
-          if (!pcts.length) {
-            const wKeys = ['W1', 'W2', 'W3', 'W4'];
-            const wVals = wKeys.map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
-            if (wVals.length) {
-              const avgW = wVals.reduce((a, b) => a + b, 0) / wVals.length;
-              const pct = Math.round((avgW / 5) * 100);
-              return { score: avgW.toFixed(2), pct, grade: calculateGrade(pct) };
-            }
-            return { score: null, pct: null, grade: '—' };
-          }
+          if (!pcts.length) return { score: null, pct: null, grade: '—' };
           const avgPct = Math.round(pcts.reduce((a, b) => a + b, 0) / pcts.length);
           const avgRaw = ((u1 != null && u1 !== '' ? Number(u1) : 0) + (u2 != null && u2 !== '' ? Number(u2) : 0)) / pcts.length;
           return { score: avgRaw.toFixed(1), pct: avgPct, grade: calculateGrade(avgPct) };
@@ -185,34 +234,45 @@ function getSubjectSchema(subjectCode, stepLevel) {
       };
     }
 
+    case 'BASIC':
+      return {
+        groups: [
+          {
+            title: 'PERIODICAL EXAMS',
+            colorVar: '--grade-a',
+            cols: [
+              { key: 'U1', type: 'PERIODIC_EXAM', min: 60, target: 100, label: 'EX-1' },
+              { key: 'U2', type: 'PERIODIC_EXAM', min: 60, target: 100, label: 'EX-2' }
+            ]
+          }
+        ],
+        calcFinal: (scores) => {
+          const exams = ['U1', 'U2'].map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
+          if (!exams.length) return { score: null, pct: null, grade: '—' };
+          const avg = Math.round(exams.reduce((a, b) => a + b, 0) / exams.length);
+          return { score: `${avg}%`, pct: avg, grade: calculateGrade(avg) };
+        }
+      };
+
     case 'SPEAKING':
-    default:
+    default: {
+      const spkExamMin = stepLevel === 1 ? 10 : (stepLevel === 2 ? 12 : 15);
       return {
         groups: [
           {
             title: 'DIAGNOSTIC',
             colorVar: '--primary-tactical',
             cols: [
-              { key: 'PT', type: 'DIAGNOSTIC', target: 25, label: 'PT' }
+              { key: 'PT', type: 'DIAGNOSTIC', min: 5, target: 25, label: 'PT' }
             ]
           },
-          ...(stepLevel === 3 ? [{
-            title: 'WEEKLY ATTENDANCE',
-            colorVar: '--grade-b',
-            cols: [
-              { key: 'W1', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W1' },
-              { key: 'W2', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W2' },
-              { key: 'W3', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W3' },
-              { key: 'W4', type: 'WEEKLY_DEPOSIT', target: 5, label: 'W4' }
-            ]
-          }] : []),
           {
             title: 'PERIODICAL EXAMS',
             colorVar: '--grade-a',
             cols: [
-              { key: 'U1', type: 'PERIODIC_EXAM', target: 25, label: 'EX-1 (Max 25)' },
-              { key: 'U2', type: 'PERIODIC_EXAM', target: 25, label: 'EX-2 (Max 25)' },
-              ...(stepLevel === 1 ? [{ key: 'PRACTICE', type: 'PRACTICE', target: 25, label: 'EX-3 (Practice)' }] : (stepLevel === 3 ? [{ key: 'U3', type: 'PERIODIC_EXAM', target: 25, label: 'EX-3 (Max 25)' }] : []))
+              { key: 'U1', type: 'PERIODIC_EXAM', min: spkExamMin, target: 25, label: 'EX-1' },
+              { key: 'U2', type: 'PERIODIC_EXAM', min: spkExamMin, target: 25, label: 'EX-2' },
+              ...(stepLevel === 1 ? [{ key: 'PRACTICE', type: 'PRACTICE', min: 5, target: 25, label: 'EX-3' }] : (stepLevel === 3 ? [{ key: 'U3', type: 'PERIODIC_EXAM', min: spkExamMin, target: 25, label: 'EX-3' }] : []))
             ]
           }
         ],
@@ -222,30 +282,33 @@ function getSubjectSchema(subjectCode, stepLevel) {
           const u3 = scores['U3']?.raw_score;
           const pr = scores['PRACTICE']?.raw_score;
           const exams = [u1, u2, u3, pr].filter(v => v != null && v !== '').map(Number);
-          if (!exams.length) {
-            const wKeys = ['W1', 'W2', 'W3', 'W4'];
-            const wVals = wKeys.map(k => scores[k]?.raw_score).filter(v => v != null && v !== '').map(Number);
-            if (wVals.length) {
-              const avgW = wVals.reduce((a, b) => a + b, 0) / wVals.length;
-              const pct = Math.round((avgW / 5) * 100);
-              return { score: avgW.toFixed(2), pct, grade: calculateGrade(pct) };
-            }
-            return { score: null, pct: null, grade: '—' };
-          }
+          if (!exams.length) return { score: null, pct: null, grade: '—' };
           const avg = exams.reduce((a, b) => a + b, 0) / exams.length;
           const pct = Math.min(100, Math.round((avg / 25) * 100));
           return { score: avg.toFixed(1), pct, grade: calculateGrade(pct) };
         }
       };
+    }
   }
+}
+
+export function getAcademicGradebookEditMode() {
+  return _activeGradebookEditMode;
+}
+
+export function setAcademicGradebookEditMode(val) {
+  _activeGradebookEditMode = Boolean(val);
 }
 
 /**
  * Main Renderer for Manual Academic Gradebook
  */
-export async function renderAcademicGradebook({ container, currentClass, students = [], batchMap = {}, levelMap = {} }) {
+export async function renderAcademicGradebook({ container, currentClass, students = [], batchMap = {}, levelMap = {}, skipInfobar = false, cbtTests = null }) {
   if (!container || !currentClass) return;
   _activeClassId = currentClass.id;
+  if (Array.isArray(cbtTests)) {
+    _cachedCbtTests = cbtTests;
+  }
 
   const { discipline, subjectCode, stepLevel } = resolveClassSubjectAndStep(currentClass, levelMap);
   const schema = getSubjectSchema(subjectCode, stepLevel);
@@ -264,6 +327,57 @@ export async function renderAcademicGradebook({ container, currentClass, student
       .eq('subject_code', subjectCode);
     if (!error && data) {
       assessments = data;
+    }
+  }
+
+  // Fallback for Basic English CBT exams (EX-1: Tell Me What You See, EX-2: 100 Questions Exam)
+  if (subjectCode === 'BASIC' && _cachedCbtTests.length > 0 && studentIds.length > 0) {
+    const examMap = {};
+    _cachedCbtTests.forEach(t => {
+      const code = String(t.shell_code || '').toUpperCase();
+      const title = String(t.title || '').toLowerCase();
+      const themeCode = String(t.payload?.theme_code || '').toUpperCase();
+      if (title.includes('tell me') || code.includes('1BSC-A') || code.includes('1BAS-A') || themeCode === 'A') {
+        examMap[t.id] = 'U1';
+      } else if (title.includes('100 question') || title.includes('selection') || code.includes('1BSC-B') || code.includes('1BSC-C') || code.includes('1BAS-B') || code.includes('1BAS-C') || themeCode === 'B' || themeCode === 'C') {
+        examMap[t.id] = 'U2';
+      }
+    });
+    const examTestIds = Object.keys(examMap);
+    if (examTestIds.length > 0) {
+      const { data: cbtAtts } = await supabase
+        .from('attempts')
+        .select('student_id, test_id, score, total_questions, percentage, status')
+        .in('student_id', studentIds)
+        .in('test_id', examTestIds)
+        .in('status', ['submitted', 'auto_submitted', 'evaluated', 'graded']);
+      if (Array.isArray(cbtAtts)) {
+        const bestByStudentKey = {};
+        cbtAtts.forEach(att => {
+          const uKey = examMap[att.test_id];
+          if (!uKey) return;
+          const tq = Number(att.total_questions || 100);
+          const pct = att.percentage != null ? Number(att.percentage) : (tq > 0 ? (Number(att.score || 0) / tq) * 100 : 0);
+          const rawScore = Math.round(pct);
+          const mapKey = `${att.student_id}:${uKey}`;
+          if (!bestByStudentKey[mapKey] || rawScore > bestByStudentKey[mapKey].raw_score) {
+            bestByStudentKey[mapKey] = {
+              student_id: att.student_id,
+              assessment_key: uKey,
+              raw_score: rawScore,
+              percentage: Math.round(pct * 100) / 100,
+              grade: calculateGrade(pct),
+              is_cbt_fallback: true
+            };
+          }
+        });
+        Object.values(bestByStudentKey).forEach(fb => {
+          const hasManual = assessments.some(a => a.student_id === fb.student_id && a.assessment_key === fb.assessment_key);
+          if (!hasManual) {
+            assessments.push(fb);
+          }
+        });
+      }
     }
   }
   _cachedAssessments = assessments;
@@ -294,49 +408,61 @@ export async function renderAcademicGradebook({ container, currentClass, student
     g.cols.forEach(c => allCols.push({ ...c, groupTitle: g.title, groupColor: g.colorVar }));
   });
 
-  // Build HTML Table Matrix (Strict Single Perimeter Ownership & Two-Tier Sticky Header)
+  // Build HTML Table Matrix (Strict Single Perimeter Ownership & 3-Tier Sticky Header with PTS | MIN | MAX)
   let html = `
     <div class="academic-gradebook-wrapper table-wrap" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:auto; position:relative; background:var(--clr-surface-card); border-radius:6px; border:1px solid var(--clr-border);">
-      <table class="topscore-table gradebook-table" id="academic-gradebook-grid" style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;">
+      <table class="topscore-table gradebook-table" id="academic-gradebook-grid" style="width:max-content; min-width:100%; border-collapse:collapse; font-size:12px !important; text-align:left;">
         <thead>
-          <!-- TIER 1: SUPER-HEADERS (top:0, height:30px) -->
-          <tr style="position:sticky; top:0; z-index:10; background:var(--clr-surface-elevated);">
-            <th colspan="4" style="height:30px; padding:4px 8px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--clr-border); border-right:1px solid var(--clr-border); color:var(--clr-text-2);">
+          <!-- TIER 1: GROUP SUPER-HEADERS (top:0, height:30px) -->
+          <tr style="position:sticky; top:0; z-index:11; background:#0b1120;">
+            <th colspan="3" style="height:30px; padding:0 8px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; border-bottom:1px solid rgba(255,255,255,0.15); border-right:1px solid rgba(255,255,255,0.15); color:#f8fafc; text-align:center; background:#0b1120;">
               STUDENT DEMOGRAPHICS
             </th>
-            ${schema.groups.map(g => `
-              <th colspan="${g.cols.length}" style="height:30px; padding:4px 8px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--clr-border); border-right:1px solid var(--clr-border); color:var(${g.colorVar || '--clr-primary'}); text-align:center;">
-                ${escapeHtml(g.title)}
-              </th>
-            `).join('')}
-            <th colspan="3" style="height:30px; padding:4px 8px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid var(--clr-border); color:var(--grade-a); text-align:center;">
+            ${schema.groups.map(g => {
+              const gSpan = g.cols.reduce((acc, c) => acc + (c.min != null ? 3 : 2), 0);
+              return `
+                <th colspan="${gSpan}" style="height:30px; padding:0 8px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; border-bottom:1px solid rgba(255,255,255,0.15); border-right:1px solid rgba(255,255,255,0.15); color:var(${g.colorVar || '--primary-tactical'}); text-align:center; background:#0b1120;">
+                  ${escapeHtml(g.title)}
+                </th>
+              `;
+            }).join('')}
+            <th colspan="3" style="height:30px; padding:0 8px; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:0.4px; border-bottom:1px solid rgba(255,255,255,0.15); color:var(--grade-star, #a855f7); text-align:center; background:#0b1120;">
               SUBJECT COMPOSITE
             </th>
           </tr>
 
-          <!-- TIER 2: SUB-HEADERS (top:30px, height:30px) -->
-          <tr style="position:sticky; top:30px; z-index:9; background:var(--clr-surface-muted);">
-            <th style="width:40px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); color:var(--clr-text-3);">NO</th>
-            <th style="width:75px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); color:var(--clr-text-3);">NIS</th>
-            <th style="min-width:180px; height:30px; padding:4px 8px; border-bottom:1px solid var(--clr-border); color:var(--clr-text-1);">STUDENT NAME</th>
-            <th style="width:65px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); border-right:1px solid var(--clr-border); color:var(--clr-text-3);">BATCH</th>
-            
-            ${allCols.map(col => `
-              <th style="width:70px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); border-right:1px solid var(--clr-border); color:var(--clr-text-2);">
-                ${escapeHtml(col.label)}
-                <span style="font-size:10px; color:var(--clr-text-3); display:block; font-weight:400;">/${col.target}</span>
-              </th>
-            `).join('')}
+          <!-- TIER 2: EXAM SUB-HEADERS (top:30px, height:26px) -->
+          <tr style="position:sticky; top:30px; z-index:10; background:#0f172a;">
+            <th rowspan="2" style="width:36px; min-width:36px; text-align:center; padding:0 4px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.08); color:#64748b; background:#0f172a; white-space:nowrap;">NO</th>
+            <th rowspan="2" style="min-width:240px; text-align:left !important; padding:0 10px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.08); color:#f8fafc; background:#0f172a; white-space:nowrap;">STUDENT NAME</th>
+            <th rowspan="2" style="width:56px; min-width:56px; text-align:center; padding:0 4px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.15); color:#f8fafc; background:#0f172a; white-space:nowrap;">BATCH</th>
 
-            <th style="width:80px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); color:var(--clr-text-2);">SCORE</th>
-            <th style="width:65px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); color:var(--clr-text-2);">GRADE</th>
-            <th style="width:85px; text-align:center; height:30px; padding:4px 6px; border-bottom:1px solid var(--clr-border); color:var(--clr-text-2);">STATUS</th>
+            ${allCols.map(col => {
+              const cSpan = col.min != null ? 3 : 2;
+              return `
+                <th colspan="${cSpan}" style="text-align:center; height:26px; padding:0 4px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.12); border-right:1px solid rgba(255,255,255,0.12); color:var(${col.groupColor || '--primary-tactical'}); background:#0f172a; white-space:nowrap;">
+                  ${escapeHtml(col.label)}
+                </th>
+              `;
+            }).join('')}
+
+            <th rowspan="2" style="width:78px; min-width:74px; text-align:center; padding:0 6px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.08); color:var(--grade-star, #a855f7); background:#0f172a; white-space:nowrap;">SCORE</th>
+            <th rowspan="2" style="width:56px; min-width:54px; text-align:center; padding:0 4px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.08); color:var(--grade-star, #a855f7); background:#0f172a; white-space:nowrap;">GRADE</th>
+            <th rowspan="2" style="width:76px; min-width:72px; text-align:center; padding:0 4px; font-size:12px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); color:var(--grade-star, #a855f7); background:#0f172a; white-space:nowrap;">STATUS</th>
+          </tr>
+
+          <!-- TIER 3: PTS | MIN | MAX SUB-SUB HEADERS (top:56px, height:22px) -->
+          <tr style="position:sticky; top:56px; z-index:9; background:#111827;">
+            ${allCols.map(col => `
+              <th style="width:46px; min-width:44px; text-align:center; height:22px; padding:0 3px; font-size:11px; font-weight:700; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.06); color:#f8fafc; background:#111827; white-space:nowrap;">PTS</th>
+              ${col.min != null ? `<th style="width:38px; min-width:36px; text-align:center; height:22px; padding:0 3px; font-size:11px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.06); color:#64748b; background:#0b1120; white-space:nowrap;">MIN</th>` : ''}
+              <th style="width:38px; min-width:36px; text-align:center; height:22px; padding:0 3px; font-size:11px; font-weight:600; border-bottom:1px solid rgba(255,255,255,0.2); border-right:1px solid rgba(255,255,255,0.12); color:#64748b; background:#0b1120; white-space:nowrap;">MAX</th>
+            `).join('')}
           </tr>
         </thead>
         <tbody id="gradebook-tbody">
           ${rowStats.map((row, idx) => {
             const s = row.student;
-            const nis = s.nis || '—';
             const bName = batchMap[s.batch_id]?.name || '134';
             const fin = row.final;
             const isPassed = fin.pct != null && fin.pct >= 60;
@@ -344,29 +470,32 @@ export async function renderAcademicGradebook({ container, currentClass, student
             const statusColor = fin.pct == null ? 'var(--clr-text-3)' : (isPassed ? 'var(--grade-a)' : 'var(--grade-e)');
 
             return `
-              <tr data-student-id="${s.id}" style="border-bottom:1px solid var(--clr-border-muted); transition:background 0.15s ease;">
-                <td style="text-align:center; padding:6px; color:var(--clr-text-3);">${idx + 1}</td>
-                <td style="text-align:center; padding:6px; font-family:monospace; font-size:11px; color:var(--clr-text-2);">${escapeHtml(nis)}</td>
-                <td style="padding:6px 8px; font-weight:600; color:var(--clr-text-1);">
+              <tr data-student-id="${s.id}" style="height:32px; border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s ease;">
+                <td style="text-align:center; padding:0 4px; color:#64748b; background:rgba(2,6,23,0.35); font-weight:500; font-variant-numeric:tabular-nums; border-right:1px solid rgba(255,255,255,0.06);">${idx + 1}</td>
+                <td style="text-align:left !important; padding:0 10px !important; font-weight:600; color:var(--clr-text-1); white-space:nowrap; border-right:1px solid rgba(255,255,255,0.06);">
                   ${escapeHtml(cleanStudentName(s.name))}
                 </td>
-                <td style="text-align:center; padding:6px; border-right:1px solid var(--clr-border-muted);">
-                  <span style="color:var(--clr-text-2); font-size:12px; font-weight:500;">${escapeHtml(bName)}</span>
+                <td style="text-align:center; padding:0 4px; border-right:1px solid rgba(255,255,255,0.12); background:rgba(2,6,23,0.35); font-variant-numeric:tabular-nums;">
+                  <span style="color:#64748b; font-size:12px; font-weight:500;">${escapeHtml(bName)}</span>
                 </td>
 
                 ${allCols.map(col => {
                   const item = row.scores[col.key];
                   const raw = item?.raw_score != null ? Number(item.raw_score) : '';
                   const cellId = `cell-${s.id}-${col.key}`;
+                  const minCell = col.min != null
+                    ? `<td style="text-align:center; padding:0 3px; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; color:#64748b; background:rgba(2,6,23,0.35); border-right:1px solid rgba(255,255,255,0.06);">${col.min}</td>`
+                    : '';
+                  const maxCell = `<td style="text-align:center; padding:0 3px; font-size:12px; font-weight:500; font-variant-numeric:tabular-nums; color:#64748b; background:rgba(2,6,23,0.35); border-right:1px solid rgba(255,255,255,0.12);">${col.target}</td>`;
 
                   if (_activeGradebookEditMode) {
                     return `
-                      <td style="text-align:center; padding:3px; border-right:1px solid var(--clr-border-muted);">
-                        <input type="number" 
-                               step="0.5" 
-                               min="0" 
-                               max="${col.target * 1.5}" 
-                               class="gradebook-cell-input" 
+                      <td style="text-align:center; padding:2px 3px; border-right:1px solid rgba(255,255,255,0.06);">
+                        <input type="number"
+                               step="0.5"
+                               min="0"
+                               max="${col.target * 1.5}"
+                               class="gradebook-cell-input"
                                id="${cellId}"
                                data-student-id="${s.id}"
                                data-key="${col.key}"
@@ -374,36 +503,39 @@ export async function renderAcademicGradebook({ container, currentClass, student
                                data-target="${col.target}"
                                value="${raw}"
                                placeholder="—"
-                               style="width:54px; height:26px; text-align:center; background:#111827; border:1px solid #374151; border-radius:4px; color:#fff; font-size:12px; font-weight:600;" />
+                               style="width:42px; height:24px; text-align:center; background:#111827; border:1px solid #38bdf8; border-radius:4px; color:#fff; font-size:12px; font-weight:700;" />
                       </td>
+                      ${minCell}
+                      ${maxCell}
                     `;
                   } else {
                     const scoreDisplay = raw !== '' ? raw : '<span style="color:var(--clr-text-muted);">—</span>';
-                    const pctVal = item?.percentage != null ? item.percentage : (raw !== '' && col.target > 0 ? (raw / col.target) * 100 : null);
-                    const pillColor = pctVal != null ? getGradeColorByScore(pctVal) : 'transparent';
+                    const ptsColor = raw !== '' ? getMinMaxCellColor(raw, col.min, col.target) : 'inherit';
 
                     return `
-                      <td id="${cellId}" 
+                      <td id="${cellId}"
                           class="gradebook-interactive-cell"
                           data-student-id="${s.id}"
                           data-key="${col.key}"
                           data-type="${col.type}"
                           data-target="${col.target}"
-                          style="text-align:center; padding:6px; border-right:1px solid var(--clr-border-muted); cursor:pointer;"
-                          title="Click to edit ${col.label}">
-                        <span style="font-weight:600; color:${pctVal != null ? pillColor : 'inherit'};">
+                          style="text-align:center; padding:0 4px; border-right:1px solid rgba(255,255,255,0.06); cursor:pointer; font-variant-numeric:tabular-nums;"
+                          title="${col.label}: ${raw !== '' ? raw : '—'} (Min ${col.min ?? '—'} / Max ${col.target})">
+                        <span style="font-weight:700; color:${ptsColor};">
                           ${scoreDisplay}
                         </span>
                       </td>
+                      ${minCell}
+                      ${maxCell}
                     `;
                   }
                 }).join('')}
 
                 <!-- COMPOSITE SCORE -->
                 <td id="final-score-${s.id}" style="text-align:center; padding:6px; font-weight:700; color:var(--clr-text-1);">
-                  ${fin.score != null ? `${fin.score} <span style="font-size:10px; font-weight:400; color:var(--clr-text-3);">(${fin.pct}%)</span>` : '—'}
+                  ${fin.score != null ? (String(fin.score).includes('%') ? fin.score : `${fin.score} <span style="font-size:10px; font-weight:400; color:var(--clr-text-3);">(${fin.pct}%)</span>`) : '—'}
                 </td>
-                
+
                 <!-- COMPOSITE GRADE -->
                 <td id="final-grade-${s.id}" style="text-align:center; padding:6px;">
                   ${fin.grade !== '—' ? formatGradeBadgeHtml(fin.grade, fin.pct) : '<span style="color:var(--clr-text-muted);">—</span>'}
@@ -427,7 +559,7 @@ export async function renderAcademicGradebook({ container, currentClass, student
   setupGradebookInteractions(container, currentClass, batchMap, levelMap, schema);
 
   // Sync Authoritative Sub-Panel (40px Lower Panel SSOT)
-  if (typeof window.setBottomInfobar === 'function') {
+  if (!skipInfobar && typeof window.setBottomInfobar === 'function') {
     const leftHtml = `
       <div style="display:flex; align-items:center; gap:8px;">
         <span class="badge" style="background:var(--primary-tactical); color:#000; font-weight:700; padding:3px 8px; border-radius:4px; font-size:11px;">
@@ -491,10 +623,12 @@ function setupGradebookInteractions(container, currentClass, batchMap, levelMap,
 
       if (rawVal === '') {
         // Clear assessment
+        const { subjectCode, stepLevel } = resolveClassSubjectAndStep(currentClass, levelMap);
         await supabase
           .from('student_academic_assessments')
           .delete()
-          .match({ student_id: studentId, step_level: currentClass.level_number || 1, subject_code: currentClass.code?.split('-')[1] || 'SPEAKING', assessment_key: key });
+          .match({ student_id: studentId, step_level: stepLevel, subject_code: subjectCode, assessment_key: key });
+        _cachedAssessments = _cachedAssessments.filter(a => !(a.student_id === studentId && a.assessment_key === key));
         recalcStudentRow(studentId, schema);
         return;
       }
@@ -572,7 +706,7 @@ function recalcStudentRow(studentId, schema) {
   const statusEl = document.getElementById(`final-status-${studentId}`);
 
   if (scoreEl) {
-    scoreEl.innerHTML = fin.score != null ? `${fin.score} <span style="font-size:10px; font-weight:400; color:var(--clr-text-3);">(${fin.pct}%)</span>` : '—';
+    scoreEl.innerHTML = fin.score != null ? (String(fin.score).includes('%') ? fin.score : `${fin.score} <span style="font-size:10px; font-weight:400; color:var(--clr-text-3);">(${fin.pct}%)</span>`) : '—';
   }
   if (gradeEl) {
     gradeEl.innerHTML = fin.grade !== '—' ? formatGradeBadgeHtml(fin.grade, fin.pct) : '<span style="color:var(--clr-text-muted);">—</span>';

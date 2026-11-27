@@ -374,11 +374,6 @@ export function initAdminTheme() {
         btn.classList.remove('active');
       }
     });
-
-    const iconEl = document.getElementById('admin-theme-icon');
-    if (iconEl) iconEl.textContent = ICONS[theme] || '🌊';
-    const btn = document.getElementById('admin-theme-toggle');
-    if (btn) btn.title = `Current Theme: ${NAMES[theme]} (Click to switch)`;
   }
 
   window.applyAdminTheme = apply;
@@ -394,12 +389,6 @@ export function initAdminTheme() {
         window.showToast(`Theme switched: ${NAMES[targetTheme] || targetTheme}`, 'info');
       }
     };
-  });
-
-  document.getElementById('admin-theme-toggle')?.addEventListener('click', () => {
-    const current = document.body.getAttribute('data-theme') || 'navy';
-    const nextIdx = (THEMES.indexOf(current) + 1) % THEMES.length;
-    apply(THEMES[nextIdx]);
   });
 }
 if (typeof window !== 'undefined') {

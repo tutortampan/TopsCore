@@ -470,8 +470,8 @@
       transition: all 0.2s ease;
       -webkit-tap-highlight-color: transparent;
       box-sizing: border-box;
-      min-height: 46px;
-      height: clamp(46px, 6vh, 56px);
+      min-height: 40px;
+      height: auto;
     }
     .mc-option:hover {
       background: rgba(255,255,255,0.15);
@@ -711,7 +711,28 @@
       position: relative !important;
     }
 
-    #answer-container-mc,
+    #answer-container-mc {
+      width: 100% !important;
+      max-width: 430px !important;
+      flex: 0 1 auto !important;
+      min-height: 28px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: flex-start !important;
+      gap: 10px !important;
+      padding: 10px !important;
+      background: linear-gradient(180deg, rgba(20, 32, 58, 0.75) 0%, rgba(13, 20, 36, 0.9) 100%) !important;
+      border: 1px solid rgba(255, 255, 255, 0.12) !important;
+      border-radius: 14px !important;
+      -webkit-overflow-scrolling: touch !important;
+      box-sizing: border-box !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.08) !important;
+      -webkit-backdrop-filter: blur(16px) !important;
+      backdrop-filter: blur(16px) !important;
+      overflow-y: auto !important;
+      margin-bottom: 6px !important;
+    }
+
     #answer-container-chips {
       width: 100% !important;
       max-width: 430px !important;

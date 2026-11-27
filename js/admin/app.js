@@ -405,9 +405,10 @@ import { renderClasses as _renderClassesModule, loadClassLearningPath } from './
 import { renderBatches as _renderBatchesModule, renderUnifiedInstitutions } from './program-management.js?v=20261121_v665';
 import { renderResults } from './class.js?v=20261116_v572';
 import { renderTests } from './tests-management.js?v=20261121_v665';
-import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261123_v678';
+import { renderTestAccess, renderClassTestSessions } from './tests-access.js?v=20261128_v695';
 import { renderClassVocabularyAnalytics } from './class-analytics.js?v=20261113_v450';
 import { renderVocabularyVault } from './vocab-vault.js?v=20261127_v694';
+import { renderBasicEnglishQuestionBank, BASIC_ENGLISH_BANK_QUESTIONS } from './basic-english-bank.js?v=20261128_v6';
 import { renderModules } from './modules.js?v=20261106_v160';
 import { renderAuditLog, renderSettings, renderInterfaceSettings, renderDataHealth, renderRecycleBin } from './desk.js?v=20261121_v665';
 import { renderSystemArchitecture } from './system-architecture.js?v=20261121_v656';
@@ -422,7 +423,7 @@ import { renderClassesHub } from './classes-hub.js?v=20261127_v693';
 import { renderDashboard } from './admin-deck.js?v=20261121_v655';
 import { openStudentFullEdit } from './student-management.js?v=20261123_v677';
 import { renderStudentsRegistration } from './student-registration.js?v=20261127_v701';
-import { renderAcademicGradebook } from './academic-gradebook.js?v=20261123_v678';
+import { renderAcademicGradebook, getAcademicGradebookEditMode, setAcademicGradebookEditMode } from './academic-gradebook.js?v=20261123_v678';
 
 if (typeof window !== 'undefined') {
   window.renderAcademicGradebook = renderAcademicGradebook;
@@ -1265,12 +1266,52 @@ if (typeof window !== 'undefined') {
         action();
       };
 
+      const getSidebarClassMode = (cls) => {
+        try {
+          const saved = JSON.parse(localStorage.getItem('topscore_class_mode_map') || '{}');
+          const code = String(cls.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-');
+          if (code && saved[code]) return /^system|cbt$/i.test(saved[code]) ? 'System' : 'Manual';
+          const name = String(cls.name || '').toLowerCase();
+          if (name.includes('basic english') && /1st|level\s*1/i.test(name)) return 'System';
+          if (name.includes('vocabulary') && /3rd|level\s*3/i.test(name)) return 'System';
+          if (!/camp/i.test(name)) return 'System'; // TOP corporate classes stay individual
+        } catch (_) {}
+        return 'Manual';
+      };
+
+      const inferCampStepNumber = (cls) => {
+        const s = `${cls.code || ''} ${cls.name || ''}`;
+        if (/1st|level\s*1|-1/i.test(s)) return 1;
+        if (/2nd|level\s*2|-2/i.test(s)) return 2;
+        if (/3rd|level\s*3|-3/i.test(s)) return 3;
+        return null;
+      };
+
       const bindEvents = () => {
         container.querySelectorAll('.sidebar-class-item').forEach(item => {
           if (item._hasClickBound) return;
           item._hasClickBound = true;
           item.addEventListener('click', (e) => {
             handleSidebarClick(e.currentTarget, () => {
+              const stepAttr = item.getAttribute('data-step-group');
+              if (stepAttr) {
+                const stepNum = Number(stepAttr);
+                window._selectedStepGroup = stepNum;
+                const stepClasses = (window._sidebarManualClassesByStep?.[stepNum] || []);
+                const currentInStep = stepClasses.find(c => c.id === window._selectedClassId) || stepClasses[0];
+                if (currentInStep) {
+                  window._selectedClassId = currentInStep.id;
+                  window._selectedClassName = currentInStep.name;
+                  try {
+                    localStorage.setItem('topscore_selected_class_id', currentInStep.id);
+                    localStorage.setItem('topscore_selected_class_name', currentInStep.name);
+                  } catch(err) {}
+                }
+                window._selectedLevelId = null;
+                loadSection('class-hub');
+                return;
+              }
+              window._selectedStepGroup = null;
               const cid = item.getAttribute('data-class-id');
               const cname = item.getAttribute('data-class-name');
               window._selectedClassId = cid;
@@ -1302,12 +1343,43 @@ if (typeof window !== 'undefined') {
           } catch(err) {}
         }
 
+        const systemClasses = [];
+        const manualByStep = { 1: [], 2: [], 3: [] };
+        sortedClasses.forEach(cls => {
+          const isCamp = /camp/i.test(cls.name || '') || /^ca?mp-/i.test(cls.code || '');
+          const mode = getSidebarClassMode(cls);
+          const stepNum = isCamp ? inferCampStepNumber(cls) : null;
+          if (isCamp && mode === 'Manual' && stepNum && manualByStep[stepNum]) {
+            manualByStep[stepNum].push(cls);
+          } else {
+            systemClasses.push(cls);
+          }
+        });
+        window._sidebarManualClassesByStep = manualByStep;
+
         let html = `<div class="sidebar-class-group" style="display:flex; flex-direction:column; gap:6px;">`;
         if (sortedClasses.length === 0) {
           html += `<div style="padding: 12px; color: var(--clr-text-muted); font-size: 12px;">No classes found.</div>`;
         } else {
-          sortedClasses.forEach(cls => {
-            const isActive = (activeId === cls.id && (_currentSection === 'class-hub' || window._activeSectionAlias === 'class-hub')) ? 'active' : '';
+          // 1. Grouped Manual Steps (Camp 1st Step, Camp 2nd Step, Camp 3rd Step)
+          [1, 2, 3].forEach(stepNum => {
+            if (manualByStep[stepNum].length === 0) return;
+            const stepLabel = stepNum === 1 ? 'Camp 1st Step' : stepNum === 2 ? 'Camp 2nd Step' : 'Camp 3rd Step';
+            const isStepActive = (window._selectedStepGroup === stepNum && (_currentSection === 'class-hub' || window._activeSectionAlias === 'class-hub')) ? 'active' : '';
+            const stepSvg = (typeof getClassSvgIcon === 'function')
+              ? getClassSvgIcon(stepLabel, 14, 'currentColor')
+              : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`;
+            html += `
+              <div class="admin-nav-item sidebar-class-item ${isStepActive}" data-step-group="${stepNum}" data-tenant="CEC" title="${stepLabel} (${manualByStep[stepNum].length} Manual Classes)">
+                <span class="nav-icon">${stepSvg}</span>
+                <span>${stepLabel}</span>
+              </div>
+            `;
+          });
+
+          // 2. Individual System (CBT) Classes (e.g. Camp 1st Basic English, Camp 3rd Vocabulary, TOP)
+          systemClasses.forEach(cls => {
+            const isActive = (!window._selectedStepGroup && activeId === cls.id && (_currentSection === 'class-hub' || window._activeSectionAlias === 'class-hub')) ? 'active' : '';
             const classTenant = isClassInTenant(cls.name, 'TOP') ? 'TOP' : 'CEC';
             const classSvg = (typeof getClassSvgIcon === 'function')
               ? getClassSvgIcon(cls.name, 14, 'currentColor')
@@ -1353,7 +1425,7 @@ if (typeof window !== 'undefined') {
 
       // 2. Fetch fresh classes from server (stale-while-revalidate with forceRefresh)
       try {
-        const classes = await adminFetchAll('classes', 'id, name, program_id, is_active', { is_active: true }, true);
+        const classes = await adminFetchAll('classes', 'id, name, code, level_id, program_id, is_active', { is_active: true }, true);
         if (classes && classes.length > 0) {
           const activeClasses = classes.filter(c => c.is_active !== false);
           activeClasses.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { numeric: true, sensitivity: 'base' }));
@@ -1453,7 +1525,7 @@ if (typeof window !== 'undefined') {
         // OPTIMIZATION: attempts query is deferred and strictly scoped to this class's tests (pruning 95%+ egress & avoiding 9x pagination loops)
         let [allClasses, allTests, allStudents, allPrograms, allBatches, allLevels, allVault, allInstitutions, allClassLevels] = await Promise.all([
           adminFetchAll('classes', 'id, name, program_id, level_id').catch(() => []),
-          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at', {}, true).catch(() => []),
+          adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, answer_type, payload, deleted_at, created_at', {}, true).catch(() => []),
           adminFetchAll('students', 'id, name, gender, birth_date, is_active, deleted_at, level_id, batch_id, program_id, institution_id').catch(() => []),
           adminFetchAll('programs', 'id, name, institution_id').catch(() => []),
           adminFetchAll('batches', 'id, name, is_active, program_id, current_level_id').catch(() => []),
@@ -1561,20 +1633,16 @@ if (typeof window !== 'undefined') {
           return true;
         });
 
-        // Filter to published tests when present so obsolete draft/legacy test rows do not pollute the matrix
-        const publishedClassTests = classTests.filter(a => String(a.status || '').toLowerCase() === 'published');
-        if (publishedClassTests.length > 0) {
-          classTests = publishedClassTests;
-        }
+        // Keep all non-deleted tests (both PUBLISHED and DRAFT) in classTests so Class Tests tab always shows Drafts.
+        // Status ('published' vs 'draft') only determines whether a test counts toward student scores/progress.
 
         // Auto Cache-Bust: if cached test array has 0 items for this class, force-refresh tests directly from DB
         if (classTests.length === 0 && classId) {
-          const freshTests = await adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, payload, deleted_at, created_at', {}, true).catch(() => []);
+          const freshTests = await adminFetchAll('tests', 'id, title, category, test_type, test_subtype, shell_code, class_id, level_id, display_order, status, minimum_required_score, prerequisite_test_id, question_order, answer_type, payload, deleted_at, created_at', {}, true).catch(() => []);
           const freshClassTests = (freshTests || []).filter(a => a.class_id === classId && !a.deleted_at);
           if (freshClassTests.length > 0) {
             allTests = freshTests;
-            const pubFresh = freshClassTests.filter(a => String(a.status || '').toLowerCase() === 'published');
-            classTests = pubFresh.length > 0 ? pubFresh : freshClassTests;
+            classTests = freshClassTests;
           }
         }
 
@@ -1633,7 +1701,8 @@ if (typeof window !== 'undefined') {
           if (correctCount > 0 && correctCount <= 10) return 'phrases';
           return 'words';
         };
-        const allClassExams = classTests.filter(isWeeklyExam);
+        const countedClassTests = classTests.filter(a => String(a.status || '').toLowerCase() === 'published');
+        const allClassExams = countedClassTests.filter(isWeeklyExam);
         const totalClassExams = allClassExams.length || 8;
         // Find students that have access to this class's program AND level
         const classProgramId = currentClass?.program_id;
@@ -1743,7 +1812,13 @@ if (typeof window !== 'undefined') {
           const status = r?.status || r?.test_type || 'draft';
           const TestCategory = (r?.category || r?.test_type || 'Task');
 
-          const rawAns = r?.answer_type || 'spoken';
+          const isTellMeExam = String(r?.title || '').toLowerCase().includes('tell me') || String(r?.shell_code || '').toUpperCase().includes('1BSC-A') || String(r?.shell_code || '').toUpperCase().includes('1BAS-A');
+          const isBasicSelectionExam = String(r?.shell_code || '').toUpperCase().includes('1BSC-B') || String(r?.shell_code || '').toUpperCase().includes('1BAS-B') || String(r?.test_subtype || '').toUpperCase() === 'BASIC_ENGLISH_SELECTION_EXAM';
+          const rawAns = isTellMeExam
+            ? 'description'
+            : (isBasicSelectionExam
+              ? 'selection'
+              : (r?.answer_type || r?.payload?.answer_type || r?.payload?.module_key || (isBasicEnglishClass ? 'selection' : 'spoken')));
           const isPhrase = r?.payload?.category === 'phrases'
             || r?.test_subtype?.includes('PHRASE')
             || (r?.shell_code && r.shell_code.includes('PHRASE'))
@@ -1756,9 +1831,11 @@ if (typeof window !== 'undefined') {
 
           const minScore = r?.minimum_required_score || 60;
           const _isDyn = !!(r?.payload && r.payload.is_dynamic_shell) || r?.is_dynamic_shell === true;
-          const _vaultQ = _isDyn ? vaultCountFor(r, cleanLvlNum) : 0;
+          // For Basic English Description exams: treat as non-dynamic to avoid vault count bleed
+          const _isDescriptionDyn = _isDyn && (isTellMeExam || String(r?.answer_type || r?.payload?.answer_type || '').toLowerCase() === 'description');
+          const _vaultQ = (_isDyn && !_isDescriptionDyn) ? vaultCountFor(r, cleanLvlNum) : 0;
           const qCount = r?.total_questions || r?.payload?.total_questions || (r?.test_type === 'exam' ? 120 : 40);
-          const effectiveQCount = _isDyn ? _vaultQ : qCount;
+          const effectiveQCount = (_isDyn && !_isDescriptionDyn) ? _vaultQ : qCount;
 
           // Repetitions & Per-Component Answer Mode Resolution (DECISION-084 / Rule 2.4.1)
           let parsedClassSettings = null;
@@ -1853,8 +1930,8 @@ if (typeof window !== 'undefined') {
             phrasesTimeLimit,
             timeLimit,
             minScore,
-            qCount: _isDyn ? _vaultQ : qCount,
-            qIsVault: _isDyn,
+            qCount: (_isDyn && !_isDescriptionDyn) ? _vaultQ : qCount,
+            qIsVault: _isDyn && !_isDescriptionDyn,
             status,
             shellCode: r?.shell_code || '',
             _raw: r || {}
@@ -1883,13 +1960,13 @@ if (typeof window !== 'undefined') {
           return isPhrase ? 30 : 120;
         };
 
-        // Calculate total possible points in curriculum across all tests for cumulative mastery
+        // Calculate total possible points in curriculum across published tests for cumulative mastery
         let curriculumTotalMaxPoints = 0;
-        classTests.forEach(asm => {
+        countedClassTests.forEach(asm => {
           const q = Number(asm.total_questions || getAsmExpectedMax(asm));
           curriculumTotalMaxPoints += q;
         });
-        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (classTests.length || 20) * 50;
+        if (curriculumTotalMaxPoints === 0) curriculumTotalMaxPoints = (countedClassTests.length || 20) * 50;
 
         // Fetch dynamic test system settings for this class (target repetitions & pass threshold)
         const classTestSettings = (typeof fetchClassTestSettings === 'function')
@@ -1945,9 +2022,9 @@ if (typeof window !== 'undefined') {
             levelName = levelMap[s.batches.current_level_id].name;
           }
 
-          // Attempts and Progress calculation for this class
+          // Attempts and Progress calculation for this class (only PUBLISHED tests count toward score/progress)
           const studentAttempts = (allAttempts || []).filter(a => a.student_id === s.id);
-          const classTestIds = new Set(classTests.map(a => a.id));
+          const classTestIds = new Set(countedClassTests.map(a => a.id));
           const classAttempts = studentAttempts.filter(a => classTestIds.has(a.test_id || a.Test_id));
 
           // Map best attempt per test (Rule 2.7: report card stores HIGHEST score)
@@ -1961,7 +2038,7 @@ if (typeof window !== 'undefined') {
           const studentExamEntries = [];
 
           // Step 1: Map best attempt per activity
-          classTests.forEach(asm => {
+          countedClassTests.forEach(asm => {
             const atts = classAttempts.filter(a => (a.test_id || a.Test_id) === asm.id);
             const maxQ = getAsmExpectedMax(asm);
             let bestAtt = null;
@@ -2069,14 +2146,14 @@ if (typeof window !== 'undefined') {
           // In each theme (A, B, C, D), Words Exam and Phrases Exam are one package.
           // If either is remedial, BOTH are synchronized as remedial.
           const themeExamMap = {};
-          classTests.filter(isWeeklyExam).forEach(asm => {
+          countedClassTests.filter(isWeeklyExam).forEach(asm => {
             const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
             const tc = (rawTheme || 'A').toUpperCase();
             if (!themeExamMap[tc]) themeExamMap[tc] = [];
             themeExamMap[tc].push(asm);
           });
           // Step 3: Compute effective scores, completion, and sort values
-          classTests.forEach(asm => {
+          countedClassTests.forEach(asm => {
             const bestAtt = asmScores[asm.id];
             const maxQ = getAsmExpectedMax(asm);
             const totalQ = Number(bestAtt?.total_questions || maxQ);
@@ -2110,7 +2187,7 @@ if (typeof window !== 'undefined') {
             }
           });
 
-          const totalClassTests = classTests.length || 40;
+          const totalClassTests = countedClassTests.length || 40;
 
           // 1. PROG % (Completion Rate): Maintain calculation across ALL activities (tasks + exams)
           const allActProgressPct = totalClassTests > 0 ? Math.round((completedCount / totalClassTests) * 100) : 0;
@@ -2317,6 +2394,7 @@ if (typeof window !== 'undefined') {
 
         const totalMeetingsCount = (currentClass && isVocabularyClass(currentClass)) ? 24 : 20;
 
+        const isBasicEnglishClass = Boolean(currentClass && (/basic\s*english/i.test(currentClass.name || '') || /1BASIC/i.test(currentClass.code || '')));
         let classHubTabs = [];
         if (!isCbtClass) {
           classHubTabs = [
@@ -2333,19 +2411,55 @@ if (typeof window !== 'undefined') {
             { id: 'class-attendance', icon: getSvgIcon('clock', 14), val: `${totalMeetingsCount} Meetings`, label: 'Class Attendance' },
             { id: 'test-sessions', icon: getSvgIcon('clock', 14), val: 2, label: 'Class Sessions' },
             { id: 'tests', icon: getSvgIcon('clipboard', 14), val: classTests.length, label: 'Class Tests' },
-            { id: 'analytics', icon: getSvgIcon('trending-up', 14), val: 'Insights', label: 'Test Analytics' }
+            ...(!isBasicEnglishClass ? [{ id: 'analytics', icon: getSvgIcon('trending-up', 14), val: 'Insights', label: 'Test Analytics' }] : []),
+            ...(isBasicEnglishClass ? [{ id: 'question-bank', icon: getSvgIcon('book-open', 14), val: BASIC_ENGLISH_BANK_QUESTIONS.length, label: 'Questions Bank' }] : [])
           ];
+          if (isBasicEnglishClass && window._classHubActiveTab === 'analytics') {
+            window._classHubActiveTab = 'tests';
+          }
 
           if (isTutorRole()) {
             classHubTabs = classHubTabs.filter(t => t.id === 'test-sessions' || t.id === 'attendance' || t.id === 'class-attendance');
-            if (window._classHubActiveTab === 'tests' || window._classHubActiveTab === 'analytics') {
+            if (window._classHubActiveTab === 'tests' || window._classHubActiveTab === 'analytics' || window._classHubActiveTab === 'question-bank') {
               window._classHubActiveTab = 'test-sessions';
             }
           }
         }
 
-        if (window.setTopbarTabs) {
-          window.setTopbarTabs(classHubTabs, window._classHubActiveTab, 'window._switchClassHubTab');
+        const stepGroupNum = window._selectedStepGroup ? Number(window._selectedStepGroup) : null;
+        const stepGroupClasses = stepGroupNum ? (window._sidebarManualClassesByStep?.[stepGroupNum] || []) : [];
+        const isStepGroupView = Boolean(stepGroupNum && stepGroupClasses.length > 0 && !isCbtClass);
+
+        if (isStepGroupView) {
+          window._switchStepClassTab = (targetClassId) => {
+            const targetCls = stepGroupClasses.find(c => c.id === targetClassId);
+            if (!targetCls) return;
+            window._selectedClassId = targetCls.id;
+            window._selectedClassName = targetCls.name;
+            try {
+              localStorage.setItem('topscore_selected_class_id', targetCls.id);
+              localStorage.setItem('topscore_selected_class_name', targetCls.name);
+            } catch(_) {}
+            renderClassHub(area);
+          };
+
+          if (window._classHubActiveTab !== 'attendance' && window._classHubActiveTab !== 'class-attendance') {
+            window._classHubActiveTab = 'class-attendance';
+          }
+
+          if (window.setTopbarTabs) {
+            const stepTopTabs = stepGroupClasses.map(c => ({
+              id: c.id,
+              icon: getClassSvgIcon ? getClassSvgIcon(c.name, 14, 'currentColor') : getSvgIcon('book-open', 14),
+              val: 'Manual',
+              label: c.name
+            }));
+            window.setTopbarTabs(stepTopTabs, classId, 'window._switchStepClassTab');
+          }
+        } else {
+          if (window.setTopbarTabs) {
+            window.setTopbarTabs(classHubTabs, window._classHubActiveTab, 'window._switchClassHubTab');
+          }
         }
 
         let html = `
@@ -2355,6 +2469,8 @@ if (typeof window !== 'undefined') {
                 <div id="class-meetings-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
               ` : (window._classHubActiveTab === 'test-sessions' ? `
                 <div id="class-test-sessions-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
+              ` : (window._classHubActiveTab === 'question-bank' ? `
+                <div id="class-question-bank-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
               ` : (window._classHubActiveTab === 'analytics' ? `
                 <div id="class-analytics-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;"></div>
               ` : (window._classHubActiveTab === 'tests' ? `
@@ -2365,7 +2481,7 @@ if (typeof window !== 'undefined') {
                 <div id="class-attendance-container" style="display:flex; flex-direction:column; flex:1 1 0; min-height:0; overflow:hidden;">
                   <div id="class-attendance-grid" style="flex:1 1 0; min-height:0; display:flex; flex-direction:column; overflow:hidden;"></div>
                 </div>
-              `)))}
+              `))))}
             </div>
           </div>
         `;
@@ -2651,10 +2767,153 @@ if (typeof window !== 'undefined') {
 
         syncClassHubLowerPanel(window._classHubActiveTab);
 
+        if (isStepGroupView && typeof window.setBottomInfobar === 'function') {
+          const stepLabel = stepGroupNum === 1 ? 'Camp 1st Step' : stepGroupNum === 2 ? 'Camp 2nd Step' : 'Camp 3rd Step';
+          const isGradesView = window._classHubActiveTab === 'attendance';
+          const isStepEditOn = isGradesView
+            ? getAcademicGradebookEditMode()
+            : (typeof window.getGlobalEditMode === 'function' ? window.getGlobalEditMode() : false);
+
+          const leftHtml = `
+            <div style="display:inline-flex;align-items:center;gap:8px;font-size:12px;white-space:nowrap;">
+              <span style="font-weight:800;color:#f8fafc;">${escapeHtml(stepLabel)}</span>
+              <span style="color:#475569;">·</span>
+              <span style="color:#38bdf8;font-weight:700;">${escapeHtml(className)}</span>
+              <span style="color:#475569;">·</span>
+              <span style="color:#94a3b8;">${activeBatchStudents.length} Enrolled</span>
+              <input type="file" id="camp-step-excel-input" accept=".xlsx,.xls,.csv" style="display:none;" />
+              <button type="button" class="btn btn-sm toolbar-btn-30" id="btn-camp-import-excel" style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.45);color:#38bdf8;font-weight:700;font-size:11px;height:28px;padding:0 10px;border-radius:4px;cursor:pointer;">Import Excel</button>
+            </div>
+          `;
+          const centerHtml = `
+            <div style="display:inline-flex;align-items:stretch;height:28px;background:#0b1324;border:1px solid #334155;border-radius:5px;overflow:hidden;">
+              <button type="button" onclick="window._switchClassHubTab('class-attendance')" style="border:none;border-right:1px solid #334155;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer;${!isGradesView ? 'background:#38bdf8;color:#090d16;' : 'background:transparent;color:#94a3b8;'}">Daily Attendance</button>
+              <button type="button" onclick="window._switchClassHubTab('attendance')" style="border:none;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer;${isGradesView ? 'background:#38bdf8;color:#090d16;' : 'background:transparent;color:#94a3b8;'}">Grades</button>
+            </div>
+          `;
+          const rightHtml = `
+            <div style="display:inline-flex;align-items:center;gap:8px;">
+              <button type="button" class="btn btn-sm toolbar-btn-30" id="btn-step-hub-edit-mode" style="${isStepEditOn ? 'background:#38bdf8;border:1px solid #38bdf8;color:#090d16;box-shadow:0 0 8px rgba(56,189,248,0.4);' : 'background:transparent;border:1px solid rgba(255,255,255,0.25);color:#ffffff;'}font-weight:700;font-size:12px;height:28px;padding:0 14px;border-radius:4px;cursor:pointer;">${isStepEditOn ? '✓ Done Editing' : '✎ Edit Mode'}</button>
+            </div>
+          `;
+          window.setBottomInfobar(leftHtml, rightHtml, centerHtml);
+
+          document.getElementById('btn-step-hub-edit-mode')?.addEventListener('click', () => {
+            if (isGradesView) {
+              setAcademicGradebookEditMode(!getAcademicGradebookEditMode());
+              renderClassHub(area);
+            } else if (typeof window.toggleGlobalEditMode === 'function') {
+              window.toggleGlobalEditMode();
+              renderClassHub(area);
+            }
+          });
+
+          document.getElementById('btn-camp-import-excel')?.addEventListener('click', () => {
+            document.getElementById('camp-step-excel-input')?.click();
+          });
+
+          document.getElementById('camp-step-excel-input')?.addEventListener('change', async (ev) => {
+            const file = ev.target.files?.[0];
+            if (!file) return;
+            if (typeof XLSX === 'undefined') {
+              showToast('SheetJS (XLSX) library is not loaded.', 'error');
+              return;
+            }
+            try {
+              const buf = await file.arrayBuffer();
+              const wb = XLSX.read(buf, { type: 'array' });
+              const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+              if (!rows || rows.length === 0) {
+                showToast('Excel/CSV file is empty.', 'warning');
+                return;
+              }
+              const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              const findStudent = (row) => {
+                const rawName = row['Nama Peserta'] || row['Nama Siswa'] || row['Student Name'] || row['Name'] || row['NAME'] || '';
+                const nKey = norm(rawName);
+                if (!nKey) return null;
+                return activeBatchStudents.find(s => norm(s.name) === nKey)
+                  || activeBatchStudents.find(s => norm(s.name).includes(nKey) || nKey.includes(norm(s.name)));
+              };
+
+              const disc = detectClassDiscipline(currentClass);
+              const activeSubjCode = disc === 'STORYTELLING' ? 'STORYTELLING'
+                : disc === 'GRAMMAR' ? 'GRAMMAR'
+                : disc === 'GFS' ? 'GFS'
+                : disc === 'PRONUNCIATION' ? 'PRONUNCIATION'
+                : disc === 'VOCABULARY' ? 'VOCABULARY'
+                : disc === 'BASIC_ENGLISH' ? 'BASIC'
+                : 'SPEAKING';
+
+              const upserts = [];
+              let matched = 0;
+              const pushRec = (studentId, subjCode, lvl, key, rawVal, maxVal = 100) => {
+                const num = parseFloat(rawVal);
+                if (rawVal === '' || rawVal === null || rawVal === undefined || isNaN(num)) return;
+                const pct = Math.min(100, Math.max(0, Math.round((num / maxVal) * 100)));
+                const grade = calculateGrade(pct, 'CEC');
+                upserts.push({
+                  student_id: studentId,
+                  step_level: lvl,
+                  subject_code: subjCode,
+                  assessment_key: key,
+                  raw_score: num,
+                  percentage: pct,
+                  grade,
+                  updated_at: new Date().toISOString()
+                });
+              };
+
+              rows.forEach(row => {
+                const st = findStudent(row);
+                if (!st) return;
+                matched++;
+                ['W1', 'W2', 'W3', 'W4'].forEach(wk => {
+                  if (row[wk] !== undefined && row[wk] !== '') pushRec(st.id, activeSubjCode, stepGroupNum, wk, row[wk], activeSubjCode === 'VOCABULARY' ? 100 : 5);
+                });
+                ['EX-1', 'EX-2', 'EX-3', 'EX-4'].forEach((ex, i) => {
+                  if (row[ex] !== undefined && row[ex] !== '') pushRec(st.id, activeSubjCode, stepGroupNum, `W${i + 1}`, row[ex], 5);
+                });
+                if (stepGroupNum === 1) {
+                  ['Vocab L1 M1', 'Vocab L1 M2', 'Vocab L1 M3', 'Vocab L1 M4', 'Vocab L1 M4 (Kata)'].forEach((col, idx) => {
+                    if (row[col] !== undefined && row[col] !== '') pushRec(st.id, 'VOCABULARY', 1, idx >= 3 ? 'W4' : `W${idx + 1}`, row[col], 100);
+                  });
+                  if (row['Grammar L1 U1'] !== undefined) pushRec(st.id, 'GRAMMAR', 1, 'U1', row['Grammar L1 U1'], 15);
+                  if (row['Grammar L1 U2'] !== undefined) pushRec(st.id, 'GRAMMAR', 1, 'U2', row['Grammar L1 U2'], 20);
+                  if (row['Speaking L1 U1'] !== undefined) pushRec(st.id, 'SPEAKING', 1, 'U1', row['Speaking L1 U1'], 25);
+                  if (row['Speaking L1 U2'] !== undefined) pushRec(st.id, 'SPEAKING', 1, 'U2', row['Speaking L1 U2'], 25);
+                } else if (stepGroupNum === 2) {
+                  if (row['Vocab L2 M1'] !== undefined) pushRec(st.id, 'VOCABULARY', 2, 'W1', row['Vocab L2 M1'], 100);
+                  if (row['Vocab L2 M2'] !== undefined) pushRec(st.id, 'VOCABULARY', 2, 'W2', row['Vocab L2 M2'], 100);
+                  if (row['Vocab L2 M2 (Kata)'] !== undefined) pushRec(st.id, 'VOCABULARY', 2, 'W2', row['Vocab L2 M2 (Kata)'], 100);
+                  if (row['GFS Score'] !== undefined) pushRec(st.id, 'GFS', 2, 'U1', row['GFS Score'], 30);
+                  if (row['Speaking L2 U1'] !== undefined) pushRec(st.id, 'SPEAKING', 2, 'U1', row['Speaking L2 U1'], 25);
+                  if (row['Speaking L2 U2'] !== undefined) pushRec(st.id, 'SPEAKING', 2, 'U2', row['Speaking L2 U2'], 25);
+                }
+              });
+
+              if (upserts.length === 0) {
+                showToast(`No matching scores found (${matched} students matched).`, 'warning');
+                return;
+              }
+              const sb = await getSupabase();
+              const { error } = await sb.from('student_academic_assessments').upsert(upserts, { onConflict: 'student_id,step_level,subject_code,assessment_key' });
+              if (error) {
+                showToast(`Import failed: ${error.message}`, 'error');
+                return;
+              }
+              showToast(`Imported ${upserts.length} scores for ${matched} students`, 'success');
+              renderClassHub(area);
+            } catch (err) {
+              showToast(`Import error: ${err.message}`, 'error');
+            }
+          });
+        }
+
         let renderAttendanceGridMatrix = null;
 
         // Render content depending on tab
-        if (!isCbtClass && window._classHubActiveTab === 'attendance') {
+        if ((!isCbtClass || isBasicEnglishClass) && window._classHubActiveTab === 'attendance') {
           const classAttContainer = document.getElementById('class-attendance-grid');
           if (classAttContainer) {
             window._currentClassStudents = activeBatchStudents;
@@ -2663,7 +2922,9 @@ if (typeof window !== 'undefined') {
               currentClass,
               students: activeBatchStudents,
               batchMap,
-              levelMap
+              levelMap,
+              skipInfobar: isStepGroupView,
+              cbtTests: isBasicEnglishClass ? classTests : []
             });
           }
           return;
@@ -2682,7 +2943,8 @@ if (typeof window !== 'undefined') {
               allLevels,
               batchMap,
               levelMap,
-              showPic: false
+              showPic: false,
+              skipInfobar: isStepGroupView
             });
           }
         } else if (window._classHubActiveTab === 'test-sessions') {
@@ -2700,6 +2962,26 @@ if (typeof window !== 'undefined') {
               allAttempts,
               batchMap,
               levelMap
+            });
+          }
+        } else if (window._classHubActiveTab === 'question-bank') {
+          const qbContainer = document.getElementById('class-question-bank-container');
+          if (qbContainer) {
+            await renderBasicEnglishQuestionBank(qbContainer, {
+              classId,
+              institutionId: currentClass?.institution_id || null,
+              programId: currentClass?.program_id || null,
+              levelId: currentClass?.level_id || null,
+              classTests,
+              onSynced: () => {
+                if (window._classHubCache) delete window._classHubCache[classId];
+                if (typeof window._switchClassHubTab === 'function') {
+                  window._switchClassHubTab('tests');
+                } else {
+                  window._classHubActiveTab = 'tests';
+                  window.renderClassHub(document.getElementById('admin-content-area'));
+                }
+              }
             });
           }
         } else if (window._classHubActiveTab === 'analytics') {
@@ -2726,6 +3008,84 @@ if (typeof window !== 'undefined') {
             return `${mins} min`;
           };
 
+          const isVocabClassTable = Boolean(currentClass && isVocabularyClass(currentClass));
+
+          if (isBasicEnglishClass) {
+            const gridContainer = document.getElementById('class-tests-grid');
+            const renderBasicPanels = () => {
+              if (!gridContainer) return;
+              const isEditOn = document.body.classList.contains('global-edit-mode-on') || (typeof window.isGlobalEditModeActive === 'function' && window.isGlobalEditModeActive());
+              const cardsHtml = testsGridData.map(row => {
+                const raw = row._raw || {};
+                const pay = raw.payload || {};
+                const isDesc = String(row.answerType || '').toLowerCase() === 'description';
+                const accent = isDesc ? '#38bdf8' : '#95ff00';
+                const st = String(row.status || 'draft').toLowerCase();
+                const isPub = st === 'published';
+                const passRate = row.minScore || 60;
+                const warmSec = Number(pay.warmup_per_question_seconds || 60);
+                const coreSec = Number(pay.per_question_seconds || 20);
+                const bonusSec = Number(pay.bonus_per_question_seconds || 60);
+                const qTotal = isDesc ? (pay.total_questions || 20) : (pay.topic_questions_count || row.qCount || 100);
+                const durLabel = isDesc ? formatDur(row.timeLimit || 60) : `${formatDur(row.timeLimit || 40)} (${coreSec}s/Q)`;
+
+                const detailRows = isDesc
+                  ? `
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Module Engine</span><strong style="color:#38bdf8;">Description (Point &amp; Speak + Camera)</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Question Format</span><strong style="color:#f8fafc;">20 Sentences (5× THIS, 5× THAT, 5× THESE, 5× THOSE)</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Workflow</span><strong style="color:#cbd5e1;">Take Photo → Unlock Mic → Speech + OSASCOMP</strong></div>
+                  `
+                  : `
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Module Engine</span><strong style="color:#95ff00;">Selection (4-Option MCQ)</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Phase 1 (LET'S WARM UP!)</span><strong style="color:#38bdf8;">3 Live Dynamic Qs • ${warmSec}s/Q</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Phase 2 (HERE WE GO!)</span><strong style="color:#95ff00;">${qTotal} Shuffled Topic Qs • ${coreSec}s/Q (Auto-Next)</strong></div>
+                    <div style="display:flex; justify-content:space-between; font-size:12px;"><span style="color:#94a3b8;">Phase 3 (BONUS ROUNDS!)</span><strong style="color:#a855f7;">2 Surprise Qs (Excluded from Score) • ${bonusSec}s/Q</strong></div>
+                  `;
+
+                const statusControl = isEditOn
+                  ? `<select class="form-control form-control-sm input-test-status-select" data-test-id="${row.id}" data-test-title="${escapeHtml(row.title || 'Test')}" data-original-status="${st}" style="height:24px !important; font-size:12px; font-weight:700; background:#090d16; border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:${isPub ? 'var(--grade-a)' : '#94a3b8'}; padding:0 6px;">
+                      <option value="published" ${isPub ? 'selected' : ''}>Published</option>
+                      <option value="draft" ${!isPub ? 'selected' : ''}>Draft</option>
+                    </select>`
+                  : `<span style="font-size:12px; font-weight:700; color:${isPub ? 'var(--grade-a)' : '#94a3b8'};">${isPub ? 'Published' : 'Draft'}</span>`;
+
+                return `
+                  <div style="background:rgba(15,23,42,0.75); border:1px solid rgba(255,255,255,0.12); border-top:3px solid ${accent}; border-radius:8px; padding:10px; display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:10px;">
+                      <div style="min-width:0;">
+                        <div style="font-size:12px; font-weight:700; color:${accent}; font-family:var(--font-mono, monospace);">${escapeHtml(row.shellCode || 'EXAM')}</div>
+                        <div style="font-size:14px; font-weight:800; color:#f8fafc; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${escapeHtml(row.title)}">${escapeHtml(row.title)}</div>
+                      </div>
+                      ${statusControl}
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:8px; background:rgba(2,6,23,0.45); border:1px solid rgba(255,255,255,0.06); border-radius:6px; padding:10px;">
+                      ${detailRows}
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; padding-top:4px; border-top:1px solid rgba(255,255,255,0.06); text-align:center;">
+                      <div><div style="font-size:12px; color:#64748b;">LEVEL</div><strong style="font-size:12px; color:#f8fafc;">${escapeHtml(row.level || '1st')}</strong></div>
+                      <div><div style="font-size:12px; color:#64748b;">PASS RATE</div><strong style="font-size:12px; color:var(--grade-c);">${passRate}%</strong></div>
+                      <div><div style="font-size:12px; color:#64748b;">ORDER</div><strong style="font-size:12px; color:#f8fafc;">${escapeHtml(row.questionOrder || 'Random')}</strong></div>
+                      <div><div style="font-size:12px; color:#64748b;">DURATION</div><strong style="font-size:12px; color:#f8fafc;">${durLabel}</strong></div>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+              gridContainer.innerHTML = `<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; width:100%; align-items:start;">${cardsHtml}</div>`;
+            };
+            renderBasicPanels();
+            window._classAsmGridInstance = { render: renderBasicPanels };
+            if (!window._classTestsEditModeBound) {
+              window._classTestsEditModeBound = true;
+              window.addEventListener('admin-edit-mode-changed', () => {
+                if (document.getElementById('class-tests-grid') && window._classAsmGridInstance) {
+                  window._classAsmGridInstance.render();
+                }
+                if (window._classHubActiveTab === 'tests' && typeof window.syncClassHubLowerPanel === 'function') {
+                  window.syncClassHubLowerPanel('tests');
+                }
+              });
+            }
+          } else {
           const classAsmGrid = new window.DataGrid({
             container: document.getElementById('class-tests-grid'),
             tableId: 'class-tests-table',
@@ -2806,6 +3166,17 @@ if (typeof window !== 'undefined') {
                   return `<span style="font-size:12px; color:${color}; font-weight:600; white-space:nowrap;">${label}</span>`;
                 }
               },
+              ...(!isVocabClassTable ? [{
+                key: 'answerType',
+                label: 'MODULE',
+                sortable: true,
+                width: '120px',
+                align: 'center',
+                render: (val, row) => {
+                  const mod = String(row.answerType || 'Selection');
+                  return `<span style="font-size:12px; color:#38bdf8; font-weight:700; white-space:nowrap;">${escapeHtml(mod)}</span>`;
+                }
+              }] : []),
               {
                 key: 'prereq',
                 label: 'PREREQUISITE',
@@ -2818,7 +3189,7 @@ if (typeof window !== 'undefined') {
                   return `<span style="font-size:12px; color:var(--clr-text-2, #cbd5e1); font-family:var(--font-mono, monospace); font-weight:500; white-space:nowrap;" title="${escapeHtml(prereqDisplay)}">${escapeHtml(prereqDisplay)}</span>`;
                 }
               },
-              {
+              ...(isVocabClassTable ? [{
                 key: 'repetitions',
                 label: 'REPS',
                 shortLabel: 'REPS',
@@ -2834,7 +3205,7 @@ if (typeof window !== 'undefined') {
                   const rCount = row.repetitions || 7;
                   return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${rCount}x Repetitions Target">${rCount}x</span>`;
                 }
-              },
+              }] : []),
               {
                 key: 'minScore',
                 label: 'PASS RATE',
@@ -2880,101 +3251,115 @@ if (typeof window !== 'undefined') {
                 width: '105px',
                 align: 'center',
                 render: (val, row) => {
-                  const count = row.qCount || 0;
-                  const isVault = !!row.qIsVault;
+                  const topicCount = row._raw?.payload?.topic_questions_count;
+                  const count = topicCount !== undefined && topicCount !== null ? Number(topicCount) : (row.qCount || 0);
+                  const isVault = !!row.qIsVault && row.isVocab !== false && !row._raw?.payload?.answer_type?.includes('description');
+                  if (row.isVocab === false && count <= 0) {
+                    return `<span class="text-muted" style="font-size:12px;">—</span>`;
+                  }
+                  const hasLive = Boolean(row._raw?.payload?.pin_live_questions);
+                  const hasBonus = Boolean(row._raw?.payload?.include_bonus_round);
+                  const extraNote = (hasLive || hasBonus) ? ` (${hasLive ? '+3 Live' : ''}${hasLive && hasBonus ? ', ' : ''}${hasBonus ? '+2 Bonus' : ''})` : '';
                   const label = isVault ? `${count} (Vault)` : `${count}`;
-                  return `<span class="fw-500" style="color:var(--clr-text-2); font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums;" title="${isVault ? 'Live question count projected from Vocabulary Vault' : 'Question bank total'}">${label}</span>`;
+                  return `<span class="fw-500" style="color:var(--clr-text-2); font-size:12px; white-space:nowrap; font-variant-numeric:tabular-nums;" title="${isVault ? 'Live question count projected from Vocabulary Vault' : `Question bank total${extraNote}`}">${label}</span>`;
                 }
               },
-              {
-                key: 'wordsCount',
-                label: 'WORDS',
-                shortLabel: 'WORD',
-                sortable: true,
-                width: '75px',
-                align: 'center',
-                render: (val, row) => {
-                  if (row.isVocab === false) return `<span class="text-muted" style="font-size:12px;">—</span>`;
-                  const count = row.wordsCount || 0;
-                  if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
-                  return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Words in test">${count}</span>`;
-                }
-              },
-              {
-                key: 'wordsAnswerType',
-                label: 'W-MODE',
-                sortable: true,
-                width: '90px',
-                align: 'center',
-                render: (val, row) => {
-                  const mode = String(row.wordsAnswerType || '—');
-                  if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
-                  return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
-                }
-              },
-              {
-                key: 'wordsTimeLimit',
-                label: 'W-TIME',
-                sortable: true,
-                width: '75px',
-                align: 'center',
-                render: (val, row) => {
-                  if (row.isVocab === false || !row.wordsTimeLimit || row.wordsTimeLimit <= 0) {
-                    return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+              ...(isVocabClassTable ? [
+                {
+                  key: 'wordsCount',
+                  label: 'WORDS',
+                  shortLabel: 'WORD',
+                  sortable: true,
+                  width: '75px',
+                  align: 'center',
+                  render: (val, row) => {
+                    if (row.isVocab === false) return `<span class="text-muted" style="font-size:12px;">—</span>`;
+                    const count = row.wordsCount || 0;
+                    if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                    return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Words in test">${count}</span>`;
                   }
-                  const mins = Number(row.wordsTimeLimit);
-                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums;" title="Word Category Duration (${mins} min)">${formatDur(mins)}</span>`;
-                }
-              },
-              {
-                key: 'phrasesCount',
-                label: 'PHRASES',
-                shortLabel: 'PHR',
-                sortable: true,
-                width: '75px',
-                align: 'center',
-                render: (val, row) => {
-                  if (row.isVocab === false) return `<span class="text-muted" style="font-size:12px;">—</span>`;
-                  const count = row.phrasesCount || 0;
-                  if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
-                  return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Phrases in test">${count}</span>`;
-                }
-              },
-              {
-                key: 'phrasesAnswerType',
-                label: 'P-MODE',
-                sortable: true,
-                width: '90px',
-                align: 'center',
-                render: (val, row) => {
-                  const mode = String(row.phrasesAnswerType || '—');
-                  if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
-                  return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
-                }
-              },
-              {
-                key: 'phrasesTimeLimit',
-                label: 'P-TIME',
-                sortable: true,
-                width: '75px',
-                align: 'center',
-                render: (val, row) => {
-                  if (row.isVocab === false || !row.phrasesTimeLimit || row.phrasesTimeLimit <= 0) {
-                    return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                },
+                {
+                  key: 'wordsAnswerType',
+                  label: 'W-MODE',
+                  sortable: true,
+                  width: '90px',
+                  align: 'center',
+                  render: (val, row) => {
+                    const mode = String(row.wordsAnswerType || '—');
+                    if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                    return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
                   }
-                  const mins = Number(row.phrasesTimeLimit);
-                  return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums;" title="Phrase Category Duration (${mins} min)">${formatDur(mins)}</span>`;
+                },
+                {
+                  key: 'wordsTimeLimit',
+                  label: 'W-TIME',
+                  sortable: true,
+                  width: '75px',
+                  align: 'center',
+                  render: (val, row) => {
+                    if (row.isVocab === false || !row.wordsTimeLimit || row.wordsTimeLimit <= 0) {
+                      return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                    }
+                    const mins = Number(row.wordsTimeLimit);
+                    return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums;" title="Word Category Duration (${mins} min)">${formatDur(mins)}</span>`;
+                  }
+                },
+                {
+                  key: 'phrasesCount',
+                  label: 'PHRASES',
+                  shortLabel: 'PHR',
+                  sortable: true,
+                  width: '75px',
+                  align: 'center',
+                  render: (val, row) => {
+                    if (row.isVocab === false) return `<span class="text-muted" style="font-size:12px;">—</span>`;
+                    const count = row.phrasesCount || 0;
+                    if (count <= 0) return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                    return `<span style="font-size:12px; font-weight:700; color:var(--clr-text-1, #f8fafc); font-variant-numeric:tabular-nums;" title="${count} Phrases in test">${count}</span>`;
+                  }
+                },
+                {
+                  key: 'phrasesAnswerType',
+                  label: 'P-MODE',
+                  sortable: true,
+                  width: '90px',
+                  align: 'center',
+                  render: (val, row) => {
+                    const mode = String(row.phrasesAnswerType || '—');
+                    if (mode === '—') return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                    return `<span class="fw-500" style="font-size:12px; color:var(--clr-text-1); white-space:nowrap;">${escapeHtml(mode)}</span>`;
+                  }
+                },
+                {
+                  key: 'phrasesTimeLimit',
+                  label: 'P-TIME',
+                  sortable: true,
+                  width: '75px',
+                  align: 'center',
+                  render: (val, row) => {
+                    if (row.isVocab === false || !row.phrasesTimeLimit || row.phrasesTimeLimit <= 0) {
+                      return `<span style="font-size:12px; color:var(--clr-text-3, #64748b);">—</span>`;
+                    }
+                    const mins = Number(row.phrasesTimeLimit);
+                    return `<span style="font-size:12px; color:var(--clr-text-2); white-space:nowrap; font-weight:600; font-variant-numeric:tabular-nums;" title="Phrase Category Duration (${mins} min)">${formatDur(mins)}</span>`;
+                  }
                 }
-              },
+              ] : []),
               {
                 key: 'timeLimit',
                 label: 'DURATION',
                 sortable: true,
-                width: '85px',
+                width: '115px',
                 align: 'center',
                 render: (val, row) => {
                   const mins = Number(row.timeLimit || 60);
-                  return `<span style="font-size:12px; color:var(--clr-text-1, #f8fafc); white-space:nowrap; font-weight:700; font-variant-numeric:tabular-nums;" title="Cumulative Duration (${mins} min)">${formatDur(mins)}</span>`;
+                  const perQSec = Number(row._raw?.payload?.per_question_seconds || 0);
+                  const durText = perQSec > 0 ? `${formatDur(mins)} (${perQSec}s/Q)` : formatDur(mins);
+                  const tip = perQSec > 0
+                    ? `Warm-up: 1m/Q • Core: ${perQSec}s/Q • Bonus: 1m/Q (Total ${mins}m)`
+                    : `Cumulative Duration (${mins} min)`;
+                  return `<span style="font-size:12px; color:var(--clr-text-1, #f8fafc); white-space:nowrap; font-weight:700; font-variant-numeric:tabular-nums;" title="${tip}">${durText}</span>`;
                 }
               },
               {
@@ -3018,6 +3403,8 @@ if (typeof window !== 'undefined') {
             });
           }
 
+
+          } // End non-Basic-English DataGrid else
 
           // Sync Class Tests directly from Vocabulary Vault (Scoped strictly to this Class only)
           document.getElementById('btn-sync-class-tests')?.addEventListener('click', async () => {
@@ -3255,12 +3642,12 @@ if (typeof window !== 'undefined') {
 
           const initialRosterData = filterRosterData(studentsGridData, rosterBatchFilter);
 
-          // Dynamically compute theme headers and colSpans from actual classTests
+          // Dynamically compute theme headers and colSpans from published classTests
           const themeCounts = {};
           const themeAsmCounts = { 'A': 0, 'B': 0, 'C': 0, 'D': 0 };
           const themeNames = {};
 
-          classTests.forEach(asm => {
+          countedClassTests.forEach(asm => {
             const isTest = isWeeklyExam(asm);
             const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
             const themeCode = (rawTheme || 'A').toUpperCase();
@@ -4485,9 +4872,9 @@ if (typeof window !== 'undefined') {
 
             const isTestAsm = isWeeklyExam;
 
-            // Group all class tests by theme (Tasks & Exams)
+            // Group published class tests by theme (Tasks & Exams)
             const themeGroups = {};
-            classTests.forEach(asm => {
+            countedClassTests.forEach(asm => {
               const rawTheme = asm.payload?.theme_code || (asm.shell_code ? asm.shell_code.replace(/^[0-9]+/, '').charAt(0) : 'A');
               const tc = (rawTheme || 'A').toUpperCase();
               if (!themeGroups[tc]) themeGroups[tc] = [];

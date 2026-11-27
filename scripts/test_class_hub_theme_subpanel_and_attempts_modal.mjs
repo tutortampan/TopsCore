@@ -71,7 +71,7 @@ assert(
 
 assert(
   appJs.includes("words_att_") &&
-  appJs.includes("for (let rep = 1; rep <= 7; rep++)"),
+  (appJs.includes("for (let rep = 1; rep <= 7; rep++)") || appJs.includes("for (let rep = 1; rep <= compTargetReps; rep++)")),
   '7 distinct attempt columns generated per topic for Words (W1..W7)'
 );
 

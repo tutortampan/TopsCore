@@ -2049,9 +2049,9 @@ body.result-page .result-complete-banner,
 body.result-page .result-waiting-banner {
   width: 100% !important;
   max-width: 100% !important;
-  height: 50px !important;
-  min-height: 50px !important;
-  max-height: 50px !important;
+  height: 80px !important;
+  min-height: 80px !important;
+  max-height: 80px !important;
   box-sizing: border-box !important;
   display: flex !important;
   flex-direction: column !important;

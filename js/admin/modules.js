@@ -2,7 +2,8 @@ import { getSvgIcon } from '../svg-icons.js?v=20261114_01';
 
 export const OFFICIAL_MODULES = [
   { id: 'm1', key: 'description', name: 'Description & Structure', icon: 'target', desc: 'Visual context, pronouns, and sentence mechanics.' },
-  { id: 'm2', key: 'recognition', name: 'Vocabulary Recognition',  icon: 'check-circle', desc: 'Standardized multiple choice for vocabulary precision.' },
+  { id: 'm2', key: 'recognition', name: 'Vocabulary Recognition',  icon: 'check-circle', desc: 'Standardized multiple choice exclusively from Vocabulary Vault.' },
+  { id: 'selection', key: 'selection', name: 'Selection', icon: 'list', desc: 'Dedicated 4-option multiple choice for Basic English & non-vault classes.' },
   { id: 'm3', key: 'spoken',      name: 'Spoken Vocabulary',       icon: 'mic', desc: 'Phonetic analysis & pronunciation accuracy evaluation.' },
   { id: 'm4', key: 'written',     name: 'Written Vocabulary',      icon: 'edit', desc: 'Rigorous target lexicon typing, spelling, and meaning verification.' },
   { id: 'm5', key: 'speech',      name: 'Public Speech',           icon: 'award', desc: 'Formal 5-pillar speaking performance assessment.' },
@@ -20,7 +21,8 @@ export const CLASS_DISCIPLINES = [
 
 export const DEFAULT_MODULE_CLASS_MAP = {
   m1: ['grammar'],                     // Description -> Basic English
-  m2: ['vocabulary'],                  // Vocabulary Mastery - Recognition (Strictly Vocabulary)
+  selection: ['grammar'],              // Selection -> Basic English (4-Option MCQ)
+  m2: ['vocabulary'],                  // Recognition -> Vocabulary Vault ONLY
   m3: ['vocabulary'],                  // Vocabulary Mastery - Spoken      (Strictly Vocabulary)
   m4: ['vocabulary'],                  // Vocabulary Mastery - Written     (Strictly Vocabulary)
   m5: ['speaking'],                    // Speech      -> Speaking
@@ -126,7 +128,8 @@ export async function renderModules(area) {
 
   const modules = [
     { id: 'm1', name: 'Description', type: 'Visual Context', desc: 'Real-time object, pronoun, and image context description.', status: 'Active', icon: 'target', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nMedia (photos) must be processed transiently in the browser, sent directly to the AI API for evaluation via Edge Functions, and discarded.' },
-    { id: 'm2', name: 'Recognition', type: 'Standardized Choices', desc: 'Classic multi-option evaluation for vocabulary, grammar, and syntax precision.', status: 'Active', icon: 'check-circle', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nClassic multi-option evaluation.' },
+    { id: 'm2', name: 'Recognition', type: 'Vocabulary Vault Choices', desc: 'Multiple-choice evaluation sourced exclusively from the Vocabulary Vault.', status: 'Active', icon: 'check-circle', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nVocabulary Vault multi-option evaluation only.' },
+    { id: 'selection', name: 'Selection', type: 'Standardized 4-Option MCQ', desc: 'Dedicated 4-option multiple choice for Basic English with Live Dynamic & Bonus Round support.', status: 'Active', icon: 'list', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nDedicated 4-option multiple choice for Basic English (independent from Vocabulary Vault).' },
     { id: 'm3', name: 'Spoken', type: 'Phonetic Analysis', desc: 'Speech analysis comparing spoken words and pronunciation against standard targets.', status: 'Active', icon: 'mic', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nMedia (audio) must be processed transiently in the browser, sent directly to the AI API for evaluation, and discarded.' },
     { id: 'm4', name: 'Written', type: 'Text & Spelling', desc: 'Rigorous testing of target lexicon spelling, meaning, and written precision.', status: 'Active', icon: 'clipboard', directive: 'Direct English Only.\nFor vocabulary-style written evaluation, normalize at minimum: leading/trailing whitespace, repeated spaces, case, unnecessary punctuation.\nRequired result labels: Correct, Minor Spelling Error, Incorrect.\nDefault tolerance: 0 errors -> 1pt, 1-2 errors -> 0.5pt, 3+ errors -> 0pt.' },
     { id: 'm5', name: 'Speech', type: '5 Pillars Performance', desc: 'Comprehensive grading on Fluency, Pronunciation, Vocabulary, Grammar, and Comprehension.', status: 'Active', icon: 'award', directive: 'Direct English Only.\nArchitecture: Stateless & Low-Egress.\nEvaluate based on 5 Pillars: Fluency, Pronunciation, Vocabulary, Grammar, Comprehension.' },
@@ -142,7 +145,7 @@ export async function renderModules(area) {
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:16px; font-weight:800; font-family:var(--fm-font-display, 'Inter', sans-serif); color:#f8fafc;">Modules (Core Engines)</span>
         <span style="color:#64748b; font-size:12px;">—</span>
-        <span style="font-size:12px; color:#94a3b8; font-weight:500;">Central warehouse for the 8 core AI evaluation engines &amp; class assignment mapping</span>
+        <span style="font-size:12px; color:#94a3b8; font-weight:500;">Central warehouse for the 9 core AI evaluation engines &amp; class assignment mapping</span>
       </div>
     `;
   }
@@ -159,7 +162,7 @@ export async function renderModules(area) {
     const leftHtml = `
       <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
         <span style="color:var(--primary-tactical, #38bdf8);">${getSvgIcon('layers', 14)}</span>
-        <span>8 Core AI Evaluation Modules (Stateless &amp; Low-Egress)</span>
+        <span>9 Core AI Evaluation Modules (Stateless &amp; Low-Egress)</span>
       </div>
     `;
     const rightHtml = `
@@ -177,73 +180,103 @@ export async function renderModules(area) {
     window.setBottomInfobar(leftHtml, rightHtml);
   }
 
-  area.innerHTML = `
-    <div style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; padding: 10px; box-sizing: border-box; overflow-y: auto; gap: 10px;">
-      
-      <!-- 8 Module Cards Grid: Strictly 4 Columns on Top & 4 on Bottom (Universal 10px Gap) -->
-      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; flex: 1 1 auto;">
-        ${modules.map(mod => {
-          const assignedList = assignments[mod.id] || DEFAULT_MODULE_CLASS_MAP[mod.id] || [];
-          return `
-            <div class="module-card card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; height: 100%; min-height: 290px; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;" 
-                 onmouseover="this.style.borderColor='rgba(56, 189, 248, 0.35)'; this.style.boxShadow='0 4px 16px rgba(0, 0, 0, 0.4)'" 
-                 onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.08)'; this.style.boxShadow='none'">
-              
-              <!-- Standardized Badge Area (Invariant 1.5.0) Above Title Area -->
-              <div class="badge-area" style="width: 48px; height: 48px; border-radius: 12px; background: rgba(56, 189, 248, 0.1); border: 1.5px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 12px rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; margin: 4px auto 10px auto; color: var(--primary-tactical, #38bdf8); flex-shrink: 0;">
-                ${getSvgIcon(mod.icon, 24)}
-              </div>
+  const renderModuleCard = (mod) => {
+    const assignedList = assignments[mod.id] || DEFAULT_MODULE_CLASS_MAP[mod.id] || [];
+    return `
+      <div class="module-card card" style="background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; height: 100%; min-height: 270px; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box;" 
+           onmouseover="this.style.borderColor='rgba(56, 189, 248, 0.35)'; this.style.boxShadow='0 4px 16px rgba(0, 0, 0, 0.4)'" 
+           onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.08)'; this.style.boxShadow='none'">
+        
+        <div class="badge-area" style="width: 44px; height: 44px; border-radius: 10px; background: rgba(56, 189, 248, 0.1); border: 1.5px solid rgba(56, 189, 248, 0.3); box-shadow: 0 0 12px rgba(56, 189, 248, 0.15); display: flex; align-items: center; justify-content: center; margin: 2px auto 8px auto; color: var(--primary-tactical, #38bdf8); flex-shrink: 0;">
+          ${getSvgIcon(mod.icon, 22)}
+        </div>
 
-              <!-- Standardized 40px Title Area (Invariant 1.5.1) -->
-              <div class="title-area" style="height: 40px !important; min-height: 40px !important; max-height: 40px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin-bottom: 8px; flex-shrink: 0;">
-                <h3 style="font-size: 16px; font-family: var(--fm-font-display, 'Inter', sans-serif); font-weight: 700; color: #f8fafc; margin: 0; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.2;">
-                  ${escapeHtml(mod.name)}
-                </h3>
-                <span style="font-size: 12px; font-weight: 700; color: var(--primary-tactical, #38bdf8); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">
-                  ${mod.id.toUpperCase()} — ${escapeHtml(mod.type)}
-                </span>
-              </div>
-              
-              <!-- Description Paragraph -->
-              <p style="font-size: 12px; color: #94a3b8; line-height: 1.4; margin: 0 0 8px 0; text-align: center; min-height: 36px; display: flex; align-items: center; justify-content: center;">
-                ${escapeHtml(mod.desc)}
-              </p>
-              
-              <!-- Assigned / Applicable Classes Section (Stacked Top-to-Bottom with 10px Gap) -->
-              <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 10px; margin-bottom: 10px; flex-grow: 1; display: flex; flex-direction: column;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                  <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">APPLICABLE CLASSES</span>
-                  <span class="edit-mode-only" style="font-size: 12px; color: var(--primary-tactical, #38bdf8); font-weight: 600;">(Toggle)</span>
-                </div>
+        <div class="title-area" style="height: 40px !important; min-height: 40px !important; max-height: 40px !important; border-bottom: 1.5px solid rgba(255, 255, 255, 0.16) !important; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; margin-bottom: 8px; flex-shrink: 0;">
+          <h3 style="font-size: 16px; font-family: var(--fm-font-display, 'Inter', sans-serif); font-weight: 700; color: #f8fafc; margin: 0; text-transform: uppercase; letter-spacing: 0.02em; line-height: 1.2;">
+            ${escapeHtml(mod.name)}
+          </h3>
+          <span style="font-size: 12px; font-weight: 700; color: var(--primary-tactical, #38bdf8); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1.2;">
+            ${escapeHtml(mod.type)}
+          </span>
+        </div>
+        
+        <p style="font-size: 12px; color: #94a3b8; line-height: 1.4; margin: 0 0 8px 0; text-align: center; min-height: 34px; display: flex; align-items: center; justify-content: center;">
+          ${escapeHtml(mod.desc)}
+        </p>
+        
+        <div style="background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 6px; padding: 8px; margin-bottom: 8px; flex-grow: 1; display: flex; flex-direction: column;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">APPLICABLE CLASSES</span>
+            <span class="edit-mode-only" style="font-size: 12px; color: var(--primary-tactical, #38bdf8); font-weight: 600;">(Toggle)</span>
+          </div>
 
-                <div class="module-class-pills" style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
-                  ${CLASS_DISCIPLINES.map(d => {
-                    const isAssigned = assignedList.includes(d.key);
-                    return `
-                      <button type="button" class="btn-toggle-disc-pill" data-mod="${mod.id}" data-mod-name="${escapeHtml(mod.name)}" data-disc="${d.key}" data-disc-label="${escapeHtml(d.label)}"
-                              title="${isAssigned ? `Active for ${d.label} (Click to remove)` : `Inactive for ${d.label} (Click to add)`}"
-                              style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; box-sizing: border-box; padding: 4px 10px; height: 28px; line-height: 20px; border-radius: 4px; font-size: 12px; font-weight: ${isAssigned ? '700' : '600'}; color: ${isAssigned ? d.color : '#64748b'}; background: ${isAssigned ? d.bg : 'rgba(255,255,255,0.02)'}; border: 1px ${isAssigned ? 'solid ' + d.border : 'dashed rgba(255,255,255,0.12)'}; cursor: pointer; transition: background 0.15s, border-color 0.15s; user-select: none;">
-                        <span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; flex-shrink: 0;">${isAssigned ? getSvgIcon('check', 12) : getSvgIcon('plus', 12)}</span>
-                        <span style="flex-grow: 1; text-align: left;">${d.label}</span>
-                        ${isAssigned ? `<span style="font-size: 12px; opacity: 0.8; font-weight: 600;">Active</span>` : ''}
-                      </button>
-                    `;
-                  }).join('')}
-                </div>
-              </div>
+          <div class="module-class-pills" style="display: flex; flex-direction: column; gap: 6px; width: 100%;">
+            ${CLASS_DISCIPLINES.map(d => {
+              const isAssigned = assignedList.includes(d.key);
+              return `
+                <button type="button" class="btn-toggle-disc-pill" data-mod="${mod.id}" data-mod-name="${escapeHtml(mod.name)}" data-disc="${d.key}" data-disc-label="${escapeHtml(d.label)}"
+                        title="${isAssigned ? `Active for ${d.label} (Click to remove)` : `Inactive for ${d.label} (Click to add)`}"
+                        style="display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; box-sizing: border-box; padding: 4px 10px; height: 26px; line-height: 18px; border-radius: 4px; font-size: 12px; font-weight: ${isAssigned ? '700' : '600'}; color: ${isAssigned ? d.color : '#64748b'}; background: ${isAssigned ? d.bg : 'rgba(255,255,255,0.02)'}; border: 1px ${isAssigned ? 'solid ' + d.border : 'dashed rgba(255,255,255,0.12)'}; cursor: pointer; transition: background 0.15s, border-color 0.15s; user-select: none;">
+                  <span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; flex-shrink: 0;">${isAssigned ? getSvgIcon('check', 12) : getSvgIcon('plus', 12)}</span>
+                  <span style="flex-grow: 1; text-align: left;">${d.label}</span>
+                  ${isAssigned ? `<span style="font-size: 12px; opacity: 0.8; font-weight: 600;">Active</span>` : ''}
+                </button>
+              `;
+            }).join('')}
+          </div>
+        </div>
 
-              <!-- Action Button: Configure Engine (Rule 3.4 Ghost-to-Solid-Glow) -->
-              <button class="btn-configure-engine edit-mode-only" data-id="${mod.id}" data-name="${escapeHtml(mod.name)}" data-directive="${escapeHtml(mod.directive)}"
-                      style="background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: var(--primary-tactical, #38bdf8); padding: 0 10px; height: 30px; line-height: 28px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: auto;"
-                      onmouseover="this.style.background='#38bdf8'; this.style.borderColor='#38bdf8'; this.style.color='#090d16'; this.style.boxShadow='0 0 10px rgba(56, 189, 248, 0.45)';"
-                      onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(56, 189, 248, 0.4)'; this.style.color='var(--primary-tactical, #38bdf8)'; this.style.boxShadow='none';">
-                <span>${getSvgIcon('settings', 14)}</span>
-                <span>Configure Engine &amp; Classes</span>
-              </button>
-            </div>
-          `;
-        }).join('')}
+        <button class="btn-configure-engine edit-mode-only" data-id="${mod.id}" data-name="${escapeHtml(mod.name)}" data-directive="${escapeHtml(mod.directive)}"
+                style="background: transparent; border: 1px solid rgba(56, 189, 248, 0.4); color: var(--primary-tactical, #38bdf8); padding: 0 10px; height: 30px; line-height: 28px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 6px; margin-top: auto;"
+                onmouseover="this.style.background='#38bdf8'; this.style.borderColor='#38bdf8'; this.style.color='#090d16'; this.style.boxShadow='0 0 10px rgba(56, 189, 248, 0.45)';"
+                onmouseout="this.style.background='transparent'; this.style.borderColor='rgba(56, 189, 248, 0.4)'; this.style.color='var(--primary-tactical, #38bdf8)'; this.style.boxShadow='none';">
+          <span>${getSvgIcon('settings', 14)}</span>
+          <span>Configure Engine &amp; Classes</span>
+        </button>
       </div>
+    `;
+  };
+
+  const unassignedModules = modules.filter(m => {
+    const list = assignments[m.id] || DEFAULT_MODULE_CLASS_MAP[m.id] || [];
+    return list.length === 0;
+  });
+
+  area.innerHTML = `
+    <div style="display: flex; flex-direction: column; flex: 1 1 0; min-height: 0; height: 100%; box-sizing: border-box; overflow-y: auto; gap: 10px;">
+      ${CLASS_DISCIPLINES.map(d => {
+        const groupMods = modules.filter(m => (assignments[m.id] || DEFAULT_MODULE_CLASS_MAP[m.id] || []).includes(d.key));
+        return `
+          <section style="display: flex; flex-direction: column; gap: 10px; background: rgba(15, 23, 42, 0.45); border: 1px solid ${d.border}; border-radius: 8px; padding: 10px; box-sizing: border-box;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="width: 10px; height: 10px; border-radius: 50%; background: ${d.color}; box-shadow: 0 0 8px ${d.color}; flex-shrink: 0;"></span>
+                <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: ${d.color}; text-transform: uppercase; letter-spacing: 0.04em;">${escapeHtml(d.label)} Class</h3>
+                <span style="font-size: 12px; color: #94a3b8;">— ${escapeHtml(d.desc)}</span>
+              </div>
+              <span style="font-size: 12px; font-weight: 700; color: ${d.color}; background: ${d.bg}; border: 1px solid ${d.border}; padding: 2px 8px; border-radius: 4px; white-space: nowrap;">${groupMods.length} ${groupMods.length === 1 ? 'Module' : 'Modules'}</span>
+            </div>
+            ${groupMods.length > 0 ? `
+              <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+                ${groupMods.map(renderModuleCard).join('')}
+              </div>
+            ` : `
+              <div style="padding: 16px; text-align: center; font-size: 12px; color: #64748b;">No modules currently assigned to ${escapeHtml(d.label)}.</div>
+            `}
+          </section>
+        `;
+      }).join('')}
+      ${unassignedModules.length > 0 ? `
+        <section style="display: flex; flex-direction: column; gap: 10px; background: rgba(15, 23, 42, 0.45); border: 1px dashed rgba(255,255,255,0.16); border-radius: 8px; padding: 10px; box-sizing: border-box;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 8px;">
+            <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.04em;">Unassigned Modules</h3>
+            <span style="font-size: 12px; font-weight: 700; color: #94a3b8;">${unassignedModules.length}</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px;">
+            ${unassignedModules.map(renderModuleCard).join('')}
+          </div>
+        </section>
+      ` : ''}
     </div>
   `;
 

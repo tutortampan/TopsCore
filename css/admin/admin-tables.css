@@ -839,11 +839,19 @@ input[type="checkbox"], input[type="radio"] {
 /* Dynamic Column Sizing & Single-Line Text Invariant (Rule 21 / Sec 2.34) */
 .datagrid-table,
 .table-wrap table,
-#class-attendance-grid table,
-#blueprint-matrix-table {
+#class-attendance-grid table {
   width: 100% !important;
   max-width: 100% !important;
   table-layout: fixed !important;
+}
+
+#blueprint-matrix-table,
+#vault-table,
+#theme-manager-flat-table,
+#board-batches-table,
+.table-wrap table.dashboard-academic-table {
+  width: 100% !important;
+  table-layout: auto !important;
 }
 
 .datagrid-table th,

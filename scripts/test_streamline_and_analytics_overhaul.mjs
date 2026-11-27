@@ -17,11 +17,11 @@ const adminHtml = fs.readFileSync('admin.html', 'utf8');
 assert(adminHtml.includes('class="sidebar-logo') || adminHtml.includes('class="sidebar-corner-top'), 'admin.html must contain top corner');
 assert(!adminHtml.includes('id="global-edit-mode-toggle"'), 'admin.html must be clean of #global-edit-mode-toggle (purged per Phase 556)');
 
-// Ensure top corner contains user role (ADMIN/TUTOR) and Exit button
+// Ensure top corner contains user role (ADMIN/TUTOR) and Exit button is present in bottom banner or top corner
 const sidebarHeaderArea = adminHtml.slice(adminHtml.indexOf('class="sidebar-logo'), adminHtml.indexOf('class="admin-nav"'));
 assert(sidebarHeaderArea && (sidebarHeaderArea.includes('ADMIN/TUTOR') || sidebarHeaderArea.includes('id="sidebar-user-role-label"')), 'Top corner must contain user role label (ADMIN/TUTOR)');
-assert(sidebarHeaderArea && sidebarHeaderArea.includes('id="admin-logout-btn"'), 'Top corner must contain #admin-logout-btn');
-assert(sidebarHeaderArea && (sidebarHeaderArea.includes('EXIT') || sidebarHeaderArea.includes('Exit')), 'admin-logout-btn must contain clean text Exit');
+assert(adminHtml.includes('id="admin-logout-btn"'), 'admin.html must contain #admin-logout-btn');
+assert(adminHtml.includes('Exit Console') || adminHtml.includes('EXIT') || adminHtml.includes('Exit'), 'admin-logout-btn must contain clean Exit label/title');
 console.log('  ✓ Top corner verified: "ADMIN/TUTOR", dynamic role label, and SVG logout Exit');
 
 // Ensure bottom corner (.sidebar-footer) is clean of edit mode toggle

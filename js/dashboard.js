@@ -1990,7 +1990,45 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
       let nextAssignment = null;
       const visitedPairIds = new Set();
 
+      // Prioritize any currently UNLOCKED & whitelisted live exam whose prerequisite is met
+      const isLiveUnlockedForMe = (t) => {
+        if (!t || !isExam(t)) return false;
+        const sess = t.payload?.test_session;
+        if (!sess || sess.status !== 'UNLOCKED') return false;
+        if (sess.auto_close_at && new Date(sess.auto_close_at) <= new Date()) return false;
+        const allowedIds = Array.isArray(sess.allowed_student_ids) ? sess.allowed_student_ids : [];
+        if (allowedIds.length > 0 && !allowedIds.includes(session.student_id)) return false;
+        if (t.prerequisite_test_id) {
+          const prereqTest = published.find(p => p.id === t.prerequisite_test_id);
+          if (prereqTest && !isTestPassed(prereqTest)) return false;
+        }
+        return true;
+      };
+      const liveUnlockedExam = published.find(t => !isTestPassed(t) && isLiveUnlockedForMe(t));
+      if (liveUnlockedExam) {
+        const pair = getTestPairInfo(liveUnlockedExam, published);
+        if (pair && pair.isPair) {
+          nextAssignment = {
+            isPair: true,
+            isUnified: Boolean(pair.isUnified),
+            isExam: true,
+            wordsTest: pair.wordsTest,
+            phrasesTest: pair.phrasesTest,
+            wordsPassed: isTestPassed(pair.wordsTest),
+            phrasesPassed: isTestPassed(pair.phrasesTest),
+            primaryTest: pair.wordsTest
+          };
+        } else {
+          nextAssignment = {
+            isPair: false,
+            isExam: true,
+            primaryTest: liveUnlockedExam
+          };
+        }
+      }
+
       for (const t of published) {
+        if (nextAssignment) break;
         if (visitedPairIds.has(t.id)) continue;
         const pair = getTestPairInfo(t, published);
         if (pair && pair.isPair) {
@@ -2284,15 +2322,16 @@ import { fetchStudentClasses, fetchStudentProgress, fetchTestsForStudentClass, f
         } else {
           const reqMin = Number(activeTestItem.minimum_required_score) || Number(activeTestItem.payload?.min_score) || 60;
           const bestScore = bestMap[activeTestItem.id] ?? 0;
-          let examStatusText = `Official Exam • Passing: ${reqMin}%`;
+          let examStatusText = `Passing: ${reqMin}%`;
           if (bestScore > 0) {
             const clr = typeof getGradeColorByScore === 'function' ? getGradeColorByScore(bestScore) : (bestScore >= reqMin ? 'var(--grade-a)' : 'var(--grade-d)');
-            examStatusText = `Official Exam • Best: <span style="color:${clr};font-weight:800;">${Math.round(bestScore)}% ${bestScore >= reqMin ? '✓' : ''}</span> • Passing: ${reqMin}%`;
+            examStatusText = `Best: <span style="color:${clr};font-weight:800;">${Math.round(bestScore)}% ${bestScore >= reqMin ? '✓' : ''}</span> &bull; Passing: ${reqMin}%`;
           }
-          subIndicatorHtml = `<div class="next-test-sub" style="font-size:12px; font-weight:700; color:var(--quad-a); letter-spacing:0.04em; margin:0;">${examStatusText}</div>`;
+          subIndicatorHtml = `<div class="next-test-sub" style="font-size:16px !important; font-weight:700; color:#94a3b8; letter-spacing:0.02em; margin:0;">${examStatusText}</div>`;
         }
 
         if (isUnlocked && isWhitelisted) {
+          const isFlexible = String(activeTestItem?.schedule_mode || '').toLowerCase() === 'flexible';
           const remMin = activeSession?.remaining_minutes || 40;
           const playTitle = isAlumni ? 'Start Exam (Alumni Universal Access)' : (isFlexible ? 'Start Exam' : `Start Exam (${remMin}m left)`);
           container.innerHTML = `

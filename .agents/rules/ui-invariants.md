@@ -284,11 +284,11 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
    - **Flat Enterprise Precision (Zero Standby Glow & Zero Heavy Shadow)**: Pada posisi standby/diam, tombol, badge, dan kartu MUTLAK BEBAS dari efek glow atau bayangan berat (`box-shadow: none !important; text-shadow: none !important;`). Pada Light Mode, kartu kerja menggunakan elevasi mikro `box-shadow: 0 1px 3px rgba(0,0,0,0.04)`.
    - Mengeliminasi *visual noise* dan kejenuhan mata pada semua tema.
 2. **Aktif / ON / Pressed = Solid Filled Mode**:
-   - Latar terisi penuh warna padat sesuai alokasi token (`#0284c7` / `var(--quad-d)` untuk Cyan, `var(--grade-c)` untuk Kuning, `var(--grade-e)` untuk Merah, `var(--grade-a)` untuk Hijau, `var(--grade-star, #a855f7)` untuk Ungu).
+   - Latar terisi penuh warna padat sesuai alokasi token (`var(--primary-tactical, #38bdf8)` untuk Cyan, `var(--grade-c)` untuk Kuning, `var(--grade-e)` untuk Merah, `var(--grade-a)` untuk Hijau, `var(--grade-star, #a855f7)` untuk Ungu).
    - Efek iluminasi aktif terfokus hanya pada interaksi tombol CTA primer dengan tampilan matte bersih tanpa neon bleed (`text-shadow: none !important;`).
-3. **Aturan Kontras Teks (Luminance Contrast)**:
-   - Warna latar terang (Kuning `var(--grade-c)`, Hijau `var(--grade-a)`): Teks WAJIB gelap (**`#0F172A`**).
-   - Warna latar pekat (Merah `var(--grade-e)`, Cyan `#0284c7`, Ungu `var(--grade-star, #a855f7)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
+3. **Aturan Kontras Teks (Luminance Contrast — `DECISION-087`)**:
+   - Warna latar terang (Cyan `var(--primary-tactical, #38bdf8)`, Kuning `var(--grade-c)`, Hijau `var(--grade-a)`): Teks WAJIB gelap (**`#090D16`** / **`#0F172A`**).
+   - Warna latar pekat (Merah `var(--grade-e)`, Ungu `var(--grade-star, #a855f7)`, Pink `var(--quad-a)`): Teks WAJIB putih (**`#FFFFFF`**).
 4. **Anti-Layout Shift (Zero CLS)**:
    - Tombol toggle mode yang labelnya berganti (misal: `Edit Mode` $\to$ `Done Editing`) WAJIB mengunci lebar tetap (`width`, `min-width`, `max-width`) untuk mencegah pergeseran layout tombol di sekitarnya.
 5. **Strict Zero-Movement Hover Invariant (Anti-Clipping & Anti-Jitter SSOT)**:
@@ -594,7 +594,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - `DataGrid` defaults to `bulkActions: false`. Neon box-shadow glows purged; dividers render as crisp flat lines.
 
 ### 6.4 Level Promotion & Passing Threshold Invariant (NEXT Action Invariant SSOT)
-- **Kepatuhan Ambang Batas Resmi ($\ge 60\%$)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **skor $\ge 60\%$** (**Grade D — Enough** pada CEC / **Grade C — Enough** pada TOP per `AGENTS.md` §2.10) atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**) per [`AGENTS.md` §2.4.1](file:///AGENTS.md#241-level-promotion--passing-threshold-invariant-ssot-aturan-baku-promosi-level).
+- **Kepatuhan Ambang Batas Resmi ($\ge 60\%$ / Level 3 Exam $70\%$)**: Penentuan kelayakan promosi level siswa (`isEligibleNext` / tombol `NEXT`) WAJIB mematuhi 100% ambang batas minimum kelulusan resmi TopsCore, yaitu **skor $\ge 60\%$** (**Grade D — Enough** pada CEC / **Grade C — Enough** pada TOP per `AGENTS.md` §2.10; khusus **Ujian Akhir Tema Level 3 / 3rd Step** minimal **$\ge 70\%$** per `DECISION-084`) atau `min_score` pada metadata tes, dispensasi administratif resmi (**Grade F** / `is_forgiven = true`), atau Remedial yang diselesaikan (**Grade R**) per [`AGENTS.md` §2.4.1](file:///AGENTS.md#241-level-promotion--passing-threshold-invariant-ssot-aturan-baku-promosi-level).
 - **Mutlak Nol Ambang Batas Arbitrer**: Dilarang keras menerapkan angka batas hardcoded di luar SSOT (seperti angka liar `70%`). Siswa yang telah mencapai ambang kelulusan resmi ($\ge 60\%$) telah berstatus Lulus (*Enough*) dan mutlak berhak naik level bersamaan dalam satu rombongan belajar tanpa ada yang tertahan.
 - **Aktivasi Tombol Aksi NEXT di Roster**: Tombol `NEXT` di Sub Panel atau toolbar roster otomatis aktif (*enabled*) hanya saat seluruh siswa aktif dalam batch telah memenuhi batas kelulusan (lulus, remedial tuntas, atau dispensasi Grade F). Jika masih ada siswa yang belum tuntas, tombol dinonaktifkan (*disabled*) dengan tooltip alasan.
 
@@ -602,7 +602,7 @@ Aturan baku antarmuka untuk seluruh tombol aksi, mode toggle, dan kontrol sistem
 - **Prinsip Identitas Level Resmi**:
   1. **Level 0 (Non-Level Programs)**: Khusus untuk program yang sejak awal tidak memiliki jenjang bertahap (single-tier, misal seluruh program pada institusi TOP: Evnikom, Sheraton, Tamata Persada). Pada seluruh tabel workstation admin (kolom `LVL`), filter dropdown, modal, dan dashboard siswa, Level 0 ditampilkan sebagai angka **`0`** (bukan tanda strip `—`). Tanda strip `—` hanya digunakan sebagai representasi data kosong/belum ditentukan (`null`/`undefined`). Dilarang keras menampilkan teks "L0" atau tanda strip pada entitas Level 0 yang valid.
   2. **Level 1–3 (Jenjang Reguler)**: Ditampilkan sebagai `1st`, `2nd`, `3rd` dengan tabular numbers tebal (`color: #f8fafc; font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap;`).
-  3. **Level X (Alumni Graduation)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, `program_status = 'ALUMNI'`). Ditampilkan sebagai huruf **`X`** tebal berwarna ungu (`#c084fc` / `var(--grade-star, #a855f7)`). Alumni mutlak DILARANG menggunakan angka 0.
+  3. **Level X (Alumni Graduation)**: Siswa yang telah lulus dari Level 3 resmi berstatus **Level X** (`level_number = 99` di database, `program_status = 'ALUMNI'`). Ditampilkan sebagai huruf **`X`** tebal berwarna ungu (`var(--grade-star, #a855f7)` per `DECISION-086`). Alumni mutlak DILARANG menggunakan angka 0.
 - **In-Memory & Inline Master Edit Mode Select Control**:
   - Kontainer dropdown select inline level (`.student-inline-select`) di tabel workstation menyajikan 5 opsi terstruktur:
     - `value="0"`: `—` (Non-Level)

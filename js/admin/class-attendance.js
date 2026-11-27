@@ -35,7 +35,8 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
     allLevels = [],
     batchMap = {},
     levelMap = {},
-    showPic = false
+    showPic = false,
+    skipInfobar = false
   } = context;
 
   const cfg = getMeetingsConfigForClass(currentClass || className);
@@ -294,7 +295,7 @@ export async function renderClassMeetingsAttendance(container, context = {}) {
     `;
 
     // Dock Class Info & Legend into Lower Sub Panel (Sole SSOT Domain for Legends & Triage per Rule 0.2.3)
-    if (typeof window.setBottomInfobar === 'function') {
+    if (!skipInfobar && typeof window.setBottomInfobar === 'function') {
       const leftHtml = `
         <div style="display:inline-flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; font-weight:600;">
           <span style="font-size:12px; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.04em;">

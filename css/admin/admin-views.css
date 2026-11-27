@@ -1486,11 +1486,11 @@ body.global-edit-mode-on .vault-edit-input:focus {
   align-items: stretch !important;
 }
 
-/* Outline Styling: Green = Normal / +Late */
+/* Neutral Idle -> Semantic Color on Hover/Active */
 .btn-wireframe-normal {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75) !important;
-  color: var(--grade-a, #00c000) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -1506,18 +1506,19 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-normal:hover {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.22) !important;
-  border-color: var(--grade-a) !important;
-  color: #ffffff !important;
+.btn-wireframe-normal:hover,
+.btn-wireframe-normal:active {
+  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.18) !important;
+  border-color: var(--grade-a, #00c000) !important;
+  color: var(--grade-a, #00c000) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
 .btn-wireframe-late {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-a-rgb, 0, 192, 0), 0.75) !important;
-  color: var(--grade-a, #00c000) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -1533,19 +1534,20 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-late:hover {
-  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.22) !important;
-  border-color: var(--grade-a) !important;
-  color: #ffffff !important;
+.btn-wireframe-late:hover,
+.btn-wireframe-late:active {
+  background: rgba(var(--grade-a-rgb, 0, 192, 0), 0.18) !important;
+  border-color: var(--grade-a, #00c000) !important;
+  color: var(--grade-a, #00c000) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
-/* Outline Styling: Yellow = Remidi / Edit Time */
+/* Neutral Idle -> Yellow on Hover/Active */
 .btn-wireframe-remidi {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85) !important;
-  color: var(--grade-c) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -1561,10 +1563,11 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-remidi:hover {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.22) !important;
+.btn-wireframe-remidi:hover:not(:disabled),
+.btn-wireframe-remidi:active:not(:disabled) {
+  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.16) !important;
   border-color: var(--grade-c) !important;
-  color: #ffffff !important;
+  color: var(--grade-c) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
@@ -1578,9 +1581,9 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 
 .btn-wireframe-edit-time {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-c-rgb, 255, 255, 0), 0.85) !important;
-  color: var(--grade-c) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -1597,10 +1600,43 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-edit-time:hover {
-  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.22) !important;
+.btn-wireframe-edit-time:hover,
+.btn-wireframe-edit-time:active {
+  background: rgba(var(--grade-c-rgb, 255, 255, 0), 0.16) !important;
   border-color: var(--grade-c) !important;
-  color: #ffffff !important;
+  color: var(--grade-c) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
+  transform: none;
+}
+
+.btn-wireframe-edit-mode,
+.btn-wireframe-beacon {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
+  font-weight: 800 !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.04em !important;
+  flex: 1 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  box-shadow: none !important;
+  cursor: pointer !important;
+  transition: all 0.18s ease !important;
+}
+.btn-wireframe-edit-mode:hover,
+.btn-wireframe-edit-mode:active,
+.btn-wireframe-beacon:hover,
+.btn-wireframe-beacon:active {
+  background: rgba(56, 189, 248, 0.16) !important;
+  border-color: #38bdf8 !important;
+  color: #38bdf8 !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
@@ -1672,9 +1708,9 @@ body.global-edit-mode-on .vault-edit-input:focus {
 }
 
 .btn-wireframe-close {
-  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.06) !important;
-  border: 1px solid rgba(var(--grade-e-rgb, 255, 0, 0), 0.75) !important;
-  color: var(--grade-e, #ff0000) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  color: #cbd5e1 !important;
   font-weight: 800 !important;
   font-size: 12px !important;
   text-transform: uppercase !important;
@@ -1690,18 +1726,19 @@ body.global-edit-mode-on .vault-edit-input:focus {
   cursor: pointer !important;
   transition: all 0.18s ease !important;
 }
-.btn-wireframe-close:hover {
-  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.22) !important;
-  border-color: var(--grade-e) !important;
-  color: #ffffff !important;
+.btn-wireframe-close:hover,
+.btn-wireframe-close:active {
+  background: rgba(var(--grade-e-rgb, 255, 0, 0), 0.18) !important;
+  border-color: var(--grade-e, #ff0000) !important;
+  color: var(--grade-e, #ff0000) !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 
 /* Semantics: Tactical Dark Slate = Live Monitor Hero Button */
 .btn-wireframe-live-view {
-  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%) !important;
-  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
   color: #f8fafc !important;
   font-weight: 800 !important;
   font-size: 12px !important;
@@ -1713,14 +1750,16 @@ body.global-edit-mode-on .vault-edit-input:focus {
   align-items: center !important;
   justify-content: center !important;
   gap: 8px !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  box-shadow: none !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
 }
-.btn-wireframe-live-view:hover {
-  background: linear-gradient(180deg, #263348 0%, #1e293b 100%) !important;
+.btn-wireframe-live-view:hover,
+.btn-wireframe-live-view:active {
+  background: rgba(56, 189, 248, 0.14) !important;
   border-color: #38bdf8 !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  color: #38bdf8 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   transform: none;
 }
 

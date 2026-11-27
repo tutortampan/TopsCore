@@ -904,6 +904,27 @@ export async function renderStudents(area, options = {}) {
     const sAcademicMap = academicByStudent.get(s.id) || new Map();
     const sFinalExam = finalExamsByStudent.get(s.id) || null;
 
+    // Fallback CBT Basic English scores (Theme A -> EX-1/U1, Theme B/C -> EX-2/U2) if no manual assessment exists
+    let basicClass = null;
+    for (const c of classesMap.values()) {
+      const codeNorm = (c.code || '').toUpperCase().replace(/^CMP-/, 'CAMP-');
+      if (codeNorm === 'CAMP-1BASIC' || (/basic\s*english/i.test(c.name || '') && /1st|level\s*1/i.test(c.name || ''))) {
+        basicClass = c;
+        break;
+      }
+    }
+    if (basicClass && perClassFinal.has(basicClass.id)) {
+      const bcs = perClassFinal.get(basicClass.id);
+      const tA = bcs.themeScores?.['A'];
+      const tBC = bcs.themeScores?.['C'] ?? bcs.themeScores?.['B'];
+      if (typeof tA === 'number' && !sAcademicMap.has('1:BASIC:U1')) {
+        sAcademicMap.set('1:BASIC:U1', { raw_score: Math.round(tA), percentage: tA, is_cbt_fallback: true });
+      }
+      if (typeof tBC === 'number' && !sAcademicMap.has('1:BASIC:U2')) {
+        sAcademicMap.set('1:BASIC:U2', { raw_score: Math.round(tBC), percentage: tBC, is_cbt_fallback: true });
+      }
+    }
+
     // Build authoritative 3-Step academic assessment summaries
     const stepSummaries = {};
     [1, 2, 3].forEach(stepNum => {
@@ -3882,10 +3903,23 @@ export async function renderStudents(area, options = {}) {
   function getCampRaportColDefs(stepNum = 1) {
     const sNum = parseInt(stepNum, 10) || 1;
     const fourthCode = sNum === 1 ? 'BASIC' : (sNum === 2 ? 'GFS' : 'PRONUNCIATION');
-    const gramTarget = sNum === 2 ? 30 : 15;
+    const gramPtMax = sNum === 2 ? 30 : (sNum === 3 ? 15 : 25);
+    const gramPtMin = sNum === 2 ? 10 : null;
+    const gramU1Max = sNum === 2 ? 30 : 15;
+    const gramU2Max = sNum === 1 ? 20 : (sNum === 2 ? 30 : 15);
+    const gramU1Min = sNum === 2 ? 17 : 8;
+    const gramU2Min = sNum === 1 ? 12 : (sNum === 2 ? 17 : 8);
     const fourthTarget = sNum === 1 ? 100 : (sNum === 2 ? 20 : 25);
+    const fourthMin = sNum === 1 ? 60 : (sNum === 2 ? 12 : 10);
+    const vocabPtMax = sNum === 1 ? 30 : 50;
+    const vocabMinMap = sNum === 1
+      ? { W1: 60, W2: 120, W3: 180, W4: 240 }
+      : (sNum === 2 ? { W1: 75, W2: 155, W3: 235, W4: 315 } : { W1: 90, W2: 215, W3: 340, W4: 415 });
+    const vocabMaxMap = sNum === 1
+      ? { W1: 90, W2: 210, W3: 300, W4: 450 }
+      : (sNum === 2 ? { W1: 120, W2: 280, W3: 440, W4: 600 } : { W1: 150, W2: 400, W3: 650, W4: 800 });
+    const spkExamMin = sNum === 1 ? 10 : (sNum === 2 ? 12 : 15);
     const spkKeys = sNum === 1 ? ['U1', 'U2', 'PRACTICE'] : (sNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
-    const spkLabels = sNum === 1 ? ['U1', 'U2', 'PR'] : (sNum === 2 ? ['U1', 'U2'] : ['U1', 'U2', 'U3']);
 
     const cols = [];
 
@@ -3897,7 +3931,8 @@ export async function renderStudents(area, options = {}) {
         label: exLabel,
         shortLabel: exLabel,
         microLabel: exLabel,
-        headerTitle: `${fourthCode} ${exLabel} (Max ${fourthTarget})`,
+        subSubLabel: `${fourthMin}/${fourthTarget}`,
+        headerTitle: `${fourthCode} ${exLabel} (Min ${fourthMin} / Max ${fourthTarget})`,
         sortable: true,
         align: 'center',
         width: '58px',
@@ -3962,7 +3997,8 @@ export async function renderStudents(area, options = {}) {
       label: 'PT',
       shortLabel: 'PT',
       microLabel: 'PT',
-      headerTitle: 'Vocabulary Placement Test (Target 30 wds)',
+      ...(sNum !== 3 ? { subSubLabel: `${vocabPtMax}` } : {}),
+      headerTitle: `Vocabulary Placement Test (Target ${vocabPtMax} wds)`,
       sortable: true,
       align: 'center',
       width: '48px',
@@ -4013,7 +4049,8 @@ export async function renderStudents(area, options = {}) {
         label: exLabel,
         shortLabel: exLabel,
         microLabel: exLabel,
-        headerTitle: `Vocabulary ${exLabel} (Theme ${tc})`,
+        ...(sNum !== 3 ? { subSubLabel: `${vocabMinMap[wKey]}/${vocabMaxMap[wKey]}` } : {}),
+        headerTitle: `Vocabulary ${exLabel} (Theme ${tc}${sNum !== 3 ? ` · Min ${vocabMinMap[wKey]} / Max ${vocabMaxMap[wKey]}` : ''})`,
         sortable: true,
         align: 'center',
         width: '52px',
@@ -4072,7 +4109,8 @@ export async function renderStudents(area, options = {}) {
         label: exLabel,
         shortLabel: exLabel,
         microLabel: exLabel,
-        headerTitle: `Storytelling ${exLabel} (Rubric 1-5)`,
+        subSubLabel: '3/5',
+        headerTitle: `Storytelling ${exLabel} (Min 3 / Max 5)`,
         sortable: true,
         align: 'center',
         width: '52px',
@@ -4137,7 +4175,8 @@ export async function renderStudents(area, options = {}) {
       label: 'PT',
       shortLabel: 'PT',
       microLabel: 'PT',
-      headerTitle: 'Grammar Placement Test (Max 25 pts)',
+      subSubLabel: gramPtMin != null ? `${gramPtMin}/${gramPtMax}` : `${gramPtMax}`,
+      headerTitle: `Grammar Placement Test (${gramPtMin != null ? `Min ${gramPtMin} / ` : ''}Max ${gramPtMax} pts)`,
       sortable: true,
       align: 'center',
       width: '48px',
@@ -4173,12 +4212,15 @@ export async function renderStudents(area, options = {}) {
 
     ['EX-1', 'EX-2'].forEach((exLabel, idx) => {
       const uKey = `U${idx + 1}`;
+      const gMax = idx === 0 ? gramU1Max : gramU2Max;
+      const gMin = idx === 0 ? gramU1Min : gramU2Min;
       cols.push({
         key: `_camp_grm_${sNum}_${uKey.toLowerCase()}`,
         label: exLabel,
         shortLabel: exLabel,
         microLabel: exLabel,
-        headerTitle: `Grammar ${exLabel} (Max ${gramTarget})`,
+        subSubLabel: `${gMin}/${gMax}`,
+        headerTitle: `Grammar ${exLabel} (Min ${gMin} / Max ${gMax})`,
         sortable: true,
         align: 'center',
         width: '58px',
@@ -4186,12 +4228,12 @@ export async function renderStudents(area, options = {}) {
         render: (row) => {
           const itm = row.academicMap?.get(`${sNum}:GRAMMAR:${uKey}`);
           const raw = itm?.raw_score != null ? itm.raw_score : '';
-          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / gramTarget) * 100 : null);
+          const pct = itm?.percentage != null ? itm.percentage : (raw !== '' ? (raw / gMax) * 100 : null);
           const displayVal = raw !== '' ? raw : '—';
           const color = pct != null && typeof getGradeColorByScore === 'function' ? getGradeColorByScore(pct) : 'var(--clr-text-3)';
           return `
             <div class="student-cell-view" style="display:flex;align-items:center;justify-content:center;">
-              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar ${exLabel}: ${displayVal} / ${gramTarget} (${pct != null ? Math.round(pct) + '%' : '—'})">${displayVal}</span>
+              <span style="font-size:12px;font-weight:600;color:${color} !important;font-variant-numeric:tabular-nums;" title="Grammar ${exLabel}: ${displayVal} / ${gMax} (Min ${gMin})">${displayVal}</span>
             </div>
             <input type="number"
               class="student-inline-input student-inline-academic-input text-center"
@@ -4201,9 +4243,9 @@ export async function renderStudents(area, options = {}) {
               data-subject="GRAMMAR"
               data-type="PERIODIC_EXAM"
               data-key="${uKey}"
-              data-target="${gramTarget}"
+              data-target="${gMax}"
               min="0"
-              max="${gramTarget}"
+              max="${gMax}"
               step="1"
               value="${raw}"
               placeholder="—"
@@ -4243,7 +4285,8 @@ export async function renderStudents(area, options = {}) {
       label: 'PT',
       shortLabel: 'PT',
       microLabel: 'PT',
-      headerTitle: 'Speaking Placement Test (Max 25 pts)',
+      subSubLabel: '5/25',
+      headerTitle: 'Speaking Placement Test (Min 5 / Max 25 pts)',
       sortable: true,
       align: 'center',
       width: '48px',
@@ -4279,12 +4322,14 @@ export async function renderStudents(area, options = {}) {
 
     spkKeys.forEach((key, idx) => {
       const exLabel = `EX-${idx + 1}`;
+      const spkMin = key === 'PRACTICE' ? 5 : spkExamMin;
       cols.push({
         key: `_camp_spk_${sNum}_${key.toLowerCase()}`,
         label: exLabel,
         shortLabel: exLabel,
         microLabel: exLabel,
-        headerTitle: `Speaking ${exLabel} (${key}) (Max 25)`,
+        subSubLabel: `${spkMin}/25`,
+        headerTitle: `Speaking ${exLabel} (${key}) (Min ${spkMin} / Max 25)`,
         sortable: true,
         align: 'center',
         width: '52px',

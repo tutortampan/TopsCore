@@ -100,13 +100,13 @@ assert(
   'Subheaders protected with safe padding (3px 4px) and height to prevent text clipping'
 );
 const vAdmin = parseInt((adminHtml.match(/css\/admin(?:\.min)?\.css\?v=202611\d+_v(\d+)/) || [])[1] || '0', 10);
-const vSw = parseInt((swJs.match(/topscore-cache-(?:option-a-)?v(\d+)/) || [])[1] || '0', 10);
+const vSw = parseInt((swJs.match(/topscore-cache-(?:option-a-)?v(\d+)/) || swJs.match(/BUILD_DATE\s*=\s*['"]\d+_v(\d+)['"]/) || [])[1] || '0', 10);
 assert(
   vAdmin >= 179,
   `admin.html cache busters incremented (>= v179, current: v${vAdmin})`
 );
 assert(
-  vSw >= 104,
+  vSw >= 104 && swJs.includes('CACHE_NAME'),
   `sw.js cache name incremented (>= v104, current: v${vSw})`
 );
 
